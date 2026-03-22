@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -81,7 +82,12 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         child: Row(
           children: [
             SparkleIconButton(
-              onPressed: () => context.pop(),
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation),
+                );
+                context.pop();
+              },
               icon: const Icon(Icons.arrow_back_ios_rounded),
               variant: ButtonVariant.ghost,
             ),
@@ -159,7 +165,10 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         itemCount: patterns.length,
         itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.only(bottom: DS.spacing16),
-          child: _PatternCard(pattern: patterns[index]),
+          child: SparkleStaggerItem(
+            index: index,
+            child: _PatternCard(pattern: patterns[index]),
+          ),
         ),
       );
 }

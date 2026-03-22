@@ -3,8 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -52,7 +56,11 @@ class _PersonaOnboardingScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final steps = _buildSteps(l10n);
-    return SparklePageScaffold(
+    return SceneAudioScope(
+      policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+        trackOverride: _personaTrack(),
+      ),
+      child: SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
         title: Text(l10n.personaGuide),
@@ -92,7 +100,21 @@ class _PersonaOnboardingScreenState
           ),
         ),
       ),
+      ),
     );
+  }
+
+  BgmTrack _personaTrack() {
+    switch (_learningStyle) {
+      case 'practice':
+        return BgmTrack.focusStart;
+      case 'logic':
+        return BgmTrack.thinking;
+      case 'visual':
+        return BgmTrack.dashboard;
+      default:
+        return BgmTrack.profile;
+    }
   }
 
   List<Step> _buildSteps(AppLocalizations l10n) => [
@@ -147,6 +169,9 @@ class _PersonaOnboardingScreenState
                 max: 180,
                 divisions: 17,
                 onChanged: (v) {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   setState(() => _studyMinutes = v);
                   _schedulePreview();
                 },
@@ -177,6 +202,9 @@ class _PersonaOnboardingScreenState
                 value: _depthPreference,
                 divisions: 10,
                 onChanged: (v) {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   setState(() => _depthPreference = v);
                   _schedulePreview();
                 },
@@ -187,6 +215,9 @@ class _PersonaOnboardingScreenState
                 value: _curiosityPreference,
                 divisions: 10,
                 onChanged: (v) {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   setState(() => _curiosityPreference = v);
                   _schedulePreview();
                 },
@@ -201,6 +232,7 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _learningStyle == value,
         onSelected: (_) {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _learningStyle = value);
           _schedulePreview();
         },
@@ -210,6 +242,7 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _goalType == value,
         onSelected: (_) {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _goalType = value);
           _schedulePreview();
         },
@@ -219,6 +252,7 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _knowledgeLevel == value,
         onSelected: (_) {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _knowledgeLevel = value);
           _schedulePreview();
         },
@@ -226,6 +260,7 @@ class _PersonaOnboardingScreenState
 
   void _handleBack() {
     if (_currentStep == 0) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() => _currentStep -= 1);
   }
 
@@ -270,6 +305,11 @@ class _PersonaOnboardingScreenState
         _previewMessage = preview['message']?.toString().trim();
         _previewLoading = false;
       });
+      if ((_previewMessage ?? '').isNotEmpty) {
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
+        );
+      }
     } catch (_) {
       if (!mounted || requestId != _previewRequestId) return;
       setState(() {
@@ -342,10 +382,12 @@ class _PersonaOnboardingScreenState
 
   Future<void> _handleContinue(int totalSteps) async {
     if (_currentStep < totalSteps - 1) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       setState(() => _currentStep += 1);
       return;
     }
 
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     setState(() => _submitting = true);
     final repo = ref.read(userRepositoryProvider);
     try {
@@ -366,6 +408,9 @@ class _PersonaOnboardingScreenState
       ref.invalidate(inferredPreferencesProvider);
       ref.invalidate(activePoliciesProvider);
       if (mounted) {
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
+        );
         context.go('/home');
       }
     } finally {

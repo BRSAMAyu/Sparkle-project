@@ -26,7 +26,8 @@ class FriendsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -42,12 +43,12 @@ class FriendsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const ContentConstraint(
+        child: const ContentConstraint(
           child: TabBarView(
             children: [
-              _MyFriendsTab(),
-              _PendingRequestsTab(),
-              _RecommendationsTab(),
+              SparkleStaggerItem(index: 0, child: _MyFriendsTab()),
+              SparkleStaggerItem(index: 1, child: _PendingRequestsTab()),
+              SparkleStaggerItem(index: 2, child: _RecommendationsTab()),
             ],
           ),
         ),

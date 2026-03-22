@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -149,14 +152,16 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     final statusColor = _statusColor(widget.contextData.status, plan?.isActive);
     final summary = _taskSummary();
 
-    return MaterialStyler(
-      material: AppMaterials.ceramic.copyWith(
-        backgroundColor: widget.isDark ? DS.neutral900 : DS.neutral100,
-        borderColor: statusColor.withValues(alpha: 0.2),
-      ),
-      borderRadius: DS.borderRadius16,
-      padding: const EdgeInsets.all(DS.spacing16),
-      child: Column(
+    return SparkleStaggerItem(
+      index: 0,
+      child: MaterialStyler(
+        material: AppMaterials.ceramic.copyWith(
+          backgroundColor: widget.isDark ? DS.neutral900 : DS.neutral100,
+          borderColor: statusColor.withValues(alpha: 0.2),
+        ),
+        borderRadius: DS.borderRadius16,
+        padding: const EdgeInsets.all(DS.spacing16),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -201,7 +206,12 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                       : Icons.keyboard_arrow_down_rounded,
                   color: widget.isDark ? DS.neutral300 : DS.neutral600,
                 ),
-                onPressed: () => setState(() => _expanded = !_expanded),
+                onPressed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
+                  setState(() => _expanded = !_expanded);
+                },
               ),
             ],
           ),
@@ -216,6 +226,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                 : _buildCollapsedHint(l10n),
           ),
         ],
+      ),
       ),
     );
   }

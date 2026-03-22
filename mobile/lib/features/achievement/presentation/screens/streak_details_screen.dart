@@ -22,6 +22,22 @@ class StreakDetailsScreen extends ConsumerStatefulWidget {
 
 class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
   static const int _historyDays = 90;
+  int? _lastCelebratedRecord;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final stats = ref.read(streakStatsProvider);
+    final bestRecord = stats.longestStreak > 0
+        ? stats.longestStreak
+        : math.max(stats.maxStreak, stats.currentStreak);
+    if (stats.currentStreak > 0 &&
+        stats.currentStreak >= bestRecord &&
+        _lastCelebratedRecord != stats.currentStreak) {
+      _lastCelebratedRecord = stats.currentStreak;
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.streak));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 责任伙伴打卡热力图组件
 ///
@@ -227,7 +228,7 @@ class AccountabilityHeatmap extends StatelessWidget {
               orElse: () => null,
             );
 
-        return _buildHeatmapCell(context, dayData);
+        return _buildHeatmapCell(context, dayData, index);
       },
     );
   }
@@ -246,7 +247,11 @@ class AccountabilityHeatmap extends StatelessWidget {
     }
   }
 
-  Widget _buildHeatmapCell(BuildContext context, Map<String, dynamic>? dayData) {
+  Widget _buildHeatmapCell(
+    BuildContext context,
+    Map<String, dynamic>? dayData,
+    int revealIndex,
+  ) {
     if (dayData == null) {
       return Container(
         decoration: BoxDecoration(
@@ -274,10 +279,22 @@ class AccountabilityHeatmap extends StatelessWidget {
       cellColor = const Color(0xFF216E39);
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cellColor,
-        borderRadius: BorderRadius.circular(2),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 180 + (revealIndex.clamp(0, 80) * 8)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.scale(
+          scale: 0.92 + (0.08 * value),
+          child: child,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cellColor,
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
     );
   }

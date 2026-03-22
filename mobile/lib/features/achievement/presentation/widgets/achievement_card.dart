@@ -39,10 +39,12 @@ class AnimatedAchievementCard extends StatefulWidget {
     required this.child,
     super.key,
     this.index = 0,
+    this.rarity = AchievementRarity.common,
   });
 
   final Widget child;
   final int index;
+  final AchievementRarity rarity;
 
   @override
   State<AnimatedAchievementCard> createState() =>
@@ -55,6 +57,13 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
   late final Animation<Offset> _slideAnimation;
+
+  int get _rarityDelayMs => switch (widget.rarity) {
+        AchievementRarity.common => 32,
+        AchievementRarity.rare => 44,
+        AchievementRarity.epic => 56,
+        AchievementRarity.legendary => 70,
+      };
 
   @override
   void initState() {
@@ -81,7 +90,7 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
     // Stagger: each card delays by index * 50 ms.
     unawaited(
       Future<void>.delayed(
-        Duration(milliseconds: widget.index * 50),
+        Duration(milliseconds: widget.index * _rarityDelayMs),
         () {
           if (mounted) _controller.forward();
         },
@@ -289,15 +298,18 @@ class AchievementCard extends StatelessWidget {
     final shouldWrap = _shouldShimmer || _isNewlyUnlocked;
     if (!shouldWrap) return card;
 
-    return RarityVisualWrapper(
-      rarity: achievement.achievement.rarity,
-      borderRadius: _borderRadiusForStyle,
-      showShimmer: _shouldShimmer,
-      showGlow: _isNewlyUnlocked,
-      showParticles: false, // Cards don't show orbital particles
-      isNewlyUnlocked: _isNewlyUnlocked,
-      unlockedAt: achievement.userProgress?.unlockedAt,
-      child: card,
+    return Hero(
+      tag: 'achievement-${achievement.achievement.id}',
+      child: RarityVisualWrapper(
+        rarity: achievement.achievement.rarity,
+        borderRadius: _borderRadiusForStyle,
+        showShimmer: _shouldShimmer,
+        showGlow: _isNewlyUnlocked,
+        showParticles: false,
+        isNewlyUnlocked: _isNewlyUnlocked,
+        unlockedAt: achievement.userProgress?.unlockedAt,
+        child: card,
+      ),
     );
   }
 
@@ -1205,6 +1217,7 @@ class AchievementGridCard extends StatelessWidget {
     if (animationIndex != null) {
       return AnimatedAchievementCard(
         index: animationIndex!,
+        rarity: achievement.achievement.rarity,
         child: card,
       );
     }
@@ -1245,6 +1258,7 @@ class AchievementListCard extends StatelessWidget {
     if (animationIndex != null) {
       return AnimatedAchievementCard(
         index: animationIndex!,
+        rarity: achievement.achievement.rarity,
         child: card,
       );
     }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
@@ -45,13 +46,20 @@ class _SeedLibraryDetailScreenState
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.share_outlined),
-              onPressed: () => showShareResourceSheet(
-                context,
-                resourceType: 'seed_library',
-                resourceId: state.library!.id,
-                title: state.library!.name,
-                subtitle: state.library!.description,
-              ),
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.sheetOpen,
+                  ),
+                );
+                showShareResourceSheet(
+                  context,
+                  resourceType: 'seed_library',
+                  resourceId: state.library!.id,
+                  title: state.library!.name,
+                  subtitle: state.library!.description,
+                );
+              },
             ),
           if (canManageLibrary)
             SparkleIconButton(
@@ -156,7 +164,9 @@ class _SeedLibraryDetailScreenState
             child: ContentConstraint(
               child: Padding(
                 padding: const EdgeInsets.all(DS.spacing16),
-                child: Column(
+                child: SparkleStaggerItem(
+                  index: 0,
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Category and visibility badges
@@ -242,6 +252,7 @@ class _SeedLibraryDetailScreenState
                       ),
                     ],
                   ],
+                  ),
                 ),
               ),
             ),
@@ -257,21 +268,28 @@ class _SeedLibraryDetailScreenState
                   DS.spacing16,
                   DS.spacing8,
                 ),
-                child: Row(
-                  children: [
-                    Text(
-                      context.l10n.seedLibraryContentItems,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const Spacer(),
-                    SparkleButton.ghost(
-                      onPressed: () {
-                        // TODO: Show filter dialog
-                      },
-                      icon: const Icon(Icons.filter_list, size: DS.iconSizeXs),
-                      label: context.l10n.seedLibraryFilter,
-                    ),
-                  ],
+                child: SparkleStaggerItem(
+                  index: 1,
+                  child: Row(
+                    children: [
+                      Text(
+                        context.l10n.seedLibraryContentItems,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const Spacer(),
+                      SparkleButton.ghost(
+                        onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.filter_list, size: DS.iconSizeXs),
+                        label: context.l10n.seedLibraryFilter,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -321,14 +339,24 @@ class _SeedLibraryDetailScreenState
                     }
 
                     final item = state.items[index];
-                    return SeedItemCard(
-                      item: item,
-                      onShare: () => showShareResourceSheet(
-                        context,
-                        resourceType: 'seed_item',
-                        resourceId: item.id,
-                        title: item.title ?? item.itemTypeDisplayName,
-                        subtitle: item.content,
+                    return SparkleStaggerItem(
+                      index: index,
+                      child: SeedItemCard(
+                        item: item,
+                        onShare: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.sheetOpen,
+                            ),
+                          );
+                          showShareResourceSheet(
+                            context,
+                            resourceType: 'seed_item',
+                            resourceId: item.id,
+                            title: item.title ?? item.itemTypeDisplayName,
+                            subtitle: item.content,
+                          );
+                        },
                       ),
                     );
                   },

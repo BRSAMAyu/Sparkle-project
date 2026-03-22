@@ -37,11 +37,23 @@ class FocusStatsChart extends StatelessWidget {
         ? dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b)
         : 10.0;
 
-    return SizedBox(
-      height: 120,
-      child: chartType == FocusStatsChartType.bar
-          ? _BarChart(dataPoints: dataPoints, maxValue: maxValue)
-          : _LineChart(dataPoints: dataPoints, maxValue: maxValue),
+    return SparkleStaggerItem(
+      index: 0,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.94, end: 1),
+        duration: DS.motionDuration(SparkleMotionToken.scene),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) => Transform.scale(
+          scale: value,
+          child: Opacity(opacity: value, child: child),
+        ),
+        child: SizedBox(
+          height: 120,
+          child: chartType == FocusStatsChartType.bar
+              ? _BarChart(dataPoints: dataPoints, maxValue: maxValue)
+              : _LineChart(dataPoints: dataPoints, maxValue: maxValue),
+        ),
+      ),
     );
   }
 

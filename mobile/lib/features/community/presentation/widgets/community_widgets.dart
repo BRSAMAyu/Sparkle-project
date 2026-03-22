@@ -85,7 +85,18 @@ class ChatBubble extends StatelessWidget {
   final bool isSent;
 
   @override
-  Widget build(BuildContext context) => Align(
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: DS.durationNormal,
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(isMe ? 10 * (1 - value) : -10 * (1 - value), 0),
+            child: child,
+          ),
+        ),
+        child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -143,6 +154,7 @@ class ChatBubble extends StatelessWidget {
             ],
           ),
         ),
+      ),
       );
 
   double _bubbleMaxWidth(BuildContext context) {

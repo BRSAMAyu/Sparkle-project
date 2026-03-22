@@ -41,9 +41,11 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPeriodSelector(),
+              SparkleStaggerItem(index: 0, child: _buildPeriodSelector()),
               const SizedBox(height: DS.spacing16),
-              exportAsync.when(
+              SparkleStaggerItem(
+                index: 1,
+                child: exportAsync.when(
                 data: (payload) => _buildOpsContent(context, payload),
                 loading: () => const GraphiteCardSurface(
                   child: LinearProgressIndicator(minHeight: 3),
@@ -53,8 +55,11 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                   '$error',
                 ),
               ),
+              ),
               const SizedBox(height: DS.spacing16),
-              predictionAsync.when(
+              SparkleStaggerItem(
+                index: 2,
+                child: predictionAsync.when(
                 data: (payload) => _buildPredictionContent(context, payload),
                 loading: () => const GraphiteCardSurface(
                   child: LinearProgressIndicator(minHeight: 3),
@@ -63,6 +68,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                   '预测转化分析加载失败',
                   '$error',
                 ),
+              ),
               ),
             ],
           ),

@@ -387,6 +387,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             child: RepaintBoundary(
               child: TaskCard(
                 task: task,
+                enableSwipeComplete: true,
                 onTap: () {
                   context.push('/tasks/${task.id}');
                 },

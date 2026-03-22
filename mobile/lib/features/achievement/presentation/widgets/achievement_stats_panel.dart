@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -64,7 +65,7 @@ class AchievementStatsPanel extends StatelessWidget {
                     children: [
                       for (var index = 0; index < cards.length; index++) ...[
                         if (index > 0) const SizedBox(height: DS.spacing10),
-                        cards[index],
+                        SparkleStaggerItem(index: index, child: cards[index]),
                       ],
                     ],
                   )
@@ -73,16 +74,26 @@ class AchievementStatsPanel extends StatelessWidget {
                     children: [
                       for (var index = 0; index < cards.length; index++) ...[
                         if (index > 0) const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[index]),
+                        Expanded(
+                          child: SparkleStaggerItem(
+                            index: index,
+                            child: cards[index],
+                          ),
+                        ),
                       ],
                     ],
                   ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                  child:
-                      _buildOverallProgressBar(l10n, compact: compactStats),
+                  child: SparkleStaggerItem(
+                    index: 3,
+                    child: _buildOverallProgressBar(l10n, compact: compactStats),
+                  ),
                 ),
-                _buildRarityDistribution(l10n),
+                SparkleStaggerItem(
+                  index: 4,
+                  child: _buildRarityDistribution(l10n),
+                ),
               ],
             );
           },
@@ -228,19 +239,24 @@ class AchievementStatsPanel extends StatelessWidget {
             ],
           ),
         SizedBox(height: compact ? DS.spacing10 : DS.spacing8),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            color: DS.neutral200,
-            borderRadius: DS.borderRadiusFull,
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DS.primaryGradient,
-                borderRadius: DS.borderRadiusFull,
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+          duration: DS.durationSlow,
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) => Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: DS.neutral200,
+              borderRadius: DS.borderRadiusFull,
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: value,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: DS.primaryGradient,
+                  borderRadius: DS.borderRadiusFull,
+                ),
               ),
             ),
           ),

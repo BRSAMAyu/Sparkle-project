@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -66,19 +67,23 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
-    _titleController.removeListener(_onTitleChanged);
-    _titleController.dispose();
+    _titleController
+      ..removeListener(_onTitleChanged)
+      ..dispose();
     _tagsController.dispose();
     super.dispose();
   }
 
   void _onTitleChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (_titleController.text.length > 2) {
-        _fetchSuggestions(_titleController.text);
-      }
-    });
+    _debounce = Timer(
+      const Duration(milliseconds: 800),
+      () {
+        if (_titleController.text.length > 2) {
+          unawaited(_fetchSuggestions(_titleController.text));
+        }
+      },
+    );
   }
 
   Future<void> _fetchSuggestions(String input) async {
@@ -101,6 +106,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   }
 
   void _applySuggestion(SuggestedNode node) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _titleController.text = node.name;
       _selectedKnowledgeNodeId = node.id;
@@ -129,6 +135,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
   Future<void> _submitTask() async {
     if (!_formKey.currentState!.validate()) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     setState(() {
       _isSubmitting = true;
@@ -263,8 +270,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 8,
+                        SparkleStaggerWrap(
                           children: _suggestions!.suggestedNodes
                               .map(
                                 (node) => ActionChip(
@@ -312,6 +318,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
                       setState(() => _selectedType = value);
                     }
                   },

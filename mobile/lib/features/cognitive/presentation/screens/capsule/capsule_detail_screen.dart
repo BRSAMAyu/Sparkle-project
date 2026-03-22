@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -96,52 +97,67 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
             children: [
               // 深度级别标签
               if (capsule.depthLevel != null) ...[
-                _DepthBadge(capsule: capsule),
+                SparkleStaggerItem(
+                  index: 0,
+                  child: _DepthBadge(capsule: capsule),
+                ),
                 const SizedBox(height: DS.spacing16),
               ],
 
               // 标题
-              Text(
-                capsule.title,
-                style: context.sparkleTypography.headingMedium,
+              SparkleStaggerItem(
+                index: 1,
+                child: Text(
+                  capsule.title,
+                  style: context.sparkleTypography.headingMedium,
+                ),
               ),
               const SizedBox(height: DS.spacing8),
 
               // 元信息行
-              _MetaRow(capsule: capsule),
+              SparkleStaggerItem(
+                index: 2,
+                child: _MetaRow(capsule: capsule),
+              ),
               const SizedBox(height: DS.spacing24),
 
               // 个性化说明卡片
               if (capsule.personalizationContext != null) ...[
-                _PersonalizationCard(
-                  capsule: capsule,
-                  localizePattern: _localizePatternName,
+                SparkleStaggerItem(
+                  index: 3,
+                  child: _PersonalizationCard(
+                    capsule: capsule,
+                    localizePattern: _localizePatternName,
+                  ),
                 ),
                 const SizedBox(height: DS.spacing24),
               ],
 
               // 主内容
-              MarkdownBody(
-                data: capsule.content,
-                styleSheet:
-                    MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  p: context.sparkleTypography.bodyLarge,
-                  h1: context.sparkleTypography.headingLarge,
-                  h2: context.sparkleTypography.headingMedium,
-                  h3: context.sparkleTypography.titleLarge,
-                  strong: context.sparkleTypography.bodyLarge
-                      .copyWith(fontWeight: FontWeight.bold),
-                  blockquote: context.sparkleTypography.bodyMedium.copyWith(
-                    color: DS.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  code: context.sparkleTypography.bodyMedium.copyWith(
-                    fontFamily: 'monospace',
-                    backgroundColor: DS.surfaceTertiary,
-                  ),
-                  codeblockDecoration: BoxDecoration(
-                    color: DS.surfaceTertiary,
-                    borderRadius: DS.borderRadius8,
+              SparkleStaggerItem(
+                index: 4,
+                child: MarkdownBody(
+                  data: capsule.content,
+                  styleSheet:
+                      MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                    p: context.sparkleTypography.bodyLarge,
+                    h1: context.sparkleTypography.headingLarge,
+                    h2: context.sparkleTypography.headingMedium,
+                    h3: context.sparkleTypography.titleLarge,
+                    strong: context.sparkleTypography.bodyLarge
+                        .copyWith(fontWeight: FontWeight.bold),
+                    blockquote: context.sparkleTypography.bodyMedium.copyWith(
+                      color: DS.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    code: context.sparkleTypography.bodyMedium.copyWith(
+                      fontFamily: 'monospace',
+                      backgroundColor: DS.surfaceTertiary,
+                    ),
+                    codeblockDecoration: BoxDecoration(
+                      color: DS.surfaceTertiary,
+                      borderRadius: DS.borderRadius8,
+                    ),
                   ),
                 ),
               ),
@@ -149,28 +165,35 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
 
               // 相关主题 chip
               if (capsule.relatedSubject != null) ...[
-                Wrap(
-                  spacing: DS.spacing8,
-                  children: [
-                    Chip(
-                      avatar: const Icon(Icons.tag, size: 14),
-                      label: Text(
-                        capsule.relatedSubject!,
-                        style: context.sparkleTypography.labelSmall,
+                SparkleStaggerItem(
+                  index: 5,
+                  child: Wrap(
+                    spacing: DS.spacing8,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.tag, size: 14),
+                        label: Text(
+                          capsule.relatedSubject!,
+                          style: context.sparkleTypography.labelSmall,
+                        ),
+                        backgroundColor: DS.surfaceSecondary,
+                        side: BorderSide(color: DS.border, width: 0.5),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: DS.spacing4),
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
                       ),
-                      backgroundColor: DS.surfaceSecondary,
-                      side: BorderSide(color: DS.border, width: 0.5),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: DS.spacing4),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: DS.spacing24),
               ],
 
               // 质量评分 + 统计信息合并一行
-              _StatsRow(capsule: capsule),
+              SparkleStaggerItem(
+                index: 6,
+                child: _StatsRow(capsule: capsule),
+              ),
             ],
           ),
         ),
@@ -214,10 +237,14 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _toggleFavorite(CuriosityCapsuleModel capsule) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     unawaited(ref.read(capsuleProvider.notifier).toggleFavorite(capsule.id));
   }
 
   void _showFeedbackSheet(CuriosityCapsuleModel capsule) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     unawaited(
       showModalBottomSheet<void>(
         context: context,
@@ -249,6 +276,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _showShareSheet(CuriosityCapsuleModel capsule) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     final tags = <String>[
       if ((capsule.relatedSubject ?? '').trim().isNotEmpty)
         capsule.relatedSubject!.trim(),
@@ -365,8 +393,11 @@ class _MetaRow extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: DS.textSecondary),
           ),
           const SizedBox(width: DS.spacing16),
-          Icon(Icons.calendar_today_outlined,
-              size: 13, color: DS.textSecondary),
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 13,
+            color: DS.textSecondary,
+          ),
           const SizedBox(width: DS.spacing4),
           Text(
             Formatters.formatRelativeTime(capsule.createdAt),
@@ -427,8 +458,11 @@ class _PersonalizationCard extends StatelessWidget {
               color: DS.prismPurple.withValues(alpha: 0.12),
               borderRadius: DS.borderRadius8,
             ),
-            child: Icon(Icons.psychology_outlined,
-                size: 16, color: DS.prismPurple),
+            child: Icon(
+              Icons.psychology_outlined,
+              size: 16,
+              color: DS.prismPurple,
+            ),
           ),
           const SizedBox(width: DS.spacing12),
           Expanded(
@@ -445,7 +479,8 @@ class _PersonalizationCard extends StatelessWidget {
                 const SizedBox(height: DS.spacing4),
                 Text(
                   l10n.capsulePersonalizationExplanation(
-                      patterns.join(separator)),
+                    patterns.join(separator),
+                  ),
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 13,

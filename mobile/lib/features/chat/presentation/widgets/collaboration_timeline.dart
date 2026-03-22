@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -32,7 +34,8 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
     _controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500 * widget.steps.length),
-    )..forward();
+    );
+    unawaited(_controller.forward());
   }
 
   @override
@@ -138,7 +141,11 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                 opacity: progress,
                 child: Transform.translate(
                   offset: Offset(0, (1 - progress) * 20),
-                  child: child,
+                  child: SparkleStaggerItem(
+                    index: index,
+                    offset: 0.04,
+                    child: child!,
+                  ),
                 ),
               );
             },

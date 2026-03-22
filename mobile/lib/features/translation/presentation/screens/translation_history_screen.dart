@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/data/repositories/local_translation_repository.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 
@@ -60,6 +63,11 @@ class _TranslationHistoryScreenState
                   final starValue = index + 1;
                   return SparkleIconButton(
                     onPressed: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
                       setDialogState(() {
                         _selectedRatings[id] = starValue;
                       });
@@ -223,23 +231,29 @@ class _TranslationHistoryScreenState
               padding: const EdgeInsets.symmetric(horizontal: DS.md),
               child: Row(
                 children: [
-                  _FilterChip(
-                    label: context.l10n.translationFilterAll,
-                    isSelected: state.filter == TranslationFilter.all,
-                    count: state.statistics['total'] ?? 0,
-                    onTap: () => ref
-                        .read(translationHistoryProvider.notifier)
-                        .setFilter(TranslationFilter.all),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: _FilterChip(
+                      label: context.l10n.translationFilterAll,
+                      isSelected: state.filter == TranslationFilter.all,
+                      count: state.statistics['total'] ?? 0,
+                      onTap: () => ref
+                          .read(translationHistoryProvider.notifier)
+                          .setFilter(TranslationFilter.all),
+                    ),
                   ),
                   const SizedBox(width: DS.sm),
-                  _FilterChip(
-                    label: context.l10n.translationFilterFavorites,
-                    isSelected: state.filter == TranslationFilter.favorites,
-                    count: state.statistics['favorites'] ?? 0,
-                    icon: Icons.star,
-                    onTap: () => ref
-                        .read(translationHistoryProvider.notifier)
-                        .setFilter(TranslationFilter.favorites),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: _FilterChip(
+                      label: context.l10n.translationFilterFavorites,
+                      isSelected: state.filter == TranslationFilter.favorites,
+                      count: state.statistics['favorites'] ?? 0,
+                      icon: Icons.star,
+                      onTap: () => ref
+                          .read(translationHistoryProvider.notifier)
+                          .setFilter(TranslationFilter.favorites),
+                    ),
                   ),
                   const SizedBox(width: DS.sm),
                   _FilterChip(
@@ -277,16 +291,19 @@ class _TranslationHistoryScreenState
                           itemCount: state.records.length,
                           itemBuilder: (context, index) {
                             final item = state.records[index];
-                            return _TranslationCard(
-                              item: item,
-                              languageCodeToFlag: _languageCodeToFlag,
-                              context: context,
-                              onRatingTap: () =>
-                                  _showRatingDialog(item.id, item.rating),
-                              onFavoriteToggle: () => ref
-                                  .read(translationHistoryProvider.notifier)
-                                  .toggleFavorite(item.id),
-                              onDelete: () => _showDeleteConfirmation(item),
+                            return SparkleStaggerItem(
+                              index: index,
+                              child: _TranslationCard(
+                                item: item,
+                                languageCodeToFlag: _languageCodeToFlag,
+                                context: context,
+                                onRatingTap: () =>
+                                    _showRatingDialog(item.id, item.rating),
+                                onFavoriteToggle: () => ref
+                                    .read(translationHistoryProvider.notifier)
+                                    .toggleFavorite(item.id),
+                                onDelete: () => _showDeleteConfirmation(item),
+                              ),
                             );
                           },
                         ),

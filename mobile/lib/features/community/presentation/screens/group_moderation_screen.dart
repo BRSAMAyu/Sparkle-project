@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
@@ -77,6 +78,9 @@ class _GroupModerationScreenState
 
   Future<void> _save() async {
     try {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+      );
       await ref.read(groupModerationProvider(widget.groupId).notifier).save(
             GroupModerationSettings(
               muteAll: _muteAll,
@@ -145,29 +149,41 @@ class _GroupModerationScreenState
               padding: const EdgeInsets.all(DS.spacing16),
               children: [
                 // Mute all section
-                GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.panel,
-                  child: Column(
-                    children: [
-                      SwitchListTile(
-                        title: const Text('全体禁言'),
-                        subtitle: const Text('开启后只有管理员可以发言'),
-                        value: _muteAll,
-                        onChanged: (v) => setState(() => _muteAll = v),
-                      ),
-                    ],
+                SparkleStaggerItem(
+                  index: 0,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          title: const Text('全体禁言'),
+                          subtitle: const Text('开启后只有管理员可以发言'),
+                          value: _muteAll,
+                          onChanged: (v) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() => _muteAll = v);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
 
                 // Slow mode section
-                GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.panel,
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                SparkleStaggerItem(
+                  index: 1,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Row(
                           children: [
                             const Text('慢速模式',
@@ -177,8 +193,16 @@ class _GroupModerationScreenState
                             const Spacer(),
                             Switch(
                               value: _slowModeSeconds > 0,
-                              onChanged: (v) => setState(() =>
-                                  _slowModeSeconds = v ? 30 : 0),
+                              onChanged: (v) {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.selection,
+                                  ),
+                                );
+                                setState(
+                                  () => _slowModeSeconds = v ? 30 : 0,
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -198,20 +222,23 @@ class _GroupModerationScreenState
                                 setState(() => _slowModeSeconds = v.toInt()),
                           ),
                         ],
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
 
                 // Keyword filters section
-                GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.panel,
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                SparkleStaggerItem(
+                  index: 2,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         const Text('关键词过滤',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -253,11 +280,19 @@ class _GroupModerationScreenState
                             const SizedBox(width: DS.spacing8),
                             SparkleIconButton(
                               icon: const Icon(Icons.add),
-                              onPressed: _addKeyword,
+                              onPressed: () {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.confirm,
+                                  ),
+                                );
+                                _addKeyword();
+                              },
                             ),
                           ],
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

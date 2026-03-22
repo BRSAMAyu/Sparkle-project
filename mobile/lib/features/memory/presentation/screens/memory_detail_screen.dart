@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 
@@ -389,11 +392,16 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         ),
       );
 
-  void _showEvidence(BuildContext context) => EvidenceDrawer.show(
-        context,
-        refs: _refs,
-        evidenceMissing: _evidenceMissing,
-      );
+  void _showEvidence(BuildContext context) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+    );
+    EvidenceDrawer.show(
+      context,
+      refs: _refs,
+      evidenceMissing: _evidenceMissing,
+    );
+  }
 
   String _formatDate(DateTime? value) {
     if (value == null) {

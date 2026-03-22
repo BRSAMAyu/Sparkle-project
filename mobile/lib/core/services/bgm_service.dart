@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum BgmPriority {
@@ -85,14 +86,19 @@ class BgmService {
   static const _modeKey = 'bgm.mode';
 
   static AudioPlayer? _player;
+  static AudioPlayer? _preloadPlayer;
   static SharedPreferences? _prefs;
+  static final WidgetsBindingObserver _lifecycleObserver = _BgmLifecycleObserver();
   static final Map<Object, _BgmRegistration> _registrations = {};
   static int _sequence = 0;
   static bool _isRefreshing = false;
   static bool _refreshQueued = false;
   static int _duckSequence = 0;
+  static bool _observerRegistered = false;
   static BgmTrack? _currentTrack;
   static BgmPriority? _currentPriority;
+  static String? _currentAssetPath;
+  static String? _preloadedAssetPath;
   static double _currentOutputVolume = 0;
 
   static Future<void> init() async {
@@ -101,6 +107,12 @@ class BgmService {
     }
     _player = AudioPlayer();
     await _player!.setReleaseMode(ReleaseMode.loop);
+    _preloadPlayer = AudioPlayer();
+    await _preloadPlayer!.setReleaseMode(ReleaseMode.stop);
+    if (!_observerRegistered) {
+      WidgetsBinding.instance.addObserver(_lifecycleObserver);
+      _observerRegistered = true;
+    }
   }
 
   static Future<SharedPreferences> _getPrefs() async =>
@@ -230,9 +242,17 @@ class BgmService {
 
   static Future<void> dispose() async {
     _registrations.clear();
+    if (_observerRegistered) {
+      WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+      _observerRegistered = false;
+    }
     await _player?.dispose();
+    await _preloadPlayer?.dispose();
     _player = null;
+    _preloadPlayer = null;
     _currentTrack = null;
+    _currentAssetPath = null;
+    _preloadedAssetPath = null;
   }
 
   static Future<void> _refreshPlayback({bool force = false}) async {
@@ -263,6 +283,9 @@ class BgmService {
         await _player?.setVolume(await _targetVolume(desiredTrack));
       } else {
         await _switchTrack(desiredTrack);
+      }
+      if (desiredTrack != null) {
+        unawaited(_preloadLikelyNextTrack(desiredTrack));
       }
     } finally {
       _isRefreshing = false;
@@ -322,18 +345,82 @@ class BgmService {
 
     final registration = _resolveRegistration();
     final fadeDuration = _fadeDurationForPriority(registration?.priority);
+    final assetPath = await _resolveAssetPath(track);
+
+    if (_currentAssetPath == assetPath) {
+      _currentTrack = track;
+      _currentPriority = registration?.priority;
+      await player.resume();
+      await _fadeTo(await _targetVolume(track), duration: fadeDuration);
+      return;
+    }
 
     await _fadeTo(0, duration: fadeDuration);
     await player.stop();
     await player.setReleaseMode(ReleaseMode.loop);
-    await player.play(
-      AssetSource(await _resolveAssetPath(track)),
-      volume: 0,
-      mode: PlayerMode.mediaPlayer,
-    );
+    await player.play(AssetSource(assetPath), volume: 0, mode: PlayerMode.mediaPlayer);
     _currentTrack = track;
     _currentPriority = registration?.priority;
+    _currentAssetPath = assetPath;
     await _fadeTo(await _targetVolume(track), duration: fadeDuration);
+  }
+
+  static Future<void> _preloadLikelyNextTrack(BgmTrack currentTrack) async {
+    final preloadPlayer = _preloadPlayer;
+    if (preloadPlayer == null) {
+      return;
+    }
+    final nextTrack = _likelyNextTrack(currentTrack);
+    if (nextTrack == null) {
+      return;
+    }
+    final assetPath = await _resolveAssetPath(nextTrack);
+    if (assetPath == _currentAssetPath || assetPath == _preloadedAssetPath) {
+      return;
+    }
+    try {
+      await preloadPlayer.stop();
+      await preloadPlayer.setSourceAsset(assetPath);
+      _preloadedAssetPath = assetPath;
+    } catch (_) {
+      _preloadedAssetPath = null;
+    }
+  }
+
+  static BgmTrack? _likelyNextTrack(BgmTrack track) {
+    switch (track) {
+      case BgmTrack.dashboard:
+        return BgmTrack.chat;
+      case BgmTrack.chat:
+        return BgmTrack.task;
+      case BgmTrack.task:
+        return BgmTrack.focusStart;
+      case BgmTrack.focusStart:
+      case BgmTrack.focus:
+      case BgmTrack.focusDeep:
+        return BgmTrack.achievement;
+      case BgmTrack.achievement:
+        return BgmTrack.community;
+      case BgmTrack.community:
+        return BgmTrack.dashboard;
+      case BgmTrack.plan:
+        return BgmTrack.task;
+      case BgmTrack.calendar:
+        return BgmTrack.task;
+      case BgmTrack.galaxy:
+        return BgmTrack.insights;
+      case BgmTrack.insights:
+        return BgmTrack.plan;
+      case BgmTrack.tools:
+        return BgmTrack.focusStart;
+      case BgmTrack.profile:
+        return BgmTrack.dashboard;
+      case BgmTrack.thinking:
+        return BgmTrack.chat;
+      case BgmTrack.celebration:
+      case BgmTrack.visualUnlock:
+        return BgmTrack.dashboard;
+    }
   }
 
   static Future<double> _targetVolume(BgmTrack track) async =>
@@ -477,6 +564,23 @@ class BgmService {
       case BgmPriority.route:
       case null:
         return const Duration(milliseconds: 560);
+    }
+  }
+}
+
+class _BgmLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        unawaited(BgmService.pause());
+        return;
+      case AppLifecycleState.resumed:
+        unawaited(BgmService.resume());
+        return;
     }
   }
 }

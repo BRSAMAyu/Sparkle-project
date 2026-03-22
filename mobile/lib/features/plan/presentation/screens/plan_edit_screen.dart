@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 计划编辑屏幕 - 占位页面
@@ -18,14 +21,21 @@ class PlanEditScreen extends StatelessWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
+            context.pop();
+          },
         ),
       ),
       child: ContentConstraint(
         child: Center(
-          child: GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
+          child: SparkleStaggerItem(
+            index: 0,
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.construction, size: 80, color: DS.brandPrimary),
@@ -47,9 +57,17 @@ class PlanEditScreen extends StatelessWidget {
                 const SizedBox(height: DS.xl),
                 SparkleButton.primary(
                   label: l10n.back,
-                  onPressed: () => context.pop(),
+                  onPressed: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                      ),
+                    );
+                    context.pop();
+                  },
                 ),
               ],
+            ),
             ),
           ),
         ),

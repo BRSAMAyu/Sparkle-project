@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
@@ -268,74 +269,89 @@ class _AchievementShareBottomSheetState
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Handle bar
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: DS.neutral300,
-                    borderRadius: BorderRadius.circular(4),
+                SparkleStaggerItem(
+                  index: 0,
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: DS.neutral300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ),
                 const SizedBox(height: DS.md),
 
                 // Title
-                Text(
-                  l10n.shareOptionsTitle,
-                  style: Theme.of(context).textTheme.titleLarge,
+                SparkleStaggerItem(
+                  index: 1,
+                  child: Text(
+                    l10n.shareOptionsTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
                 const SizedBox(height: DS.md),
 
                 // Template Selector
                 if (_templates.isNotEmpty) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.shareTemplateTitle,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.textSecondary,
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        l10n.shareTemplateTitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightMedium,
+                          color: DS.textSecondary,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: DS.sm),
-                  ShareTemplateSelector(
-                    templates: _templates,
-                    selectedId: _selectedTemplateId,
-                    onSelected: _onTemplateSelected,
+                  SparkleStaggerItem(
+                    index: 3,
+                    child: ShareTemplateSelector(
+                      templates: _templates,
+                      selectedId: _selectedTemplateId,
+                      onSelected: _onTemplateSelected,
+                    ),
                   ),
                   const SizedBox(height: DS.md),
                 ],
 
                 // Privacy Settings Toggle
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _showPrivacySettings = !_showPrivacySettings;
-                    });
-                  },
-                  borderRadius: DS.borderRadius8,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: DS.sm),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _showPrivacySettings
-                              ? Icons.expand_less
-                              : Icons.expand_more,
-                          color: DS.textSecondary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: DS.xs),
-                        Text(
-                          l10n.sharePrivacyTitle,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            fontWeight: DS.fontWeightMedium,
+                SparkleStaggerItem(
+                  index: 4,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showPrivacySettings = !_showPrivacySettings;
+                      });
+                    },
+                    borderRadius: DS.borderRadius8,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: DS.sm),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _showPrivacySettings
+                                ? Icons.expand_less
+                                : Icons.expand_more,
                             color: DS.textSecondary,
+                            size: 20,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: DS.xs),
+                          Text(
+                            l10n.sharePrivacyTitle,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightMedium,
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -350,7 +366,10 @@ class _AchievementShareBottomSheetState
                 const SizedBox(height: DS.md),
 
                 // Preview
-                _buildPreview(),
+                SparkleStaggerItem(
+                  index: 5,
+                  child: _buildPreview(),
+                ),
                 const SizedBox(height: DS.lg),
 
                 // Share options

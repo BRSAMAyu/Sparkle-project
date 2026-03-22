@@ -54,13 +54,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: DS.motionDuration(SparkleMotionToken.standard),
     );
 
     _slideAnimation = Tween<Offset>(
@@ -70,6 +71,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     unawaited(_controller.forward());
@@ -253,11 +257,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: GestureDetector(
-          onLongPress: () => _showContextMenu(context, isMe),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: Row(
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: GestureDetector(
+            onLongPress: () => _showContextMenu(context, isMe),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+              child: Row(
               mainAxisAlignment:
                   isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -319,6 +326,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   _buildAvatar(widget.message.sender),
                 ],
               ],
+              ),
             ),
           ),
         ),

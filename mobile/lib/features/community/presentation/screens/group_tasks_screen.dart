@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -30,7 +33,10 @@ class GroupTasksScreen extends ConsumerWidget {
       ),
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
-        onPressed: () => _showCreateTaskDialog(context, ref),
+        onPressed: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+          _showCreateTaskDialog(context, ref);
+        },
       ),
       child: tasksState.when(
         data: (tasks) {
@@ -61,44 +67,70 @@ class GroupTasksScreen extends ConsumerWidget {
                 children: [
                   if (inProgress.isNotEmpty) ...[
                     _sectionHeader('进行中', DS.brandPrimary),
-                    ...inProgress.map(
-                      (t) => _TaskCard(
-                        task: t,
-                        groupId: groupId,
-                        onComplete: () async {
-                          try {
-                            await ref
-                                .read(communityRepositoryProvider)
-                                .completeTask(t.id);
-                            ref.invalidate(groupTasksProvider(groupId));
-                            if (context.mounted) {
-                              AppFeedback.success(context, '任务已完成！');
+                    ...inProgress.indexed.map(
+                      (entry) => SparkleStaggerItem(
+                        index: entry.$1,
+                        child: _TaskCard(
+                          task: entry.$2,
+                          groupId: groupId,
+                          onComplete: () async {
+                            try {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.success,
+                                ),
+                              );
+                              await ref
+                                  .read(communityRepositoryProvider)
+                                  .completeTask(entry.$2.id);
+                              ref.invalidate(groupTasksProvider(groupId));
+                              if (context.mounted) {
+                                AppFeedback.success(context, '任务已完成！');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                AppFeedback.error(context, '操作失败: $e');
+                              }
                             }
-                          } catch (e) {
-                            if (context.mounted) {
-                              AppFeedback.error(context, '操作失败: $e');
-                            }
-                          }
-                        },
+                          },
+                        ),
                       ),
                     ),
                   ],
                   if (unclaimed.isNotEmpty) ...[
                     _sectionHeader('待认领', DS.neutral500),
-                    ...unclaimed.map(
-                      (t) => _TaskCard(
-                        task: t,
-                        groupId: groupId,
-                        onClaim: () => ref
-                            .read(groupTasksProvider(groupId).notifier)
-                            .claimTask(t.id),
+                    ...unclaimed.indexed.map(
+                      (entry) => SparkleStaggerItem(
+                        index: entry.$1 + inProgress.length,
+                        child: _TaskCard(
+                          task: entry.$2,
+                          groupId: groupId,
+                          onClaim: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.confirm,
+                              ),
+                            );
+                            ref
+                                .read(groupTasksProvider(groupId).notifier)
+                                .claimTask(entry.$2.id);
+                          },
+                        ),
                       ),
                     ),
                   ],
                   if (completed.isNotEmpty) ...[
                     _sectionHeader('已完成', DS.success),
-                    ...completed
-                        .map((t) => _TaskCard(task: t, groupId: groupId)),
+                    ...completed.indexed
+                        .map(
+                          (entry) => SparkleStaggerItem(
+                            index: entry.$1 + inProgress.length + unclaimed.length,
+                            child: _TaskCard(
+                              task: entry.$2,
+                              groupId: groupId,
+                            ),
+                          ),
+                        ),
                   ],
                 ],
               ),

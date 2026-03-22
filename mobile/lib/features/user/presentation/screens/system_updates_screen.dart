@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
@@ -101,10 +104,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
               ),
             )
           else
-            ...filtered.map(
-              (item) => Padding(
+            ...filtered.asMap().entries.map(
+              (entry) => SparkleStaggerItem(
+                index: entry.key,
+                child: Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing12),
-                child: _buildUpdateCard(item),
+                child: _buildUpdateCard(entry.value),
+              ),
               ),
             ),
         ],
@@ -166,7 +172,14 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
                     labelStyle: TextStyle(
                       color: selected == item ? DS.primaryBase : DS.neutral600,
                     ),
-                    onSelected: (_) => onSelected(item),
+                    onSelected: (_) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      onSelected(item);
+                    },
                   ),
                 )
                 .toList(),

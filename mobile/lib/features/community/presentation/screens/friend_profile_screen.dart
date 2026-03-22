@@ -103,139 +103,166 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
       padding: const EdgeInsets.all(DS.spacing24),
       child: Column(
         children: [
-          const SizedBox(height: DS.spacing16),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: DS.brandPrimaryConst, width: 3),
-              boxShadow: DS.shadowMd,
-            ),
-            child: SparkleAvatar(
-              radius: 48,
-              url: user.avatarUrl,
-              fallbackText: user.displayName,
-            ),
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            user.displayName,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: DS.xs),
-          Text(
-            '@${user.username}',
-            style:
-                theme.textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
-          ),
-          const SizedBox(height: DS.spacing16),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.xs,
-            ),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: DS.brandPrimary.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          SparkleStaggerItem(
+            index: 0,
+            motionToken: SparkleMotionToken.scene,
+            child: Column(
               children: [
-                Icon(
-                  Icons.local_fire_department,
-                  size: 16,
-                  color: DS.brandPrimaryConst,
-                ),
-                const SizedBox(width: DS.xs),
-                Text(
-                  'Flame Lv.${user.flameLevel}',
-                  style: TextStyle(
-                    color: DS.brandPrimaryConst,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                const SizedBox(height: DS.spacing16),
+                SparkleAttentionPulse(
+                  active: true,
+                  glowColor: DS.brandPrimary,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: DS.brandPrimaryConst, width: 3),
+                      boxShadow: DS.shadowMd,
+                    ),
+                    child: SparkleAvatar(
+                      radius: 48,
+                      url: user.avatarUrl,
+                      fallbackText: user.displayName,
+                    ),
                   ),
+                ),
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  user.displayName,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: DS.xs),
+                Text(
+                  '@${user.username}',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: DS.textSecondary),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: DS.spacing16),
+          SparkleStaggerItem(
+            index: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.xs,
+              ),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: DS.brandPrimary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department,
+                    size: 16,
+                    color: DS.brandPrimaryConst,
+                  ),
+                  const SizedBox(width: DS.xs),
+                  Text(
+                    'Flame Lv.${user.flameLevel}',
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: DS.spacing24),
           if (accountability.isNotEmpty) ...[
-            _SimplePanel(
-              title: '伙伴目标',
-              icon: Icons.flag_outlined,
-              body: Text(
-                (accountability['partner_goal'] ??
-                        accountability['initiator_goal'] ??
-                        '还没有同步目标')
-                    .toString(),
-                style: DS.bodyMedium,
+            SparkleStaggerItem(
+              index: 2,
+              child: _SimplePanel(
+                title: '伙伴目标',
+                icon: Icons.flag_outlined,
+                body: Text(
+                  (accountability['partner_goal'] ??
+                          accountability['initiator_goal'] ??
+                          '还没有同步目标')
+                      .toString(),
+                  style: DS.bodyMedium,
+                ),
               ),
             ),
             const SizedBox(height: DS.spacing16),
           ],
           if (relationshipSummary.isNotEmpty || achievementsSummary.isNotEmpty)
-            _RelationshipPanel(
-              relationshipSummary: relationshipSummary,
-              achievementsSummary: achievementsSummary,
-              leaderboardSummary: leaderboardSummary,
-              recentShares: profile.recentShares,
-              hasAccountability: accountability.isNotEmpty,
+            SparkleStaggerItem(
+              index: 3,
+              child: _RelationshipPanel(
+                relationshipSummary: relationshipSummary,
+                achievementsSummary: achievementsSummary,
+                leaderboardSummary: leaderboardSummary,
+                recentShares: profile.recentShares,
+                hasAccountability: accountability.isNotEmpty,
+              ),
             ),
           const SizedBox(height: DS.spacing24),
-          Row(
-            children: [
-              Expanded(
-                child: CustomButton.primary(
-                  text: '聊天',
-                  icon: Icons.chat_bubble_outline,
-                  onPressed: () {
-                    context.push(
-                      '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              Expanded(
-                child: CustomButton.secondary(
-                  text: canOpenDashboard ? '进入工作台' : '去看成就',
-                  icon: canOpenDashboard
-                      ? Icons.handshake_outlined
-                      : Icons.emoji_events_outlined,
-                  onPressed: () {
-                    if (canOpenDashboard) {
+          SparkleStaggerItem(
+            index: 4,
+            child: Row(
+              children: [
+                Expanded(
+                  child: CustomButton.primary(
+                    text: '聊天',
+                    icon: Icons.chat_bubble_outline,
+                    onPressed: () {
                       context.push(
-                        CommunityRoutes.accountabilityDetail
-                            .replaceFirst(':id', partnershipId),
+                        '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
                       );
-                    } else {
-                      context.push('/achievements');
-                    }
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: CustomButton.secondary(
+                    text: canOpenDashboard ? '进入工作台' : '去看成就',
+                    icon: canOpenDashboard
+                        ? Icons.handshake_outlined
+                        : Icons.emoji_events_outlined,
+                    onPressed: () {
+                      if (canOpenDashboard) {
+                        context.push(
+                          CommunityRoutes.accountabilityDetail
+                              .replaceFirst(':id', partnershipId),
+                        );
+                      } else {
+                        context.push('/achievements');
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: DS.md),
-          SizedBox(
-            width: double.infinity,
-            child: CustomButton.secondary(
-              text: canInviteAccountability ? '发起责任伙伴' : '进入伙伴工作台',
-              icon: Icons.handshake_outlined,
-              onPressed: () {
-                if (canInviteAccountability) {
-                  _showAccountabilityInvite(context, user);
-                  return;
-                }
-                final id = partnershipId;
-                if (id == null) return;
-                context.push(
-                  CommunityRoutes.accountabilityDetail.replaceFirst(':id', id),
-                );
-              },
+          SparkleStaggerItem(
+            index: 5,
+            child: SizedBox(
+              width: double.infinity,
+              child: CustomButton.secondary(
+                text: canInviteAccountability ? '发起责任伙伴' : '进入伙伴工作台',
+                icon: Icons.handshake_outlined,
+                onPressed: () {
+                  if (canInviteAccountability) {
+                    _showAccountabilityInvite(context, user);
+                    return;
+                  }
+                  final id = partnershipId;
+                  if (id == null) return;
+                  context.push(
+                    CommunityRoutes.accountabilityDetail.replaceFirst(':id', id),
+                  );
+                },
+              ),
             ),
           ),
         ],

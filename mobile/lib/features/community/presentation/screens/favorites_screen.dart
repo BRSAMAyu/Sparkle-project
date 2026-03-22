@@ -99,7 +99,10 @@ class FavoritesScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(DS.spacing16),
               itemCount: favorites.length,
               separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
-              itemBuilder: (ctx, i) => _FavoriteTile(favorite: favorites[i]),
+              itemBuilder: (ctx, i) => SparkleStaggerItem(
+                index: i,
+                child: _FavoriteTile(favorite: favorites[i]),
+              ),
             ),
           );
         },

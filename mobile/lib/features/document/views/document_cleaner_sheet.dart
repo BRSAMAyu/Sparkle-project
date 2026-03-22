@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/document/controllers/document_controller.dart';
 import 'package:sparkle/features/document/models/document_cleaning_model.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
@@ -51,6 +53,9 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
   }
 
   Future<void> _pickFile() async {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+    );
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'docx', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'gif'],
@@ -63,6 +68,9 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
     setState(() {
       _selectedFile = File(result.files.single.path!);
     });
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
   }
 
   Future<void> _startCleaning() async {
@@ -71,6 +79,9 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
       return;
     }
 
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+    );
     await ref.read(documentControllerProvider.notifier).startCleaning(
           _selectedFile!,
           enableOcr: _enableOcr,
@@ -89,6 +100,9 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
     if (!mounted) {
       return;
     }
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
     AppFeedback.success(context, '清洗结果已复制');
   }
 

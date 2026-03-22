@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -36,68 +38,87 @@ class SharePrivacySettings extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            children: [
-              Icon(
-                Icons.privacy_tip_outlined,
-                size: 20,
-                color: DS.textSecondary,
-              ),
-              const SizedBox(width: DS.sm),
-              Text(
-                l10n.sharePrivacyTitle,
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
-                  fontWeight: DS.fontWeightSemiBold,
-                  color: DS.textPrimary,
+          SparkleStaggerItem(
+            index: 0,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.privacy_tip_outlined,
+                  size: 20,
+                  color: DS.textSecondary,
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.sm),
+                Text(
+                  l10n.sharePrivacyTitle,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeBase,
+                    fontWeight: DS.fontWeightSemiBold,
+                    color: DS.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: DS.md),
 
           // Display Name Input
-          _buildDisplayNameField(context, l10n),
+          SparkleStaggerItem(
+            index: 1,
+            child: _buildDisplayNameField(context, l10n),
+          ),
           const SizedBox(height: DS.md),
 
           // Toggle Options
-          _buildToggleOption(
-            context: context,
-            title: l10n.sharePrivacyShowAvatar,
-            subtitle: l10n.sharePrivacyShowAvatarDesc,
-            icon: Icons.account_circle_outlined,
-            value: settings.showAvatar,
-            onChanged: (value) => _updateSettings(showAvatar: value),
+          SparkleStaggerItem(
+            index: 2,
+            child: _buildToggleOption(
+              context: context,
+              title: l10n.sharePrivacyShowAvatar,
+              subtitle: l10n.sharePrivacyShowAvatarDesc,
+              icon: Icons.account_circle_outlined,
+              value: settings.showAvatar,
+              onChanged: (value) => _updateSettings(showAvatar: value),
+            ),
           ),
           const SizedBox(height: DS.sm),
 
-          _buildToggleOption(
-            context: context,
-            title: l10n.sharePrivacyShowDate,
-            subtitle: l10n.sharePrivacyShowDateDesc,
-            icon: Icons.calendar_today_outlined,
-            value: settings.showUnlockDate,
-            onChanged: (value) => _updateSettings(showUnlockDate: value),
+          SparkleStaggerItem(
+            index: 3,
+            child: _buildToggleOption(
+              context: context,
+              title: l10n.sharePrivacyShowDate,
+              subtitle: l10n.sharePrivacyShowDateDesc,
+              icon: Icons.calendar_today_outlined,
+              value: settings.showUnlockDate,
+              onChanged: (value) => _updateSettings(showUnlockDate: value),
+            ),
           ),
           const SizedBox(height: DS.sm),
 
-          _buildToggleOption(
-            context: context,
-            title: l10n.sharePrivacyShowStats,
-            subtitle: l10n.sharePrivacyShowStatsDesc,
-            icon: Icons.bar_chart_outlined,
-            value: settings.showProgressStats,
-            onChanged: (value) => _updateSettings(showProgressStats: value),
+          SparkleStaggerItem(
+            index: 4,
+            child: _buildToggleOption(
+              context: context,
+              title: l10n.sharePrivacyShowStats,
+              subtitle: l10n.sharePrivacyShowStatsDesc,
+              icon: Icons.bar_chart_outlined,
+              value: settings.showProgressStats,
+              onChanged: (value) => _updateSettings(showProgressStats: value),
+            ),
           ),
           const SizedBox(height: DS.sm),
 
-          _buildToggleOption(
-            context: context,
-            title: l10n.sharePrivacyShowFirstBadge,
-            subtitle: l10n.sharePrivacyShowFirstBadgeDesc,
-            icon: Icons.emoji_events_outlined,
-            value: settings.showFirstUnlockerBadge,
-            onChanged: (value) => _updateSettings(showFirstUnlockerBadge: value),
+          SparkleStaggerItem(
+            index: 5,
+            child: _buildToggleOption(
+              context: context,
+              title: l10n.sharePrivacyShowFirstBadge,
+              subtitle: l10n.sharePrivacyShowFirstBadgeDesc,
+              icon: Icons.emoji_events_outlined,
+              value: settings.showFirstUnlockerBadge,
+              onChanged: (value) =>
+                  _updateSettings(showFirstUnlockerBadge: value),
+            ),
           ),
         ],
       ),
@@ -147,6 +168,9 @@ class SharePrivacySettings extends StatelessWidget {
                 ? IconButton(
                     icon: Icon(Icons.clear, size: 18, color: DS.textTertiary),
                     onPressed: () {
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                      );
                       _nameController.clear();
                       _updateSettings(displayName: null);
                     },
@@ -238,7 +262,12 @@ class SharePrivacySettings extends StatelessWidget {
             scale: 0.85,
             child: Switch(
               value: value,
-              onChanged: onChanged,
+              onChanged: (next) {
+                SensoryFeedbackService.emit(
+                  SensoryFeedbackEvent.selection,
+                );
+                onChanged(next);
+              },
               activeTrackColor: DS.brandPrimary.withValues(alpha: 0.3),
             ),
           ),

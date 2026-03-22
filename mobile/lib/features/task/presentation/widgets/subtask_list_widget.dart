@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 
@@ -91,8 +94,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
       );
 
   Widget _buildQuickAddInput() => Consumer(
-        builder: (context, ref, child) {
-          return Row(
+        builder: (context, ref, child) => Row(
             children: [
               Expanded(
                 child: TextField(
@@ -135,14 +137,16 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
                 ),
               ),
             ],
-          );
-        },
+          ),
       );
 
   void _addSubtask(WidgetRef ref, String title) {
-    ref
-        .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
-        .addSubtask(SubTaskCreate(title: title));
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    unawaited(
+      ref
+          .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+          .addSubtask(SubTaskCreate(title: title)),
+    );
     // Also call the callback if provided for backwards compatibility
     widget.onSubtaskAdd?.call(widget.parentTaskId, title);
   }
@@ -177,9 +181,14 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
                     SparkleButton(
                       label: context.l10n.retry,
                       variant: ButtonVariant.ghost,
-                      onPressed: () => ref
-                          .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
-                          .refresh(),
+                      onPressed: () => unawaited(
+                        ref
+                            .read(
+                              subtaskNotifierProvider(widget.parentTaskId)
+                                  .notifier,
+                            )
+                            .refresh(),
+                      ),
                     ),
                   ],
                 ),
@@ -197,14 +206,43 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
             itemCount: state.subtasks.length,
             itemBuilder: (context, index) {
               final subtask = state.subtasks[index];
-              return SubtaskItemWidget(
-                subtask: subtask,
-                onToggle: () => ref
-                    .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
-                    .toggleSubtask(subtask),
-                onDelete: () => ref
-                    .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
-                    .deleteSubtask(subtask.id),
+              return SparkleStaggerItem(
+                index: index,
+                child: SubtaskItemWidget(
+                  subtask: subtask,
+                  onToggle: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        subtask.isCompleted
+                            ? SensoryFeedbackEvent.selection
+                            : SensoryFeedbackEvent.success,
+                      ),
+                    );
+                    unawaited(
+                      ref
+                          .read(
+                            subtaskNotifierProvider(widget.parentTaskId)
+                                .notifier,
+                          )
+                          .toggleSubtask(subtask),
+                    );
+                  },
+                  onDelete: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.warning,
+                      ),
+                    );
+                    unawaited(
+                      ref
+                          .read(
+                            subtaskNotifierProvider(widget.parentTaskId)
+                                .notifier,
+                          )
+                          .deleteSubtask(subtask.id),
+                    );
+                  },
+                ),
               );
             },
           );

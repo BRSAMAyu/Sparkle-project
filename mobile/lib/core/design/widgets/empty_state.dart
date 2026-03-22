@@ -212,47 +212,58 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.spacing32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 图标
-              if (showIcon) _buildIcon(),
-              if (showIcon) const SizedBox(height: DS.spacing24),
-              // 标题
-              Text(
-                title ?? _getDefaultTitle(context),
-                style: TextStyle(
-                  fontSize: DS.fontSize2xl,
-                  fontWeight: DS.fontWeightBold,
-                  color: context.colors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.spacing12),
-              // 描述
-              Text(
-                description ?? _getDefaultDescription(context),
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
-                  color: DS.neutral600,
-                  height: DS.lineHeightNormal,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              // 操作按钮
-              if (customAction != null ||
-                  ((actionText ?? _getDefaultActionText(context)) != null &&
-                      onAction != null)) ...[
-                const SizedBox(height: DS.spacing32),
-                customAction ??
-                    CustomButton.primary(
-                      text: actionText ?? _getDefaultActionText(context)!,
-                      onPressed: onAction,
-                      icon: _getActionIcon(),
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: title ?? _getDefaultTitle(context),
+            value: description ?? _getDefaultDescription(context),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showIcon)
+                    SparkleAttentionPulse(
+                      active: !context.reduceMotion,
+                      scaleRange: 0.014,
+                      glowColor: _getIconColor(),
+                      child: _buildIcon(),
                     ),
-              ],
-            ],
+                  if (showIcon) const SizedBox(height: DS.spacing24),
+                  Text(
+                    title ?? _getDefaultTitle(context),
+                    style: TextStyle(
+                      fontSize: DS.fontSize2xl,
+                      fontWeight: DS.fontWeightBold,
+                      color: context.colors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Text(
+                    description ?? _getDefaultDescription(context),
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      color: context.colors.textSecondary,
+                      height: DS.lineHeightNormal,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (customAction != null ||
+                      ((actionText ?? _getDefaultActionText(context)) != null &&
+                          onAction != null)) ...[
+                    const SizedBox(height: DS.spacing32),
+                    customAction ??
+                        CustomButton.primary(
+                          text: actionText ?? _getDefaultActionText(context)!,
+                          onPressed: onAction,
+                          icon: _getActionIcon(),
+                        ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -311,42 +322,46 @@ class CompactEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Container(
-                width: 64.0,
-                height: 64.0,
-                decoration: BoxDecoration(
-                  color: DS.neutral100,
-                  shape: BoxShape.circle,
+        child: Semantics(
+          container: true,
+          label: message,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Container(
+                  width: 64.0,
+                  height: 64.0,
+                  decoration: BoxDecoration(
+                    color: DS.neutral100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: DS.iconSizeLg,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: DS.iconSizeLg,
-                  color: DS.neutral400,
+                const SizedBox(height: DS.spacing16),
+              ],
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: DS.fontSizeBase,
+                  color: context.colors.textSecondary,
                 ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: DS.spacing16),
+              if (onAction != null && actionText != null) ...[
+                const SizedBox(height: DS.spacing16),
+                CustomButton.text(
+                  text: actionText!,
+                  onPressed: onAction,
+                  size: CustomButtonSize.small,
+                ),
+              ],
             ],
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                color: DS.neutral600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (onAction != null && actionText != null) ...[
-              const SizedBox(height: DS.spacing16),
-              CustomButton.text(
-                text: actionText!,
-                onPressed: onAction,
-                size: CustomButtonSize.small,
-              ),
-            ],
-          ],
+          ),
         ),
       );
 }

@@ -31,9 +31,11 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildWindowSelector(),
+              SparkleStaggerItem(index: 0, child: _buildWindowSelector()),
               const SizedBox(height: DS.spacing16),
-              capacityAsync.when(
+              SparkleStaggerItem(
+                index: 1,
+                child: capacityAsync.when(
                 data: _buildCapacityPanel,
                 loading: () => const GraphiteCardSurface(
                   child: LinearProgressIndicator(minHeight: 3),
@@ -43,8 +45,11 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   '$error',
                 ),
               ),
+              ),
               const SizedBox(height: DS.spacing16),
-              alertsAsync.when(
+              SparkleStaggerItem(
+                index: 2,
+                child: alertsAsync.when(
                 data: _buildAlertsPanel,
                 loading: () => const GraphiteCardSurface(
                   child: LinearProgressIndicator(minHeight: 3),
@@ -54,8 +59,11 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   '$error',
                 ),
               ),
+              ),
               const SizedBox(height: DS.spacing16),
-              telemetryAsync.when(
+              SparkleStaggerItem(
+                index: 3,
+                child: telemetryAsync.when(
                 data: _buildTelemetryPanel,
                 loading: () => const GraphiteCardSurface(
                   child: LinearProgressIndicator(minHeight: 3),
@@ -64,6 +72,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   '客户端观测加载失败',
                   '$error',
                 ),
+              ),
               ),
             ],
           ),

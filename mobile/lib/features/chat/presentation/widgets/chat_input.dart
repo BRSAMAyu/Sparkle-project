@@ -45,10 +45,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final FocusNode _focusNode = FocusNode();
   final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
+  bool _isAttachmentBursting = false;
   bool _isButtonPressed = false;
   bool _isFocusChanging = false;
 
   void _showAttachmentSheet() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+    _pulseAttachmentButton();
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -62,7 +65,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  void _pulseAttachmentButton() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isAttachmentBursting = true;
+    });
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isAttachmentBursting = false;
+      });
+    });
+  }
+
   void _openFileUpload() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -81,6 +102,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   void _openDocumentCleaner() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -132,8 +154,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
-    _controller.removeListener(_handleTextChange);
-    _controller.dispose();
+    _controller
+      ..removeListener(_handleTextChange)
+      ..dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();
     super.dispose();
@@ -150,33 +173,30 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       _controller.clear();
       widget.onCancelQuote?.call();
 
-      if (!_isFocusChanging) {
-        _isFocusChanging = true;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && _focusNode.canRequestFocus) {
-            _focusNode.requestFocus();
-          }
-          _isFocusChanging = false;
-        });
-      }
+      _restoreFocus();
       return;
     }
 
     setState(() => _isSending = true);
     try {
       _controller.clear();
-      if (!_isFocusChanging) {
-        _isFocusChanging = true;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && _focusNode.canRequestFocus) {
-            _focusNode.requestFocus();
-          }
-          _isFocusChanging = false;
-        });
-      }
+      _restoreFocus();
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  void _restoreFocus() {
+    if (_isFocusChanging) {
+      return;
+    }
+    _isFocusChanging = true;
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted && _focusNode.canRequestFocus) {
+        _focusNode.requestFocus();
+      }
+      _isFocusChanging = false;
+    });
   }
 
   @override
@@ -209,17 +229,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     child: SizedBox(
                       width: attachmentVisualSize,
                       height: attachmentVisualSize,
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.add_circle_outline_rounded,
-                          color: DS.textSecondary,
-                        ),
-                        iconSize: attachmentIconSize,
-                        onPressed: widget.enabled ? _showAttachmentSheet : null,
-                        padding: EdgeInsets.all(attachmentPadding),
-                        constraints: BoxConstraints.tightFor(
-                          width: attachmentVisualSize,
-                          height: attachmentVisualSize,
+                      child: AnimatedScale(
+                        duration: DS.durationFast,
+                        curve: Curves.easeOutBack,
+                        scale: _isAttachmentBursting ? 1.08 : 1,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: DS.textSecondary,
+                          ),
+                          iconSize: attachmentIconSize,
+                          onPressed: widget.enabled ? _showAttachmentSheet : null,
+                          padding: EdgeInsets.all(attachmentPadding),
+                          constraints: BoxConstraints.tightFor(
+                            width: attachmentVisualSize,
+                            height: attachmentVisualSize,
+                          ),
                         ),
                       ),
                     ),
@@ -305,8 +330,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
-  Widget _buildSendButton(bool reduceMotion) {
-    return ValueListenableBuilder<bool>(
+  Widget _buildSendButton(bool reduceMotion) => ValueListenableBuilder<bool>(
       valueListenable: _textNotEmpty,
       builder: (context, hasText, child) {
         final canSend = widget.enabled && !_isSending && hasText;
@@ -370,7 +394,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         );
       },
     );
-  }
 
   Widget _buildQuotePreview(bool isDark) => Container(
         width: double.infinity,

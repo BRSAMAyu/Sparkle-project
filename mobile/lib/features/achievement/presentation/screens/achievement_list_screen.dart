@@ -643,6 +643,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
                   final achievement = filteredAchievements[index];
                   return AnimatedAchievementCard(
                     index: index,
+                    rarity: achievement.achievement.rarity,
                     child: AchievementGridCard(
                       achievement: achievement,
                       onTap: () => _openAchievementDetail(achievement),
@@ -670,6 +671,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               ),
               child: AnimatedAchievementCard(
                 index: index,
+                rarity: achievement.achievement.rarity,
                 child: AchievementListCard(
                   achievement: achievement,
                   onTap: () => _openAchievementDetail(achievement),

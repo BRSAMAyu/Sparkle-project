@@ -22,7 +22,9 @@ class LearningPathProgressBar extends StatelessWidget {
         progress.nodes.where((n) => n.status == 'mastered').length;
     final totalCount = progress.nodes.length;
 
-    return Column(
+    return SparkleStaggerItem(
+      index: 0,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showLabel) ...[
@@ -48,16 +50,21 @@ class LearningPathProgressBar extends StatelessWidget {
           ),
           const SizedBox(height: DS.xs),
         ],
-        Container(
-          height: 32,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: DS.brandPrimary10),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: Row(
-              children: _buildSegments(),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: 1),
+          duration: DS.motionDuration(SparkleMotionToken.hero),
+          curve: DS.motionCurve(SparkleMotionToken.hero),
+          builder: (context, reveal, _) => Container(
+            height: 32,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: DS.brandPrimary10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Row(
+                children: _buildSegments(reveal),
+              ),
             ),
           ),
         ),
@@ -72,10 +79,11 @@ class LearningPathProgressBar extends StatelessWidget {
           ],
         ),
       ],
+      ),
     );
   }
 
-  List<Widget> _buildSegments() {
+  List<Widget> _buildSegments(double reveal) {
     final segments = <Widget>[];
     final totalNodes = progress.nodes.length;
 
@@ -93,7 +101,7 @@ class LearningPathProgressBar extends StatelessWidget {
                 // TODO: Navigate to galaxy node detail
               },
               child: ColoredBox(
-                color: color,
+                color: color.withValues(alpha: 0.35 + (0.65 * reveal)),
                 child: node.isTarget
                     ? Center(
                         child: Icon(

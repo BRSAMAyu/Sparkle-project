@@ -109,16 +109,22 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           controller: _scrollController,
           padding: const EdgeInsets.all(DS.spacing16),
           children: [
-            _buildOnboardingBanner(context, l10n, completed),
-            _buildQuickAccessCard(context),
+            SparkleStaggerItem(
+              index: 0,
+              child: _buildOnboardingBanner(context, l10n, completed),
+            ),
+            SparkleStaggerItem(index: 1, child: _buildQuickAccessCard(context)),
             const SizedBox(height: DS.spacing16),
-            _buildAsyncSection(
+            SparkleStaggerItem(
+              index: 2,
+              child: _buildAsyncSection(
               ref,
               context,
               title: 'Context Snapshot',
               asyncValue: profileContextAsync,
               builder: (data) => _buildContextSummaryRows(l10n, data),
               onRetry: () => ref.invalidate(profileContextProvider),
+            ),
             ),
             const SizedBox(height: DS.spacing24),
             _sectionTitle(l10n.personaL1Title),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -48,6 +49,9 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
           SparkleIconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               unawaited(ref.read(generationJobsProvider.notifier).fetchJobs());
             },
             variant: ButtonVariant.ghost,
@@ -68,7 +72,10 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
                       final job = jobs[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing16),
-                        child: _JobCard(job: job),
+                        child: SparkleStaggerItem(
+                          index: index,
+                          child: _JobCard(job: job),
+                        ),
                       );
                     },
                   ),

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -79,6 +81,7 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
   bool _reduceMotion = false;
   bool _particlesEnabled = false;
   int _registeredParticleCount = 0;
+  bool _didEmitCelebration = false;
 
   @override
   void initState() {
@@ -154,6 +157,7 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
 
     // Glow for newly unlocked
     if (widget.showGlow && _isActuallyNewlyUnlocked) {
+      _emitRarityCelebrationOnce();
       _glowController.repeat(reverse: true);
     }
 
@@ -280,6 +284,9 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
   @override
   void didUpdateWidget(RarityVisualWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isNewlyUnlocked && widget.isNewlyUnlocked) {
+      _didEmitCelebration = false;
+    }
     if (widget.rarity != oldWidget.rarity) {
       _borderRotationController.duration = _getBorderRotationDuration();
     }
@@ -295,6 +302,18 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
       _updateParticleRegistration(force: true);
       _startAnimations();
     }
+  }
+
+  void _emitRarityCelebrationOnce() {
+    if (_didEmitCelebration || _reduceMotion) return;
+    _didEmitCelebration = true;
+    final event = switch (_getRarityLevel()) {
+      _RarityLevel.common => SensoryFeedbackEvent.achievementCommon,
+      _RarityLevel.rare => SensoryFeedbackEvent.achievementRare,
+      _RarityLevel.epic => SensoryFeedbackEvent.achievementEpic,
+      _RarityLevel.legendary => SensoryFeedbackEvent.achievementLegendary,
+    };
+    unawaited(SensoryFeedbackService.emit(event));
   }
 
   @override

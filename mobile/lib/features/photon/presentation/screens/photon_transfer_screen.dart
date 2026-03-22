@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
@@ -76,9 +77,11 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 ),
 
               // Current Balance Card
-              GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.accent,
-                child: Row(
+              SparkleStaggerItem(
+                index: 0,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.accent,
+                  child: Row(
                   children: [
                     Icon(
                       Icons.flash_on_rounded,
@@ -108,116 +111,153 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       ],
                     ),
                   ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 32),
 
               // Recipient ID
-              Text(
-                '接收人ID',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+              SparkleStaggerItem(
+                index: 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '接收人ID',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _recipientIdController,
-                decoration: const InputDecoration(
-                  hintText: '请输入用户ID',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _recipientIdController,
+                      decoration: const InputDecoration(
+                        hintText: '请输入用户ID',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入接收人ID';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '请输入接收人ID';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: DS.xl),
 
               // Amount
-              Text(
-                '转账数量',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+              SparkleStaggerItem(
+                index: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '转账数量',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: '请输入转账数量',
-                  prefixIcon: const Icon(Icons.flash_on_outlined),
-                  suffixIcon: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    size: 32,
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      // Show quick amount options
-                      _showAmountSelector(currentBalance);
-                    },
-                  ),
-                  border: const OutlineInputBorder(),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '请输入转账数量',
+                        prefixIcon: const Icon(Icons.flash_on_outlined),
+                        suffixIcon: SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 32,
+                          icon: const Icon(Icons.add_circle_outline),
+                          onPressed: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.sheetOpen,
+                              ),
+                            );
+                            _showAmountSelector(currentBalance);
+                          },
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '请输入转账数量';
+                        }
+                        final amount = int.tryParse(value);
+                        if (amount == null || amount <= 0) {
+                          return '请输入有效的数量';
+                        }
+                        if (amount > currentBalance) {
+                          return '余额不足';
+                        }
+                        if (amount > 10000) {
+                          return '单次转账不能超过10000光子';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '请输入转账数量';
-                  }
-                  final amount = int.tryParse(value);
-                  if (amount == null || amount <= 0) {
-                    return '请输入有效的数量';
-                  }
-                  if (amount > currentBalance) {
-                    return '余额不足';
-                  }
-                  if (amount > 10000) {
-                    return '单次转账不能超过10000光子';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: DS.xl),
 
               // Message (Optional)
-              Text(
-                '附言（可选）',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+              SparkleStaggerItem(
+                index: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '附言（可选）',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _messageController,
-                maxLines: 3,
-                maxLength: 200,
-                decoration: const InputDecoration(
-                  hintText: '说点什么...',
-                  border: OutlineInputBorder(),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _messageController,
+                      maxLines: 3,
+                      maxLength: 200,
+                      decoration: const InputDecoration(
+                        hintText: '说点什么...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
               const SizedBox(height: 32),
 
               // Transfer Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: SparkleButton(
-                  label: '确认转账',
-                  expand: true,
-                  onPressed: isGuestMode || _isTransferring
-                      ? null
-                      : () {
-                          if (_formKey.currentState!.validate()) {
-                            _confirmTransfer(currentBalance);
-                          }
-                        },
-                  loading: _isTransferring,
+              SparkleStaggerItem(
+                index: 4,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: SparkleButton(
+                    label: '确认转账',
+                    expand: true,
+                    onPressed: isGuestMode || _isTransferring
+                        ? null
+                        : () {
+                            if (_formKey.currentState!.validate()) {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.confirm,
+                                ),
+                              );
+                              _confirmTransfer(currentBalance);
+                            }
+                          },
+                    loading: _isTransferring,
+                  ),
                 ),
               ),
 
@@ -262,6 +302,11 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   label: Text('$amount'),
                   onPressed: isEnabled
                       ? () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
                           _amountController.text = amount.toString();
                           Navigator.of(context).pop();
                         }
@@ -309,11 +354,23 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
         actions: [
           SparkleButton.ghost(
             label: '取消',
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(
+                  SensoryFeedbackEvent.selection,
+                ),
+              );
+              Navigator.of(context).pop();
+            },
           ),
           SparkleButton(
             label: '确认',
             onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(
+                  SensoryFeedbackEvent.confirm,
+                ),
+              );
               Navigator.of(context).pop();
               unawaited(_performTransfer());
             },
@@ -339,6 +396,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
       );
 
       if (mounted) {
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+        );
         AppFeedback.success(context, '转账成功');
         // Refresh balance
         ref.read(photonBalanceProvider.notifier).refreshBalance();

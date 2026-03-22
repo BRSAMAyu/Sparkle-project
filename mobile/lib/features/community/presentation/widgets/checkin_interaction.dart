@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 责任伙伴打卡互动组件
 ///
@@ -110,7 +113,10 @@ class CheckinInteraction extends StatelessWidget {
 
   Widget _buildLikeButton(BuildContext context) {
     return InkWell(
-      onTap: onLike,
+      onTap: () {
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+        onLike?.call();
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -151,7 +157,10 @@ class CheckinInteraction extends StatelessWidget {
 
   Widget _buildEncourageButton(BuildContext context) {
     return InkWell(
-      onTap: () => _showEncourageDialog(context),
+      onTap: () {
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+        _showEncourageDialog(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

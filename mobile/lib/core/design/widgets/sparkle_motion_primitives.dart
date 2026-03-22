@@ -186,6 +186,158 @@ class SparkleStaggerGrid extends StatelessWidget {
       );
 }
 
+class SparkleStaggerWrap extends StatelessWidget {
+  const SparkleStaggerWrap({
+    required this.children,
+    super.key,
+    this.spacing = DS.spacing8,
+    this.runSpacing = DS.spacing8,
+    this.alignment = WrapAlignment.start,
+    this.crossAxisAlignment = WrapCrossAlignment.start,
+    this.axis = Axis.horizontal,
+    this.motionToken = SparkleMotionToken.standard,
+  });
+
+  final List<Widget> children;
+  final double spacing;
+  final double runSpacing;
+  final WrapAlignment alignment;
+  final WrapCrossAlignment crossAxisAlignment;
+  final Axis axis;
+  final SparkleMotionToken motionToken;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: spacing,
+        runSpacing: runSpacing,
+        alignment: alignment,
+        crossAxisAlignment: crossAxisAlignment,
+        children: children
+            .asMap()
+            .entries
+            .map(
+              (entry) => SparkleStaggerItem(
+                index: entry.key,
+                axis: axis,
+                motionToken: motionToken,
+                child: entry.value,
+              ),
+            )
+            .toList(growable: false),
+      );
+}
+
+class SparkleAttentionPulse extends StatefulWidget {
+  const SparkleAttentionPulse({
+    required this.child,
+    super.key,
+    this.active = true,
+    this.scaleRange = 0.018,
+    this.glowColor,
+    this.duration = const Duration(milliseconds: 1600),
+    this.padding = EdgeInsets.zero,
+  });
+
+  final Widget child;
+  final bool active;
+  final double scaleRange;
+  final Color? glowColor;
+  final Duration duration;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  State<SparkleAttentionPulse> createState() => _SparkleAttentionPulseState();
+}
+
+class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  var _reduceMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = context.reduceMotion;
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant SparkleAttentionPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active || oldWidget.duration != widget.duration) {
+      if (oldWidget.duration != widget.duration) {
+        _controller.duration = widget.duration;
+      }
+      _sync();
+    }
+  }
+
+  void _sync() {
+    if (!widget.active || _reduceMotion) {
+      _controller
+        ..stop()
+        ..value = 0;
+      return;
+    }
+    unawaited(_controller.repeat(reverse: true));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.active || context.reduceMotion) {
+      return Padding(
+        padding: widget.padding,
+        child: widget.child,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t =
+            DS.motionCurve(SparkleMotionToken.scene).transform(_controller.value);
+        final scale = 1 + (widget.scaleRange * t);
+        final glowOpacity = 0.06 + (0.10 * t);
+        return Padding(
+          padding: widget.padding,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: [
+                if (widget.glowColor != null)
+                  BoxShadow(
+                    color: widget.glowColor!.withValues(alpha: glowOpacity),
+                    blurRadius: 18 + (8 * t),
+                    spreadRadius: 0.6 + (0.8 * t),
+                  ),
+              ],
+            ),
+            child: Transform.scale(
+              scale: scale,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
 class SparkleExitTransition extends StatelessWidget {
   const SparkleExitTransition({
     required this.visible,

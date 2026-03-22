@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
@@ -72,7 +75,10 @@ class GrowthScreen extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(DS.sm),
       itemCount: plans.length,
-      itemBuilder: (context, index) => _GrowthPlanCard(plan: plans[index]),
+      itemBuilder: (context, index) => SparkleStaggerItem(
+        index: index,
+        child: _GrowthPlanCard(plan: plans[index]),
+      ),
     );
   }
 }
@@ -88,6 +94,11 @@ class _GrowthPlanCard extends StatelessWidget {
         padding: EdgeInsets.zero,
         child: InkWell(
           onTap: () {
+            unawaited(
+              SensoryFeedbackService.emit(
+                SensoryFeedbackEvent.selection,
+              ),
+            );
             context.push('/plans/${plan.id}');
           },
           child: Padding(
@@ -147,10 +158,15 @@ class _GrowthPlanCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: DS.xs),
-          LinearProgressIndicator(
-            value: progressValue,
-            backgroundColor: color.withValues(alpha: 0.2),
-            color: color,
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: progressValue),
+            duration: DS.motionDuration(SparkleMotionToken.hero),
+            curve: DS.motionCurve(SparkleMotionToken.hero),
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              backgroundColor: color.withValues(alpha: 0.2),
+              color: color,
+            ),
           ),
         ],
       );

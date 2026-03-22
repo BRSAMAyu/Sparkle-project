@@ -92,26 +92,32 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                   const SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final group = groups[index];
-                return GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  padding: EdgeInsets.zero,
-                  borderColor: DS.border.withValues(alpha: 0.42),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-                      child: Icon(
-                        group.type.name == 'sprint' ? Icons.timer : Icons.group,
+                return SparkleStaggerItem(
+                  index: index,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.card,
+                    padding: EdgeInsets.zero,
+                    borderColor: DS.border.withValues(alpha: 0.42),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                        child: Icon(
+                          group.type.name == 'sprint' ? Icons.timer : Icons.group,
+                        ),
                       ),
+                      title: Text(group.name),
+                      subtitle: Text(
+                        '${group.memberCount} members • ${group.totalFlamePower} flame',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        );
+                        context.push('/community/groups/${group.id}');
+                      },
                     ),
-                    title: Text(group.name),
-                    subtitle: Text(
-                      '${group.memberCount} members • ${group.totalFlamePower} flame',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      context.push('/community/groups/${group.id}');
-                    },
                   ),
                 );
               },

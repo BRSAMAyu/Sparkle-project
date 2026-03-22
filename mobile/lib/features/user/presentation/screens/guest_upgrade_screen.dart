@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
@@ -43,6 +44,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
     }
 
     final agreedLocale = Localizations.localeOf(context).toLanguageTag();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     setState(() => _isLoading = true);
     try {
       await ref.read(authProvider.notifier).upgradeGuest(
@@ -54,6 +56,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             agreedLocale: agreedLocale,
           );
       if (!mounted) return;
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       AppFeedback.success(context, context.l10n.guestUpgradeSuccess);
       context.go('/profile');
     } catch (e) {
@@ -74,6 +77,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
     }
 
     final agreedLocale = Localizations.localeOf(context).toLanguageTag();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     setState(() => _isLoading = true);
     try {
       final SocialAuthResult? result;
@@ -100,6 +104,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
             agreedLocale: agreedLocale,
           );
       if (!mounted) return;
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       AppFeedback.success(
         context,
         context.l10n.guestUpgradeSocialSuccess,
@@ -133,9 +138,11 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(DS.spacing24),
           children: [
-            GraphiteCardSurface(
-              surfaceRole: SparkleSurfaceRole.panel,
-              child: Column(
+            SparkleStaggerItem(
+              index: 0,
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.panel,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Wrap(
@@ -164,10 +171,13 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                   ),
                 ],
               ),
+              ),
             ),
             const SizedBox(height: DS.spacing16),
-            GraphiteCardSurface(
-              child: Form(
+            SparkleStaggerItem(
+              index: 1,
+              child: GraphiteCardSurface(
+                child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
@@ -250,8 +260,14 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _acceptedTos,
-                      onChanged: (value) =>
-                          setState(() => _acceptedTos = value ?? false),
+                      onChanged: (value) {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          ),
+                        );
+                        setState(() => _acceptedTos = value ?? false);
+                      },
                       title: Text(l10n.guestUpgradeAgreeTerms),
                       controlAffinity: ListTileControlAffinity.leading,
                     ),
@@ -265,8 +281,14 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _acceptedPrivacy,
-                      onChanged: (value) =>
-                          setState(() => _acceptedPrivacy = value ?? false),
+                      onChanged: (value) {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          ),
+                        );
+                        setState(() => _acceptedPrivacy = value ?? false);
+                      },
                       title: Text(l10n.guestUpgradeAgreePrivacy),
                       controlAffinity: ListTileControlAffinity.leading,
                     ),
@@ -290,6 +312,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     ),
                   ],
                 ),
+              ),
               ),
             ),
             const SizedBox(height: DS.spacing16),

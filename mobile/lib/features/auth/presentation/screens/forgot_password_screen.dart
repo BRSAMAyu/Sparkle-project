@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -25,6 +28,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     try {
       final message = await ref
@@ -65,39 +69,51 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.authForgotPasswordHint,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: DS.spacing24),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: l10n.email,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.email_outlined),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Text(
+                      l10n.authForgotPasswordHint,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    validator: (value) {
-                      if (value == null ||
-                          !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return l10n.authInvalidEmail;
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: DS.spacing24),
-                  SparkleButton(
-                    label: l10n.authSendResetEmail,
-                    onPressed: authState.isLoading ? null : _submit,
-                    loading: authState.isLoading,
-                    disabled: authState.isLoading,
-                    expand: true,
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: l10n.email,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.email_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null ||
+                            !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                          return l10n.authInvalidEmail;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing24),
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: SparkleButton(
+                      label: l10n.authSendResetEmail,
+                      onPressed: authState.isLoading ? null : _submit,
+                      loading: authState.isLoading,
+                      disabled: authState.isLoading,
+                      expand: true,
+                    ),
                   ),
                   const SizedBox(height: DS.spacing12),
-                  SparkleButton.ghost(
-                    label: l10n.authHaveResetCode,
-                    onPressed: () => context.go('/reset-password'),
+                  SparkleStaggerItem(
+                    index: 3,
+                    child: SparkleButton.ghost(
+                      label: l10n.authHaveResetCode,
+                      onPressed: () => context.go('/reset-password'),
+                    ),
                   ),
                 ],
               ),

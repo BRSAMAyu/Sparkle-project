@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -70,7 +73,12 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => context.push('/community/groups/create'),
+            onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+              );
+              context.push('/community/groups/create');
+            },
           ),
         ],
       ),
@@ -81,23 +89,29 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _SearchBar(
-                  controller: _searchController,
-                  onSubmitted: _submitSearch,
-                  onClear: () async {
-                    _searchController.clear();
-                    await notifier.setKeyword('');
-                  },
+                SparkleStaggerItem(
+                  index: 0,
+                  child: _SearchBar(
+                    controller: _searchController,
+                    onSubmitted: _submitSearch,
+                    onClear: () async {
+                      _searchController.clear();
+                      await notifier.setKeyword('');
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _CompactFilterBar(
-                  sortBy: notifier.sortBy,
-                  onSortChanged: notifier.setSortBy,
-                  type: notifier.type,
-                  onTypeChanged: notifier.setType,
-                  availableTags: directory.availableTags,
-                  selectedTags: notifier.selectedTags,
-                  onToggleTag: notifier.toggleTag,
+                SparkleStaggerItem(
+                  index: 1,
+                  child: _CompactFilterBar(
+                    sortBy: notifier.sortBy,
+                    onSortChanged: notifier.setSortBy,
+                    type: notifier.type,
+                    onTypeChanged: notifier.setType,
+                    availableTags: directory.availableTags,
+                    selectedTags: notifier.selectedTags,
+                    onToggleTag: notifier.toggleTag,
+                  ),
                 ),
                 if (groupPrompts.isNotEmpty) ...[
                   const SizedBox(height: 18),
@@ -114,10 +128,13 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                   ...groupPrompts.take(2).map(
                         (prompt) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: RecommendationFeedbackPromptCard(
-                            prompt: prompt,
-                            onRespond: () =>
-                                _handlePromptFeedback(context, prompt),
+                          child: SparkleStaggerItem(
+                            index: 2,
+                            child: RecommendationFeedbackPromptCard(
+                              prompt: prompt,
+                              onRespond: () =>
+                                  _handlePromptFeedback(context, prompt),
+                            ),
                           ),
                         ),
                       ),
@@ -175,15 +192,29 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                       padding: EdgeInsets.only(
                         bottom: index == directory.groups.length - 1 ? 0 : 12,
                       ),
-                      child: _DirectoryGroupCard(
-                        group: group,
-                        onTap: () =>
-                            context.push('/community/groups/${group.id}'),
-                        onJoin: group.isJoined
-                            ? null
-                            : () {
-                                notifier.join(group.id);
-                              },
+                      child: SparkleStaggerItem(
+                        index: index + 3,
+                        child: _DirectoryGroupCard(
+                          group: group,
+                          onTap: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            context.push('/community/groups/${group.id}');
+                          },
+                          onJoin: group.isJoined
+                              ? null
+                              : () {
+                                  unawaited(
+                                    SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.confirm,
+                                    ),
+                                  );
+                                  notifier.join(group.id);
+                                },
+                        ),
                       ),
                     );
                   }),

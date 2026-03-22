@@ -40,7 +40,9 @@ class LongTermPlanCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        SparkleStaggerItem(
+          index: 0,
+          child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
@@ -58,54 +60,67 @@ class LongTermPlanCard extends ConsumerWidget {
             ),
           ],
         ),
+        ),
         const Spacer(),
         Center(
           child: Column(
             children: [
-              Text(
-                '${(growth.progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: dense ? 16 : (compact ? 18 : 20),
-                  fontWeight: FontWeight.bold,
-                  color: DS.success,
+              SparkleStaggerItem(
+                index: 1,
+                child: Text(
+                  '${(growth.progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: dense ? 16 : (compact ? 18 : 20),
+                    fontWeight: FontWeight.bold,
+                    color: DS.success,
+                  ),
                 ),
               ),
               const SizedBox(height: DS.xs),
-              SizedBox(
-                height: 4,
-                width: compact ? 52 : 60,
-                child: LinearProgressIndicator(
-                  value: growth.progress,
-                  backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
-                  valueColor: AlwaysStoppedAnimation<Color>(DS.success),
-                  borderRadius: BorderRadius.circular(2),
+              SparkleStaggerItem(
+                index: 2,
+                child: SizedBox(
+                  height: 4,
+                  width: compact ? 52 : 60,
+                  child: LinearProgressIndicator(
+                    value: growth.progress,
+                    backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+                    valueColor: AlwaysStoppedAnimation<Color>(DS.success),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
             ],
           ),
         ),
         const Spacer(),
-        Text(
-          growth.name,
-          style: TextStyle(
-            fontSize: dense ? 10 : (compact ? 11 : 12),
-            fontWeight: FontWeight.w600,
-            color: DS.textPrimary,
+        SparkleStaggerItem(
+          index: 3,
+          child: Text(
+            growth.name,
+            style: TextStyle(
+              fontSize: dense ? 10 : (compact ? 11 : 12),
+              fontWeight: FontWeight.w600,
+              color: DS.textPrimary,
+            ),
+            maxLines: dense ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: dense ? 2 : 1,
-          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
-        Text(
-          dense
-              ? '掌握 ${(growth.masteryLevel * 100).toInt()}%'
-              : 'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
-          style: TextStyle(
-            fontSize: dense ? 9 : (compact ? 9 : 10),
-            color: DS.textSecondary,
+        SparkleStaggerItem(
+          index: 4,
+          child: Text(
+            dense
+                ? '掌握 ${(growth.masteryLevel * 100).toInt()}%'
+                : 'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
+            style: TextStyle(
+              fontSize: dense ? 9 : (compact ? 9 : 10),
+              color: DS.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

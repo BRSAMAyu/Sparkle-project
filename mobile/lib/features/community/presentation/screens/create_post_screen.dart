@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -21,6 +24,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   String? _selectedLocation;
 
   Future<void> _pickImage() async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
@@ -31,6 +35,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _pickLocation() async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     // Feature: Implement location picker using geolocator package
     // Requires: flutter pub add geolocator
     // 暂时使用模拟位置
@@ -44,6 +49,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Future<void> _submit() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     setState(() => _isPosting = true);
 
@@ -59,6 +65,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           debugPrint('位置信息: $_selectedLocation');
         }
       }
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -112,42 +119,49 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                   ),
                   Divider(color: DS.borderSubtle),
-                  TextField(
-                    controller: _topicController,
-                    style: TextStyle(color: DS.textPrimary),
-                    decoration: InputDecoration(
-                      prefixText: '# ',
-                      hintText: 'Topic (optional)',
-                      hintStyle: TextStyle(
-                          color: DS.textSecondary.withValues(alpha: 0.7),),
-                      border: InputBorder.none,
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: TextField(
+                      controller: _topicController,
+                      style: TextStyle(color: DS.textPrimary),
+                      decoration: InputDecoration(
+                        prefixText: '# ',
+                        hintText: 'Topic (optional)',
+                        hintStyle: TextStyle(
+                            color: DS.textSecondary.withValues(alpha: 0.7),),
+                        border: InputBorder.none,
+                      ),
                     ),
                   ),
                   const Spacer(),
                   // Toolbar (Placeholder)
-                  Row(
-                    children: [
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        icon: Icon(
-                          Icons.image_outlined,
-                          color: _selectedImage != null
-                              ? DS.brandPrimary
-                              : DS.brandPrimary,
+                  SparkleStaggerItem(
+                    index: 1,
+                    axis: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          icon: Icon(
+                            Icons.image_outlined,
+                            color: _selectedImage != null
+                                ? DS.brandPrimary
+                                : DS.brandPrimary,
+                          ),
+                          onPressed: _pickImage,
                         ),
-                        onPressed: _pickImage,
-                      ),
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        icon: Icon(
-                          Icons.location_on_outlined,
-                          color: _selectedLocation != null
-                              ? DS.brandPrimary
-                              : DS.brandPrimary,
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          icon: Icon(
+                            Icons.location_on_outlined,
+                            color: _selectedLocation != null
+                                ? DS.brandPrimary
+                                : DS.brandPrimary,
+                          ),
+                          onPressed: _pickLocation,
                         ),
-                        onPressed: _pickLocation,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

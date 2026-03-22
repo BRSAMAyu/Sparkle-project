@@ -158,17 +158,34 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         children: [
                           if (owners.isNotEmpty) ...[
                             _buildSectionHeader('Owner (${owners.length})'),
-                            ...owners.map(_buildMemberTile),
+                            ...owners.asMap().entries.map(
+                                  (entry) => SparkleStaggerItem(
+                                    index: entry.key,
+                                    child: _buildMemberTile(entry.value),
+                                  ),
+                                ),
                           ],
                           if (admins.isNotEmpty) ...[
                             _buildSectionHeader('Admins (${admins.length})'),
-                            ...admins.map(_buildMemberTile),
+                            ...admins.asMap().entries.map(
+                                  (entry) => SparkleStaggerItem(
+                                    index: owners.length + entry.key,
+                                    child: _buildMemberTile(entry.value),
+                                  ),
+                                ),
                           ],
                           if (regularMembers.isNotEmpty) ...[
                             _buildSectionHeader(
                               'Members (${regularMembers.length})',
                             ),
-                            ...regularMembers.map(_buildMemberTile),
+                            ...regularMembers.asMap().entries.map(
+                                  (entry) => SparkleStaggerItem(
+                                    index: owners.length +
+                                        admins.length +
+                                        entry.key,
+                                    child: _buildMemberTile(entry.value),
+                                  ),
+                                ),
                           ],
                         ],
                       );
@@ -267,16 +284,19 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
         itemBuilder: (ctx, i) {
           final m = members[i];
           final rankIcons = ['🥇', '🥈', '🥉'];
-          return ListTile(
-            leading: Text(
-              i < 3 ? rankIcons[i] : '${i + 1}',
-              style: const TextStyle(fontSize: 20),
-            ),
-            title: Text(m.user.displayName),
-            trailing: Text(
-              value(m),
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: DS.brandPrimary),
+          return SparkleStaggerItem(
+            index: i,
+            child: ListTile(
+              leading: Text(
+                i < 3 ? rankIcons[i] : '${i + 1}',
+                style: const TextStyle(fontSize: 20),
+              ),
+              title: Text(m.user.displayName),
+              trailing: Text(
+                value(m),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: DS.brandPrimary),
+              ),
             ),
           );
         },

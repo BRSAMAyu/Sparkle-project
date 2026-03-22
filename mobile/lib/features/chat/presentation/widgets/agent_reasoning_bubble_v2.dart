@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 
@@ -74,6 +75,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isThinking != widget.isThinking) {
       _syncShimmerState();
+      if (oldWidget.isThinking && !widget.isThinking) {
+        unawaited(
+          SensoryFeedbackService.emit(
+            SensoryFeedbackEvent.selection,
+            enableSound: false,
+          ),
+        );
+      }
     }
   }
 
@@ -85,8 +94,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       unawaited(_shimmerController.repeat());
       return;
     }
-    _shimmerController.stop();
-    _shimmerController.value = 0;
+    _shimmerController
+      ..stop()
+      ..value = 0;
   }
 
   @override
@@ -170,33 +180,37 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         child: Row(
           children: [
             // Animated Agent Icon
-            AnimatedContainer(
-              duration: transitionDuration,
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: activeAgentColor,
-                boxShadow: widget.isThinking
-                    ? [
-                        BoxShadow(
-                          color: activeAgentColor.withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: AnimatedSwitcher(
+            SparkleAttentionPulse(
+              active: widget.isThinking,
+              glowColor: activeAgentColor,
+              child: AnimatedContainer(
                 duration: transitionDuration,
-                child: Icon(
-                  _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
-                  color: ThemeUtils.getContrastSafeText(
-                    activeAgentColor,
-                    darkText: DS.textPrimary,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: activeAgentColor,
+                  boxShadow: widget.isThinking
+                      ? [
+                          BoxShadow(
+                            color: activeAgentColor.withValues(alpha: 0.28),
+                            blurRadius: 12,
+                            spreadRadius: 1.5,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: AnimatedSwitcher(
+                  duration: transitionDuration,
+                  child: Icon(
+                    _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
+                    color: ThemeUtils.getContrastSafeText(
+                      activeAgentColor,
+                      darkText: DS.textPrimary,
+                    ),
+                    size: 18,
+                    key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                   ),
-                  size: 18,
-                  key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                 ),
               ),
             ),

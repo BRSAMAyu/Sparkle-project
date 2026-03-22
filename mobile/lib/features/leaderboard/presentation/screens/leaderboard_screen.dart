@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 
 /// Leaderboard Screen
@@ -56,6 +57,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          onTap: (_) {
+            unawaited(
+              SensoryFeedbackService.emit(
+                SensoryFeedbackEvent.selection,
+              ),
+            );
+          },
           tabs: _tabs.map((type) => Tab(text: _getTabLabel(type))).toList(),
         ),
         actions: [
@@ -108,7 +116,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   if (index >= leaderboard.entries.length) return null;
-                  return _buildLeaderboardEntry(leaderboard.entries[index]);
+                  return SparkleStaggerItem(
+                    index: index,
+                    child: _buildLeaderboardEntry(leaderboard.entries[index]),
+                  );
                 },
                 childCount: leaderboard.entries.length,
               ),
@@ -242,41 +253,44 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget _buildMyRankBanner(LeaderboardData leaderboard) {
     if (leaderboard.myRank == null) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.all(DS.spacing16),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing16,
-        vertical: DS.spacing12,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              context.l10n.leaderboardMyRank(leaderboard.myRank!),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+    return SparkleAttentionPulse(
+      glowColor: Theme.of(context).colorScheme.primary,
+      child: Container(
+        margin: const EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.l10n.leaderboardMyRank(leaderboard.myRank!),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const Spacer(),
-          Text(
-            leaderboard.myScore != null
-                ? context.l10n.leaderboardPoints(
-                    leaderboard.myScore!.toInt(),
-                  )
-                : '-',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            const Spacer(),
+            Text(
+              leaderboard.myScore != null
+                  ? context.l10n.leaderboardPoints(
+                      leaderboard.myScore!.toInt(),
+                    )
+                  : '-',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

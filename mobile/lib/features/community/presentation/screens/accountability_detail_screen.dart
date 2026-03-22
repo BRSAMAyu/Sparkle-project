@@ -227,118 +227,140 @@ class _DashboardView extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(DS.spacing16),
             children: [
-              _DashboardHero(
-                partnerName: partnerName,
-                stats: stats,
-                relationshipSummary: dashboard.relationshipSummary,
-                onCheckin: stats.myCheckedInToday ? null : onCheckin,
-                onNudge: onNudge,
-                onShare: () => context.push('/achievements'),
-                onChat: () => context.push(
-                  '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
+              SparkleStaggerItem(
+                index: 0,
+                motionToken: SparkleMotionToken.scene,
+                child: _DashboardHero(
+                  partnerName: partnerName,
+                  stats: stats,
+                  relationshipSummary: dashboard.relationshipSummary,
+                  onCheckin: stats.myCheckedInToday ? null : onCheckin,
+                  onNudge: onNudge,
+                  onShare: () => context.push('/achievements'),
+                  onChat: () => context.push(
+                    '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
+                  ),
                 ),
               ),
               const SizedBox(height: DS.spacing12),
-              _GoalPanel(
-                title: '我的目标',
-                goal: isInitiator
-                    ? partnership.initiatorGoal
-                    : partnership.partnerGoal ?? '还没有填写目标',
+              SparkleStaggerItem(
+                index: 1,
+                child: _GoalPanel(
+                  title: '我的目标',
+                  goal: isInitiator
+                      ? partnership.initiatorGoal
+                      : partnership.partnerGoal ?? '还没有填写目标',
+                ),
               ),
               const SizedBox(height: DS.spacing12),
-              _GoalPanel(
-                title: '$partnerName 的目标',
-                goal: isInitiator
-                    ? partnership.partnerGoal ?? '对方还没填写目标'
-                    : partnership.initiatorGoal,
+              SparkleStaggerItem(
+                index: 2,
+                child: _GoalPanel(
+                  title: '$partnerName 的目标',
+                  goal: isInitiator
+                      ? partnership.partnerGoal ?? '对方还没填写目标'
+                      : partnership.initiatorGoal,
+                ),
               ),
               const SizedBox(height: DS.spacing12),
-              _SectionCard(
-                title: '伙伴共成长',
-                child: _GrowthSummary(
-                  relationshipSummary: dashboard.relationshipSummary,
-                  leaderboardSummary: dashboard.leaderboardSummary,
-                  achievements: dashboard.achievements,
+              SparkleStaggerItem(
+                index: 3,
+                child: _SectionCard(
+                  title: '伙伴共成长',
+                  child: _GrowthSummary(
+                    relationshipSummary: dashboard.relationshipSummary,
+                    leaderboardSummary: dashboard.leaderboardSummary,
+                    achievements: dashboard.achievements,
+                  ),
                 ),
               ),
               if (dashboard.recentShares.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
-                _SectionCard(
-                  title: '最近分享',
-                  child: Column(
-                    children: dashboard.recentShares
-                        .take(3)
-                        .map(
-                          (share) => Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: DS.spacing12),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.share_outlined,
-                                  size: 18,
-                                  color: DS.brandPrimary,
-                                ),
-                                const SizedBox(width: DS.spacing8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        share['title']?.toString() ?? '已分享内容',
-                                        style: DS.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      if ((share['comment'] ?? '')
-                                          .toString()
-                                          .isNotEmpty) ...[
-                                        const SizedBox(height: 4),
+                SparkleStaggerItem(
+                  index: 4,
+                  child: _SectionCard(
+                    title: '最近分享',
+                    child: Column(
+                      children: dashboard.recentShares
+                          .take(3)
+                          .map(
+                            (share) => Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: DS.spacing12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.share_outlined,
+                                    size: 18,
+                                    color: DS.brandPrimary,
+                                  ),
+                                  const SizedBox(width: DS.spacing8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
                                         Text(
-                                          share['comment'].toString(),
-                                          style: DS.bodySmall.copyWith(
-                                            color: DS.textSecondary,
+                                          share['title']?.toString() ?? '已分享内容',
+                                          style: DS.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
+                                        if ((share['comment'] ?? '')
+                                            .toString()
+                                            .isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            share['comment'].toString(),
+                                            style: DS.bodySmall.copyWith(
+                                              color: DS.textSecondary,
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
               ],
               const SizedBox(height: DS.spacing12),
-              _SectionCard(
-                title: '年度打卡热力图',
-                child: AccountabilityHeatmap(
-                  year:
-                      (dashboard.heatmap['year'] as int?) ?? DateTime.now().year,
-                  heatmap:
-                      ((dashboard.heatmap['heatmap'] as List<dynamic>?) ??
-                              const [])
-                          .map((item) => Map<String, dynamic>.from(item as Map))
-                          .toList(),
+              SparkleStaggerItem(
+                index: 5,
+                child: _SectionCard(
+                  title: '年度打卡热力图',
+                  child: AccountabilityHeatmap(
+                    year:
+                        (dashboard.heatmap['year'] as int?) ?? DateTime.now().year,
+                    heatmap:
+                        ((dashboard.heatmap['heatmap'] as List<dynamic>?) ??
+                                const [])
+                            .map((item) => Map<String, dynamic>.from(item as Map))
+                            .toList(),
+                  ),
                 ),
               ),
               const SizedBox(height: DS.spacing12),
-              _SectionCard(
-                title: '伙伴成就',
-                child: partnerAchievements.isEmpty
-                    ? Text(
-                        '伙伴还没有解锁专属成就，先互相打卡一轮试试看。',
-                        style: TextStyle(color: DS.textSecondary),
-                      )
-                    : AchievementGrid(
-                        achievements: partnerAchievements,
-                        crossAxisCount: 1,
-                      ),
+              SparkleStaggerItem(
+                index: 6,
+                child: _SectionCard(
+                  title: '伙伴成就',
+                  child: partnerAchievements.isEmpty
+                      ? Text(
+                          '伙伴还没有解锁专属成就，先互相打卡一轮试试看。',
+                          style: TextStyle(color: DS.textSecondary),
+                        )
+                      : AchievementGrid(
+                          achievements: partnerAchievements,
+                          crossAxisCount: 1,
+                        ),
+                ),
               ),
               const SizedBox(height: DS.spacing16),
               Text(

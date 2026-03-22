@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 复习性能评价按钮组
 ///
@@ -18,49 +21,82 @@ class ReviewPerformanceButtons extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '你对这道题的掌握情况？',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-            textAlign: TextAlign.center,
+          SparkleStaggerItem(
+            index: 0,
+            child: Text(
+              '你对这道题的掌握情况？',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: DS.spacing16),
           Row(
             children: [
               Expanded(
-                child: _PerformanceButton(
+                child: SparkleStaggerItem(
+                  index: 1,
+                  child: _PerformanceButton(
                   performance: 'forgotten',
                   label: '忘记了',
                   icon: Icons.close,
                   color: DS.error,
                   description: '下次会提前复习',
                   isLoading: isLoading,
-                  onTap: () => onPerformanceSelected('forgotten'),
+                  onTap: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.warning,
+                      ),
+                    );
+                    onPerformanceSelected('forgotten');
+                  },
+                ),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
-                child: _PerformanceButton(
+                child: SparkleStaggerItem(
+                  index: 2,
+                  child: _PerformanceButton(
                   performance: 'fuzzy',
                   label: '有点模糊',
                   icon: Icons.remove,
                   color: DS.warningLight,
                   description: '保持复习间隔',
                   isLoading: isLoading,
-                  onTap: () => onPerformanceSelected('fuzzy'),
+                  onTap: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                      ),
+                    );
+                    onPerformanceSelected('fuzzy');
+                  },
+                ),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
-                child: _PerformanceButton(
+                child: SparkleStaggerItem(
+                  index: 3,
+                  child: _PerformanceButton(
                   performance: 'remembered',
                   label: '记住了',
                   icon: Icons.check,
                   color: DS.success,
                   description: '延长复习间隔',
                   isLoading: isLoading,
-                  onTap: () => onPerformanceSelected('remembered'),
+                  onTap: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.success,
+                      ),
+                    );
+                    onPerformanceSelected('remembered');
+                  },
+                ),
                 ),
               ),
             ],

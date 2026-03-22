@@ -18,13 +18,15 @@ class SceneAudioPolicy {
   final bool stopAmbientOnDispose;
   final bool suppressBgm;
 
+  static const Object _unset = Object();
+
   bool get wantsAmbient => useSavedAmbient || ambientScene != null;
 
   SceneAudioPolicy copyWith({
     BgmTrack? track,
     BgmPriority? priority,
     bool? useSavedAmbient,
-    AmbientScene? ambientScene,
+    Object? ambientScene = _unset,
     bool? stopAmbientOnDispose,
     bool? suppressBgm,
   }) =>
@@ -32,7 +34,9 @@ class SceneAudioPolicy {
         track: track ?? this.track,
         priority: priority ?? this.priority,
         useSavedAmbient: useSavedAmbient ?? this.useSavedAmbient,
-        ambientScene: ambientScene ?? this.ambientScene,
+        ambientScene: identical(ambientScene, _unset)
+            ? this.ambientScene
+            : ambientScene as AmbientScene?,
         stopAmbientOnDispose: stopAmbientOnDispose ?? this.stopAmbientOnDispose,
         suppressBgm: suppressBgm ?? this.suppressBgm,
       );

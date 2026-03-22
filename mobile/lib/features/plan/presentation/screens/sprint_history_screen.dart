@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_history_detail.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -62,7 +65,10 @@ class SprintHistoryScreen extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
         itemBuilder: (context, index) {
           final item = state.items[index];
-          return _SprintHistoryCard(item: item);
+          return SparkleStaggerItem(
+            index: index,
+            child: _SprintHistoryCard(item: item),
+          );
         },
       ),
     );
@@ -202,26 +208,34 @@ class _SprintHistoryCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
-                      Stack(
-                        children: [
-                          Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: DS.surfaceTertiary,
-                              borderRadius: DS.borderRadiusFull,
-                            ),
-                          ),
-                          FractionallySizedBox(
-                            widthFactor: item.finalProgress.clamp(0.0, 1.0),
-                            child: Container(
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                          begin: 0,
+                          end: item.finalProgress.clamp(0.0, 1.0),
+                        ),
+                        duration: DS.motionDuration(SparkleMotionToken.hero),
+                        curve: DS.motionCurve(SparkleMotionToken.hero),
+                        builder: (context, value, _) => Stack(
+                          children: [
+                            Container(
                               height: 6,
                               decoration: BoxDecoration(
-                                color: _getProgressColor(item.finalProgress),
+                                color: DS.surfaceTertiary,
                                 borderRadius: DS.borderRadiusFull,
                               ),
                             ),
-                          ),
-                        ],
+                            FractionallySizedBox(
+                              widthFactor: value,
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: _getProgressColor(item.finalProgress),
+                                  borderRadius: DS.borderRadiusFull,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -258,6 +272,9 @@ class _SprintHistoryCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

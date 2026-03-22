@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -175,8 +176,10 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                           childAspectRatio: 1.2,
                         ),
                         itemCount: files.length,
-                        itemBuilder: (context, index) =>
-                            _buildGridItem(files[index]),
+                        itemBuilder: (context, index) => SparkleStaggerItem(
+                          index: index,
+                          child: _buildGridItem(files[index]),
+                        ),
                       );
                     }
 
@@ -184,8 +187,10 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                       padding: const EdgeInsets.all(DS.lg),
                       itemCount: files.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) =>
-                          _buildListItem(files[index]),
+                      itemBuilder: (context, index) => SparkleStaggerItem(
+                        index: index,
+                        child: _buildListItem(files[index]),
+                      ),
                     );
                   },
                 ),
@@ -203,6 +208,9 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+          );
           setState(() => _category = category);
           _reload();
         },

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
@@ -70,7 +73,12 @@ class ErrorCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
+            onTap?.call();
+          },
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(

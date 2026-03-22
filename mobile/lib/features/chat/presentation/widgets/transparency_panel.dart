@@ -70,31 +70,35 @@ class TransparencyPanel extends StatelessWidget {
 
     if (!hasAnyData) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePrimaryElevated,
-          borderRadius: DS.borderRadius12,
-          boxShadow: DS.shadowSm,
-        ),
-        child: Column(
-          children: [
-            _buildHeader(context),
-            // 只有在有时间线数据时才显示步骤指示器
-            if (showReasoningTimeline &&
-                transparencyData != null &&
-                transparencyData!.steps.isNotEmpty) ...[
-              _buildStepper(),
-              Divider(height: 1, color: DS.neutral200),
+    return SparkleStaggerItem(
+      index: 0,
+      offset: 0.035,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfacePrimaryElevated,
+            borderRadius: DS.borderRadius12,
+            boxShadow: DS.shadowSm,
+          ),
+          child: Column(
+            children: [
+              _buildHeader(context),
+              // 只有在有时间线数据时才显示步骤指示器
+              if (showReasoningTimeline &&
+                  transparencyData != null &&
+                  transparencyData!.steps.isNotEmpty) ...[
+                _buildStepper(),
+                Divider(height: 1, color: DS.neutral200),
+              ],
+              _buildCompactInfo(context),
+              // 可展开详情区域
+              if (activeTools.isNotEmpty ||
+                  (showTokenUsageDetails && totalTokens != null) ||
+                  (showReasoningTimeline && transparencyData != null))
+                _buildExpandableDetails(context),
             ],
-            _buildCompactInfo(context),
-            // 可展开详情区域
-            if (activeTools.isNotEmpty ||
-                (showTokenUsageDetails && totalTokens != null) ||
-                (showReasoningTimeline && transparencyData != null))
-              _buildExpandableDetails(context),
-          ],
+          ),
         ),
       ),
     );

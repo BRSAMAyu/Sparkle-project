@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
@@ -19,6 +22,7 @@ class CommunityScreen extends ConsumerWidget {
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.edit),
         onPressed: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
           context.push(CommunityRoutes.postsCreate);
         },
       ),
@@ -41,7 +45,10 @@ class CommunityScreen extends ConsumerWidget {
                       return _buildHeader(context);
                     }
                     final post = posts[index - 1];
-                    return FeedPostCard(post: post);
+                    return SparkleStaggerItem(
+                      index: index - 1,
+                      child: FeedPostCard(post: post),
+                    );
                   },
                 );
               },
@@ -97,14 +104,14 @@ class CommunityScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.lg),
             // Filter Tabs (Placeholder)
-            const SingleChildScrollView(
+            SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   _FilterChip(label: 'Global Feed', isSelected: true),
-                  SizedBox(width: DS.sm),
+                  const SizedBox(width: DS.sm),
                   _FilterChip(label: 'My Squad', isSelected: false),
-                  SizedBox(width: DS.sm),
+                  const SizedBox(width: DS.sm),
                   _FilterChip(label: 'Following', isSelected: false),
                 ],
               ),
@@ -144,22 +151,27 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? DS.surfaceRoleColor(SparkleSurfaceRole.accent)
-              : DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? DS.brandPrimary : DS.borderSubtle,
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? DS.surfaceRoleColor(SparkleSurfaceRole.accent)
+                : DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? DS.brandPrimary : DS.borderSubtle,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? DS.textPrimary : DS.textSecondary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? DS.textPrimary : DS.textSecondary,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ),
       );

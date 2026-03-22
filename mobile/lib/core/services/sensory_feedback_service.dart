@@ -173,9 +173,16 @@ class SensoryFeedbackService {
   // ── Ambient player ────────────────────────────────────────────────────────
   static AudioPlayer? _ambientPlayer;
   static AmbientScene _currentScene = AmbientScene.none;
+  static double _currentAmbientOutputVolume = 0;
 
   // ── Throttle ──────────────────────────────────────────────────────────────
   static final Map<SensoryFeedbackEvent, DateTime> _lastEmission = {};
+  static final List<DateTime> _recentSoundEvents = [];
+  static final List<DateTime> _recentHapticEvents = [];
+  static const Duration _soundBudgetWindow = Duration(milliseconds: 2200);
+  static const Duration _hapticBudgetWindow = Duration(milliseconds: 1600);
+  static const int _soundBudgetLimit = 5;
+  static const int _hapticBudgetLimit = 3;
 
   // ── Prefs cache ───────────────────────────────────────────────────────────
   static SharedPreferences? _prefs;
@@ -226,6 +233,7 @@ class SensoryFeedbackService {
       await player.stop();
     }
     await _ambientPlayer?.stop();
+    _currentScene = AmbientScene.none;
   }
 
   static Future<double> getAmbientVolume() async =>
@@ -233,6 +241,7 @@ class SensoryFeedbackService {
 
   static Future<void> setAmbientVolume(double volume) async {
     await (await _getPrefs()).setDouble(_ambientVolumeKey, volume);
+    _currentAmbientOutputVolume = volume;
     await _ambientPlayer?.setVolume(volume);
   }
 
@@ -277,8 +286,12 @@ class SensoryFeedbackService {
     final soundAllowed = enableSound && await isSoundEnabled();
     final hapticAllowed = enableHaptic && await isHapticEnabled();
 
-    if (soundAllowed) unawaited(_playSound(event));
-    if (hapticAllowed) unawaited(_playHaptic(event));
+    if (soundAllowed && _consumeBudget(_recentSoundEvents, _soundBudgetWindow, _soundBudgetLimit)) {
+      unawaited(_playSound(event));
+    }
+    if (hapticAllowed && _consumeBudget(_recentHapticEvents, _hapticBudgetWindow, _hapticBudgetLimit)) {
+      unawaited(_playHaptic(event));
+    }
   }
 
   static bool _shouldEmit(SensoryFeedbackEvent event) {
@@ -290,6 +303,20 @@ class SensoryFeedbackService {
     return true;
   }
 
+  static bool _consumeBudget(
+    List<DateTime> history,
+    Duration window,
+    int limit,
+  ) {
+    final now = DateTime.now();
+    history.removeWhere((ts) => now.difference(ts) >= window);
+    if (history.length >= limit) {
+      return false;
+    }
+    history.add(now);
+    return true;
+  }
+
   // ---------------------------------------------------------------------------
   // Ambient audio (background loop for focus mode)
   // ---------------------------------------------------------------------------
@@ -298,26 +325,34 @@ class SensoryFeedbackService {
 
   static Future<void> playAmbient(AmbientScene scene) async {
     if (scene == _currentScene) return;
+    final player = _ambientPlayer;
+    if (player == null) return;
+    final previousScene = _currentScene;
     _currentScene = scene;
     await _saveAmbientScene(scene);
 
-    final player = _ambientPlayer;
-    if (player == null) return;
-
-    await player.stop();
     final path = scene.assetPath;
     if (path == null) return;
 
     if (!await isSoundEnabled()) return;
 
     final volume = await getAmbientVolume();
-    await player.setVolume(volume);
+    if (previousScene != AmbientScene.none) {
+      await _fadeAmbientTo(0);
+      await player.stop();
+    }
+    await player.setVolume(0);
     await player.play(AssetSource(path));
+    _currentAmbientOutputVolume = 0;
+    await _fadeAmbientTo(volume);
   }
 
   static Future<void> stopAmbient() async {
     _currentScene = AmbientScene.none;
-    await _ambientPlayer?.stop();
+    final player = _ambientPlayer;
+    if (player == null) return;
+    await _fadeAmbientTo(0);
+    await player.stop();
   }
 
   static Future<void> pauseAmbient() async => _ambientPlayer?.pause();
@@ -335,6 +370,11 @@ class SensoryFeedbackService {
     _poolReady = false;
     await _ambientPlayer?.dispose();
     _ambientPlayer = null;
+    _currentScene = AmbientScene.none;
+    _currentAmbientOutputVolume = 0;
+    _lastEmission.clear();
+    _recentSoundEvents.clear();
+    _recentHapticEvents.clear();
   }
 
   // ---------------------------------------------------------------------------
@@ -582,6 +622,27 @@ class SensoryFeedbackService {
           const Duration(milliseconds: 180),
           HapticFeedback.heavyImpact,
         );
+    }
+  }
+
+  static Future<void> _fadeAmbientTo(
+    double target, {
+    Duration duration = const Duration(milliseconds: 260),
+    int steps = 6,
+  }) async {
+    final player = _ambientPlayer;
+    if (player == null) {
+      return;
+    }
+
+    final current = _currentAmbientOutputVolume;
+    for (var i = 1; i <= steps; i++) {
+      final t = i / steps;
+      final next = current + (target - current) * t;
+      final clamped = next.clamp(0.0, 1.0);
+      await player.setVolume(clamped);
+      _currentAmbientOutputVolume = clamped;
+      await Future<void>.delayed(duration ~/ steps);
     }
   }
 }

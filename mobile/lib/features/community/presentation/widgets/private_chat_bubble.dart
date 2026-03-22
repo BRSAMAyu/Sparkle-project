@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -19,13 +21,14 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: DS.motionDuration(SparkleMotionToken.standard),
     );
 
     _slideAnimation = Tween<Offset>(
@@ -36,8 +39,11 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
+    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
 
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override
@@ -55,9 +61,12 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-          child: Row(
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: Row(
             mainAxisAlignment:
                 isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -89,6 +98,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
                 _buildAvatar(widget.message.sender),
               ],
             ],
+            ),
           ),
         ),
       ),

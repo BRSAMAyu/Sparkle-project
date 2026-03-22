@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -106,7 +107,10 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
         compact: widget.compact,
         title: compactHeadline,
         sourceBadge: sourceBadge,
-        onExpand: () => _setExpanded(true),
+        onExpand: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(_setExpanded(true));
+        },
       );
     }
 
@@ -161,7 +165,12 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               if (sourceBadge != null) const SizedBox(width: DS.spacing8),
               InkWell(
                 borderRadius: BorderRadius.circular(999),
-                onTap: () => _setExpanded(false),
+                onTap: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
+                  unawaited(_setExpanded(false));
+                },
                 child: Padding(
                   padding: const EdgeInsets.all(2),
                   child: Icon(
@@ -175,7 +184,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
           ),
           if (visiblePredictions.isNotEmpty || promptStarters.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
-            Wrap(
+            SparkleStaggerWrap(
               spacing: DS.spacing6,
               runSpacing: DS.spacing6,
               children: visiblePredictions

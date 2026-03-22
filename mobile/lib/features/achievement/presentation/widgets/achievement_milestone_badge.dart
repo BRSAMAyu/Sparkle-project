@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 enum MilestoneLevel {
@@ -80,10 +82,27 @@ class _AchievementMilestoneBadgeState extends State<AchievementMilestoneBadge>
   @override
   void didUpdateWidget(covariant AchievementMilestoneBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_milestone.index > _milestoneForProgress(oldWidget.progress).index) {
+      unawaited(
+        SensoryFeedbackService.emit(
+          _milestone == MilestoneLevel.platinum
+              ? SensoryFeedbackEvent.achievementRare
+              : SensoryFeedbackEvent.success,
+        ),
+      );
+    }
     if (oldWidget.progress != widget.progress) {
       _updateParticleRegistration(force: true);
       _startAnimations();
     }
+  }
+
+  MilestoneLevel _milestoneForProgress(double progress) {
+    if (progress >= 1.0) return MilestoneLevel.platinum;
+    if (progress >= 0.75) return MilestoneLevel.gold;
+    if (progress >= 0.50) return MilestoneLevel.silver;
+    if (progress >= 0.25) return MilestoneLevel.bronze;
+    return MilestoneLevel.none;
   }
 
   void _startAnimations() {

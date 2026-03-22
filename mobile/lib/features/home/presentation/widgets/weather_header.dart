@@ -119,30 +119,42 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final weatherType = dashboardState.weather.type;
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: _getWeatherGradient(weatherType, isDark),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: DS.durationSlow,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, (1 - value) * 18),
+          child: child,
+        ),
       ),
-      child: Stack(
-        children: [
-          // Animated star field (always present, intensity varies)
-          _buildAnimatedStarField(weatherType),
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: _getWeatherGradient(weatherType, isDark),
+        ),
+        child: Stack(
+          children: [
+            // Animated star field (always present, intensity varies)
+            _buildAnimatedStarField(weatherType),
 
-          // Weather-specific animated effects
-          _buildWeatherEffects(weatherType, accentColor: DS.brandPrimary),
+            // Weather-specific animated effects
+            _buildWeatherEffects(weatherType, accentColor: DS.brandPrimary),
 
-          // Corner overlay for weather status
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 16,
-            child: _buildWeatherStatus(
-              weatherType,
-              dashboardState.weather.condition,
+            // Corner overlay for weather status
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              right: 16,
+              child: _buildWeatherStatus(
+                weatherType,
+                dashboardState.weather.condition,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

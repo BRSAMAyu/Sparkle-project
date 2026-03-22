@@ -251,38 +251,44 @@ class _AchievementDetailScreenState
     final rarity = achievement.achievement.rarity;
     final rarityColor = RarityColorProvider.getColor(rarity);
 
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: achievement.isUnlocked
-              ? [
-                  rarityColor,
-                  rarityColor.withValues(alpha: 0.6),
-                ]
-              : [
-                  DS.neutral300,
-                  DS.neutral400,
-                ],
+    return Hero(
+      tag: 'achievement-${achievement.achievement.id}',
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: achievement.isUnlocked
+                  ? [
+                      rarityColor,
+                      rarityColor.withValues(alpha: 0.6),
+                    ]
+                  : [
+                      DS.neutral300,
+                      DS.neutral400,
+                    ],
+            ),
+            boxShadow: achievement.isUnlocked
+                ? [
+                    BoxShadow(
+                      color: rarityColor.withValues(alpha: 0.34),
+                      blurRadius: 28,
+                      spreadRadius: 5,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Icon(
+            _getIconForAchievement(achievement),
+            color: achievement.isUnlocked ? DS.textOnPrimary : DS.neutral600,
+            size: 50,
+          ),
         ),
-        boxShadow: achievement.isUnlocked
-            ? [
-                BoxShadow(
-                  color: rarityColor.withValues(alpha: 0.34),
-                  blurRadius: 28,
-                  spreadRadius: 5,
-                ),
-              ]
-            : null,
-      ),
-      child: Icon(
-        _getIconForAchievement(achievement),
-        color: achievement.isUnlocked ? DS.textOnPrimary : DS.neutral600,
-        size: 50,
       ),
     );
   }

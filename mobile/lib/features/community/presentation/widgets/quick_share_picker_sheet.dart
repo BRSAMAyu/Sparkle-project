@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
@@ -100,6 +101,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _selectedCategory = QuickShareCategory.values[_tabController.index];
       _isLoading = true;
@@ -256,6 +258,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   void _onItemTap(QuickShareItem item) {
     final payload = item.toPayload();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     Navigator.pop(context);
     widget.onShare(payload);
   }
@@ -339,7 +342,10 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
       separatorBuilder: (_, __) => const SizedBox(height: DS.sm),
       itemBuilder: (context, index) {
         final item = _items[index];
-        return _buildItemTile(item);
+        return SparkleStaggerItem(
+          index: index,
+          child: _buildItemTile(item),
+        );
       },
     );
   }

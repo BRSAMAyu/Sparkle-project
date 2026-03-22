@@ -13,12 +13,13 @@ class BlockedUsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blockedState = ref.watch(blockedUsersProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('黑名单管理'),
         backgroundColor: DS.surfacePrimary,
       ),
-      body: blockedState.when(
+      child: blockedState.when(
         data: (users) {
           if (users.isEmpty) {
             return Center(
@@ -41,7 +42,10 @@ class BlockedUsersScreen extends ConsumerWidget {
             itemCount: users.length,
             itemBuilder: (ctx, i) {
               final block = users[i];
-              return _BlockedUserTile(blockInfo: block);
+              return SparkleStaggerItem(
+                index: i,
+                child: _BlockedUserTile(blockInfo: block),
+              );
             },
           );
         },

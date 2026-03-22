@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
@@ -183,16 +186,21 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final entries = _applySort(_applyFilters(_buildEntries()));
     return RefreshIndicator(
       onRefresh: _loadAll,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(DS.lg),
-        children: [
-          _buildFilterBar(context),
-          const SizedBox(height: DS.md),
-          if (entries.isEmpty)
-            _buildEmptyState()
-          else
-            ...entries.map(_buildEntryCard),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
+            const SizedBox(height: DS.md),
+            if (entries.isEmpty)
+              _buildEmptyState()
+            else
+              ...entries.indexed.map(
+                (entry) => SparkleStaggerItem(
+                  index: entry.$1 + 1,
+                  child: _buildEntryCard(entry.$2),
+                ),
+              ),
         ],
       ),
     );
@@ -777,7 +785,12 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) => FilterChip(
         label: Text(label),
         selected: selected,
-        onSelected: onSelected,
+        onSelected: (value) {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+          );
+          onSelected(value);
+        },
       );
 }
 

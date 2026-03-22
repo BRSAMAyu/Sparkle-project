@@ -202,9 +202,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Mastery Progress Card
           SliverToBoxAdapter(
             child: ContentConstraint(
-              child: _MasteryCard(
-                stats: detail.userStats,
-                sectorColor: sectorStyle.primaryColor,
+              child: SparkleStaggerItem(
+                index: 0,
+                child: _MasteryCard(
+                  stats: detail.userStats,
+                  sectorColor: sectorStyle.primaryColor,
+                ),
               ),
             ),
           ),
@@ -214,11 +217,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               detail.node.description!.isNotEmpty)
             SliverToBoxAdapter(
               child: ContentConstraint(
-                child: _SectionCard(
-                  title: context.l10n.knowledgeDescription,
-                  child: Text(
-                    detail.node.description!,
-                    style: theme.textTheme.bodyMedium,
+                child: SparkleStaggerItem(
+                  index: 1,
+                  child: _SectionCard(
+                    title: context.l10n.knowledgeDescription,
+                    child: Text(
+                      detail.node.description!,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ),
                 ),
               ),
@@ -228,20 +234,23 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           if (detail.node.keywords.isNotEmpty)
             SliverToBoxAdapter(
               child: ContentConstraint(
-                child: _SectionCard(
-                  title: context.l10n.knowledgeKeywords,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: detail.node.keywords
-                        .map(
-                          (keyword) => Chip(
-                            label: Text(keyword),
-                            backgroundColor:
-                                sectorStyle.glowColor.withAlpha(50),
-                          ),
-                        )
-                        .toList(),
+                child: SparkleStaggerItem(
+                  index: 2,
+                  child: _SectionCard(
+                    title: context.l10n.knowledgeKeywords,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: detail.node.keywords
+                          .map(
+                            (keyword) => Chip(
+                              label: Text(keyword),
+                              backgroundColor:
+                                  sectorStyle.glowColor.withAlpha(50),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
               ),

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
@@ -77,6 +80,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             variant: ButtonVariant.ghost,
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               setState(() {
                 _showSearch = !_showSearch;
                 if (!_showSearch) {
@@ -89,7 +95,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context),
+            onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+              );
+              unawaited(_showFilterDialog(context));
+            },
           ),
         ],
         bottom: TabBar(
@@ -119,7 +130,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToAddError(context),
+        onPressed: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+          unawaited(_navigateToAddError(context));
+        },
         icon: const Icon(Icons.add),
         label: Text(context.l10n.errorBookAddError),
       ),
@@ -220,11 +234,18 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ),
           onChanged: (value) {
             // 防抖搜索
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (value == _searchController.text) {
-                ref.read(errorFilterProvider.notifier).setSearchKeyword(value);
-              }
-            });
+            unawaited(
+              Future.delayed(
+                const Duration(milliseconds: 500),
+                () {
+                  if (value == _searchController.text) {
+                    ref
+                        .read(errorFilterProvider.notifier)
+                        .setSearchKeyword(value);
+                  }
+                },
+              ),
+            );
           },
         ),
       );
@@ -381,8 +402,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
     if ((result ?? false) && mounted) {
       // 刷新列表
-      ref.invalidate(errorListProvider);
-      ref.invalidate(errorStatsProvider);
+      ref
+        ..invalidate(errorListProvider)
+        ..invalidate(errorStatsProvider);
     }
   }
 
@@ -391,8 +413,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
     // 详情页可能会更新错题，返回时刷新列表
     if (mounted) {
-      ref.invalidate(errorListProvider);
-      ref.invalidate(errorStatsProvider);
+      ref
+        ..invalidate(errorListProvider)
+        ..invalidate(errorStatsProvider);
     }
   }
 

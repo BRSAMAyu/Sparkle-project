@@ -34,7 +34,7 @@ class SprintCard extends ConsumerWidget {
   }
 
   Widget _buildSprintContent(BuildContext context, SprintData sprint) {
-    final progress = sprint.progress;
+    final progress = sprint.progress.clamp(0.0, 1.0);
     final daysLeft = sprint.daysLeft;
     final isUrgent = daysLeft <= 3;
 
@@ -63,40 +63,44 @@ class SprintCard extends ConsumerWidget {
                   constraints.maxWidth.clamp(0, 56).toDouble(),
                   constraints.maxHeight.clamp(0, 56).toDouble(),
                 );
-                return SizedBox(
-                  width: ringSize,
-                  height: ringSize,
-                  child: Stack(
-                    alignment: Alignment.center,
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: progress),
+                  duration: DS.durationSlow,
+                  curve: Curves.easeOutCubic,
+                  builder: (context, animatedProgress, child) => SizedBox(
+                    width: ringSize,
+                    height: ringSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size(ringSize, ringSize),
+                          painter: _CircularProgressPainter(
+                            progress: animatedProgress,
+                            isUrgent: isUrgent,
+                          ),
+                        ),
+                        child!,
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      CustomPaint(
-                        size: Size(ringSize, ringSize),
-                        painter: _CircularProgressPainter(
-                          progress: progress,
-                          isUrgent: isUrgent,
+                      Text(
+                        '$daysLeft',
+                        style: context.sparkleTypography.headingMedium.copyWith(
+                          fontSize: ringSize * 0.3,
+                          fontWeight: FontWeight.bold,
+                          color: isUrgent ? DS.error : DS.brandPrimary,
                         ),
                       ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$daysLeft',
-                            style:
-                                context.sparkleTypography.headingMedium.copyWith(
-                              fontSize: ringSize * 0.3,
-                              fontWeight: FontWeight.bold,
-                              color: isUrgent ? DS.error : DS.brandPrimary,
-                            ),
-                          ),
-                          Text(
-                            '天',
-                            style:
-                                context.sparkleTypography.labelSmall.copyWith(
-                              fontSize: ringSize * 0.17,
-                              color: DS.textSecondary,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '天',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          fontSize: ringSize * 0.17,
+                          color: DS.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -109,18 +113,24 @@ class SprintCard extends ConsumerWidget {
         const SizedBox(height: 4),
 
         // Sprint name
-        Text(
-          sprint.name,
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontWeight: FontWeight.w600,
-            color: DS.textPrimary,
+        SparkleStaggerItem(
+          index: 0,
+          child: Text(
+            sprint.name,
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: DS.textPrimary,
+            ),
           ),
         ),
-        Text(
-          '${(progress * 100).toInt()}% 完成',
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontSize: 10,
-            color: DS.textSecondary,
+        SparkleStaggerItem(
+          index: 1,
+          child: Text(
+            '${(progress * 100).toInt()}% 完成',
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontSize: 10,
+              color: DS.textSecondary,
+            ),
           ),
         ),
       ],

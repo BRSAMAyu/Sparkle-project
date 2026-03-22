@@ -482,6 +482,7 @@ class _AmbientSelector extends StatelessWidget {
   static IconData _icon(AmbientScene scene) => switch (scene) {
         AmbientScene.none => Icons.volume_off_rounded,
         AmbientScene.rain => Icons.water_drop_outlined,
+        AmbientScene.ocean => Icons.waves_outlined,
         AmbientScene.whiteNoise => Icons.waves_rounded,
         AmbientScene.cafe => Icons.local_cafe_outlined,
         AmbientScene.piano => Icons.piano_outlined,

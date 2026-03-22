@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';
@@ -84,6 +87,7 @@ class _SchedulePreferencesScreenState
       initialTime: TimeOfDay.now(),
     );
     if (picked != null) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
       // Format as HH:mm
       final hour = picked.hour.toString().padLeft(2, '0');
       final minute = picked.minute.toString().padLeft(2, '0');
@@ -114,10 +118,12 @@ class _SchedulePreferencesScreenState
     newPrefs['preferred_break_duration'] = _preferredBreakDuration;
 
     try {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       await ref.read(authProvider.notifier).updateProfile({
         'schedule_preferences': newPrefs,
       });
       if (mounted) {
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
         AppFeedback.success(context, context.l10n.schedulePreferencesSaved);
         UserRoutes.popOrGoProfile(context);
       }
@@ -156,9 +162,11 @@ class _SchedulePreferencesScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Info card explaining the feature
-                _buildInfoCard(context),
+                SparkleStaggerItem(index: 0, child: _buildInfoCard(context)),
                 const SizedBox(height: DS.spacing20),
-                GraphiteCardSurface(
+                SparkleStaggerItem(
+                  index: 1,
+                  child: GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.card,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,9 +190,12 @@ class _SchedulePreferencesScreenState
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: DS.spacing20),
                 // Focus period preference
-                GraphiteCardSurface(
+                SparkleStaggerItem(
+                  index: 2,
+                  child: GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.card,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,9 +231,12 @@ class _SchedulePreferencesScreenState
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: DS.spacing20),
                 // Task duration preference
-                GraphiteCardSurface(
+                SparkleStaggerItem(
+                  index: 3,
+                  child: GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.card,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,6 +295,7 @@ class _SchedulePreferencesScreenState
                       ),
                     ],
                   ),
+                ),
                 ),
                 const SizedBox(height: DS.spacing20),
               ],

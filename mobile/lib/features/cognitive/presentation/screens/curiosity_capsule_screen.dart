@@ -46,30 +46,33 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             length: 2,
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DS.spacing16,
-                    DS.spacing12,
-                    DS.spacing16,
-                    DS.spacing8,
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: DS.surfaceSecondary,
-                      borderRadius: DS.borderRadius16,
-                      border: Border.all(color: DS.borderSubtle),
+                SparkleStaggerItem(
+                  index: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DS.spacing16,
+                      DS.spacing12,
+                      DS.spacing16,
+                      DS.spacing8,
                     ),
-                    child: TabBar(
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      indicator: BoxDecoration(
-                        color: DS.capsuleAccent.withValues(alpha: 0.14),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
                         borderRadius: DS.borderRadius16,
+                        border: Border.all(color: DS.borderSubtle),
                       ),
-                      tabs: [
-                        Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
-                        Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
-                      ],
+                      child: TabBar(
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        indicator: BoxDecoration(
+                          color: DS.capsuleAccent.withValues(alpha: 0.14),
+                          borderRadius: DS.borderRadius16,
+                        ),
+                        tabs: [
+                          Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
+                          Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
+                        ],
+                      ),
                     ),
                   ),
                 ),

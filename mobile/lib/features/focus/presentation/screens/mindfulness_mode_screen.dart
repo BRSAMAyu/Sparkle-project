@@ -48,7 +48,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     WidgetsBinding.instance.addObserver(this);
 
     // 设置全屏模式
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive));
 
     // 入场动画控制器
     _entryController = AnimationController(
@@ -104,7 +104,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     );
 
     // 开始入场动画
-    _entryController.forward();
+    unawaited(_entryController.forward());
   }
 
   void _initializeWithTask(TaskModel task) {
@@ -123,7 +123,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     _entryController.dispose();
 
     // 恢复系统UI
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
     super.dispose();
   }
@@ -206,6 +206,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       data: (task) {
         _initializeWithTask(task);
         final mindfulness = ref.watch(mindfulnessProvider);
+        final ambienceIntensity =
+            (0.52 +
+                    (mindfulness.elapsedSeconds / 900).clamp(0, 1) * 0.4 -
+                    (mindfulness.interruptionCount * 0.04))
+                .clamp(0.35, 1.0);
 
         return PopScope(
           canPop: false,
@@ -214,7 +219,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             final shouldPop = await _onWillPop();
             if (!mounted) return;
             if (shouldPop) {
-              Navigator.of(context).pop();
+              Navigator.of(this.context).pop();
             }
           },
           child: SparklePageScaffold(
@@ -223,9 +228,13 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             child: Stack(
               children: [
                 const Positioned.fill(
+                  child: SizedBox.shrink(),
+                ),
+                Positioned.fill(
                   child: AnimatedStarBackground(
-                    fadeInDuration: Duration(milliseconds: 420),
+                    fadeInDuration: const Duration(milliseconds: 420),
                     starCount: 88,
+                    intensity: ambienceIntensity,
                   ),
                 ),
                 Positioned.fill(
@@ -438,7 +447,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         if (currentTask != null) {
           ref.read(activeTaskProvider.notifier).state = currentTask;
         }
-        context.push('/tasks/${widget.taskId}/execute');
+        unawaited(context.push('/tasks/${widget.taskId}/execute'));
       }
     }
   }

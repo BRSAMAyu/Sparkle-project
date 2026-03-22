@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -58,6 +61,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   Future<void> _submitPlan() async {
     if (!_formKey.currentState!.validate()) return;
 
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+    );
     setState(() => _isSubmitting = true);
 
     try {
@@ -79,6 +85,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
 
       if (mounted) {
         context.pop();
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+        );
         AppFeedback.success(context, context.l10n.planCreateSuccess);
       }
     } catch (e) {
@@ -115,173 +124,216 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
           child: ListView(
             padding: const EdgeInsets.all(DS.lg),
             children: [
-              // Plan Type Selector
-              SegmentedButton<PlanType>(
-                segments: [
-                  ButtonSegment(
-                    value: PlanType.sprint,
-                    label: Text(l10n.planTypeSprint),
-                    icon: const Icon(Icons.flash_on),
-                  ),
-                  ButtonSegment(
-                    value: PlanType.growth,
-                    label: Text(l10n.planTypeGrowth),
-                    icon: const Icon(Icons.trending_up),
-                  ),
-                ],
-                selected: {_selectedType},
-                onSelectionChanged: (types) {
-                  setState(() => _selectedType = types.first);
-                },
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Name
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.planNameLabel,
-                  hintText: l10n.planNameHint,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.label_outline),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l10n.planNameRequired;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Description
-              TextFormField(
-                controller: _descController,
-                decoration: InputDecoration(
-                  labelText: l10n.planDescLabel,
-                  hintText: l10n.planDescHint,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.description_outlined),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Subject
-              TextFormField(
-                controller: _subjectController,
-                decoration: InputDecoration(
-                  labelText: l10n.planSubjectLabel,
-                  hintText: l10n.planSubjectHint,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.school_outlined),
-                ),
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Daily Available Minutes
-              DropdownButtonFormField<int>(
-                initialValue: _dailyMinutes,
-                decoration: InputDecoration(
-                  labelText: l10n.planDailyMinutesLabel,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.timer_outlined),
-                ),
-                items: [15, 30, 45, 60, 90, 120, 180, 240]
-                    .map(
-                      (m) => DropdownMenuItem(
-                        value: m,
-                        child: Text(l10n.taskMinutesOption(m)),
+              SparkleStaggerItem(
+                index: 0,
+                child: SegmentedButton<PlanType>(
+                  segments: [
+                    ButtonSegment(
+                      value: PlanType.sprint,
+                      label: Text(l10n.planTypeSprint),
+                      icon: const Icon(Icons.flash_on),
+                    ),
+                    ButtonSegment(
+                      value: PlanType.growth,
+                      label: Text(l10n.planTypeGrowth),
+                      icon: const Icon(Icons.trending_up),
+                    ),
+                  ],
+                  selected: {_selectedType},
+                  onSelectionChanged: (types) {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
                       ),
-                    )
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() => _dailyMinutes = v);
-                  }
-                },
+                    );
+                    setState(() => _selectedType = types.first);
+                  },
+                ),
               ),
               const SizedBox(height: DS.lg),
 
-              // Priority
-              DropdownButtonFormField<PlanPriority>(
-                initialValue: _priority,
-                decoration: InputDecoration(
-                  labelText: l10n.planPriorityLabel,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.flag_outlined),
-                ),
-                items: PlanPriority.values
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(_getPriorityLabel(l10n, p)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() => _priority = v);
-                  }
-                },
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Target Date
-              ListTile(
-                title: Text(l10n.planTargetDateLabel),
-                subtitle: Text(
-                  _targetDate == null
-                      ? l10n.planTargetDateUnset
-                      : Formatters.formatDateShort(_targetDate!),
-                ),
-                leading: const Icon(Icons.calendar_today),
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(
-                    color: DS.brandPrimary.withValues(alpha: 0.4),
+              SparkleStaggerItem(
+                index: 1,
+                child: TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: l10n.planNameLabel,
+                    hintText: l10n.planNameHint,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.label_outline),
                   ),
-                  borderRadius: BorderRadius.circular(4),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return l10n.planNameRequired;
+                    }
+                    return null;
+                  },
                 ),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: _targetDate ?? DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    setState(() => _targetDate = date);
-                  }
-                },
-                trailing: _targetDate != null
-                    ? SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        size: 32,
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _targetDate = null),
+              ),
+              const SizedBox(height: DS.lg),
+
+              SparkleStaggerItem(
+                index: 2,
+                child: TextFormField(
+                  controller: _descController,
+                  decoration: InputDecoration(
+                    labelText: l10n.planDescLabel,
+                    hintText: l10n.planDescHint,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.description_outlined),
+                  ),
+                  maxLines: 3,
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+
+              SparkleStaggerItem(
+                index: 3,
+                child: TextFormField(
+                  controller: _subjectController,
+                  decoration: InputDecoration(
+                    labelText: l10n.planSubjectLabel,
+                    hintText: l10n.planSubjectHint,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.school_outlined),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+
+              SparkleStaggerItem(
+                index: 4,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _dailyMinutes,
+                  decoration: InputDecoration(
+                    labelText: l10n.planDailyMinutesLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.timer_outlined),
+                  ),
+                  items: [15, 30, 45, 60, 90, 120, 180, 240]
+                      .map(
+                        (m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(l10n.taskMinutesOption(m)),
+                        ),
                       )
-                    : null,
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      setState(() => _dailyMinutes = v);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+
+              SparkleStaggerItem(
+                index: 5,
+                child: DropdownButtonFormField<PlanPriority>(
+                  initialValue: _priority,
+                  decoration: InputDecoration(
+                    labelText: l10n.planPriorityLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.flag_outlined),
+                  ),
+                  items: PlanPriority.values
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(_getPriorityLabel(l10n, p)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      setState(() => _priority = v);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+
+              SparkleStaggerItem(
+                index: 6,
+                child: ListTile(
+                  title: Text(l10n.planTargetDateLabel),
+                  subtitle: Text(
+                    _targetDate == null
+                        ? l10n.planTargetDateUnset
+                        : Formatters.formatDateShort(_targetDate!),
+                  ),
+                  leading: const Icon(Icons.calendar_today),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      color: DS.brandPrimary.withValues(alpha: 0.4),
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _targetDate ?? DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      setState(() => _targetDate = date);
+                    }
+                  },
+                  trailing: _targetDate != null
+                      ? SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 32,
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() => _targetDate = null);
+                          },
+                        )
+                      : null,
+                ),
               ),
               const SizedBox(height: DS.xxl),
 
-              // Submit Button
-              FilledButton.icon(
-                onPressed: _isSubmitting ? null : _submitPlan,
-                icon: _isSubmitting
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: DS.textOnPrimary,
-                        ),
-                      )
-                    : const Icon(Icons.check),
-                label: Text(
-                  _isSubmitting ? l10n.planCreating : l10n.planCreateAction,
-                ),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+              SparkleStaggerItem(
+                index: 7,
+                child: FilledButton.icon(
+                  onPressed: _isSubmitting ? null : _submitPlan,
+                  icon: _isSubmitting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: DS.textOnPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.check),
+                  label: Text(
+                    _isSubmitting ? l10n.planCreating : l10n.planCreateAction,
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ),
             ],

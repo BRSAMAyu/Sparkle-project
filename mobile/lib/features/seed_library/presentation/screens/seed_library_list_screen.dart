@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_library_card.dart';
@@ -50,6 +53,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _applyFilters() {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     ref
         .read(
           seedLibraryListProvider(
@@ -104,6 +110,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
       floatingActionButton: SparkleIconButton(
         size: DS.touchTargetMinSize + DS.spacing8,
         onPressed: () async {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+          );
           final result =
               await context.push<bool>(SeedLibraryRoutes.createLibrary);
           if (result ?? false) {
@@ -271,11 +280,19 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           }
 
           final library = state.libraries[index];
-          return SeedLibraryCard(
-            library: library,
-            onTap: () {
-              context.push(SeedLibraryRoutes.detail(library.id));
-            },
+          return SparkleStaggerItem(
+            index: index,
+            child: SeedLibraryCard(
+              library: library,
+              onTap: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
+                context.push(SeedLibraryRoutes.detail(library.id));
+              },
+            ),
           );
         },
       ),

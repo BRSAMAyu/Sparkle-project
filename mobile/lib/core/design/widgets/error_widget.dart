@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 错误组件类型
@@ -200,87 +203,120 @@ class CustomErrorWidget extends StatelessWidget {
 
   String _getRetryText() => l10n?.retry ?? '重试';
 
+  void _handleRetry() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    onRetry?.call();
+  }
+
+  void _handleClose() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    onClose?.call();
+  }
+
   Widget _buildErrorPage(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.spacing32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 错误图标
-              if (showIcon)
-                Container(
-                  width: 120.0,
-                  height: 120.0,
-                  decoration: BoxDecoration(
-                    gradient: _getGradient(),
-                    borderRadius: DS.borderRadiusFull,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _getBackgroundColor().withValues(alpha: 0.3),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: title ?? _getDefaultTitle(),
+            value: message,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (showIcon)
+                    SparkleAttentionPulse(
+                      active: !context.reduceMotion,
+                      glowColor: _getBackgroundColor(),
+                      child: Container(
+                        width: 120.0,
+                        height: 120.0,
+                        decoration: BoxDecoration(
+                          gradient: _getGradient(),
+                          borderRadius: DS.borderRadiusFull,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _getBackgroundColor().withValues(alpha: 0.3),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          icon ?? _getDefaultIcon(),
+                          size: DS.iconSize3xl,
+                          color: DS.brandPrimaryConst,
+                        ),
                       ),
-                    ],
+                    ),
+                  const SizedBox(height: DS.spacing32),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Text(
+                      title ?? _getDefaultTitle(),
+                      style: TextStyle(
+                        fontSize: DS.fontSize2xl,
+                        fontWeight: DS.fontWeightBold,
+                        color: context.colors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  child: Icon(
-                    icon ?? _getDefaultIcon(),
-                    size: DS.iconSize3xl,
-                    color: DS.brandPrimaryConst,
+                  const SizedBox(height: DS.spacing12),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeBase,
+                        color: context.colors.textSecondary,
+                        height: DS.lineHeightNormal,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              const SizedBox(height: DS.spacing32),
-              // 错误标题
-              Text(
-                title ?? _getDefaultTitle(),
-                style: TextStyle(
-                  fontSize: DS.fontSize2xl,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral900,
-                ),
-                textAlign: TextAlign.center,
+                  const SizedBox(height: DS.spacing32),
+                  if (actions != null)
+                    ...actions!
+                  else if (onRetry != null)
+                    SparkleStaggerItem(
+                      index: 2,
+                      child: CustomButton.primary(
+                        text: _getRetryText(),
+                        onPressed: _handleRetry,
+                        icon: Icons.refresh_rounded,
+                        customGradient: _getGradient(),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: DS.spacing12),
-              // 错误消息
-              Text(
-                message,
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
-                  color: DS.neutral600,
-                  height: DS.lineHeightNormal,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.spacing32),
-              // 操作按钮
-              if (actions != null)
-                ...actions!
-              else if (onRetry != null)
-                CustomButton.primary(
-                  text: _getRetryText(),
-                  onPressed: onRetry,
-                  icon: Icons.refresh_rounded,
-                  customGradient: _getGradient(),
-                ),
-            ],
+            ),
           ),
         ),
       );
 
-  Widget _buildErrorBanner(BuildContext context) => Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: _getGradient(),
-          boxShadow: DS.shadowMd,
-        ),
-        child: Material(
-          color: DS.neutral0.withValues(alpha: 0),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16,
-              vertical: DS.spacing12,
-            ),
-            child: Row(
-              children: [
+  Widget _buildErrorBanner(BuildContext context) => Semantics(
+        container: true,
+        liveRegion: true,
+        label: title ?? _getDefaultTitle(),
+        value: message,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: _getGradient(),
+            boxShadow: DS.shadowMd,
+          ),
+          child: Material(
+            color: DS.neutral0.withValues(alpha: 0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing16,
+                vertical: DS.spacing12,
+              ),
+              child: Row(
+                children: [
                 // 图标
                 Icon(
                   icon ?? _getDefaultIcon(),
@@ -319,55 +355,68 @@ class CustomErrorWidget extends StatelessWidget {
                 if (onClose != null) ...[
                   const SizedBox(width: DS.spacing12),
                   InkWell(
-                    onTap: onClose,
+                    onTap: _handleClose,
                     borderRadius: BorderRadius.circular(DS.radius8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(DS.spacing4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: DS.brandPrimaryConst,
-                        size: DS.iconSizeSm,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing8),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: DS.brandPrimaryConst,
+                          size: DS.iconSizeSm,
+                        ),
                       ),
                     ),
                   ),
                 ],
-              ],
+                ],
+              ),
             ),
           ),
         ),
       );
 
-  Widget _buildInlineError(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          color: _getLightBackgroundColor(),
-          border: Border.all(
-            color: _getBackgroundColor().withValues(alpha: 0.3),
+  Widget _buildInlineError(BuildContext context) => Semantics(
+        container: true,
+        liveRegion: true,
+        label: title ?? _getDefaultTitle(),
+        value: message,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: _getLightBackgroundColor(),
+            border: Border.all(
+              color: _getBackgroundColor().withValues(alpha: 0.3),
+            ),
+            borderRadius: DS.borderRadius12,
           ),
-          borderRadius: DS.borderRadius12,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (showIcon) ...[
-              Icon(
-                icon ?? _getDefaultIcon(),
-                color: _getBackgroundColor(),
-                size: DS.iconSizeSm,
-              ),
-              const SizedBox(width: DS.spacing8),
-            ],
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  fontSize: DS.fontSizeSm,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showIcon) ...[
+                Icon(
+                  icon ?? _getDefaultIcon(),
                   color: _getBackgroundColor(),
-                  height: DS.lineHeightNormal,
+                  size: DS.iconSizeSm,
+                ),
+                const SizedBox(width: DS.spacing8),
+              ],
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    color: _getBackgroundColor(),
+                    height: DS.lineHeightNormal,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }

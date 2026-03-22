@@ -208,6 +208,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       child: BonfireWidget(
                         level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
                         size: 140,
+                        showCrackleToggle: true,
                       ),
                     ),
                   ),
@@ -215,35 +216,38 @@ class GroupDetailScreen extends ConsumerWidget {
                   const SizedBox(height: DS.xxl),
 
                   // Stats Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          '成员',
-                          '${group.memberCount}/${group.maxMembers}',
-                          Icons.people,
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            context,
+                            '成员',
+                            '${group.memberCount}/${group.maxMembers}',
+                            Icons.people,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          '火力值',
-                          '${group.totalFlamePower}',
-                          Icons.local_fire_department,
+                        const SizedBox(width: DS.md),
+                        Expanded(
+                          child: _buildStatCard(
+                            context,
+                            '火力值',
+                            '${group.totalFlamePower}',
+                            Icons.local_fire_department,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          '今日打卡',
-                          '${group.todayCheckinCount}',
-                          Icons.check_circle,
+                        const SizedBox(width: DS.md),
+                        Expanded(
+                          child: _buildStatCard(
+                            context,
+                            '今日打卡',
+                            '${group.todayCheckinCount}',
+                            Icons.check_circle,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: DS.xxl),

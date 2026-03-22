@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class BonfireWidget extends StatefulWidget {
   const BonfireWidget({
     required this.level,
     super.key,
     this.size = 120,
+    this.showCrackleToggle = false,
   });
   final int level; // 1-5
   final double size;
+  final bool showCrackleToggle;
 
   @override
   State<BonfireWidget> createState() => _BonfireWidgetState();
@@ -17,6 +22,7 @@ class BonfireWidget extends StatefulWidget {
 class _BonfireWidgetState extends State<BonfireWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  var _crackleEnabled = false;
 
   @override
   void initState() {
@@ -148,6 +154,63 @@ class _BonfireWidgetState extends State<BonfireWidget>
               ),
             ),
           ),
+          if (widget.showCrackleToggle)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: DS.surfaceOverlay.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: (_crackleEnabled ? baseColor : DS.borderSubtle)
+                        .withValues(alpha: 0.35),
+                  ),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    setState(() {
+                      _crackleEnabled = !_crackleEnabled;
+                    });
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        _crackleEnabled
+                            ? SensoryFeedbackEvent.selection
+                            : SensoryFeedbackEvent.tap,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing6,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _crackleEnabled
+                              ? Icons.graphic_eq_rounded
+                              : Icons.volume_mute_outlined,
+                          size: 14,
+                          color: baseColor,
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          _crackleEnabled ? 'Crackle' : 'Silent',
+                          style: TextStyle(
+                            color: baseColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

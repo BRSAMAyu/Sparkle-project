@@ -5,6 +5,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -65,17 +66,21 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             collapsedBackgroundColor: DS.surfacePrimary.withValues(alpha: 0),
 
             // Icon
-            leading: Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: BoxDecoration(
-                gradient: DS.secondaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: context.sparkleShadows.small,
-              ),
-              child: Icon(
-                Icons.lightbulb_outline,
-                color: DS.textOnPrimary,
-                size: 20,
+            leading: SparkleAttentionPulse(
+              active: !capsule.isRead,
+              glowColor: DS.secondaryBase,
+              child: Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  gradient: DS.secondaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: context.sparkleShadows.small,
+                ),
+                child: Icon(
+                  Icons.lightbulb_outline,
+                  color: DS.textOnPrimary,
+                  size: 20,
+                ),
               ),
             ),
 
@@ -90,15 +95,21 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             // Subtitle (New Badge)
             subtitle: capsule.isRead
                 ? null
-                : Text(
-                    context.l10n.capsuleNewDiscovery,
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: context.sparkleColors.brandPrimary,
-                      fontWeight: FontWeight.bold,
+                : SparkleAttentionPulse(
+                    glowColor: context.sparkleColors.brandPrimary,
+                    child: Text(
+                      context.l10n.capsuleNewDiscovery,
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: context.sparkleColors.brandPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
 
             onExpansionChanged: (expanded) {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               if (expanded && !capsule.isRead) {
                 unawaited(
                   ref.read(capsuleProvider.notifier).markAsRead(capsule.id),
@@ -156,6 +167,11 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                             : context.l10n.capsuleArchiveAction,
                         variant: ButtonVariant.ghost,
                         onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.confirm,
+                            ),
+                          );
                           ref
                               .read(capsuleArchiveProvider.notifier)
                               .toggleArchive(capsule.id);

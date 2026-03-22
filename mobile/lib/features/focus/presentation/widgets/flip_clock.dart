@@ -1,7 +1,9 @@
 import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 翻页时钟组件 - 星空渐变风格
 class FlipClock extends StatelessWidget {
@@ -93,6 +95,12 @@ class _FlipDigitState extends State<_FlipDigit>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.digit != widget.digit) {
       _nextDigit = widget.digit;
+      unawaited(
+        SensoryFeedbackService.emit(
+          SensoryFeedbackEvent.cardFlip,
+          enableSound: false,
+        ),
+      );
       _controller.forward(from: 0).then((_) {
         setState(() {
           _currentDigit = _nextDigit;

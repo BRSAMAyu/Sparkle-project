@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
@@ -40,6 +43,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isSubmitting) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     setState(() => _isSubmitting = true);
 
@@ -121,6 +125,11 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               SubjectFilterChips(
                 selectedSubject: _selectedSubject,
                 onSelected: (subject) {
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
                   setState(() {
                     _selectedSubject = subject ?? 'math';
                   });

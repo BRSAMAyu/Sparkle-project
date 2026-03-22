@@ -104,7 +104,12 @@ class UserRoutes {
           name: 'systemUpdates',
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const SystemUpdatesScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const SystemUpdatesScreen(),
+            ),
           ),
         ),
         GoRoute(
@@ -180,7 +185,12 @@ class UserRoutes {
           name: 'adminOperations',
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const AdminOperationsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const AdminOperationsScreen(),
+            ),
           ),
         ),
         GoRoute(
@@ -188,7 +198,12 @@ class UserRoutes {
           name: 'guestUpgrade',
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const GuestUpgradeScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const GuestUpgradeScreen(),
+            ),
           ),
         ),
         GoRoute(
@@ -196,7 +211,12 @@ class UserRoutes {
           name: 'learningMode',
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const LearningModeScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const LearningModeScreen(),
+            ),
           ),
         ),
         GoRoute(

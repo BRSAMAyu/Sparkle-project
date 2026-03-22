@@ -41,7 +41,9 @@ class LegalDocumentScreen extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: DS.spacing16),
           itemBuilder: (context, index) {
             if (index == 0) {
-              return GraphiteCardSurface(
+              return SparkleStaggerItem(
+                index: 0,
+                child: GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -63,13 +65,16 @@ class LegalDocumentScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                ),
               );
             }
 
             final section = sections[index - 1];
-            return GraphiteCardSurface(
-              surfaceRole: SparkleSurfaceRole.card,
-              child: Column(
+            return SparkleStaggerItem(
+              index: index,
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -86,6 +91,7 @@ class LegalDocumentScreen extends StatelessWidget {
                         ),
                   ),
                 ],
+              ),
               ),
             );
           },

@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/onboarding/presentation/widgets/architecture_animation.dart';
 
 /// 交互式引导流程 - Week 7
@@ -98,6 +101,7 @@ class _InteractiveOnboardingScreenState
   }
 
   void _nextPage() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     if (_currentPage < _totalPages - 1) {
       unawaited(
         _pageController.nextPage(
@@ -111,11 +115,16 @@ class _InteractiveOnboardingScreenState
   }
 
   void _skipAll() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     widget.onComplete();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SceneAudioScope(
+        policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+          trackOverride: BgmTrack.dashboard,
+        ),
+        child: Scaffold(
         backgroundColor: DS.deepSpaceStart,
         body: SafeArea(
           child: Column(
@@ -190,6 +199,7 @@ class _InteractiveOnboardingScreenState
             ],
           ),
         ),
+      ),
       );
 
   // Page 1: Welcome
@@ -258,22 +268,31 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.xxxl),
 
             // Features preview
-            _buildFeaturePreview(
-              Icons.auto_graph,
-              context.l10n.onboardingFeatureGalaxy,
-              context.l10n.onboardingFeatureGalaxyDesc,
+            SparkleStaggerItem(
+              index: 0,
+              child: _buildFeaturePreview(
+                Icons.auto_graph,
+                context.l10n.onboardingFeatureGalaxy,
+                context.l10n.onboardingFeatureGalaxyDesc,
+              ),
             ),
             const SizedBox(height: DS.lg),
-            _buildFeaturePreview(
-              Icons.psychology,
-              context.l10n.onboardingFeatureChat,
-              context.l10n.onboardingFeatureChatDesc,
+            SparkleStaggerItem(
+              index: 1,
+              child: _buildFeaturePreview(
+                Icons.psychology,
+                context.l10n.onboardingFeatureChat,
+                context.l10n.onboardingFeatureChatDesc,
+              ),
             ),
             const SizedBox(height: DS.lg),
-              _buildFeaturePreview(
+              SparkleStaggerItem(
+                index: 2,
+                child: _buildFeaturePreview(
                 Icons.task_alt,
                 context.l10n.onboardingFeatureTasks,
                 context.l10n.onboardingFeatureTasksDesc,
+              ),
               ),
             ],
           ),
@@ -483,45 +502,56 @@ class _InteractiveOnboardingScreenState
           child: Column(
             children: [
               // Icon
-              Container(
+              SparkleStaggerItem(
+                index: 0,
+                child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: iconGradient),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(icon, size: 48, color: DS.brandPrimary),
+                ),
               ),
               const SizedBox(height: DS.xl),
 
               // Title
-              Text(
+              SparkleStaggerItem(
+                index: 1,
+                child: Text(
                 title,
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
+                ),
               ),
               const SizedBox(height: DS.md),
 
               // Description
-              Text(
+              SparkleStaggerItem(
+                index: 2,
+                child: Text(
                 description,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: DS.brandPrimary.withValues(alpha: 0.8),
                   fontSize: 16,
                 ),
+                ),
               ),
               const SizedBox(height: DS.xxl),
 
               // Demo widget
-              demoWidget,
+              SparkleStaggerItem(index: 3, child: demoWidget),
               const SizedBox(height: DS.xxl),
 
               // Features list
               ...features.map(
-                (feature) => Padding(
+                (feature) => SparkleStaggerItem(
+                  index: features.indexOf(feature) + 4,
+                  child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,6 +573,7 @@ class _InteractiveOnboardingScreenState
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
             ],
@@ -571,7 +602,9 @@ class _InteractiveOnboardingScreenState
     required bool isLoading,
     required Future<void> Function()? onTap,
   }) =>
-      Container(
+      SparkleStaggerItem(
+        index: title.hashCode & 1,
+        child: Container(
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
           color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -647,11 +680,21 @@ class _InteractiveOnboardingScreenState
                     label: isLoading
                         ? (_isChinese ? '处理中...' : 'Working...')
                         : _permissionEnableLabel,
-                    onPressed: isLoading ? () {} : () => unawaited(action()),
+                    onPressed: isLoading
+                        ? () {}
+                        : () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.confirm,
+                              ),
+                            );
+                            unawaited(action());
+                          },
                   ),
               ],
             ),
           ],
+        ),
         ),
       );
 
@@ -696,7 +739,11 @@ class _InteractiveOnboardingScreenState
             ),
             Switch(
               value: value,
-              onChanged: (v) {},
+              onChanged: (v) {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                );
+              },
               activeThumbColor: DS.brandPrimary.shade400,
             ),
           ],

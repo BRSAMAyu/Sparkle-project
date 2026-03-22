@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -85,6 +86,9 @@ class _AchievementProgressBannerState
         position: _slideAnimation,
         child: GestureDetector(
           onTap: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
             // Navigate to achievement details
             unawaited(context.push('/achievements/${achievement.id}'));
             // Dismiss banner after navigation
@@ -143,6 +147,26 @@ class _AchievementProgressBannerState
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                            begin: 0,
+                            end: (item.progressPercentage / 100).clamp(0.0, 1.0),
+                          ),
+                          duration: DS.durationSlow,
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) => ClipRRect(
+                            borderRadius: DS.borderRadiusFull,
+                            child: LinearProgressIndicator(
+                              minHeight: 4,
+                              value: value,
+                              backgroundColor: DS.surfaceSecondary,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _getRarityColor(rarity),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),

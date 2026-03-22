@@ -256,8 +256,16 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         child: TabBarView(
           controller: _tabController,
           children: [
-            _FriendsListTab(),
-            _GroupsListTab(),
+            SparkleStaggerItem(
+              index: 0,
+              motionToken: SparkleMotionToken.scene,
+              child: _FriendsListTab(),
+            ),
+            SparkleStaggerItem(
+              index: 1,
+              motionToken: SparkleMotionToken.scene,
+              child: _GroupsListTab(),
+            ),
           ],
         ),
       ),

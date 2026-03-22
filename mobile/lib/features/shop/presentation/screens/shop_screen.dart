@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation_dialog.dart';
 import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
@@ -55,6 +58,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       ),
       child: RefreshIndicator(
         onRefresh: () async {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           await ref.read(shopItemsProvider.notifier).refresh();
         },
         child: TabBarView(
@@ -124,15 +128,19 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        return ShopItemCard(
-          item: item,
-          onTap: () => _showPurchaseDialog(item),
+        return SparkleStaggerItem(
+          index: index,
+          child: ShopItemCard(
+            item: item,
+            onTap: () => _showPurchaseDialog(item),
+          ),
         );
       },
     );
   }
 
   void _showPurchaseDialog(ShopItem item) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     showDialog<void>(
       context: context,
       builder: (dialogContext) => PurchaseConfirmationDialog(
@@ -144,6 +152,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
           if (!mounted) return;
 
           if (success) {
+            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
             Navigator.of(dialogContext).pop();
             AppFeedback.success(
               context,

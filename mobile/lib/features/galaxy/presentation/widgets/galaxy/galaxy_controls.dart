@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class GalaxyControls extends StatelessWidget {
   const GalaxyControls({
@@ -245,7 +247,16 @@ class _ControlButton extends StatelessWidget {
             ],
           ),
           child: IconButton(
-            onPressed: onPressed,
+            onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(
+                  isActive
+                      ? SensoryFeedbackEvent.selection
+                      : SensoryFeedbackEvent.navigation,
+                ),
+              );
+              onPressed();
+            },
             icon: Icon(icon, color: iconColor, size: 20),
             visualDensity: VisualDensity.compact,
           ),

@@ -22,23 +22,25 @@ class SceneAudioScope extends StatefulWidget {
 class _SceneAudioScopeState extends State<SceneAudioScope> {
   Object? _bgmToken;
   bool _ambientActivated = false;
+  int _ambientRequestVersion = 0;
 
   @override
   void initState() {
     super.initState();
-    _configureAudio(initial: true);
+    unawaited(_configureAudio(initial: true));
   }
 
   @override
   void didUpdateWidget(covariant SceneAudioScope oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.policy != widget.policy) {
-      _configureAudio();
+      unawaited(_configureAudio());
     }
   }
 
   Future<void> _configureAudio({bool initial = false}) async {
     final policy = widget.policy;
+    final requestVersion = ++_ambientRequestVersion;
 
     if (policy.suppressBgm || policy.track == null) {
       if (_bgmToken != null) {
@@ -70,14 +72,20 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
 
     final ambientScene = policy.ambientScene ??
         await SensoryFeedbackService.getSavedAmbientScene();
+    if (!mounted || requestVersion != _ambientRequestVersion) {
+      return;
+    }
     _ambientActivated = ambientScene != AmbientScene.none;
     if (_ambientActivated) {
       unawaited(SensoryFeedbackService.playAmbient(ambientScene));
+      return;
     }
+    unawaited(SensoryFeedbackService.stopAmbient());
   }
 
   @override
   void dispose() {
+    _ambientRequestVersion++;
     if (_bgmToken != null) {
       unawaited(BgmService.deactivate(_bgmToken!));
     }

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 
@@ -36,6 +39,9 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   Future<void> _createLibrary() async {
     if (!_formKey.currentState!.validate()) return;
 
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+    );
     setState(() {
       _isCreating = true;
     });
@@ -55,6 +61,9 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
       );
 
       if (mounted) {
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+        );
         AppFeedback.success(context, '种子库创建成功');
         Navigator.pop(context, true);
       }
@@ -80,6 +89,9 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
       _tags.add(tag);
       _tagsController.clear();
     });
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
   }
 
   void _removeTag(String tag) {
@@ -111,86 +123,114 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
             child: ListView(
               padding: const EdgeInsets.all(DS.spacing16),
               children: [
-                // Name field
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: '名称',
-                    hintText: '输入种子库名称',
-                    border: OutlineInputBorder(),
+                SparkleStaggerItem(
+                  index: 0,
+                  child: TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: '名称',
+                      hintText: '输入种子库名称',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return '请输入名称';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '请输入名称';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: DS.spacing16),
 
-                // Description field
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: '描述',
-                    hintText: '输入种子库描述（可选）',
-                    border: OutlineInputBorder(),
+                SparkleStaggerItem(
+                  index: 1,
+                  child: TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: '描述',
+                      hintText: '输入种子库描述（可选）',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
                   ),
-                  maxLines: 3,
                 ),
                 const SizedBox(height: DS.spacing24),
 
-                // Category selection
-                Text(
-                  '分类',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                SparkleStaggerItem(
+                  index: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '分类',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Wrap(
-                  spacing: DS.spacing8,
-                  children: LibraryCategory.values.map((category) {
-                    final isSelected = _selectedCategory == category;
-                    return ChoiceChip(
-                      label: Text(category.displayName),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      selectedColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                    );
-                  }).toList(),
+                      const SizedBox(height: DS.spacing8),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        children: LibraryCategory.values.map((category) {
+                          final isSelected = _selectedCategory == category;
+                          return ChoiceChip(
+                            label: Text(category.displayName),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.selection,
+                                ),
+                              );
+                              setState(() {
+                                _selectedCategory = category;
+                              });
+                            },
+                            selectedColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: DS.spacing24),
 
-                // Visibility selection
-                Text(
-                  '可见性',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                SparkleStaggerItem(
+                  index: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '可见性',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Wrap(
-                  spacing: DS.spacing8,
-                  children: LibraryVisibility.values.map((visibility) {
-                    final isSelected = _selectedVisibility == visibility;
-                    return ChoiceChip(
-                      label: Text(visibility.displayName),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedVisibility = visibility;
-                        });
-                      },
-                      selectedColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                    );
-                  }).toList(),
+                      const SizedBox(height: DS.spacing8),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        children: LibraryVisibility.values.map((visibility) {
+                          final isSelected = _selectedVisibility == visibility;
+                          return ChoiceChip(
+                            label: Text(visibility.displayName),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.selection,
+                                ),
+                              );
+                              setState(() {
+                                _selectedVisibility = visibility;
+                              });
+                            },
+                            selectedColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: DS.spacing24),
 

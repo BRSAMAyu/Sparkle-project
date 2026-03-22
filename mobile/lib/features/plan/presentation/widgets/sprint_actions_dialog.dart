@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
 
 /// Sprint action type
@@ -159,26 +162,35 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
                 children: [
-                  _ActionTile(
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: _ActionTile(
                     icon: Icons.check_circle_rounded,
                     title: l10n.sprintActionCompleteTitle,
                     subtitle: l10n.sprintActionCompleteSubtitle,
                     color: DS.semanticSuccess,
                     onTap: () => _handleComplete(context),
                   ),
-                  _ActionTile(
+                  ),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: _ActionTile(
                     icon: Icons.date_range_rounded,
                     title: l10n.sprintActionExtendTitle,
                     subtitle: l10n.sprintActionExtendSubtitle,
                     color: DS.info,
                     onTap: () => _handleExtend(context),
                   ),
-                  _ActionTile(
+                  ),
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: _ActionTile(
                     icon: Icons.cancel_rounded,
                     title: l10n.sprintActionAbandonTitle,
                     subtitle: l10n.sprintActionAbandonSubtitle,
                     color: DS.semanticError,
                     onTap: () => _handleAbandon(context),
+                  ),
                   ),
                 ],
               ),
@@ -189,6 +201,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleComplete(BuildContext context) async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => _ConfirmCompleteDialog(planName: widget.planName),
@@ -205,6 +218,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleExtend(BuildContext context) async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     final days = await showDialog<int>(
       context: context,
       builder: (context) => _ExtendSprintDialog(planName: widget.planName),

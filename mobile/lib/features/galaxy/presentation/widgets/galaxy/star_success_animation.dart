@@ -78,7 +78,11 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
       }
     }
 
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.starUnlock));
+    unawaited(
+      SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.starUnlock,
+      ),
+    );
     unawaited(
       _controller.forward().then((_) {
         widget.onComplete();
@@ -95,16 +99,18 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: _controller,
-        builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _ObsidianNodePainter(
-            center: widget.position,
-            color: widget.color,
-            progress: _controller.value,
-            neighborPositions: widget.neighborPositions,
-            emphasizeNeighbors: widget.emphasizeNeighbors,
-            burstParticles: _burstParticles,
-            connectionParticles: _connectionParticles,
+        builder: (context, child) => RepaintBoundary(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _ObsidianNodePainter(
+              center: widget.position,
+              color: widget.color,
+              progress: _controller.value,
+              neighborPositions: widget.neighborPositions,
+              emphasizeNeighbors: widget.emphasizeNeighbors,
+              burstParticles: _burstParticles,
+              connectionParticles: _connectionParticles,
+            ),
           ),
         ),
       );
