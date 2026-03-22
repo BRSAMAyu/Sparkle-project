@@ -291,7 +291,7 @@ class ShopService:
             )
 
             # 10. 发送 WebSocket 通知（异步，不阻塞）
-            # TODO: 实现购买成功通知
+            # TRACKED(TD-006): 实现购买成功通知
             # await websocket_manager.broadcast_to_user(
             #     user_id,
             #     {

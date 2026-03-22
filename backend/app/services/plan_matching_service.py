@@ -169,7 +169,7 @@ class PlanMatchingService:
         if plan.subject:
             parts.append(f"学科: {plan.subject}")
 
-        # TODO: 可以添加 milestones、recent tasks 等信息
+        # TRACKED(TD-008): 可以添加 milestones、recent tasks 等信息
 
         return " ".join(parts)
 

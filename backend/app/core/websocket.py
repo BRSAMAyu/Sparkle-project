@@ -270,7 +270,8 @@ class ConnectionManager:
                     try:
                         await ws.send_json({"type": "error", "message": f"Kicked: {reason}"})
                         await ws.close(code=4001)
-                    except: pass
+                    except RuntimeError:
+                        pass
 
     async def broadcast(self, message: dict, group_id: str):
         """Broadcast to group (Distributed)"""
@@ -624,7 +625,7 @@ class ConnectionManager:
                 if cached:
                     try:
                         return json.loads(cached)
-                    except:
+                    except (json.JSONDecodeError, TypeError):
                         pass  # 缓存损坏，继续查询
 
             # 如果缓存未命中，需要从数据库查询

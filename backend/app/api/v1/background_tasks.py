@@ -119,7 +119,7 @@ async def retry_background_task(
     await db.commit()
     await db.refresh(task)
 
-    # TODO: Trigger the actual retry logic here (e.g., re-queue to Celery)
+    # TRACKED(TD-006): Trigger the actual retry logic here (e.g., re-queue to Celery)
 
     return {
         "data": task.to_dict(),
@@ -162,7 +162,7 @@ async def cancel_background_task(
     await db.commit()
     await db.refresh(task)
 
-    # TODO: If task has external_task_id, cancel the external job (e.g., Celery)
+    # TRACKED(TD-006): If task has external_task_id, cancel the external job (e.g., Celery)
 
     return {
         "data": task.to_dict(),

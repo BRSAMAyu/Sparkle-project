@@ -160,7 +160,7 @@ class DeviceService:
                 import json
                 try:
                     return json.loads(cached)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass  # 缓存损坏，继续查询数据库
 
         # 查询数据库

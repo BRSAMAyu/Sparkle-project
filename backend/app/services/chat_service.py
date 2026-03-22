@@ -131,7 +131,7 @@ class ChatService:
                     "actions": [action.model_dump() for action in llm_response.actions]
                 })
             }
-            # TODO: 异步执行 Actions (JobService) 或前端确认后执行
+            # TRACKED(TD-006): 异步执行 Actions (JobService) 或前端确认后执行
 
         # 6. 保存 Assistant 消息
         assistant_message = ChatMessage(

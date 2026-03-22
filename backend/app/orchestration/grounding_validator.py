@@ -405,7 +405,7 @@ class GroundingValidator:
             # 3. Focus 时间冲突检查（简化版）
             if tool_call.name in ["create_task", "update_task", "create_focus"]:
                 if "due_date" in tool_call.params or "start_time" in tool_call.params:
-                    # TODO: 实际应查询 focus_service 检查时间冲突
+                    # TRACKED(TD-008): 实际应查询 focus_service 检查时间冲突
                     # Phase 2: 简化实现，仅记录日志
                     logger.debug(f"Focus time conflict check for {tool_call.name}")
 

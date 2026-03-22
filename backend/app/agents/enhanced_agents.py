@@ -158,7 +158,7 @@ class StudyPlannerAgent(BaseAgent):
         # 这里需要实际的 DB session，简化示例中使用模拟数据
         # 生产环境应该从 context 中获取 db session
 
-        # TODO: 从 context 中获取 db session
+        # TRACKED(TD-008): 从 context 中获取 db session
         # db = context.db_session
         # galaxy_service = GalaxyService(db)
         # decay_service = DecayService(db)

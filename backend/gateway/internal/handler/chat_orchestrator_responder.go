@@ -247,7 +247,7 @@ func (r *protobufResponder) SendAck() {
 }
 
 func (r *protobufResponder) SendError(code, message string, retryable bool) {
-	// TODO: Define Error proto in websocket.proto
+	// TRACKED(TD-009): Define Error proto in websocket.proto
 	// For now, sending JSON error inside protobuf wrapper to be compatible with clients expecting structured error
 	enumCode := parseErrorCode(code)
 	errBody := map[string]interface{}{

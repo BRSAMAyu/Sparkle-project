@@ -545,7 +545,7 @@ class CognitiveService:
                     if str(fragment_id) not in ev_list:
                             ev_list.append(str(fragment_id))
                             pattern.evidence_ids = ev_list
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pattern.evidence_ids = [str(fragment_id)]
             else:
                 pattern.evidence_ids = [str(fragment_id)]

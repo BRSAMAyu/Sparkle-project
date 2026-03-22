@@ -350,7 +350,7 @@ class ContentModerationService:
         elif action_enum == ModerationAction.BAN:
             member.is_muted = True
             member.mute_until = _utcnow() + datetime.timedelta(days=365)  # 1年
-            # TODO: 可能还需要加入全局黑名单
+            # TRACKED(TD-008): 可能还需要加入全局黑名单
 
         await db.flush()
         return True

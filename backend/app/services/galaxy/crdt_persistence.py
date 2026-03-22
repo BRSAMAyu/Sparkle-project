@@ -56,7 +56,7 @@ class CRDTPersistenceManager:
         stmt = insert(CRDTSnapshot).values(
             galaxy_id=galaxy_id,
             state_data=update_data,
-            operation_count=0, # TODO: implement operation count tracking
+            operation_count=0, # TRACKED(TD-008): implement operation count tracking
             updated_at=_utcnow()
         ).on_conflict_do_update(
             index_elements=['galaxy_id'],

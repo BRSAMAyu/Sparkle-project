@@ -667,6 +667,6 @@ class ErrorBookService:
             "total_errors": total or 0,
             "mastered_count": mastered or 0,
             "need_review_count": need_review or 0,
-            "review_streak_days": 0, # TODO: Calculate from study logs
+            "review_streak_days": 0, # TRACKED(TD-008): Calculate from study logs
             "subject_distribution": subject_distribution
         }

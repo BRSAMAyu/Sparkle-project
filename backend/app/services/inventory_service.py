@@ -404,32 +404,32 @@ class InventoryService:
 
         if effect_type == ConsumableEffectType.EXP_BOOST:
             # 经验加成：记录到用户状态
-            # TODO: 实现 exp boost 效果
+            # TRACKED(TD-006): 实现 exp boost 效果
             return {"effect": "exp_boost", "duration_hours": 24, "multiplier": 2.0}
 
         elif effect_type == ConsumableEffectType.PHOTON_BOOST:
             # 光子加成：记录到用户状态
-            # TODO: 实现 photon boost 效果
+            # TRACKED(TD-006): 实现 photon boost 效果
             return {"effect": "photon_boost", "duration_hours": 24, "multiplier": 1.5}
 
         elif effect_type == ConsumableEffectType.STREAK_FREEZE:
             # 连击冻结：增加冻结次数
-            # TODO: 实现 streak freeze 效果
+            # TRACKED(TD-006): 实现 streak freeze 效果
             return {"effect": "streak_freeze", "charges_added": quantity}
 
         elif effect_type == ConsumableEffectType.HINT_REVEAL:
             # 提示解锁：增加提示次数
-            # TODO: 实现 hint reveal 效果
+            # TRACKED(TD-006): 实现 hint reveal 效果
             return {"effect": "hint_reveal", "hints_added": quantity}
 
         elif effect_type == ConsumableEffectType.ENERGY_RESTORE:
             # 能量恢复：恢复能量值
-            # TODO: 实现 energy restore 效果
+            # TRACKED(TD-006): 实现 energy restore 效果
             return {"effect": "energy_restore", "energy_restored": quantity * 10}
 
         elif effect_type == ConsumableEffectType.CUSTOM_AVATAR:
             # 自定义头像：解锁自定义头像权限
-            # TODO: 实现 custom avatar 效果
+            # TRACKED(TD-006): 实现 custom avatar 效果
             return {"effect": "custom_avatar", "unlocked": True}
 
         else:

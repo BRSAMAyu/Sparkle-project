@@ -483,7 +483,7 @@ class FavoriteService:
             selectinload(MessageFavorite.private_message)
         ).order_by(desc(MessageFavorite.created_at)).limit(limit).offset(offset)
 
-        # TODO: 实现标签过滤 (JSON 数组包含查询)
+        # TRACKED(TD-008): 实现标签过滤 (JSON 数组包含查询)
 
         result = await db.execute(query)
         return list(result.scalars().all())

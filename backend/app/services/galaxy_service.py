@@ -758,7 +758,7 @@ class GalaxyService:
                     for sim in similar:
                         if sim.id != node_id:
                             logger.warning(f"Potential duplicate found for {node_id}: {sim.id} ({sim.name})")
-                            # TODO: Create Notification for user to merge
+                            # TRACKED(TD-006): Create Notification for user to merge
                             # notification_service.create_system_notification(...)
                             break
 

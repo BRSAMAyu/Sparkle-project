@@ -281,7 +281,7 @@ class SummarizationWorker:
                 json.dumps(log_entry),
                 ex=86400  # 24小时过期
             )
-        except:
+        except (TypeError, redis.RedisError):
             pass  # 日志失败不影响主流程
 
     def get_stats(self) -> dict[str, Any]:

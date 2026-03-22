@@ -66,7 +66,7 @@ async def get_daily_stats(
         "tasks_completed": tasks_completed,
         "study_minutes": study_minutes,
         "total_tasks_today": total_today,
-        "focus_sessions": 0,  # TODO: integrate with focus_sessions table when available
+        "focus_sessions": 0,  # TRACKED(TD-008): integrate with focus_sessions table when available
     }
 
 

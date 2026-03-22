@@ -1839,10 +1839,10 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             """准备参数用于验证和执行"""
             if isinstance(tc.full_arguments, dict):
                 return tc.full_arguments
-            elif isinstance(tc.full_arguments, str):
+            if isinstance(tc.full_arguments, str):
                 try:
-                    return {"_raw_json": tc.full_arguments}
-                except:
+                    return json.loads(tc.full_arguments)
+                except (json.JSONDecodeError, TypeError):
                     return {"_raw": tc.full_arguments}
             return {}
 
@@ -1904,7 +1904,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         if isinstance(args, str):
             try:
                 args = json.loads(args)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 args = {}
 
         await _execute_single_tool(

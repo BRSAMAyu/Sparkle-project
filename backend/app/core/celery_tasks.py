@@ -680,7 +680,8 @@ def monitor_task_execution(task_func):
                     duration,
                     {"status": "success"}
                 )
-            except:
+            except Exception as exc:
+                logger.debug(f"Skip celery success metric for {task_name}: {exc}")
                 pass
 
             logger.info(f"✅ Task {task_name} completed in {duration:.2f}s")
@@ -697,7 +698,8 @@ def monitor_task_execution(task_func):
                     duration,
                     {"status": "failed"}
                 )
-            except:
+            except Exception as exc:
+                logger.debug(f"Skip celery failure metric for {task_name}: {exc}")
                 pass
 
             logger.error(f"❌ Task {task_name} failed after {duration:.2f}s: {e}")

@@ -143,7 +143,7 @@ async def create_event(
         ).to_dict(),
     )
 
-    # TODO: 调度提醒通知 (Phase 2)
+    # TRACKED(TD-006): 调度提醒通知
 
     return CalendarEventDetail.model_validate(event)
 

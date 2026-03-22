@@ -381,7 +381,7 @@ class TokenTracker:
                         usage = await self.redis.get(key)
                         if usage:
                             user_totals[user_id] = user_totals.get(user_id, 0) + int(usage)
-                except:
+                except (TypeError, ValueError):
                     continue
 
         # 排序并返回 Top N
@@ -412,7 +412,7 @@ class TokenTracker:
             try:
                 detail = json.loads(msg)
                 details.append(detail)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 continue
 
         return details

@@ -571,7 +571,7 @@ class MemoryService:
             MEMORY_WRITE_TOTAL.labels(type="episodic", status="blocked").inc()
             return None
         normalized_refs = _normalize_evidence_refs(evidence_refs, require_non_empty=True)
-        # TODO: enforce per-session rate limits (1-2 memories) once session tracking is available.
+        # TRACKED(TD-008): enforce per-session rate limits (1-2 memories) once session tracking is available.
         evidence_score = compute_score(normalized_refs, evidence_missing=False)
         evidence_snapshot = None
         if settings.ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE and await self._advanced_features_enabled(user_id):

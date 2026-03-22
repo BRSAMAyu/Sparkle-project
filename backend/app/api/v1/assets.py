@@ -248,7 +248,7 @@ async def list_assets(
 
     return AssetListResponse(
         assets=[_asset_to_response(a) for a in assets],
-        total=len(assets),  # TODO: Add actual count query for pagination
+        total=len(assets),  # TRACKED(TD-007): Add actual count query for pagination
         limit=limit,
         offset=offset,
     )

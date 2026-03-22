@@ -1282,7 +1282,7 @@ async def websocket_endpoint(
                         # Add user_id to identify sender and broadcast
                         data["user_id"] = user_id
                         await manager.broadcast(data, str(group_id))
-                except:
+                except (json.JSONDecodeError, TypeError):
                     # Non-json or other messages, ignore
                     pass
         except WebSocketDisconnect:
@@ -2302,7 +2302,7 @@ async def user_websocket_endpoint(
             if user_id:
                 manager.disconnect_user(user_id)
             await websocket.close()
-        except:
+        except RuntimeError:
             pass
 
 

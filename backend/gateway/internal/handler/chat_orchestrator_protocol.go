@@ -497,7 +497,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 	}
 
 	// Extract trace context
-	// TODO: Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
+	// TRACKED(TD-009): Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
 	ctx := baseCtx
 	ctx, span := tracer.Start(ctx, "HandleMessage.Proto")
 	span.SetAttributes(

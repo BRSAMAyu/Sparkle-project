@@ -483,7 +483,7 @@ class TranslationService:
         Returns:
             List of term mappings [{"source": "cache", "target": "缓存"}, ...]
         """
-        # TODO: Implement glossary storage in database
+        # TRACKED(TD-007): Implement glossary storage in database
         # For MVP, return built-in CS glossary
 
         if glossary_id == "cs_terms_v1":
@@ -507,7 +507,7 @@ class TranslationService:
         Segment text into translation units.
 
         Uses simple sentence splitting for MVP.
-        TODO: Use proper sentence tokenizer (spacy, nltk) in Phase 2.
+        TRACKED(TD-007): Use proper sentence tokenizer (spacy, nltk) in Phase 2.
 
         Args:
             text: Input text to segment

@@ -144,7 +144,7 @@ class FileCascadeService:
         1. 验证权限
         2. 物理删除 chunks（如果配置启用）
         3. 物理删除草稿节点（如果配置启用）
-        4. 删除 MinIO 文件（TODO）
+        4. 删除 MinIO 文件（TRACKED(TD-007)）
         5. 物理删除文件记录
 
         Args:
@@ -224,7 +224,7 @@ class FileCascadeService:
 
                 logger.info(f"Hard deleted {stats['nodes_deleted']} draft nodes for file {file_id}")
 
-            # 5. TODO: 删除 MinIO 存储
+            # 5. TRACKED(TD-007): 删除 MinIO 存储
             # 这需要 MinIO 客户端，暂时跳过
             # if file.object_key:
             #     await minio_client.remove_object(bucket, file.object_key)
