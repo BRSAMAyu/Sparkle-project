@@ -151,7 +151,7 @@ class _ActiveSprintView extends ConsumerWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final task = fullPlan.tasks![index];
-                  // return TaskCard(task: task); // TODO: Uncomment when TaskCard is available and integrated
+                  // return TaskCard(task: task); // TRACKED(TD-002): Uncomment when TaskCard is available and integrated
                   return ListTile(
                     title: Text(task.title),
                     subtitle: Text(task.status.name),

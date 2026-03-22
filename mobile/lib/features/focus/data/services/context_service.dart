@@ -53,8 +53,8 @@ class ContextService {
         'day_of_week': _getDayOfWeek(now.weekday),
       },
       'content': {
-        'language': 'en', // TODO: Detect from content
-        'domain': 'general', // TODO: Infer from task/content
+        'language': 'en', // TRACKED(TD-004): Detect from content
+        'domain': 'general', // TRACKED(TD-004): Infer from task/content
       },
       'pii_scrubbed': true,
     };

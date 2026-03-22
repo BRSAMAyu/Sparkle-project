@@ -488,7 +488,7 @@ extension ChatNotifierReviews on ChatNotifier {
   /// 返回用户的历史反馈模式，用于个性化审查
   Future<Map<String, dynamic>?> getUserFeedbackPattern() async {
     try {
-      // TODO: Implement gRPC call to GetUserFeedbackPattern
+      // TRACKED(TD-001): Implement gRPC call to GetUserFeedbackPattern
       // For now, return null (no pattern yet)
       return null;
     } catch (e) {

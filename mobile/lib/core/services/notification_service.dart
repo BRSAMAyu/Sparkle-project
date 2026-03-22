@@ -275,12 +275,12 @@ class NotificationService {
   }
 
   void _handleSnooze(Map<String, dynamic> payload) {
-    // TODO: Call API to snooze
+    // TRACKED(TD-003): Call API to snooze
     _logger.i('Snoozing notification: $payload');
   }
 
   void _handleDismiss(Map<String, dynamic> payload) {
-    // TODO: Call API to dismiss
+    // TRACKED(TD-003): Call API to dismiss
     _logger.i('Dismissing notification: $payload');
   }
 

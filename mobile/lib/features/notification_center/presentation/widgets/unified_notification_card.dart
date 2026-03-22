@@ -198,16 +198,16 @@ class UnifiedNotificationCard extends StatelessWidget {
         final planId = notification.metadata['plan_id'] as String?;
         if (planId != null) {
           // Navigate to plan detail
-          // TODO: Implement navigation
+          // TRACKED(TD-003): Implement navigation
         }
 
       case 'settings_updated':
       // Navigate to settings
-      // TODO: Implement navigation
+      // TRACKED(TD-003): Implement navigation
 
       case 'achievement':
       // Navigate to achievements
-      // TODO: Implement navigation
+      // TRACKED(TD-003): Implement navigation
 
       default:
         // Show detail dialog

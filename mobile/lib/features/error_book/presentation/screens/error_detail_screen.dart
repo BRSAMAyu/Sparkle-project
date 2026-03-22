@@ -658,7 +658,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                     label: Text(link.nodeName),
                     tooltip: context.l10n.errorBookKnowledgeLinkTooltip,
                     onPressed: () {
-                      // TODO: 导航到知识星图对应节点
+                      // TRACKED(TD-005): 导航到知识星图对应节点
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -923,7 +923,7 @@ class ErrorDetailScreen extends ConsumerWidget {
   }
 
   void _navigateToEdit(BuildContext context, ErrorRecord error) {
-    // TODO: 实现编辑功能
+    // TRACKED(TD-005): 实现编辑功能
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.errorBookEditInProgress),
@@ -937,7 +937,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) async {
-    // TODO: 调用重新分析 API
+    // TRACKED(TD-005): 调用重新分析 API
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -1019,7 +1019,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) {
-    // TODO: 导航到复习页面
+    // TRACKED(TD-005): 导航到复习页面
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.errorBookReviewInProgress),

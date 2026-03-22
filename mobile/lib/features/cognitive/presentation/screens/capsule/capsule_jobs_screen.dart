@@ -288,7 +288,7 @@ class _JobCard extends StatelessWidget {
                       avatar: const Icon(Icons.check_circle_outline, size: 16),
                       backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
                       onPressed: () {
-                        // TODO: 导航到胶囊详情
+                        // TRACKED(TD-005): 导航到胶囊详情
                       },
                     ),
                   )
@@ -305,7 +305,7 @@ class _JobCard extends StatelessWidget {
                   child: SparkleButton.outline(
                     label: l10n.commonRetry,
                     onPressed: () {
-                      // TODO: 重试
+                      // TRACKED(TD-005): 重试
                     },
                     icon: const Icon(Icons.refresh),
                   ),
@@ -318,7 +318,7 @@ class _JobCard extends StatelessWidget {
                   child: SparkleButton.primary(
                     label: l10n.capsuleViewCapsules,
                     onPressed: () {
-                      // TODO: 查看生成的胶囊
+                      // TRACKED(TD-005): 查看生成的胶囊
                     },
                     icon: const Icon(Icons.visibility),
                   ),

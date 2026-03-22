@@ -78,7 +78,7 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
   void startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      // TODO: Fetch latest tasks from API
+      // TRACKED(TD-003): Fetch latest tasks from API
     });
   }
 
@@ -214,7 +214,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
 
   Widget _buildTaskList(List<BackgroundTaskModel> tasks) => RefreshIndicator(
         onRefresh: () async {
-          // TODO: Refresh tasks from API
+          // TRACKED(TD-003): Refresh tasks from API
         },
         color: DS.primaryBase,
         child: ListView.builder(
@@ -289,7 +289,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                 children: [
                   TextButton.icon(
                     onPressed: () {
-                      // TODO: Retry task
+                      // TRACKED(TD-003): Retry task
                     },
                     icon: Icon(Icons.refresh, size: 16, color: DS.primaryBase),
                     label: Text(

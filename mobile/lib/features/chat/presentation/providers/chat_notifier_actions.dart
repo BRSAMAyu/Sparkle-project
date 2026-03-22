@@ -286,7 +286,7 @@ extension ChatNotifierActions on ChatNotifier {
       '✅ Action confirmed: ${action.type} (tool_result_id: $toolResultId)',
     );
 
-    // TODO: 可以添加乐观更新 - 立即在 UI 中标记为已确认
+    // TRACKED(TD-001): 可以添加乐观更新 - 立即在 UI 中标记为已确认
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: true));
   }
 
@@ -335,7 +335,7 @@ extension ChatNotifierActions on ChatNotifier {
       '❌ Action dismissed: ${action.type} (tool_result_id: $toolResultId)',
     );
 
-    // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
+    // TRACKED(TD-001): 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
   }
 
@@ -522,7 +522,7 @@ extension ChatNotifierActions on ChatNotifier {
 
     debugPrint('💬 Status message: $message');
 
-    // TODO: 更新 UI 中对应 ActionCard 的状态
+    // TRACKED(TD-001): 更新 UI 中对应 ActionCard 的状态
     // 例如：标记为已确认、已忽略，或者从列表中移除
     // state = state.copyWith(messages: _updateMessageActionStatus(event.actionId, event.status));
   }

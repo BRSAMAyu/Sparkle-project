@@ -434,7 +434,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Future<void> _showFilterDialog(BuildContext context) async {
-    // TODO: 实现更多筛选选项（掌握度、章节等）
+    // TRACKED(TD-005): 实现更多筛选选项（掌握度、章节等）
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(

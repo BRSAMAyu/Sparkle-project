@@ -25,7 +25,7 @@ class TranslationHistoryItem {
 
 /// In-memory translation history provider (session-only)
 ///
-/// TODO: Replace with persistent storage in Phase 2
+/// TRACKED(TD-007): Replace with persistent storage in Phase 2
 final translationHistoryProvider = StateNotifierProvider<
     TranslationHistoryNotifier, List<TranslationHistoryItem>>(
   (ref) => TranslationHistoryNotifier(),

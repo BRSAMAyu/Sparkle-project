@@ -98,7 +98,7 @@ class LearningPathProgressBar extends StatelessWidget {
             message: '${node.name} (${node.mastery}%)',
             child: GestureDetector(
               onTap: () {
-                // TODO: Navigate to galaxy node detail
+                // TRACKED(TD-002): Navigate to galaxy node detail
               },
               child: ColoredBox(
                 color: color.withValues(alpha: 0.35 + (0.65 * reveal)),

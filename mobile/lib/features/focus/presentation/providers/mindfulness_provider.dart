@@ -251,7 +251,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           },
         );
 
-        // TODO: Show reward feedback to user
+        // TRACKED(TD-004): Show reward feedback to user
         // Can emit an event or update state to trigger UI update
       } catch (e) {
         // Log error but don't block exit
@@ -278,7 +278,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
         // PR-15: Call prediction API and store candidates in state
         final candidates = await _predictionService.requestPredictions(
           userId: state.currentTask?.userId ??
-              'unknown', // TODO: Get actual user ID from auth
+              'unknown', // TRACKED(TD-004): Get actual user ID from auth
           contextEnvelope: envelope,
         );
 

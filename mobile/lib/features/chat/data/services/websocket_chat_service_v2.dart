@@ -1108,7 +1108,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _sendMessage(messagePayload);
     } else {
       _log('⏳ Message queued (not connected yet)');
-      // TODO-A7: Pending Limit
+      // TRACKED(TD-001): Pending limit
       if (_pendingMessages.length >= 50) {
         _pendingMessages.removeAt(0); // Drop oldest
       }
@@ -1695,9 +1695,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
   }
 
-  /// 触发重连（指数退避）(TODO-A7)
+  /// 触发重连（指数退避）(TRACKED(TD-001))
   void _triggerReconnect() {
-    if (_disposed) return; // TODO-A7: Check disposed
+    if (_disposed) return; // TRACKED(TD-001): Check disposed
     if (!_enableReconnect || !_enableReconnectLocal) {
       _log('⛔ Reconnect disabled');
       _updateConnectionState(WsConnectionState.failed);
@@ -1708,7 +1708,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Max reconnect attempts reached');
       _updateConnectionState(WsConnectionState.failed);
 
-      // TODO-A7: Clear pending
+      // TRACKED(TD-001): Clear pending
       _pendingMessages.clear();
 
       _broadcastErrorToActiveRequests(
@@ -1737,7 +1737,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
-      if (_disposed) return; // TODO-A7: Check disposed inside timer
+      if (_disposed) return; // TRACKED(TD-001): Check disposed inside timer
       if (_currentUserId != null) {
         _establishConnection(_currentUserId!, _currentToken);
       }
@@ -1847,14 +1847,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _heartbeatTimeoutTimer = null;
   }
 
-  /// 发送消息 (TODO-A7)
+  /// 发送消息 (TRACKED(TD-001))
   void _sendMessage(Map<String, dynamic> payload) {
     _log(
       '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',
     );
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
-      // TODO-A7: Pending Limit
+      // TRACKED(TD-001): Pending limit
       if (_pendingMessages.length >= 50) {
         _pendingMessages.removeAt(0); // Drop oldest
       }
@@ -2061,7 +2061,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _pendingMessages.clear();
   }
 
-  // Helper for TODO-A10
+  // Helper for TRACKED(TD-001)
   void _log(String message) {
     if (kDebugMode) {
       var masked = message;

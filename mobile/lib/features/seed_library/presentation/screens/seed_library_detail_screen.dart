@@ -78,7 +78,7 @@ class _SeedLibraryDetailScreenState
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.edit),
               onPressed: () {
-                // TODO: Implement edit
+                // TRACKED(TD-002): Implement edit
               },
             ),
           if (canManageLibrary)
