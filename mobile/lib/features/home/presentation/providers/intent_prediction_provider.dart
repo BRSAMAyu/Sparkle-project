@@ -189,7 +189,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       isTyping: isTyping,
       currentInput: text,
       typingPredictions: typingPredictions,
-      typingInsight: null,
     );
 
     _scheduleBackendPrediction(text, localTopConfidence);
@@ -200,7 +199,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       isTyping: false,
       currentInput: '',
       typingPredictions: [],
-      typingInsight: null,
     );
     _backendDebounce?.cancel();
     _lastBackendText = '';
@@ -231,7 +229,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             await _ref.read(predictionRepositoryProvider).getRealtimeNextStep(
                   partialText: normalized,
                   activePlanId: activePlanId,
-                  surface: 'chat_input',
                 );
 
         if (requestId != _backendRequestId) return;
@@ -317,7 +314,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
           : insight.trackingActionType,
       feedbackType: 'accept',
       contextSnapshot: _feedbackContext(insight),
-    ));
+    ),);
     unawaited(_eventStream.recordPredictionFeedback(
       predictionId: insight.predictionId,
       feedbackType: 'accept',
@@ -330,7 +327,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
           : insight.suggestedPrompt,
       entityType: insight.entityCard?.entityType,
       entityId: insight.entityCard?.entityId,
-    ));
+    ),);
     unawaited(
       _predictionAttribution.rememberAcceptedPrediction(
         predictionId: insight.predictionId,

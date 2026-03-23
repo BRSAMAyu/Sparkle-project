@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
 /// 消息详情放大视图
@@ -214,17 +214,17 @@ class MessageDetailView extends StatelessWidget {
           fontSize: 16,
           height: 1.6,
           color: DS.textPrimary,
-          fontFamilyFallback: aiContentFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       );
     }
 
-    return AiRichText(
+    return SparkleMarkdown(
       content: message.content,
       textColor: DS.textPrimary,
       codeBackgroundColor: DS.surfaceTertiary.withValues(alpha: 0.35),
       linkColor: DS.primaryBase,
-      selectablePlainText: true,
+      selectable: true,
     );
   }
 

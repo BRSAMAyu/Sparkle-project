@@ -76,15 +76,13 @@ class ShareTriggerButton extends StatelessWidget {
   final bool showLabel;
 
   @override
-  Widget build(BuildContext context) {
-    return switch (variant) {
+  Widget build(BuildContext context) => switch (variant) {
       ShareButtonVariant.icon => _buildIconButton(context),
       ShareButtonVariant.chip => _buildChipButton(context),
       ShareButtonVariant.fab => _buildFabButton(context),
       ShareButtonVariant.outlined => _buildOutlinedButton(context),
       ShareButtonVariant.filled => _buildFilledButton(context),
     };
-  }
 
   void _onTap(BuildContext context) {
     showUniversalShareSheet(
@@ -256,8 +254,7 @@ class AchievementShareTrigger extends StatelessWidget {
   final Future<File?> Function(UniversalSharePayload payload)? onGenerateCard;
 
   @override
-  Widget build(BuildContext context) {
-    return ShareTriggerButton(
+  Widget build(BuildContext context) => ShareTriggerButton(
       payload: UniversalSharePayload(
         contentType: ShareableContentType.achievement,
         resourceId: achievementId,
@@ -268,7 +265,6 @@ class AchievementShareTrigger extends StatelessWidget {
       size: size,
       onGenerateCard: onGenerateCard,
     );
-  }
 }
 
 /// Convenience widget for task completion share trigger
@@ -291,8 +287,7 @@ class TaskShareTrigger extends StatelessWidget {
   final Future<File?> Function(UniversalSharePayload payload)? onGenerateCard;
 
   @override
-  Widget build(BuildContext context) {
-    return ShareTriggerButton(
+  Widget build(BuildContext context) => ShareTriggerButton(
       payload: UniversalSharePayload(
         contentType: ShareableContentType.taskCompletion,
         resourceId: taskId,
@@ -304,7 +299,6 @@ class TaskShareTrigger extends StatelessWidget {
       onGenerateCard: onGenerateCard,
       icon: Icons.task_alt,
     );
-  }
 }
 
 /// Convenience widget for plan progress share trigger
@@ -327,8 +321,7 @@ class PlanShareTrigger extends StatelessWidget {
   final Future<File?> Function(UniversalSharePayload payload)? onGenerateCard;
 
   @override
-  Widget build(BuildContext context) {
-    return ShareTriggerButton(
+  Widget build(BuildContext context) => ShareTriggerButton(
       payload: UniversalSharePayload(
         contentType: ShareableContentType.planProgress,
         resourceId: planId,
@@ -343,7 +336,6 @@ class PlanShareTrigger extends StatelessWidget {
       onGenerateCard: onGenerateCard,
       icon: Icons.flag,
     );
-  }
 }
 
 /// Convenience widget for capsule share trigger
@@ -366,8 +358,7 @@ class CapsuleShareTrigger extends StatelessWidget {
   final Future<File?> Function(UniversalSharePayload payload)? onGenerateCard;
 
   @override
-  Widget build(BuildContext context) {
-    return ShareTriggerButton(
+  Widget build(BuildContext context) => ShareTriggerButton(
       payload: UniversalSharePayload(
         contentType: ShareableContentType.capsule,
         resourceId: capsuleId,
@@ -379,7 +370,6 @@ class CapsuleShareTrigger extends StatelessWidget {
       onGenerateCard: onGenerateCard,
       icon: Icons.access_time,
     );
-  }
 }
 
 /// Convenience widget for knowledge node share trigger
@@ -402,8 +392,7 @@ class NodeShareTrigger extends StatelessWidget {
   final Future<File?> Function(UniversalSharePayload payload)? onGenerateCard;
 
   @override
-  Widget build(BuildContext context) {
-    return ShareTriggerButton(
+  Widget build(BuildContext context) => ShareTriggerButton(
       payload: UniversalSharePayload(
         contentType: ShareableContentType.knowledgeNode,
         resourceId: nodeId,
@@ -418,5 +407,4 @@ class NodeShareTrigger extends StatelessWidget {
       onGenerateCard: onGenerateCard,
       icon: Icons.school,
     );
-  }
 }

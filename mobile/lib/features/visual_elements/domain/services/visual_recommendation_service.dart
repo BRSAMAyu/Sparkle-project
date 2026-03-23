@@ -44,7 +44,7 @@ class VisualRecommendationService {
               element: element,
               reason: reason,
               score: getRecommendationScore(element, effectiveState),
-            ))
+            ),)
         .toList()
       ..sort((a, b) => b.score.compareTo(a.score));
 
@@ -133,14 +133,12 @@ class VisualRecommendationService {
     required int particle,
     required int effect,
     required int bundle,
-  }) {
-    return switch (type) {
+  }) => switch (type) {
       VisualElementType.background => background,
       VisualElementType.particle => particle,
       VisualElementType.effect => effect,
       VisualElementType.bundle => bundle,
     };
-  }
 
   int _keywordScore(String text, List<String> keywords) {
     if (text.isEmpty) return 0;

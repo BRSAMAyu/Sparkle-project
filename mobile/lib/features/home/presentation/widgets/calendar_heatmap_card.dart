@@ -177,7 +177,6 @@ class CalendarHeatmapCard extends ConsumerWidget {
                       SizedBox(width: dense ? DS.spacing8 : DS.spacing10),
                       // Right 1/3: Stats sidebar
                       Expanded(
-                        flex: 1,
                         child: _CompactCalendarSidebar(
                           activeDays: activeDays,
                           totalTasks: totalTasks,
@@ -345,7 +344,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
             return Expanded(child: Center(child: child));
           }),
         ),
-      )),
+      ),),
     );
   }
 

@@ -45,13 +45,13 @@ class _FakeUserRepository implements UserRepository {
                 'patterns': [
                   {
                     'name': 'Idealistic Scheduling Loop',
-                    'metadata': {'level': 'readonly'}
+                    'metadata': {'level': 'readonly'},
                   },
                 ],
                 'fragments': [
                   {
                     'content': '喜欢先拆框架再执行',
-                    'metadata': {'level': 'readonly'}
+                    'metadata': {'level': 'readonly'},
                   },
                 ],
               },
@@ -146,16 +146,16 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<List<Map<String, dynamic>>> fetchSystemUpdates(
-          {int limit = 50, int offset = 0}) async =>
+          {int limit = 50, int offset = 0,}) async =>
       <Map<String, dynamic>>[];
 
   @override
   Future<void> updateTransparentPreference(
-      {required String prefKey, required value}) async {}
+      {required String prefKey, required value,}) async {}
 
   @override
   Future<void> updateGoal(
-      {required String goalId, String? title, String? status}) async {}
+      {required String goalId, String? title, String? status,}) async {}
 
   @override
   Future<Map<String, dynamic>> fetchUserSettings() async => <String, dynamic>{};
@@ -211,24 +211,22 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<UserModel> updateSchedulePreferences(
-      Map<String, dynamic> scheduleData) {
+      Map<String, dynamic> scheduleData,) {
     throw UnimplementedError();
   }
 }
 
-Widget _buildTestApp(_FakeUserRepository repository) {
-  return ProviderScope(
+Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
     overrides: [
       userRepositoryProvider.overrideWithValue(repository),
     ],
-    child: MaterialApp(
-      home: const UserPersonaScreen(),
+    child: const MaterialApp(
+      home: UserPersonaScreen(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
+      locale: Locale('zh'),
     ),
   );
-}
 
 void main() {
   setUp(() {
@@ -248,7 +246,7 @@ void main() {
     expect(find.text('Context Snapshot'), findsOneWidget);
     expect(find.textContaining('Preference Version: 12'), findsOneWidget);
     expect(
-        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget);
+        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget,);
     await tester.scrollUntilVisible(
       find.text('Inferred Preferences'),
       300,
@@ -257,7 +255,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Inferred Preferences'), findsOneWidget);
     expect(
-        find.textContaining('social_learning_preference: 0.2'), findsOneWidget);
+        find.textContaining('social_learning_preference: 0.2'), findsOneWidget,);
     expect(find.text('Reset'), findsOneWidget);
   });
 
@@ -300,7 +298,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-        repository.resetOverrideCalls, <String>['social_learning_preference']);
+        repository.resetOverrideCalls, <String>['social_learning_preference'],);
     expect(find.text('已恢复系统推断值'), findsOneWidget);
   });
 

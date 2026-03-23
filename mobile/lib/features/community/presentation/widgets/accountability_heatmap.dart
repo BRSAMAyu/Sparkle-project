@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// 责任伙伴打卡热力图组件
 ///
@@ -47,8 +46,7 @@ class AccountabilityHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Card(
+  Widget _buildEmptyState(BuildContext context) => Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -72,10 +70,8 @@ class AccountabilityHeatmap extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildLegend(BuildContext context) {
-    return Row(
+  Widget _buildLegend(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -97,7 +93,6 @@ class AccountabilityHeatmap extends StatelessWidget {
         ),
       ],
     );
-  }
 
   Widget _buildLegendDot(BuildContext context, int level) {
     final colors = [
@@ -140,27 +135,24 @@ class AccountabilityHeatmap extends StatelessWidget {
 
   Widget _buildMonthLabels(BuildContext context) {
     final months = ['一月', '二月', '三月', '四月', '五月', '六月',
-                    '七月', '八月', '九月', '十月', '十一月', '十二月'];
+                    '七月', '八月', '九月', '十月', '十一月', '十二月',];
 
     return Padding(
       padding: const EdgeInsets.only(left: 32), // Space for day labels
       child: Row(
-        children: List.generate(12, (index) {
-          return Expanded(
+        children: List.generate(12, (index) => Expanded(
             child: Center(
               child: Text(
                 months[index],
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-          );
-        }),
+          ),),
       ),
     );
   }
 
-  Widget _buildWeeksGrid(BuildContext context, Map<String, List<Map<String, dynamic>>> monthlyData) {
-    return Row(
+  Widget _buildWeeksGrid(BuildContext context, Map<String, List<Map<String, dynamic>>> monthlyData) => Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Day labels
@@ -172,14 +164,12 @@ class AccountabilityHeatmap extends StatelessWidget {
         ),
       ],
     );
-  }
 
   Widget _buildDayLabels(BuildContext context) {
     final days = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
     return Column(
-      children: List.generate(7, (index) {
-        return SizedBox(
+      children: List.generate(7, (index) => SizedBox(
           height: 12,
           child: Center(
             child: Text(
@@ -189,8 +179,7 @@ class AccountabilityHeatmap extends StatelessWidget {
               ),
             ),
           ),
-        );
-      }),
+        ),),
     );
   }
 
@@ -204,7 +193,6 @@ class AccountabilityHeatmap extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 53,
-        childAspectRatio: 1,
         crossAxisSpacing: 2,
         mainAxisSpacing: 2,
       ),
@@ -236,7 +224,7 @@ class AccountabilityHeatmap extends StatelessWidget {
   DateTime? _getDateForCell(int year, int week, int dayOfWeek) {
     try {
       // 找到该年份的第一周的第一天（周一）
-      final firstDayOfYear = DateTime(year, 1, 1);
+      final firstDayOfYear = DateTime(year);
       final firstMonday = firstDayOfYear.add(Duration(days: (8 - firstDayOfYear.weekday) % 7));
 
       // 计算目标日期
@@ -328,7 +316,7 @@ class MonthlyHeatmap extends StatelessWidget {
     }
 
     final daysInMonth = DateTime(year, month + 1, 0).day;
-    final firstWeekday = DateTime(year, month, 1).weekday;
+    final firstWeekday = DateTime(year, month).weekday;
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -351,8 +339,7 @@ class MonthlyHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Card(
+  Widget _buildEmptyState(BuildContext context) => Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -366,7 +353,6 @@ class MonthlyHeatmap extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildCalendarGrid(
     BuildContext context,
@@ -380,8 +366,7 @@ class MonthlyHeatmap extends StatelessWidget {
       children: [
         // Weekday headers
         Row(
-          children: List.generate(7, (index) {
-            return Expanded(
+          children: List.generate(7, (index) => Expanded(
               child: Center(
                 child: Text(
                   weekdays[index],
@@ -390,13 +375,11 @@ class MonthlyHeatmap extends StatelessWidget {
                   ),
                 ),
               ),
-            );
-          }),
+            ),),
         ),
         const SizedBox(height: 8),
         // Calendar grid
-        ...List.generate(6, (week) {
-          return Row(
+        ...List.generate(6, (week) => Row(
             children: List.generate(7, (day) {
               final dayNumber = week * 7 + day - firstWeekday + 1;
               final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
@@ -415,8 +398,7 @@ class MonthlyHeatmap extends StatelessWidget {
                 child: _buildDayCell(context, dayData, dayNumber),
               );
             }),
-          );
-        }),
+          ),),
       ],
     );
   }

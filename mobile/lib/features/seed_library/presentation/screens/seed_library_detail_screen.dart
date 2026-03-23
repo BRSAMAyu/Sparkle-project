@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
@@ -289,7 +289,7 @@ class _SeedLibraryDetailScreenState
                                 label: (state.subscription?.isEnabled ?? false) ? '暂停使用' : '应用种子库',
                                 icon: Icon((state.subscription?.isEnabled ?? false)
                                     ? Icons.pause_circle_outline
-                                    : Icons.play_circle_outline),
+                                    : Icons.play_circle_outline,),
                               ),
                               SparkleButton.secondary(
                                 onPressed: () async {
@@ -554,7 +554,7 @@ class _SeedLibraryDetailScreenState
     SeedLibraryDetailState state,
   ) async {
     final commentController = TextEditingController();
-    double score = state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
+    var score = state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -582,7 +582,6 @@ class _SeedLibraryDetailScreenState
               Text('当前评分：${score.toStringAsFixed(1)} / 10'),
               Slider(
                 value: score,
-                min: 0,
                 max: 10,
                 divisions: 20,
                 label: score.toStringAsFixed(1),
@@ -674,12 +673,12 @@ class _SeedLibraryDetailScreenState
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
                     padding: const EdgeInsets.all(DS.spacing12),
-                    child: AiRichText(
+                    child: SparkleMarkdown(
                       content: item.content!,
                       textColor: DS.textPrimary,
                       codeBackgroundColor: DS.surfaceSecondary,
                       linkColor: DS.info,
-                      selectablePlainText: true,
+                      selectable: true,
                     ),
                   ),
                 ],

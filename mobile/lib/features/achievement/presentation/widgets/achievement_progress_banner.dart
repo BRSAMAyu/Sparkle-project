@@ -108,7 +108,6 @@ class _AchievementProgressBannerState
                 borderRadius: BorderRadius.circular(DS.spacing12),
                 border: Border.all(
                   color: DS.borderSubtle,
-                  width: 1,
                 ),
               ),
               child: Row(

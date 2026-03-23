@@ -94,9 +94,10 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
     super.dispose();
+    _tabController
+      ..removeListener(_onTabChanged)
+      ..dispose();
   }
 
   void _onTabChanged() {
@@ -110,7 +111,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   }
 
   Future<void> _loadItems() async {
-    List<QuickShareItem> items = [];
+    var items = <QuickShareItem>[];
 
     try {
       switch (_selectedCategory) {
@@ -144,7 +145,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
         .where((a) => a.isUnlocked)
         .toList()
       ..sort((a, b) => (b.userProgress?.unlockedAt ?? DateTime(1970))
-          .compareTo(a.userProgress?.unlockedAt ?? DateTime(1970)));
+          .compareTo(a.userProgress?.unlockedAt ?? DateTime(1970)),);
 
     return unlockedAchievements.take(10).map((achievement) {
       final rarity = achievement.achievement.rarity;
@@ -180,14 +181,13 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Future<List<QuickShareItem>> _loadPlans() async {
     final state = ref.read(planListProvider);
-
-    if (state.isLoading || state.error != null) return [];
-
     final activePlans = state.activePlans.toList()
       ..sort((a, b) => b.progress.compareTo(a.progress));
+    if (activePlans.isEmpty && (state.isLoading || state.error != null)) {
+      return [];
+    }
 
-    return activePlans.take(10).map((plan) {
-      return QuickShareItem(
+    return activePlans.take(10).map((plan) => QuickShareItem(
         id: plan.id,
         title: plan.name,
         subtitle: '进度: ${(plan.progress * 100).toStringAsFixed(0)}%',
@@ -198,23 +198,21 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
           'progress': plan.progress,
           'subject': plan.subject,
         },
-      );
-    }).toList();
+      ),).toList();
   }
 
   Future<List<QuickShareItem>> _loadRecentTasks() async {
     final state = ref.read(taskListProvider);
-
-    if (state.isLoading || state.error != null) return [];
-
     final completedTasks = state.tasks
         .where((t) => t.status == TaskStatus.completed)
         .toList()
       ..sort((a, b) => (b.completedAt ?? DateTime(1970))
-          .compareTo(a.completedAt ?? DateTime(1970)));
+          .compareTo(a.completedAt ?? DateTime(1970)),);
+    if (completedTasks.isEmpty && (state.isLoading || state.error != null)) {
+      return [];
+    }
 
-    return completedTasks.take(10).map((task) {
-      return QuickShareItem(
+    return completedTasks.take(10).map((task) => QuickShareItem(
         id: task.id,
         title: task.title,
         subtitle: '已完成 · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
@@ -225,19 +223,18 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
           'duration': task.actualMinutes ?? task.estimatedMinutes,
           'type': task.type.name,
         },
-      );
-    }).toList();
+      ),).toList();
   }
 
   Future<List<QuickShareItem>> _loadKnowledgeNodes() async {
     final state = ref.read(galaxyProvider);
-
-    if (state.isLoading || state.lastError != null) return [];
-
     final nodesWithMastery = state.nodes
         .where((n) => n.masteryScore > 0)
         .toList()
       ..sort((a, b) => b.masteryScore.compareTo(a.masteryScore));
+    if (nodesWithMastery.isEmpty && (state.isLoading || state.lastError != null)) {
+      return [];
+    }
 
     return nodesWithMastery.take(10).map((node) {
       final sectorStyle = SectorConfig.getStyle(node.sector);
@@ -264,8 +261,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -325,7 +321,6 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
         ),
       ),
     );
-  }
 
   Widget _buildItemList() {
     if (_isLoading) {
@@ -422,7 +417,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
           size: 20,
           color: DS.neutral400,
         ),
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: DS.borderRadius12,
         ),
         tileColor: DS.surfaceSecondary,

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -11,16 +10,17 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
-import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
-import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
@@ -537,14 +537,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           bottomRight: Radius.circular(16),
                                         ),
                                       ),
-                                      child: AiRichText(
+                                      child: SparkleMarkdown(
                                         content: activeTask.guideContent ??
                                             l10n.taskExecutionGuideEmpty,
                                         textColor: DS.textPrimary,
                                         codeBackgroundColor: DS.neutral100,
                                         linkColor: DS.primaryBase,
-                                        fontSize: DS.fontSizeBase,
-                                        height: 1.6,
+                                        lineHeight: 1.6,
                                       ),
                                     ),
                                   ],

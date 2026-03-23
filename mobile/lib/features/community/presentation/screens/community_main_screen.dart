@@ -196,7 +196,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                   SnackBar(
                     content: Text(focusMode
                         ? context.l10n.communityFocusModeDisabled
-                        : context.l10n.communityFocusModeEnabled),
+                        : context.l10n.communityFocusModeEnabled,),
                     duration: const Duration(seconds: 2),
                   ),
                 );
@@ -275,18 +275,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
 class _FriendsListTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return const FriendsHubView(
+  Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
       padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
     );
-  }
 }
 
 class _GroupsListTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return const GroupsHubView(
+  Widget build(BuildContext context, WidgetRef ref) => const GroupsHubView(
       padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
     );
-  }
 }

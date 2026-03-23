@@ -36,7 +36,7 @@ class CalendarRemoteDataSource {
     final data = response.data?['data'] as List<dynamic>? ?? [];
     return data
         .map(
-            (json) => CalendarEventModel.fromJson(json as Map<String, dynamic>))
+            (json) => CalendarEventModel.fromJson(json as Map<String, dynamic>),)
         .toList();
   }
 
@@ -80,12 +80,12 @@ class CalendarRemoteDataSource {
       ApiEndpoints.calendarEventRestore(eventId),
     );
     return CalendarEventModel.fromJson(
-        response.data?['data'] as Map<String, dynamic>);
+        response.data?['data'] as Map<String, dynamic>,);
   }
 
   /// 批量操作
   Future<Map<String, dynamic>> batchOperations(
-      List<Map<String, dynamic>> operations) async {
+      List<Map<String, dynamic>> operations,) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.calendarEventsBatch,
       data: {'operations': operations},

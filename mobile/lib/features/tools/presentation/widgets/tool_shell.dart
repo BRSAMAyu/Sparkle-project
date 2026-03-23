@@ -255,7 +255,7 @@ class _ToolShellState extends State<ToolShell> {
             ),
           ),
         ),
-        SizedBox(height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20),
+        SizedBox(height: _effectiveCompactHeader ? DS.spacing8 : DS.spacing20),
         if (widget.fillHeight)
           Expanded(child: widget.body)
         else if (_isSheet)
@@ -274,7 +274,7 @@ class _ToolShellState extends State<ToolShell> {
           widget.footer!,
         ],
         if (widget.subtitle.isNotEmpty || widget.heroChips.isNotEmpty) ...[
-          const SizedBox(height: DS.spacing12),
+          const SizedBox(height: DS.spacing8),
           _ToolIntroSection(
             expanded: !_headerCollapsed,
             accentColor: widget.accentColor,
@@ -330,12 +330,15 @@ class _ToolShellState extends State<ToolShell> {
     );
 
     return Align(
-      alignment: Alignment.topCenter,
+      alignment: _isSheet ? Alignment.bottomCenter : Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: widget.maxWidth,
+          minHeight: _isSheet
+              ? math.min(MediaQuery.sizeOf(context).height * 0.84, 820)
+              : 0,
           maxHeight: _isSheet
-              ? math.min(MediaQuery.sizeOf(context).height * 0.88, 940)
+              ? math.min(MediaQuery.sizeOf(context).height * 0.92, 980)
               : double.infinity,
         ),
         child: root,

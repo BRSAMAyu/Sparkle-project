@@ -1401,7 +1401,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   }
 
   void _routeEventToRequest(String? requestId, ChatStreamEvent event) {
-    String? targetRequestId = requestId;
+    var targetRequestId = requestId;
     if ((targetRequestId == null || targetRequestId.isEmpty) &&
         _requestControllers.length == 1) {
       targetRequestId = _requestControllers.keys.first;
@@ -1777,7 +1777,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _heartbeatTimeoutTimer?.cancel();
     _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () {
       _log(
-          '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s');
+          '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s',);
       _handleHeartbeatFailure();
     });
   }
@@ -1795,7 +1795,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         rtt: rtt,
         sentAt: _lastPingSentTime!,
         receivedAt: _lastPongReceivedTime,
-        consecutiveFailures: 0,
       );
       _heartbeatMetricsController.add(metrics);
       _log('💓 Heartbeat OK (RTT: ${rtt.inMilliseconds}ms)');
@@ -1812,14 +1811,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       final metrics = HeartbeatMetrics(
         rtt: Duration.zero,
         sentAt: _lastPingSentTime!,
-        receivedAt: null,
         consecutiveFailures: _consecutiveHeartbeatFailures,
       );
       _heartbeatMetricsController.add(metrics);
     }
 
     _log(
-        '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures');
+        '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures',);
 
     if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
       // 🔧 P0修复：流式消息活跃期间，如果最近收到过数据则跳过重连
@@ -1828,7 +1826,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         final sinceLastData = DateTime.now().difference(_lastStreamDataTime!);
         if (sinceLastData.inSeconds < 120) {
           _log(
-              '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago');
+              '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago',);
           _consecutiveHeartbeatFailures =
               0; // Reset to avoid immediate re-trigger
           return;

@@ -40,7 +40,7 @@ class AchievementShareCardFactory {
                     color: Colors.white.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.workspace_premium_rounded,
                     color: Color(0xFFB8860B),
                   ),
@@ -67,9 +67,9 @@ class AchievementShareCardFactory {
                 payload.subtitle!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeXs,
-                  color: const Color(0xFF6F5A34),
+                  color: Color(0xFF6F5A34),
                   height: 1.35,
                 ),
               ),

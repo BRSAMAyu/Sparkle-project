@@ -39,7 +39,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptedTos || !_acceptedPrivacy) {
       AppFeedback.info(
-          context, context.l10n.guestUpgradeAcceptPoliciesRequired);
+          context, context.l10n.guestUpgradeAcceptPoliciesRequired,);
       return;
     }
 
@@ -72,7 +72,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   Future<void> _upgradeWithSocial(String provider) async {
     if (!_acceptedTos || !_acceptedPrivacy) {
       AppFeedback.info(
-          context, context.l10n.guestUpgradeAcceptPoliciesRequired);
+          context, context.l10n.guestUpgradeAcceptPoliciesRequired,);
       return;
     }
 
@@ -187,7 +187,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         labelText: l10n.username,
                         filled: true,
                         fillColor: DS.surfaceSecondary,
-                        border: OutlineInputBorder(
+                        border: const OutlineInputBorder(
                           borderRadius: DS.borderRadius12,
                         ),
                       ),
@@ -205,7 +205,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         labelText: l10n.email,
                         filled: true,
                         fillColor: DS.surfaceSecondary,
-                        border: OutlineInputBorder(
+                        border: const OutlineInputBorder(
                           borderRadius: DS.borderRadius12,
                         ),
                       ),
@@ -226,7 +226,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         labelText: l10n.password,
                         filled: true,
                         fillColor: DS.surfaceSecondary,
-                        border: OutlineInputBorder(
+                        border: const OutlineInputBorder(
                           borderRadius: DS.borderRadius12,
                         ),
                       ),
@@ -245,7 +245,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                         labelText: l10n.confirmPassword,
                         filled: true,
                         fillColor: DS.surfaceSecondary,
-                        border: OutlineInputBorder(
+                        border: const OutlineInputBorder(
                           borderRadius: DS.borderRadius12,
                         ),
                       ),

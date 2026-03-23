@@ -54,56 +54,46 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
 
   void _initParticles() {
     // Initialize stars (shared across weather types)
-    _stars = List.generate(20, (i) {
-      return _Star(
+    _stars = List.generate(20, (i) => _Star(
         x: _random.nextDouble(),
         y: _random.nextDouble() * 0.5,
         size: 0.5 + _random.nextDouble() * 1.5,
         baseOpacity: 0.2 + _random.nextDouble() * 0.3,
         twinkleSpeed: 0.5 + _random.nextDouble() * 1.5,
-      );
-    });
+      ),);
 
     // Initialize particles for sunny weather (sun rays)
-    _particles = List.generate(8, (i) {
-      return _Particle(
+    _particles = List.generate(8, (i) => _Particle(
         angle: (i * pi / 4),
         baseRadius: 30.0 + i * 15.0,
-      );
-    });
+      ),);
 
     // Initialize clouds for cloudy weather
-    _clouds = List.generate(5, (i) {
-      return _Cloud(
+    _clouds = List.generate(5, (i) => _Cloud(
         x: _random.nextDouble(),
         y: 0.05 + _random.nextDouble() * 0.25,
         size: 40 + _random.nextDouble() * 60,
         speed: 0.1 + _random.nextDouble() * 0.2,
         opacity: 0.03 + _random.nextDouble() * 0.05,
-      );
-    });
+      ),);
 
     // Initialize rain drops for rainy weather
-    _rainDrops = List.generate(40, (i) {
-      return _RainDrop(
+    _rainDrops = List.generate(40, (i) => _RainDrop(
         x: _random.nextDouble(),
         startY: -0.1 - _random.nextDouble() * 0.5,
         speed: 0.8 + _random.nextDouble() * 0.4,
         length: 10 + _random.nextDouble() * 15,
         opacity: 0.1 + _random.nextDouble() * 0.15,
-      );
-    });
+      ),);
 
     // Initialize meteors for meteor weather
-    _meteors = List.generate(6, (i) {
-      return _Meteor(
+    _meteors = List.generate(6, (i) => _Meteor(
         startX: 0.2 + _random.nextDouble() * 0.6,
         startY: _random.nextDouble() * 0.2,
         length: 30 + _random.nextDouble() * 50,
         speed: 1.5 + _random.nextDouble() * 1.0,
         delay: i * 0.15,
-      );
-    });
+      ),);
   }
 
   @override
@@ -171,8 +161,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
 
     return AnimatedBuilder(
       animation: _mainAnimationController,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _AnimatedStarPainter(
             stars: _stars,
@@ -180,8 +169,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
             color: DS.brandPrimary,
             intensity: starIntensity,
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -201,8 +189,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   }
 
   /// Sunny: Pulsing sun rays with glow effect
-  Widget _buildSunnyEffects(Color accentColor) {
-    return Stack(
+  Widget _buildSunnyEffects(Color accentColor) => Stack(
       children: [
         // Central sun glow
         Positioned(
@@ -210,8 +197,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
           top: -30,
           child: AnimatedBuilder(
             animation: _pulseAnimation,
-            builder: (context, child) {
-              return Container(
+            builder: (context, child) => Container(
                 width: 200 * _pulseAnimation.value,
                 height: 200 * _pulseAnimation.value,
                 decoration: BoxDecoration(
@@ -224,34 +210,28 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                     ],
                   ),
                 ),
-              );
-            },
+              ),
           ),
         ),
         // Sun rays (expanding rings)
         AnimatedBuilder(
           animation: _mainAnimationController,
-          builder: (context, child) {
-            return CustomPaint(
+          builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _SunRayPainter(
                 particles: _particles,
                 animationValue: _mainAnimationController.value,
                 accentColor: accentColor,
               ),
-            );
-          },
+            ),
         ),
       ],
     );
-  }
 
   /// Cloudy: Drifting clouds with breathing opacity
-  Widget _buildCloudyEffects(Color accentColor) {
-    return AnimatedBuilder(
+  Widget _buildCloudyEffects(Color accentColor) => AnimatedBuilder(
       animation: _particleController,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _CloudPainter(
             clouds: _clouds,
@@ -259,14 +239,11 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
             accentColor: accentColor,
             breathingValue: _mainAnimationController.value,
           ),
-        );
-      },
+        ),
     );
-  }
 
   /// Rainy: Falling rain drops with splash effect
-  Widget _buildRainyEffects(Color accentColor) {
-    return Stack(
+  Widget _buildRainyEffects(Color accentColor) => Stack(
       children: [
         // Dark overlay for rainy mood
         Positioned.fill(
@@ -286,58 +263,48 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         // Rain drops
         AnimatedBuilder(
           animation: _particleController,
-          builder: (context, child) {
-            return CustomPaint(
+          builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _RainPainter(
                 rainDrops: _rainDrops,
                 animationValue: _particleController.value,
                 accentColor: accentColor,
               ),
-            );
-          },
+            ),
         ),
       ],
     );
-  }
 
   /// Meteor: Shooting stars with trails and twinkling energy particles
-  Widget _buildMeteorEffects(Color accentColor) {
-    return Stack(
+  Widget _buildMeteorEffects(Color accentColor) => Stack(
       children: [
         // Energy particles floating
         AnimatedBuilder(
           animation: _mainAnimationController,
-          builder: (context, child) {
-            return CustomPaint(
+          builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _EnergyParticlePainter(
                 animationValue: _mainAnimationController.value,
                 accentColor: accentColor,
               ),
-            );
-          },
+            ),
         ),
         // Shooting meteors
         AnimatedBuilder(
           animation: _particleController,
-          builder: (context, child) {
-            return CustomPaint(
+          builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _MeteorPainter(
                 meteors: _meteors,
                 animationValue: _particleController.value,
                 accentColor: accentColor,
               ),
-            );
-          },
+            ),
         ),
       ],
     );
-  }
 
-  Widget _buildWeatherStatus(String type, String condition) {
-    return Column(
+  Widget _buildWeatherStatus(String type, String condition) => Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Row(
@@ -371,7 +338,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         ),
       ],
     );
-  }
 
   Widget _buildWeatherIcon(String type) {
     IconData icon;
@@ -567,10 +533,8 @@ class _AnimatedStarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AnimatedStarPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue ||
+  bool shouldRepaint(covariant _AnimatedStarPainter oldDelegate) => animationValue != oldDelegate.animationValue ||
         intensity != oldDelegate.intensity;
-  }
 }
 
 class _SunRayPainter extends CustomPainter {
@@ -627,9 +591,7 @@ class _SunRayPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SunRayPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _SunRayPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _CloudPainter extends CustomPainter {
@@ -673,10 +635,8 @@ class _CloudPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CloudPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue ||
+  bool shouldRepaint(covariant _CloudPainter oldDelegate) => animationValue != oldDelegate.animationValue ||
         breathingValue != oldDelegate.breathingValue;
-  }
 }
 
 class _RainPainter extends CustomPainter {
@@ -732,9 +692,7 @@ class _RainPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RainPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _RainPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _MeteorPainter extends CustomPainter {
@@ -802,9 +760,7 @@ class _MeteorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MeteorPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _MeteorPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _EnergyParticlePainter extends CustomPainter {
@@ -845,7 +801,5 @@ class _EnergyParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }

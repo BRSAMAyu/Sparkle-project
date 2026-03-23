@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
 import 'package:sparkle/features/community/presentation/widgets/thread_sheet.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -54,7 +54,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     }
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 240) {
-      ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages();
+      unawaited(
+        ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages(),
+      );
     }
   }
 
@@ -98,7 +100,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 const Text(
                   '转发到群组',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
+                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
                 ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
@@ -173,7 +175,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   const Text(
                     '举报消息',
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg),
+                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
                   ),
                   const SizedBox(height: DS.spacing8),
                   RadioGroup<ReportReason>(
@@ -428,7 +430,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       itemBuilder: (context, index) {
                         if (showAgentStatus && index == 0) {
                           return Padding(
-                            padding: EdgeInsets.only(bottom: DS.spacing16),
+                            padding: const EdgeInsets.only(bottom: DS.spacing16),
                             child: AiStatusIndicator(
                               status: 'THINKING',
                               details: context.l10n.communityAgentThinking,
@@ -589,7 +591,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       ),
                 );
               },
-              onQuickShare: (payload) => _handleQuickShare(payload),
+              onQuickShare: _handleQuickShare,
             ),
           ],
         ),
@@ -621,7 +623,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
         messageType: MessageType.text,
         sender: buildCommunityAgentUser(
-            localizedName: context.l10n.communityAgentName),
+            localizedName: context.l10n.communityAgentName,),
         content: content,
         contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
         createdAt: DateTime.now(),
@@ -646,19 +648,32 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             recentMessages: messages,
             preset: preset,
             reasoningMode: reasoningMode,
-            chatMode: 'standard',
           ),
     );
   }
 
-  void _handleQuickShare(UniversalSharePayload payload) async {
+  Future<void> _handleQuickShare(UniversalSharePayload payload) async {
     try {
-      await ref.read(communityShareRepositoryProvider).shareResource(
-            resourceType: payload.contentType.stringValue,
-            resourceId: payload.resourceId,
-            targetGroupId: widget.groupId,
-            comment: payload.shareMessage,
-          );
+      if (payload.contentType == ShareableContentType.achievement) {
+        await ref.read(communityRepositoryProvider).sendMessage(
+              widget.groupId,
+              type: MessageType.achievement,
+              content: payload.shareMessage,
+              contentData: {
+                'achievement_id': payload.resourceId,
+                'name': payload.title,
+                'description': payload.subtitle,
+                ...?payload.metadata,
+              },
+            );
+      } else {
+        await ref.read(communityShareRepositoryProvider).shareResource(
+              resourceType: payload.contentType.stringValue,
+              resourceId: payload.resourceId,
+              targetGroupId: widget.groupId,
+              comment: payload.shareMessage,
+            );
+      }
       if (!mounted) return;
       ref.invalidate(groupChatProvider(widget.groupId));
       AppFeedback.success(context, context.l10n.shareResourceSuccess);
@@ -748,7 +763,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         groupInfo: groupInfo,
                         messages: messages,
                         preset: 'summary',
-                        reasoningMode: 'fast',
                       ),
                     ),
                     _AgentQuickChip(
@@ -762,7 +776,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         groupInfo: groupInfo,
                         messages: messages,
                         preset: 'reminder',
-                        reasoningMode: 'fast',
                       ),
                     ),
                     _AgentQuickChip(

@@ -1,5 +1,5 @@
-import 'dart:math';
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';

@@ -340,7 +340,5 @@ class _MilestoneParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MilestoneParticlePainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _MilestoneParticlePainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }

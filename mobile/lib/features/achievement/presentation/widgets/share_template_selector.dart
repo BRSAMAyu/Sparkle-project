@@ -16,8 +16,7 @@ class ShareTemplateSelector extends StatelessWidget {
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
+  Widget build(BuildContext context) => SizedBox(
       height: 120,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -36,7 +35,6 @@ class ShareTemplateSelector extends StatelessWidget {
         },
       ),
     );
-  }
 }
 
 class _TemplateCard extends StatelessWidget {
@@ -51,8 +49,7 @@ class _TemplateCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -111,19 +108,14 @@ class _TemplateCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Color _getTemplateColor(String templateId) {
-    return getTemplateColor(templateId);
-  }
+  Color _getTemplateColor(String templateId) => getTemplateColor(templateId);
 
-  IconData _getTemplateIcon(String templateId) {
-    return switch (templateId) {
+  IconData _getTemplateIcon(String templateId) => switch (templateId) {
       'cosmic' => Icons.auto_awesome,
       'minimal' => Icons.minimize,
       'neon' => Icons.light_mode,
       'elegant' => Icons.star_outline,
       _ => Icons.image,
     };
-  }
 }

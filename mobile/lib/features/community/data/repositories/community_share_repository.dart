@@ -59,6 +59,9 @@ class CommunityShareRepository {
     final response = await _apiClient.post<dynamic>(
       ApiEndpoints.adoptSharedResource(sharedResourceId),
     );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to adopt shared resource');
+    }
     final data =
         ApiResponseParser.unwrapMap(response.data, action: 'adoptResource');
     await _eventStream.recordSharedResourceAction(

@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -103,7 +103,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
     ).animate(CurvedAnimation(
       parent: _headerController,
       curve: Curves.easeOutCubic,
-    ));
+    ),);
     unawaited(_headerController.forward());
   }
 
@@ -281,8 +281,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         ),
       );
 
-  Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) {
-    return LayoutBuilder(
+  Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) => LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 420;
         final cardWidth = compact
@@ -317,7 +316,6 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         );
       },
     );
-  }
 
   Widget _buildViewModeButton({
     required IconData icon,
@@ -931,8 +929,7 @@ class _AnimatedSection extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
@@ -948,7 +945,6 @@ class _AnimatedSection extends StatelessWidget {
       },
       child: child,
     );
-  }
 }
 
 // ─── Animated category chip with selection feedback ─────────────────────────
@@ -965,8 +961,7 @@ class _AnimatedCategoryChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1002,7 +997,6 @@ class _AnimatedCategoryChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 // ─── Animated limited card entrance ─────────────────────────────────────────
@@ -1043,8 +1037,7 @@ class _AnimatedLimitedCardState extends State<_AnimatedLimitedCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final curve = Curves.easeOutCubic.transform(_controller.value);
@@ -1061,7 +1054,6 @@ class _AnimatedLimitedCardState extends State<_AnimatedLimitedCard>
       },
       child: widget.child,
     );
-  }
 }
 
 // ─── Quick action card with tap scale ───────────────────────────────────────
@@ -1109,8 +1101,7 @@ class _QuickActionCardState extends State<_QuickActionCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTapDown: (_) => _tapController.forward(),
       onTapUp: (_) {
         _tapController.reverse();
@@ -1174,7 +1165,6 @@ class _QuickActionCardState extends State<_QuickActionCard>
         ),
       ),
     );
-  }
 }
 
 // ─── Limited achievement card with countdown and glow ───────────────────────
@@ -1312,8 +1302,7 @@ class _LimitedAchievementCard extends StatelessWidget {
                     Tween(begin: 0, end: achievement.progressPercentage / 100),
                 duration: const Duration(milliseconds: 800),
                 curve: Curves.easeOutCubic,
-                builder: (context, value, _) {
-                  return Column(
+                builder: (context, value, _) => Column(
                     children: [
                       ClipRRect(
                         borderRadius:
@@ -1334,8 +1323,7 @@ class _LimitedAchievementCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                  );
-                },
+                  ),
               ),
             ],
           ],
@@ -1388,8 +1376,7 @@ class _PulsingBadgeState extends State<_PulsingBadge>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final opacity = 0.7 + 0.3 * _controller.value;
@@ -1400,7 +1387,6 @@ class _PulsingBadgeState extends State<_PulsingBadge>
       },
       child: widget.child,
     );
-  }
 }
 
 // ─── Filter sheet ───────────────────────────────────────────────────────────
@@ -1617,7 +1603,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
   }
 
   String _getStatusDisplayName(
-      AchievementStatus status, AppLocalizations l10n) {
+      AchievementStatus status, AppLocalizations l10n,) {
     switch (status) {
       case AchievementStatus.all:
         return l10n.achievementAll;

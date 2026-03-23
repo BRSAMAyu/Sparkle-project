@@ -1414,7 +1414,7 @@ class DemoDataService {
         totalEstimatedHours: 20,
         tasks: demoTasks
             .where((task) =>
-                task.title.contains('数据结构') || task.title.contains('算法设计'))
+                task.title.contains('数据结构') || task.title.contains('算法设计'),)
             .take(3)
             .toList(),
       ),
@@ -1452,7 +1452,6 @@ class DemoDataService {
         totalEstimatedHours: 48,
         subject: '学习方法',
         planStage: PlanStage.daily,
-        priority: PlanPriority.normal,
         tasks: emergingGrowthTasks,
       ),
       PlanModel(
@@ -1471,7 +1470,6 @@ class DemoDataService {
         totalEstimatedHours: 24,
         subject: '数据库系统',
         planStage: PlanStage.review,
-        priority: PlanPriority.normal,
         tasks: archivedGrowthTasks,
       ),
     ];
@@ -2590,7 +2588,7 @@ main  →  [A] → [B] → [C]
               .subtract(const Duration(minutes: 30))
               .toIso8601String(),
           'reactions': [
-            {'emoji': '👍', 'count': 3}
+            {'emoji': '👍', 'count': 3},
           ],
         },
         {
@@ -2605,7 +2603,7 @@ main  →  [A] → [B] → [C]
               .subtract(const Duration(minutes: 25))
               .toIso8601String(),
           'reactions': [
-            {'emoji': '💪', 'count': 2}
+            {'emoji': '💪', 'count': 2},
           ],
         },
         {
@@ -2626,10 +2624,10 @@ main  →  [A] → [B] → [C]
   // --- 📊 责任伙伴打卡热力图 Data ---
   List<Map<String, dynamic>> get demoAccountabilityHeatmap {
     final now = DateTime.now();
-    final List<Map<String, dynamic>> heatmap = [];
+    final heatmap = <Map<String, dynamic>>[];
 
     // 生成过去365天的模拟数据
-    for (int i = 0; i < 365; i++) {
+    for (var i = 0; i < 365; i++) {
       final date = now.subtract(Duration(days: i));
       // 随机生成打卡强度 (0-4)
       final intensity =

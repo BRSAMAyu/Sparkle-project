@@ -186,7 +186,6 @@ class _FakeAchievementRepository extends AchievementRepository {
     shareAchievementCalls.add(achievementId);
     return AchievementShareCard(
       cardUrl: '/uploads/achievement-cards/user-1/$achievementId.png',
-      mimeType: 'image/png',
       width: 1080,
       height: 1440,
       generatedAt: DateTime(2026, 3, 10),

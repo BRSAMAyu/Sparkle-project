@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,7 +65,7 @@ class FriendsHubView extends ConsumerWidget {
             ...friends.map((friendship) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _FriendCard(friendship: friendship, overview: overview),
-                )),
+                ),),
         ],
       ),
     );
@@ -128,10 +130,10 @@ class _PartnerHero extends ConsumerWidget {
               expand: true,
               onPressed: () {
                 if (pendingCount > 0) {
-                  context.pushNamed('friendRequests');
+                  unawaited(context.pushNamed('friendRequests'));
                   return;
                 }
-                context.pushNamed('friendsDiscover');
+                unawaited(context.pushNamed('friendsDiscover'));
               },
             ),
           ],
@@ -303,8 +305,7 @@ class _PendingInviteBanner extends StatelessWidget {
   final int count;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: Row(
         children: [
           Icon(Icons.mark_email_unread_outlined, color: DS.warning),
@@ -322,7 +323,6 @@ class _PendingInviteBanner extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _FriendCard extends StatelessWidget {
@@ -365,12 +365,12 @@ class _FriendCard extends StatelessWidget {
       child: GraphiteCardSurface(
         onTap: () {
           if (accountability?.isPending == true) {
-            context.pushNamed('friendRequests');
+            unawaited(context.pushNamed('friendRequests'));
             return;
           }
-          context.push(
+          unawaited(context.push(
             '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-          );
+          ));
         },
         child: Row(
           children: [
@@ -481,13 +481,23 @@ class _FriendCard extends StatelessWidget {
                 if (accountability?.partnershipId != null)
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
-                    icon: const Icon(Icons.handshake_outlined),
-                    onPressed: () => context.push(
-                      CommunityRoutes.accountabilityDetail.replaceFirst(
-                        ':id',
-                        accountability!.partnershipId,
-                      ),
+                    icon: Icon(
+                      accountability?.isPending == true
+                          ? Icons.mark_email_unread_outlined
+                          : Icons.handshake_outlined,
                     ),
+                    onPressed: () {
+                      if (accountability?.isPending == true) {
+                        unawaited(context.pushNamed('friendRequests'));
+                        return;
+                      }
+                      unawaited(context.push(
+                        CommunityRoutes.accountabilityDetail.replaceFirst(
+                          ':id',
+                          accountability!.partnershipId,
+                        ),
+                      ));
+                    },
                   ),
               ],
             ),
@@ -508,8 +518,7 @@ class _MetricChip extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: DS.surfacePrimary.withValues(alpha: 0.82),
@@ -529,7 +538,6 @@ class _MetricChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _TinyMetric extends StatelessWidget {
@@ -538,8 +546,7 @@ class _TinyMetric extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -550,7 +557,6 @@ class _TinyMetric extends StatelessWidget {
         style: DS.labelSmall.copyWith(color: DS.textSecondary),
       ),
     );
-  }
 }
 
 class _Pill extends StatelessWidget {
@@ -563,8 +569,7 @@ class _Pill extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
@@ -578,7 +583,6 @@ class _Pill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _InlineError extends StatelessWidget {
@@ -587,14 +591,12 @@ class _InlineError extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: Text(
         message,
         style: DS.bodySmall.copyWith(color: DS.error),
       ),
     );
-  }
 }
 
 class _EmptyFriendsCard extends StatelessWidget {

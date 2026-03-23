@@ -316,8 +316,6 @@ class VisualElementRepository {
               },
               'aurora_colors': ['#00ff88', '#00ccff', '#ff00ff'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'bg_sunset',
@@ -335,7 +333,6 @@ class VisualElementRepository {
               },
             },
             isUnlocked: true,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'bg_nebula',
@@ -353,8 +350,6 @@ class VisualElementRepository {
               },
               'nebula_colors': ['#8b5cf6', '#a855f7', '#d946ef'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'bg_cyberpunk',
@@ -372,8 +367,6 @@ class VisualElementRepository {
               },
               'neon_colors': ['#ff00ff', '#00ffff', '#ffff00'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'bg_event_starlight',
@@ -394,8 +387,6 @@ class VisualElementRepository {
             unlockRequirement: {
               'event_end_at': '2026-04-15T00:00:00Z',
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           // Particles
           VisualElementModel(
@@ -431,8 +422,6 @@ class VisualElementRepository {
               'shape': 'petal',
               'colors': ['#ffb7c5', '#ffc0cb', '#ff69b4'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'particle_firefly',
@@ -450,7 +439,6 @@ class VisualElementRepository {
               'colors': ['#90ee90', '#adff2f', '#ffff00'],
             },
             isUnlocked: true,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'particle_snow',
@@ -467,8 +455,6 @@ class VisualElementRepository {
               'shape': 'snowflake',
               'colors': ['#ffffff', '#f0f8ff', '#e6e6fa'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'particle_energy',
@@ -485,8 +471,6 @@ class VisualElementRepository {
               'shape': 'circle',
               'colors': ['#ff6b6b', '#4ecdc4', '#45b7d1'],
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           // Effects
           VisualElementModel(
@@ -522,8 +506,6 @@ class VisualElementRepository {
               'intensity': 0.6,
               'color': '#4ecdc4',
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
           VisualElementModel(
             id: 'effect_gravity_wave',
@@ -540,8 +522,6 @@ class VisualElementRepository {
               'intensity': 0.8,
               'color': '#8b5cf6',
             },
-            isUnlocked: false,
-            isEquipped: false,
           ),
         ],
         total: 13,

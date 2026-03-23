@@ -305,7 +305,6 @@ class AchievementCard extends StatelessWidget {
         borderRadius: _borderRadiusForStyle,
         showShimmer: _shouldShimmer,
         showGlow: _isNewlyUnlocked,
-        showParticles: false,
         isNewlyUnlocked: _isNewlyUnlocked,
         unlockedAt: achievement.userProgress?.unlockedAt,
         child: card,
@@ -365,7 +364,6 @@ class AchievementCard extends StatelessWidget {
                 ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildIcon(size: 36),
             const SizedBox(width: DS.spacing10),
@@ -1199,7 +1197,6 @@ class AchievementGridCard extends StatelessWidget {
     final card = AchievementCard(
       achievement: achievement,
       onTap: onTap,
-      style: AchievementCardStyle.standard,
       showProgress: showProgress,
     );
 

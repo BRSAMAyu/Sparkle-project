@@ -23,17 +23,16 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
-import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
-import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
+import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 void main() {

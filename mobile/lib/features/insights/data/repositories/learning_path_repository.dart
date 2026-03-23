@@ -91,6 +91,62 @@ class LearningPathRepository {
     }
   }
 
+  Future<LearningPathTaskPathResponse> generateTaskPath(
+    String targetNodeId, {
+    List<String> selectedRelatedNodeIds = const [],
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return LearningPathTaskPathResponse(
+        mode: 'task_path',
+        targetNodeId: targetNodeId,
+        targetName: '示例节点',
+        planSummary: '这是一个不占用计划额度的轻量学习路径。',
+        tasks: [
+          LearningPathTaskSummary(
+            id: 'mock_task_path_1',
+            title: '快速理解核心概念',
+            type: 'learning',
+            estimatedMinutes: 25,
+            status: 'pending',
+          ),
+          LearningPathTaskSummary(
+            id: 'mock_task_path_2',
+            title: '完成一轮小练习',
+            type: 'learning',
+            estimatedMinutes: 25,
+            status: 'pending',
+          ),
+        ],
+      );
+    }
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.learningPathTaskPath(targetNodeId),
+        queryParameters: {
+          'include_related': true,
+          if (selectedRelatedNodeIds.isNotEmpty)
+            'selected_related_node_ids': selectedRelatedNodeIds,
+        },
+      );
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'generateTaskPath',
+      );
+      final parsed = LearningPathTaskPathResponse.fromJson(data);
+      await _eventStream.recordLearningPathGenerated(
+        targetNodeId: targetNodeId,
+        taskIds: parsed.tasks.map((task) => task.id).toList(),
+      );
+      return parsed;
+    } on DioException catch (e) {
+      throw Exception(
+        _extractDioMessage(e, 'Failed to generate learning task path'),
+      );
+    } catch (_) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
   Future<FullPlanResponse> generateFullPathPlan(
     String targetNodeId, {
     List<String> selectedRelatedNodeIds = const [],

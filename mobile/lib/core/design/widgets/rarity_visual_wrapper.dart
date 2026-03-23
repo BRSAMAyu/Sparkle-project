@@ -605,7 +605,6 @@ class _RotatingGradientBorderPainter extends CustomPainter {
 
     // Create rotating gradient
     final gradient = SweepGradient(
-      center: Alignment.center,
       startAngle: rotation,
       endAngle: rotation + 2 * math.pi,
       colors: colors,

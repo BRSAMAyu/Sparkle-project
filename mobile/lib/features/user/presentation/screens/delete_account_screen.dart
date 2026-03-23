@@ -234,11 +234,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       ),
                       const SizedBox(height: DS.spacing12),
                       _buildChecklistItem(
-                          context.l10n.deleteAccountChecklistItem1),
+                          context.l10n.deleteAccountChecklistItem1,),
                       _buildChecklistItem(
-                          context.l10n.deleteAccountChecklistItem2),
+                          context.l10n.deleteAccountChecklistItem2,),
                       _buildChecklistItem(
-                          context.l10n.deleteAccountChecklistItem3),
+                          context.l10n.deleteAccountChecklistItem3,),
                     ],
                   ),
                 ),

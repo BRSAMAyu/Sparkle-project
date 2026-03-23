@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -281,10 +282,70 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         subtitle: Text(relation.relationLabel),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
-                          context.push('/galaxy/node/$relatedNodeId');
+                          unawaited(context.push('/galaxy/node/$relatedNodeId'));
                         },
                       );
                     }).toList(),
+                  ),
+                ),
+              ),
+            ),
+
+          if (detail.learningPathSnapshot != null)
+            SliverToBoxAdapter(
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '最近生成的学习路径',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(DS.sm),
+                        decoration: BoxDecoration(
+                          color: DS.surfacePanel,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          detail.learningPathSnapshot!.mode == 'task_path'
+                              ? '当前为轻量任务路径，不占用计划额度。'
+                              : '当前为完整学习计划路径。',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.md),
+                      SparkleMarkdown(
+                        content: detail.learningPathSnapshot!.summary,
+                        textColor: DS.textPrimary,
+                        codeBackgroundColor: DS.surfacePanel,
+                        linkColor: DS.brandPrimary,
+                        fontSize: theme.textTheme.bodyMedium?.fontSize ?? 14,
+                        lineHeight: 1.6,
+                      ),
+                      if (detail.learningPathSnapshot!.tasks.isNotEmpty) ...[
+                        const SizedBox(height: DS.md),
+                        Text(
+                          '已生成任务',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        ...detail.learningPathSnapshot!.tasks.map(
+                          (task) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.task_alt),
+                            title: Text(task.title),
+                            subtitle: Text('约 ${task.estimatedMinutes} 分钟'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () =>
+                                unawaited(context.push('/tasks/${task.id}')),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -308,10 +369,10 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(task.title),
                             subtitle: Text(
-                                '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}'),
+                                '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}',),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
-                              context.push('/tasks/${task.id}');
+                              unawaited(context.push('/tasks/${task.id}'));
                             },
                           ),
                         )
@@ -346,9 +407,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               if (plan.planType == 'sprint') {
-                                context.push('/sprint');
+                                unawaited(context.push('/sprint'));
                               } else {
-                                context.push('/growth');
+                                unawaited(context.push('/growth'));
                               }
                             },
                           ),

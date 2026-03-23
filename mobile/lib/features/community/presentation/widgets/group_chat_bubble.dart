@@ -11,16 +11,16 @@ import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
-import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
-import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
@@ -344,7 +344,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final entries = reactions.entries.where((e) {
       final v = e.value;
       if (v is int) return v > 0;
-      if (v is List) return (v).isNotEmpty;
+      if (v is List) return v.isNotEmpty;
       return false;
     }).toList();
 
@@ -533,13 +533,12 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ? normalizeCommunityAgentOutput(widget.message.content ?? '')
         : widget.message.content ?? '';
     final textColor = isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText;
-    return AiRichText(
+    return SparkleMarkdown(
       content: rawContent,
       textColor: textColor,
       codeBackgroundColor:
           isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
       linkColor: isMe ? Colors.white : DS.brandPrimary,
-      fontSize: 16,
       height: 1.4,
     );
   }
@@ -773,7 +772,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       isMe: isMe,
       child: TaskShareCardFactory.fromPayload(
         payload,
-        isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
         sharedResourceId: sharedResourceId,
         onAdopt: sharedResourceId == null
@@ -806,7 +804,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       isMe: isMe,
       child: PlanShareCardFactory.fromPayload(
         payload,
-        isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
         sharedResourceId: sharedResourceId,
         onAdopt: sharedResourceId == null
@@ -819,6 +816,30 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Widget _buildCapsuleShareBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
     final sharedResourceType = data['resource_type'] as String?;
+    if (sharedResourceType == 'knowledge_node') {
+      final payload = UniversalSharePayload(
+        contentType: ShareableContentType.knowledgeNode,
+        resourceId: data['resource_id'] as String? ?? '',
+        title: data['resource_title'] as String? ??
+            data['title'] as String? ??
+            widget.message.content ??
+            '知识节点',
+        subtitle:
+            data['resource_summary'] as String? ?? data['summary'] as String?,
+        metadata: {
+          ...data,
+          ...((data['resource_meta'] as Map<String, dynamic>?) ?? const {}),
+        },
+      );
+
+      return _buildRichCardWrapper(
+        isMe: isMe,
+        child: NodeShareCardFactory.fromPayload(
+          payload,
+          onTap: () => _handleSharedResourceTap(payload),
+        ),
+      );
+    }
     if (sharedResourceType == 'seed_library' ||
         sharedResourceType == 'seed_item') {
       return _buildRichCardWrapper(
@@ -850,7 +871,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       isMe: isMe,
       child: CapsuleShareCardFactory.fromPayload(
         payload,
-        isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
       ),
     );
@@ -951,7 +971,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Future<void> _handleAdopt(
     BuildContext context,
     String sharedResourceId,
-    String resourceType,
+    String fallbackResourceType,
   ) async {
     try {
       final result = await ref
@@ -959,21 +979,31 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           .adoptResource(sharedResourceId: sharedResourceId);
       if (!context.mounted) return;
       AppFeedback.success(context, '已采纳，跳转中...');
+      final resourceType =
+          result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>
           ? EntityCardPayload.fromRaw(
               {'entity_card': result['entity_card'] as Map<String, dynamic>},
               fallbackType: resourceType,
             )
           : null;
-      final newId = result['new_resource_id'] as String;
+      final newId = result['new_resource_id']?.toString();
       if (resourceType == 'plan') {
         unawaited(ref.read(planListProvider.notifier).refresh());
-      } else {
+      } else if (resourceType == 'task') {
         unawaited(ref.read(taskListProvider.notifier).refreshTasks());
       }
       final route = entityCard?.detailRoute ??
-          (resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId');
-      unawaited(context.push(route));
+          (newId == null
+              ? null
+              : resourceType == 'plan'
+                  ? '/plans/$newId'
+                  : resourceType == 'task'
+                      ? '/tasks/$newId'
+                      : null);
+      if (route != null && route.isNotEmpty) {
+        unawaited(context.push(route));
+      }
     } catch (e) {
       if (!context.mounted) return;
       AppFeedback.error(context, '采纳失败: $e');
@@ -1081,7 +1111,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                               color: isMe ? Colors.white : DS.prismPurple,
                             ),
                           ),
-                        ))
+                        ),)
                     .toList(),
               ),
             ],
@@ -1179,7 +1209,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       // 使用深链接服务导航，而非复制链接
       if (!DeepLinkService.handleDeepLink(context, deepLink)) {
         // 导航失败时回退到复制链接
-        UniversalShareService().copyDeepLink(deepLink);
+        unawaited(UniversalShareService().copyDeepLink(deepLink));
         AppFeedback.info(context, '链接已复制');
       }
     }

@@ -199,8 +199,7 @@ class VisualElementModel {
     bool? isUnlocked,
     DateTime? unlockedAt,
     bool? isEquipped,
-  }) {
-    return VisualElementModel(
+  }) => VisualElementModel(
       id: id,
       name: name,
       description: description,
@@ -218,7 +217,6 @@ class VisualElementModel {
       unlockedAt: unlockedAt ?? this.unlockedAt,
       isEquipped: isEquipped ?? this.isEquipped,
     );
-  }
 }
 
 // ========== 用户视觉配置 ==========

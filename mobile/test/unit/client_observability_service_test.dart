@@ -21,7 +21,7 @@ void main() {
           'severity': 'info',
           'duration_ms': 18,
           'metadata': <String, dynamic>{'platform': 'ios'},
-          'occurred_at': DateTime.utc(2026, 3, 21, 0, 0, 0).toIso8601String(),
+          'occurred_at': DateTime.utc(2026, 3, 21).toIso8601String(),
         },
       ]),
     });

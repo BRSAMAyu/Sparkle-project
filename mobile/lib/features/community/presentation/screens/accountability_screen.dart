@@ -6,11 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
-import 'package:sparkle/features/auth/auth.dart';
 
 /// 我的责任伙伴列表
 class AccountabilityScreen extends ConsumerWidget {
@@ -135,7 +135,7 @@ class _PartnershipCard extends ConsumerWidget {
                       style: TextStyle(
                           color: DS.brandPrimary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 18),
+                          fontSize: 18,),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
@@ -147,7 +147,7 @@ class _PartnershipCard extends ConsumerWidget {
                           partner?.displayName ?? '未知用户',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: DS.fontSizeBase),
+                              fontSize: DS.fontSizeBase,),
                         ),
                         const SizedBox(height: DS.xs),
                         _StatusChip(status: partnership.status),
@@ -235,7 +235,7 @@ class _StatusChip extends StatelessWidget {
           style: TextStyle(
               fontSize: DS.fontSizeXs,
               color: color,
-              fontWeight: FontWeight.bold),),
+              fontWeight: FontWeight.bold,),),
     );
   }
 }
@@ -251,7 +251,7 @@ class _GoalRow extends StatelessWidget {
         children: [
           Text('$label: ',
               style: TextStyle(
-                  fontSize: DS.fontSizeSm, color: DS.textSecondary),),
+                  fontSize: DS.fontSizeSm, color: DS.textSecondary,),),
           Expanded(
             child: Text(goal,
                 maxLines: 2,
@@ -287,12 +287,12 @@ class _StreakRow extends ConsumerWidget {
       data: (stats) => Row(
         children: [
           Icon(Icons.local_fire_department,
-              size: 16, color: DS.brandPrimary),
+              size: 16, color: DS.brandPrimary,),
           const SizedBox(width: DS.xs),
           Text(
             '我: ${stats.myStreakDays} 天 · 伙伴: ${stats.partnerStreakDays} 天',
             style: TextStyle(
-                fontSize: DS.fontSizeSm, color: DS.brandPrimary),
+                fontSize: DS.fontSizeSm, color: DS.brandPrimary,),
           ),
           const Spacer(),
           if (stats.partnerCheckedInToday)
@@ -306,7 +306,7 @@ class _StreakRow extends ConsumerWidget {
                 fontSize: DS.fontSizeXs,
                 color: stats.partnerCheckedInToday
                     ? DS.success
-                    : DS.neutral500),
+                    : DS.neutral500,),
           ),
         ],
       ),

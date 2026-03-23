@@ -166,6 +166,4 @@ final subtaskNotifierProvider =
 );
 
 /// Provider to get subtask state for a task (shorthand)
-final subtaskStateProvider = Provider.family<SubtaskState, String>((ref, taskId) {
-  return ref.watch(subtaskNotifierProvider(taskId));
-});
+final subtaskStateProvider = Provider.family<SubtaskState, String>((ref, taskId) => ref.watch(subtaskNotifierProvider(taskId)));

@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -113,13 +113,12 @@ class _VisualElementCardState extends State<VisualElementCard>
         curve: Curves.easeOut,
         transform: Matrix4.identity()
           ..scaleByDouble(
-              _isPressed ? 0.96 : 1.0, _isPressed ? 0.96 : 1.0, 1, 1),
+              _isPressed ? 0.96 : 1.0, _isPressed ? 0.96 : 1.0, 1, 1,),
         child: RarityVisualWrapper(
           rarity: widget.element.rarity,
           borderRadius: borderRadius,
           showShimmer: shouldShimmer,
           showGlow: isNewlyUnlocked,
-          showParticles: false,
           isNewlyUnlocked: isNewlyUnlocked,
           unlockedAt: widget.element.unlockedAt,
           child: Stack(
@@ -162,7 +161,7 @@ class _VisualElementCardState extends State<VisualElementCard>
                       // 内容
                       Padding(
                         padding: EdgeInsets.all(
-                            widget.isCompact ? DS.spacing8 : DS.spacing12),
+                            widget.isCompact ? DS.spacing8 : DS.spacing12,),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -245,11 +244,9 @@ class _VisualElementCardState extends State<VisualElementCard>
     );
   }
 
-  bool _shouldShimmerForRarity(VisualElementRarity rarity) {
-    return rarity == VisualElementRarity.rare ||
+  bool _shouldShimmerForRarity(VisualElementRarity rarity) => rarity == VisualElementRarity.rare ||
         rarity == VisualElementRarity.epic ||
         rarity == VisualElementRarity.legendary;
-  }
 
   bool get _isElementNewlyUnlocked {
     final unlockedAt = widget.element.unlockedAt;
@@ -416,8 +413,7 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
   }
 
-  Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) {
-    return Container(
+  Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) => Container(
       padding: EdgeInsets.symmetric(
         horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
         vertical: DS.spacing4,
@@ -425,7 +421,7 @@ class _VisualElementCardState extends State<VisualElementCard>
       decoration: BoxDecoration(
         color: colors.background,
         borderRadius: DS.borderRadius8,
-        border: Border.all(color: colors.border, width: 1),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -449,7 +445,6 @@ class _VisualElementCardState extends State<VisualElementCard>
         ],
       ),
     );
-  }
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -535,8 +530,7 @@ class _VisualElementCardState extends State<VisualElementCard>
   }
 
   /// 磨砂玻璃锁定遮罩
-  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) {
-    return Positioned.fill(
+  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) => Positioned.fill(
       child: ClipRRect(
         borderRadius: widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
         child: Stack(
@@ -578,7 +572,6 @@ class _VisualElementCardState extends State<VisualElementCard>
         ),
       ),
     );
-  }
 
   String _getUnlockConditionSummary(AppLocalizations l10n) {
     switch (widget.element.unlockSource) {
@@ -673,9 +666,7 @@ class _BreathingBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) {
-    return animation.value != oldDelegate.animation.value;
-  }
+  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) => animation.value != oldDelegate.animation.value;
 }
 
 /// 元素预览画笔
@@ -786,10 +777,8 @@ class _ElementPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ElementPreviewPainter oldDelegate) {
-    return elementType != oldDelegate.elementType ||
+  bool shouldRepaint(covariant _ElementPreviewPainter oldDelegate) => elementType != oldDelegate.elementType ||
         config != oldDelegate.config;
-  }
 }
 
 /// 确定性随机数生成器（用于预览）

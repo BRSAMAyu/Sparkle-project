@@ -139,11 +139,11 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: MaterialApp(
-          home: const MemoryPanelScreen(),
+        child: const MaterialApp(
+          home: MemoryPanelScreen(),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
+          locale: Locale('zh'),
         ),
       ),
     );

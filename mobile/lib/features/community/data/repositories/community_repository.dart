@@ -85,7 +85,7 @@ class CommunityRepository {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.friendsPending);
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getPendingRequests');
+          action: 'getPendingRequests',);
       return data
           .map((e) => FriendshipInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -109,7 +109,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getFriendRecommendations');
+          action: 'getFriendRecommendations',);
       return data
           .map((e) => FriendRecommendation.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -302,7 +302,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'getGroupDirectory');
+          action: 'getGroupDirectory',);
       return GroupDirectoryInfo.fromJson(payload);
     }
     throw Exception('Failed to load group directory');
@@ -444,7 +444,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getGroupMembers');
+          action: 'getGroupMembers',);
       return data
           .map((e) => GroupMemberInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -611,7 +611,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'editGroupMessage');
+          action: 'editGroupMessage',);
       return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit group message');
@@ -633,7 +633,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updateGroupReaction');
+          action: 'updateGroupReaction',);
       return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update group reaction');
@@ -650,7 +650,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'searchGroupMessages');
+          action: 'searchGroupMessages',);
       return data
           .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -669,7 +669,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getThreadMessages');
+          action: 'getThreadMessages',);
       return data
           .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -709,7 +709,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getPrivateMessages');
+          action: 'getPrivateMessages',);
       return data
           .map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -726,7 +726,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'sendPrivateMessage');
+          action: 'sendPrivateMessage',);
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to send private message');
@@ -753,7 +753,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'editPrivateMessage');
+          action: 'editPrivateMessage',);
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit private message');
@@ -774,7 +774,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updatePrivateReaction');
+          action: 'updatePrivateReaction',);
       return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update private reaction');
@@ -791,7 +791,7 @@ class CommunityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'searchPrivateMessages');
+          action: 'searchPrivateMessages',);
       return data
           .map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>))
           .toList();

@@ -82,8 +82,7 @@ extension OfflineChatMessageExtension on OfflineChatMessage {
     String? chatMode,
     String? nickname,
     int priority = 0,
-  }) {
-    return OfflineChatMessage()
+  }) => OfflineChatMessage()
       ..requestId = requestId
       ..sessionId = sessionId
       ..message = message
@@ -96,7 +95,6 @@ extension OfflineChatMessageExtension on OfflineChatMessage {
       ..chatMode = chatMode
       ..nickname = nickname
       ..priority = priority;
-  }
 
   /// Mark message as sent
   void markAsSent() {

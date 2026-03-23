@@ -150,7 +150,6 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                         SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
                         onCancel();
                       },
-                      size: CustomButtonSize.medium,
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
@@ -164,7 +163,6 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                         );
                         onConfirm();
                       },
-                      size: CustomButtonSize.medium,
                     ),
                   ),
                 ],
@@ -176,15 +174,13 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildAnimatedHeader(BuildContext context) {
-    return Container(
+  Widget _buildAnimatedHeader(BuildContext context) => Container(
       padding: const EdgeInsets.only(top: DS.spacing24),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutBack,
-        builder: (context, value, child) {
-          return Transform.scale(
+        builder: (context, value, child) => Transform.scale(
             scale: value,
             child: Container(
               padding: const EdgeInsets.all(DS.spacing16),
@@ -198,9 +194,7 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                 color: DS.warning,
               ),
             ),
-          );
-        },
+          ),
       ),
     );
-  }
 }

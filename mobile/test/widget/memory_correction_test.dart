@@ -1,4 +1,3 @@
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class _CorrectionApiService implements MemoryApiService {
   _CorrectionApiService(this.result);

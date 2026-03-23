@@ -31,7 +31,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                   Text(
                     '暂无拉黑用户',
                     style: TextStyle(
-                        color: DS.neutral500, fontSize: DS.fontSizeBase),
+                        color: DS.neutral500, fontSize: DS.fontSizeBase,),
                   ),
                 ],
               ),
@@ -82,7 +82,6 @@ class _BlockedUserTile extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: DS.spacing12),
       child: ListTile(
         leading: SparkleAvatar(
-          radius: 20,
           url: user.avatarUrl,
           fallbackText: user.nickname ?? user.username,
         ),

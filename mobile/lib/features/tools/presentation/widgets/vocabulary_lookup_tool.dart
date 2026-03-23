@@ -3,10 +3,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
@@ -337,7 +337,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(
-                                        _formatBytes(package.sizeBytes!)),
+                                        _formatBytes(package.sizeBytes!),),
                                   if (installed != null)
                                     _buildMetaChip(
                                       '安装于 ${_formatInstalledAt(installed.installedAt)}',
@@ -377,10 +377,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         onPressed: () async {
                                           Navigator.of(context).pop();
                                           await _removeDictionaryPackage(
-                                              package.id);
+                                              package.id,);
                                         },
                                         icon: const Icon(
-                                            Icons.delete_outline_rounded),
+                                            Icons.delete_outline_rounded,),
                                         expand: true,
                                       ),
                                     ),

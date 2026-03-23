@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -311,7 +311,7 @@ class _VisualRewardBadgeState extends State<_VisualRewardBadge>
         decoration: BoxDecoration(
           color: colors.background.withValues(alpha: 0.92),
           borderRadius: DS.borderRadius6,
-          border: Border.all(color: colors.border, width: 1),
+          border: Border.all(color: colors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -336,14 +336,12 @@ class _VisualRewardBadgeState extends State<_VisualRewardBadge>
     );
   }
 
-  VisualElementRarity _parseRarity(String rarity) {
-    return switch (rarity) {
+  VisualElementRarity _parseRarity(String rarity) => switch (rarity) {
       'legendary' => VisualElementRarity.legendary,
       'epic' => VisualElementRarity.epic,
       'rare' => VisualElementRarity.rare,
       _ => VisualElementRarity.common,
     };
-  }
 
   String _getRarityName(VisualElementRarity rarity) {
     switch (rarity) {
@@ -438,7 +436,6 @@ class _LoadingRows extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
-                          value: null,
                           minHeight: 3,
                           backgroundColor: DS.neutral200,
                           valueColor:

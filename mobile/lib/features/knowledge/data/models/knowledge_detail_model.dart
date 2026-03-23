@@ -13,6 +13,7 @@ class KnowledgeDetailResponse {
     this.relations = const [],
     this.relatedTasks = const [],
     this.relatedPlans = const [],
+    this.learningPathSnapshot,
   });
 
   factory KnowledgeDetailResponse.fromJson(Map<String, dynamic> json) =>
@@ -22,6 +23,8 @@ class KnowledgeDetailResponse {
   final List<TaskModel> relatedTasks;
   final List<RelatedPlan> relatedPlans;
   final KnowledgeUserStats userStats;
+  @JsonKey(name: 'learningPathSnapshot')
+  final LearningPathSnapshot? learningPathSnapshot;
 
   Map<String, dynamic> toJson() => _$KnowledgeDetailResponseToJson(this);
 }
@@ -213,4 +216,60 @@ class KnowledgeUserStats {
   double get masteryProgress => (masteryScore / 100).clamp(0.0, 1.0);
 
   Map<String, dynamic> toJson() => _$KnowledgeUserStatsToJson(this);
+}
+
+@JsonSerializable()
+class LearningPathSnapshot {
+  LearningPathSnapshot({
+    required this.mode,
+    required this.summary,
+    this.taskCount = 0,
+    this.tasks = const [],
+    this.selectedRelatedNodeIds = const [],
+    this.generatedAt,
+  });
+
+  factory LearningPathSnapshot.fromJson(Map<String, dynamic> json) =>
+      _$LearningPathSnapshotFromJson(json);
+
+  final String mode;
+  final String summary;
+  @JsonKey(name: 'task_count')
+  final int taskCount;
+  final List<LearningPathSnapshotTask> tasks;
+  @JsonKey(name: 'selected_related_node_ids')
+  final List<String> selectedRelatedNodeIds;
+  @JsonKey(name: 'generated_at')
+  final DateTime? generatedAt;
+
+  Map<String, dynamic> toJson() => _$LearningPathSnapshotToJson(this);
+}
+
+@JsonSerializable()
+class LearningPathSnapshotTask {
+  LearningPathSnapshotTask({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.estimatedMinutes,
+    required this.status,
+    this.knowledgeNodeId,
+    this.guideContent,
+  });
+
+  factory LearningPathSnapshotTask.fromJson(Map<String, dynamic> json) =>
+      _$LearningPathSnapshotTaskFromJson(json);
+
+  final String id;
+  final String title;
+  final String type;
+  @JsonKey(name: 'estimated_minutes')
+  final int estimatedMinutes;
+  final String status;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
+  @JsonKey(name: 'guide_content')
+  final String? guideContent;
+
+  Map<String, dynamic> toJson() => _$LearningPathSnapshotTaskToJson(this);
 }

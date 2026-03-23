@@ -30,6 +30,13 @@ class AccountabilityDetailScreen extends ConsumerStatefulWidget {
 
 class _AccountabilityDetailScreenState
     extends ConsumerState<AccountabilityDetailScreen> {
+  bool _quickActionEnabled(
+    Map<String, dynamic> actions,
+    String key, {
+    String? legacyKey,
+  }) =>
+      actions[key] == true || (legacyKey != null && actions[legacyKey] == true);
+
   @override
   Widget build(BuildContext context) {
     final dashboardAsync =
@@ -56,7 +63,7 @@ class _AccountabilityDetailScreenState
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'end') {
-                _confirmEnd();
+                unawaited(_confirmEnd());
               }
             },
             itemBuilder: (_) => const [
@@ -90,16 +97,67 @@ class _AccountabilityDetailScreenState
                   style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: DS.spacing12),
+                SparkleButton.primary(
+                  label: '重试',
+                  onPressed: () => ref.invalidate(
+                    accountabilityDashboardProvider(widget.partnershipId),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        data: (dashboard) => _DashboardView(
-          dashboard: dashboard,
-          currentUserId: currentUserId,
-          onCheckin: _showCheckinSheet,
-          onNudge: () => _sendNudge(widget.partnershipId),
-        ),
+        data: (dashboard) {
+          final canCheckin = _quickActionEnabled(
+            dashboard.quickActions,
+            'can_check_in',
+            legacyKey: 'can_checkin',
+          );
+          final canNudge =
+              _quickActionEnabled(dashboard.quickActions, 'can_nudge');
+          final canShare =
+              _quickActionEnabled(dashboard.quickActions, 'can_share');
+          final canChat =
+              _quickActionEnabled(dashboard.quickActions, 'can_chat');
+          final canOpenDashboard = _quickActionEnabled(
+            dashboard.quickActions,
+            'can_open_dashboard',
+          );
+
+          if (!canOpenDashboard ||
+              dashboard.partnership.status != AccountabilityStatus.active) {
+            return _InactiveDashboardView(
+              dashboard: dashboard,
+              currentUserId: currentUserId,
+              canChat: canChat,
+            );
+          }
+
+          return _DashboardView(
+            dashboard: dashboard,
+            currentUserId: currentUserId,
+            onCheckin: canCheckin ? _showCheckinSheet : null,
+            onNudge: canNudge ? () => _sendNudge(widget.partnershipId) : null,
+            onShare: canShare
+                ? () => unawaited(context.push('/achievements'))
+                : null,
+            onChat: canChat
+                ? () {
+                    final partnerId = dashboard.partnership.initiatorId == currentUserId
+                        ? dashboard.partnership.partnerId
+                        : dashboard.partnership.initiatorId;
+                    final partnerName = _partnerName(
+                      dashboard.partnership,
+                      currentUserId,
+                    );
+                    unawaited(context.push(
+                      '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
+                    ));
+                  }
+                : null,
+          );
+        },
       ),
     );
   }
@@ -127,7 +185,7 @@ class _AccountabilityDetailScreenState
           ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
         },
       ),
-    ));
+    ),);
   }
 
   Future<void> _sendNudge(String partnershipId) async {
@@ -199,12 +257,16 @@ class _DashboardView extends StatelessWidget {
     required this.currentUserId,
     required this.onCheckin,
     required this.onNudge,
+    required this.onShare,
+    required this.onChat,
   });
 
   final AccountabilityDashboardInfo dashboard;
   final String currentUserId;
-  final VoidCallback onCheckin;
-  final VoidCallback onNudge;
+  final VoidCallback? onCheckin;
+  final VoidCallback? onNudge;
+  final VoidCallback? onShare;
+  final VoidCallback? onChat;
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +276,6 @@ class _DashboardView extends StatelessWidget {
     final partner =
         isInitiator ? partnership.partner : partnership.initiator;
     final partnerName = partner?.displayName ?? '责任伙伴';
-    final partnerId = isInitiator ? partnership.partnerId : partnership.initiatorId;
     final partnerAchievements = ((dashboard.achievements['achievements']
                     as List<dynamic>?) ??
                 const [])
@@ -244,10 +305,8 @@ class _DashboardView extends StatelessWidget {
                   relationshipSummary: dashboard.relationshipSummary,
                   onCheckin: stats.myCheckedInToday ? null : onCheckin,
                   onNudge: onNudge,
-                  onShare: () => context.push('/achievements'),
-                  onChat: () => context.push(
-                    '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
-                  ),
+                  onShare: onShare,
+                  onChat: onChat,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -402,7 +461,7 @@ class _DashboardView extends StatelessWidget {
             child: SparkleButton(
               label: stats.myCheckedInToday ? '今天已打卡' : '今日打卡',
               onPressed: stats.myCheckedInToday ? null : onCheckin,
-              disabled: stats.myCheckedInToday,
+              disabled: stats.myCheckedInToday || onCheckin == null,
               expand: true,
             ),
           ),
@@ -427,13 +486,12 @@ class _DashboardHero extends StatelessWidget {
   final AccountabilityStatsInfo stats;
   final Map<String, dynamic> relationshipSummary;
   final VoidCallback? onCheckin;
-  final VoidCallback onNudge;
-  final VoidCallback onShare;
-  final VoidCallback onChat;
+  final VoidCallback? onNudge;
+  final VoidCallback? onShare;
+  final VoidCallback? onChat;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
@@ -547,7 +605,6 @@ class _DashboardHero extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _HeroAction extends StatelessWidget {
@@ -562,27 +619,109 @@ class _HeroAction extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: DS.surfacePrimary.withValues(alpha: 0.8),
+          color: onTap == null
+              ? DS.surfaceSecondary.withValues(alpha: 0.7)
+              : DS.surfacePrimary.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: DS.neutral200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: DS.brandPrimary),
+            Icon(
+              icon,
+              size: 16,
+              color: onTap == null ? DS.textTertiary : DS.brandPrimary,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
-              style: DS.labelSmall.copyWith(fontWeight: FontWeight.w700),
+              style: DS.labelSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: onTap == null ? DS.textTertiary : null,
+              ),
             ),
           ],
+        ),
+      ),
+    );
+}
+
+class _InactiveDashboardView extends StatelessWidget {
+  const _InactiveDashboardView({
+    required this.dashboard,
+    required this.currentUserId,
+    required this.canChat,
+  });
+
+  final AccountabilityDashboardInfo dashboard;
+  final String currentUserId;
+  final bool canChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final partnership = dashboard.partnership;
+    final isInitiator = partnership.initiatorId == currentUserId;
+    final partner =
+        isInitiator ? partnership.partner : partnership.initiator;
+    final partnerName = partner?.displayName ?? '责任伙伴';
+    final isPending = partnership.status == AccountabilityStatus.pending;
+    final message = isPending
+        ? (isInitiator ? '邀请已发出，等待对方确认后才能进入伙伴工作台。' : '这条伙伴邀请还待你确认，先去邀请页处理后再回来。')
+        : '当前伙伴关系暂时不可进入完整工作台。';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing24),
+        child: GraphiteCardSurface(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isPending ? Icons.schedule_outlined : Icons.info_outline,
+                size: 40,
+                color: DS.brandPrimary,
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text(
+                isPending ? '伙伴邀请待处理' : '伙伴工作台暂不可用',
+                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                message,
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.spacing16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (isPending)
+                    SparkleButton.primary(
+                      label: isInitiator ? '查看状态' : '去处理邀请',
+                      onPressed: () =>
+                          unawaited(context.pushNamed('friendRequests')),
+                    ),
+                  if (canChat)
+                    SparkleButton.ghost(
+                      label: '继续聊天',
+                      onPressed: () => unawaited(context.push(
+                        '/chat/private/${partner?.id ?? ''}?name=${Uri.encodeComponent(partnerName)}',
+                      )),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -702,8 +841,7 @@ class _GoalPanel extends StatelessWidget {
   final String goal;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -721,7 +859,6 @@ class _GoalPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _SectionCard extends StatelessWidget {
@@ -731,8 +868,7 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,7 +884,6 @@ class _SectionCard extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _TinyMetric extends StatelessWidget {
@@ -757,8 +892,7 @@ class _TinyMetric extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -769,7 +903,6 @@ class _TinyMetric extends StatelessWidget {
         style: DS.labelSmall.copyWith(color: DS.textSecondary),
       ),
     );
-  }
 }
 
 class _CheckinTile extends ConsumerWidget {
@@ -836,7 +969,7 @@ class _CheckinTile extends ConsumerWidget {
               Icon(Icons.favorite, size: 16, color: DS.error),
               const SizedBox(width: DS.xs),
               Text('${checkin.likes}',
-                  style: TextStyle(color: DS.textSecondary)),
+                  style: TextStyle(color: DS.textSecondary),),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.chat_bubble_outline, size: 16, color: DS.neutral500),
               const SizedBox(width: DS.xs),
@@ -863,8 +996,7 @@ class _CheckinTile extends ConsumerWidget {
             const SizedBox(height: DS.spacing8),
             Wrap(
               runSpacing: DS.xs,
-              children: checkin.encouragements.map((item) {
-                return Container(
+              children: checkin.encouragements.map((item) => Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: DS.xs),
                   padding: const EdgeInsets.all(DS.sm),
@@ -879,8 +1011,7 @@ class _CheckinTile extends ConsumerWidget {
                       color: DS.textSecondary,
                     ),
                   ),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           ],
         ],
@@ -1057,7 +1188,6 @@ class _AccountabilityCheckinSheetState
               ),
               Slider(
                 value: _minutes.toDouble(),
-                min: 0,
                 max: 360,
                 divisions: 72,
                 label: '$_minutes 分钟',

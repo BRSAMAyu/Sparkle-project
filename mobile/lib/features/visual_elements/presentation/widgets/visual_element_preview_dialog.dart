@@ -5,12 +5,11 @@ import 'dart:ui' as ui;
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/effect_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/particle_layer.dart';
@@ -47,13 +46,12 @@ class VisualElementPreviewDialog extends StatefulWidget {
     VoidCallback? onUnequip,
     bool isEquipped = false,
     bool isUnlocked = false,
-  }) {
-    return showModalBottomSheet<void>(
+  }) => showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
+        initialChildSize: 0.72,
         minChildSize: 0.4,
         maxChildSize: 0.9,
         builder: (context, scrollController) => VisualElementPreviewDialog(
@@ -67,7 +65,6 @@ class VisualElementPreviewDialog extends StatefulWidget {
         ),
       ),
     );
-  }
 
   @override
   State<VisualElementPreviewDialog> createState() =>
@@ -177,17 +174,17 @@ class _VisualElementPreviewDialogState
                               children: [
                                 ConstrainedBox(
                                   constraints: const BoxConstraints(
-                                    minWidth: 0,
-                                    maxWidth: 320,
+                                    maxWidth: 360,
                                   ),
                                   child: Text(
                                     widget.element.name,
                                     style: TextStyle(
-                                      fontSize: DS.fontSizeXl,
+                                      fontSize: DS.fontSizeLg,
                                       fontWeight: DS.fontWeightBold,
                                       color: DS.textPrimary,
+                                      height: 1.15,
                                     ),
-                                    maxLines: 3,
+                                    maxLines: 4,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -201,15 +198,15 @@ class _VisualElementPreviewDialogState
 
                             if (widget.element.description != null) ...[
                               const SizedBox(height: DS.spacing8),
-                              Text(
-                                widget.element.description!,
-                                style: TextStyle(
-                                  fontSize: DS.fontSizeSm,
-                                  color: DS.textSecondary,
-                                  height: 1.5,
+                              SelectionArea(
+                                child: Text(
+                                  widget.element.description!,
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeSm,
+                                    color: DS.textSecondary,
+                                    height: 1.5,
+                                  ),
                                 ),
-                                maxLines: 6,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
 
@@ -276,7 +273,6 @@ class _VisualElementPreviewDialogState
                 DS.warning,
                 DS.success,
               ],
-              gravity: 0.2,
               emissionFrequency: 0.05,
               numberOfParticles: 30,
               maxBlastForce: 100,
@@ -287,8 +283,7 @@ class _VisualElementPreviewDialogState
     );
   }
 
-  Widget _buildActionButtons(AppLocalizations l10n) {
-    return Container(
+  Widget _buildActionButtons(AppLocalizations l10n) => Container(
       padding: EdgeInsets.fromLTRB(
         DS.spacing16,
         DS.spacing12,
@@ -330,10 +325,8 @@ class _VisualElementPreviewDialogState
         ),
       ),
     );
-  }
 
-  Widget _buildShareButton(AppLocalizations l10n) {
-    return SizedBox(
+  Widget _buildShareButton(AppLocalizations l10n) => SizedBox(
       height: 48,
       child: OutlinedButton.icon(
         onPressed: _isSharing ? null : _sharePreview,
@@ -357,16 +350,14 @@ class _VisualElementPreviewDialogState
         style: OutlinedButton.styleFrom(
           foregroundColor: DS.textSecondary,
           side: BorderSide(color: DS.border),
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
         ),
       ),
     );
-  }
 
-  Widget _buildEquipButton(AppLocalizations l10n) {
-    return SizedBox(
+  Widget _buildEquipButton(AppLocalizations l10n) => SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
@@ -376,16 +367,14 @@ class _VisualElementPreviewDialogState
         style: ElevatedButton.styleFrom(
           backgroundColor: DS.brandPrimary,
           foregroundColor: DS.textOnPrimary,
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
         ),
       ),
     );
-  }
 
-  Widget _buildUnequipButton(AppLocalizations l10n) {
-    return SizedBox(
+  Widget _buildUnequipButton(AppLocalizations l10n) => SizedBox(
       width: double.infinity,
       height: 48,
       child: OutlinedButton.icon(
@@ -395,16 +384,14 @@ class _VisualElementPreviewDialogState
         style: OutlinedButton.styleFrom(
           foregroundColor: DS.textSecondary,
           side: BorderSide(color: DS.border),
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
         ),
       ),
     );
-  }
 
-  Widget _buildLockedButton(AppLocalizations l10n) {
-    return SizedBox(
+  Widget _buildLockedButton(AppLocalizations l10n) => SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
@@ -414,13 +401,12 @@ class _VisualElementPreviewDialogState
         style: ElevatedButton.styleFrom(
           backgroundColor: DS.surfaceTertiary,
           foregroundColor: DS.textTertiary,
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
         ),
       ),
     );
-  }
 
   Future<void> _sharePreview() async {
     final boundary =
@@ -816,8 +802,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
     );
   }
 
-  Widget _buildPreviewLayers(UserVisualConfig config) {
-    return Stack(
+  Widget _buildPreviewLayers(UserVisualConfig config) => Stack(
       fit: StackFit.expand,
       children: [
         BackgroundLayer(
@@ -835,7 +820,6 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
         ),
       ],
     );
-  }
 
   UserVisualConfig _resolvePreviewConfig(bool isPreviewing) {
     final base = widget.baseConfig;
@@ -895,8 +879,7 @@ class _RarityBadge extends StatelessWidget {
   final AppLocalizations l10n;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing6,
@@ -926,7 +909,6 @@ class _RarityBadge extends StatelessWidget {
         ],
       ),
     );
-  }
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -966,8 +948,7 @@ class _InfoRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -999,7 +980,6 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// 解锁条件显示
@@ -1013,8 +993,7 @@ class _UnlockRequirement extends StatelessWidget {
   final AppLocalizations l10n;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -1041,7 +1020,6 @@ class _UnlockRequirement extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String _getRequirementText() {
     switch (element.unlockSource) {

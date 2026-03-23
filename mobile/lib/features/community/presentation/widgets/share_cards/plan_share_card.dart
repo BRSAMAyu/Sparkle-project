@@ -44,7 +44,7 @@ class PlanShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -66,7 +66,7 @@ class PlanShareCard extends StatelessWidget {
                   size: 18,
                 ),
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +128,7 @@ class PlanShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.all(DS.md),
+                padding: const EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -137,7 +137,7 @@ class PlanShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(DS.sm),
+                          padding: const EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: DS.info.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
@@ -148,7 +148,7 @@ class PlanShareCard extends StatelessWidget {
                             size: 20,
                           ),
                         ),
-                        SizedBox(width: DS.sm),
+                        const SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +178,7 @@ class PlanShareCard extends StatelessWidget {
 
                     // Progress indicator
                     if (progress != null) ...[
-                      SizedBox(height: DS.md),
+                      const SizedBox(height: DS.md),
                       Row(
                         children: [
                           Expanded(
@@ -194,7 +194,7 @@ class PlanShareCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          SizedBox(width: DS.sm),
+                          const SizedBox(width: DS.sm),
                           Text(
                             '${_progressPercent!}%',
                             style: TextStyle(
@@ -207,7 +207,7 @@ class PlanShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    SizedBox(height: DS.md),
+                    const SizedBox(height: DS.md),
 
                     // Stats row
                     Wrap(
@@ -237,7 +237,7 @@ class PlanShareCard extends StatelessWidget {
                       ],
                     ),
                     if (onAdopt != null) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: ConstrainedBox(
@@ -280,7 +280,7 @@ class PlanShareCard extends StatelessWidget {
             size: 14,
             color: DS.textTertiary,
           ),
-          SizedBox(width: DS.xs),
+          const SizedBox(width: DS.xs),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

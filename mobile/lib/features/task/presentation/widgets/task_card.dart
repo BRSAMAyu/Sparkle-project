@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
@@ -111,7 +111,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
             child: GestureDetector(
               onTapDown: (_) {
                 unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),);
                 if (mounted) unawaited(_controller.forward());
               },
               onTapUp: (_) {
@@ -321,7 +321,6 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                       .task.subtasksCompleted,
                                                   total:
                                                       widget.task.subtasksTotal,
-                                                  showLabel: true,
                                                 ),
                                               ),
                                             ],

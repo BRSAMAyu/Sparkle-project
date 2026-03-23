@@ -208,7 +208,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             label: '重试',
                             onPressed: () => ref
                                 .read(groupMembersProvider(widget.groupId)
-                                    .notifier)
+                                    .notifier,)
                                 .refresh(),
                           ),
                         ],
@@ -295,7 +295,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               trailing: Text(
                 value(m),
                 style: TextStyle(
-                    fontWeight: FontWeight.bold, color: DS.brandPrimary),
+                    fontWeight: FontWeight.bold, color: DS.brandPrimary,),
               ),
             ),
           );

@@ -410,8 +410,7 @@ class _PosterTopBar extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -463,7 +462,6 @@ class _PosterTopBar extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _PosterCardShell extends StatelessWidget {
@@ -476,8 +474,7 @@ class _PosterCardShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -494,7 +491,6 @@ class _PosterCardShell extends StatelessWidget {
       ),
       child: child,
     );
-  }
 }
 
 class _PosterMetricChip extends StatelessWidget {
@@ -511,8 +507,7 @@ class _PosterMetricChip extends StatelessWidget {
   final Color borderColor;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       constraints: const BoxConstraints(minWidth: 112),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -545,7 +540,6 @@ class _PosterMetricChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _PosterIdentity extends StatelessWidget {
@@ -560,8 +554,7 @@ class _PosterIdentity extends StatelessWidget {
   final bool showAvatar;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         if (showAvatar)
           Container(
@@ -596,7 +589,6 @@ class _PosterIdentity extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _PosterMetric {
@@ -677,8 +669,7 @@ class _PosterThemeData {
     };
   }
 
-  List<Widget> buildDecorations() {
-    return [
+  List<Widget> buildDecorations() => [
       Positioned(
         top: -60,
         right: -30,
@@ -711,7 +702,6 @@ class _PosterThemeData {
         child: _SparkDot(color: Colors.white.withValues(alpha: 0.26), size: 6),
       ),
     ];
-  }
 
   static Color _accentForContent(ShareableContentType type) => switch (type) {
         ShareableContentType.achievement => const Color(0xFFF9B94B),
@@ -734,8 +724,7 @@ class _GlowBlob extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -749,7 +738,6 @@ class _GlowBlob extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _SparkDot extends StatelessWidget {
@@ -762,8 +750,7 @@ class _SparkDot extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -777,5 +764,4 @@ class _SparkDot extends StatelessWidget {
         ],
       ),
     );
-  }
 }

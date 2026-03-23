@@ -45,7 +45,7 @@ class CapsuleShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -67,7 +67,7 @@ class CapsuleShareCard extends StatelessWidget {
                   size: 18,
                 ),
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +129,7 @@ class CapsuleShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.all(DS.md),
+                padding: const EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -138,7 +138,7 @@ class CapsuleShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(DS.sm),
+                          padding: const EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: _capsulePurple.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
@@ -149,7 +149,7 @@ class CapsuleShareCard extends StatelessWidget {
                             size: 20,
                           ),
                         ),
-                        SizedBox(width: DS.sm),
+                        const SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,9 +179,9 @@ class CapsuleShareCard extends StatelessWidget {
 
                     // Summary
                     if (capsuleSummary != null && capsuleSummary!.isNotEmpty) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Container(
-                        padding: EdgeInsets.all(DS.sm),
+                        padding: const EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
                           color: DS.surfacePrimary.withValues(alpha: 0.5),
                           borderRadius: DS.borderRadius8,
@@ -199,7 +199,7 @@ class CapsuleShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    SizedBox(height: DS.md),
+                    const SizedBox(height: DS.md),
 
                     // Stats row
                     Row(
@@ -207,14 +207,14 @@ class CapsuleShareCard extends StatelessWidget {
                         if (depth != null)
                           _buildDepthIndicator(depth!),
                         if (wordCount != null) ...[
-                          SizedBox(width: DS.md),
+                          const SizedBox(width: DS.md),
                           _buildStat(
                             '${wordCount}字',
                             Icons.edit_note,
                           ),
                         ],
                         if (createdAt != null) ...[
-                          SizedBox(width: DS.md),
+                          const SizedBox(width: DS.md),
                           _buildStat(
                             _formatDate(createdAt!),
                             Icons.access_time,
@@ -225,13 +225,12 @@ class CapsuleShareCard extends StatelessWidget {
 
                     // Tags
                     if (tags != null && tags!.isNotEmpty) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Wrap(
                         spacing: DS.xs,
                         runSpacing: DS.xs,
-                        children: tags!.take(3).map((tag) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
+                        children: tags!.take(3).map((tag) => Container(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: DS.sm,
                               vertical: 2,
                             ),
@@ -241,13 +240,12 @@ class CapsuleShareCard extends StatelessWidget {
                             ),
                             child: Text(
                               '#$tag',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: DS.fontSizeXs,
                                 color: _capsulePurple,
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ),).toList(),
                       ),
                     ],
                   ],
@@ -258,18 +256,16 @@ class CapsuleShareCard extends StatelessWidget {
         ),
       );
 
-  IconData _getTypeIcon() {
-    return switch (capsuleType?.toLowerCase()) {
+  IconData _getTypeIcon() => switch (capsuleType?.toLowerCase()) {
       '思考' || 'thinking' => Icons.psychology,
       '反思' || 'reflection' => Icons.auto_stories,
       '灵感' || 'inspiration' => Icons.lightbulb,
       '总结' || 'summary' => Icons.summarize,
       _ => Icons.hourglass_empty,
     };
-  }
 
   Widget _buildDepthIndicator(int depth) => Container(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.sm,
           vertical: DS.xs,
         ),
@@ -285,7 +281,7 @@ class CapsuleShareCard extends StatelessWidget {
               size: 14,
               color: _getDepthColor(),
             ),
-            SizedBox(width: DS.xs),
+            const SizedBox(width: DS.xs),
             Text(
               '深度 Lv.$depth',
               style: TextStyle(
@@ -314,7 +310,7 @@ class CapsuleShareCard extends StatelessWidget {
             size: 14,
             color: DS.textTertiary,
           ),
-          SizedBox(width: DS.xs),
+          const SizedBox(width: DS.xs),
           Text(
             value,
             style: TextStyle(
@@ -325,9 +321,7 @@ class CapsuleShareCard extends StatelessWidget {
         ],
       );
 
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}';
-  }
+  String _formatDate(DateTime date) => '${date.month}/${date.day}';
 }
 
 /// Factory for creating capsule share cards from payload

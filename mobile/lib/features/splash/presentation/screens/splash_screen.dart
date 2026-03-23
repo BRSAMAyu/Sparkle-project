@@ -6,8 +6,7 @@ class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -88,5 +87,4 @@ class SplashScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

@@ -174,9 +174,7 @@ class VisualElementTypeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final types = VisualElementType.values.where((type) {
-      return showEmptyTypes || (elementsByType[type]?.isNotEmpty ?? false);
-    }).toList();
+    final types = VisualElementType.values.where((type) => showEmptyTypes || (elementsByType[type]?.isNotEmpty ?? false)).toList();
 
     return CustomScrollView(
       slivers: [

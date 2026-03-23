@@ -3,15 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:gal/gal.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
-import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
@@ -91,7 +90,7 @@ class _AchievementShareBottomSheetState
 
   Future<void> _checkWeChatAvailability() async {
     final available = _wechatShare.isAvailable;
-    bool installed = false;
+    var installed = false;
     if (available) {
       installed = await _wechatShare.isWeChatInstalled();
     }
@@ -154,7 +153,7 @@ class _AchievementShareBottomSheetState
             privacySettings: _privacySettings,
           );
 
-      String? cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
+      var cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
 
       if (cardUrl == null || cardUrl.isEmpty) {
         if (mounted) {

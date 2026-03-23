@@ -35,8 +35,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
@@ -75,7 +74,6 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
         },
       ),
     );
-  }
 
   Widget _buildContent(BuildContext context, FriendProfileDetail profile) {
     final theme = Theme.of(context);
@@ -103,7 +101,6 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               children: [
                 const SizedBox(height: DS.spacing16),
                 SparkleAttentionPulse(
-                  active: true,
                   glowColor: DS.brandPrimary,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -365,8 +362,7 @@ class _RelationshipPanel extends StatelessWidget {
   final bool hasAccountability;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -404,7 +400,7 @@ class _RelationshipPanel extends StatelessWidget {
               _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
               _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
               _InfoChip(
-                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天'),
+                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天',),
             ],
           ),
           if (achievementsSummary.isNotEmpty) ...[
@@ -451,7 +447,6 @@ class _RelationshipPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _SimplePanel extends StatelessWidget {
@@ -466,8 +461,7 @@ class _SimplePanel extends StatelessWidget {
   final Widget body;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -495,7 +489,6 @@ class _SimplePanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _InfoChip extends StatelessWidget {
@@ -504,8 +497,7 @@ class _InfoChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -519,5 +511,4 @@ class _InfoChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }

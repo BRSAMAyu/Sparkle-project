@@ -7,8 +7,7 @@ class GroupListScreen extends StatelessWidget {
   const GroupListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
@@ -35,5 +34,4 @@ class GroupListScreen extends StatelessWidget {
         child: GroupsHubView(),
       ),
     );
-  }
 }

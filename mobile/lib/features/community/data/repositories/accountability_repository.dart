@@ -259,7 +259,7 @@ class AccountabilityRepository {
           response.data, action: 'getMyPartnerships',);
       return data
           .map((e) =>
-              AccountabilityPartnershipInfo.fromJson(e as Map<String, dynamic>))
+              AccountabilityPartnershipInfo.fromJson(e as Map<String, dynamic>),)
           .toList();
     }
     throw Exception('Failed to load partnerships');
@@ -317,7 +317,7 @@ class AccountabilityRepository {
                 'last_checkin_at': active.lastCheckinAt?.toIso8601String(),
               },
         quickActions: {
-          'can_checkin': active != null && !(active.myCheckedInToday ?? false),
+          'can_check_in': active != null && !(active.myCheckedInToday ?? false),
           'can_nudge': active != null,
           'can_share': active != null,
           'can_chat': active != null,
@@ -385,7 +385,7 @@ class AccountabilityRepository {
         },
         relationshipSummary: {
           'slot_type': 'core',
-          'status': 'active',
+          'status': partnership.status.name,
           'partner_id': partnership.partnerId,
           'partner_name': partnership.partner?.displayName ?? '责任伙伴',
           'days_together': 18,
@@ -410,11 +410,12 @@ class AccountabilityRepository {
           },
         ],
         quickActions: {
-          'can_checkin': !(partnership.myCheckedInToday ?? false),
+          'can_check_in': partnership.status == AccountabilityStatus.active &&
+              !(partnership.myCheckedInToday ?? false),
           'can_nudge': partnership.status == AccountabilityStatus.active,
-          'can_share': true,
-          'can_chat': true,
-          'can_open_dashboard': true,
+          'can_share': partnership.status != AccountabilityStatus.ended,
+          'can_chat': partnership.status != AccountabilityStatus.ended,
+          'can_open_dashboard': partnership.status == AccountabilityStatus.active,
         },
       );
     }
@@ -541,7 +542,7 @@ class AccountabilityRepository {
           response.data, action: 'getTimeline',);
       return data
           .map((e) =>
-              AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
+              AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>),)
           .toList();
     }
     throw Exception('Failed to load timeline');

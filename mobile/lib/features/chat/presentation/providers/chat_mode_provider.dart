@@ -17,7 +17,7 @@ final chatModeProvider = chatModeNotifierProvider;
 /// This provider persists the last selected mode.
 final chatModeNotifierProvider =
     StateNotifierProvider<ChatModeNotifier, ChatMode>(
-        (ref) => ChatModeNotifier());
+        (ref) => ChatModeNotifier(),);
 
 /// Chat Mode Notifier
 ///

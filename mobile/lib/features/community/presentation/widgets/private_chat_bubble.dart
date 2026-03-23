@@ -6,13 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
@@ -132,14 +132,27 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
 
   Widget _buildSharedResourceBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
-    final contentType = _getContentTypeFromMessageType(widget.message.messageType);
+    final contentType = _getContentTypeFromMessage(
+      widget.message.messageType,
+      data,
+    );
     final sharedResourceId = data['shared_resource_id']?.toString();
 
     final payload = UniversalSharePayload(
       contentType: contentType,
-      resourceId: data['id'] as String? ?? data['${contentType.stringValue}_id'] as String? ?? '',
-      title: data['title'] as String? ?? data['name'] as String? ?? widget.message.content ?? '',
-      subtitle: data['subtitle'] as String? ?? data['description'] as String?,
+      resourceId: data['resource_id'] as String? ??
+          data['id'] as String? ??
+          data['${contentType.stringValue}_id'] as String? ??
+          data['achievement_id'] as String? ??
+          '',
+      title: data['resource_title'] as String? ??
+          data['title'] as String? ??
+          data['name'] as String? ??
+          widget.message.content ??
+          '',
+      subtitle: data['resource_summary'] as String? ??
+          data['subtitle'] as String? ??
+          data['description'] as String?,
       metadata: data,
     );
 
@@ -147,10 +160,11 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       isMe: isMe,
       child: ShareCardFactory.fromPayload(
         payload,
-        isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
         sharedResourceId: sharedResourceId,
-        onAdopt: sharedResourceId == null
+        onAdopt: sharedResourceId == null ||
+                (contentType != ShareableContentType.planProgress &&
+                    contentType != ShareableContentType.taskCompletion)
             ? null
             : () => _handleAdopt(
                   context,
@@ -163,15 +177,23 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     );
   }
 
-  ShareableContentType _getContentTypeFromMessageType(MessageType type) =>
-      switch (type) {
-        MessageType.taskShare => ShareableContentType.taskCompletion,
-        MessageType.planShare => ShareableContentType.planProgress,
-        MessageType.capsuleShare => ShareableContentType.capsule,
-        MessageType.prismShare => ShareableContentType.cognitivePrism,
-        MessageType.achievement => ShareableContentType.achievement,
-        _ => ShareableContentType.taskCompletion,
-      };
+  ShareableContentType _getContentTypeFromMessage(
+    MessageType type,
+    Map<String, dynamic> data,
+  ) {
+    if (type == MessageType.capsuleShare &&
+        data['resource_type']?.toString() == 'knowledge_node') {
+      return ShareableContentType.knowledgeNode;
+    }
+    return switch (type) {
+      MessageType.taskShare => ShareableContentType.taskCompletion,
+      MessageType.planShare => ShareableContentType.planProgress,
+      MessageType.capsuleShare => ShareableContentType.capsule,
+      MessageType.prismShare => ShareableContentType.cognitivePrism,
+      MessageType.achievement => ShareableContentType.achievement,
+      _ => ShareableContentType.taskCompletion,
+    };
+  }
 
   Widget _buildRichCardWrapper({
     required bool isMe,
@@ -203,7 +225,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     final deepLink = payload.deepLink;
     if (deepLink.isNotEmpty) {
       if (!DeepLinkService.handleDeepLink(context, deepLink)) {
-        UniversalShareService().copyDeepLink(deepLink);
+        unawaited(UniversalShareService().copyDeepLink(deepLink));
         AppFeedback.info(context, '链接已复制');
       }
     }
@@ -212,7 +234,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   Future<void> _handleAdopt(
     BuildContext context,
     String sharedResourceId,
-    String resourceType,
+    String fallbackResourceType,
   ) async {
     try {
       final result = await ref
@@ -222,6 +244,8 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         return;
       }
       AppFeedback.success(context, '已采纳，跳转中...');
+      final resourceType =
+          result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>
           ? EntityCardPayload.fromRaw(
               {'entity_card': result['entity_card'] as Map<String, dynamic>},
@@ -237,7 +261,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
                   : '/tasks/$newId');
       if (resourceType == 'plan') {
         unawaited(ref.read(planListProvider.notifier).refresh());
-      } else {
+      } else if (resourceType == 'task') {
         unawaited(ref.read(taskListProvider.notifier).refreshTasks());
       }
       if (route != null && route.isNotEmpty) {
@@ -273,14 +297,13 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
               : DS.shadowSm,
           border: isMe ? null : Border.all(color: DS.neutral100),
         ),
-        child: AiRichText(
+        child: SparkleMarkdown(
           content: widget.message.content ?? '',
           textColor: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
           codeBackgroundColor:
               isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
           linkColor: isMe ? Colors.white : DS.brandPrimary,
-          fontSize: 16,
-          height: 1.4,
+          lineHeight: 1.4,
         ),
       );
 

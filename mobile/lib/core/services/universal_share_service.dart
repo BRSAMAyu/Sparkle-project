@@ -2,14 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:gal/gal.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 
-import 'share_service.dart';
-import 'wechat_share_service.dart';
+import 'package:sparkle/core/services/share_service.dart';
+import 'package:sparkle/core/services/wechat_share_service.dart';
 
 /// Shareable content types for the universal share system
 enum ShareableContentType {
@@ -216,8 +216,7 @@ class UniversalShareService {
     final title = payload.title.trim();
     final subtitle = payload.subtitle?.trim();
 
-    String compactSummary() {
-      return switch (payload.contentType) {
+    String compactSummary() => switch (payload.contentType) {
         ShareableContentType.achievement =>
           '已解锁 ${metadata['unlocked_count'] ?? '--'} 个成就，当前 ${metadata['equipped_title'] ?? '持续成长中'}',
         ShareableContentType.taskCompletion =>
@@ -233,7 +232,6 @@ class UniversalShareService {
         ShareableContentType.cognitivePrism =>
           '把最近的思考模式整理成了一张认知切片',
       };
-    }
 
     final summary = compactSummary();
     final deepLink = payload.deepLink;
@@ -381,6 +379,4 @@ class UniversalShareService {
 }
 
 /// Riverpod provider for UniversalShareService
-final universalShareServiceProvider = Provider<UniversalShareService>((ref) {
-  return UniversalShareService();
-});
+final universalShareServiceProvider = Provider<UniversalShareService>((ref) => UniversalShareService());

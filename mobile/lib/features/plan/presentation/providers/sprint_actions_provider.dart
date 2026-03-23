@@ -43,7 +43,7 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
 
   Future<bool> completeSprint(String planId) async {
     state = state.copyWith(
-        isProcessing: true, clearError: true, clearSuccess: true);
+        isProcessing: true, clearError: true, clearSuccess: true,);
 
     try {
       // Archive the plan to mark sprint as complete
@@ -92,7 +92,7 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
 
   Future<bool> extendSprint(String planId, int additionalDays) async {
     state = state.copyWith(
-        isProcessing: true, clearError: true, clearSuccess: true);
+        isProcessing: true, clearError: true, clearSuccess: true,);
 
     try {
       // Update the plan's target date
@@ -132,7 +132,7 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
 
   Future<bool> abandonSprint(String planId, String reason) async {
     state = state.copyWith(
-        isProcessing: true, clearError: true, clearSuccess: true);
+        isProcessing: true, clearError: true, clearSuccess: true,);
 
     try {
       // Archive the plan

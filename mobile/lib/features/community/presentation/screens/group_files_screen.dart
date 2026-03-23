@@ -74,7 +74,6 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
           ],
         ),
         floatingActionButton: SparkleIconButton(
-          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.upload_file_rounded),
           onPressed: () {
             unawaited(showSensoryModalBottomSheet<void>(
@@ -94,7 +93,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                   _reload();
                 },
               ),
-            ));
+            ),);
           },
         ),
         child: ContentConstraint(

@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
+import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -25,13 +26,15 @@ class LearningPathDialog extends ConsumerStatefulWidget {
 }
 
 class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
+  bool _isGeneratingTaskPath = false;
   bool _isGeneratingPlan = false;
   bool _isGeneratingFullPlan = false;
   String? _inlineStatus;
   String? _inlineError;
   final Set<String> _selectedRelatedNodeIds = <String>{};
 
-  bool get _isBusy => _isGeneratingPlan || _isGeneratingFullPlan;
+  bool get _isBusy =>
+      _isGeneratingTaskPath || _isGeneratingPlan || _isGeneratingFullPlan;
 
   void _setInlineStatus(String? message) {
     if (!mounted) return;
@@ -139,18 +142,54 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
           ),
         ),
         const SizedBox(height: DS.lg),
-        SparkleButton(
-          label: _isGeneratingFullPlan ? '正在生成...' : '一键生成学习计划',
-          icon: _isGeneratingFullPlan
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.auto_awesome),
-          expand: true,
-          onPressed: _isBusy ? null : () => _handleCreateFullPlan(context),
-          loading: _isGeneratingFullPlan,
+        GraphiteCardSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '生成方式',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: DS.xs),
+              Text(
+                '快速任务路径不会占用计划额度，适合先生成几张可以立刻执行的任务卡；完整计划会创建正式方案。',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.md),
+              SparkleButton(
+                label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                icon: _isGeneratingTaskPath
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.bolt),
+                expand: true,
+                onPressed: _isBusy ? null : () => _handleCreateTaskPath(context),
+                loading: _isGeneratingTaskPath,
+              ),
+              const SizedBox(height: DS.sm),
+              SparkleButton(
+                label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                icon: _isGeneratingFullPlan
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome),
+                expand: true,
+                variant: ButtonVariant.secondary,
+                onPressed: _isBusy ? null : () => _handleCreateFullPlan(context),
+                loading: _isGeneratingFullPlan,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -476,6 +515,38 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       if (mounted) {
         setState(() {
           _isGeneratingFullPlan = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleCreateTaskPath(BuildContext context) async {
+    final feedbackContext = _feedbackContext(context);
+    setState(() {
+      _isGeneratingTaskPath = true;
+    });
+    _setInlineStatus('正在生成可立即执行的任务路径...');
+    try {
+      final response =
+          await ref.read(learningPathRepositoryProvider).generateTaskPath(
+                widget.targetNodeId,
+                selectedRelatedNodeIds:
+                    _selectedRelatedNodeIds.toList(growable: false),
+              );
+      if (!feedbackContext.mounted) return;
+      AppFeedback.success(
+        feedbackContext,
+        response.message ?? '任务路径已生成',
+      );
+      ref.invalidate(knowledgeDetailProvider(widget.targetNodeId));
+      _clearInlineFeedback();
+      Navigator.of(context).pop();
+    } catch (e) {
+      _setInlineError('生成失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingTaskPath = false;
         });
       }
     }

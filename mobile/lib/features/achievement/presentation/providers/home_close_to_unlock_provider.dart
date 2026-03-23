@@ -56,14 +56,14 @@ class HomeCloseToUnlockNotifier
     try {
       final all = await _ref
           .read(achievementProvider.notifier)
-          .getCloseToUnlockAchievements(threshold: 0.8);
+          .getCloseToUnlockAchievements();
 
       // Sort by progress descending, take top 3 non-unlocked items
       final sorted = all
           .where((a) => !a.isUnlocked)
           .toList()
         ..sort((a, b) =>
-            b.progressPercentage.compareTo(a.progressPercentage));
+            b.progressPercentage.compareTo(a.progressPercentage),);
 
       _lastFetchTime = DateTime.now();
       state = state.copyWith(

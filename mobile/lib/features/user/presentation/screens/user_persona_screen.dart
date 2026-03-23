@@ -250,7 +250,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                     asyncValue: inferredPreferencesAsync,
                     builder: (items) => items
                         .map((item) =>
-                            _inferredPreferenceRow(ref, context, l10n, item))
+                            _inferredPreferenceRow(ref, context, l10n, item),)
                         .toList(),
                     onRetry: () => ref.invalidate(inferredPreferencesProvider),
                   ),
@@ -427,8 +427,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     return lines;
   }
 
-  Widget _buildReadableSummaryCard(List<String> summaryLines) {
-    return Column(
+  Widget _buildReadableSummaryCard(List<String> summaryLines) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -453,7 +452,6 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         ),
       ],
     );
-  }
 
   Widget _buildAsyncSection<T>(
     WidgetRef ref,
@@ -740,7 +738,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         return;
       }
       await _openOverrideInferredDialog(
-          ref, context, key, matchedItem['value']);
+          ref, context, key, matchedItem['value'],);
     });
   }
 
@@ -762,7 +760,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _buildOnboardingBanner(
-          BuildContext context, AppLocalizations l10n, bool completed) =>
+          BuildContext context, AppLocalizations l10n, bool completed,) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -796,7 +794,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       );
 
   Widget _subSectionList(
-          String title, List<Widget> items, AppLocalizations l10n) =>
+          String title, List<Widget> items, AppLocalizations l10n,) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -957,7 +955,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _metadataRow(
-      AppLocalizations l10n, String label, Map<String, dynamic> metadata) {
+      AppLocalizations l10n, String label, Map<String, dynamic> metadata,) {
     final reason = metadata['reason']?.toString() ?? '';
     final level = metadata['level']?.toString() ?? 'readonly';
     final confidence = metadata['confidence'];
@@ -1255,12 +1253,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 decoration: InputDecoration(labelText: l10n.personaGoalStatus),
                 items: [
                   DropdownMenuItem(
-                      value: 'active', child: Text(l10n.personaStatusActive)),
+                      value: 'active', child: Text(l10n.personaStatusActive),),
                   DropdownMenuItem(
                       value: 'completed',
-                      child: Text(l10n.personaStatusCompleted)),
+                      child: Text(l10n.personaStatusCompleted),),
                   DropdownMenuItem(
-                      value: 'paused', child: Text(l10n.personaStatusPaused)),
+                      value: 'paused', child: Text(l10n.personaStatusPaused),),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -1302,7 +1300,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 } catch (error) {
                   if (context.mounted) {
                     AppFeedback.error(
-                        context, '目标更新失败：${_friendlyError(error)}');
+                        context, '目标更新失败：${_friendlyError(error)}',);
                   }
                 }
               },
@@ -1382,7 +1380,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               if (nextValue.isEmpty) {
                 if (context.mounted) {
                   AppFeedback.info(
-                      context, context.l10n.personaPleaseEnterValue);
+                      context, context.l10n.personaPleaseEnterValue,);
                 }
                 return;
               }

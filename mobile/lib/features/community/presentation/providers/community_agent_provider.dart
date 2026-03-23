@@ -48,25 +48,30 @@ class AgentChatState<T> {
     this.streamingContent = '',
     this.messages = const [],
     this.error,
+    this.lastDraft,
   });
 
   final bool isSending;
   final String streamingContent;
   final List<T> messages;
   final String? error;
+  final String? lastDraft;
 
   AgentChatState<T> copyWith({
     bool? isSending,
     String? streamingContent,
     List<T>? messages,
     String? error,
+    String? lastDraft,
     bool clearError = false,
+    bool clearDraft = false,
   }) =>
       AgentChatState<T>(
         isSending: isSending ?? this.isSending,
         streamingContent: streamingContent ?? this.streamingContent,
         messages: messages ?? this.messages,
         error: clearError ? null : error ?? this.error,
+        lastDraft: clearDraft ? null : lastDraft ?? this.lastDraft,
       );
 }
 
@@ -465,7 +470,7 @@ class PrivateAgentChatNotifier
   final Ref _ref;
   final String _friendId;
 
-  Future<void> sendAgentMessage({
+  Future<String?> composeDraft({
     required String prompt,
     String? friendName,
     List<PrivateMessageInfo> recentMessages = const [],
@@ -473,10 +478,14 @@ class PrivateAgentChatNotifier
     String reasoningMode = 'fast',
     String chatMode = 'standard',
   }) async {
-    if (state.isSending) return;
+    if (state.isSending) return null;
 
-    state =
-        state.copyWith(isSending: true, streamingContent: '', clearError: true);
+    state = state.copyWith(
+      isSending: true,
+      streamingContent: '',
+      clearError: true,
+      clearDraft: true,
+    );
 
     final userContext = await _resolveUserContext(_ref);
     final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
@@ -526,7 +535,7 @@ class PrivateAgentChatNotifier
             streamingContent: '',
             error: message,
           );
-          return;
+          return null;
         }
       }
 
@@ -538,6 +547,88 @@ class PrivateAgentChatNotifier
                   friendName,
                 ))
           .trim();
+      state = state.copyWith(
+        isSending: false,
+        streamingContent: '',
+        lastDraft: content.isEmpty ? null : content,
+      );
+      return content.isEmpty ? null : content;
+    } catch (e) {
+      final message =
+          ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
+      state = state.copyWith(
+        isSending: false,
+        streamingContent: '',
+        error: message,
+      );
+      return null;
+    }
+  }
+
+  Future<void> saveSelfVisibleDraft({
+    required String content,
+  }) async {
+    final trimmed = normalizeCommunityAgentOutput(content).trim();
+    if (trimmed.isEmpty) return;
+
+    final userContext = await _resolveUserContext(_ref);
+    final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
+          AgentSessionScope.privateChat,
+          _friendId,
+          userContext.userId,
+        );
+    final message = PrivateMessageInfo(
+      id: const Uuid().v4(),
+      sender: buildCommunityAgentUser(),
+      receiver: userContext.userBrief,
+      messageType: MessageType.text,
+      content: trimmed,
+      contentData: {
+        kAgentMetadataKey: true,
+        kAgentVisibilityKey: kAgentVisibilitySelf,
+        kAgentVisibleToKey: userContext.userId,
+        kAgentSessionIdKey: sessionId,
+        kAgentContextTypeKey: 'private',
+        kAgentContextIdKey: _friendId,
+      },
+      isRead: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [message, ...state.messages],
+      clearDraft: true,
+    );
+  }
+
+  Future<void> sendAgentMessage({
+    required String prompt,
+    String? friendName,
+    List<PrivateMessageInfo> recentMessages = const [],
+    String preset = 'custom',
+    String reasoningMode = 'fast',
+    String chatMode = 'standard',
+  }) async {
+    final content = await composeDraft(
+      prompt: prompt,
+      friendName: friendName,
+      recentMessages: recentMessages,
+      preset: preset,
+      reasoningMode: reasoningMode,
+      chatMode: chatMode,
+    );
+    if (content == null || content.isEmpty) {
+      return;
+    }
+    try {
+      final userContext = await _resolveUserContext(_ref);
+      final sessionId =
+          _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
+                AgentSessionScope.privateChat,
+                _friendId,
+                userContext.userId,
+              );
       if (content.isNotEmpty) {
         final message = await _persistPrivateAgentMessage(
           userId: userContext.userId,
@@ -550,9 +641,8 @@ class PrivateAgentChatNotifier
           isSending: false,
           streamingContent: '',
           messages: [message, ...state.messages],
+          clearDraft: true,
         );
-      } else {
-        state = state.copyWith(isSending: false, streamingContent: '');
       }
     } catch (e) {
       final message =

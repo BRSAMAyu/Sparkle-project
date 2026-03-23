@@ -4,15 +4,15 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
-import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
-import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/shared/providers/visual_element_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final visualState = ref.watch(visualElementProvider);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerHeight = screenHeight < 720 ? 196.0 : 244.0;
+    final headerHeight = screenHeight < 720 ? 174.0 : 220.0;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -41,17 +41,17 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                 child: Column(
                   children: [
-                    const SizedBox(height: DS.spacing4),
+                    const SizedBox(height: DS.spacing2),
                     const StatisticsCard(),
-                    const SizedBox(height: DS.spacing20),
+                    const SizedBox(height: DS.spacing16),
                     _buildPrestigeShowcase(
                       context,
                       achievementState,
                       visualState,
                     ),
-                    const SizedBox(height: DS.spacing24),
+                    const SizedBox(height: DS.spacing18),
                     _buildSettingsSection(context, ref, l10n, user),
-                    const SizedBox(height: 100), // Bottom padding
+                    const SizedBox(height: 72),
                   ],
                 ),
               ),
@@ -232,8 +232,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildIdentityChip({
     required String label,
     required Color color,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -250,7 +249,6 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Color _colorFromElement(dynamic element) {
     final colors = (element.config['colors'] as List<dynamic>?) ??
@@ -324,12 +322,15 @@ class ProfileScreen extends ConsumerWidget {
           // Content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(DS.spacing24),
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing20,
+                DS.spacing18,
+                DS.spacing20,
+                DS.spacing16,
+              ),
               child: Column(
                 children: [
-                  const SizedBox(height: DS.spacing6),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Avatar Area
                       DecoratedBox(
@@ -342,7 +343,7 @@ class ProfileScreen extends ConsumerWidget {
                           boxShadow: DS.shadowMd,
                         ),
                         child: SparkleAvatar(
-                          radius: 40,
+                          radius: 36,
                           backgroundColor: DS.avatarFallbackBackground,
                           url: user.avatarStatus == AvatarStatus.pending
                               ? (user.pendingAvatarUrl ?? user.avatarUrl)
@@ -351,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
                           status: user.avatarStatus,
                         ),
                       ),
-                      const SizedBox(width: DS.spacing20),
+                      const SizedBox(width: DS.spacing16),
                       // Info Area
                       Expanded(
                         child: Column(
@@ -369,7 +370,7 @@ class ProfileScreen extends ConsumerWidget {
                                     fontWeight: DS.fontWeightBold,
                                   ),
                             ),
-                            const SizedBox(height: DS.sm),
+                            const SizedBox(height: DS.spacing6),
                             Wrap(
                               spacing: DS.spacing8,
                               runSpacing: DS.spacing8,

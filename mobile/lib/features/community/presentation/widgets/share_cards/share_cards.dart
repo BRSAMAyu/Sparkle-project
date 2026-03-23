@@ -5,22 +5,23 @@
 /// - Quick share picker for previewing before sharing
 /// - Universal share bottom sheet for card preview
 
-export 'task_share_card.dart';
-export 'plan_share_card.dart';
-export 'capsule_share_card.dart';
-export 'node_share_card.dart';
-export 'achievement_share_card.dart';
-export 'learning_report_share_card.dart';
-
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
-import 'task_share_card.dart';
-import 'plan_share_card.dart';
-import 'capsule_share_card.dart';
-import 'node_share_card.dart';
-import 'achievement_share_card.dart';
-import 'learning_report_share_card.dart';
+
+import 'package:sparkle/features/community/presentation/widgets/share_cards/achievement_share_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/capsule_share_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/learning_report_share_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/node_share_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/plan_share_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/task_share_card.dart';
+
+export 'package:sparkle/features/community/presentation/widgets/share_cards/achievement_share_card.dart';
+export 'package:sparkle/features/community/presentation/widgets/share_cards/capsule_share_card.dart';
+export 'package:sparkle/features/community/presentation/widgets/share_cards/learning_report_share_card.dart';
+export 'package:sparkle/features/community/presentation/widgets/share_cards/node_share_card.dart';
+export 'package:sparkle/features/community/presentation/widgets/share_cards/plan_share_card.dart';
+export 'package:sparkle/features/community/presentation/widgets/share_cards/task_share_card.dart';
 
 /// Factory for creating share cards from content type
 class ShareCardFactory {
@@ -31,8 +32,7 @@ class ShareCardFactory {
     VoidCallback? onTap,
     String? sharedResourceId,
     VoidCallback? onAdopt,
-  }) {
-    return switch (payload.contentType) {
+  }) => switch (payload.contentType) {
       ShareableContentType.taskCompletion => TaskShareCardFactory.fromPayload(
           payload,
           isCompact: isCompact,
@@ -69,7 +69,6 @@ class ShareCardFactory {
         ),
       _ => _buildDefaultCard(payload, isCompact: isCompact, onTap: onTap),
     };
-  }
 
   static Widget _buildDefaultCard(
     UniversalSharePayload payload, {
@@ -79,7 +78,7 @@ class ShareCardFactory {
       GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -101,7 +100,7 @@ class ShareCardFactory {
                   size: 18,
                 ),
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

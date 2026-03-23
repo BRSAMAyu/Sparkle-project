@@ -6,8 +6,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
-import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 

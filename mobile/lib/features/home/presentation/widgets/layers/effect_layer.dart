@@ -46,11 +46,9 @@ class EffectLayer extends StatelessWidget {
     );
   }
 
-  Widget _buildDefaultEffect() {
-    return AnimatedBuilder(
+  Widget _buildDefaultEffect() => AnimatedBuilder(
       animation: mainAnimation,
-      builder: (context, child) {
-        return Stack(
+      builder: (context, child) => Stack(
           children: [
             CustomPaint(
               size: Size.infinite,
@@ -69,10 +67,8 @@ class EffectLayer extends StatelessWidget {
               ),
             ),
           ],
-        );
-      },
+        ),
     );
-  }
 
   CustomPainter _getEffectPainter(String effectType, Map<String, dynamic> config) {
     final intensity = (config['intensity'] as num?)?.toDouble() ?? 0.5;
@@ -172,8 +168,7 @@ class _PulseGlowPainter extends CustomPainter {
     );
   }
 
-  Offset _getPosition(Size size) {
-    return switch (position) {
+  Offset _getPosition(Size size) => switch (position) {
       'top-right' => Offset(size.width * 0.8, size.height * 0.2),
       'top-left' => Offset(size.width * 0.2, size.height * 0.2),
       'bottom-right' => Offset(size.width * 0.8, size.height * 0.8),
@@ -181,12 +176,9 @@ class _PulseGlowPainter extends CustomPainter {
       'center' => Offset(size.width / 2, size.height / 2),
       _ => Offset(size.width / 2, size.height / 2),
     };
-  }
 
   @override
-  bool shouldRepaint(covariant _PulseGlowPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _PulseGlowPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _PulseRingPainter extends CustomPainter {
@@ -224,18 +216,14 @@ class _PulseRingPainter extends CustomPainter {
     }
   }
 
-  Offset _getPosition(Size size) {
-    return switch (position) {
+  Offset _getPosition(Size size) => switch (position) {
       'top-right' => Offset(size.width * 0.8, size.height * 0.2),
       'center' => Offset(size.width / 2, size.height / 2),
       _ => Offset(size.width / 2, size.height / 2),
     };
-  }
 
   @override
-  bool shouldRepaint(covariant _PulseRingPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _PulseRingPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _GravityWavePainter extends CustomPainter {
@@ -275,9 +263,7 @@ class _GravityWavePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _GravityWavePainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _GravityWavePainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _SupernovaPainter extends CustomPainter {
@@ -308,7 +294,7 @@ class _SupernovaPainter extends CustomPainter {
       ).createShader(Rect.fromCircle(
         center: center,
         radius: 100 + animationValue * 50,
-      ));
+      ),);
 
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
@@ -337,9 +323,7 @@ class _SupernovaPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SupernovaPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _SupernovaPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _AmbientVignettePainter extends CustomPainter {

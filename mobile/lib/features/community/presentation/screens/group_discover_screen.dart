@@ -374,8 +374,7 @@ class _SearchBar extends StatelessWidget {
   final Future<void> Function() onClear;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -407,7 +406,6 @@ class _SearchBar extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _CompactFilterBar extends StatelessWidget {
@@ -495,8 +493,7 @@ class _CompactFilterBar extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 6),
               color: DS.textSecondary.withValues(alpha: 0.2),
             ),
-            ...availableTags.take(8).map((tag) {
-              return Padding(
+            ...availableTags.take(8).map((tag) => Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: FilterChip(
                   label: Text(tag),
@@ -504,8 +501,7 @@ class _CompactFilterBar extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   onSelected: (_) => onToggleTag(tag),
                 ),
-              );
-            }),
+              ),),
           ],
         ],
       ),
@@ -525,8 +521,7 @@ class _RecommendationsPanel extends StatelessWidget {
   final Future<void> Function(GroupRecommendationItem item) onFeedback;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('为你推荐', style: Theme.of(context).textTheme.titleMedium),
@@ -558,7 +553,6 @@ class _RecommendationsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _DirectoryGroupCard extends StatelessWidget {

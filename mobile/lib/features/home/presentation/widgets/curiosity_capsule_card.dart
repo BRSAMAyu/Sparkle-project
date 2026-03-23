@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -136,13 +136,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                         ),
                       ),
 
-                    MarkdownBody(
-                      data: capsule.content,
-                      styleSheet: MarkdownStyleSheet(
-                        p: context.sparkleTypography.bodyMedium,
-                        strong: context.sparkleTypography.bodyMedium
-                            .copyWith(fontWeight: FontWeight.bold),
-                      ),
+                    SparkleMarkdown(
+                      content: capsule.content,
+                      textColor: DS.textPrimary,
+                      codeBackgroundColor: DS.surfaceTertiary,
+                      linkColor: DS.brandPrimary,
+                      fontSize: 14,
                     ),
                     const SizedBox(height: DS.md),
 

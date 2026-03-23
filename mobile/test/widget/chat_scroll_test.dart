@@ -1,4 +1,3 @@
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 // Mock needed dependencies
 class MockChatNotifier extends ChatNotifier {
@@ -66,7 +66,7 @@ void main() {
         child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),home: ChatScreen()),
+        locale: const Locale('zh'),home: ChatScreen(),),
       ),
     );
 

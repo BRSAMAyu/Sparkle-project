@@ -197,9 +197,7 @@ class CalendarEventModel {
     return null;
   }
 
-  static String _colorToHex(int colorValue) {
-    return '#${(colorValue & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
-  }
+  static String _colorToHex(int colorValue) => '#${(colorValue & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
   static int? _namedColorToValue(String name) {
     const colorMap = {
@@ -216,9 +214,7 @@ class CalendarEventModel {
   }
 
   /// 事件时长（分钟）
-  int get durationMinutes {
-    return endTime.difference(startTime).inMinutes;
-  }
+  int get durationMinutes => endTime.difference(startTime).inMinutes;
 
   /// 是否为重复事件
   bool get isRecurring => recurrenceRule != null;

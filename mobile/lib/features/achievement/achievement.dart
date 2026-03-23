@@ -29,11 +29,11 @@ export 'data/repositories/achievement_repository.dart'
     hide AchievementListResponse, GalaxySkinListResponse;
 // 状态管理
 export 'presentation/providers/achievement_provider.dart';
+export 'presentation/screens/achievement_contract_screen.dart';
 // 页面
 export 'presentation/screens/achievement_detail_screen.dart';
 export 'presentation/screens/achievement_list_screen.dart';
 export 'presentation/screens/achievement_map_screen.dart';
-export 'presentation/screens/achievement_contract_screen.dart';
 export 'presentation/screens/streak_details_screen.dart';
 // 组件
 export 'presentation/widgets/achievement_card.dart';

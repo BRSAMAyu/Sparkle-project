@@ -59,6 +59,10 @@ String normalizeAiMarkdown(String content) {
     (match) => '${match.group(1)}${match.group(2)} ',
   );
   normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)(\d+)[、．](?=\S)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)}. ',
+  );
+  normalized = normalized.replaceAllMapped(
     RegExp(r'(^|\n)(#{1,6})(?=\S)', multiLine: true),
     (match) => '${match.group(1)}${match.group(2)} ',
   );
@@ -78,7 +82,7 @@ String normalizeAiMarkdown(String content) {
 }
 
 String _normalizeAiMarkdownLine(String rawLine) {
-  var line = rawLine;
+  final line = rawLine;
   final trimmedLeft = line.trimLeft();
   final leadingWhitespace = line.substring(0, line.length - trimmedLeft.length);
   if (trimmedLeft.isEmpty) {
@@ -102,6 +106,9 @@ String _normalizeAiMarkdownLine(String rawLine) {
     '◇',
     '▶',
     '▸',
+    '－',
+    '—',
+    '–',
   };
 
   if (suspiciousLeadingMarkers.any(trimmedLeft.startsWith)) {
@@ -126,6 +133,16 @@ String _normalizeAiMarkdownLine(String rawLine) {
 
   if (trimmedLeft.startsWith('***') || trimmedLeft.startsWith('*__')) {
     return '$leadingWhitespace- ${trimmedLeft.substring(1)}';
+  }
+
+  final numberedMatch = RegExp(r'^[(（]?(\d+)[)）][\s\u3000]*').firstMatch(
+    trimmedLeft,
+  );
+  if (numberedMatch != null) {
+    final rest = trimmedLeft.substring(numberedMatch.end).trimLeft();
+    if (rest.isNotEmpty) {
+      return '$leadingWhitespace${numberedMatch.group(1)}. $rest';
+    }
   }
 
   return line;

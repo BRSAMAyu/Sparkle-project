@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:fluwx/fluwx.dart' as fluwx;
 import 'package:logger/logger.dart';
 
-import 'share_service.dart';
+import 'package:sparkle/core/services/share_service.dart';
 
 /// WeChat share service implementation
 ///

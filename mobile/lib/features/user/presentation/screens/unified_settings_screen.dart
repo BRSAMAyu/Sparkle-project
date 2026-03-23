@@ -11,8 +11,8 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
-import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
+import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -286,8 +286,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         Expanded(
                           child: Slider(
                             value: _ambientVolume,
-                            min: 0,
-                            max: 1,
                             divisions: 10,
                             onChanged: _sensoryReady && _soundEnabled
                                 ? (value) =>
@@ -452,8 +450,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         Expanded(
                           child: Slider(
                             value: _bgmVolume,
-                            min: 0,
-                            max: 1,
                             divisions: 10,
                             onChanged: _bgmEnabled && _bgmReady
                                 ? (value) => setState(() => _bgmVolume = value)
@@ -553,11 +549,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       activeThumbColor: DS.primaryBase,
                     ),
                     const Divider(height: DS.spacing24),
-                    ListTile(
+                    const ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.tune),
-                      title: const Text('AI 档位'),
-                      subtitle: const Text('敏捷更快，均衡推荐，深思更强分析'),
+                      leading: Icon(Icons.tune),
+                      title: Text('AI 档位'),
+                      subtitle: Text('敏捷更快，均衡推荐，深思更强分析'),
                     ),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -675,7 +671,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         if (v) {
                           final granted = await ref
                               .read(
-                                  notificationPermissionStatusProvider.notifier)
+                                  notificationPermissionStatusProvider.notifier,)
                               .requestPermission();
                           if (!granted) {
                             if (context.mounted) {
@@ -1210,16 +1206,16 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final permissionStatus = ref.watch(notificationPermissionStatusProvider);
 
     return permissionStatus.when(
-      loading: () => GraphiteCardSurface(
+      loading: () => const GraphiteCardSurface(
         child: ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const SizedBox(
+          leading: SizedBox(
             width: 24,
             height: 24,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          title: const Text('通知权限状态'),
-          subtitle: const Text('...'),
+          title: Text('通知权限状态'),
+          subtitle: Text('...'),
         ),
       ),
       error: (error, stack) => GraphiteCardSurface(
@@ -1296,7 +1292,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           if (!hasPermission) {
                             final granted = await ref
                                 .read(notificationPermissionStatusProvider
-                                    .notifier)
+                                    .notifier,)
                                 .requestPermission();
                             if (!granted && context.mounted) {
                               _showOpenSettingsDialog(context);
@@ -1341,8 +1337,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  Widget _buildPermissionChip(String label, bool enabled) {
-    return Container(
+  Widget _buildPermissionChip(String label, bool enabled) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -1375,7 +1370,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ],
       ),
     );
-  }
 
   void _showOpenSettingsDialog(BuildContext context) {
     showDialog<void>(

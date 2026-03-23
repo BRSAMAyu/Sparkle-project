@@ -89,6 +89,57 @@ class LearningPathTaskSummary {
   final String? status;
 }
 
+class LearningPathTaskPathResponse {
+  LearningPathTaskPathResponse({
+    required this.mode,
+    required this.targetNodeId,
+    required this.targetName,
+    required this.planSummary,
+    required this.tasks,
+    this.message,
+    this.retry,
+    this.taskListEntityCard,
+  });
+
+  factory LearningPathTaskPathResponse.fromJson(Map<String, dynamic> json) {
+    final tasksJson = json['tasks'];
+    final taskList = tasksJson is List
+        ? tasksJson
+            .whereType<Map<String, dynamic>>()
+            .map(LearningPathTaskSummary.fromJson)
+            .toList()
+        : <LearningPathTaskSummary>[];
+
+    return LearningPathTaskPathResponse(
+      mode: json['mode'] as String? ?? 'task_path',
+      targetNodeId: json['target_node_id'] as String? ?? '',
+      targetName: json['target_name'] as String? ?? '',
+      planSummary: json['plan_summary'] as String? ?? '',
+      tasks: taskList,
+      message: json['message'] as String?,
+      retry: json['retry'] as bool?,
+      taskListEntityCard: json['task_list_entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {
+                'entity_card':
+                    json['task_list_entity_card'] as Map<String, dynamic>,
+              },
+              fallbackType: 'task_list',
+            )
+          : null,
+    );
+  }
+
+  final String mode;
+  final String targetNodeId;
+  final String targetName;
+  final String planSummary;
+  final List<LearningPathTaskSummary> tasks;
+  final String? message;
+  final bool? retry;
+  final EntityCardPayload? taskListEntityCard;
+}
+
 class FullPlanResponse {
   FullPlanResponse({
     required this.planId,
@@ -116,7 +167,7 @@ class FullPlanResponse {
             ? EntityCardPayload.fromRaw(
                 {
                   'entity_card':
-                      json['plan_entity_card'] as Map<String, dynamic>
+                      json['plan_entity_card'] as Map<String, dynamic>,
                 },
                 fallbackType: 'plan',
               )

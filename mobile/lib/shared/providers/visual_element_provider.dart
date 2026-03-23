@@ -83,7 +83,7 @@ class VisualElementNotifier extends StateNotifier<VisualElementState> {
     VisualElementRarity? rarity,
     String? category,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
     final queryParams = <String, dynamic>{};
@@ -120,7 +120,7 @@ class VisualElementNotifier extends StateNotifier<VisualElementState> {
 
   /// 加载用户已解锁的元素
   Future<void> loadUnlockedElements({VisualElementType? type}) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
     final queryParams = <String, dynamic>{};

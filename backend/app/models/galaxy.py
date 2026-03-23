@@ -220,6 +220,7 @@ class UserNodeStatus(Base):
 
     # 元数据
     first_unlock_at = Column(DateTime, nullable=True)
+    learning_path_snapshot = Column(JSONBCompat, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,

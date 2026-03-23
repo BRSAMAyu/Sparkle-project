@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -112,11 +112,9 @@ class _MyFriendsTab extends ConsumerWidget {
   const _MyFriendsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return const FriendsHubView(
+  Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
     );
-  }
 
   // ignore: unused_element
   void _showFriendContextMenu(
@@ -204,7 +202,7 @@ class _MyFriendsTab extends ConsumerWidget {
           ),
         ),
       ),
-    ));
+    ),);
   }
 
   Future<void> _handleDeleteFriend(
@@ -411,8 +409,7 @@ class _RecommendationsTab extends ConsumerWidget {
         .firstWhere((insight) => insight != null, orElse: () => null);
 
     return recommendationsState.when(
-      data: (recommendations) {
-        return RefreshIndicator(
+      data: (recommendations) => RefreshIndicator(
           onRefresh: () =>
               ref.read(friendRecommendationsProvider.notifier).refresh(),
           child: ListView(
@@ -531,8 +528,7 @@ class _RecommendationsTab extends ConsumerWidget {
                 ),
             ],
           ),
-        );
-      },
+        ),
       loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(
         child: CustomErrorWidget.page(
@@ -802,19 +798,15 @@ class _RecommendationsTab extends ConsumerWidget {
     }
   }
 
-  FriendMatchStrategy _parseStrategy(String? raw) {
-    return FriendMatchStrategy.values.firstWhere(
+  FriendMatchStrategy _parseStrategy(String? raw) => FriendMatchStrategy.values.firstWhere(
       (item) => item.name == raw,
       orElse: () => FriendMatchStrategy.compatibility,
     );
-  }
 
-  FriendRecommendationTarget _parseTarget(String? raw) {
-    return FriendRecommendationTarget.values.firstWhere(
+  FriendRecommendationTarget _parseTarget(String? raw) => FriendRecommendationTarget.values.firstWhere(
       (item) => item.name == raw,
       orElse: () => FriendRecommendationTarget.accountability,
     );
-  }
 
   String _friendActionFromTrigger(String trigger) {
     if (trigger.contains('accountability_invite')) {
@@ -1020,8 +1012,7 @@ class _RecommendationBadge extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.sm,
         vertical: DS.xs,
@@ -1038,7 +1029,6 @@ class _RecommendationBadge extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 责任伙伴入口卡片（显示在好友列表顶部）
@@ -1049,8 +1039,7 @@ class _AccountabilityPartnersCard extends StatelessWidget {
   final AsyncValue<List<AccountabilityPartnershipInfo>> partnershipsState;
 
   @override
-  Widget build(BuildContext context) {
-    return partnershipsState.when(
+  Widget build(BuildContext context) => partnershipsState.when(
       loading: _buildSkeleton,
       error: (_, __) => const SizedBox.shrink(), // 静默失败，不影响好友列表
       data: (partnerships) {
@@ -1107,7 +1096,6 @@ class _AccountabilityPartnersCard extends StatelessWidget {
         );
       },
     );
-  }
 
   String _buildSubtitle(int active, int pending) {
     if (active == 0 && pending == 0) {

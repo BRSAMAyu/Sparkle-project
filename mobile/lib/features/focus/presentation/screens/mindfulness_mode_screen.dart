@@ -413,7 +413,6 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
   Widget _buildTaskCard(TaskModel task) => GraphiteCardSurface(
         margin: const EdgeInsets.symmetric(horizontal: DS.spacing8),
-        padding: const EdgeInsets.all(DS.spacing20),
         borderColor: DS.brandPrimary.withValues(alpha: 0.14),
         child: DecoratedBox(
           decoration: BoxDecoration(

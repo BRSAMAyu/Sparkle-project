@@ -66,7 +66,6 @@ class AchievementBadge extends StatelessWidget {
                 color: Theme.of(
                   context,
                 ).colorScheme.primary.withValues(alpha: 0.3),
-                width: 1,
               )
             : null,
       ),
@@ -75,8 +74,7 @@ class AchievementBadge extends StatelessWidget {
     );
   }
 
-  Widget _buildSmallContent(BuildContext context) {
-    return Row(
+  Widget _buildSmallContent(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildIcon(context),
@@ -91,10 +89,8 @@ class AchievementBadge extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildMediumContent(BuildContext context) {
-    return Column(
+  Widget _buildMediumContent(BuildContext context) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
@@ -143,10 +139,8 @@ class AchievementBadge extends StatelessWidget {
           ),
       ],
     );
-  }
 
-  Widget _buildIcon(BuildContext context) {
-    return Container(
+  Widget _buildIcon(BuildContext context) => Container(
       width: size == AchievementBadgeSize.small ? 32 : 48,
       height: size == AchievementBadgeSize.small ? 32 : 48,
       decoration: BoxDecoration(
@@ -165,10 +159,8 @@ class AchievementBadge extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildPointsBadge(BuildContext context) {
-    return Container(
+  Widget _buildPointsBadge(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary,
@@ -193,7 +185,6 @@ class AchievementBadge extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
@@ -268,8 +259,7 @@ class AchievementGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
+  Widget _buildEmptyState(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -297,7 +287,6 @@ class AchievementGrid extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 成就信息模型
@@ -320,8 +309,7 @@ class AchievementInfo {
   final bool isUnlocked;
   final DateTime? unlockedAt;
 
-  factory AchievementInfo.fromJson(Map<String, dynamic> json) {
-    return AchievementInfo(
+  factory AchievementInfo.fromJson(Map<String, dynamic> json) => AchievementInfo(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
@@ -332,10 +320,8 @@ class AchievementInfo {
           ? DateTime.parse(json['unlocked_at'] as String)
           : null,
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'name': name,
       'description': description,
@@ -344,7 +330,6 @@ class AchievementInfo {
       'unlocked': isUnlocked,
       'unlocked_at': unlockedAt?.toIso8601String(),
     };
-  }
 }
 
 /// 成就进度展示组件
@@ -413,8 +398,7 @@ class AchievementDetailDialog extends StatelessWidget {
   final AchievementInfo achievement;
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -482,7 +466,6 @@ class AchievementDetailDialog extends StatelessWidget {
         ),
       ],
     );
-  }
 
   static void show(BuildContext context, AchievementInfo achievement) {
     showSensoryDialog<void>(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -17,7 +18,6 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
   const DailyDetailScreen({required this.date, super.key});
@@ -161,7 +161,7 @@ class DailyDetailScreen extends ConsumerWidget {
     PlanModel plan,
   ) =>
       GestureDetector(
-        onTap: () => context.push('/plan/${plan.id}'),
+        onTap: () => context.push('/plans/${plan.id}'),
         child: Container(
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
@@ -612,7 +612,8 @@ class DailyDetailScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: () {
               if (event.taskId != null && event.taskId!.isNotEmpty) {
-                unawaited(context.push('/tasks/new?taskId=${event.taskId!}'));
+                final encodedTaskId = Uri.encodeComponent(event.taskId!);
+                unawaited(context.push('/tasks/new?taskId=$encodedTaskId'));
                 return;
               }
               _showEditEventDialog(context, ref, event);
@@ -749,10 +750,10 @@ class DailyDetailScreen extends ConsumerWidget {
     final locationController = TextEditingController(
       text: event.location ?? '',
     );
-    DateTime startTime = event.startTime;
-    DateTime endTime = event.endTime;
-    bool isAllDay = event.isAllDay;
-    int reminderMinutes = event.reminderMinutes.isNotEmpty
+    var startTime = event.startTime;
+    var endTime = event.endTime;
+    var isAllDay = event.isAllDay;
+    var reminderMinutes = event.reminderMinutes.isNotEmpty
         ? event.reminderMinutes.first
         : 15;
 

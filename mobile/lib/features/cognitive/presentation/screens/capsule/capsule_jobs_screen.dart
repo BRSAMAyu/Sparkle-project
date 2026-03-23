@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -80,37 +83,27 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
                     },
                   ),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) =>
-              Center(child: Text(l10n.capsuleLoadFailed('$err'))),
+          loading: () => LoadingIndicator.circular(
+            showText: true,
+            loadingText: '正在同步生成任务...',
+          ),
+          error: (err, stack) => CustomErrorWidget.page(
+            context: context,
+            title: '生成任务加载失败',
+            message: l10n.capsuleLoadFailed('$err'),
+            onRetry: () => ref.read(generationJobsProvider.notifier).fetchJobs(),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() => Builder(
-        builder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.task_alt_outlined,
-              size: 64,
-              color: DS.brandPrimary.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              context.l10n.capsuleNoJobs,
-              style: TextStyle(color: DS.textPrimary, fontSize: 16),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              context.l10n.capsuleNoJobsSubtitle,
-              style: TextStyle(color: DS.textSecondary, fontSize: 14),
-            ),
-          ],
+        builder: (context) => EmptyState(
+          title: context.l10n.capsuleNoJobs,
+          description: context.l10n.capsuleNoJobsSubtitle,
+          icon: Icons.task_alt_outlined,
         ),
-      ),
       );
 }
 

@@ -106,54 +106,46 @@ class _WeatherLayerState extends State<WeatherLayer> {
 
   List<_WeatherParticle> _initSunnyParticles() {
     final count = _scaledCount(8, min: 4);
-    return List.generate(count, (i) {
-      return _WeatherParticle(
+    return List.generate(count, (i) => _WeatherParticle(
         x: 0.8 + _random.nextDouble() * 0.2,
         y: 0.1 + _random.nextDouble() * 0.2,
         size: 30.0 + i * 15.0,
         angle: i * pi / 4,
         speed: 0.5 + _random.nextDouble() * 0.5,
-      );
-    });
+      ),);
   }
 
   List<_WeatherParticle> _initCloudyParticles() {
     final count = _scaledCount(5, min: 3);
-    return List.generate(count, (i) {
-      return _WeatherParticle(
+    return List.generate(count, (i) => _WeatherParticle(
         x: _random.nextDouble(),
         y: 0.05 + _random.nextDouble() * 0.25,
         size: 40 + _random.nextDouble() * 60,
         speed: 0.1 + _random.nextDouble() * 0.2,
         opacity: 0.03 + _random.nextDouble() * 0.05,
-      );
-    });
+      ),);
   }
 
   List<_WeatherParticle> _initRainyParticles() {
     final count = _scaledCount(40, min: 16);
-    return List.generate(count, (i) {
-      return _WeatherParticle(
+    return List.generate(count, (i) => _WeatherParticle(
         x: _random.nextDouble(),
         y: -0.1 - _random.nextDouble() * 0.5,
         size: 10 + _random.nextDouble() * 15,
         speed: 0.8 + _random.nextDouble() * 0.4,
         opacity: 0.1 + _random.nextDouble() * 0.15,
-      );
-    });
+      ),);
   }
 
   List<_WeatherParticle> _initMeteorParticles() {
     final count = _scaledCount(6, min: 3);
-    return List.generate(count, (i) {
-      return _WeatherParticle(
+    return List.generate(count, (i) => _WeatherParticle(
         x: 0.2 + _random.nextDouble() * 0.6,
         y: _random.nextDouble() * 0.2,
         size: 30 + _random.nextDouble() * 50,
         speed: 1.5 + _random.nextDouble() * 1.0,
         delay: i * 0.15,
-      );
-    });
+      ),);
   }
 
   @override
@@ -166,8 +158,7 @@ class _WeatherLayerState extends State<WeatherLayer> {
           widget.mainAnimation,
           widget.particleAnimation,
         ]),
-        builder: (context, child) {
-          return CustomPaint(
+        builder: (context, child) => CustomPaint(
             size: Size.infinite,
             painter: _WeatherPainter(
               weatherType: widget.weatherType,
@@ -178,8 +169,7 @@ class _WeatherLayerState extends State<WeatherLayer> {
               speedMultiplier: _speedMultiplier,
               opacityScale: _opacityScale,
             ),
-          );
-        },
+          ),
       ),
     );
   }
@@ -364,7 +354,7 @@ class _WeatherPainter extends CustomPainter {
           y - meteor.size * 0.5,
           meteor.size,
           meteor.size * 0.5,
-        ));
+        ),);
 
       final path = Path();
       path.moveTo(x, y);
@@ -383,13 +373,11 @@ class _WeatherPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WeatherPainter oldDelegate) {
-    return mainValue != oldDelegate.mainValue ||
+  bool shouldRepaint(covariant _WeatherPainter oldDelegate) => mainValue != oldDelegate.mainValue ||
         particleValue != oldDelegate.particleValue ||
         speedMultiplier != oldDelegate.speedMultiplier ||
         opacityScale != oldDelegate.opacityScale ||
         accentColor != oldDelegate.accentColor ||
         weatherType != oldDelegate.weatherType ||
         particles != oldDelegate.particles;
-  }
 }

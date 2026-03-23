@@ -6,10 +6,8 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 
 final myPartnershipsProvider = StateNotifierProvider.autoDispose<
     MyPartnershipsNotifier,
-    AsyncValue<List<AccountabilityPartnershipInfo>>>((ref) {
-  return MyPartnershipsNotifier(
-      ref.watch(accountabilityRepositoryProvider),);
-});
+    AsyncValue<List<AccountabilityPartnershipInfo>>>((ref) => MyPartnershipsNotifier(
+      ref.watch(accountabilityRepositoryProvider),),);
 
 final accountabilityOverviewProvider =
     FutureProvider.autoDispose<AccountabilityOverviewInfo>((ref) async {
@@ -88,9 +86,7 @@ final partnershipHeatmapProvider = FutureProvider.autoDispose
   return repo.getHeatmap(partnershipId);
 });
 
-final partnershipHeatmapYearProvider = Provider.family<int, int>((ref, _) {
-  return DateTime.now().year;
-});
+final partnershipHeatmapYearProvider = Provider.family<int, int>((ref, _) => DateTime.now().year);
 
 // ─── Achievements ────────────────────────────────────────────────────────────────
 
@@ -122,19 +118,15 @@ class CheckinInteractionState {
     bool? liked,
     int? likes,
     List<EncouragementMessage>? encouragements,
-  }) {
-    return CheckinInteractionState(
+  }) => CheckinInteractionState(
       liked: liked ?? this.liked,
       likes: likes ?? this.likes,
       encouragements: encouragements ?? this.encouragements,
     );
-  }
 }
 
 final checkinInteractionProvider = StateProvider.autoDispose
-    .family<CheckinInteractionState, String>((ref, checkinId) {
-  return const CheckinInteractionState();
-});
+    .family<CheckinInteractionState, String>((ref, checkinId) => const CheckinInteractionState());
 
 // ─── Actions ────────────────────────────────────────────────────────────────────
 
@@ -179,7 +171,7 @@ class AccountabilityActions {
           userId: result['encouragement']['user_id'] as String,
           message: result['encouragement']['message'] as String,
           createdAt: DateTime.parse(
-              result['encouragement']['created_at'] as String),
+              result['encouragement']['created_at'] as String,),
         ),
       ],
     );
@@ -197,6 +189,4 @@ class AccountabilityActions {
   }
 }
 
-final accountabilityActionsProvider = Provider<AccountabilityActions>((ref) {
-  return const AccountabilityActions();
-});
+final accountabilityActionsProvider = Provider<AccountabilityActions>((ref) => const AccountabilityActions());

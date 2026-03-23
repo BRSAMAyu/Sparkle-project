@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/cognitive_state_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/emotion_visual_blend_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/effect_layer.dart';
@@ -124,8 +124,7 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
     );
   }
 
-  Widget _buildWeatherStatus(String type, String condition) {
-    return Container(
+  Widget _buildWeatherStatus(String type, String condition) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing8,
@@ -190,10 +189,9 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
         ],
       ),
     );
-  }
 
   Widget _buildWeatherIcon(String type) {
-    final IconData iconData = switch (type) {
+    final iconData = switch (type) {
       'sunny' => Icons.wb_sunny_rounded,
       'cloudy' => Icons.cloud_rounded,
       'rainy' => Icons.water_drop_rounded,
@@ -208,13 +206,11 @@ class _VisualRendererState extends ConsumerState<VisualRenderer>
     );
   }
 
-  String _getWeatherTitle(String type) {
-    return switch (type) {
+  String _getWeatherTitle(String type) => switch (type) {
       'sunny' => '晴空万里',
       'cloudy' => '薄雾弥漫',
       'rainy' => '风雨欲来',
       'meteor' => '繁星入梦',
       _ => '晴空万里',
     };
-  }
 }

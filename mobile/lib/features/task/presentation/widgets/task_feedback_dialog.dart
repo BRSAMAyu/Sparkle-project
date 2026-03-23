@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
@@ -291,13 +291,11 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                           Container(
                             constraints: const BoxConstraints(maxHeight: 200),
                             child: SingleChildScrollView(
-                              child: AiRichText(
+                              child: SparkleMarkdown(
                                 content: widget.result.feedback!,
                                 textColor: DS.textPrimary,
                                 codeBackgroundColor: DS.neutral100,
                                 linkColor: DS.primaryBase,
-                                fontSize: DS.fontSizeBase,
-                                height: 1.5,
                               ),
                             ),
                           )

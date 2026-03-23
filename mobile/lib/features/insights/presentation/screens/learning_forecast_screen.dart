@@ -42,7 +42,7 @@ class _LearningForecastScreenState
     try {
       final results = await Future.wait<dynamic>([
         ref.read(predictiveServiceProvider).getDashboardData(),
-        ref.read(achievementRepositoryProvider).getStreakHistory(days: 90),
+        ref.read(achievementRepositoryProvider).getStreakHistory(),
       ]);
       final response = results[0] as Map<String, dynamic>;
       final streakDays = results[1] as List<StreakDayRecord>;

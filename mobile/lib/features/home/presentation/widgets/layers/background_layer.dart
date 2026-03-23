@@ -42,8 +42,7 @@ class BackgroundLayer extends StatelessWidget {
     );
   }
 
-  Widget _buildDefaultBackground() {
-    return Stack(
+  Widget _buildDefaultBackground() => Stack(
       children: [
         Container(
           decoration: const BoxDecoration(
@@ -77,7 +76,6 @@ class BackgroundLayer extends StatelessWidget {
         _buildTextureOverlay('mesh'),
       ],
     );
-  }
 
   Widget _buildBackgroundFromConfig(Map<String, dynamic> config) {
     // 解析渐变配置
@@ -130,59 +128,45 @@ class BackgroundLayer extends StatelessWidget {
     );
   }
 
-  Widget _buildAuroraEffect(List<dynamic> colors) {
-    return AnimatedBuilder(
+  Widget _buildAuroraEffect(List<dynamic> colors) => AnimatedBuilder(
       animation: mainAnimation,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _AuroraPainter(
             colors: colors.map((c) => _parseColor(c as String)).toList(),
             animationValue: mainAnimation.value,
           ),
-        );
-      },
+        ),
     );
-  }
 
-  Widget _buildNebulaEffect(List<dynamic> colors) {
-    return AnimatedBuilder(
+  Widget _buildNebulaEffect(List<dynamic> colors) => AnimatedBuilder(
       animation: mainAnimation,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _NebulaPainter(
             colors: colors.map((c) => _parseColor(c as String)).toList(),
             animationValue: mainAnimation.value,
           ),
-        );
-      },
+        ),
     );
-  }
 
-  Widget _buildNeonEffect(List<dynamic> colors) {
-    return AnimatedBuilder(
+  Widget _buildNeonEffect(List<dynamic> colors) => AnimatedBuilder(
       animation: mainAnimation,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _NeonPainter(
             colors: colors.map((c) => _parseColor(c as String)).toList(),
             animationValue: mainAnimation.value,
           ),
-        );
-      },
+        ),
     );
-  }
 
-  Widget _buildTextureOverlay(String texture) {
-    return IgnorePointer(
+  Widget _buildTextureOverlay(String texture) => IgnorePointer(
       child: CustomPaint(
         size: Size.infinite,
         painter: _TexturePainter(texture: texture),
       ),
     );
-  }
 
   Color _parseColor(String hexColor) {
     final buffer = StringBuffer();
@@ -193,8 +177,7 @@ class BackgroundLayer extends StatelessWidget {
     return Color(int.parse(buffer.toString(), radix: 16));
   }
 
-  Alignment _parseAlignment(String value) {
-    return switch (value) {
+  Alignment _parseAlignment(String value) => switch (value) {
       'topLeft' => Alignment.topLeft,
       'topCenter' => Alignment.topCenter,
       'topRight' => Alignment.topRight,
@@ -206,7 +189,6 @@ class BackgroundLayer extends StatelessWidget {
       'bottomRight' => Alignment.bottomRight,
       _ => Alignment.topCenter,
     };
-  }
 }
 
 // ========== Custom Painters ==========
@@ -239,7 +221,7 @@ class _AuroraPainter extends CustomPainter {
       ).createShader(Rect.fromCircle(
         center: Offset(x, y),
         radius: size.width * 0.4,
-      ));
+      ),);
 
       canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -249,9 +231,7 @@ class _AuroraPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AuroraPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _AuroraPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _NebulaPainter extends CustomPainter {
@@ -282,7 +262,7 @@ class _NebulaPainter extends CustomPainter {
       ).createShader(Rect.fromCircle(
         center: Offset(x, y),
         radius: size.width * 0.5,
-      ));
+      ),);
 
       canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -292,9 +272,7 @@ class _NebulaPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NebulaPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _NebulaPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _NeonPainter extends CustomPainter {
@@ -337,9 +315,7 @@ class _NeonPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NeonPainter oldDelegate) {
-    return animationValue != oldDelegate.animationValue;
-  }
+  bool shouldRepaint(covariant _NeonPainter oldDelegate) => animationValue != oldDelegate.animationValue;
 }
 
 class _TexturePainter extends CustomPainter {
@@ -368,7 +344,7 @@ class _TexturePainter extends CustomPainter {
       ..strokeWidth = 1;
 
     const gap = 28.0;
-    for (double x = -size.height; x < size.width + size.height; x += gap) {
+    for (var x = -size.height; x < size.width + size.height; x += gap) {
       canvas.drawLine(
         Offset(x, 0),
         Offset(x + size.height * 0.35, size.height),

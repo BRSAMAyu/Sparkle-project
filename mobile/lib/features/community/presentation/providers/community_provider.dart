@@ -988,7 +988,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
                 if (!messages.any((m) => m.id == message.id)) {
                   state = AsyncValue.data([message, ...messages]);
                   unawaited(
-                      _markVisibleMessagesAsRead(upToMessageId: message.id));
+                      _markVisibleMessagesAsRead(upToMessageId: message.id),);
 
                   // Trigger in-app notification for incoming group messages
                   // Only notify if message is from someone else
@@ -1039,9 +1039,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       _retryCount++;
       final delay = Duration(
           seconds:
-              1 << _retryCount); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+              1 << _retryCount,); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
       debugPrint(
-          'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)');
+          'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)',);
       Future.delayed(delay, () {
         if (mounted) {
           _connectWebSocket(isRetry: true);
@@ -1104,7 +1104,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> loadMessages() async {
     try {
-      final messages = await _repository.getMessages(_groupId, limit: _pageSize);
+      final messages = await _repository.getMessages(_groupId);
       _hasMoreMessages = messages.length >= _pageSize;
       state = AsyncValue.data(messages);
       await _cacheService.saveGroupMessages(_groupId, messages);
@@ -1136,7 +1136,6 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       final olderMessages = await _repository.getMessages(
         _groupId,
         beforeId: currentMessages.last.id,
-        limit: _pageSize,
       );
       if (olderMessages.isEmpty) {
         _hasMoreMessages = false;
@@ -1271,7 +1270,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       _repository.getThreadMessages(_groupId, threadRootId);
 
   Future<void> _markVisibleMessagesAsRead(
-      {required String upToMessageId}) async {
+      {required String upToMessageId,}) async {
     final currentUserId = await _resolveCurrentUserId();
     if (currentUserId == null || currentUserId.isEmpty) {
       return;
@@ -1997,9 +1996,7 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
 
 // 10. Blocked Users Provider (Phase 4)
 final blockedUsersProvider = StateNotifierProvider.autoDispose<
-    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>((ref) {
-  return BlockedUsersNotifier(ref.watch(communityRepositoryProvider));
-});
+    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>((ref) => BlockedUsersNotifier(ref.watch(communityRepositoryProvider)));
 
 class BlockedUsersNotifier
     extends StateNotifier<AsyncValue<List<BlockUserInfo>>> {

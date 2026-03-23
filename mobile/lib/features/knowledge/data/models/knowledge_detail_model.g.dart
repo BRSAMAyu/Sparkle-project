@@ -24,6 +24,10 @@ KnowledgeDetailResponse _$KnowledgeDetailResponseFromJson(
               ?.map((e) => RelatedPlan.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      learningPathSnapshot: json['learningPathSnapshot'] == null
+          ? null
+          : LearningPathSnapshot.fromJson(
+              json['learningPathSnapshot'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$KnowledgeDetailResponseToJson(
@@ -34,6 +38,7 @@ Map<String, dynamic> _$KnowledgeDetailResponseToJson(
       'relatedTasks': instance.relatedTasks,
       'relatedPlans': instance.relatedPlans,
       'userStats': instance.userStats,
+      'learningPathSnapshot': instance.learningPathSnapshot,
     };
 
 KnowledgeNodeDetail _$KnowledgeNodeDetailFromJson(Map<String, dynamic> json) =>
@@ -142,4 +147,60 @@ Map<String, dynamic> _$KnowledgeUserStatsToJson(KnowledgeUserStats instance) =>
       'last_study_at': instance.lastStudyAt?.toIso8601String(),
       'next_review_at': instance.nextReviewAt?.toIso8601String(),
       'decay_paused': instance.decayPaused,
+    };
+
+LearningPathSnapshot _$LearningPathSnapshotFromJson(
+        Map<String, dynamic> json) =>
+    LearningPathSnapshot(
+      mode: json['mode'] as String,
+      summary: json['summary'] as String,
+      taskCount: (json['task_count'] as num?)?.toInt() ?? 0,
+      tasks: (json['tasks'] as List<dynamic>?)
+              ?.map((e) =>
+                  LearningPathSnapshotTask.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      selectedRelatedNodeIds:
+          (json['selected_related_node_ids'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList() ??
+              const [],
+      generatedAt: json['generated_at'] == null
+          ? null
+          : DateTime.parse(json['generated_at'] as String),
+    );
+
+Map<String, dynamic> _$LearningPathSnapshotToJson(
+        LearningPathSnapshot instance) =>
+    <String, dynamic>{
+      'mode': instance.mode,
+      'summary': instance.summary,
+      'task_count': instance.taskCount,
+      'tasks': instance.tasks,
+      'selected_related_node_ids': instance.selectedRelatedNodeIds,
+      'generated_at': instance.generatedAt?.toIso8601String(),
+    };
+
+LearningPathSnapshotTask _$LearningPathSnapshotTaskFromJson(
+        Map<String, dynamic> json) =>
+    LearningPathSnapshotTask(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      type: json['type'] as String,
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 25,
+      status: json['status'] as String,
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
+      guideContent: json['guide_content'] as String?,
+    );
+
+Map<String, dynamic> _$LearningPathSnapshotTaskToJson(
+        LearningPathSnapshotTask instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'type': instance.type,
+      'estimated_minutes': instance.estimatedMinutes,
+      'status': instance.status,
+      'knowledge_node_id': instance.knowledgeNodeId,
+      'guide_content': instance.guideContent,
     };

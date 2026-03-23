@@ -1,22 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -525,13 +525,12 @@ class _TaskDetailView extends ConsumerWidget {
           border: Border.all(color: DS.neutral200),
           boxShadow: DS.shadowSm,
         ),
-        child: AiRichText(
+        child: SparkleMarkdown(
           content: task.guideContent ?? context.l10n.taskGuideEmpty,
           textColor: DS.textPrimary,
           codeBackgroundColor: DS.neutral100,
           linkColor: DS.primaryBase,
-          fontSize: DS.fontSizeBase,
-          height: 1.6,
+          lineHeight: 1.6,
         ),
       );
 
@@ -741,7 +740,7 @@ class _BottomActionBar extends ConsumerWidget {
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.confirm),
+                            SensoryFeedbackEvent.confirm,),
                       );
                       ref.read(activeTaskProvider.notifier).state = task;
                       // P0-1: Auto-switch plan context when starting task
@@ -768,7 +767,7 @@ class _BottomActionBar extends ConsumerWidget {
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.dialogOpen),
+                            SensoryFeedbackEvent.dialogOpen,),
                       );
                       unawaited(
                         showSensoryDialog<void>(

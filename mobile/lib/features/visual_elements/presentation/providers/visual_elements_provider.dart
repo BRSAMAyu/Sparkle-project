@@ -271,7 +271,7 @@ class VisualElementsNotifier extends StateNotifier<VisualElementsState> {
 
   /// 加载所有数据
   Future<void> loadAll() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final results = await Future.wait([
@@ -284,7 +284,6 @@ class VisualElementsNotifier extends StateNotifier<VisualElementsState> {
         allElements: (results[0] as VisualElementListResponse).items,
         unlockedElements: (results[1] as VisualElementListResponse).items,
         config: results[2] as UserVisualConfig,
-        isLoading: false,
         filterOptions: state.filterOptions,
       );
     } catch (e) {

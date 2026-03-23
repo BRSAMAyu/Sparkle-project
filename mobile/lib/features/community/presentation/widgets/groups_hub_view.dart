@@ -208,8 +208,7 @@ class _RecommendationsSection extends ConsumerWidget {
   final AsyncValue<List<GroupRecommendationItem>> state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+  Widget build(BuildContext context, WidgetRef ref) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -287,7 +286,6 @@ class _RecommendationsSection extends ConsumerWidget {
         ),
       ],
     );
-  }
 }
 
 class _MyGroupsSection extends StatelessWidget {
@@ -296,8 +294,7 @@ class _MyGroupsSection extends StatelessWidget {
   final AsyncValue<List<GroupListItem>> state;
 
   @override
-  Widget build(BuildContext context) {
-    return state.when(
+  Widget build(BuildContext context) => state.when(
       data: (groups) {
         if (groups.isEmpty) {
           return CompactEmptyState(
@@ -353,7 +350,6 @@ class _MyGroupsSection extends StatelessWidget {
         style: TextStyle(color: DS.textSecondary),
       ),
     );
-  }
 }
 
 class _JoinedGroupTile extends StatelessWidget {

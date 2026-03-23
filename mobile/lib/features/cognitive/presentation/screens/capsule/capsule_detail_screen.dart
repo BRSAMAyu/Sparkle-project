@@ -1,16 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 
@@ -75,11 +78,27 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
       bottomNavigationBar: capsule != null ? _buildBottomBar(capsule) : null,
       child: detailState.when(
         data: (c) {
-          if (c == null) return Center(child: Text(l10n.capsuleMissing));
+          if (c == null) {
+            return const EmptyState(
+              title: '这枚胶囊暂时不可用',
+              description: '它可能已经被移除，或者还没有完成生成。',
+              icon: Icons.auto_awesome_outlined,
+            );
+          }
           return _buildContent(c);
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text(l10n.capsuleLoadFailed('$err'))),
+        loading: () => LoadingIndicator.circular(
+          showText: true,
+          loadingText: '正在整理这枚胶囊...',
+        ),
+        error: (err, _) => CustomErrorWidget.page(
+          context: context,
+          message: l10n.capsuleLoadFailed('$err'),
+          title: '胶囊打开失败',
+          onRetry: () => ref
+              .read(capsuleDetailProvider(widget.capsuleId).notifier)
+              .fetchDetail(widget.capsuleId),
+        ),
       ),
     );
   }
@@ -136,29 +155,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
               // 主内容
               SparkleStaggerItem(
                 index: 4,
-                child: MarkdownBody(
-                  data: capsule.content,
-                  styleSheet:
-                      MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                    p: context.sparkleTypography.bodyLarge,
-                    h1: context.sparkleTypography.headingLarge,
-                    h2: context.sparkleTypography.headingMedium,
-                    h3: context.sparkleTypography.titleLarge,
-                    strong: context.sparkleTypography.bodyLarge
-                        .copyWith(fontWeight: FontWeight.bold),
-                    blockquote: context.sparkleTypography.bodyMedium.copyWith(
-                      color: DS.textSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    code: context.sparkleTypography.bodyMedium.copyWith(
-                      fontFamily: 'monospace',
-                      backgroundColor: DS.surfaceTertiary,
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: DS.surfaceTertiary,
-                      borderRadius: DS.borderRadius8,
-                    ),
-                  ),
+                child: SparkleMarkdown(
+                  content: capsule.content,
+                  textColor: DS.textPrimary,
+                  codeBackgroundColor: DS.surfaceTertiary,
+                  linkColor: DS.brandPrimary,
+                  lineHeight: 1.65,
+                  selectable: true,
                 ),
               ),
               const SizedBox(height: DS.spacing24),

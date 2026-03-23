@@ -44,7 +44,7 @@ class TaskShareCard extends StatelessWidget {
   Widget _buildCompactCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
             borderRadius: DS.borderRadius8,
@@ -66,7 +66,7 @@ class TaskShareCard extends StatelessWidget {
                   size: 18,
                 ),
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +128,7 @@ class TaskShareCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.all(DS.md),
+                padding: const EdgeInsets.all(DS.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -137,7 +137,7 @@ class TaskShareCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(DS.sm),
+                          padding: const EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: DS.success.withValues(alpha: 0.15),
                             borderRadius: DS.borderRadius8,
@@ -148,7 +148,7 @@ class TaskShareCard extends StatelessWidget {
                             size: 20,
                           ),
                         ),
-                        SizedBox(width: DS.sm),
+                        const SizedBox(width: DS.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +178,7 @@ class TaskShareCard extends StatelessWidget {
 
                     if (taskDescription != null &&
                         taskDescription!.isNotEmpty) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Text(
                         taskDescription!,
                         style: TextStyle(
@@ -190,7 +190,7 @@ class TaskShareCard extends StatelessWidget {
                       ),
                     ],
 
-                    SizedBox(height: DS.md),
+                    const SizedBox(height: DS.md),
 
                     // Stats row
                     Wrap(
@@ -208,7 +208,7 @@ class TaskShareCard extends StatelessWidget {
                     ),
 
                     if (completedAt != null) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Text(
                         _formatTime(completedAt!),
                         style: TextStyle(
@@ -218,7 +218,7 @@ class TaskShareCard extends StatelessWidget {
                       ),
                     ],
                     if (onAdopt != null) ...[
-                      SizedBox(height: DS.sm),
+                      const SizedBox(height: DS.sm),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: ConstrainedBox(

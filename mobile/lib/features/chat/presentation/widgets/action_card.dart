@@ -14,6 +14,7 @@ import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dar
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ActionCard extends StatefulWidget {
@@ -171,6 +172,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     );
   }
 
+  bool _hasStablePlanId(String? id) =>
+      id != null &&
+      RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+      ).hasMatch(id);
+
   @override
   Widget build(BuildContext context) {
     if (_hiddenAfterAction) {
@@ -209,6 +216,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             toolResultId != null && toolResultId.trim().isNotEmpty;
         final detailRoute = entity.detailRoute;
         final share = entity.share;
+        final canShareTask =
+            isServerTaskId(task.id) && ((share?.resourceId ?? task.id).isNotEmpty);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -235,17 +244,22 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
                   const SizedBox(width: DS.spacing8),
                   Expanded(
-                    child: SparkleButton.ghost(
+                    child: SparkleButton(
                       label: '分享卡片',
+                      variant: ButtonVariant.ghost,
                       icon: const Icon(Icons.share_outlined),
-                      onPressed: () => unawaited(
-                        _shareResource(
-                          resourceType: share?.resourceType ?? 'task',
-                          resourceId: share?.resourceId ?? task.id,
-                          title: share?.title ?? task.title,
-                          subtitle: share?.subtitle ?? task.guideContent,
-                        ),
-                      ),
+                      onPressed: canShareTask
+                          ? () => unawaited(
+                                _shareResource(
+                                  resourceType: share?.resourceType ?? 'task',
+                                  resourceId: share?.resourceId ?? task.id,
+                                  title: share?.title ?? task.title,
+                                  subtitle:
+                                      share?.subtitle ?? task.guideContent,
+                                ),
+                              )
+                          : () {},
+                      disabled: !canShareTask,
                     ),
                   ),
                 ],
@@ -1215,6 +1229,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         action.data['id']?.toString();
     final canConfirm = toolResultId != null && toolResultId.trim().isNotEmpty;
     final planId = entity.planId ?? action.data['plan_id']?.toString();
+    final canOpenPlan = _hasStablePlanId(planId);
+    final planShareId = entity.share?.resourceId ?? planId;
+    final canSharePlan = canOpenPlan && (planShareId?.isNotEmpty ?? false);
     final planTitle = _asString(entity.linkedEntities['plan_title']) ??
         action.data['plan_title']?.toString() ??
         action.data['plan_name']?.toString();
@@ -1226,6 +1243,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       final taskId = task['id']?.toString();
       final title = task['title']?.toString() ?? l10n.taskUntitled;
       final taskModel = taskModelFromEntityPayload(task);
+      final canOpenTask = taskId != null && isServerTaskId(taskId);
+      final canShareTask =
+          canOpenTask && ((taskEntity.share?.resourceId ?? taskId).isNotEmpty);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing10),
@@ -1236,7 +1256,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               TaskCard(
                 task: taskModel,
                 compact: true,
-                onTap: taskId == null ? null : () => context.push('/tasks/$taskId'),
+                onTap:
+                    canOpenTask ? () => context.push('/tasks/$taskId') : null,
               )
             else
               Container(
@@ -1259,26 +1280,37 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 child: Row(
                   children: [
                     Expanded(
-                      child: SparkleButton.ghost(
+                    child: SparkleButton(
                         label: '打开',
+                        variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.open_in_new_rounded),
-                        onPressed: () => unawaited(context.push('/tasks/$taskId')),
+                        onPressed: canOpenTask
+                            ? () => unawaited(context.push('/tasks/$taskId'))
+                            : () {},
+                        disabled: !canOpenTask,
                       ),
                     ),
                     const SizedBox(width: DS.spacing8),
                     Expanded(
-                      child: SparkleButton.ghost(
+                      child: SparkleButton(
                         label: '分享',
+                        variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.share_outlined),
-                        onPressed: () => unawaited(
-                          _shareResource(
-                            resourceType: taskEntity.share?.resourceType ?? 'task',
-                            resourceId: taskEntity.share?.resourceId ?? taskId,
-                            title: taskEntity.share?.title ?? title,
-                            subtitle:
-                                taskEntity.share?.subtitle ?? taskModel?.guideContent,
-                          ),
-                        ),
+                        onPressed: canShareTask
+                            ? () => unawaited(
+                                  _shareResource(
+                                    resourceType:
+                                        taskEntity.share?.resourceType ??
+                                            'task',
+                                    resourceId:
+                                        taskEntity.share?.resourceId ?? taskId,
+                                    title: taskEntity.share?.title ?? title,
+                                    subtitle: taskEntity.share?.subtitle ??
+                                        taskModel?.guideContent,
+                                  ),
+                                )
+                            : () {},
+                        disabled: !canShareTask,
                       ),
                     ),
                   ],
@@ -1338,26 +1370,37 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             child: Row(
               children: [
                 Expanded(
-                  child: SparkleButton.ghost(
+                  child: SparkleButton(
                     label: '查看计划',
+                    variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.map_outlined),
-                    onPressed: () => unawaited(context.push('/plans/$planId')),
+                    onPressed: canOpenPlan
+                        ? () => unawaited(context.push('/plans/$planId'))
+                        : () {},
+                    disabled: !canOpenPlan,
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
                 Expanded(
-                  child: SparkleButton.ghost(
+                  child: SparkleButton(
                     label: '分享计划',
+                    variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.share_outlined),
-                    onPressed: () => unawaited(
-                      _shareResource(
-                        resourceType: entity.share?.resourceType ?? 'plan',
-                        resourceId: entity.share?.resourceId ?? planId,
-                        title: entity.share?.title ?? (planTitle ?? '学习计划'),
-                        subtitle:
-                            entity.share?.subtitle ?? '由 AI 生成的任务计划',
-                      ),
-                    ),
+                    onPressed: canSharePlan
+                        ? () => unawaited(
+                              _shareResource(
+                                resourceType:
+                                    entity.share?.resourceType ?? 'plan',
+                                resourceId:
+                                    entity.share?.resourceId ?? planId,
+                                title:
+                                    entity.share?.title ?? (planTitle ?? '学习计划'),
+                                subtitle: entity.share?.subtitle ??
+                                    '由 AI 生成的任务计划',
+                              ),
+                            )
+                        : () {},
+                    disabled: !canSharePlan,
                   ),
                 ),
               ],
@@ -1398,6 +1441,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final planId = entity.entityId ??
         action.data['id']?.toString() ??
         action.data['plan_id']?.toString();
+    final planShareId = entity.share?.resourceId ?? planId;
+    final canSharePlan =
+        _hasStablePlanId(planId) && (planShareId?.isNotEmpty ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -1412,18 +1458,20 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 },
           onShare: planId == null
               ? null
-              : () => unawaited(
-                    _shareResource(
-                      resourceType: entity.share?.resourceType ?? 'plan',
-                      resourceId: entity.share?.resourceId ?? planId,
-                      title: entity.share?.title ??
-                          action.data['title']?.toString() ??
-                          action.data['name']?.toString() ??
-                          '学习计划',
-                      subtitle:
-                          entity.share?.subtitle ?? action.data['description']?.toString(),
-                    ),
-                  ),
+              : (canSharePlan
+                  ? () => unawaited(
+                        _shareResource(
+                          resourceType: entity.share?.resourceType ?? 'plan',
+                          resourceId: entity.share?.resourceId ?? planId,
+                          title: entity.share?.title ??
+                              action.data['title']?.toString() ??
+                              action.data['name']?.toString() ??
+                              '学习计划',
+                          subtitle: entity.share?.subtitle ??
+                              action.data['description']?.toString(),
+                        ),
+                      )
+                  : null),
         ),
       ],
     );

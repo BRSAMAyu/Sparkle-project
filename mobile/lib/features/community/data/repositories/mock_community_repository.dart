@@ -963,10 +963,6 @@ class MockCommunityRepository implements CommunityRepository {
                     strategy: strategy.name,
                     target: target.name,
                     summary: '更适合做监督型责任伙伴，先建立好友关系会更顺畅。',
-                    relationshipStatus: 'none',
-                    isExistingFriend: false,
-                    canInviteAccountability: false,
-                    recommendedAction: 'send_friend_request',
                     scoreBreakdown: const {
                       'support_strength': 0.28,
                       'subject_bridge': 0.18,
@@ -984,10 +980,6 @@ class MockCommunityRepository implements CommunityRepository {
                     strategy: strategy.name,
                     target: target.name,
                     summary: '适合作为互补型学习搭子。',
-                    relationshipStatus: 'none',
-                    isExistingFriend: false,
-                    canInviteAccountability: false,
-                    recommendedAction: 'send_friend_request',
                     scoreBreakdown: const {
                       'support_strength': 0.25,
                       'diversity': 0.12,
@@ -1286,7 +1278,6 @@ class MockCommunityRepository implements CommunityRepository {
       deadline: group.deadline,
       sprintGoal: group.sprintGoal,
       announcement: group.announcement,
-      myRole: null,
     );
   }
 
@@ -1484,9 +1475,7 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<UserBrief> getUserProfile(String userId) async {
-    return UserBrief(id: userId, username: 'mock_user');
-  }
+  Future<UserBrief> getUserProfile(String userId) async => UserBrief(id: userId, username: 'mock_user');
 
   void _updateInsight(
     RecommendationItemType itemType, {
@@ -1553,8 +1542,7 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<FriendProfileDetail> getFriendProfile(String userId) async {
-    return FriendProfileDetail(
+  Future<FriendProfileDetail> getFriendProfile(String userId) async => FriendProfileDetail(
       user: UserBrief(
         id: userId,
         username: 'mock_user',
@@ -1581,7 +1569,6 @@ class MockCommunityRepository implements CommunityRepository {
         'partner_total_unlocked': 1,
       },
       leaderboardSummary: const {},
-      recentShares: const [],
       quickActions: const {
         'can_invite_accountability': false,
         'can_open_dashboard': true,
@@ -1589,7 +1576,6 @@ class MockCommunityRepository implements CommunityRepository {
         'can_share': true,
       },
     );
-  }
 
   @override
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
@@ -1706,9 +1692,7 @@ class MockCommunityRepository implements CommunityRepository {
   // ── Privacy Settings ──────────────────────────────────────────────────────
 
   @override
-  Future<UserPrivacySettings> getPrivacySettings() async {
-    return UserPrivacySettings(searchableBy: SearchVisibility.everyone);
-  }
+  Future<UserPrivacySettings> getPrivacySettings() async => UserPrivacySettings(searchableBy: SearchVisibility.everyone);
 
   @override
   Future<void> updatePrivacySettings(UserPrivacySettings settings) async {
@@ -1720,8 +1704,7 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<BroadcastMessageInfo> createBroadcast(
     BroadcastMessageCreate request,
-  ) async {
-    return BroadcastMessageInfo(
+  ) async => BroadcastMessageInfo(
       id: const Uuid().v4(),
       senderId: currentUserId,
       content: request.content,
@@ -1730,19 +1713,14 @@ class MockCommunityRepository implements CommunityRepository {
       deliveredCount: request.targetGroupIds.length,
       createdAt: DateTime.now(),
     );
-  }
 
   // ── Offline Queue ──────────────────────────────────────────────────────────
 
   @override
-  Future<List<OfflineMessageInfo>> getPendingOfflineMessages() async {
-    return [];
-  }
+  Future<List<OfflineMessageInfo>> getPendingOfflineMessages() async => [];
 
   @override
-  Future<List<OfflineMessageInfo>> getFailedOfflineMessages() async {
-    return [];
-  }
+  Future<List<OfflineMessageInfo>> getFailedOfflineMessages() async => [];
 
   @override
   Future<void> retryOfflineMessages(List<String> messageIds) async {
@@ -1754,8 +1732,7 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<EncryptionKeyInfo> registerEncryptionKey(
     EncryptionKeyCreate request,
-  ) async {
-    return EncryptionKeyInfo(
+  ) async => EncryptionKeyInfo(
       id: const Uuid().v4(),
       userId: currentUserId,
       publicKey: request.publicKey,
@@ -1765,12 +1742,9 @@ class MockCommunityRepository implements CommunityRepository {
       createdAt: DateTime.now(),
       expiresAt: request.expiresAt,
     );
-  }
 
   @override
-  Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async {
-    return [];
-  }
+  Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async => [];
 
   @override
   Future<void> revokeEncryptionKey(String keyId) async {
@@ -1785,16 +1759,13 @@ class MockCommunityRepository implements CommunityRepository {
     String? category,
     int limit = 50,
     int offset = 0,
-  }) async {
-    return [];
-  }
+  }) async => [];
 
   @override
   Future<GroupFileInfo> shareFileToGroup(
     String groupId,
     GroupFileShareRequest request,
-  ) async {
-    return GroupFileInfo(
+  ) async => GroupFileInfo(
       id: const Uuid().v4(),
       groupId: groupId,
       uploaderId: currentUserId,
@@ -1808,15 +1779,13 @@ class MockCommunityRepository implements CommunityRepository {
       permissions: GroupFilePermissions(),
       createdAt: DateTime.now(),
     );
-  }
 
   @override
   Future<GroupFileInfo> updateGroupFilePermissions(
     String groupId,
     String fileId,
     GroupFilePermissionUpdate permissions,
-  ) async {
-    return GroupFileInfo(
+  ) async => GroupFileInfo(
       id: fileId,
       groupId: groupId,
       uploaderId: currentUserId,
@@ -1831,20 +1800,16 @@ class MockCommunityRepository implements CommunityRepository {
       ),
       createdAt: DateTime.now(),
     );
-  }
 
   @override
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
     String groupId,
-  ) async {
-    return [];
-  }
+  ) async => [];
 
   // ── Shared Resources ───────────────────────────────────────────────────────
 
   @override
-  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async {
-    return SharedResourceInfo(
+  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async => SharedResourceInfo(
       id: const Uuid().v4(),
       resourceType: request.resourceType,
       createdAt: DateTime.now(),
@@ -1854,7 +1819,6 @@ class MockCommunityRepository implements CommunityRepository {
       planId:
           request.resourceType == SharedResourceType.plan ? request.resourceId : null,
     );
-  }
 
   @override
   Future<List<SharedResourceInfo>> getGroupResources(
@@ -1862,9 +1826,7 @@ class MockCommunityRepository implements CommunityRepository {
     SharedResourceType? type,
     int limit = 50,
     int offset = 0,
-  }) async {
-    return [];
-  }
+  }) async => [];
 
   @override
   Future<void> adoptSharedResource(String shareId) async {
@@ -1874,16 +1836,13 @@ class MockCommunityRepository implements CommunityRepository {
   // ── Message Reports Management ─────────────────────────────────────────────
 
   @override
-  Future<List<MessageReportInfo>> getPendingReports(String groupId) async {
-    return [];
-  }
+  Future<List<MessageReportInfo>> getPendingReports(String groupId) async => [];
 
   @override
   Future<MessageReportInfo> reviewReport(
     String reportId,
     MessageReportReview review,
-  ) async {
-    return MessageReportInfo(
+  ) async => MessageReportInfo(
       id: reportId,
       reporterId: currentUserId,
       reason: ReportReason.other,
@@ -1893,5 +1852,4 @@ class MockCommunityRepository implements CommunityRepository {
       reviewedAt: DateTime.now(),
       actionTaken: review.actionTaken,
     );
-  }
 }

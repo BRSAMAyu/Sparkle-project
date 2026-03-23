@@ -87,7 +87,6 @@ class FocusAgentSheet extends ConsumerWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: SparkleStaggerWrap(
-                spacing: DS.sm,
                 runSpacing: DS.xs,
                 children: [
                   _QuickPromptChip(

@@ -373,7 +373,6 @@ class AchievementRepository {
           .achievement;
       return AchievementShareCard(
         cardUrl: '',
-        mimeType: 'image/png',
         width: 1080,
         height: 1440,
         generatedAt: DateTime.now(),

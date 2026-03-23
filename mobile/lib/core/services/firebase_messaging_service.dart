@@ -97,11 +97,7 @@ class FirebaseMessagingService {
 
   Future<NotificationSettings> _requestPermission() async {
     final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-      criticalAlert: false,
+      
     );
     return settings;
   }
@@ -294,9 +290,7 @@ class FirebaseMessagingService {
 
 /// Provider for FirebaseMessagingService
 final firebaseMessagingServiceProvider =
-    Provider<FirebaseMessagingService>((ref) {
-  return FirebaseMessagingService(ref);
-});
+    Provider<FirebaseMessagingService>((ref) => FirebaseMessagingService(ref));
 
 /// Provider for FCM initialization state
 final fcmInitializedProvider = StateProvider<bool>((ref) => false);

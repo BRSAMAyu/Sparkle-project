@@ -852,7 +852,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, 0, DS.spacing16, DS.spacing16),
+          DS.spacing16, 0, DS.spacing16, DS.spacing16,),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -919,7 +919,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   children: [
                     Text('低',
                         style:
-                            TextStyle(fontSize: 11, color: DS.textSecondary)),
+                            TextStyle(fontSize: 11, color: DS.textSecondary),),
                     const SizedBox(width: DS.spacing6),
                     ...List.generate(
                       5,
@@ -935,7 +935,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     ),
                     Text('高',
                         style:
-                            TextStyle(fontSize: 11, color: DS.textSecondary)),
+                            TextStyle(fontSize: 11, color: DS.textSecondary),),
                   ],
                 ),
               ],

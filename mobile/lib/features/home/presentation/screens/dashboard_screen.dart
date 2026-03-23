@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -14,7 +15,6 @@ import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
-import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';

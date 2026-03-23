@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -74,8 +74,7 @@ class _AchievementContractScreenState
           duration: const Duration(milliseconds: 400),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
+          transitionBuilder: (child, animation) => FadeTransition(
               opacity: animation,
               child: SlideTransition(
                 position: Tween<Offset>(
@@ -84,8 +83,7 @@ class _AchievementContractScreenState
                 ).animate(animation),
                 child: child,
               ),
-            );
-          },
+            ),
           child: contract == null
               ? _buildCreateSection(l10n)
               : _buildActiveSection(contract, l10n),
@@ -98,14 +96,13 @@ class _AchievementContractScreenState
   // Create section
   // ---------------------------------------------------------------------------
 
-  Widget _buildCreateSection(AppLocalizations l10n) {
-    return Column(
+  Widget _buildCreateSection(AppLocalizations l10n) => Column(
       key: const ValueKey('create'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l10n.contractCreateTitle,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: DS.fontSizeLg,
             fontWeight: DS.fontWeightSemibold,
           ),
@@ -141,7 +138,6 @@ class _AchievementContractScreenState
         ),
       ],
     );
-  }
 
   // ---------------------------------------------------------------------------
   // Active section
@@ -157,7 +153,7 @@ class _AchievementContractScreenState
       children: [
         Text(
           l10n.contractActiveTitle,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: DS.fontSizeLg,
             fontWeight: DS.fontWeightSemibold,
           ),
@@ -249,8 +245,7 @@ class _AchievementContractScreenState
   // Contract rows
   // ---------------------------------------------------------------------------
 
-  Widget _buildContractRow(String label, String value) {
-    return Padding(
+  Widget _buildContractRow(String label, String value) => Padding(
       padding: const EdgeInsets.only(top: DS.spacing8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,7 +268,6 @@ class _AchievementContractScreenState
         ],
       ),
     );
-  }
 
   Widget _buildDeadlineRow(int daysRemaining, AppLocalizations l10n) {
     final Color deadlineColor;
@@ -331,12 +325,10 @@ class _AchievementContractScreenState
   Widget _buildNumberField({
     required String label,
     required TextEditingController controller,
-  }) {
-    return _FocusHighlightField(
+  }) => _FocusHighlightField(
       label: label,
       controller: controller,
     );
-  }
 
   // ---------------------------------------------------------------------------
   // Contract actions
@@ -463,8 +455,7 @@ class _ContractCelebrationState extends State<_ContractCelebration>
     );
 
     final rng = math.Random();
-    _particles = List.generate(20, (_) {
-      return _ConfettiParticle(
+    _particles = List.generate(20, (_) => _ConfettiParticle(
         angle: rng.nextDouble() * 2 * math.pi,
         speed: 80 + rng.nextDouble() * 160,
         size: 4 + rng.nextDouble() * 6,
@@ -475,8 +466,7 @@ class _ContractCelebrationState extends State<_ContractCelebration>
           DS.brandSecondary,
         ][rng.nextInt(4)],
         rotationSpeed: (rng.nextDouble() - 0.5) * 6,
-      );
-    });
+      ),);
 
     // Start sequence
     _iconController.forward();
@@ -500,8 +490,7 @@ class _ContractCelebrationState extends State<_ContractCelebration>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
+  Widget build(BuildContext context) => Material(
       color: Colors.black.withValues(alpha: 0.4),
       child: GestureDetector(
         onTap: widget.onDismiss,
@@ -518,15 +507,13 @@ class _ContractCelebrationState extends State<_ContractCelebration>
                     _iconController,
                     _confettiController,
                   ]),
-                  builder: (context, child) {
-                    return CustomPaint(
+                  builder: (context, child) => CustomPaint(
                       painter: _ConfettiPainter(
                         particles: _particles,
                         progress: _confettiController.value,
                       ),
                       child: child,
-                    );
-                  },
+                    ),
                   child: ScaleTransition(
                     scale: _iconScale,
                     child: Container(
@@ -558,7 +545,7 @@ class _ContractCelebrationState extends State<_ContractCelebration>
                 opacity: _textOpacity,
                 child: Text(
                   widget.celebrationLabel,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: DS.fontSizeXl,
                     fontWeight: DS.fontWeightBold,
                     color: Colors.white,
@@ -570,7 +557,6 @@ class _ContractCelebrationState extends State<_ContractCelebration>
         ),
       ),
     );
-  }
 }
 
 // =============================================================================
@@ -691,13 +677,11 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: widget.progress),
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeOutCubic,
-      builder: (context, animatedProgress, _) {
-        return AnimatedBuilder(
+      builder: (context, animatedProgress, _) => AnimatedBuilder(
           animation: _glowController,
           builder: (context, _) {
             final glowOpacity =
@@ -732,10 +716,8 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
               ),
             );
           },
-        );
-      },
+        ),
     );
-  }
 }
 
 class _ProgressBarPainter extends CustomPainter {
@@ -819,22 +801,18 @@ class _AnimatedRow extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: Duration(milliseconds: 400 + index * 80),
       curve: Curves.easeOutCubic,
-      builder: (context, value, _) {
-        return Opacity(
+      builder: (context, value, _) => Opacity(
           opacity: value.clamp(0.0, 1.0),
           child: Transform.translate(
             offset: Offset(20 * (1 - value), 0),
             child: child,
           ),
-        );
-      },
+        ),
     );
-  }
 }
 
 // =============================================================================
@@ -890,7 +868,7 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.auto_awesome,
                 size: 16,
                 color: goldenAccent,
@@ -921,13 +899,12 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
                   BoxShadow(
                     color: goldenAccent.withValues(alpha: 0.3),
                     blurRadius: 8,
-                    spreadRadius: 0,
                   ),
                 ],
               ),
               child: Text(
                 '${widget.multiplier.toStringAsFixed(1)}x',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
                   color: Colors.white,
@@ -984,7 +961,7 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
     ).animate(CurvedAnimation(
       parent: _borderController,
       curve: Curves.easeOut,
-    ));
+    ),);
   }
 
   void _onFocusChanged() {
@@ -1004,8 +981,7 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _borderColor,
       builder: (context, child) {
         final currentBorder = _borderColor.value ?? DS.border;
@@ -1033,5 +1009,4 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
         );
       },
     );
-  }
 }

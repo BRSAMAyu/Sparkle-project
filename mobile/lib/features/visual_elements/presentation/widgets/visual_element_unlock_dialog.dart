@@ -309,8 +309,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     _RarityColors colors,
     AppLocalizations l10n,
     VisualElementRarity highestRarity,
-  ) {
-    return LayoutBuilder(
+  ) => LayoutBuilder(
       builder: (context, constraints) {
         final dialogWidth = math.min(constraints.maxWidth - 48, 340.0);
         final compact = dialogWidth < 300;
@@ -453,10 +452,8 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         );
       },
     );
-  }
 
-  Widget _buildRarityIndicator(VisualElementRarity rarity, AppLocalizations l10n) {
-    return Container(
+  Widget _buildRarityIndicator(VisualElementRarity rarity, AppLocalizations l10n) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing6,
@@ -488,7 +485,6 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         ],
       ),
     );
-  }
 
   Widget _buildIconContainer(
     _RarityColors colors,
@@ -618,7 +614,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
                   ),
                 ],
               ),
-            )),
+            ),),
         if (hasMore)
           Container(
             padding: const EdgeInsets.symmetric(
@@ -712,8 +708,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     required bool isPrimary,
     required _RarityColors colors,
     required VoidCallback onPressed,
-  }) {
-    return GestureDetector(
+  }) => GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
@@ -733,7 +728,6 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         ),
       ),
     );
-  }
 
   Widget _buildBackgroundEffects(VisualElementRarity rarity) {
     if (rarity == VisualElementRarity.legendary) {

@@ -116,7 +116,6 @@ class SprintStatisticsCard extends ConsumerWidget {
     const sectionRadius = 12.0;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Donut chart — properly sized to avoid overflow
         SizedBox(

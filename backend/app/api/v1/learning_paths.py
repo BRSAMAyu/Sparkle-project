@@ -5,12 +5,14 @@ Learning Paths API
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from typing import Any, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.collaboration_workflows import TaskDecompositionWorkflow
@@ -18,8 +20,9 @@ from app.agents.enhanced_agents import EnhancedAgentContext
 from app.api.deps import get_current_user, get_current_user_id, get_db
 from app.core.cache import cache_service
 from app.core.exceptions import QuotaExceededError
+from app.models.galaxy import UserNodeStatus
 from app.models.plan import PlanType
-from app.models.task import SubTaskStatus
+from app.models.task import SubTaskStatus, TaskType
 from app.models.user import User
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
@@ -57,7 +60,21 @@ class LearningPathNodeResponse(BaseModel):
     source_type: str | None = None
 
 
+class LearningPathTaskResponse(BaseModel):
+    """轻量学习路径任务响应"""
+    id: str
+    title: str
+    type: str
+    estimated_minutes: int
+    status: str
+    knowledge_node_id: str | None = None
+    guide_content: str | None = None
+
+
 # ============ Helpers ============
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def _is_error_response(path: list[dict[str, Any]]) -> bool:
     """检查路径响应是否为错误响应"""
@@ -104,6 +121,106 @@ def _build_fallback_plan_summary(target_name: str, path: list[dict[str, Any]]) -
             f"完成标志：能够独立解释 {target_name}，并把第 {target_step_index} 步涉及的关键知识串联起来。",
         ]
     )
+
+
+def _build_task_path_guide(target_name: str, path: list[dict[str, Any]]) -> str:
+    ordered_nodes = [node for node in path if not node.get("is_optional")]
+    optional_nodes = [node for node in path if node.get("is_optional")]
+
+    lines = [f"目标：围绕「{target_name}」建立一条可以立刻执行的学习路径。", "", "建议执行顺序："]
+    active_index = 1
+    for node in ordered_nodes:
+        status = str(node.get("status", "locked"))
+        name = str(node.get("name", "未知节点"))
+        if status == "mastered":
+            lines.append(f"{active_index}. 快速复盘 {name}，确认关键概念没有遗忘。")
+        elif node.get("is_target"):
+            lines.append(f"{active_index}. 集中攻克 {name}，先理解核心，再完成一轮练习与输出。")
+        else:
+            lines.append(f"{active_index}. 先补齐 {name} 的基础概念和典型用法。")
+        active_index += 1
+
+    if optional_nodes:
+        lines.extend(["", "可选加深："])
+        for node in optional_nodes[:3]:
+            relation = node.get("relation_type") or "related"
+            lines.append(f"- {node.get('name', '未知节点')}（{relation}）")
+
+    lines.extend(
+        [
+            "",
+            "完成标志：",
+            f"- 能用自己的话解释 {target_name}",
+            "- 至少完成一轮例题、练习或小型输出",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _build_task_step_guide(
+    *,
+    task_index: int,
+    total_steps: int,
+    node_name: str,
+    node_description: str,
+    is_target: bool,
+    summary: str,
+) -> str:
+    heading = f"第 {task_index}/{total_steps} 步：{node_name}"
+    focus = "目标节点，优先完成理解 + 练习 + 输出。" if is_target else "前置节点，优先补齐概念和基本方法。"
+    detail = node_description or "围绕该节点完成概念理解、例题练习和简短输出。"
+    return "\n".join(
+        [
+            heading,
+            "",
+            f"本步重点：{focus}",
+            f"节点说明：{detail}",
+            "",
+            "整条路径摘要：",
+            summary,
+        ]
+    )
+
+
+async def _upsert_learning_path_snapshot(
+    *,
+    db: AsyncSession,
+    user_id: UUID,
+    target_node_id: UUID,
+    summary: str,
+    tasks_payload: list[dict[str, Any]],
+    selected_related_node_ids: list[UUID],
+    mode: str,
+) -> None:
+    result = await db.execute(
+        select(UserNodeStatus).where(
+            UserNodeStatus.user_id == user_id,
+            UserNodeStatus.node_id == target_node_id,
+        )
+    )
+    user_status = result.scalar_one_or_none()
+    if user_status is None:
+        user_status = UserNodeStatus(
+            user_id=user_id,
+            node_id=target_node_id,
+            is_unlocked=True,
+            mastery_score=0,
+            total_minutes=0,
+            total_study_minutes=0,
+            study_count=0,
+            learning_path_snapshot=None,
+        )
+        db.add(user_status)
+
+    user_status.learning_path_snapshot = {
+        "mode": mode,
+        "summary": summary,
+        "task_count": len(tasks_payload),
+        "tasks": tasks_payload,
+        "selected_related_node_ids": [str(node_id) for node_id in selected_related_node_ids],
+        "generated_at": _utcnow().isoformat(),
+    }
+    await db.commit()
 
 
 async def _generate_plan_summary(
@@ -373,6 +490,124 @@ async def generate_learning_path_plan(
             tool_name="generate_learning_path_plan",
             plan_id=plan_id,
             plan_title=plan.name,
+            source_channel="learning_path",
+        ),
+    }
+
+
+@router.post("/{target_node_id}/task-path", response_model=dict[str, Any])
+async def generate_learning_task_path(
+    target_node_id: UUID,
+    include_related: bool = Query(True, description="是否在任务路径中纳入推荐拓展节点"),
+    selected_related_node_ids: list[UUID] = Query(default_factory=list, description="用户选择纳入任务路径的拓展节点"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: GraphReasoningService = Depends(get_graph_reasoning_service),
+):
+    """
+    生成不占用计划额度的轻量学习路径。
+
+    会直接创建一组任务卡，并把最近一次学习路径摘要写回知识节点详情。
+    """
+    path = await service.generate_learning_path(
+        current_user.id,  # type: ignore[arg-type]
+        target_node_id,
+        include_related_suggestions=include_related,
+        selected_related_node_ids=selected_related_node_ids,
+    )
+
+    if not path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=LearningPathErrorResponse(
+                error_code="NO_PATH",
+                message="未找到学习路径或目标节点不存在",
+            ).model_dump(),
+        )
+    if _is_error_response(path):
+        error_code, message, details = _extract_error(path)
+        http_status = status.HTTP_400_BAD_REQUEST
+        if error_code == "TARGET_NOT_FOUND":
+            http_status = status.HTTP_404_NOT_FOUND
+        raise HTTPException(
+            status_code=http_status,
+            detail=LearningPathErrorResponse(
+                error_code=error_code,
+                message=message,
+                details=details,
+            ).model_dump(),
+        )
+
+    target_node = next((node for node in path if node.get("is_target")), None)
+    target_name = str(target_node.get("name", "目标节点")) if target_node else "目标节点"
+    active_nodes = [node for node in path if node.get("status") != "mastered"]
+    if not active_nodes:
+        active_nodes = [node for node in path if not node.get("is_optional")]
+    if not active_nodes:
+        active_nodes = path
+
+    limited_nodes = active_nodes[:5]
+    guide_summary = _build_task_path_guide(target_name, limited_nodes)
+
+    tasks_payload: list[dict[str, Any]] = []
+    for index, node in enumerate(limited_nodes, start=1):
+        node_id = UUID(str(node["id"]))
+        node_name = str(node.get("name", "未知节点"))
+        node_description = service.get_node_description(node_id)
+        is_target = bool(node.get("is_target"))
+        title_prefix = "攻克" if is_target else "学习"
+        task = await TaskService.create(
+            db=db,
+            obj_in=TaskCreate(
+                title=f"{title_prefix}：{node_name}",
+                type=TaskType.LEARNING,
+                estimated_minutes=35 if is_target else 25,
+                difficulty=3 if is_target else 2,
+                knowledge_node_id=node_id,
+                guide_content=_build_task_step_guide(
+                    task_index=index,
+                    total_steps=len(limited_nodes),
+                    node_name=node_name,
+                    node_description=node_description,
+                    is_target=is_target,
+                    summary=guide_summary,
+                ),
+            ),
+            user_id=current_user.id,
+        )
+        tasks_payload.append(
+            {
+                "id": str(task.id),
+                "title": task.title,
+                "type": task.type.value if task.type else "LEARNING",
+                "estimated_minutes": int(task.estimated_minutes or 25),
+                "status": task.status.value if task.status else "PENDING",
+                "knowledge_node_id": str(task.knowledge_node_id) if task.knowledge_node_id else None,
+                "guide_content": task.guide_content,
+            }
+        )
+
+    await _upsert_learning_path_snapshot(
+        db=db,
+        user_id=current_user.id,
+        target_node_id=target_node_id,
+        summary=guide_summary,
+        tasks_payload=tasks_payload,
+        selected_related_node_ids=selected_related_node_ids,
+        mode="task_path",
+    )
+
+    return {
+        "mode": "task_path",
+        "target_node_id": str(target_node_id),
+        "target_name": target_name,
+        "plan_summary": guide_summary,
+        "tasks": tasks_payload,
+        "message": f"已为「{target_name}」生成 {len(tasks_payload)} 张可立即执行的任务卡",
+        "retry": False,
+        "task_list_entity_card": build_task_list_entity_card(
+            tasks_payload,
+            tool_name="generate_learning_task_path",
             source_channel="learning_path",
         ),
     }

@@ -10,6 +10,7 @@ import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -46,6 +47,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   String? _editingTaskId;
   bool _isEditMode = false;
   bool _isLoadingExistingTask = false;
+
+  BuildContext get _feedbackContext => Navigator.of(
+        context,
+        rootNavigator: true,
+      ).context;
 
   @override
   void initState() {
@@ -97,6 +103,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         setState(() => _isLoadingExistingTask = false);
       }
     }
+  }
+
+  void _closeAfterSubmit() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(TaskRoutes.home);
   }
 
   @override
@@ -197,8 +211,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               ),
             );
         if (mounted) {
-          context.pop();
-          AppFeedback.success(context, '任务已更新');
+          AppFeedback.success(_feedbackContext, '任务已更新');
+          _closeAfterSubmit();
         }
         return;
       }
@@ -234,8 +248,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
           });
           AppFeedback.info(context, context.l10n.taskCreatedWithSuggestions);
         } else {
-          context.pop(); // Go back to task list
-          AppFeedback.success(context, context.l10n.taskCreateSuccess);
+          AppFeedback.success(_feedbackContext, context.l10n.taskCreateSuccess);
+          _closeAfterSubmit();
         }
       }
     } catch (e) {
@@ -273,7 +287,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       _nudges = [];
       _showNudgesAfterCreation = false;
     });
-    context.pop(); // Go back to task list
+    _closeAfterSubmit();
   }
 
   @override
@@ -558,11 +572,15 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   onTap: () async {
+                    final now = DateTime.now();
+                    final initialDate = _dueDate != null && _dueDate!.isAfter(now)
+                        ? _dueDate!
+                        : now;
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate: initialDate,
+                      firstDate: now,
+                      lastDate: now.add(const Duration(days: 365)),
                     );
                     if (date != null) {
                       setState(() => _dueDate = date);
@@ -641,10 +659,16 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                           ),
                                         ),
                                         if (nudge.suggestedValue != null)
-                                          SparkleButton(
-                                            label: l10n.taskNudgeApply,
-                                            variant: ButtonVariant.ghost,
-                                            onPressed: () => _applyNudge(nudge),
+                                          Flexible(
+                                            child: Align(
+                                              alignment: Alignment.centerRight,
+                                              child: SparkleButton(
+                                                label: l10n.taskNudgeApply,
+                                                variant: ButtonVariant.ghost,
+                                                onPressed: () =>
+                                                    _applyNudge(nudge),
+                                              ),
+                                            ),
                                           ),
                                       ],
                                     ),

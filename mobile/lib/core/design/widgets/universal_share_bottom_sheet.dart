@@ -134,7 +134,7 @@ class _UniversalShareBottomSheetState
 
   Future<void> _checkWeChatAvailability() async {
     final available = _shareService.isWeChatAvailable;
-    bool installed = false;
+    var installed = false;
     if (available) {
       installed = await _shareService.isWeChatInstalled();
     }
@@ -943,7 +943,7 @@ class _UniversalShareBottomSheetState
       AppFeedback.warning(context, context.l10n.wechatNotInstalled);
     } else if (result.error != null) {
       AppFeedback.error(
-          context, context.l10n.shareFailed(result.error!));
+          context, context.l10n.shareFailed(result.error!),);
     }
   }
 }

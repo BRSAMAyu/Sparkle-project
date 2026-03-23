@@ -106,7 +106,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(DS.spacing8),
+                      padding: const EdgeInsets.all(DS.spacing6),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: DS.borderRadius8,
@@ -117,13 +117,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         size: DS.iconSizeSm,
                       ),
                     ),
-                    const SizedBox(width: DS.spacing16),
+                    const SizedBox(width: DS.spacing12),
                     Text(
                       context.l10n.taskListTitle,
                       style: TextStyle(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
-                        fontSize: DS.fontSizeLg,
+                        fontSize: DS.fontSizeBase,
                       ),
                     ),
                   ],
@@ -145,7 +145,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                 )
                 .toList(),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing6),
               child: Row(
                 children: [
                   Icon(
@@ -258,7 +258,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       color: DS.info.withValues(alpha: 0.24),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     '拖拽排序仅在“全部任务”列表中可用。',
                   ),
                 ),
@@ -318,11 +318,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
     if (_isReorderMode && canReorder) {
       return ReorderableListView.builder(
-        padding: EdgeInsets.fromLTRB(
+        padding: const EdgeInsets.fromLTRB(
           DS.spacing12,
-          DS.spacing8,
+          DS.spacing6,
           DS.spacing12,
-          96,
+          80,
         ),
         onReorder: (oldIndex, newIndex) async {
           await ref.read(taskListProvider.notifier).reorderTasks(
@@ -381,7 +381,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     final showSummary =
         !_isSearching &&
         ref.read(taskFilterProvider) == TaskFilterOptions.all &&
-        tasks.length > 1;
+        tasks.length > 2;
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(
@@ -389,9 +389,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       ),
       padding: const EdgeInsets.fromLTRB(
         DS.spacing12,
-        DS.spacing8,
+        DS.spacing6,
         DS.spacing12,
-        88,
+        72,
       ),
       itemCount: tasks.length + (showSummary ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
@@ -415,7 +415,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           child: TaskCard(
             task: task,
             compact: true,
-            enableSwipeComplete: false,
             onTap: () => context.push('/tasks/${task.id}'),
             onStart: () {
               unawaited(
@@ -504,13 +503,13 @@ class _FilterChips extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(
         DS.spacing12,
-        DS.spacing12,
+        DS.spacing8,
         DS.spacing12,
         0,
       ),
       padding: const EdgeInsets.symmetric(
-        vertical: DS.spacing8,
-        horizontal: DS.spacing8,
+        vertical: DS.spacing6,
+        horizontal: DS.spacing6,
       ),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -518,7 +517,7 @@ class _FilterChips extends ConsumerWidget {
         border: Border.all(color: DS.neutral300.withValues(alpha: 0.4)),
       ),
       child: SizedBox(
-        height: DS.spacing40,
+        height: 36,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: TaskFilterOptions.values.map((filter) {
@@ -535,7 +534,7 @@ class _FilterChips extends ConsumerWidget {
                 child: AnimatedContainer(
                   duration: DS.durationFast,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing16,
+                    horizontal: DS.spacing12,
                     vertical: DS.spacing8,
                   ),
                   decoration: BoxDecoration(
@@ -557,6 +556,7 @@ class _FilterChips extends ConsumerWidget {
                             ? DS.fontWeightBold
                             : DS.fontWeightMedium,
                         fontSize: DS.fontSizeSm,
+                        height: 1,
                       ),
                     ),
                   ),
@@ -607,7 +607,7 @@ class _TaskListSummary extends StatelessWidget {
         ),
         child: Wrap(
           spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
+          runSpacing: DS.spacing6,
           children: [
             _TaskMetricChip(label: '全部', value: totalCount, tone: DS.info),
             _TaskMetricChip(

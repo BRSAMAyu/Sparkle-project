@@ -13,10 +13,8 @@ import 'package:sparkle/features/community/data/repositories/community_repositor
 
 final groupModerationProvider = StateNotifierProvider.autoDispose
     .family<GroupModerationNotifier, AsyncValue<GroupModerationSettings>,
-        String>((ref, groupId) {
-  return GroupModerationNotifier(
-      ref.watch(communityRepositoryProvider), groupId,);
-});
+        String>((ref, groupId) => GroupModerationNotifier(
+      ref.watch(communityRepositoryProvider), groupId,),);
 
 class GroupModerationNotifier
     extends StateNotifier<AsyncValue<GroupModerationSettings>> {
@@ -189,7 +187,7 @@ class _GroupModerationScreenState
                             const Text('慢速模式',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: DS.fontSizeBase),),
+                                    fontSize: DS.fontSizeBase,),),
                             const Spacer(),
                             Switch(
                               value: _slowModeSeconds > 0,
@@ -242,7 +240,7 @@ class _GroupModerationScreenState
                         const Text('关键词过滤',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: DS.fontSizeBase),),
+                                fontSize: DS.fontSizeBase,),),
                         const SizedBox(height: DS.spacing8),
                         const Text(
                           '包含以下关键词的消息将被自动屏蔽',

@@ -141,7 +141,7 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   Future<void> switchPlanSession(String? planId,
-      {BuildContext? context}) async {
+      {BuildContext? context,}) async {
     cancelActiveRun(reason: 'switch_plan');
     if (planId == null) {
       // 🔧 修复：即使没有活跃计划，也尝试加载当前会话历史
@@ -218,7 +218,7 @@ extension ChatNotifierActions on ChatNotifier {
     // Show feedback after successful switch
     if (context != null && context.mounted) {
       AppFeedback.success(
-          context, I18nService.instance.l10n.chatPlanContextSwitched);
+          context, I18nService.instance.l10n.chatPlanContextSwitched,);
     }
   }
 
@@ -487,7 +487,7 @@ extension ChatNotifierActions on ChatNotifier {
         notificationType: event.notificationType,
       );
       debugPrint(
-          '✅ Notification added to notification center: ${event.notificationId}');
+          '✅ Notification added to notification center: ${event.notificationId}',);
     } catch (e) {
       debugPrint('⚠️ Failed to add notification to center: $e');
     }

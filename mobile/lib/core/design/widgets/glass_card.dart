@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 @Deprecated(
     'Use SparkleCard with glass effect parameters. Will be removed in v2.0',)

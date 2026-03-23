@@ -6,14 +6,16 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -33,15 +35,25 @@ class PrivateChatScreen extends ConsumerStatefulWidget {
 }
 
 class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
+  final TextEditingController _composerController = TextEditingController();
+  final FocusNode _composerFocusNode = FocusNode();
   String? _displayName;
   String? _avatarUrl;
   bool _isSharing = false;
   bool _agentMode = false;
+  String? _assistantOriginalDraft;
 
   @override
   void initState() {
     super.initState();
     _displayName = widget.friendName;
+  }
+
+  @override
+  void dispose() {
+    _composerController.dispose();
+    _composerFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -98,8 +110,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 data: (messages) {
                   final mergedMessages =
                       _mergeMessages(messages, agentState, currentUser);
-                  final showAgentStatus = agentState.isSending &&
-                      agentState.streamingContent.isEmpty;
+                  final showAgentStatus = agentState.isSending;
                   if (mergedMessages.isEmpty) {
                     return Center(
                       child: Column(
@@ -133,7 +144,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           mergedMessages.length + (showAgentStatus ? 1 : 0),
                       itemBuilder: (context, index) {
                       if (showAgentStatus && index == 0) {
-                        return Padding(
+                        return const Padding(
                           padding: EdgeInsets.only(bottom: DS.spacing16),
                           child: AiStatusIndicator(
                             status: 'THINKING',
@@ -210,82 +221,94 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                         children: [
                           _PrivateAgentQuickChip(
                             label: '润色回复',
-                            onTap: () => _sendAgentPrompt(
-                              buildPrivateAssistantPresetPrompt(
-                                'polish_reply',
-                                friendName: _displayName ?? widget.friendName,
-                              ),
-                              agentState,
+                            onTap: () => _runAssistantPreset(
                               preset: 'polish_reply',
-                              reasoningMode: 'fast',
+                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '温和提醒',
-                            onTap: () => _sendAgentPrompt(
-                              buildPrivateAssistantPresetPrompt(
-                                'gentle_reminder',
-                                friendName: _displayName ?? widget.friendName,
-                              ),
-                              agentState,
+                            onTap: () => _runAssistantPreset(
                               preset: 'gentle_reminder',
-                              reasoningMode: 'fast',
+                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '协调时间',
-                            onTap: () => _sendAgentPrompt(
-                              buildPrivateAssistantPresetPrompt(
-                                'schedule_sync',
-                                friendName: _displayName ?? widget.friendName,
-                              ),
-                              agentState,
+                            onTap: () => _runAssistantPreset(
                               preset: 'schedule_sync',
+                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
                               reasoningMode: 'balanced',
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '快速总结',
-                            onTap: () => _sendAgentPrompt(
-                              buildPrivateAssistantPresetPrompt(
-                                'summary',
-                                friendName: _displayName ?? widget.friendName,
-                              ),
-                              agentState,
+                            onTap: () => _runAssistantPreset(
                               preset: 'summary',
-                              reasoningMode: 'fast',
+                              sendStyle: _PrivateAssistantSendStyle.visibilityChoice,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '提炼下一步',
-                            onTap: () => _sendAgentPrompt(
-                              buildPrivateAssistantPresetPrompt(
-                                'next_step',
-                                friendName: _displayName ?? widget.friendName,
-                              ),
-                              agentState,
+                            onTap: () => _runAssistantPreset(
                               preset: 'next_step',
-                              reasoningMode: 'fast',
+                              sendStyle: _PrivateAssistantSendStyle.visibilityChoice,
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  if (_assistantOriginalDraft != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: DS.spacing8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing12,
+                          vertical: DS.spacing10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DS.brandPrimary.withValues(alpha: 0.08),
+                          borderRadius: DS.borderRadius12,
+                          border: Border.all(
+                            color: DS.brandPrimary.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'AI 草稿已放入输入框，你确认后再发送。',
+                                style: TextStyle(
+                                  fontSize: DS.fontSizeSm,
+                                  color: DS.neutral700,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _restoreOriginalDraft,
+                              child: const Text('恢复原文'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
             CommunityChatInput(
+              controller: _composerController,
+              focusNode: _composerFocusNode,
               quotedMessage: notifier.quotedMessage,
               onCancelQuote: () => setState(() => notifier.setQuote(null)),
               onSend: (text, {replyToId}) {
-                if (_agentMode) {
-                  _sendAgentPrompt(text, agentState);
-                } else {
-                  notifier.sendMessage(content: text, replyToId: replyToId);
-                }
+                setState(() => _assistantOriginalDraft = null);
+                unawaited(
+                  notifier.sendMessage(content: text, replyToId: replyToId),
+                );
               },
-              onQuickShare: _isSharing ? null : (payload) => _handleQuickShare(payload),
-              enabled: !_isSharing && (!_agentMode || !agentState.isSending),
+              onQuickShare: _isSharing ? null : _handleQuickShare,
+              enabled: !_isSharing && !agentState.isSending,
             ),
           ],
         ),
@@ -299,12 +322,6 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     UserModel? currentUser,
   ) {
     final merged = [...messages, ...agentState.messages];
-    if (agentState.streamingContent.isNotEmpty) {
-      merged.add(_buildStreamingAgentMessage(
-        agentState.streamingContent,
-        currentUser,
-      ));
-    }
     final byId = <String, PrivateMessageInfo>{};
     for (final message in merged) {
       final existing = byId[message.id];
@@ -317,58 +334,225 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     return deduped;
   }
 
-  PrivateMessageInfo _buildStreamingAgentMessage(
-    String content,
-    UserModel? currentUser,
-  ) {
-    final receiver = currentUser != null
-        ? UserBrief(
-            id: currentUser.id,
-            username: currentUser.username,
-            nickname: currentUser.nickname,
-            avatarUrl: currentUser.avatarUrl,
-            flameLevel: currentUser.flameLevel,
-            flameBrightness: currentUser.flameBrightness,
-            status: currentUser.status,
-          )
-        : UserBrief(id: '', username: context.l10n.commonUnknown);
+  Future<void> _runAssistantPreset({
+    required String preset,
+    required _PrivateAssistantSendStyle sendStyle,
+    String reasoningMode = 'fast',
+  }) async {
+    final agentState = ref.read(privateChatAgentProvider(widget.friendId));
+    if (agentState.isSending) return;
 
-    return PrivateMessageInfo(
-      id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
-      sender: buildCommunityAgentUser(
-        localizedName: context.l10n.communityAgentName,
-      ),
-      receiver: receiver,
-      messageType: MessageType.text,
-      content: content,
-      contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
-      isRead: true,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+    final composerText = _composerController.text.trim();
+    if ((preset == 'polish_reply' ||
+            preset == 'gentle_reminder' ||
+            preset == 'schedule_sync') &&
+        composerText.isEmpty) {
+      AppFeedback.info(context, '先在输入框写一点内容，我再帮你处理。');
+      _composerFocusNode.requestFocus();
+      return;
+    }
+
+    final prompt = _buildPresetPrompt(
+      preset,
+      composerText: composerText,
+    );
+    final notifier = ref.read(privateChatAgentProvider(widget.friendId).notifier);
+    final draft = await notifier.composeDraft(
+      prompt: prompt,
+      friendName: _displayName ?? widget.friendName,
+      recentMessages:
+          ref.read(privateChatProvider(widget.friendId)).valueOrNull ?? [],
+      preset: preset,
+      reasoningMode: reasoningMode,
+      chatMode: preset == 'schedule_sync' ? 'standard' : 'fast',
+    );
+    if (!mounted) return;
+    if (draft == null || draft.trim().isEmpty) {
+      final error = ref.read(privateChatAgentProvider(widget.friendId)).error;
+      AppFeedback.error(context, error ?? '这次没有生成可用内容，请再试一次。');
+      return;
+    }
+    await _showDraftPreview(
+      preset: preset,
+      draft: draft,
+      sendStyle: sendStyle,
+      originalText: composerText,
     );
   }
 
-  void _sendAgentPrompt(
-    String prompt,
-    AgentChatState<PrivateMessageInfo> agentState,
-    {String preset = 'custom',
-    String reasoningMode = 'fast',}
-  ) {
-    if (agentState.isSending) return;
-    unawaited(
-      ref
-          .read(privateChatAgentProvider(widget.friendId).notifier)
-          .sendAgentMessage(
-            prompt: prompt,
-            friendName: widget.friendName,
-            recentMessages:
-                ref.read(privateChatProvider(widget.friendId)).valueOrNull ??
-                    [],
-            preset: preset,
-            reasoningMode: reasoningMode,
-            chatMode: 'standard',
-          ),
+  String _buildPresetPrompt(
+    String preset, {
+    required String composerText,
+  }) {
+    final friendName = _displayName ?? widget.friendName;
+    final base = buildPrivateAssistantPresetPrompt(
+      preset,
+      friendName: friendName,
     );
+    if (composerText.isEmpty) {
+      return base;
+    }
+    return switch (preset) {
+      'polish_reply' =>
+        '$base\n\n我当前输入框里的原始草稿是：\n$composerText\n\n请保留我的原意和口吻，只做润色，不要换成第三方视角。',
+      'gentle_reminder' =>
+        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请在尽量保留我表达意图的前提下，改成更温和自然的提醒。',
+      'schedule_sync' =>
+        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请基于这段内容生成一条适合我直接发出的时间协调消息。',
+      _ => base,
+    };
+  }
+
+  Future<void> _showDraftPreview({
+    required String preset,
+    required String draft,
+    required _PrivateAssistantSendStyle sendStyle,
+    required String originalText,
+  }) async {
+    await showSensoryModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfaceSecondary,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _previewTitleForPreset(preset),
+                style: const TextStyle(
+                  fontSize: DS.fontSizeLg,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxHeight: 260),
+                padding: const EdgeInsets.all(DS.spacing16),
+                decoration: BoxDecoration(
+                  color: DS.surfacePrimary,
+                  borderRadius: DS.borderRadius16,
+                  border: Border.all(
+                    color: DS.neutral200,
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    draft,
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              if (sendStyle == _PrivateAssistantSendStyle.visibilityChoice)
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _PreviewActionButton(
+                      label: '仅自己可见',
+                      onTap: () async {
+                        Navigator.of(sheetContext).pop();
+                        await ref
+                            .read(privateChatAgentProvider(widget.friendId).notifier)
+                            .saveSelfVisibleDraft(content: draft);
+                        if (!mounted) return;
+                        AppFeedback.success(context, '已保存为仅自己可见。');
+                      },
+                    ),
+                    _PreviewActionButton(
+                      label: '双方都可见',
+                      primary: true,
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        _applyDraftToComposer(
+                          draft,
+                          originalText: originalText,
+                        );
+                      },
+                    ),
+                    _PreviewActionButton(
+                      label: '取消',
+                      onTap: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                )
+              else
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _PreviewActionButton(
+                      label: '取消',
+                      onTap: () => Navigator.of(sheetContext).pop(),
+                    ),
+                    _PreviewActionButton(
+                      label: '放入输入框',
+                      primary: true,
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        _applyDraftToComposer(
+                          draft,
+                          originalText: originalText,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _previewTitleForPreset(String preset) => switch (preset) {
+        'polish_reply' => '润色后的回复',
+        'gentle_reminder' => '温和提醒草稿',
+        'schedule_sync' => '协调时间草稿',
+        'summary' => '快速总结',
+        'next_step' => '提炼出的下一步',
+        _ => 'AI 生成结果',
+      };
+
+  void _applyDraftToComposer(
+    String draft, {
+    required String originalText,
+  }) {
+    setState(() {
+      _assistantOriginalDraft = originalText;
+      _composerController.text = draft;
+      _composerController.selection = TextSelection.collapsed(
+        offset: _composerController.text.length,
+      );
+    });
+    _composerFocusNode.requestFocus();
+    AppFeedback.success(context, '已放入输入框，请确认后发送。');
+  }
+
+  void _restoreOriginalDraft() {
+    final originalText = _assistantOriginalDraft;
+    if (originalText == null) return;
+    setState(() {
+      _composerController.text = originalText;
+      _composerController.selection = TextSelection.collapsed(
+        offset: _composerController.text.length,
+      );
+      _assistantOriginalDraft = null;
+    });
+    _composerFocusNode.requestFocus();
+    AppFeedback.info(context, '已恢复你原本的输入。');
   }
 
   Future<void> _handleQuickShare(UniversalSharePayload payload) async {
@@ -376,12 +560,28 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
 
     setState(() => _isSharing = true);
     try {
-      await ref.read(communityShareRepositoryProvider).shareResource(
-            resourceType: payload.contentType.stringValue,
-            resourceId: payload.resourceId,
-            targetUserId: widget.friendId, // 私聊分享给好友
-            comment: payload.shareMessage,
-          );
+      if (payload.contentType == ShareableContentType.achievement) {
+        await ref.read(communityRepositoryProvider).sendPrivateMessage(
+              PrivateMessageSend(
+                targetUserId: widget.friendId,
+                messageType: MessageType.achievement,
+                content: payload.shareMessage,
+                contentData: {
+                  'achievement_id': payload.resourceId,
+                  'name': payload.title,
+                  'description': payload.subtitle,
+                  ...?payload.metadata,
+                },
+              ),
+            );
+      } else {
+        await ref.read(communityShareRepositoryProvider).shareResource(
+              resourceType: payload.contentType.stringValue,
+              resourceId: payload.resourceId,
+              targetUserId: widget.friendId, // 私聊分享给好友
+              comment: payload.shareMessage,
+            );
+      }
       if (!mounted) return;
       ref.invalidate(privateChatProvider(widget.friendId));
       AppFeedback.success(context, context.l10n.shareResourceSuccess);
@@ -394,6 +594,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       }
     }
   }
+}
+
+enum _PrivateAssistantSendStyle {
+  replaceInput,
+  visibilityChoice,
 }
 
 class _PrivateAgentQuickChip extends StatelessWidget {
@@ -416,5 +621,33 @@ class _PrivateAgentQuickChip extends StatelessWidget {
         ),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
+      );
+}
+
+class _PreviewActionButton extends StatelessWidget {
+  const _PreviewActionButton({
+    required this.label,
+    required this.onTap,
+    this.primary = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) => FilledButton.tonal(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary
+              ? DS.brandPrimary
+              : DS.surfaceSecondary.withValues(alpha: 0.9),
+          foregroundColor: primary ? Colors.white : DS.neutral800,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+        ),
+        onPressed: onTap,
+        child: Text(label),
       );
 }

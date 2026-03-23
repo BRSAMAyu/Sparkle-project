@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -62,11 +62,10 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AnimatedSection(
-                    delay: const Duration(milliseconds: 0),
+                  const _AnimatedSection(
+                    delay: Duration(),
                     child: StreakIndicator(
                       style: StreakIndicatorStyle.full,
-                      onTap: null,
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
@@ -198,7 +197,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
               label: l10n.retry,
               onPressed: () => ref
                   .read(streakHistoryProvider.notifier)
-                  .loadHistory(days: _historyDays),
+                  .loadHistory(),
             ),
           ],
         ),
@@ -229,8 +228,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
     );
   }
 
-  Widget _buildCalendarShell(AppLocalizations l10n, Widget child) {
-    return Container(
+  Widget _buildCalendarShell(AppLocalizations l10n, Widget child) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -261,10 +259,8 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildCalendarLegend(AppLocalizations l10n) {
-    return Wrap(
+  Widget _buildCalendarLegend(AppLocalizations l10n) => Wrap(
       spacing: DS.spacing12,
       runSpacing: DS.spacing8,
       children: [
@@ -282,7 +278,6 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
         ),
       ],
     );
-  }
 
   Widget _buildCalendarGrid(
     List<StreakDayRecord> days,
@@ -374,8 +369,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
     );
   }
 
-  Widget _buildShopCallToAction(BuildContext context, AppLocalizations l10n) {
-    return Container(
+  Widget _buildShopCallToAction(BuildContext context, AppLocalizations l10n) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
@@ -415,7 +409,6 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
         ],
       ),
     );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -447,8 +440,7 @@ class _AnimatedSectionState extends State<_AnimatedSection> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: _visible ? 1 : 0),
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
@@ -461,7 +453,6 @@ class _AnimatedSectionState extends State<_AnimatedSection> {
       ),
       child: widget.child,
     );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -531,8 +522,7 @@ class _StatTileState extends State<_StatTile>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnimation,
       child: ScaleTransition(
         scale: _scaleAnimation,
@@ -565,7 +555,6 @@ class _StatTileState extends State<_StatTile>
         ),
       ),
     );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -625,8 +614,7 @@ class _LegendItem extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -647,7 +635,6 @@ class _LegendItem extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -753,7 +740,7 @@ class _CalendarCellState extends State<_CalendarCell>
         : DS.textOnPrimary;
 
     // Overlay icon for active / frozen days
-    final IconData? overlayIcon = switch (record.status) {
+    final overlayIcon = switch (record.status) {
       StreakDayStatus.active => Icons.local_fire_department,
       StreakDayStatus.frozen => Icons.ac_unit,
       StreakDayStatus.missed => null,
@@ -930,8 +917,7 @@ class _RiskHintCardState extends State<_RiskHintCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
+  Widget build(BuildContext context) => SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
@@ -965,5 +951,4 @@ class _RiskHintCardState extends State<_RiskHintCard>
         ),
       ),
     );
-  }
 }

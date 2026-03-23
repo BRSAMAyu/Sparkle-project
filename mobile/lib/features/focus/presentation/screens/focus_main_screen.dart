@@ -43,18 +43,36 @@ class FocusMainScreen extends ConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  DS.spacing20,
                   DS.spacing16,
-                  DS.spacing20,
                   DS.spacing12,
+                  DS.spacing16,
+                  DS.spacing10,
                 ),
-                child: Text(
-                  context.l10n.focusReadyPrompt,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: DS.textPrimary,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  child: Column(
+                    children: [
+                      Text(
+                        context.l10n.focusReadyPrompt,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        '先选一个任务开始，或直接进入自由专注。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -62,18 +80,36 @@ class FocusMainScreen extends ConsumerWidget {
                 child: todayTasks.isEmpty
                     ? _buildEmptyState(context, ref)
                     : SparkleStaggerList(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing16,
+                        ),
                         shrinkWrap: false,
                         physics: const BouncingScrollPhysics(),
-                        gap: DS.spacing12,
+                        gap: DS.spacing10,
                         children: [
                           for (final task in todayTasks)
                             _buildTaskItem(context, task),
                         ],
                       ),
               ),
-              _buildQuickFocusButton(context, ref),
-              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing16,
+                  DS.spacing10,
+                  DS.spacing16,
+                  DS.spacing16,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.surfacePrimary.withValues(alpha: 0.94),
+                  border: Border(
+                    top: BorderSide(
+                      color: DS.borderSubtle,
+                    ),
+                  ),
+                ),
+                child: _buildQuickFocusButton(context, ref),
+              ),
             ],
           ),
         ),
@@ -151,12 +187,14 @@ class FocusMainScreen extends ConsumerWidget {
   Widget _buildTaskItem(BuildContext context, TaskModel task) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: DS.spacing8),
         padding: EdgeInsets.zero,
         child: Consumer(
           builder: (context, ref, child) => ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing10,
+            ),
             title: Text(
               task.title,
               style: TextStyle(
@@ -186,7 +224,7 @@ class FocusMainScreen extends ConsumerWidget {
       );
 
   Widget _buildQuickFocusButton(BuildContext context, WidgetRef ref) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.zero,
         child: SparkleButton(
           expand: true,
           label: context.l10n.focusQuickStart,

@@ -300,7 +300,7 @@ class _TimeSuggestionSheet extends StatelessWidget {
             ...suggestions.map((suggestion) => _SuggestionTile(
                   suggestion: suggestion,
                   onTap: () => onSelected(suggestion),
-                )),
+                ),),
             const SizedBox(height: DS.spacing16),
             // Safe area padding
             SizedBox(height: MediaQuery.of(context).padding.bottom),

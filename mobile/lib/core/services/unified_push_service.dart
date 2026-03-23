@@ -9,14 +9,15 @@ import 'package:sparkle/core/constants/push_config.dart';
 import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
+import 'package:sparkle/core/services/firebase_messaging_service.dart'
+    show firebaseMessagingServiceProvider, fcmInitializedProvider;
+
 // Conditional import for Firebase services
-export 'firebase_messaging_service.dart'
+export 'package:sparkle/core/services/firebase_messaging_service.dart'
     show
         FirebaseMessagingService,
         firebaseMessagingServiceProvider,
         fcmInitializedProvider;
-import 'firebase_messaging_service.dart'
-    show firebaseMessagingServiceProvider, fcmInitializedProvider;
 
 /// Push channel type
 enum PushChannel {
@@ -455,9 +456,7 @@ class UnifiedPushService {
 }
 
 /// Provider for UnifiedPushService
-final unifiedPushServiceProvider = Provider<UnifiedPushService>((ref) {
-  return UnifiedPushService(ref);
-});
+final unifiedPushServiceProvider = Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
 
 /// Provider for push service initialization state
 final pushInitializedProvider = StateProvider<bool>((ref) => false);

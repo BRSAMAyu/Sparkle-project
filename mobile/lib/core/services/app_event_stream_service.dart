@@ -37,8 +37,7 @@ class AppEventStreamService {
     String? entityType,
     String? entityId,
     Map<String, dynamic>? extraPayload,
-  }) {
-    return ingestEvents([
+  }) => ingestEvents([
       _buildEvent(
         eventType: 'prediction_$feedbackType',
         source: 'prediction_surface',
@@ -56,20 +55,18 @@ class AppEventStreamService {
         },
       ),
     ]);
-  }
 
   Future<void> recordLearningPathGenerated({
     required String targetNodeId,
-    required String planId,
+    String? planId,
     List<String> taskIds = const <String>[],
-  }) {
-    return ingestEvents([
+  }) => ingestEvents([
       _buildEvent(
         eventType: 'learning_path_generated',
         source: 'learning_path',
         entities: {
           'target_node_id': targetNodeId,
-          'plan_id': planId,
+          if (planId != null && planId.isNotEmpty) 'plan_id': planId,
           if (taskIds.isNotEmpty) 'task_ids': taskIds,
         },
         payload: {
@@ -77,7 +74,6 @@ class AppEventStreamService {
         },
       ),
     ]);
-  }
 
   Future<void> recordSharedResourceAction({
     required String action,
@@ -85,8 +81,7 @@ class AppEventStreamService {
     required String resourceType,
     String? resourceId,
     String? adoptedEntityId,
-  }) {
-    return ingestEvents([
+  }) => ingestEvents([
       _buildEvent(
         eventType: 'shared_resource_$action',
         source: 'community_share',
@@ -98,7 +93,6 @@ class AppEventStreamService {
         },
       ),
     ]);
-  }
 
   Future<void> recordEntityExecution({
     required String entityType,
@@ -106,8 +100,7 @@ class AppEventStreamService {
     required String actionType,
     required String source,
     Map<String, dynamic>? payload,
-  }) {
-    return ingestEvents([
+  }) => ingestEvents([
       _buildEvent(
         eventType: 'entity_execution',
         source: source,
@@ -121,7 +114,6 @@ class AppEventStreamService {
         },
       ),
     ]);
-  }
 
   Map<String, dynamic> _buildEvent({
     required String eventType,

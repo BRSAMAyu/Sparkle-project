@@ -54,7 +54,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     if (_tabController.index == 0) {
       setState(() {
         _filterOptions = _filterOptions.copyWith(
-          type: null,
           showUnlockedOnly: false,
         );
       });
@@ -115,7 +114,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   ) {
     final eventElements = state.allElements
         .where((element) =>
-            element.unlockSource == VisualElementUnlockSource.event)
+            element.unlockSource == VisualElementUnlockSource.event,)
         .toList();
 
     return SliverToBoxAdapter(
@@ -188,8 +187,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
-  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) {
-    return Container(
+  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -215,7 +213,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         runSpacing: DS.spacing12,
         children: [
           SizedBox(
-            width: 240,
+            width: 212,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -249,7 +247,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ),
           ),
           Container(
-            width: 112,
+            width: 104,
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing16,
               vertical: DS.spacing12,
@@ -297,7 +295,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ],
       ),
     );
-  }
 
   Widget _buildCurrentShowcase(VisualElementsState state) {
     final equipped = [
@@ -400,7 +397,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     }
 
     return SizedBox(
-      height: 112,
+      height: 104,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: bundles.length > 6 ? 6 : bundles.length,
@@ -415,7 +412,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               state.equippedIds.contains(element.id),
             ),
             child: Container(
-              width: 236,
+              width: 208,
               padding: const EdgeInsets.all(DS.spacing16),
               decoration: BoxDecoration(
                 color: DS.surfaceSecondary,
@@ -473,8 +470,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
-  Widget _miniChip(String label, Color color) {
-    return Container(
+  Widget _miniChip(String label, Color color) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -492,7 +488,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
       ),
     );
-  }
 
   Color _elementAccent(VisualElementModel element) {
     final gradient = element.config['gradient'] as List<dynamic>?;
@@ -506,8 +501,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return value == null ? DS.brandPrimary : Color(value);
   }
 
-  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
-    return SliverPersistentHeader(
+  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) => SliverPersistentHeader(
       pinned: true,
       delegate: _StickyTabBarDelegate(
         TabBar(
@@ -539,7 +533,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
       ),
     );
-  }
 
   Widget _buildBody(
     BuildContext context,
@@ -590,8 +583,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           SliverPadding(
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
-              builder: (context, constraints) {
-                return SliverGrid(
+              builder: (context, constraints) => SliverGrid(
                   key: ValueKey(_filterOptions.hashCode),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: _calculateCrossAxisCount(
@@ -599,7 +591,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     ),
                     mainAxisSpacing: DS.spacing12,
                     crossAxisSpacing: DS.spacing12,
-                    mainAxisExtent: 196,
+                    mainAxisExtent: 184,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -608,8 +600,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     },
                     childCount: filteredElements.length,
                   ),
-                );
-              },
+                ),
             ),
           ),
         ],
@@ -700,8 +691,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     }
   }
 
-  Widget _buildErrorView(String error, AppLocalizations l10n) {
-    return Center(
+  Widget _buildErrorView(String error, AppLocalizations l10n) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
@@ -740,10 +730,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
       ),
     );
-  }
 
-  Widget _buildEmptyView(AppLocalizations l10n) {
-    return Center(
+  Widget _buildEmptyView(AppLocalizations l10n) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
@@ -766,15 +754,13 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
       ),
     );
-  }
 
   Widget _buildRecommendationBody(
     BuildContext context,
     AppLocalizations l10n,
     VisualElementsState state,
     AsyncValue<List<VisualRecommendation>> recommendationsValue,
-  ) {
-    return recommendationsValue.when(
+  ) => recommendationsValue.when(
       data: (recommendations) {
         if (recommendations.isEmpty) {
           return _buildEmptyView(l10n);
@@ -794,7 +780,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     ),
                     mainAxisSpacing: DS.spacing12,
                     crossAxisSpacing: DS.spacing12,
-                    mainAxisExtent: 200,
+                    mainAxisExtent: 188,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -835,7 +821,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => _buildErrorView(err.toString(), l10n),
     );
-  }
 
   String _recommendationReasonText(
     AppLocalizations l10n,
@@ -949,7 +934,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           const SizedBox(height: DS.spacing12),
           SizedBox(
-            height: 196,
+            height: 184,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: eventElements.length,
@@ -1054,17 +1039,13 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     BuildContext context,
     double shrinkOffset,
     bool overlapsContent,
-  ) {
-    return Container(
+  ) => Container(
       color: DS.surfacePrimary,
       child: tabBar,
     );
-  }
 
   @override
-  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar;
-  }
+  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) => tabBar != oldDelegate.tabBar;
 }
 
 /// 筛选面板
@@ -1125,7 +1106,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 Text(
                   l10n.visualElementFilter,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: DS.fontSizeLg,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1165,8 +1146,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _buildStatusFilter(AppLocalizations l10n) {
-    return Column(
+  Widget _buildStatusFilter(AppLocalizations l10n) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -1208,10 +1188,8 @@ class _FilterSheetState extends State<_FilterSheet> {
         ),
       ],
     );
-  }
 
-  Widget _buildSortFilter(AppLocalizations l10n) {
-    return Column(
+  Widget _buildSortFilter(AppLocalizations l10n) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -1297,10 +1275,8 @@ class _FilterSheetState extends State<_FilterSheet> {
         ),
       ],
     );
-  }
 
-  Widget _buildRarityFilter(AppLocalizations l10n) {
-    return Column(
+  Widget _buildRarityFilter(AppLocalizations l10n) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -1332,14 +1308,12 @@ class _FilterSheetState extends State<_FilterSheet> {
         ),
       ],
     );
-  }
 
   Widget _buildFilterChip(
     String label,
     bool isSelected, {
     VoidCallback? onTap,
-  }) {
-    return GestureDetector(
+  }) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -1364,7 +1338,6 @@ class _FilterSheetState extends State<_FilterSheet> {
         ),
       ),
     );
-  }
 
   String _getRarityName(VisualElementRarity rarity, AppLocalizations l10n) {
     switch (rarity) {

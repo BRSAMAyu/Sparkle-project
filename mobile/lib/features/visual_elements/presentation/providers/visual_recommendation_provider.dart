@@ -6,9 +6,7 @@ import 'package:sparkle/features/visual_elements/domain/services/visual_recommen
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 
 final visualRecommendationServiceProvider =
-    Provider<VisualRecommendationService>((ref) {
-  return VisualRecommendationService();
-});
+    Provider<VisualRecommendationService>((ref) => VisualRecommendationService());
 
 /// Derive current user activity state from dashboard + streak signals.
 final userActivityStateProvider = Provider<UserActivityState>((ref) {

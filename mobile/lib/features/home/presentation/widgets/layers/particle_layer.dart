@@ -61,8 +61,7 @@ class _ParticleLayerState extends State<ParticleLayer>
     final maxSize = (config['max_size'] as num?)?.toDouble() ?? 3.0;
     final fallDirection = config['fall_direction'] as String?;
 
-    _particles = List.generate(count, (i) {
-      return _Particle(
+    _particles = List.generate(count, (i) => _Particle(
         x: _random.nextDouble(),
         y: _random.nextDouble(),
         size: minSize + _random.nextDouble() * (maxSize - minSize),
@@ -73,8 +72,7 @@ class _ParticleLayerState extends State<ParticleLayer>
         twinkleOffset: _random.nextDouble() * 2 * pi,
         rotation: _random.nextDouble() * 2 * pi,
         fallDirection: fallDirection,
-      );
-    });
+      ),);
   }
 
   void _registerLifecycleControllers() {
@@ -124,8 +122,7 @@ class _ParticleLayerState extends State<ParticleLayer>
         widget.particleAnimation,
         widget.mainAnimation,
       ]),
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _ParticlePainter(
             particles: _particles,
@@ -138,8 +135,7 @@ class _ParticleLayerState extends State<ParticleLayer>
             particleValue: widget.particleAnimation.value,
             mainValue: widget.mainAnimation.value,
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -208,8 +204,8 @@ class _ParticlePainter extends CustomPainter {
       final particle = particles[i];
 
       // 计算当前位置
-      double x = particle.x * size.width;
-      double y = particle.y * size.height;
+      var x = particle.x * size.width;
+      var y = particle.y * size.height;
 
       // 应用漂移
       if (drift) {
@@ -233,7 +229,7 @@ class _ParticlePainter extends CustomPainter {
       }
 
       // 计算透明度（闪烁效果）
-      double opacity = particle.opacity;
+      var opacity = particle.opacity;
       if (twinkle) {
         final twinkleValue = sin(
           mainValue * speedMultiplier * 2 * pi * particle.twinkleSpeed +
@@ -338,8 +334,7 @@ class _ParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ParticlePainter oldDelegate) {
-    return particleValue != oldDelegate.particleValue ||
+  bool shouldRepaint(covariant _ParticlePainter oldDelegate) => particleValue != oldDelegate.particleValue ||
         mainValue != oldDelegate.mainValue ||
         speedMultiplier != oldDelegate.speedMultiplier ||
         twinkle != oldDelegate.twinkle ||
@@ -348,5 +343,4 @@ class _ParticlePainter extends CustomPainter {
         speed != oldDelegate.speed ||
         particles != oldDelegate.particles ||
         colors.length != oldDelegate.colors.length;
-  }
 }

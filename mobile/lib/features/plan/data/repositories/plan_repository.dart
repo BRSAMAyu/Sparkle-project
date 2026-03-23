@@ -160,7 +160,7 @@ class PlanRepository {
     }
   }
 
-  Future<PlanModel> _updateActivation(String id, bool activate) async {
+  Future<void> _updateActivation(String id, bool activate) async {
     if (DemoDataService.isDemoMode) {
       final demoPlans = DemoDataService().demoPlans;
       final index = demoPlans.indexWhere((p) => p.id == id);
@@ -189,37 +189,25 @@ class PlanRepository {
           isPrimary: activate ? existing.isPrimary : false,
         );
         demoPlans[index] = updated;
-        return updated;
+        return;
       }
+      return;
     }
     try {
-      final planUpdate = PlanUpdate(isActive: activate);
-      final response = await _apiClient.put<dynamic>(
-        ApiEndpoints.plan(id),
-        data: planUpdate.toJson(),
+      await _apiClient.post<dynamic>(
+        activate ? ApiEndpoints.planRestore(id) : ApiEndpoints.planArchive(id),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data,
-          action: activate ? 'activatePlan' : 'deactivatePlan',);
-      return PlanModel.fromJson(payload);
     } on DioException catch (e) {
-      return _handleDioError(e, activate ? 'activatePlan' : 'deactivatePlan');
+      return _handleDioError<void>(
+        e,
+        activate ? 'activatePlan' : 'deactivatePlan',
+      );
     }
   }
 
-  Future<PlanModel> activatePlan(String id) async =>
-      _updateActivation(id, true);
+  Future<void> activatePlan(String id) async => _updateActivation(id, true);
 
-  Future<PlanModel> deactivatePlan(String id) async {
-    if (DemoDataService.isDemoMode) {
-      return _updateActivation(id, false);
-    }
-    try {
-      await _apiClient.post<dynamic>(ApiEndpoints.planArchive(id));
-      return await getPlan(id);
-    } on DioException catch (e) {
-      return _handleDioError(e, 'deactivatePlan');
-    }
-  }
+  Future<void> deactivatePlan(String id) async => _updateActivation(id, false);
 
   Future<void> setPrimaryPlan(String id) async {
     if (DemoDataService.isDemoMode) {

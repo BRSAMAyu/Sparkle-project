@@ -3,9 +3,7 @@ import 'package:sparkle/features/home/domain/services/emotion_visual_blending_se
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 final emotionVisualBlendingServiceProvider =
-    Provider<EmotionVisualBlendingService>((ref) {
-  return EmotionVisualBlendingService();
-});
+    Provider<EmotionVisualBlendingService>((ref) => EmotionVisualBlendingService());
 
 final emotionVisualBlendProvider =
     Provider.family<VisualBlendParams, CognitiveState>((ref, state) {

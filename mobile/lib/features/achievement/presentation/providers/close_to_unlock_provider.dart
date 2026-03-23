@@ -64,7 +64,6 @@ class CloseToUnlockNotifier extends StateNotifier<CloseToUnlockState> {
       final closeAchievements =
           await _ref.read(achievementProvider.notifier).getCloseToUnlockAchievements(
                 category: category,
-                threshold: 0.8,
               );
 
       if (closeAchievements.isEmpty) {
@@ -74,7 +73,7 @@ class CloseToUnlockNotifier extends StateNotifier<CloseToUnlockState> {
 
       // Find the one with highest progress percentage that's not yet unlocked
       AchievementWithProgress? bestMatch;
-      int highestProgress = 0;
+      var highestProgress = 0;
 
       for (final item in closeAchievements) {
         // Skip already unlocked achievements

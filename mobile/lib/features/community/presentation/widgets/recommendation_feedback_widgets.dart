@@ -49,8 +49,7 @@ Future<RecommendationFeedbackDraft?> showRecommendationFeedbackSheet({
   GroupListItem? group,
   String? strategy,
   String? target,
-}) {
-  return showSensoryModalBottomSheet<RecommendationFeedbackDraft>(
+}) => showSensoryModalBottomSheet<RecommendationFeedbackDraft>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -63,7 +62,6 @@ Future<RecommendationFeedbackDraft?> showRecommendationFeedbackSheet({
       target: target,
     ),
   );
-}
 
 class RecommendationFeedbackPromptCard extends StatelessWidget {
   const RecommendationFeedbackPromptCard({
@@ -493,7 +491,7 @@ class _RecommendationFeedbackSheetState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.privacy_tip_outlined,
-                        color: _accentColor(widget.itemType), size: 18),
+                        color: _accentColor(widget.itemType), size: 18,),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -647,8 +645,7 @@ class _ScoreRow extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,7 +671,6 @@ class _ScoreRow extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ChipSelector extends StatelessWidget {
@@ -693,8 +689,7 @@ class _ChipSelector extends StatelessWidget {
   final ValueChanged<String> onToggle;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -717,14 +712,11 @@ class _ChipSelector extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
-Color _accentColor(RecommendationItemType itemType) {
-  return itemType == RecommendationItemType.friend
+Color _accentColor(RecommendationItemType itemType) => itemType == RecommendationItemType.friend
       ? DS.brandPrimaryConst
       : DS.warning;
-}
 
 String _stageLabel(RecommendationFeedbackStage stage) {
   switch (stage) {

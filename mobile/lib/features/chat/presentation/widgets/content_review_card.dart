@@ -16,8 +16,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -580,7 +580,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       );
 
   Widget _buildScoreBar(
-      BuildContext context, Color color, AppLocalizations l10n) {
+      BuildContext context, Color color, AppLocalizations l10n,) {
     final score = widget.review.overallScore;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,19 +701,19 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       children: [
         if (criticalIssues.isNotEmpty) ...[
           _buildIssueGroup(context, l10n.contentReviewCriticalIssues,
-              criticalIssues, DS.error),
+              criticalIssues, DS.error,),
           if (warningIssues.isNotEmpty || infoIssues.isNotEmpty)
             const SizedBox(height: DS.spacing8),
         ],
         if (warningIssues.isNotEmpty) ...[
           _buildIssueGroup(
-              context, l10n.contentReviewWarnings, warningIssues, DS.warning),
+              context, l10n.contentReviewWarnings, warningIssues, DS.warning,),
           if (infoIssues.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoIssues.isNotEmpty &&
             widget.review.decision != ContentReviewDecision.passed)
           _buildIssueGroup(
-              context, l10n.contentReviewHints, infoIssues, DS.info),
+              context, l10n.contentReviewHints, infoIssues, DS.info,),
       ],
     );
   }
@@ -927,7 +927,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   _ReflectionStatusInfo _getReflectionStatusInfo(
-      String status, AppLocalizations l10n) {
+      String status, AppLocalizations l10n,) {
     switch (status) {
       case 'pending':
         return _ReflectionStatusInfo(
@@ -1043,7 +1043,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
 
   /// Phase 2e: 更多操作菜单
   Widget _buildMoreActionsMenu(
-          BuildContext context, Color color, AppLocalizations l10n) =>
+          BuildContext context, Color color, AppLocalizations l10n,) =>
       PopupMenuButton<String>(
         icon: Icon(
           Icons.more_horiz_rounded,
@@ -1097,7 +1097,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       );
 
   void _handleMenuAction(
-      BuildContext context, String action, AppLocalizations l10n) {
+      BuildContext context, String action, AppLocalizations l10n,) {
     if (action == 'override') {
       _showOverrideDialog(context, l10n);
     } else if (action == 'appeal') {
@@ -1173,7 +1173,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                     final reason = reasonController.text.trim();
                     if (reason.isEmpty) {
                       AppFeedback.error(
-                          context, l10n.contentReviewReasonRequired);
+                          context, l10n.contentReviewReasonRequired,);
                       return;
                     }
                     Navigator.pop(context);
@@ -1185,7 +1185,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ],
         ),
       ),
-    ));
+    ),);
   }
 
   /// 显示申诉对话框
@@ -1307,12 +1307,12 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
                         AppFeedback.error(
-                            context, l10n.contentReviewAppealDetailRequired);
+                            context, l10n.contentReviewAppealDetailRequired,);
                         return;
                       }
                       if (selectedIssues.isEmpty) {
                         AppFeedback.error(
-                            context, l10n.contentReviewAppealTypeRequired);
+                            context, l10n.contentReviewAppealTypeRequired,);
                         return;
                       }
                       Navigator.pop(context);
@@ -1325,7 +1325,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ),
         ),
       ),
-    ));
+    ),);
   }
 }
 

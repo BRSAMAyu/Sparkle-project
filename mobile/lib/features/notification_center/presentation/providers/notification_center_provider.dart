@@ -205,9 +205,7 @@ class NotificationCenter extends _$NotificationCenter {
 
   /// 更新单个通知（用于实时更新已读状态等）
   void updateNotification(UnifiedNotification updated) {
-    final updatedNotifications = state.notifications.map((n) {
-      return n.id == updated.id ? updated : n;
-    }).toList();
+    final updatedNotifications = state.notifications.map((n) => n.id == updated.id ? updated : n).toList();
 
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
 

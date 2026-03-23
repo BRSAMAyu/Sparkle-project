@@ -58,7 +58,7 @@ class DashboardCardSection extends ConsumerWidget {
                   onPressed: () => _openEditSheet(context),
                   icon: const Icon(Icons.tune_rounded, size: 18),
                   label: Text(
-                      AppLocalizations.of(context)!.dashboardCustomizeCards),
+                      AppLocalizations.of(context)!.dashboardCustomizeCards,),
                 ),
               ],
             ),

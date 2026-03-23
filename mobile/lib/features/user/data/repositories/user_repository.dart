@@ -20,7 +20,7 @@ class UserRepository {
         data: preferences.toJson(),
       );
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updateUserPreferences');
+          action: 'updateUserPreferences',);
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -39,7 +39,7 @@ class UserRepository {
         data: prefs.toJson(),
       );
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updatePushPreferences');
+          action: 'updatePushPreferences',);
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -69,7 +69,7 @@ class UserRepository {
     final response =
         await _apiClient.get<Map<String, dynamic>>('/profile/transparent');
     return ApiResponseParser.unwrapMap(response.data,
-        action: 'fetchTransparentProfile');
+        action: 'fetchTransparentProfile',);
   }
 
   Future<Map<String, dynamic>> fetchProfileContext() async {
@@ -93,7 +93,7 @@ class UserRepository {
     final response =
         await _apiClient.get<Map<String, dynamic>>('/profile/context');
     return ApiResponseParser.unwrapMap(response.data,
-        action: 'fetchProfileContext');
+        action: 'fetchProfileContext',);
   }
 
   Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
@@ -184,7 +184,7 @@ class UserRepository {
     }
     // Direct list format
     final data = ApiResponseParser.unwrapList(response.data,
-        action: 'fetchSystemUpdates');
+        action: 'fetchSystemUpdates',);
     return data.cast<Map<String, dynamic>>();
   }
 
@@ -275,7 +275,7 @@ class UserRepository {
     final response =
         await _apiClient.get<Map<String, dynamic>>('/user/settings');
     return ApiResponseParser.unwrapMap(response.data,
-        action: 'fetchUserSettings');
+        action: 'fetchUserSettings',);
   }
 
   Future<void> updateUserSettings(Map<String, dynamic> payload) async {
@@ -726,7 +726,7 @@ class UserRepository {
 
   /// Update weekly schedule preferences (time slots grid)
   Future<UserModel> updateSchedulePreferences(
-      Map<String, dynamic> scheduleData) async {
+      Map<String, dynamic> scheduleData,) async {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoUser; // Mock update
     }
@@ -736,7 +736,7 @@ class UserRepository {
         data: scheduleData,
       );
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updateSchedulePreferences');
+          action: 'updateSchedulePreferences',);
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;

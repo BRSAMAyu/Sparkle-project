@@ -120,6 +120,8 @@ class ApiEndpoints {
       '/learning-paths/$targetNodeId';
   static String learningPathPlan(String targetNodeId) =>
       '/learning-paths/$targetNodeId/plan';
+  static String learningPathTaskPath(String targetNodeId) =>
+      '/learning-paths/$targetNodeId/task-path';
 
   static String learningPathFullPlan(String targetNodeId) =>
       '/learning-paths/$targetNodeId/full-plan';

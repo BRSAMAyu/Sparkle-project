@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
+import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 
 // Data models for dashboard state
 class DashboardState {

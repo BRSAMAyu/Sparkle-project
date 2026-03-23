@@ -97,11 +97,11 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(stub),
         ],
-        child: MaterialApp(
-          home: const MemorySettingsScreen(),
+        child: const MaterialApp(
+          home: MemorySettingsScreen(),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
+          locale: Locale('zh'),
         ),
       ),
     );

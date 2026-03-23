@@ -32,8 +32,7 @@ class CheckinInteraction extends StatelessWidget {
   final void Function(String message)? onEncourage;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -53,10 +52,8 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
+  Widget _buildHeader(BuildContext context) => Row(
       children: [
         CircleAvatar(
           radius: 16,
@@ -85,17 +82,13 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildContent(BuildContext context) {
-    return Text(
+  Widget _buildContent(BuildContext context) => Text(
       content,
       style: Theme.of(context).textTheme.bodyMedium,
     );
-  }
 
-  Widget _buildActions(BuildContext context) {
-    return Row(
+  Widget _buildActions(BuildContext context) => Row(
       children: [
         if (!isMyCheckin && isMyPartner)
           _buildLikeButton(context)
@@ -109,10 +102,8 @@ class CheckinInteraction extends StatelessWidget {
         const Spacer(),
       ],
     );
-  }
 
-  Widget _buildLikeButton(BuildContext context) {
-    return InkWell(
+  Widget _buildLikeButton(BuildContext context) => InkWell(
       onTap: () {
         unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
         onLike?.call();
@@ -137,10 +128,8 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildLikeCount(BuildContext context) {
-    return Row(
+  Widget _buildLikeCount(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.favorite, size: 16, color: Colors.red),
@@ -153,10 +142,8 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildEncourageButton(BuildContext context) {
-    return InkWell(
+  Widget _buildEncourageButton(BuildContext context) => InkWell(
       onTap: () {
         unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
         _showEncourageDialog(context);
@@ -181,10 +168,8 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildEncourageCount(BuildContext context) {
-    return Row(
+  Widget _buildEncourageCount(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.chat_bubble_outline, size: 16),
@@ -197,10 +182,8 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildEncouragements(BuildContext context) {
-    return Column(
+  Widget _buildEncouragements(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -214,11 +197,9 @@ class CheckinInteraction extends StatelessWidget {
         ...encouragements.map((e) => _buildEncouragementItem(context, e)),
       ],
     );
-  }
 
   Widget _buildEncouragementItem(
-      BuildContext context, EncouragementMessage encouragement) {
-    return Padding(
+      BuildContext context, EncouragementMessage encouragement,) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(8),
@@ -234,7 +215,7 @@ class CheckinInteraction extends StatelessWidget {
                 CircleAvatar(
                   radius: 10,
                   child: Text(
-                      _encouragementAuthor(encouragement)[0].toUpperCase()),
+                      _encouragementAuthor(encouragement)[0].toUpperCase(),),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -261,7 +242,6 @@ class CheckinInteraction extends StatelessWidget {
         ),
       ),
     );
-  }
 
   String _encouragementAuthor(EncouragementMessage encouragement) {
     if (encouragement.authorName.isNotEmpty) {
@@ -340,25 +320,21 @@ class EncouragementMessage {
   final String message;
   final DateTime createdAt;
 
-  factory EncouragementMessage.fromJson(Map<String, dynamic> json) {
-    return EncouragementMessage(
+  factory EncouragementMessage.fromJson(Map<String, dynamic> json) => EncouragementMessage(
       id: json['id'] as String,
       authorId: json['user_id'] as String,
       authorName: json['author_name'] as String? ?? '伙伴',
       message: json['message'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': authorId,
       'author_name': authorName,
       'message': message,
       'created_at': createdAt.toIso8601String(),
     };
-  }
 }
 
 /// 简化版打卡互动组件 - 仅显示互动信息
@@ -377,8 +353,7 @@ class CheckinInteractionCompact extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
@@ -398,22 +373,19 @@ class CheckinInteractionCompact extends StatelessWidget {
                 context,
                 icon: Icons.chat_bubble_outline,
                 count: encouragementCount,
-                color: null,
               ),
             ],
           ],
         ),
       ),
     );
-  }
 
   Widget _buildInteractionItem(
     BuildContext context, {
     required IconData icon,
     required int count,
     Color? color,
-  }) {
-    return Row(
+  }) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
@@ -430,7 +402,6 @@ class CheckinInteractionCompact extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 /// 打卡互动列表 - 用于时间线展示
@@ -483,8 +454,7 @@ class CheckinInteractionList extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
+  Widget _buildEmptyState(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -505,7 +475,6 @@ class CheckinInteractionList extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 带互动信息的打卡数据模型
@@ -528,8 +497,7 @@ class CheckinWithInteraction {
   final List<EncouragementMessage> encouragements;
   final DateTime createdAt;
 
-  factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) {
-    return CheckinWithInteraction(
+  factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) => CheckinWithInteraction(
       id: json['id'] as String,
       userId: json['user_id'] as String,
       authorName: json['author_name'] as String? ?? '用户',
@@ -540,10 +508,8 @@ class CheckinWithInteraction {
           .toList(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'user_id': userId,
       'author_name': authorName,
@@ -552,5 +518,4 @@ class CheckinWithInteraction {
       'encouragements': encouragements.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),
     };
-  }
 }

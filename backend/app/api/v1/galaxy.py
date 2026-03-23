@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+from app.models.plan import Plan
+from app.models.task import Task
 from app.schemas.galaxy import (
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
@@ -277,12 +279,77 @@ async def get_node_detail(
         for rel in relations
     ]
 
+    related_tasks_result = await db.execute(
+        select(Task)
+        .where(Task.user_id == UUID(user_id), Task.knowledge_node_id == node_id)
+        .order_by(Task.updated_at.desc())
+        .limit(6)
+    )
+    related_tasks = related_tasks_result.scalars().all()
+
+    related_plans_result = await db.execute(
+        select(Plan)
+        .where(
+            Plan.user_id == UUID(user_id),
+            Plan.source == "learning_path",
+        )
+        .order_by(Plan.updated_at.desc())
+        .limit(6)
+    )
+    related_plans = [
+        plan for plan in related_plans_result.scalars().all()
+        if isinstance(plan.source_metadata, dict)
+        and (
+            str(plan.source_metadata.get("target_node_id")) == str(node_id)
+            or str(node_id) in {
+                str(item) for item in (plan.source_metadata.get("path_node_ids") or [])
+            }
+        )
+    ]
+
     return {
         "node": node_dict,
         "userStats": user_stats,
         "relations": relations_list,
-        "relatedTasks": [],
-        "relatedPlans": [],
+        "relatedTasks": [
+            {
+                "id": str(task.id),
+                "user_id": str(task.user_id),
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "title": task.title,
+                "type": task.type.value if task.type else "LEARNING",
+                "tags": task.tags or [],
+                "estimated_minutes": int(task.estimated_minutes or 25),
+                "difficulty": int(task.difficulty or 1),
+                "energy_cost": int(task.energy_cost or 1),
+                "guide_content": task.guide_content,
+                "status": task.status.value if task.status else "PENDING",
+                "started_at": task.started_at.isoformat() if task.started_at else None,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                "actual_minutes": task.actual_minutes,
+                "user_note": task.user_note,
+                "priority": int(task.priority or 0),
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "knowledge_node_id": str(task.knowledge_node_id) if task.knowledge_node_id else None,
+                "order_index": int(task.order_index or 0),
+                "subtasks_total": int(task.subtasks_total or 0),
+                "subtasks_completed": int(task.subtasks_completed or 0),
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+                "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            }
+            for task in related_tasks
+        ],
+        "relatedPlans": [
+            {
+                "id": str(plan.id),
+                "title": plan.name,
+                "plan_type": plan.type.value if plan.type else "GROWTH",
+                "status": "active" if not plan.deleted_at else "archived",
+                "target_date": None,
+            }
+            for plan in related_plans
+        ],
+        "learningPathSnapshot": user_status.learning_path_snapshot if user_status else None,
     }
 
 

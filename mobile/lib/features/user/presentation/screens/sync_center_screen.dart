@@ -107,7 +107,7 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                           child: statsAsync.when(
                             data: (stats) => _StatsView(stats: stats),
                             loading: () => const Center(
-                                child: CircularProgressIndicator()),
+                                child: CircularProgressIndicator(),),
                             error: (error, stackTrace) => Text(
                               context.l10n.syncCenterLoadFailed(
                                 error.toString(),

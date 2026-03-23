@@ -125,8 +125,7 @@ class SharePrivacySettings extends StatelessWidget {
     );
   }
 
-  Widget _buildDisplayNameField(BuildContext context, AppLocalizations l10n) {
-    return Column(
+  Widget _buildDisplayNameField(BuildContext context, AppLocalizations l10n) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -172,7 +171,7 @@ class SharePrivacySettings extends StatelessWidget {
                         SensoryFeedbackEvent.selection,
                       );
                       _nameController.clear();
-                      _updateSettings(displayName: null);
+                      _updateSettings();
                     },
                   )
                 : null,
@@ -200,7 +199,6 @@ class SharePrivacySettings extends StatelessWidget {
         ),
       ],
     );
-  }
 
   Widget _buildToggleOption({
     required BuildContext context,
@@ -209,8 +207,7 @@ class SharePrivacySettings extends StatelessWidget {
     required IconData icon,
     required bool value,
     required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.all(DS.sm),
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
@@ -274,7 +271,6 @@ class SharePrivacySettings extends StatelessWidget {
         ],
       ),
     );
-  }
 
   void _updateSettings({
     String? displayName,
@@ -289,6 +285,6 @@ class SharePrivacySettings extends StatelessWidget {
       showUnlockDate: showUnlockDate,
       showProgressStats: showProgressStats,
       showFirstUnlockerBadge: showFirstUnlockerBadge,
-    ));
+    ),);
   }
 }

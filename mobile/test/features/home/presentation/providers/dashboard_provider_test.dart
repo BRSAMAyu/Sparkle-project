@@ -57,7 +57,7 @@ void main() {
                 'solution_text': '把高强度任务放到晚上',
                 'has_new_insight': true,
               },
-            }),
+            },),
       );
       addTearDown(notifier.dispose);
 

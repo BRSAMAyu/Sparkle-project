@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -87,9 +88,25 @@ class ChatRepository {
       return [];
     }
 
-    return data
-        .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    final messages = <ChatMessageModel>[];
+    for (final item in data) {
+      if (item is! Map<String, dynamic>) {
+        debugPrint(
+          'ChatRepository.getConversationHistory: skip non-map history item',
+        );
+        continue;
+      }
+      try {
+        messages.add(ChatMessageModel.fromJson(item));
+      } catch (error, stackTrace) {
+        debugPrint(
+          'ChatRepository.getConversationHistory: failed to parse history item '
+          'for conversation=$conversationId error=$error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+    return messages;
   }
 
   /// 获取最近对话列表

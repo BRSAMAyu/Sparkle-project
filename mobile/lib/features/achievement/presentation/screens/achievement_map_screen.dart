@@ -192,9 +192,9 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                   _MetaChip(label: node.laneLabel, color: color),
                   _MetaChip(
                       label: _displayStateLabel(node.displayState),
-                      color: Colors.white70),
+                      color: Colors.white70,),
                   _MetaChip(
-                      label: '${node.progressPercentage}%', color: DS.info),
+                      label: '${node.progressPercentage}%', color: DS.info,),
                 ],
               ),
               if (node.unlockHint != null) ...[
@@ -291,8 +291,7 @@ class _MetaChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -310,7 +309,6 @@ class _MetaChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -533,15 +531,13 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     _starCount = count;
 
     final rng = math.Random(42);
-    _stars = List.generate(count, (_) {
-      return _Star(
+    _stars = List.generate(count, (_) => _Star(
         x: rng.nextDouble(),
         y: rng.nextDouble(),
         radius: 0.5 + rng.nextDouble() * 1.5,
         baseOpacity: 0.2 + rng.nextDouble() * 0.6,
         phase: rng.nextDouble() * math.pi * 2,
-      );
-    });
+      ),);
   }
 
   int _getAdaptiveStarCount() {
@@ -635,8 +631,6 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
           transformationController: _transformationController,
           minScale: 0.35,
           maxScale: 3.5,
-          panEnabled: true,
-          scaleEnabled: true,
           constrained: false,
           interactionEndFrictionCoefficient: 0.001,
           boundaryMargin: const EdgeInsets.all(DS.spacing32),
@@ -879,8 +873,7 @@ class _MapControlButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Tooltip(
+  Widget build(BuildContext context) => Tooltip(
       message: tooltip,
       child: Material(
         color: DS.deepSpaceStart.withValues(alpha: 0.86),
@@ -900,7 +893,6 @@ class _MapControlButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 // ---------------------------------------------------------------------------

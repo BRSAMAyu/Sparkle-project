@@ -28,7 +28,6 @@ class ToolHostScreen extends StatelessWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       extendBodyBehindAppBar: true,
-      appBar: null,
       child: SafeArea(
         bottom: false,
         child: Stack(

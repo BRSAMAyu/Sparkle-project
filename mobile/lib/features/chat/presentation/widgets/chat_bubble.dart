@@ -13,7 +13,7 @@ import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/grapheme_utils.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
@@ -502,7 +502,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                       .size
                                                       .height *
                                                   0.5;
-                                          final contentWidget = AiRichText(
+                                          final contentWidget = SparkleMarkdown(
                                             content: _content,
                                             textColor: isUser
                                                 ? DS.chatBubbleUserText
@@ -1320,10 +1320,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
               fallbackType: resourceType,
             )
           : null;
-      final newId = result['new_resource_id'] as String;
+      final actualResourceType =
+          result['resource_type']?.toString() ?? resourceType;
+      final newId = result['new_resource_id']?.toString();
       final route = entityCard?.detailRoute ??
-          (resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId');
-      unawaited(context.push(route));
+          (newId == null
+              ? null
+              : actualResourceType == 'plan'
+                  ? '/plans/$newId'
+                  : '/tasks/$newId');
+      if (actualResourceType == 'plan') {
+        unawaited(ref.read(planListProvider.notifier).refresh());
+      } else if (actualResourceType == 'task') {
+        unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      }
+      if (route != null && route.isNotEmpty) {
+        unawaited(context.push(route));
+      }
     } catch (e) {
       if (!context.mounted) return;
       AppFeedback.error(context, '采纳失败: $e');

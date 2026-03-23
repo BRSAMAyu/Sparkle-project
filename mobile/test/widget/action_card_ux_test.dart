@@ -1,8 +1,8 @@
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('next actions widget triggers prompt callback', (tester) async {

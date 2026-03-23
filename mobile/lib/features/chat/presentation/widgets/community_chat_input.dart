@@ -25,6 +25,8 @@ class CommunityChatInput extends ConsumerStatefulWidget {
     super.key,
     this.enabled = true,
     this.hintText,
+    this.controller,
+    this.focusNode,
     this.onSend,
     this.quotedMessage,
     this.onCancelQuote,
@@ -35,6 +37,8 @@ class CommunityChatInput extends ConsumerStatefulWidget {
   });
   final bool enabled;
   final String? hintText;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
   final void Function(String text, {String? replyToId})? onSend;
   final PrivateMessageInfo? quotedMessage;
   final VoidCallback? onCancelQuote;
@@ -48,8 +52,10 @@ class CommunityChatInput extends ConsumerStatefulWidget {
 }
 
 class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+  late bool _ownsController;
+  late bool _ownsFocusNode;
   final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
   bool _isButtonPressed = false;
@@ -123,7 +129,35 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
+    _ownsFocusNode = widget.focusNode == null;
+    _controller = widget.controller ?? TextEditingController();
+    _focusNode = widget.focusNode ?? FocusNode();
     _controller.addListener(_handleTextChange);
+  }
+
+  @override
+  void didUpdateWidget(CommunityChatInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _controller.removeListener(_handleTextChange);
+      if (_ownsController) {
+        _controller.dispose();
+      }
+      _ownsController = widget.controller == null;
+      _controller = widget.controller ?? TextEditingController();
+      _controller.addListener(_handleTextChange);
+    }
+    if (oldWidget.focusNode != widget.focusNode) {
+      if (_ownsFocusNode) {
+        _focusNode.dispose();
+      }
+      _ownsFocusNode = widget.focusNode == null;
+      _focusNode = widget.focusNode ?? FocusNode();
+    }
+    if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
+      _focusNode.requestFocus();
+    }
   }
 
   void _handleTextChange() {
@@ -135,18 +169,14 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   }
 
   @override
-  void didUpdateWidget(CommunityChatInput oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
-      _focusNode.requestFocus();
-    }
-  }
-
-  @override
   void dispose() {
     _controller.removeListener(_handleTextChange);
-    _controller.dispose();
-    _focusNode.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
     _textNotEmpty.dispose();
     super.dispose();
   }
@@ -190,15 +220,17 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   }
 
   void _showQuickShare() {
-    showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => QuickSharePickerSheet(
-        onShare: (payload) {
-          Navigator.pop(context);
-          widget.onQuickShare?.call(payload);
-        },
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => QuickSharePickerSheet(
+          onShare: (payload) {
+            Navigator.pop(context);
+            widget.onQuickShare?.call(payload);
+          },
+        ),
       ),
     );
   }
@@ -304,8 +336,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   }
 
   /// 构建上方工具栏（可展开）
-  Widget _buildToolbar(BuildContext context, bool isDark) {
-    return Padding(
+  Widget _buildToolbar(BuildContext context, bool isDark) => Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing4,
@@ -357,7 +388,6 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         ),
       ),
     );
-  }
 
   /// 构建输入区域（滑动只作用于中间区域）
   Widget _buildSwipeableInputArea(
@@ -365,8 +395,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
     required bool isDark,
     required bool enterToSend,
     required bool reduceMotion,
-  }) {
-    return AnimatedSwitcher(
+  }) => AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       switchInCurve: Curves.easeInOut,
       switchOutCurve: Curves.easeInOut,
@@ -376,7 +405,6 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         reduceMotion: reduceMotion,
       ),
     );
-  }
 
   /// 处理左滑（向左方向滑）：text -> voice -> share -> text
   void _handleSwipeLeft() {
@@ -444,8 +472,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
     required bool isDark,
     required bool enterToSend,
     required bool reduceMotion,
-  }) {
-    return Padding(
+  }) => Padding(
       key: const ValueKey('text-mode'),
       padding: const EdgeInsets.all(DS.spacing8),
       child: Row(
@@ -464,7 +491,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                 iconSize: DS.iconSizeSm,
                 onPressed: widget.enabled ? _toggleToolbar : null,
                 padding: const EdgeInsets.all(12),
-                constraints: BoxConstraints.tightFor(
+                constraints: const BoxConstraints.tightFor(
                   width: DS.touchTargetMinSize,
                   height: DS.touchTargetMinSize,
                 ),
@@ -530,11 +557,9 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         ],
       ),
     );
-  }
 
   /// 语音输入模式
-  Widget _buildVoiceInputMode(bool isDark) {
-    return Padding(
+  Widget _buildVoiceInputMode(bool isDark) => Padding(
       key: const ValueKey('voice-mode'),
       padding: const EdgeInsets.all(DS.spacing8),
       child: Row(
@@ -631,11 +656,9 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         ],
       ),
     );
-  }
 
   /// 分享输入模式
-  Widget _buildShareInputMode(bool isDark) {
-    return Padding(
+  Widget _buildShareInputMode(bool isDark) => Padding(
       key: const ValueKey('share-mode'),
       padding: const EdgeInsets.all(DS.spacing8),
       child: Row(
@@ -710,7 +733,6 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         ],
       ),
     );
-  }
 
   Widget _buildVoicePreview(BuildContext context, bool isDark) {
     final text = _voiceDraftText.trim();
@@ -776,8 +798,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   }
 
   /// 构建发送按钮
-  Widget _buildSendButton({required bool reduceMotion}) {
-    return ValueListenableBuilder<bool>(
+  Widget _buildSendButton({required bool reduceMotion}) => ValueListenableBuilder<bool>(
       valueListenable: _textNotEmpty,
       builder: (context, hasText, child) {
         final canSend = widget.enabled && !_isSending && hasText;
@@ -841,7 +862,6 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         );
       },
     );
-  }
 
   Widget _buildQuotePreview(bool isDark) => Container(
         width: double.infinity,

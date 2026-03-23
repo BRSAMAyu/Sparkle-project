@@ -517,6 +517,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final runId = _nextClientRunId();
     final requestGeneration = ++_streamGeneration;
     bool isCurrentRequest() => requestGeneration == _streamGeneration;
+    final queuedAttachments = List<StoredFile>.from(state.attachedFiles);
+    final hasQueuedAttachments = queuedAttachments.isNotEmpty;
 
     // 1. 立即添加用户消息到 UI
     final userMessage = ChatMessageModel(
@@ -607,6 +609,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       String? errorMessage,
       String? errorCode,
       bool isRetryable = false,
+      bool restoreAttachments = false,
     }) {
       if (!isCurrentRequest() || sawTerminalEvent) {
         return;
@@ -692,6 +695,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         error: errorMessage,
         errorCode: errorCode,
         isErrorRetryable: errorMessage == null ? false : isRetryable,
+        attachedFiles: restoreAttachments ? queuedAttachments : const [],
       );
       shouldResetSending = false;
     }
@@ -966,6 +970,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                   ),
             errorCode: event.code,
             isRetryable: isRetryable,
+            restoreAttachments: hasQueuedAttachments,
           );
           return; // 提前退出
         } else if (event is WidgetEvent) {
@@ -1189,6 +1194,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         errorMessage: errorMessage,
         errorCode: 'UNKNOWN',
         isRetryable: true,
+        restoreAttachments: hasQueuedAttachments,
       );
     } finally {
       // 🔧 P1-1: 确保 isSending 总是被重置（如果还没被重置）

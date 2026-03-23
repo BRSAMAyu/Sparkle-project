@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 单次确认退出对话框
 class ExitConfirmationDialog extends StatefulWidget {
@@ -143,8 +143,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         ),
       );
 
-  Widget _buildIcon() {
-    return Container(
+  Widget _buildIcon() => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.warning.withValues(alpha: 0.12),
@@ -156,7 +155,6 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         size: 40,
       ),
     );
-  }
 
   String _getTitle() => context.l10n.focusExitTitleStep1;
 

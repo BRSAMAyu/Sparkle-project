@@ -334,7 +334,7 @@ void main() {
 
       expect(events.whereType<FullTextEvent>().single.content, 'final answer');
       expect(events.whereType<DoneEvent>().single.finishReason,
-          'full_text_idle_fallback');
+          'full_text_idle_fallback',);
 
       await sub.cancel();
     });

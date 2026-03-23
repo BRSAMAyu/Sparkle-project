@@ -5,18 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 final favoritesProvider = StateNotifierProvider.autoDispose<FavoritesNotifier,
-    AsyncValue<List<MessageFavoriteInfo>>>((ref) {
-  return FavoritesNotifier(ref.watch(communityRepositoryProvider));
-});
+    AsyncValue<List<MessageFavoriteInfo>>>((ref) => FavoritesNotifier(ref.watch(communityRepositoryProvider)));
 
 class FavoritesNotifier
     extends StateNotifier<AsyncValue<List<MessageFavoriteInfo>>> {

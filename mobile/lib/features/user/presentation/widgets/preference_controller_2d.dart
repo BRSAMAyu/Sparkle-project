@@ -118,7 +118,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                       colors: [
                         Color.alphaBlend(
                           DS.info.withValues(
-                              alpha: 0.12 + (_currentPosition.dy * 0.08)),
+                              alpha: 0.12 + (_currentPosition.dy * 0.08),),
                           Theme.of(context).brightness == Brightness.dark
                               ? DS.surfaceTertiary
                               : DS.surfaceSecondary,

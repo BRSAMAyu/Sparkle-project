@@ -542,12 +542,10 @@ class _AchievementDetailScreenState
         ),
       );
 
-  bool _hasEventWindow(AchievementModel achievement) {
-    return achievement.isLimited ||
+  bool _hasEventWindow(AchievementModel achievement) => achievement.isLimited ||
         achievement.activeFrom != null ||
         achievement.activeTo != null ||
         achievement.eventTag != null;
-  }
 
   Widget _buildEventWindow(
     AchievementModel achievement,
@@ -1351,7 +1349,6 @@ class _AnimatedSection extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: totalDurationMs),
-      curve: Curves.linear, // We handle the curve manually with delay
       builder: (context, rawValue, _) {
         // Map the raw linear 0..1 to account for the stagger delay.
         // During the delay portion, progress stays at 0.
@@ -1475,7 +1472,6 @@ class _EnergyFieldPainter extends CustomPainter {
 
     // Draw a swept gradient that rotates slowly
     final sweepGradient = SweepGradient(
-      center: Alignment.center,
       colors: [
         color.withValues(alpha: 0.0),
         color.withValues(alpha: 0.08),

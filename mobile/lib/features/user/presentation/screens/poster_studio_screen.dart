@@ -14,7 +14,6 @@ import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.d
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class PosterStudioScreen extends ConsumerStatefulWidget {
@@ -90,24 +89,37 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                   ),
             ),
             const SizedBox(height: DS.spacing10),
-            SizedBox(
-              height: 110,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: presets.length,
-                separatorBuilder: (_, __) => const SizedBox(width: DS.spacing10),
-                itemBuilder: (context, index) {
-                  final preset = presets[index];
-                  final selected = preset.id == selectedPreset.id;
-                  return _PosterPresetTile(
-                    preset: preset,
-                    selected: selected,
-                    onTap: () => setState(() {
-                      _selectedPresetId = preset.id;
-                    }),
-                  );
-                },
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth < 420 ? 1 : 2;
+                final itemWidth = (constraints.maxWidth -
+                        ((crossAxisCount - 1) * DS.spacing10)) /
+                    crossAxisCount;
+                final itemHeight = crossAxisCount == 1 ? 108.0 : 120.0;
+                final ratio = itemWidth / itemHeight;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: presets.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: DS.spacing10,
+                    crossAxisSpacing: DS.spacing10,
+                    childAspectRatio: ratio,
+                  ),
+                  itemBuilder: (context, index) {
+                    final preset = presets[index];
+                    final selected = preset.id == selectedPreset.id;
+                    return _PosterPresetTile(
+                      preset: preset,
+                      selected: selected,
+                      onTap: () => setState(() {
+                        _selectedPresetId = preset.id;
+                      }),
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: DS.spacing20),
             Text(
@@ -147,9 +159,12 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
               previewFile: _previewFile,
             ),
             const SizedBox(height: DS.spacing16),
-            Row(
+            Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
               children: [
-                Expanded(
+                SizedBox(
+                  width: double.infinity,
                   child: SparkleButton(
                     expand: true,
                     icon: const Icon(Icons.share_outlined),
@@ -162,8 +177,8 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
+                SizedBox(
+                  width: double.infinity,
                   child: SparkleButton.secondary(
                     expand: true,
                     icon: const Icon(Icons.refresh_rounded),
@@ -217,10 +232,10 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
         if (aTime == null || bTime == null) return 0;
         return bTime.compareTo(aTime);
       });
-    final AchievementWithProgress? topAchievement =
+    final topAchievement =
         unlocked.isNotEmpty ? unlocked.first : null;
-    final PlanModel? activePlan = activePlans.isNotEmpty ? activePlans.first : null;
-    final CuriosityCapsuleModel? latestCapsule =
+    final activePlan = activePlans.isNotEmpty ? activePlans.first : null;
+    final latestCapsule =
         capsules.isNotEmpty ? capsules.first : null;
     final userName = user.nickname ?? user.username;
     final flameBrightness = (user.flameBrightness * 100).round();
@@ -269,7 +284,6 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             'unlocked_achievements': unlocked.length,
             'flame_brightness': '$flameBrightness%',
           },
-          templateId: 'cosmic',
         ),
       ),
       _PosterPreset(
@@ -354,12 +368,10 @@ class _PosterPresetTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        width: 176,
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -396,8 +408,9 @@ class _PosterPresetTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: DS.bodyMedium.copyWith(
                 color: DS.textPrimary,
-                fontWeight: DS.fontWeightBold,
-              ),
+                  fontWeight: DS.fontWeightBold,
+                  height: 1.2,
+                ),
             ),
             const SizedBox(height: DS.spacing6),
             Text(
@@ -406,14 +419,13 @@ class _PosterPresetTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
-                height: 1.4,
-              ),
+                  height: 1.35,
+                ),
             ),
           ],
         ),
       ),
     );
-  }
 }
 
 class _PosterPreviewCard extends StatelessWidget {
@@ -426,8 +438,7 @@ class _PosterPreviewCard extends StatelessWidget {
   final File? previewFile;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -457,7 +468,6 @@ class _PosterPreviewCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PosterStudioHero extends StatelessWidget {
@@ -527,7 +537,7 @@ class _PosterStudioHero extends StatelessWidget {
                       color: DS.textPrimary,
                     ) ??
                 TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   height: 1.15,
                   fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
@@ -542,10 +552,10 @@ class _PosterStudioHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Wrap(
+          const Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: const [
+            children: [
               _HeroChip(label: '4 种核心海报'),
               _HeroChip(label: '实时预览'),
               _HeroChip(label: '下载图片'),
@@ -570,8 +580,7 @@ class _HeroBadge extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing8,
@@ -600,7 +609,6 @@ class _HeroBadge extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _HeroChip extends StatelessWidget {
@@ -609,8 +617,7 @@ class _HeroChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -627,7 +634,6 @@ class _HeroChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _SelectedTemplateCaption extends StatelessWidget {

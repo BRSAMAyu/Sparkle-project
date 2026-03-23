@@ -11,7 +11,7 @@ import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/widgets/ai_rich_text.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
@@ -1903,9 +1903,9 @@ class _StreamingBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Flexible(
-              child: AiRichText(
-                key: ValueKey('stream_$content'),
+              child: SparkleMarkdown(
                 content: content,
+                isStreaming: true,
                 textColor: textColor,
                 codeBackgroundColor: isDark
                     ? DS.neutral700

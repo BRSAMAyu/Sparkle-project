@@ -40,7 +40,7 @@ class LearningReportShareCardFactory {
                     color: Colors.white.withValues(alpha: 0.72),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.insights_rounded,
                     color: Color(0xFF3F6FD9),
                   ),
@@ -67,9 +67,9 @@ class LearningReportShareCardFactory {
                 payload.subtitle!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeXs,
-                  color: const Color(0xFF516B93),
+                  color: Color(0xFF516B93),
                   height: 1.35,
                 ),
               ),

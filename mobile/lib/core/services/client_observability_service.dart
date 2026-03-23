@@ -65,13 +65,11 @@ class ClientObservabilityService {
     }
   }
 
-  Future<void> trackScreenView(String routeName) {
-    return recordEvent(
+  Future<void> trackScreenView(String routeName) => recordEvent(
       eventType: 'screen_view',
       category: 'navigation',
       route: routeName,
     );
-  }
 
   Future<void> trackInteraction(
     String interactionName, {
@@ -79,8 +77,7 @@ class ClientObservabilityService {
     String status = 'ok',
     int? durationMs,
     Map<String, dynamic>? metadata,
-  }) {
-    return recordEvent(
+  }) => recordEvent(
       eventType: 'interaction',
       category: 'ux',
       route: route,
@@ -91,7 +88,6 @@ class ClientObservabilityService {
         ...?metadata,
       },
     );
-  }
 
   Future<void> trackApiRequest({
     required String path,
@@ -100,8 +96,7 @@ class ClientObservabilityService {
     required int durationMs,
     int? statusCode,
     String? message,
-  }) {
-    return recordEvent(
+  }) => recordEvent(
       eventType: 'api_request',
       category: 'network',
       route: path,
@@ -114,14 +109,12 @@ class ClientObservabilityService {
         'message': message,
       },
     );
-  }
 
   Future<void> trackCrash(
     Object error,
     StackTrace stackTrace, {
     String? context,
-  }) {
-    return recordEvent(
+  }) => recordEvent(
       eventType: 'crash',
       category: 'stability',
       status: 'error',
@@ -132,7 +125,6 @@ class ClientObservabilityService {
         'stack_trace': stackTrace.toString(),
       },
     );
-  }
 
   void _scheduleFlush() {
     if (_flushScheduled || _isFlushing) {
