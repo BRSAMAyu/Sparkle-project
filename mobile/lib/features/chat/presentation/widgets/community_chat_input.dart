@@ -18,6 +18,7 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 /// 社群专用输入组件
 /// 布局：左侧 + 按钮，点击展开上方工具栏，支持左右滑动切换模式
 enum InputMode { text, voice, share }
+enum _CommunityVoiceMode { tapToggle, holdToTalk }
 
 class CommunityChatInput extends ConsumerStatefulWidget {
   const CommunityChatInput({
@@ -53,6 +54,10 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   bool _isSending = false;
   bool _isButtonPressed = false;
   bool _isFocusChanging = false;
+  bool _voiceAutoStart = false;
+  bool _isVoiceRecording = false;
+  String _voiceDraftText = '';
+  _CommunityVoiceMode _voiceMode = _CommunityVoiceMode.holdToTalk;
   // 输入模式状态
   InputMode _inputMode = InputMode.text;
   // 工具栏是否展开
@@ -202,17 +207,67 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
     setState(() => _toolbarExpanded = !_toolbarExpanded);
   }
 
-  void _switchToVoiceMode() {
+  void _switchToTextMode() {
+    setState(() {
+      _inputMode = InputMode.text;
+      _voiceAutoStart = false;
+      _isVoiceRecording = false;
+    });
+  }
+
+  void _startToolbarVoiceRecording() {
     if (!widget.enabled) return;
     setState(() {
       _inputMode = InputMode.voice;
       _toolbarExpanded = false;
+      _voiceMode = _CommunityVoiceMode.tapToggle;
+      _voiceAutoStart = true;
+      _voiceDraftText = '';
     });
     _focusNode.unfocus();
   }
 
-  void _switchToTextMode() {
-    setState(() => _inputMode = InputMode.text);
+  void _appendVoiceTextToComposer(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      _switchToTextMode();
+      return;
+    }
+    final current = _controller.text.trim();
+    final merged = current.isEmpty ? trimmed : '$current\n$trimmed';
+    setState(() {
+      _controller.text = merged;
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+      _voiceDraftText = '';
+      _voiceAutoStart = false;
+      _isVoiceRecording = false;
+      _inputMode = InputMode.text;
+    });
+    widget.onTextChanged?.call(_controller.text);
+    if (!_isFocusChanging) {
+      _isFocusChanging = true;
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted && _focusNode.canRequestFocus) {
+          _focusNode.requestFocus();
+        }
+        _isFocusChanging = false;
+      });
+    }
+  }
+
+  void _sendVoiceTextDirectly(String text) {
+    final trimmed = text.trim();
+    setState(() {
+      _voiceDraftText = '';
+      _voiceAutoStart = false;
+      _isVoiceRecording = false;
+      _inputMode = InputMode.text;
+    });
+    if (trimmed.isEmpty) return;
+    widget.onSend?.call(trimmed, replyToId: widget.quotedMessage?.id);
+    widget.onCancelQuote?.call();
   }
 
   @override
@@ -229,6 +284,9 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         children: [
           // 引用预览
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
+          if (_inputMode == InputMode.voice &&
+              (_isVoiceRecording || _voiceDraftText.trim().isNotEmpty))
+            _buildVoicePreview(context, isDark),
 
           // === 可展开的工具栏 ===
           if (_toolbarExpanded) _buildToolbar(context, isDark),
@@ -281,7 +339,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
               _ToolbarButton(
                 icon: Icons.mic_none,
                 label: context.l10n.chatInputVoice,
-                onPressed: widget.enabled ? _switchToVoiceMode : null,
+                onPressed: widget.enabled ? _startToolbarVoiceRecording : null,
                 isDark: isDark,
               ),
               // 分享按钮（仅当有分享回调时显示）
@@ -511,28 +569,57 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
               },
               child: Center(
                 child: VoiceInputButton(
-                  size: 56,
-                  onTranscription: (text) {
-                    _controller.text = text;
-                    _switchToTextMode();
-                    if (!_isFocusChanging) {
-                      _isFocusChanging = true;
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted && _focusNode.canRequestFocus) {
-                          _focusNode.requestFocus();
-                        }
-                        _isFocusChanging = false;
-                      });
+                  size: _voiceMode == _CommunityVoiceMode.tapToggle ? 56 : 72,
+                  interactionMode:
+                      _voiceMode == _CommunityVoiceMode.tapToggle
+                      ? VoiceInputInteractionMode.tapToggle
+                      : VoiceInputInteractionMode.holdToTalk,
+                  autoStart: _voiceAutoStart,
+                  showGestureHints: true,
+                  onTranscription: (_) {},
+                  onLiveTranscription: (text) {
+                    if (!mounted) return;
+                    setState(() {
+                      _voiceDraftText = text;
+                    });
+                  },
+                  onRecordingFinished: (text, action) {
+                    switch (action) {
+                      case VoiceReleaseAction.cancel:
+                        setState(() {
+                          _voiceDraftText = '';
+                        });
+                        _switchToTextMode();
+                        break;
+                      case VoiceReleaseAction.send:
+                        _sendVoiceTextDirectly(text);
+                        break;
+                      case VoiceReleaseAction.commit:
+                        _appendVoiceTextToComposer(text);
+                        break;
                     }
+                  },
+                  onDraftCancelled: () {
+                    if (!mounted) return;
+                    setState(() {
+                      _voiceDraftText = '';
+                      _voiceAutoStart = false;
+                      _isVoiceRecording = false;
+                    });
                   },
                   onError: (error) => AppFeedback.error(context, error),
                   onRecordingStarted: () {
-                    _isFocusChanging = true;
-                    _focusNode.unfocus();
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      if (mounted) {
-                        _isFocusChanging = false;
-                      }
+                    if (!mounted) return;
+                    setState(() {
+                      _isVoiceRecording = true;
+                      _voiceAutoStart = false;
+                    });
+                  },
+                  onRecordingStopped: () {
+                    if (!mounted) return;
+                    setState(() {
+                      _isVoiceRecording = false;
+                      _voiceAutoStart = false;
                     });
                   },
                 ),
@@ -621,6 +708,69 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
           // 占位保持对称 - 固定不动
           const SizedBox(width: DS.touchTargetMinSize),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVoicePreview(BuildContext context, bool isDark) {
+    final text = _voiceDraftText.trim();
+    final helper = _voiceMode == _CommunityVoiceMode.tapToggle
+        ? (_isVoiceRecording ? '点击麦克风结束录音' : '录音结束后文字会进入输入框')
+        : (_isVoiceRecording ? '按住录音，上滑发送 / 左上滑撤回，松手进入输入框' : '长按开始语音输入');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing12,
+        DS.spacing4,
+        DS.spacing12,
+        DS.spacing4,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: isDark ? DS.surfaceSecondary : DS.surfacePanel,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: DS.brandPrimary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _isVoiceRecording ? Icons.graphic_eq_rounded : Icons.notes_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.brandPrimary,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    helper,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (text.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                text,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: DS.fontSizeSm,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

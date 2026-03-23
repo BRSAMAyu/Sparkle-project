@@ -43,6 +43,17 @@ class CapsuleExecutionPlan:
 class ModelSelectionStrategy:
     """根据用户偏好和执行模式为胶囊生成选择模型计划。"""
 
+    _BATCH_NON_THINKING_MODELS = [
+        "glm_4_5_air_batch",
+        "glm_4_6_batch",
+        "glm_4_7_no_thinking",
+    ]
+    _BATCH_THINKING_MODELS = [
+        "glm_4_7_thinking",
+        "glm_4_7_no_thinking",
+        "glm_4_6_batch",
+    ]
+
     @staticmethod
     def select_depth_level(depth_preference: float) -> DepthLevel:
         if depth_preference < 0.3:
@@ -89,11 +100,37 @@ class ModelSelectionStrategy:
             )
 
         if use_thinking:
+            if execution_mode == "glm_batch":
+                return CapsuleExecutionPlan(
+                    primary_model="glm_4_7_thinking",
+                    fallback_models=["glm_4_7_no_thinking", "glm_4_6_batch"],
+                    depth_level=depth_level,
+                    thinking_mode=True,
+                    execution_mode=execution_mode,
+                )
             return CapsuleExecutionPlan(
                 primary_model="glm_4_7_thinking",
                 fallback_models=["glm_4_7_flash_thinking", "deepseek_reason"],
                 depth_level=depth_level,
                 thinking_mode=True,
+                execution_mode=execution_mode,
+            )
+
+        if execution_mode == "glm_batch":
+            if depth_level == DepthLevel.SHALLOW:
+                primary = "glm_4_5_air_batch"
+                fallbacks = ["glm_4_6_batch", "glm_4_7_no_thinking"]
+            elif depth_level == DepthLevel.MEDIUM:
+                primary = "glm_4_6_batch"
+                fallbacks = ["glm_4_5_air_batch", "glm_4_7_no_thinking"]
+            else:
+                primary = "glm_4_7_no_thinking"
+                fallbacks = ["glm_4_6_batch", "glm_4_5_air_batch"]
+            return CapsuleExecutionPlan(
+                primary_model=primary,
+                fallback_models=fallbacks,
+                depth_level=depth_level,
+                thinking_mode=False,
                 execution_mode=execution_mode,
             )
 
@@ -116,12 +153,16 @@ class ModelSelectionStrategy:
     def _normalize_explicit_model(model_key: str | None) -> tuple[str, list[str], bool] | None:
         if not model_key:
             return None
+        if model_key == "glm_4_5_air_batch":
+            return model_key, ["glm_4_6_batch", "glm_4_7_no_thinking"], False
+        if model_key == "glm_4_6_batch":
+            return model_key, ["glm_4_5_air_batch", "glm_4_7_no_thinking"], False
         if model_key == "glm_4_7_thinking":
-            return model_key, ["glm_4_7_flash_thinking", "deepseek_reason"], True
+            return model_key, ["glm_4_7_no_thinking", "glm_4_6_batch"], True
         if model_key == "glm_4_7_flash_thinking":
             return model_key, ["glm_4_7_thinking", "deepseek_reason"], True
         if model_key == "glm_4_7_no_thinking":
-            return model_key, ["glm_4_7_flash_no_thinking", "deepseek_chat"], False
+            return model_key, ["glm_4_6_batch", "glm_4_5_air_batch"], False
         if model_key == "glm_4_7_flash_no_thinking":
             return model_key, ["glm_4_7_no_thinking", "deepseek_chat"], False
         if model_key == "deepseek_reason":

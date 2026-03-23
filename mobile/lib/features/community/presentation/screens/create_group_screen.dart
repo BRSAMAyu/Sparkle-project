@@ -63,17 +63,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
         ),
-        title: const Text('Discard Group?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to discard them?',
-        ),
+        title: const Text('放弃创建社群？'),
+        content: const Text('你有未保存的内容，确定要放弃这次创建吗？'),
         actions: [
           SparkleButton.ghost(
-            label: 'Keep Editing',
+            label: '继续编辑',
             onPressed: () => Navigator.of(context).pop(false),
           ),
           SparkleButton.destructive(
-            label: 'Discard',
+            label: '放弃',
             onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
@@ -98,7 +96,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     if (_type == GroupType.sprint && _deadline == null) {
       AppFeedback.info(
         context,
-        'Please select a deadline for the sprint group',
+        '请选择冲刺社群的截止时间',
       );
       return;
     }
@@ -132,7 +130,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     } catch (e) {
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
-        AppFeedback.error(context, 'Error creating group: $e');
+        AppFeedback.error(context, '创建社群失败: $e');
       }
     } finally {
       if (mounted) {
@@ -162,9 +160,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/community'),
             ),
-            title: const Text('Create Group'),
+            title: const Text('创建社群'),
           ),
           body: ContentConstraint(
             child: SingleChildScrollView(
@@ -177,15 +176,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
-                        labelText: 'Group Name',
-                        hintText: 'e.g., Daily Algorithm Squad',
+                        labelText: '社群名称',
+                        hintText: '例如：每日算法冲刺队',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a name';
+                          return '请输入社群名称';
                         }
-                        if (value.length < 2) return 'Name too short';
+                        if (value.length < 2) return '名称至少 2 个字符';
                         return null;
                       },
                     ),
@@ -244,7 +243,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     TextFormField(
                       controller: _descController,
                       decoration: const InputDecoration(
-                        labelText: 'Description',
+                        labelText: '社群介绍',
                         border: OutlineInputBorder(),
                         alignLabelWithHint: true,
                       ),
@@ -254,8 +253,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     TextFormField(
                       controller: _tagsController,
                       decoration: const InputDecoration(
-                        labelText: 'Focus Tags',
-                        hintText: 'Separate by comma, e.g., Math, CS, Exam',
+                        labelText: '主题标签',
+                        hintText: '用逗号分隔，例如：数学, 算法, 考研',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -264,15 +263,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       const Divider(),
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        'Sprint Settings',
+                        '冲刺设置',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: DS.spacing16),
                       ListTile(
-                        title: const Text('Deadline'),
+                        title: const Text('截止日期'),
                         subtitle: Text(
                           _deadline == null
-                              ? 'Select Date'
+                              ? '选择日期'
                               : _deadline.toString().split(' ')[0],
                         ),
                         trailing: const Icon(Icons.calendar_today),
@@ -306,14 +305,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       TextFormField(
                         controller: _goalController,
                         decoration: const InputDecoration(
-                          labelText: 'Sprint Goal',
-                          hintText: 'e.g., Complete 50 LeetCode problems',
+                          labelText: '冲刺目标',
+                          hintText: '例如：两周内完成 50 道 LeetCode',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (_type == GroupType.sprint &&
                               (value == null || value.trim().isEmpty)) {
-                            return 'Please enter a goal for sprint';
+                            return '请输入冲刺目标';
                           }
                           return null;
                         },
@@ -321,7 +320,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     ],
                     const SizedBox(height: DS.spacing32),
                     SparkleButton(
-                      label: 'Create Group',
+                      label: _isSubmitting ? '创建中...' : '创建社群',
                       onPressed: _isSubmitting ? null : _submit,
                       loading: _isSubmitting,
                       expand: true,

@@ -229,10 +229,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final experience = ExperienceProfiles.assistantFlow;
+    const experience = ExperienceProfiles.assistantFlow;
     final chatState = ref.watch(chatProvider);
     final aiSystemPreferences =
-        ref.watch(transparencyPreferencesProvider).valueOrNull ??
+        ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
             _defaultAiSystemPreferences;
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -646,8 +646,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     children: chatState.attachedFiles
                                         .map(
                                           (file) => InputChip(
+                                            avatar: Icon(
+                                              _attachmentStatusIcon(file.status),
+                                              size: 16,
+                                              color: _attachmentStatusColor(
+                                                file.status,
+                                              ),
+                                            ),
                                             label: Text(
-                                              file.fileName,
+                                              _attachmentChipLabel(file),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             backgroundColor: Color.alphaBlend(
@@ -963,13 +970,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     BoxConstraints constraints,
   ) {
     final aiSystemPreferences =
-        ref.watch(transparencyPreferencesProvider).valueOrNull ??
+        ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
             _defaultAiSystemPreferences;
     final isCompactMobile = _isCompactMobileContext(context);
     final showExpandedContext = !isCompactMobile || _showContextControls;
     final showAiSystemPanel = aiSystemPreferences.enabled;
     final currentMode = ref.watch(chatModeProvider);
     final reasoningMode = ref.watch(aiReasoningModeProvider);
+    final showChatContextToggle = ref.watch(showChatContextToggleProvider);
+    final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
     final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
@@ -982,13 +991,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isCompactMobile)
+          if (isCompactMobile && showChatContextToggle)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing12,
                 0,
                 DS.spacing12,
-                DS.spacing8,
+                DS.spacing4,
               ),
               child: _ChatContextToggle(
                 isExpanded: _showContextControls,
@@ -1042,27 +1051,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               index: 0,
               child: PlanSelectorPill(),
             ),
-            const SizedBox(height: DS.spacing18),
+            const SizedBox(height: DS.spacing10),
             const SparkleStaggerItem(
               index: 1,
               child: AiReasoningModePill(),
             ),
-            const SizedBox(height: DS.spacing18),
+            const SizedBox(height: DS.spacing10),
             const SparkleStaggerItem(
               index: 2,
               child: ChatModeSelectorPill(),
             ),
+            const SizedBox(height: DS.spacing4),
           ],
           SparkleExitTransition(
-            visible: !chatState.hasActiveRun,
+            visible: !chatState.hasActiveRun && showChatPredictionDock,
             maintainSize: false,
-            child: !chatState.hasActiveRun
+            child: !chatState.hasActiveRun && showChatPredictionDock
                 ? Padding(
                     padding: const EdgeInsets.only(
                       left: DS.spacing16,
                       right: DS.spacing16,
-                      top: DS.spacing12,
-                      bottom: DS.spacing10,
+                      top: DS.spacing2,
+                      bottom: DS.spacing8,
                     ),
                     child: SparkleStaggerItem(
                       index: 3,
@@ -1087,11 +1097,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               }
             },
             onFileUploaded: (StoredFile file) {
-              if (file.status != 'processed') {
-                AppFeedback.info(context, context.l10n.chatFileProcessing);
-                return;
-              }
               ref.read(chatProvider.notifier).addAttachment(file);
+              final status = file.status.trim().toLowerCase();
+              if (status.isNotEmpty && status != 'processed') {
+                AppFeedback.info(
+                  context,
+                  '${file.fileName} 已添加，当前状态：${_attachmentStatusText(file.status)}',
+                );
+              }
             },
             onSend: (text, {replyToId}) => unawaited(
               ref.read(chatProvider.notifier).sendMessage(text),
@@ -1123,6 +1136,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  String _attachmentChipLabel(StoredFile file) {
+    final statusText = _attachmentStatusText(file.status);
+    if (statusText.isEmpty) {
+      return file.fileName;
+    }
+    return '${file.fileName} · $statusText';
+  }
+
+  String _attachmentStatusText(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'processed':
+        return '已就绪';
+      case 'uploaded':
+      case 'processing':
+        return '处理中';
+      case 'failed':
+        return '失败';
+      default:
+        return status.trim();
+    }
+  }
+
+  IconData _attachmentStatusIcon(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'processed':
+        return Icons.check_circle_rounded;
+      case 'uploaded':
+      case 'processing':
+        return Icons.hourglass_top_rounded;
+      case 'failed':
+        return Icons.error_rounded;
+      default:
+        return Icons.insert_drive_file_rounded;
+    }
+  }
+
+  Color _attachmentStatusColor(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'processed':
+        return DS.semanticSuccess;
+      case 'uploaded':
+      case 'processing':
+        return DS.warning;
+      case 'failed':
+        return DS.semanticError;
+      default:
+        return DS.textSecondary;
+    }
+  }
+
   bool _isCompactMobileContext(BuildContext context) {
     final media = MediaQuery.of(context);
     return media.orientation == Orientation.portrait && media.size.width < 430;
@@ -1138,7 +1201,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         builder: (sheetContext) => Consumer(
           builder: (context, ref, _) {
             final preferences =
-                ref.watch(transparencyPreferencesProvider).valueOrNull ??
+                ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
                     _defaultAiSystemPreferences;
             final notifier =
                 ref.read(transparencyPreferencesNotifierProvider.notifier);

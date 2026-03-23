@@ -26,7 +26,13 @@ class FocusMainScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.go('/home');
+          },
         ),
         title: Text(context.l10n.focusSelectTaskTitle),
       ),
@@ -120,7 +126,7 @@ class FocusMainScreen extends ConsumerWidget {
                   );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = dummyTask;
-                  context.push('/tasks/${dummyTask.id}/execute');
+                  context.push('/tasks/${dummyTask.id}/execute?origin=focus');
                 },
                 icon: const Icon(Icons.play_circle_outline),
                 label: context.l10n.focusStartNow,
@@ -173,7 +179,7 @@ class FocusMainScreen extends ConsumerWidget {
               );
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;
-              context.push('/tasks/${task.id}/execute');
+              context.push('/tasks/${task.id}/execute?origin=focus');
             },
           ),
         ),
@@ -205,7 +211,7 @@ class FocusMainScreen extends ConsumerWidget {
             );
             // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
             ref.read(activeTaskProvider.notifier).state = dummyTask;
-            context.push('/tasks/${dummyTask.id}/execute');
+            context.push('/tasks/${dummyTask.id}/execute?origin=focus');
           },
         ),
       );

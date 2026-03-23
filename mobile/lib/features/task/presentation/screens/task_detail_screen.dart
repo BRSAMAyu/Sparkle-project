@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +13,7 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -520,59 +520,18 @@ class _TaskDetailView extends ConsumerWidget {
   Widget _buildGuideSection(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
+          color: DS.surfaceSecondary,
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.neutral200),
           boxShadow: DS.shadowSm,
         ),
-        child: MarkdownBody(
-          data: task.guideContent ?? context.l10n.taskGuideEmpty,
-          styleSheet: MarkdownStyleSheet(
-            h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral900,
-                ),
-            h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral800,
-                ),
-            h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral700,
-                ),
-            p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.neutral700,
-                  height: 1.6,
-                ),
-            listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.primaryBase,
-                ),
-            code: TextStyle(
-              backgroundColor: DS.neutral100,
-              color: DS.primaryDark,
-              fontFamily: 'monospace',
-              fontSize: DS.fontSizeSm,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: DS.neutral50,
-              borderRadius: DS.borderRadius8,
-              border: Border.all(color: DS.neutral200),
-            ),
-            blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.neutral600,
-                  fontStyle: FontStyle.italic,
-                ),
-            blockquoteDecoration: BoxDecoration(
-              color: DS.neutral50,
-              borderRadius: DS.borderRadius8,
-              border: Border(
-                left: BorderSide(
-                  color: DS.primaryBase,
-                  width: 4,
-                ),
-              ),
-            ),
-          ),
+        child: AiRichText(
+          content: task.guideContent ?? context.l10n.taskGuideEmpty,
+          textColor: DS.textPrimary,
+          codeBackgroundColor: DS.neutral100,
+          linkColor: DS.primaryBase,
+          fontSize: DS.fontSizeBase,
+          height: 1.6,
         ),
       );
 

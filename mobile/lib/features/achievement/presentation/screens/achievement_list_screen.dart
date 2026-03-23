@@ -31,19 +31,25 @@ class AchievementFilterOptions {
     this.status,
   });
 
+  static const Object _unset = Object();
+
   final String? category;
   final AchievementRarity? rarity;
   final AchievementStatus? status;
 
   AchievementFilterOptions copyWith({
-    String? category,
-    AchievementRarity? rarity,
-    AchievementStatus? status,
+    Object? category = _unset,
+    Object? rarity = _unset,
+    Object? status = _unset,
   }) =>
       AchievementFilterOptions(
-        category: category ?? this.category,
-        rarity: rarity ?? this.rarity,
-        status: status ?? this.status,
+        category: identical(category, _unset) ? this.category : category as String?,
+        rarity: identical(rarity, _unset)
+            ? this.rarity
+            : rarity as AchievementRarity?,
+        status: identical(status, _unset)
+            ? this.status
+            : status as AchievementStatus?,
       );
 
   bool get hasFilters =>
@@ -618,24 +624,20 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         sliver: SliverLayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.crossAxisExtent;
-            final crossAxisCount = width < 720
-                ? 2
-                : width < 1100
-                    ? 3
-                    : 4;
-            final mainAxisExtent = width < 420
-                ? 238.0
-                : width < 720
-                    ? 246.0
-                    : width < 1100
-                        ? 252.0
-                        : 260.0;
+            final crossAxisSpacing = width < 360 ? DS.spacing8 : DS.spacing12;
+            final mainAxisSpacing = width < 360 ? DS.spacing8 : DS.spacing12;
+            const crossAxisCount = 2;
+            final mainAxisExtent = width < 360
+                ? 188.0
+                : width < 430
+                    ? 204.0
+                    : 220.0;
 
             return SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                mainAxisSpacing: DS.spacing12,
-                crossAxisSpacing: DS.spacing12,
+                mainAxisSpacing: mainAxisSpacing,
+                crossAxisSpacing: crossAxisSpacing,
                 mainAxisExtent: mainAxisExtent,
               ),
               delegate: SliverChildBuilderDelegate(

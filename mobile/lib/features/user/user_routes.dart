@@ -15,6 +15,7 @@ import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.
 import 'package:sparkle/features/user/presentation/screens/learning_mode_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/poster_studio_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/security_log_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/session_management_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/social_accounts_screen.dart';
@@ -29,6 +30,7 @@ class UserRoutes {
   static const String editProfile = '/profile/edit';
   static const String settings = '/profile/settings';
   static const String persona = '/profile/persona';
+  static const String posterStudio = '/profile/posters';
   static const String systemUpdates = '/profile/system-updates';
   static const String passwordReset = '/profile/password-reset';
   static const String memorySettings = '/profile/memory-settings';
@@ -81,6 +83,19 @@ class UserRoutes {
                 trackOverride: BgmTrack.profile,
               ),
               child: const UnifiedSettingsScreen(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: posterStudio,
+          name: 'posterStudio',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.profile,
+              ),
+              child: const PosterStudioScreen(),
             ),
           ),
         ),

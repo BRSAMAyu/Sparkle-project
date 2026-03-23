@@ -16,9 +16,12 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/file/file.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   const GroupChatBubble({
@@ -956,8 +959,20 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           .adoptResource(sharedResourceId: sharedResourceId);
       if (!context.mounted) return;
       AppFeedback.success(context, '已采纳，跳转中...');
+      final entityCard = result['entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': result['entity_card'] as Map<String, dynamic>},
+              fallbackType: resourceType,
+            )
+          : null;
       final newId = result['new_resource_id'] as String;
-      final route = resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId';
+      if (resourceType == 'plan') {
+        unawaited(ref.read(planListProvider.notifier).refresh());
+      } else {
+        unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      }
+      final route = entityCard?.detailRoute ??
+          (resourceType == 'plan' ? '/plans/$newId' : '/tasks/$newId');
       unawaited(context.push(route));
     } catch (e) {
       if (!context.mounted) return;

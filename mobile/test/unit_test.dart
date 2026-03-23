@@ -56,6 +56,34 @@ void main() {
       expect(fromJson.latencyMs, 150);
       expect(fromJson.isCacheHit, true);
     });
+
+    test('ChatMessageModel.fromJson normalizes uppercase and alias roles', () {
+      final upperUser = ChatMessageModel.fromJson({
+        'id': '1',
+        'conversation_id': 'conv-1',
+        'role': 'USER',
+        'content': 'hello',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      final toolRole = ChatMessageModel.fromJson({
+        'id': '2',
+        'conversation_id': 'conv-1',
+        'role': 'tool',
+        'content': 'tool result',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      final unknownRole = ChatMessageModel.fromJson({
+        'id': '3',
+        'conversation_id': 'conv-1',
+        'role': 'SOMETHING_ODD',
+        'content': 'fallback',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      expect(upperUser.role, MessageRole.user);
+      expect(toolRole.role, MessageRole.assistant);
+      expect(unknownRole.role, MessageRole.assistant);
+    });
   });
 
   group('Workflow Integration Tests', () {

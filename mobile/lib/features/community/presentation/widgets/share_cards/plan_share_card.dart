@@ -210,7 +210,9 @@ class PlanShareCard extends StatelessWidget {
                     SizedBox(height: DS.md),
 
                     // Stats row
-                    Row(
+                    Wrap(
+                      spacing: DS.md,
+                      runSpacing: DS.sm,
                       children: [
                         if (completedTasks != null && totalTasks != null)
                           _buildStat(
@@ -219,7 +221,6 @@ class PlanShareCard extends StatelessWidget {
                             Icons.task_alt,
                           ),
                         if (milestones != null && milestones! > 0) ...[
-                          SizedBox(width: DS.md),
                           _buildStat(
                             '里程碑',
                             '$milestones',
@@ -227,7 +228,6 @@ class PlanShareCard extends StatelessWidget {
                           ),
                         ],
                         if (deadline != null) ...[
-                          SizedBox(width: DS.md),
                           _buildStat(
                             '截止',
                             _formatDeadline(deadline!),
@@ -240,10 +240,16 @@ class PlanShareCard extends StatelessWidget {
                       SizedBox(height: DS.sm),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                          label: const Text('采纳计划'),
-                          onPressed: onAdopt,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 160),
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
+                            label: const Text(
+                              '采纳计划',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onPressed: onAdopt,
+                          ),
                         ),
                       ),
                     ],

@@ -53,7 +53,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 title: Text(context.l10n.communitySearchUsers),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/community/users/search');
+                  context.pushNamed('userSearch');
                 },
               ),
               ListTile(
@@ -61,7 +61,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 title: Text(context.l10n.communitySearchGroups),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/community/groups/discover');
+                  context.pushNamed('groupDiscover');
                 },
               ),
             ],
@@ -87,7 +87,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 subtitle: Text(context.l10n.communityDiscoverFriendsHint),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/community/friends/discover');
+                  context.pushNamed('friendsDiscover');
                 },
               ),
               ListTile(
@@ -96,7 +96,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 subtitle: Text(context.l10n.communityCreateGroupHint),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/community/groups/create');
+                  context.pushNamed('createGroup');
                 },
               ),
             ],
@@ -114,7 +114,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       _showAddOptions();
     } else {
       // Groups tab - navigate to group creation
-      context.push('/community/groups/create');
+      context.pushNamed('createGroup');
     }
   }
 
@@ -208,7 +208,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.bookmark_outline),
-              onPressed: () => context.push('/community/favorites'),
+              onPressed: () => context.pushNamed('favorites'),
             ),
           ),
           Tooltip(

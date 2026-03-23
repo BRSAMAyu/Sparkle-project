@@ -319,12 +319,14 @@ class AchievementCard extends StatelessWidget {
     final isUnlocked = achievement.isUnlocked;
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
-    final rewardPreview = _rewardPreviewLabels();
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -363,9 +365,10 @@ class AchievementCard extends StatelessWidget {
                 ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildIcon(size: 40),
-            const SizedBox(width: DS.spacing12),
+            _buildIcon(size: 36),
+            const SizedBox(width: DS.spacing10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,22 +417,8 @@ class AchievementCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  if (rewardPreview.isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing6),
-                    Wrap(
-                      spacing: DS.spacing6,
-                      runSpacing: DS.spacing6,
-                      children: [
-                        _buildToneChip(
-                          label: rewardPreview.first,
-                          color: rarityColor,
-                          icon: Icons.auto_awesome_rounded,
-                        ),
-                      ],
-                    ),
-                  ],
                   if (showProgress && !isUnlocked) ...[
-                    const SizedBox(height: DS.spacing6),
+                    const SizedBox(height: DS.spacing4),
                     _buildCompactProgressBar(),
                   ],
                 ],
@@ -1210,7 +1199,7 @@ class AchievementGridCard extends StatelessWidget {
     final card = AchievementCard(
       achievement: achievement,
       onTap: onTap,
-      style: AchievementCardStyle.showcase,
+      style: AchievementCardStyle.standard,
       showProgress: showProgress,
     );
 

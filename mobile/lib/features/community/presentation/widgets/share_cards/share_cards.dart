@@ -9,6 +9,8 @@ export 'task_share_card.dart';
 export 'plan_share_card.dart';
 export 'capsule_share_card.dart';
 export 'node_share_card.dart';
+export 'achievement_share_card.dart';
+export 'learning_report_share_card.dart';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -17,6 +19,8 @@ import 'task_share_card.dart';
 import 'plan_share_card.dart';
 import 'capsule_share_card.dart';
 import 'node_share_card.dart';
+import 'achievement_share_card.dart';
+import 'learning_report_share_card.dart';
 
 /// Factory for creating share cards from content type
 class ShareCardFactory {
@@ -49,6 +53,16 @@ class ShareCardFactory {
           onTap: onTap,
         ),
       ShareableContentType.knowledgeNode => NodeShareCardFactory.fromPayload(
+          payload,
+          isCompact: isCompact,
+          onTap: onTap,
+        ),
+      ShareableContentType.achievement => AchievementShareCardFactory.fromPayload(
+          payload,
+          isCompact: isCompact,
+          onTap: onTap,
+        ),
+      ShareableContentType.learningReport => LearningReportShareCardFactory.fromPayload(
           payload,
           isCompact: isCompact,
           onTap: onTap,

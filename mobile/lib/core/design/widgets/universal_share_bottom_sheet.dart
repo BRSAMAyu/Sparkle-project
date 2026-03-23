@@ -110,6 +110,8 @@ class _UniversalShareBottomSheetState
 
   late String _selectedTemplateId;
   late UniversalSharePrivacySettings _privacySettings;
+  late List<ShareCaptionOption> _captionOptions;
+  int _selectedCaptionIndex = 0;
 
   bool _showPrivacySettings = false;
 
@@ -118,6 +120,7 @@ class _UniversalShareBottomSheetState
     super.initState();
     _selectedTemplateId = widget.payload.templateId;
     _privacySettings = widget.payload.privacySettings;
+    _captionOptions = _shareService.buildCaptionOptions(widget.payload);
     _initializeAndPrepare();
   }
 
@@ -320,6 +323,8 @@ class _UniversalShareBottomSheetState
                 // Preview
                 _buildPreview(),
                 const SizedBox(height: DS.lg),
+                _buildCaptionStudio(),
+                const SizedBox(height: DS.md),
 
                 // Share options
                 if (_isLoading)
@@ -682,6 +687,12 @@ class _UniversalShareBottomSheetState
             color: DS.brandPrimary,
             onTap: () => _shareToSystem(),
           ),
+          _buildShareOption(
+            icon: Icons.content_copy_rounded,
+            label: '复制分享文案',
+            color: const Color(0xFF8B6CEB),
+            onTap: () => _copySelectedCaption(),
+          ),
 
           // Community share
           _buildShareOption(
@@ -708,6 +719,77 @@ class _UniversalShareBottomSheetState
           ),
         ],
       );
+
+  Widget _buildCaptionStudio() {
+    final selectedCaption = _captionOptions[_selectedCaptionIndex];
+
+    return Container(
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '分享文案',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightBold,
+              color: DS.textPrimary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            '除了海报，也给你准备好了适合发朋友圈、群聊和私聊的文案。',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: DS.sm),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: List.generate(_captionOptions.length, (index) {
+              final option = _captionOptions[index];
+              final selected = index == _selectedCaptionIndex;
+              return ChoiceChip(
+                selected: selected,
+                label: Text('${option.icon} ${option.title}'),
+                onSelected: (_) {
+                  setState(() {
+                    _selectedCaptionIndex = index;
+                  });
+                },
+              );
+            }),
+          ),
+          const SizedBox(height: DS.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.md),
+            decoration: BoxDecoration(
+              color: DS.surfacePrimary,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.border),
+            ),
+            child: Text(
+              selectedCaption.caption,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textPrimary,
+                height: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildShareOption({
     required IconData icon,
@@ -774,9 +856,16 @@ class _UniversalShareBottomSheetState
 
     final result = await _shareService.shareToSystem(
       imageFile: _shareCardFile!,
-      text: widget.payload.defaultShareMessage,
+      text: _captionOptions[_selectedCaptionIndex].caption,
     );
     _handleShareResult(result);
+  }
+
+  Future<void> _copySelectedCaption() async {
+    await _shareService.copyText(_captionOptions[_selectedCaptionIndex].caption);
+    if (mounted) {
+      AppFeedback.success(context, '分享文案已复制');
+    }
   }
 
   Future<void> _shareToCommunity() async {

@@ -453,32 +453,45 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     final data = result['data'] is Map
         ? Map<String, dynamic>.from(result['data'] as Map)
         : const <String, dynamic>{};
+    Future<void> goToChat() async {
+      if (!mounted) {
+        return;
+      }
+      final prompt =
+          (data['initial_message']?.toString() ?? _controller.text).trim();
+      final currentMode = ref.read(chatModeProvider);
+      final target = Uri(
+        path: '/chat',
+        queryParameters: <String, String>{
+          if (prompt.isNotEmpty) 'prompt': prompt,
+          'chat_mode': currentMode.apiValue,
+          'source': 'omnibar',
+        },
+      ).toString();
+      final router = GoRouter.of(context);
+      final currentPath = GoRouterState.of(context).uri.path;
+      if (currentPath == '/chat') {
+        router.go(target);
+      } else {
+        await router.push(target);
+      }
+    }
     switch (type) {
       case 'CHAT':
-        if (mounted) {
-          final prompt =
-              (data['initial_message']?.toString() ?? _controller.text).trim();
-          final currentMode = ref.read(chatModeProvider);
-          final target = Uri(
-            path: '/chat',
-            queryParameters: <String, String>{
-              if (prompt.isNotEmpty) 'prompt': prompt,
-              'chat_mode': currentMode.apiValue,
-              'source': 'omnibar',
-            },
-          ).toString();
-          context.go(target);
-        }
+        await goToChat();
         return;
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
+        await goToChat();
         return;
       case 'CAPSULE':
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
+        await goToChat();
         return;
       default:
+        await goToChat();
         return;
     }
   }

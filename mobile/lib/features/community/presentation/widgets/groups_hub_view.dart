@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -46,68 +47,135 @@ class GroupsHubView extends ConsumerWidget {
   }
 }
 
-class _CommunityHero extends StatelessWidget {
+class _CommunityHero extends StatefulWidget {
   const _CommunityHero({required this.directoryAsync});
 
   final AsyncValue<GroupDirectoryInfo> directoryAsync;
 
   @override
+  State<_CommunityHero> createState() => _CommunityHeroState();
+}
+
+class _CommunityHeroState extends State<_CommunityHero> {
+  static const _collapsedPrefsKey = 'community_group_entry_collapsed_v1';
+  bool _collapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollapsed();
+  }
+
+  Future<void> _loadCollapsed() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _collapsed = prefs.getBool(_collapsedPrefsKey) ?? false;
+    });
+  }
+
+  Future<void> _toggleCollapsed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final next = !_collapsed;
+    await prefs.setBool(_collapsedPrefsKey, next);
+    if (!mounted) return;
+    setState(() {
+      _collapsed = next;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final directory = directoryAsync.valueOrNull;
+    final directory = widget.directoryAsync.valueOrNull;
     final tags = directory?.availableTags.take(6).toList() ?? const <String>[];
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.accent,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: LinearGradient(
-                colors: [
-                  DS.brandPrimary,
-                  DS.warning.withValues(alpha: 0.88),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      DS.brandPrimary,
+                      DS.warning.withValues(alpha: 0.88),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Icon(Icons.hub_outlined, color: Colors.white),
               ),
-            ),
-            child: const Icon(Icons.hub_outlined, color: Colors.white),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '像逛校园社团一样发现社群',
-            style: theme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            directory == null
-                ? '浏览公开社群、按兴趣筛选、看看当前最火的小组，也能随时创建属于自己的学习社区。'
-                : '当前可浏览 ${directory.totalCount} 个公开社群，支持热度、最新、随机发现，还能按兴趣标签快速筛选。',
-            style: theme.bodyMedium?.copyWith(color: DS.textSecondary),
-          ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: tags
-                  .map(
-                    (tag) => SemanticPill(
-                      label: tag,
-                      tone: PillTone.brand,
-                      dense: true,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '社群入口',
+                      style: theme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  )
-                  .toList(),
+                    Text(
+                      directory == null
+                          ? '浏览或创建你的学习社群'
+                          : '当前可浏览 ${directory.totalCount} 个公开社群',
+                      style: theme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SparkleButton(
+                label: _collapsed ? '展开' : '收起',
+                variant: ButtonVariant.ghost,
+                size: ButtonSize.small,
+                onPressed: _toggleCollapsed,
+              ),
+            ],
+          ),
+          if (!_collapsed) ...[
+            const SizedBox(height: 12),
+            Text(
+              '像逛校园社团一样发现社群',
+              style: theme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ],
-          const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Text(
+              directory == null
+                  ? '浏览公开社群、按兴趣筛选，也能随时创建属于自己的学习社区。'
+                  : '支持热度、最新、随机发现。这块可以长期收起，不再占用大段空间。',
+              style: theme.bodyMedium?.copyWith(color: DS.textSecondary),
+            ),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: tags
+                    .map(
+                      (tag) => SemanticPill(
+                        label: tag,
+                        tone: PillTone.brand,
+                        dense: true,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            const SizedBox(height: 12),
+          ] else
+            const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -242,17 +310,40 @@ class _MyGroupsSection extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('我的社群', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Text('我的社群', style: Theme.of(context).textTheme.titleMedium),
+                const Spacer(),
+                SparkleButton(
+                  label: '查看全部',
+                  variant: ButtonVariant.ghost,
+                  size: ButtonSize.small,
+                  onPressed: () => context.push('/community/groups'),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
-            ...List.generate(groups.length, (index) {
+            ...List.generate(groups.length > 4 ? 4 : groups.length, (index) {
               final group = groups[index];
               return Padding(
                 padding: EdgeInsets.only(
-                  bottom: index == groups.length - 1 ? 0 : 12,
+                  bottom: index == (groups.length > 4 ? 3 : groups.length - 1)
+                      ? 0
+                      : 12,
                 ),
                 child: _JoinedGroupTile(group: group),
               );
             }),
+            if (groups.length > 4) ...[
+              const SizedBox(height: 12),
+              Text(
+                '还有 ${groups.length - 4} 个社群已折叠，避免占用过长空间。',
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+            ],
           ],
         );
       },

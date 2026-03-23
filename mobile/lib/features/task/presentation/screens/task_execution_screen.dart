@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -12,6 +11,7 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -44,7 +44,9 @@ LinearGradient _taskWarmActionGradient(BuildContext context) {
 }
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
-  const TaskExecutionScreen({super.key});
+  const TaskExecutionScreen({super.key, this.origin});
+
+  final String? origin;
 
   @override
   ConsumerState<TaskExecutionScreen> createState() =>
@@ -234,11 +236,19 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     showSensoryDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TaskFeedbackDialog(
+        builder: (context) => TaskFeedbackDialog(
         result: result,
         taskId: task?.id ?? '',
         onClose: () {
           Navigator.of(context).pop();
+          if (widget.origin == 'focus') {
+            context.go('/focus');
+            return;
+          }
+          if (context.canPop()) {
+            context.pop();
+            return;
+          }
           context.go(TaskRoutes.home);
         },
       ),
@@ -527,36 +537,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           bottomRight: Radius.circular(16),
                                         ),
                                       ),
-                                      child: MarkdownBody(
-                                        data: activeTask.guideContent ??
+                                      child: AiRichText(
+                                        content: activeTask.guideContent ??
                                             l10n.taskExecutionGuideEmpty,
-                                        styleSheet: MarkdownStyleSheet(
-                                          p: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: DS.neutral700,
-                                                height: 1.6,
-                                              ),
-                                          h1: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge
-                                              ?.copyWith(
-                                                fontWeight: DS.fontWeightBold,
-                                              ),
-                                          h2: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: DS.fontWeightBold,
-                                              ),
-                                          code: TextStyle(
-                                            backgroundColor: DS.neutral100,
-                                            color: DS.textPrimary,
-                                            fontFamily: 'monospace',
-                                            fontSize: DS.fontSizeSm,
-                                          ),
-                                        ),
+                                        textColor: DS.textPrimary,
+                                        codeBackgroundColor: DS.neutral100,
+                                        linkColor: DS.primaryBase,
+                                        fontSize: DS.fontSizeBase,
+                                        height: 1.6,
                                       ),
                                     ),
                                   ],

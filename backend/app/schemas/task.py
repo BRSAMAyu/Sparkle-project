@@ -88,6 +88,7 @@ class TaskUpdate(BaseModel):
     """Update task"""
 
     title: str | None = Field(default=None, min_length=1, max_length=255, description="Task title")
+    type: TaskType | None = Field(default=None, description="Task type")
     tags: list[str] | None = Field(default=None, description="Tags list")
     estimated_minutes: int | None = Field(default=None, ge=1, description="Estimated minutes")
     difficulty: int | None = Field(default=None, ge=1, le=5, description="Difficulty level")

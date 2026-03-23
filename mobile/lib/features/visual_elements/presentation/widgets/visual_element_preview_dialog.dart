@@ -22,6 +22,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
   const VisualElementPreviewDialog({
     required this.element,
     super.key,
+    this.availableElements = const <VisualElementModel>[],
     this.baseConfig,
     this.onEquip,
     this.onUnequip,
@@ -30,6 +31,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
   });
 
   final VisualElementModel element;
+  final List<VisualElementModel> availableElements;
   final UserVisualConfig? baseConfig;
   final VoidCallback? onEquip;
   final VoidCallback? onUnequip;
@@ -39,6 +41,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     required VisualElementModel element,
+    List<VisualElementModel> availableElements = const <VisualElementModel>[],
     UserVisualConfig? baseConfig,
     VoidCallback? onEquip,
     VoidCallback? onUnequip,
@@ -55,6 +58,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
         maxChildSize: 0.9,
         builder: (context, scrollController) => VisualElementPreviewDialog(
           element: element,
+          availableElements: availableElements,
           baseConfig: baseConfig,
           onEquip: onEquip,
           onUnequip: onUnequip,
@@ -145,6 +149,7 @@ class _VisualElementPreviewDialogState
                         key: _previewKey,
                         child: _CrossfadePreviewArea(
                           element: widget.element,
+                          availableElements: widget.availableElements,
                           baseConfig: widget.baseConfig,
                           colors: colors,
                           isPreviewing: _isPreviewing,
@@ -165,9 +170,16 @@ class _VisualElementPreviewDialogState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // 名称和稀有度
-                            Row(
+                            Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Expanded(
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 0,
+                                    maxWidth: 320,
+                                  ),
                                   child: Text(
                                     widget.element.name,
                                     style: TextStyle(
@@ -175,6 +187,8 @@ class _VisualElementPreviewDialogState
                                       fontWeight: DS.fontWeightBold,
                                       color: DS.textPrimary,
                                     ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 _RarityBadge(
@@ -194,6 +208,8 @@ class _VisualElementPreviewDialogState
                                   color: DS.textSecondary,
                                   height: 1.5,
                                 ),
+                                maxLines: 6,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
 
@@ -287,18 +303,30 @@ class _VisualElementPreviewDialogState
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            _buildShareButton(l10n),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: widget.isEquipped
-                  ? _buildUnequipButton(l10n)
-                  : widget.isUnlocked
-                      ? _buildEquipButton(l10n)
-                      : _buildLockedButton(l10n),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final actionWidth = constraints.maxWidth > 420
+                ? constraints.maxWidth - 152
+                : constraints.maxWidth;
+            return Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                SizedBox(
+                  width: constraints.maxWidth > 420 ? 140 : constraints.maxWidth,
+                  child: _buildShareButton(l10n),
+                ),
+                SizedBox(
+                  width: actionWidth,
+                  child: widget.isEquipped
+                      ? _buildUnequipButton(l10n)
+                      : widget.isUnlocked
+                          ? _buildEquipButton(l10n)
+                          : _buildLockedButton(l10n),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -306,7 +334,6 @@ class _VisualElementPreviewDialogState
 
   Widget _buildShareButton(AppLocalizations l10n) {
     return SizedBox(
-      width: 124,
       height: 48,
       child: OutlinedButton.icon(
         onPressed: _isSharing ? null : _sharePreview,
@@ -320,7 +347,13 @@ class _VisualElementPreviewDialogState
                 ),
               )
             : const Icon(Icons.share_outlined),
-        label: Text(l10n.visualElementShare),
+        label: Flexible(
+          child: Text(
+            l10n.visualElementShare,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: DS.textSecondary,
           side: BorderSide(color: DS.border),
@@ -516,6 +549,7 @@ class _VisualElementPreviewDialogState
 class _PreviewArea extends StatefulWidget {
   const _PreviewArea({
     required this.element,
+    required this.availableElements,
     required this.baseConfig,
     required this.colors,
     required this.isPreviewing,
@@ -523,6 +557,7 @@ class _PreviewArea extends StatefulWidget {
   });
 
   final VisualElementModel element;
+  final List<VisualElementModel> availableElements;
   final UserVisualConfig? baseConfig;
   final _RarityColors colors;
   final bool isPreviewing;
@@ -647,12 +682,22 @@ class _PreviewAreaState extends State<_PreviewArea>
           equippedEffect: widget.element,
         );
       case VisualElementType.bundle:
-        return UserVisualConfig(
-          equippedBackground: widget.element,
-          equippedParticle: widget.element,
-          equippedEffect: widget.element,
-        );
+        return _buildBundlePreviewConfig(base);
     }
+  }
+
+  UserVisualConfig _buildBundlePreviewConfig(UserVisualConfig? base) {
+    final byId = <String, VisualElementModel>{
+      for (final element in widget.availableElements) element.id: element,
+    };
+    return UserVisualConfig(
+      equippedBackground: byId[widget.element.config['background_id']] ??
+          base?.equippedBackground,
+      equippedParticle: byId[widget.element.config['particle_id']] ??
+          base?.equippedParticle,
+      equippedEffect:
+          byId[widget.element.config['effect_id']] ?? base?.equippedEffect,
+    );
   }
 }
 
@@ -660,6 +705,7 @@ class _PreviewAreaState extends State<_PreviewArea>
 class _CrossfadePreviewArea extends StatefulWidget {
   const _CrossfadePreviewArea({
     required this.element,
+    required this.availableElements,
     required this.baseConfig,
     required this.colors,
     required this.isPreviewing,
@@ -668,6 +714,7 @@ class _CrossfadePreviewArea extends StatefulWidget {
   });
 
   final VisualElementModel element;
+  final List<VisualElementModel> availableElements;
   final UserVisualConfig? baseConfig;
   final _RarityColors colors;
   final bool isPreviewing;
@@ -816,12 +863,22 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
           equippedEffect: widget.element,
         );
       case VisualElementType.bundle:
-        return UserVisualConfig(
-          equippedBackground: widget.element,
-          equippedParticle: widget.element,
-          equippedEffect: widget.element,
-        );
+        return _buildBundlePreviewConfig(base);
     }
+  }
+
+  UserVisualConfig _buildBundlePreviewConfig(UserVisualConfig? base) {
+    final byId = <String, VisualElementModel>{
+      for (final element in widget.availableElements) element.id: element,
+    };
+    return UserVisualConfig(
+      equippedBackground: byId[widget.element.config['background_id']] ??
+          base?.equippedBackground,
+      equippedParticle: byId[widget.element.config['particle_id']] ??
+          base?.equippedParticle,
+      equippedEffect:
+          byId[widget.element.config['effect_id']] ?? base?.equippedEffect,
+    );
   }
 }
 
@@ -913,21 +970,30 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              fontWeight: DS.fontWeightMedium,
-              color: DS.textPrimary,
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            flex: 6,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                fontWeight: DS.fontWeightMedium,
+                color: DS.textPrimary,
+              ),
             ),
           ),
         ],

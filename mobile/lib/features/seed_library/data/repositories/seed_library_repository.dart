@@ -327,6 +327,45 @@ class SeedLibraryRepository {
     }
   }
 
+  Future<UserLibrarySubscription> updateSubscription(
+    String libraryId,
+    UpdateSubscriptionRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        ApiEndpoints.seedLibrarySubscription(libraryId),
+        data: request.toJson(),
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'updateSubscription',
+      );
+      return UserLibrarySubscription.fromJson(payload);
+    } on DioException catch (e) {
+      final error =
+          e.response?.data?['detail'] ?? 'Failed to update subscription';
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<SeedLibrary> rateLibrary(
+    String libraryId,
+    RateLibraryRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.seedLibraryRating(libraryId),
+        data: request.toJson(),
+      );
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'rateLibrary');
+      return SeedLibrary.fromJson(data);
+    } on DioException catch (e) {
+      final error = e.response?.data?['detail'] ?? 'Failed to rate library';
+      throw Exception(error.toString());
+    }
+  }
+
   /// Get user's subscriptions
   Future<PaginatedResponse<UserLibrarySubscription>> getMySubscriptions({
     bool? isEnabled,

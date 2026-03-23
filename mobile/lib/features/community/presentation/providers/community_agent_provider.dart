@@ -140,6 +140,7 @@ String buildGroupAgentPrompt({
 你的任务是产出一条最终可直接发送到群里的中文消息。
 只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。
 语气自然、简洁、友好，像群成员会直接发出去的话。
+如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。
 
 最近对话:
 $contextLines
@@ -172,6 +173,7 @@ String buildPrivateAgentPrompt({
 你的任务是产出一条最终可直接发送给对方的中文私聊回复。
 只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。
 语气自然、礼貌、克制，像我会直接按下发送的内容。
+如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。
 
 最近对话:
 $contextLines
@@ -179,6 +181,44 @@ $contextLines
 用户问题:
 $input
 ''';
+}
+
+String buildGroupAssistantPresetPrompt(
+  String preset, {
+  String? groupName,
+}) {
+  final name = groupName ?? '学习小组';
+  switch (preset) {
+    case 'summary':
+      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的快速总结，包含当前讨论焦点和下一步。';
+    case 'reminder':
+      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的简短提醒，推动成员继续行动，语气自然。';
+    case 'consensus':
+      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的共识总结，明确大家已经一致的结论和下一步。';
+    default:
+      return preset;
+  }
+}
+
+String buildPrivateAssistantPresetPrompt(
+  String preset, {
+  String? friendName,
+}) {
+  final name = friendName ?? '好友';
+  switch (preset) {
+    case 'polish_reply':
+      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的自然回复，要求简洁、友好、准确承接上下文。';
+    case 'gentle_reminder':
+      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的温和提醒，不催促、不生硬。';
+    case 'schedule_sync':
+      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的时间协调消息，用于约定下一步或确认安排。';
+    case 'summary':
+      return '请根据最近私聊内容，生成一段简短总结，帮我看清我和「$name」目前已经确认了什么、还缺什么，要求直接可读、可执行。';
+    case 'next_step':
+      return '请根据最近私聊内容，帮我提炼出最值得现在就发送给「$name」的一条下一步推进消息，要求明确、自然、可执行。';
+    default:
+      return preset;
+  }
 }
 
 String _compressContent(String content) {
@@ -225,6 +265,57 @@ String normalizeCommunityAgentOutput(String content) {
   return lines.join('\n').trim();
 }
 
+String _fallbackGroupAgentOutput(
+  String preset,
+  List<MessageInfo> recentMessages,
+) {
+  final lines = recentMessages
+      .where((msg) => msg.content != null && msg.content!.trim().isNotEmpty)
+      .where((msg) => !isCommunityAgentMessage(msg))
+      .take(3)
+      .map((msg) => _compressContent(msg.content ?? ''))
+      .toList();
+
+  if (lines.isEmpty) {
+    return switch (preset) {
+      'summary' => '我先帮大家收一下：目前还没有形成完整讨论，可以先补充目标、难点和下一步安排。',
+      'reminder' => '提醒一下，大家可以先明确各自负责的事项和完成时间，这样后续推进会更顺。',
+      'consensus' => '目前还没有形成稳定共识，建议先确认目标、分工和时间点，再继续推进。',
+      _ => '我先帮你整理成一句更清楚的话：把目标、当前进度和下一步写出来会更容易推进。',
+    };
+  }
+
+  final joined = lines.join('；');
+  return switch (preset) {
+    'summary' => '我先快速总结一下：$joined。当前重点是先把下一步动作说清楚并开始推进。',
+    'reminder' => '提醒一下：$joined。建议现在先各自确认下一步并同步进度。',
+    'consensus' => '目前大家比较一致的是：$joined。可以按这个方向继续推进。',
+    _ => joined,
+  };
+}
+
+String _fallbackPrivateAgentOutput(
+  String preset,
+  List<PrivateMessageInfo> recentMessages,
+  String? friendName,
+) {
+  final name = friendName ?? '你';
+  final lines = recentMessages
+      .where((msg) => msg.content != null && msg.content!.trim().isNotEmpty)
+      .where((msg) => !isPrivateAgentMessage(msg))
+      .take(2)
+      .map((msg) => _compressContent(msg.content ?? ''))
+      .toList();
+
+  final context = lines.isEmpty ? '' : '我结合我们刚才聊的内容看，';
+  return switch (preset) {
+    'polish_reply' => '${context}可以这样回$name：我这边看到了，我们按这个方向继续，我稍后给你一个更明确的进展。',
+    'gentle_reminder' => '${context}可以这样提醒$name：想跟你确认一下这件事的进度，如果方便的话我们今天把下一步也一起定下来。',
+    'schedule_sync' => '${context}可以这样发给$name：我们把下一步时间对一下吧，你这两天什么时候方便，我这边可以配合安排。',
+    _ => lines.isEmpty ? '我先帮你整理成一句更自然的回复。' : lines.join('；'),
+  };
+}
+
 class GroupAgentChatNotifier
     extends StateNotifier<AgentChatState<MessageInfo>> {
   GroupAgentChatNotifier(this._repository, this._ref, this._groupId)
@@ -238,6 +329,9 @@ class GroupAgentChatNotifier
     required String prompt,
     String? groupName,
     List<MessageInfo> recentMessages = const [],
+    String preset = 'custom',
+    String reasoningMode = 'fast',
+    String chatMode = 'standard',
   }) async {
     if (state.isSending) return;
 
@@ -259,6 +353,7 @@ class GroupAgentChatNotifier
       kAgentContextTypeKey: 'community_group',
       kAgentContextIdKey: _groupId,
       kAgentSessionIdKey: sessionId,
+      'reasoning_mode': reasoningMode,
     };
 
     var buffer = '';
@@ -271,6 +366,7 @@ class GroupAgentChatNotifier
         nickname: userContext.nickname,
         extraContext: extraContext,
         token: token,
+        chatMode: chatMode,
       )) {
         if (event is TextEvent) {
           buffer += event.content;
@@ -294,7 +390,10 @@ class GroupAgentChatNotifier
         }
       }
 
-      final content = normalizeCommunityAgentOutput(buffer).trim();
+      final content = (normalizeCommunityAgentOutput(buffer).trim().isNotEmpty
+              ? normalizeCommunityAgentOutput(buffer).trim()
+              : _fallbackGroupAgentOutput(preset, recentMessages))
+          .trim();
       if (content.isNotEmpty) {
         final message = await _persistGroupAgentMessage(
           userId: userContext.userId,
@@ -370,6 +469,9 @@ class PrivateAgentChatNotifier
     required String prompt,
     String? friendName,
     List<PrivateMessageInfo> recentMessages = const [],
+    String preset = 'custom',
+    String reasoningMode = 'fast',
+    String chatMode = 'standard',
   }) async {
     if (state.isSending) return;
 
@@ -391,6 +493,7 @@ class PrivateAgentChatNotifier
       kAgentContextTypeKey: 'community_private',
       kAgentContextIdKey: _friendId,
       kAgentSessionIdKey: sessionId,
+      'reasoning_mode': reasoningMode,
     };
 
     var buffer = '';
@@ -403,6 +506,7 @@ class PrivateAgentChatNotifier
         nickname: userContext.nickname,
         extraContext: extraContext,
         token: token,
+        chatMode: chatMode,
       )) {
         if (event is TextEvent) {
           buffer += event.content;
@@ -426,7 +530,14 @@ class PrivateAgentChatNotifier
         }
       }
 
-      final content = normalizeCommunityAgentOutput(buffer).trim();
+      final content = (normalizeCommunityAgentOutput(buffer).trim().isNotEmpty
+              ? normalizeCommunityAgentOutput(buffer).trim()
+              : _fallbackPrivateAgentOutput(
+                  preset,
+                  recentMessages,
+                  friendName,
+                ))
+          .trim();
       if (content.isNotEmpty) {
         final message = await _persistPrivateAgentMessage(
           userId: userContext.userId,

@@ -52,11 +52,19 @@ Future<void> launchTool(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: tool.embeddedBuilder!(
-          request.copyWith(surface: ToolSurface.sheet),
+      builder: (context) => FractionallySizedBox(
+        heightFactor: 0.92,
+        alignment: Alignment.bottomCenter,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: tool.embeddedBuilder!(
+              request.copyWith(surface: ToolSurface.sheet),
+            ),
+          ),
         ),
       ),
     );

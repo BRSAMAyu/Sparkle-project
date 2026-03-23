@@ -63,6 +63,7 @@ dependencies = [
     # Additional Dependencies
     "sse-starlette",
     "loguru",
+    "structlog>=24.1.0",
     "json-repair",
     "typing-extensions",
     "email-validator>=2.0.0",

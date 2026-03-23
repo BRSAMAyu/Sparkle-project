@@ -1,12 +1,10 @@
 <div align="center">
 
-<img src="docs/assets/sparkle-logo.svg" alt="Sparkle Logo" width="180" />
+# Sparkle
 
-# ✨ Sparkle
+**AI 驱动的成长操作系统**
 
-### Your AI Growth Companion
-
-**Not Just Answers, But Understanding — A Partner in Becoming Your Best Self**
+不只是回答问题，而是理解你、陪伴你、帮你成为更好的自己。
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
@@ -14,65 +12,66 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.3+-FF6B6B?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
 
-**English** · **[简体中文](README_CN.md)** · [Documentation](docs/) · [Quick Start](#-quick-start)
+**[English](README_EN.md)** &nbsp;&middot;&nbsp; [快速开始](#-快速开始) &nbsp;&middot;&nbsp; [技术文档](docs/)
 
 </div>
 
 ---
 
-> **Vision**: Help users become better versions of themselves, achieve goals, reduce internal friction, and gain fulfillment and happiness.
->
-> Every system design revolves around this core purpose.
+## 一句话理解 Sparkle
+
+> 市面上的 AI 是工具，用完即走。Sparkle 是一个**持续进化的成长伙伴**——它记住你是谁、理解你的思维模式、帮你拆解目标、追踪执行、在你卡住时给出恰到好处的支持。
 
 ---
 
-## 🎯 Why Sparkle?
+## Sparkle 解决什么问题
 
 <table>
 <tr>
-<td width="33%" align="center"><b>Traditional AI</b></td>
-<td width="33%" align="center"><b>Learning Apps</b></td>
-<td width="33%" align="center"><b>✨ Sparkle</b></td>
+<td width="33%" align="center"><b>传统 AI 助手</b></td>
+<td width="33%" align="center"><b>学习/效率类 App</b></td>
+<td width="33%" align="center"><b>Sparkle</b></td>
 </tr>
 <tr>
-<td>
+<td valign="top">
 
-❌ No memory, starts from scratch
+没有记忆，每次从零开始
 
-❌ Passive Q&A, no guidance
+被动问答，不会主动引导
 
-❌ Fragmented information
+信息碎片化，缺乏系统性
 
-❌ Single conversation, no follow-up
+单次对话，无后续跟进
 
-❌ Tool-only, no warmth
-
-</td>
-<td>
-
-⚠️ Static tags, basic categories
-
-⚠️ Preset paths, one-size-fits-all
-
-⚠️ Linear notes, manual organization
-
-⚠️ Simple stats, no insights
-
-⚠️ Random partner matching
+纯工具感，没有温度
 
 </td>
-<td>
+<td valign="top">
 
-✅ **4D Cognitive Profile**, continuously evolving
+静态标签，粗粒度分类
 
-✅ **Goal-Driven**, from "what to ask" to "who to become"
+预设路径，千人一面
 
-✅ **Knowledge Galaxy**, auto-builds your knowledge network
+线性笔记，手动整理
 
-✅ **7-Stage Growth Loop**, continuous companionship
+简单统计，缺乏洞察
 
-✅ **Cognitive Profile Matching**, find truly compatible partners
+随机匹配，社群无深度
+
+</td>
+<td valign="top">
+
+**持续进化的认知画像**，越用越懂你
+
+**目标驱动**，从"问什么"到"成为谁"
+
+**知识星图**，自动构建你的知识网络
+
+**七阶段成长闭环**，全程陪伴
+
+**认知匹配**，找到真正合拍的伙伴
 
 </td>
 </tr>
@@ -80,364 +79,66 @@
 
 ---
 
-## 🧠 Core Technical Architecture
-
-### Dual-Core Growth Operating System
-
-Sparkle's core innovation lies in splitting the AI system into two collaborative cores:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    DUAL-CORE GROWTH OPERATING SYSTEM                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌───────────────────────────────────┐    ┌─────────────────────────────┐  │
-│  │          🎯 Execution Core        │    │       🧠 Cognitive Core     │  │
-│  │  ─────────────────────────────    │    │  ─────────────────────────  │  │
-│  │                                   │    │                             │  │
-│  │   ┌─────┐   ┌──────────┐   ┌────┐ │    │   ┌───────┐   ┌──────────┐  │  │
-│  │   │ Goal │→→→│Sufficiency│→→→│Plan│ │    │   │Profile│→→→│ Memory   │  │  │
-│  │   └─────┘   └──────────┘   └────┘ │    │   └───────┘   └──────────┘  │  │
-│  │      ↓           ↓           ↓    │    │       ↓            ↓        │  │
-│  │   ┌─────┐   ┌──────────┐   ┌────┐ │    │   ┌───────┐   ┌──────────┐  │  │
-│  │   │Task │←←←│ Execute  │←←←│Feed│ │    │   │ Prism │←←←│Understand│  │  │
-│  │   └─────┘   └──────────┘   └────┘ │    │   └───────┘   └──────────┘  │  │
-│  │      ↓                           │    │       ↓                      │  │
-│  │   ┌─────────────────────────┐    │    │   ┌─────────────────────┐    │  │
-│  │   │   Adaptive Adjustment   │    │    │   │Continuous Companions│    │  │
-│  │   └─────────────────────────┘    │    │   └─────────────────────┘    │  │
-│  └───────────────────────────────────┘    └─────────────────────────────┘  │
-│                          ↘                       ↙                          │
-│                    ┌─────────────────────────────────┐                      │
-│                    │      🔄 Collaboration Layer      │                      │
-│                    │  Event Bus · Context Agg · Sync  │                      │
-│                    └─────────────────────────────────┘                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Execution Core** — "Getting things done":
-- **Goal Clarification**: Help users define what they truly want
-- **Sufficiency Evaluation**: Assess if current conditions can achieve the goal
-- **Staged Planning**: Break big goals into executable small steps
-- **Task Execution**: Provide specific execution guidance and feedback
-- **Dynamic Adjustment**: Flexibly adjust strategies based on reality
-
-**Cognitive Core** — "Understanding the user":
-- **4D Profile**: Knowledge, Cognition, Motivation, Social dimensions
-- **Memory System**: Long-term memory + short-term context
-- **Cognitive Prism**: Understand user's thinking patterns
-- **Emotional Support**: Recognize emotional states, provide personalized motivation
-
----
-
-### 7-Stage Growth Loop
-
-Every Sparkle interaction is a complete growth cycle:
-
-```
-                              ┌─────────────────────┐
-                              │       📡 SENSE      │
-                              │     (Passive)        │
-                              │  Behavior · Emotion  │
-                              └──────────┬──────────┘
-                                         │
-              ┌──────────────────────────┼──────────────────────────┐
-              │                          │                          │
-              ▼                          ▼                          ▼
-     ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-     │     🔍 CLARIFY   │      │     📋 PLAN     │      │    ⚡ EXECUTE   │
-     │  Understanding   │ ───→ │   Path Gen     │ ───→ │   Task Run     │
-     │   True Intent    │      │                │      │                │
-     └─────────────────┘      └─────────────────┘      └────────┬────────┘
-              ▲                                                 │
-              │                    ┌─────────────────┐           │
-              │                    │    🪞 REFLECT   │           │
-              │                    │   Analyze       │ ◄─────────┘
-              │                    │   Results       │
-              │                    └────────┬────────┘
-              │                             │
-              │              ┌──────────────┴──────────────┐
-              │              │                             │
-              │     ┌─────────────────┐      ┌─────────────────┐
-              │     │   🎁 REINFORCE  │      │    🔧 ADAPT     │
-              │     │   Consolidate   │ ───→ │   Adjust        │
-              │     │   Learning      │      │   Strategy      │
-              │     └─────────────────┘      └────────┬────────┘
-              │                                        │
-              └────────────────────────────────────────┘
-                                    Next Iteration
-```
-
-| Stage | Core Responsibility | Technical Implementation |
-|:------|:--------------------|:-------------------------|
-| Sense | Passively capture user signals | Behavior tracking · Emotion recognition · Learning trajectory |
-| Clarify | Understand true user intent | Intent recognition · Context understanding · Clarifying questions |
-| Plan | Generate executable paths | Goal decomposition · Path planning · Resource matching |
-| Execute | Run specific tasks | Task scheduling · Tool invocation · Progress tracking |
-| Reflect | Analyze execution results | Outcome evaluation · Error attribution · Effect quantification |
-| Reinforce | Consolidate learning outcomes | Spaced repetition · Memory curve · Achievement motivation |
-| Adapt | Adjust strategy models | Profile updates · Model fine-tuning · Strategy optimization |
-
----
-
-### Evidence-Based 4D Cognitive Profile
-
-We don't just track "what you know", we understand "how you think". Every dimension is backed by **behavioral evidence**:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        4D COGNITIVE PROFILE                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│    📚 Knowledge Dimension          🧩 Cognition Dimension                    │
-│    ─────────────────────           ─────────────────────                    │
-│    • Mastery score (0-100)         • Metacognition (self-monitoring)        │
-│    • Forgetting curve (half-life)  • Cognitive load assessment              │
-│    • Learning velocity             • Thinking style (abstract/concrete)     │
-│    • Knowledge gap map             • Problem-solving strategies             │
-│                                    • Attention distribution patterns         │
-│    App: Precision review, alerts   App: Dynamic explanation depth           │
-│                                                                             │
-│    🔥 Motivation Dimension         👥 Social Dimension                       │
-│    ─────────────────────           ─────────────────────                    │
-│    • Self-efficacy (confidence)    • Collaboration style                    │
-│    • Intrinsic/extrinsic ratio     • Communication traits                   │
-│    • Learning preferences          • Community contribution                 │
-│    • Interest map                  • Help-seeking patterns                  │
-│    • Goal commitment               • Leadership tendencies                  │
-│                                    • Peer influence sensitivity            │
-│    App: Personalized incentives    App: Intelligent partner matching        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Evidence Sources**:
-- Conversation content analysis
-- Task completion time and quality
-- Review intervals and effectiveness
-- Error pattern clustering
-- Emotional signal recognition
-- Community interaction behavior
-
----
-
-### GraphRAG Hybrid Retrieval Engine
-
-Breaking through traditional RAG limitations by fusing semantic vector search with knowledge graph traversal:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        GraphRAG HYBRID RETRIEVAL                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│                     Query: "What is gradient descent?"                       │
-│                                   │                                         │
-│                    ┌──────────────┴──────────────┐                          │
-│                    │                             │                          │
-│                    ▼                             ▼                          │
-│    ┌───────────────────────────┐   ┌───────────────────────────┐            │
-│    │   🔍 Vector Search        │   │   🕸️ Graph Traverse       │            │
-│    │      (pgvector)           │   │     (Apache AGE)          │            │
-│    │  ───────────────────────  │   │  ───────────────────────  │            │
-│    │                           │   │                           │            │
-│    │  Semantic similarity      │   │  Knowledge graph relations│            │
-│    │  • Gradient descent def   │   │  • Prerequisite: partial  │            │
-│    │  • SGD vs Adam comparison │   │    derivatives            │            │
-│    │  • Learning rate tips     │   │  • Prerequisite: loss fn  │            │
-│    │  • Common Q&A             │   │  • Follow-up: backprop    │            │
-│    │                           │   │  • Related: momentum      │            │
-│    │  ⏱️ < 200ms               │   │  ⏱️ < 500ms               │            │
-│    └─────────────┬─────────────┘   └─────────────┬─────────────┘            │
-│                  │                               │                          │
-│                  └───────────────┬───────────────┘                          │
-│                                  │                                          │
-│                                  ▼                                          │
-│                    ┌───────────────────────────┐                            │
-│                    │    🔀 Result Fusion       │                            │
-│                    │  ───────────────────────  │                            │
-│                    │  • Dedup & ranking        │                            │
-│                    │  • Dependency chain build │                            │
-│                    │  • Profile-based weighting│                            │
-│                    │  • Context compression    │                            │
-│                    └─────────────┬─────────────┘                            │
-│                                  │                                          │
-│                                  ▼                                          │
-│                    ┌───────────────────────────┐                            │
-│                    │  📝 Contextual Response   │                            │
-│                    │  ───────────────────────  │                            │
-│                    │  Profile + Graph =        │                            │
-│                    │  Personalized Content     │                            │
-│                    └───────────────────────────┘                            │
-│                                                                             │
-│                     Total Response: < 800ms                                 │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Technical Advantages**:
-
-| Capability | Traditional RAG | Sparkle GraphRAG |
-|:-----------|:----------------|:-----------------|
-| Semantic Understanding | ✅ Vector similarity | ✅ Vector similarity |
-| Knowledge Relations | ❌ None | ✅ Graph traversal |
-| Prerequisite Knowledge | ❌ Not identified | ✅ Auto-linked concepts |
-| Personalization | ❌ None | ✅ Profile-based weighting |
-| Learning Path | ❌ None | ✅ Dependency chain generation |
-
----
-
-### LangGraph Multi-Agent Orchestration
-
-10+ specialized agents dynamically collaborate, complex problems auto-decomposed:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    LangGraph MULTI-AGENT ORCHESTRATION                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│    User Input ──→ ┌─────────────────────────────────────────────────┐       │
-│                   │              🎯 Orchestrator                     │       │
-│                   │           (Main Orchestrator)                    │       │
-│                   │                                                 │       │
-│                   │  Intent → Task Split → Agent Dispatch → Aggregate│       │
-│                   └───────────────────────┬─────────────────────────┘       │
-│                                           │                                  │
-│          ┌────────────────────────────────┼────────────────────────────┐    │
-│          │                                │                            │    │
-│          ▼                                ▼                            ▼    │
-│   ┌─────────────┐               ┌─────────────┐              ┌─────────────┐│
-│   │ 📚 Knowledge│               │ 🔢 Math     │              │ 💻 Code    ││
-│   │   Agent     │               │   Agent     │              │   Agent    ││
-│   │ ─────────── │               │ ─────────── │              │ ─────────── ││
-│   │ RAG Search  │               │ Derivation  │              │ Generation ││
-│   │ Knowledge   │               │ Formula     │              │ Debugging  ││
-│   │ Graph       │               │ Explanation │              │ Analysis   ││
-│   └─────────────┘               └─────────────┘              └─────────────┘│
-│          │                                │                            │    │
-│          ▼                                ▼                            ▼    │
-│   ┌─────────────┐               ┌─────────────┐              ┌─────────────┐│
-│   │ 🧠 Reasoning│               │ 📅 Planner  │              │ 🎮 Reviewer ││
-│   │   Agent     │               │   Agent     │              │   Agent    ││
-│   │ ─────────── │               │ ─────────── │              │ ─────────── ││
-│   │ Logic       │               │ Plan        │              │ Quality    ││
-│   │ Concept     │               │ Decompose   │              │ Style      ││
-│   └─────────────┘               └─────────────┘              └─────────────┘│
-│                                           │                                  │
-│                                           ▼                                  │
-│                    ┌───────────────────────────────────┐                    │
-│                    │        📤 Stream Response          │                    │
-│                    │      (Interruptible)               │                    │
-│                    │                                   │                    │
-│                    │   • Typewriter effect              │                    │
-│                    │   • Intermediate state visible     │                    │
-│                    │   • User can interrupt anytime     │                    │
-│                    │   • PONR checkpoints (risky ops)   │                    │
-│                    └───────────────────────────────────┘                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Core Features**:
-- **Handoff Mechanism**: Seamless context transfer between agents
-- **State Snapshots**: Support checkpoint/resume for long tasks
-- **PONR Confirmation**: High-risk operations require user confirmation
-- **Observability**: Complete execution traces and decision chains
-
----
-
-## 🚀 Feature Highlights
+## 核心能力
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🤖 AI Micro-Tutor
+### AI 微调导师
 
-Not just answering questions, but diagnosing your cognitive state.
+不只是答题，而是诊断你的认知状态。
 
-When you say "this is hard", it will:
-- Analyze your knowledge gaps
-- Adjust explanation abstraction level
-- Provide targeted exercises
-- Track your understanding progress
+当你说"这个好难"，它会分析你的知识盲区、动态调整讲解深度、推荐针对性练习、追踪理解进度。10+ 专业 Agent 动态协作，复杂问题自动拆解。
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🌌 Knowledge Galaxy
+### 知识星图
 
-Your personal knowledge network visualized as a cosmic map.
+你的个人知识网络，以宇宙地图的形式呈现。
 
-- Each concept is a star
-- Mastery determines brightness
-- Relations form constellations
-- AI auto-identifies blind spots
+每个概念是一颗星，掌握度决定亮度，关系形成星座。AI 自动识别知识盲区，GraphRAG 混合检索引擎让每次查询都理解上下文。
 
 </td>
 </tr>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 📋 Smart Task System
+### 智能任务系统
 
-6 task types, AI auto-recommends based on profile:
+六种任务类型，AI 根据你的认知画像自动推荐。
 
-| Type | Description |
-|:-----|:------------|
-| Learn | New concept learning |
-| Review | Spaced repetition |
-| Practice | Reinforcement |
-| Project | Comprehensive application |
-| Reading | Knowledge expansion |
-| Other | Custom |
-
-Built-in Pomodoro timer for flow state.
+学习、复习、练习、项目、阅读、自定义——内置专注计时器，支持正念模式。任务完成后自动更新画像，形成学习飞轮。
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🏆 Achievement Engine
+### 成就引擎
 
-Gamification that actually works:
+真正有效的游戏化机制。
 
-- 🔥 **Streaks** — Build habits
-- 🎯 **Milestones** — Record breakthroughs
-- 📜 **Contracts** — Commitment mechanism
-- 🎁 **Hidden Achievements** — Surprise motivation
-
-Achievements aren't just numbers—they're proof of your growth.
+连击记录养成习惯，里程碑记录突破，成长合约提供承诺机制，隐藏成就制造惊喜。成就不只是数字——它是你成长的证明。
 
 </td>
 </tr>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 👥 Community Learning
+### 社群学习
 
-Intelligent matching based on cognitive profiles:
+基于认知画像的智能匹配。
 
-- **Partner Matching** — Find peers with similar cognitive styles
-- **Study Squads** — Long-term stable groups
-- **Sprint Groups** — Temporary goal-focused teams
-- **Sync Check-ins** — Mutual accountability
+责任伙伴找到认知风格相近的同伴，学习小组提供长期稳定的成长环境，冲刺群聚焦目标，同步打卡互相督促。
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🔄 Closed-Loop Feedback
+### 多感官体验系统
 
-Every interaction feeds back into your profile:
+统一的沉浸式体验设计。
 
-```
-Chat → Profile Update → Task Recommendation
-  ↓
-Review → Curve Calibration → Timing Optimization
-  ↓
-Errors → Pattern Clustering → Weak Spot Alerts
-  ↓
-Achievements → Motivation Update → Incentive Strategy
-```
-
-The system evolves with you, not just for you.
+场景化 BGM 和环境音随页面切换，语义化触觉反馈让每个操作都有感知，入场动效和庆祝系统让成长可见可感。无障碍优雅降级。
 
 </td>
 </tr>
@@ -445,376 +146,406 @@ The system evolves with you, not just for you.
 
 ---
 
-## 🏗️ Technical Architecture
+## 技术壁垒
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            📱 MOBILE CLIENT                                  │
-│                                                                             │
-│           Flutter 3.24+ · Riverpod · Design System V2 · Hive                │
-│                                                                             │
-│    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
-│    │    Chat     │  │    Task     │  │   Galaxy    │  │  Community  │      │
-│    │   Module    │  │   Module    │  │   Module    │  │   Module    │      │
-│    └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
-│                                                                             │
-└───────────────────────────────┬─────────────────────────────────────────────┘
-                                │
-                          WebSocket / HTTP
-                                │
-┌───────────────────────────────┴─────────────────────────────────────────────┐
-│                            🚪 GO GATEWAY (8080)                              │
-│                                                                             │
-│    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
-│    │    Auth     │  │  Rate Limit │  │  Conn Pool  │  │ gRPC Bridge │      │
-│    │  JWT + RBAC │  │  Token Bucket│  │   pgxpool  │  │  Protocol   │      │
-│    └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
-│                                                                             │
-│    ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                       │
-│    │  WebSocket  │  │ Chat History│  │Semantic Cache│                      │
-│    │  Connection │  │    Redis    │  │ Similar Query│                      │
-│    └─────────────┘  └─────────────┘  └─────────────┘                       │
-│                                                                             │
-└───────────────────────────────┬─────────────────────────────────────────────┘
-                                │
-                            gRPC (50051)
-                                │
-┌───────────────────────────────┴─────────────────────────────────────────────┐
-│                          🧠 PYTHON AI ENGINE                                 │
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                      ChatOrchestrator                                  │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │  │
-│  │  │ Context  │→→│  Router  │→→│ Validator│→→│ Executor │→→│Response │ │  │
-│  │  │ Builder  │  │          │  │          │  │          │  │ Generator│ │  │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └─────────┘ │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌───────────────────────────────┐  ┌───────────────────────────────────┐  │
-│  │    Cognitive Nexus (Core)     │  │      GraphRAG Retrieval Layer     │  │
-│  │  ───────────────────────────  │  │  ───────────────────────────────  │  │
-│  │  • User Profile Service       │  │  • pgvector Semantic Search       │  │
-│  │  • Memory System (L/S term)   │  │  • Apache AGE Graph Traverse      │  │
-│  │  • Cognitive Prism            │  │  • Redis Vector Cache             │  │
-│  │  • Achievement Engine         │  │  • Hybrid Result Fusion           │  │
-│  │  • Community Service          │  │  • Dependency Chain Building      │  │
-│  └───────────────────────────────┘  └───────────────────────────────────┘  │
-│                                                                             │
-│  ┌───────────────────────────────┐  ┌───────────────────────────────────┐  │
-│  │     LangGraph Orchestration    │  │       Tool Registry Center        │  │
-│  │  ───────────────────────────  │  │  ───────────────────────────────  │  │
-│  │  • FSM State Machine           │  │  • Dynamic Tool Registration     │  │
-│  │  • Agent Coordination          │  │  • Capability Discovery          │  │
-│  │  • Handoff Mechanism           │  │  • Execution Tracking            │  │
-│  │  • State Snapshot/Recovery     │  │  • Error Handling & Retry        │  │
-│  └───────────────────────────────┘  └───────────────────────────────────┘  │
-│                                                                             │
-│  ┌───────────────────────────────┐  ┌───────────────────────────────────┐  │
-│  │       Celery Task Queue        │  │         LLM Service Layer         │  │
-│  │  ───────────────────────────  │  │  ───────────────────────────────  │  │
-│  │  • Async Task Processing       │  │  • Multi-model Support           │  │
-│  │  • Scheduled Tasks (Beat)      │  │  • Streaming Response            │  │
-│  │  • Task Monitoring (Flower)    │  │  • Token Stats & Rate Limiting   │  │
-│  └───────────────────────────────┘  └───────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-         │                         │                         │
-         ▼                         ▼                         ▼
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│  PostgreSQL 16  │      │    Redis 7+     │      │   MinIO / S3    │
-│  ─────────────  │      │  ─────────────  │      │  ─────────────  │
-│  • Business     │      │  • Session      │      │  • Files        │
-│  • pgvector     │      │  • Pub/Sub      │      │  • Static       │
-│  • Apache AGE   │      │  • Vector Cache │      │                 │
-└─────────────────┘      └─────────────────┘      └─────────────────┘
-```
+Sparkle 的竞争力不在于单个功能，而在于**系统级架构创新**的组合壁垒：
 
-### Tech Stack Details
-
-| Layer | Technology | Version | Why |
-|:------|:-----------|:--------|:----|
-| **Mobile** | Flutter | 3.24+ | Cross-platform consistency, hot reload, rich widgets |
-| | Riverpod | 2.x | Compile-time safe, declarative state management |
-| | Hive | 2.x | Lightweight local storage, high performance |
-| **Gateway** | Go | 1.22+ | High concurrency, low memory, compiled |
-| | Gin | 1.x | High-performance HTTP framework, rich middleware |
-| | gRPC | 1.x | Strong typing, streaming, cross-language |
-| **AI Engine** | Python | 3.11+ | Rich AI ecosystem, high dev velocity |
-| | LangGraph | 0.3+ | Observable state machine, complex orchestration |
-| | Celery | 5.x | Mature async task queue |
-| **Data** | PostgreSQL | 16+ | ACID support, rich extensions |
-| | pgvector | 0.7+ | Native vector index, unified with business DB |
-| | Apache AGE | 1.5+ | PostgreSQL graph extension, Cypher queries |
-| | Redis | 7+ | High-performance cache, pub/sub |
+| 技术壁垒 | 实现方式 | 竞品现状 |
+|:---------|:---------|:---------|
+| **双核协作架构** | 执行核 + 认知核实时协作，不是并行孤立 | 大多数产品只有单一对话管线 |
+| **证据驱动的 4D 画像** | 知识、认知、动机、社交四维度，每项都有行为证据 | 通常只有静态标签或简单统计 |
+| **GraphRAG 混合检索** | pgvector 语义搜索 + Apache AGE 知识图谱遍历，融合排序 | 纯向量检索，缺乏关系推理 |
+| **LangGraph 多智能体编排** | 10+ Agent 状态机协作，handoff、快照、可中断流式输出 | 单 Agent 或简单 chain |
+| **七阶段成长闭环** | 感知 > 澄清 > 计划 > 执行 > 反思 > 巩固 > 适应 | 线性任务流，无闭环 |
+| **统一多感官体验** | 5 种体验画像 + 感官预算 + 全局粒子预算 + 无障碍降级 | 零散动效，无系统性 |
 
 ---
 
-## 🔧 Quick Start
+## 架构总览
 
-### Prerequisites
-
-| Dependency | Version | Notes |
-|:-----------|:--------|:------|
-| Go | 1.22+ | Gateway development |
-| Python | 3.11+ | AI engine development |
-| Flutter | 3.24+ | Mobile development |
-| Docker | 24+ | Containerized deployment |
-| Docker Compose | 2.x | Service orchestration |
-
-### One-Command Setup
-
-```bash
-# 1. Clone the project
-git clone https://github.com/BRSAMAyu/Sparkle-project.git
-cd Sparkle-project
-
-# 2. Configure environment
-cp .env.example .env
-# Edit .env with required configs:
-# - LLM_API_KEY: Your LLM API key
-# - DATABASE_URL: Database connection
-# - REDIS_URL: Redis connection
-
-# 3. Start infrastructure (PostgreSQL, Redis, MinIO)
-make dev-up
-
-# 4. Initialize database
-make sync-db
-
-# 5. Start backend services (two terminals needed)
-# Terminal 1: Python AI Engine
-make grpc-server
-
-# Terminal 2: Go Gateway
-make gateway-dev
-
-# 6. Start mobile client (third terminal)
-make mobile-run
+```
+                          ┌──────────────────────────┐
+                          │     Flutter Mobile App    │
+                          │   Riverpod  Design System │
+                          │ Multi-Sensory Experience  │
+                          └────────────┬─────────────┘
+                                       │
+                                WebSocket / HTTP
+                                       │
+                          ┌────────────┴─────────────┐
+                          │       Go Gateway          │
+                          │  Auth  Rate-Limit  Cache  │
+                          │  WebSocket  gRPC Bridge   │
+                          └────────────┬─────────────┘
+                                       │
+                                   gRPC (TLS)
+                                       │
+                          ┌────────────┴─────────────┐
+                          │    Python AI Engine       │
+                          │  LangGraph Orchestrator   │
+                          │  GraphRAG  Cognitive Core │
+                          │  Tool Registry  Celery    │
+                          └──┬─────────┬──────────┬──┘
+                             │         │          │
+                      ┌──────┴──┐  ┌───┴───┐  ┌──┴───┐
+                      │ PG 16   │  │ Redis │  │ MinIO│
+                      │pgvector │  │ 7+    │  │      │
+                      │AGE Graph│  │       │  │      │
+                      └─────────┘  └───────┘  └──────┘
 ```
 
-### Common Commands
+**为什么是三层？**
 
-```bash
-# === Development ===
-make dev-up              # Start infrastructure
-make gateway-dev         # Start Go gateway (hot reload)
-make grpc-server         # Start Python gRPC server
-make mobile-run          # Start Flutter app
+- **Flutter** 只负责展示和体验——不做业务逻辑
+- **Go Gateway** 负责高并发连接管理、认证、缓存——不做 AI 推理
+- **Python Engine** 负责全部 AI 智能——不做用户认证
 
-# === Code Generation ===
-make proto-gen           # Generate Protobuf code
-make sync-db             # DB migration + SQLC generation
-make mobile-gen          # Flutter code generation
-
-# === Task Queue ===
-make celery-up           # Start Celery worker + beat
-make celery-status       # Check queue status
-make celery-logs         # View task logs
-
-# === Health Checks ===
-make smoke               # All services health check
-make env-check           # Environment config check
-
-# === Testing ===
-cd backend && pytest                          # Python tests
-cd backend/gateway && go test ./...           # Go tests
-cd mobile && flutter test                      # Flutter tests
-```
+每层职责清晰，独立扩缩容。Gateway 能扛住万级 WebSocket 连接，Engine 能水平扩展 AI 算力。
 
 ---
-
-## 📁 Project Structure
-
-```
-Sparkle-project/
-│
-├── 📱 mobile/                          # Flutter client
-│   ├── lib/
-│   │   ├── core/                       # Core infrastructure
-│   │   │   ├── design/                 # Design System V2
-│   │   │   ├── services/               # Global services
-│   │   │   └── utils/                  # Utilities
-│   │   │
-│   │   ├── features/                   # Feature modules (domain-driven)
-│   │   │   ├── chat/                   # AI chat module
-│   │   │   ├── task/                   # Task management
-│   │   │   ├── galaxy/                 # Knowledge galaxy
-│   │   │   ├── plan/                   # Plan management
-│   │   │   ├── community/              # Community features
-│   │   │   └── profile/                # User profile
-│   │   │
-│   │   └── gen/                        # Protobuf generated code
-│   │
-│   └── test/                           # Test files
-│
-├── 🔧 backend/
-│   │
-│   ├── gateway/                        # Go gateway layer
-│   │   ├── internal/
-│   │   │   ├── handler/                # HTTP/WebSocket handlers
-│   │   │   │   ├── websocket.go        # WebSocket connection mgmt
-│   │   │   │   └── chat_orchestrator.go# Chat flow orchestration
-│   │   │   │
-│   │   │   ├── agent/                  # gRPC client
-│   │   │   │   └── client.go           # Python engine calls
-│   │   │   │
-│   │   │   ├── service/                # Business services
-│   │   │   │   ├── auth.go             # Auth
-│   │   │   │   └── chat_history.go     # Chat history
-│   │   │   │
-│   │   │   └── db/                     # Database layer
-│   │   │       ├── schema.sql          # Table definitions
-│   │   │       ├── models.go           # SQLC generated
-│   │   │       └── queries/            # SQL queries
-│   │   │
-│   │   └── cmd/                        # Entry points
-│   │
-│   └── app/                            # Python AI engine
-│       ├── services/                   # gRPC service implementations
-│       │   ├── agent_grpc_service.py   # Agent service
-│       │   ├── cognitive_service.py    # Cognitive service
-│       │   ├── memory_service.py       # Memory service
-│       │   ├── galaxy_service.py       # Galaxy service
-│       │   └── community_service.py    # Community service
-│       │
-│       ├── orchestration/              # Orchestration layer
-│       │   ├── orchestrator.py         # LangGraph FSM main orchestrator
-│       │   ├── plan_review_service.py  # Plan review service
-│       │   ├── sufficiency_checker.py  # Sufficiency checker
-│       │   └── adaptive_replanner.py   # Adaptive replanner
-│       │
-│       ├── tools/                      # AI tools
-│       │   ├── rag_tool.py             # RAG retrieval tool
-│       │   ├── task_tool.py            # Task management tool
-│       │   └── galaxy_tool.py          # Knowledge galaxy tool
-│       │
-│       └── core/                       # Core components
-│           ├── context_manager.py      # Context management
-│           ├── event_bus.py            # Event bus
-│           └── agent_profiles.py       # Agent configurations
-│
-├── 📜 proto/                           # Protobuf definitions (API contract)
-│   ├── agent_service.proto             # Agent service definition
-│   ├── galaxy_service.proto            # Galaxy service definition
-│   └── error_book.proto                # Error book service definition
-│
-├── 📚 docs/                            # Technical documentation
-│   ├── 00_项目概览/                     # Project overview
-│   ├── 01_核心模块文档/                 # Module docs
-│   ├── 02_技术设计文档/                 # Design docs
-│   └── 09_Cognitive_Nexus/             # Cognitive nexus docs
-│
-├── 🔨 Makefile                         # Build scripts
-├── 🐳 docker-compose.yml               # Service orchestration
-├── 📋 CLAUDE.md                        # Development guide
-└── 📄 README.md                        # This file
-```
-
----
-
-## 📚 Documentation
-
-| Document | Description | Audience |
-|:---------|:------------|:---------|
-| [CLAUDE.md](CLAUDE.md) | Dev guide · Architecture rules · Code patterns | Developers |
-| [Technical Architecture](docs/00_项目概览/02_技术架构.md) | 3-layer architecture deep dive | Developers |
-| [Cognitive Nexus Design](docs/09_Cognitive_Nexus/) | 4D profile system design | ML Engineers |
-| [Knowledge Galaxy System](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG implementation details | Developers |
-| [API Design](docs/02_技术设计文档/05_API设计.md) | gRPC + WebSocket interfaces | Developers |
-| [Database Design](docs/02_技术设计文档/04_数据库设计.md) | Table structures and indexes | Backend Devs |
-
----
-
-## 📈 Development Progress
-
-### ✅ Completed Features
 
 <details>
-<summary>Click to expand full list</summary>
+<summary><b>双核成长操作系统</b>（点击展开）</summary>
 
-- [x] 4D Cognitive Profile System
-- [x] GraphRAG Dual Retrieval (pgvector + Apache AGE)
-- [x] LangGraph Multi-Agent Orchestration
-- [x] Knowledge Galaxy Visualization
-- [x] Smart Task Recommendation + Pomodoro
-- [x] Plan Version Management
-- [x] Community Features (Friends/Groups/Check-ins)
-- [x] Forgetting Curve Review Push
-- [x] Design System V2
-- [x] Go Gateway Refactoring
-- [x] Unified gRPC Services
-- [x] Celery Async Task Queue
-- [x] 7-Stage Growth Loop
-- [x] Dual-Core Collaboration Architecture
+Sparkle 的核心创新是将 AI 系统拆为两个协作核心：
+
+```
+  ┌──────────────────────────┐    ┌──────────────────────────┐
+  │     执行核 (Execution)    │    │     认知核 (Cognitive)    │
+  │                          │    │                          │
+  │  目标澄清 → 充分性评估    │    │  用户画像 → 长短期记忆     │
+  │      ↓                   │    │      ↓                   │
+  │  分阶段计划 → 任务执行    │    │  认知棱镜 → 情感理解       │
+  │      ↓                   │    │      ↓                   │
+  │  动态调整               │    │  持续陪伴                │
+  └───────────┬──────────────┘    └──────────┬───────────────┘
+              │                               │
+              └──────── 协作层 ────────────────┘
+                  事件总线 · 上下文聚合 · 同步
+```
+
+**执行核**负责"把事做成"：帮用户定义目标、评估可行性、拆解计划、提供执行指导、根据实际灵活调整。
+
+**认知核**负责"理解用户"：四维画像持续更新、长短期记忆积累、认知棱镜洞察思维模式、情感状态识别与个性化激励。
+
+两个核心不是并行孤立运行，而是通过事件总线实时协作——执行核的任务结果会更新认知核的画像，认知核的理解会影响执行核的策略。
 
 </details>
 
-### 🚧 In Progress
+<details>
+<summary><b>七阶段成长闭环</b>（点击展开）</summary>
 
-- [ ] Error Attribution Analysis Enhancement
-- [ ] Collaborative Learning Real-time Sync
-- [ ] Performance Optimization (response < 500ms)
-- [ ] Multi-language Internationalization
+每次 Sparkle 交互都是一个完整的成长循环：
 
----
-
-## 🤝 Contributing
-
-We welcome all forms of contributions!
-
-### Ways to Contribute
-
-- 🐛 Submit bug reports
-- 💡 Propose new features
-- 📝 Improve documentation
-- 🔧 Submit code PRs
-
-### Development Workflow
-
-```bash
-# 1. Fork this repository
-# 2. Create feature branch
-git checkout -b feature/amazing-feature
-
-# 3. Commit changes
-git commit -m 'feat: add amazing feature'
-
-# 4. Push to branch
-git push origin feature/amazing-feature
-
-# 5. Create Pull Request
+```
+              感知 (Sense)
+                 │
+    ┌────────────┼────────────┐
+    ↓            ↓            ↓
+  澄清        计划         执行
+ (Clarify)   (Plan)     (Execute)
+    ↑                        │
+    │         反思            │
+    │       (Reflect) ←──────┘
+    │            │
+    │     ┌──────┴──────┐
+    │     ↓             ↓
+    │   巩固          适应
+    │ (Reinforce)   (Adapt)
+    │                   │
+    └───────────────────┘
 ```
 
-### Commit Convention
+| 阶段 | 职责 | 技术实现 |
+|:-----|:-----|:---------|
+| 感知 | 被动捕获用户信号 | 行为追踪、情绪识别、学习轨迹 |
+| 澄清 | 理解真实意图 | 意图识别、上下文理解、澄清式提问 |
+| 计划 | 生成可执行路径 | 目标拆解、路径规划、资源匹配 |
+| 执行 | 执行具体任务 | 任务调度、工具调用、进度追踪 |
+| 反思 | 分析执行结果 | 效果评估、错误归因、效果量化 |
+| 巩固 | 固化学习成果 | 间隔重复、记忆曲线、成就激励 |
+| 适应 | 调整策略模型 | 画像更新、策略优化 |
 
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+</details>
 
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation update
-- `refactor:` Code refactoring
-- `test:` Testing related
-- `chore:` Build/tooling related
+<details>
+<summary><b>证据驱动的 4D 认知画像</b>（点击展开）</summary>
+
+我们不只追踪"你知道什么"，更理解"你怎么思考"。每个维度都有**行为证据**支撑：
+
+```
+  ┌─────────────────────────────────────────────────┐
+  │              4D 认知画像                          │
+  ├────────────────────┬────────────────────────────┤
+  │                    │                            │
+  │  知识维度           │  认知维度                   │
+  │  · 掌握度 (0-100)  │  · 元认知（自我监控）        │
+  │  · 遗忘曲线半衰期   │  · 认知负荷评估              │
+  │  · 学习速率         │  · 思维风格（抽象/具象）      │
+  │  · 知识盲区图       │  · 问题解决策略              │
+  │                    │                            │
+  ├────────────────────┼────────────────────────────┤
+  │                    │                            │
+  │  动机维度           │  社交维度                   │
+  │  · 自我效能感       │  · 协作风格                  │
+  │  · 内外在动机比     │  · 沟通特征                  │
+  │  · 兴趣图谱         │  · 社区贡献度                │
+  │  · 目标承诺度       │  · 同伴影响敏感度            │
+  │                    │                            │
+  └────────────────────┴────────────────────────────┘
+```
+
+**证据来源**：对话内容分析、任务完成质量与时间、复习间隔与效果、错误模式聚类、情绪信号识别、社区互动行为。
+
+</details>
+
+<details>
+<summary><b>GraphRAG 混合检索引擎</b>（点击展开）</summary>
+
+突破传统 RAG 局限，将语义向量搜索与知识图谱遍历融合：
+
+```
+  查询 → ┬── pgvector 语义搜索（< 200ms）
+         │    语义相似的内容片段
+         │
+         ├── Apache AGE 图遍历（< 500ms）
+         │    前置知识、后续概念、关联关系
+         │
+         └── 融合排序
+              去重 → 依赖链构建 → 画像加权 → 上下文压缩
+              │
+              ↓
+          个性化响应（总延迟 < 800ms）
+```
+
+| 能力 | 传统 RAG | Sparkle GraphRAG |
+|:----|:---------|:-----------------|
+| 语义理解 | 向量相似度 | 向量相似度 |
+| 知识关系 | 无 | 图遍历推理 |
+| 前置知识 | 无法识别 | 自动关联 |
+| 个性化 | 无 | 画像加权 |
+| 学习路径 | 无 | 依赖链生成 |
+
+</details>
+
+<details>
+<summary><b>LangGraph 多智能体编排</b>（点击展开）</summary>
+
+10+ 专业 Agent 动态协作：
+
+```
+  用户输入 → 编排器（意图 → 拆分 → 分发 → 聚合）
+                │
+        ┌───────┼───────┬───────┬───────┐
+        ↓       ↓       ↓       ↓       ↓
+     知识     数学     代码    推理    规划
+     Agent   Agent   Agent   Agent   Agent
+        │       │       │       │       │
+        └───────┴───────┴───────┴───────┘
+                        │
+                  流式输出（可中断）
+```
+
+- **Handoff 机制**：Agent 之间无缝上下文传递
+- **状态快照**：长任务支持断点续传
+- **PONR 确认**：高风险操作需用户确认
+- **全链路可观测**：完整执行轨迹和决策链
+
+</details>
+
+<details>
+<summary><b>多感官体验系统</b>（点击展开）</summary>
+
+不是零散加动画，而是一套**统一的体验设计系统**：
+
+| 层次 | 能力 | 说明 |
+|:----|:----|:----|
+| **体验画像** | 5 种场景预设 | 高效仪表盘、AI 对话、沉浸专注、社交温暖、庆祝时刻 |
+| **音频策略** | 页面级 BGM + 阶段级覆盖 | SceneAudioScope 统一管理，不允许页面自行硬切 |
+| **动效原语** | 错峰进场、注意力脉冲、退场过渡 | SparkleStagger / AttentionPulse / ExitTransition |
+| **触觉反馈** | 27 种语义事件 | 同类行为触发同类反馈，全局感官预算防过载 |
+| **庆祝系统** | 三档庆祝强度 + 稀有度光效 | 全局粒子预算，低端设备自动降级 |
+| **无障碍** | reduceMotion / 大字体 / 语义标签 | 所有增强均可优雅退化 |
+
+</details>
 
 ---
 
-## 📄 License
+## 技术栈
 
-This project is licensed under the [MIT License](LICENSE).
+| 层 | 技术 | 版本 | 选型理由 |
+|:---|:----|:-----|:---------|
+| **移动端** | Flutter | 3.24+ | 跨平台一致性、热重载、丰富组件 |
+| | Riverpod | 2.x | 编译期安全、声明式状态管理 |
+| **网关** | Go | 1.22+ | 高并发、低内存、编译型 |
+| | Gin + gRPC | — | 高性能 HTTP + 强类型跨语言调用 |
+| **AI 引擎** | Python | 3.11+ | AI 生态丰富 |
+| | LangGraph | 0.3+ | 可观测状态机、复杂编排 |
+| | Celery | 5.x | 成熟异步任务队列 |
+| **数据** | PostgreSQL | 16+ | ACID + 丰富扩展 |
+| | pgvector | 0.7+ | 原生向量索引 |
+| | Apache AGE | 1.5+ | PostgreSQL 图扩展，Cypher 查询 |
+| | Redis | 7+ | 缓存、发布订阅、向量缓存 |
+| **存储** | MinIO | — | S3 兼容对象存储 |
+| **可观测** | Prometheus + Grafana + Loki + Tempo | — | 指标、日志、追踪、告警全覆盖 |
+
+---
+
+## 快速开始
+
+### 前置条件
+
+| 依赖 | 版本 | 说明 |
+|:----|:-----|:----|
+| Go | 1.22+ | 网关开发 |
+| Python | 3.11+ | AI 引擎开发 |
+| Flutter | 3.24+ | 移动端开发 |
+| Docker | 24+ | 容器化部署 |
+| Docker Compose | 2.x | 服务编排 |
+
+### 一键启动
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/BRSAMAyu/Sparkle-project.git
+cd Sparkle-project
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env，填入必要配置（LLM API Key、数据库、Redis）
+
+# 3. 启动基础设施（PostgreSQL、Redis、MinIO）
+make dev-up
+
+# 4. 初始化数据库
+make sync-db
+
+# 5. 启动后端服务（需要两个终端）
+make grpc-server    # 终端 1：Python AI 引擎
+make gateway-dev    # 终端 2：Go 网关
+
+# 6. 启动移动端（第三个终端）
+make mobile-run
+```
+
+### 常用命令
+
+```bash
+# 开发
+make dev-up              # 启动基础设施
+make gateway-dev         # 启动 Go 网关（热重载）
+make grpc-server         # 启动 Python gRPC 服务
+make mobile-run          # 启动 Flutter 应用
+
+# 代码生成
+make proto-gen           # 生成 Protobuf 代码
+make sync-db             # 数据库迁移 + SQLC 生成
+make mobile-gen          # Flutter 代码生成
+
+# 任务队列
+make celery-up           # 启动 Celery Worker + Beat
+make celery-status       # 查看队列状态
+
+# 健康检查
+make smoke               # 全服务健康检查
+make env-check           # 环境配置检查
+
+# 测试
+cd backend && pytest                    # Python 测试
+cd backend/gateway && go test ./...     # Go 测试
+cd mobile && flutter test               # Flutter 测试
+```
+
+---
+
+## 项目结构
+
+```
+Sparkle-project/
+├── mobile/                             # Flutter 移动端
+│   ├── lib/
+│   │   ├── core/                       # 核心基础设施
+│   │   │   ├── design/                 # 设计系统 V2（Token、组件、动效原语）
+│   │   │   ├── experience/             # 体验画像系统
+│   │   │   └── services/               # 全局服务（BGM、触觉、音频策略）
+│   │   ├── features/                   # 功能模块（35 个领域模块）
+│   │   │   ├── chat/                   # AI 对话
+│   │   │   ├── task/                   # 任务管理
+│   │   │   ├── galaxy/                 # 知识星图
+│   │   │   ├── focus/                  # 专注模式
+│   │   │   ├── achievement/            # 成就系统
+│   │   │   ├── community/              # 社群
+│   │   │   └── ...                     # 计划、认知、错题本、商店等
+│   │   └── gen/                        # Protobuf 生成代码
+│   └── test/                           # 81 个测试文件
+│
+├── backend/
+│   ├── gateway/                        # Go 网关层
+│   │   └── internal/
+│   │       ├── handler/                # HTTP/WebSocket 处理器
+│   │       ├── agent/                  # gRPC 客户端
+│   │       ├── service/                # 业务服务
+│   │       └── db/                     # 数据库层（SQLC）
+│   │
+│   └── app/                            # Python AI 引擎
+│       ├── orchestration/              # LangGraph 编排层
+│       ├── services/                   # gRPC 服务实现
+│       ├── tools/                      # AI 工具集
+│       └── core/                       # 核心组件（上下文、事件总线、画像）
+│
+├── proto/                              # Protobuf 定义（API 契约源）
+├── monitoring/                         # Prometheus、Grafana、Loki、Tempo、告警
+├── scripts/                            # 部署、备份、验证脚本
+├── docker-compose.yml                  # 开发环境编排
+├── docker-compose.prod.yml             # 生产环境编排（蓝绿部署）
+├── Makefile                            # 构建脚本
+└── CLAUDE.md                           # AI 开发助手指南
+```
+
+---
+
+## 文档
+
+| 文档 | 说明 | 受众 |
+|:----|:----|:----|
+| [CLAUDE.md](CLAUDE.md) | 开发指南、架构规则、代码模式 | 开发者 |
+| [技术架构](docs/00_项目概览/02_技术架构.md) | 三层架构深度讲解 | 开发者 |
+| [知识星图设计](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG 实现细节 | 开发者 |
+| [API 设计](docs/02_技术设计文档/05_API设计.md) | gRPC + WebSocket 接口 | 开发者 |
+| [CHANGELOG](CHANGELOG.md) | 版本变更记录 | 全部 |
+| [前端体验对齐](docs/engineering/前端改进对齐文档_2026-03-22.md) | 多感官体验系统规范 | 前端开发者 |
+
+---
+
+## 参与贡献
+
+欢迎各种形式的贡献：提交 Bug、提出新功能、改进文档、提交代码。
+
+```bash
+# 1. Fork 本仓库
+# 2. 创建功能分支
+git checkout -b feature/amazing-feature
+
+# 3. 提交更改（遵循 Conventional Commits）
+git commit -m 'feat: add amazing feature'
+
+# 4. 推送并创建 Pull Request
+git push origin feature/amazing-feature
+```
+
+---
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE) 许可。
 
 ---
 
 <div align="center">
 
-### ✨ Sparkle
+**Sparkle** &nbsp;&middot;&nbsp; v1.0.0
 
-**v1.0.0-beta**
-
-*Helping everyone become their best self*
-
----
-
-**Tech Stack**
+帮助每个人成为更好的自己
 
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)

@@ -87,6 +87,10 @@ class LibraryInfo(BaseModel):
     is_featured: bool = Field(default=False, description="是否为精选推荐")
     usage_count: int = Field(default=0, description="使用次数")
     quality_score: float | None = Field(None, description="质量评分")
+    system_quality_score: float | None = Field(None, description="系统基础质量评分")
+    user_rating_avg: float | None = Field(None, description="用户平均评分")
+    user_rating_count: int = Field(default=0, description="用户评分人数")
+    current_user_rating: float | None = Field(None, description="当前用户评分")
     item_count: int = Field(default=0, description="内容项数量")
     subscriber_count: int = Field(default=0, description="订阅者数量")
     created_at: datetime = Field(..., description="创建时间")
@@ -187,15 +191,33 @@ class ItemListParams(BaseModel):
 
 class SubscriptionCreate(BaseModel):
     """创建订阅请求"""
-    priority: int = Field(default=0, ge=0, le=100, description="优先级")
+    priority: int = Field(default=0, ge=0, le=1000, description="优先级")
     notes: str | None = Field(None, description="备注")
 
 
 class SubscriptionUpdate(BaseModel):
     """更新订阅请求"""
     is_enabled: bool | None = Field(None, description="是否启用")
-    priority: int | None = Field(None, ge=0, le=100, description="优先级")
+    priority: int | None = Field(None, ge=0, le=1000, description="优先级")
     notes: str | None = Field(None, description="备注")
+
+
+class RatingUpsertRequest(BaseModel):
+    """提交或更新用户评分"""
+
+    score: float = Field(..., ge=0, le=10, description="用户评分，0-10")
+    comment: str | None = Field(None, max_length=1000, description="评分说明")
+
+
+class RatingInfo(BaseModel):
+    """评分结果"""
+
+    library_id: UUID = Field(..., description="库ID")
+    score: float = Field(..., description="当前用户评分")
+    comment: str | None = Field(None, description="用户评分说明")
+    user_rating_avg: float | None = Field(None, description="用户平均评分")
+    user_rating_count: int = Field(default=0, description="用户评分人数")
+    effective_quality_score: float | None = Field(None, description="融合后的显示质量分")
 
 
 class SubscriptionInfo(BaseModel):

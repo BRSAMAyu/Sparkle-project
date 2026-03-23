@@ -8,7 +8,7 @@ from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select, text
+from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select, text, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer, selectinload
 
@@ -18,6 +18,7 @@ from app.models.seed_content import (
     LibraryVisibility,
     SeedItem,
     SeedLibrary,
+    SeedLibraryRating,
     UserLibrarySubscription,
 )
 from app.schemas.seed_content import (
@@ -145,6 +146,156 @@ class SeedLibraryService:
                 LibraryVisibility.OFFICIAL.value,
             }
         )
+
+    @staticmethod
+    def _blend_quality_score(
+        system_score: float | None,
+        user_avg: float | None,
+        user_count: int,
+    ) -> float | None:
+        if user_avg is None and system_score is None:
+            return None
+        if user_avg is None:
+            return round(float(system_score), 1) if system_score is not None else None
+        if system_score is None:
+            return round(float(user_avg), 1)
+
+        user_weight = min(0.85, 0.35 + (user_count * 0.1))
+        blended = float(system_score) * (1 - user_weight) + float(user_avg) * user_weight
+        return round(blended, 1)
+
+    async def get_rating_summary(
+        self,
+        db: AsyncSession,
+        library_id: uuid.UUID,
+        user_id: uuid.UUID | None = None,
+    ) -> dict[str, Any]:
+        avg_stmt = await db.execute(
+            select(
+                func.avg(SeedLibraryRating.score),
+                func.count(SeedLibraryRating.id),
+            ).where(SeedLibraryRating.library_id == library_id)
+        )
+        avg_score, rating_count = avg_stmt.one()
+
+        current_user_rating = None
+        current_user_comment = None
+        if user_id:
+            current_stmt = await db.execute(
+                select(SeedLibraryRating).where(
+                    and_(
+                        SeedLibraryRating.library_id == library_id,
+                        SeedLibraryRating.user_id == user_id,
+                    )
+                )
+            )
+            current = current_stmt.scalar_one_or_none()
+            if current:
+                current_user_rating = float(current.score)
+                current_user_comment = current.comment
+
+        return {
+            "user_rating_avg": round(float(avg_score), 1) if avg_score is not None else None,
+            "user_rating_count": int(rating_count or 0),
+            "current_user_rating": current_user_rating,
+            "current_user_comment": current_user_comment,
+        }
+
+    async def batch_get_rating_summaries(
+        self,
+        db: AsyncSession,
+        library_ids: list[uuid.UUID],
+        user_id: uuid.UUID | None = None,
+    ) -> dict[uuid.UUID, dict[str, Any]]:
+        if not library_ids:
+            return {}
+
+        avg_rows = await db.execute(
+            select(
+                SeedLibraryRating.library_id,
+                func.avg(SeedLibraryRating.score),
+                func.count(SeedLibraryRating.id),
+            )
+            .where(SeedLibraryRating.library_id.in_(library_ids))
+            .group_by(SeedLibraryRating.library_id)
+        )
+        summary_map: dict[uuid.UUID, dict[str, Any]] = {
+            lib_id: {
+                "user_rating_avg": round(float(avg), 1) if avg is not None else None,
+                "user_rating_count": int(count or 0),
+                "current_user_rating": None,
+                "current_user_comment": None,
+            }
+            for lib_id, avg, count in avg_rows.all()
+        }
+
+        for lib_id in library_ids:
+            summary_map.setdefault(
+                lib_id,
+                {
+                    "user_rating_avg": None,
+                    "user_rating_count": 0,
+                    "current_user_rating": None,
+                    "current_user_comment": None,
+                },
+            )
+
+        if user_id:
+            current_rows = await db.execute(
+                select(SeedLibraryRating).where(
+                    and_(
+                        SeedLibraryRating.library_id.in_(library_ids),
+                        SeedLibraryRating.user_id == user_id,
+                    )
+                )
+            )
+            for rating in current_rows.scalars().all():
+                summary_map[rating.library_id]["current_user_rating"] = float(rating.score)
+                summary_map[rating.library_id]["current_user_comment"] = rating.comment
+
+        return summary_map
+
+    async def rate_library(
+        self,
+        db: AsyncSession,
+        library_id: uuid.UUID,
+        user_id: uuid.UUID,
+        score: float,
+        comment: str | None = None,
+    ) -> dict[str, Any] | None:
+        library = await self.get_library_for_user(db, library_id, user_id)
+        if not library:
+            return None
+
+        existing = await db.execute(
+            select(SeedLibraryRating).where(
+                and_(
+                    SeedLibraryRating.library_id == library_id,
+                    SeedLibraryRating.user_id == user_id,
+                )
+            )
+        )
+        rating = existing.scalar_one_or_none()
+        if rating is None:
+            rating = SeedLibraryRating(
+                library_id=library_id,
+                user_id=user_id,
+                score=score,
+                comment=comment,
+            )
+            db.add(rating)
+        else:
+            rating.score = score
+            rating.comment = comment
+
+        await db.flush()
+        summary = await self.get_rating_summary(db, library_id, user_id)
+        summary["effective_quality_score"] = self._blend_quality_score(
+            library.quality_score,
+            summary["user_rating_avg"],
+            summary["user_rating_count"],
+        )
+        return summary
 
     async def can_access_library(
         self,
@@ -1265,16 +1416,9 @@ class SeedLibraryService:
             SeedItem.deleted_at.is_(None),
             SeedItem.is_active,
             SeedItem.item_type == ItemType.EXAMPLE,
+            SeedLibrary.deleted_at.is_(None),
+            SeedLibrary.category == LibraryCategory.FEW_SHOT.value,
         ]
-
-        lib_ids = await self._get_accessible_library_ids(
-            db,
-            user_id=user_id,
-            category=LibraryCategory.FEW_SHOT.value,
-        )
-        if not lib_ids:
-            return []
-        conditions.append(SeedItem.library_id.in_(lib_ids))
 
         # 学科筛选
         if subject:
@@ -1297,15 +1441,62 @@ class SeedLibraryService:
                     tag_filters = [SeedItem.tags.contains([tag]) for tag in cleaned_tags]
                     conditions.append(or_(*tag_filters))
 
-        # 查询示例
+        sub_alias = UserLibrarySubscription
+        public_library_conditions = [
+            SeedLibrary.is_official.is_(True),
+            SeedLibrary.visibility == LibraryVisibility.PUBLIC.value,
+            SeedLibrary.visibility == LibraryVisibility.OFFICIAL.value,
+        ]
+        accessibility = or_(
+            and_(
+                sub_alias.user_id == user_id,
+                sub_alias.is_enabled.is_(True),
+                sub_alias.deleted_at.is_(None),
+            ),
+            SeedLibrary.owner_id == user_id,
+            *public_library_conditions,
+        )
+
+        # 查询示例，并按“当前启用订阅优先级 -> 官方/精选 -> 内容顺序”排序
         result = await db.execute(
             select(SeedItem)
+            .join(SeedLibrary, SeedLibrary.id == SeedItem.library_id)
+            .outerjoin(
+                sub_alias,
+                and_(
+                    sub_alias.library_id == SeedLibrary.id,
+                    sub_alias.user_id == user_id,
+                    sub_alias.deleted_at.is_(None),
+                ),
+            )
             .options(defer(SeedItem.embedding))
             .where(and_(*conditions))
-            .order_by(asc(SeedItem.order_index))
+            .where(accessibility)
+            .order_by(
+                desc(func.coalesce(sub_alias.is_enabled, False)),
+                desc(func.coalesce(sub_alias.priority, 0)),
+                desc(SeedLibrary.is_featured),
+                desc(SeedLibrary.is_official),
+                asc(SeedItem.order_index),
+                desc(SeedItem.created_at),
+            )
             .limit(count)
         )
         items = list(result.scalars().all())
+
+        if items:
+            active_library_ids = {item.library_id for item in items}
+            await db.execute(
+                sa_update(UserLibrarySubscription)
+                .where(
+                    and_(
+                        UserLibrarySubscription.user_id == user_id,
+                        UserLibrarySubscription.library_id.in_(active_library_ids),
+                        UserLibrarySubscription.deleted_at.is_(None),
+                    )
+                )
+                .values(last_used_at=_utcnow())
+            )
 
         # 转换为 few-shot 格式
         examples = []
@@ -1356,19 +1547,46 @@ class SeedLibraryService:
             SeedItem.item_type == ItemType.TEMPLATE,
             SeedItem.tags.contains([template_key]),
         ]
-
-        lib_ids = await self._get_accessible_library_ids(
-            db,
-            user_id=user_id,
-            category=LibraryCategory.REPLY_TEMPLATE.value,
-            language=language,
+        conditions.extend(
+            [
+                SeedLibrary.deleted_at.is_(None),
+                SeedLibrary.category == LibraryCategory.REPLY_TEMPLATE.value,
+                SeedLibrary.language == language,
+            ]
         )
-        if not lib_ids:
-            return None
-        conditions.append(SeedItem.library_id.in_(lib_ids))
 
         result = await db.execute(
-            select(SeedItem).options(defer(SeedItem.embedding)).where(and_(*conditions)).order_by(desc(SeedItem.order_index))
+            select(SeedItem)
+            .join(SeedLibrary, SeedLibrary.id == SeedItem.library_id)
+            .outerjoin(
+                UserLibrarySubscription,
+                and_(
+                    UserLibrarySubscription.library_id == SeedLibrary.id,
+                    UserLibrarySubscription.user_id == user_id,
+                    UserLibrarySubscription.deleted_at.is_(None),
+                ),
+            )
+            .options(defer(SeedItem.embedding))
+            .where(and_(*conditions))
+            .where(
+                or_(
+                    and_(
+                        UserLibrarySubscription.is_enabled.is_(True),
+                        UserLibrarySubscription.user_id == user_id,
+                    ),
+                    SeedLibrary.owner_id == user_id,
+                    SeedLibrary.is_official.is_(True),
+                    SeedLibrary.visibility == LibraryVisibility.PUBLIC.value,
+                    SeedLibrary.visibility == LibraryVisibility.OFFICIAL.value,
+                )
+            )
+            .order_by(
+                desc(func.coalesce(UserLibrarySubscription.is_enabled, False)),
+                desc(func.coalesce(UserLibrarySubscription.priority, 0)),
+                desc(SeedLibrary.is_featured),
+                desc(SeedLibrary.is_official),
+                desc(SeedItem.order_index),
+            )
         )
         item = result.scalar_one_or_none()
 
@@ -1377,6 +1595,17 @@ class SeedLibraryService:
             library = await self.get_library(db, item.library_id)
             if library:
                 library.increment_usage()
+            await db.execute(
+                sa_update(UserLibrarySubscription)
+                .where(
+                    and_(
+                        UserLibrarySubscription.user_id == user_id,
+                        UserLibrarySubscription.library_id == item.library_id,
+                        UserLibrarySubscription.deleted_at.is_(None),
+                    )
+                )
+                .values(last_used_at=_utcnow())
+            )
             return item.content
 
         return None

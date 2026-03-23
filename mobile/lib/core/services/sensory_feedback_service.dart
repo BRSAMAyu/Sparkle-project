@@ -117,11 +117,11 @@ extension AmbientSceneLabel on AmbientScene {
 
   String? get assetPath => switch (this) {
         AmbientScene.none => null,
-        AmbientScene.rain => 'audio/ambient/rain.ogg',
-        AmbientScene.ocean => 'audio/ambient/ocean_waves.ogg',
-        AmbientScene.whiteNoise => 'audio/ambient/white_noise.ogg',
-        AmbientScene.cafe => 'audio/ambient/cafe.ogg',
-        AmbientScene.piano => 'audio/ambient/piano.ogg',
+        AmbientScene.rain => 'assets/audio/ambient/rain.ogg',
+        AmbientScene.ocean => 'assets/audio/ambient/ocean_waves.ogg',
+        AmbientScene.whiteNoise => 'assets/audio/ambient/white_noise.ogg',
+        AmbientScene.cafe => 'assets/audio/ambient/cafe.ogg',
+        AmbientScene.piano => 'assets/audio/ambient/piano.ogg',
       };
 }
 
@@ -179,6 +179,7 @@ class SensoryFeedbackService {
   static final Map<SensoryFeedbackEvent, DateTime> _lastEmission = {};
   static final List<DateTime> _recentSoundEvents = [];
   static final List<DateTime> _recentHapticEvents = [];
+  static final Set<String> _missingSoundAssets = <String>{};
   static const Duration _soundBudgetWindow = Duration(milliseconds: 2200);
   static const Duration _hapticBudgetWindow = Duration(milliseconds: 1600);
   static const int _soundBudgetLimit = 5;
@@ -227,6 +228,10 @@ class SensoryFeedbackService {
   static Future<void> _setSoundEnabled(bool enabled) async {
     await (await _getPrefs()).setBool(_soundEnabledKey, enabled);
     if (enabled) {
+      final scene = await getSavedAmbientScene();
+      if (scene != AmbientScene.none) {
+        await playAmbient(scene);
+      }
       return;
     }
     for (final player in _pool) {
@@ -381,7 +386,7 @@ class SensoryFeedbackService {
   // Internal: sound spec table
   // ---------------------------------------------------------------------------
 
-  static const String _ui = 'audio/ui/';
+  static const String _ui = 'assets/audio/ui/';
 
   static _SoundSpec _spec(SensoryFeedbackEvent event) {
     switch (event) {
@@ -549,6 +554,9 @@ class SensoryFeedbackService {
 
   static Future<void> _playSound(SensoryFeedbackEvent event) async {
     final spec = _spec(event);
+    if (_missingSoundAssets.contains(spec.assetPath)) {
+      return;
+    }
 
     // Ensure pool is ready (lazy init if init() was not called)
     if (!_poolReady) await init();
@@ -564,7 +572,11 @@ class SensoryFeedbackService {
         mode: PlayerMode.lowLatency,
       );
     } catch (e, st) {
-      if (kDebugMode) {
+      final isMissingAsset = e.toString().contains('Unable to load asset');
+      if (isMissingAsset) {
+        _missingSoundAssets.add(spec.assetPath);
+      }
+      if (kDebugMode && !isMissingAsset) {
         debugPrint('SensoryFeedback sound error: $e');
         debugPrintStack(stackTrace: st);
       }

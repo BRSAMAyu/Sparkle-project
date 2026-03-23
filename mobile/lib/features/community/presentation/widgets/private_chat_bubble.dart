@@ -2,11 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
   const PrivateChatBubble({required this.message, super.key});
@@ -126,6 +133,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   Widget _buildSharedResourceBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
     final contentType = _getContentTypeFromMessageType(widget.message.messageType);
+    final sharedResourceId = data['shared_resource_id']?.toString();
 
     final payload = UniversalSharePayload(
       contentType: contentType,
@@ -141,6 +149,16 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         payload,
         isCompact: false,
         onTap: () => _handleSharedResourceTap(payload),
+        sharedResourceId: sharedResourceId,
+        onAdopt: sharedResourceId == null
+            ? null
+            : () => _handleAdopt(
+                  context,
+                  sharedResourceId,
+                  contentType == ShareableContentType.planProgress
+                      ? 'plan'
+                      : 'task',
+                ),
       ),
     );
   }
@@ -184,8 +202,52 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   void _handleSharedResourceTap(UniversalSharePayload payload) {
     final deepLink = payload.deepLink;
     if (deepLink.isNotEmpty) {
-      UniversalShareService().copyDeepLink(deepLink);
-      AppFeedback.info(context, '链接已复制');
+      if (!DeepLinkService.handleDeepLink(context, deepLink)) {
+        UniversalShareService().copyDeepLink(deepLink);
+        AppFeedback.info(context, '链接已复制');
+      }
+    }
+  }
+
+  Future<void> _handleAdopt(
+    BuildContext context,
+    String sharedResourceId,
+    String resourceType,
+  ) async {
+    try {
+      final result = await ref
+          .read(communityShareRepositoryProvider)
+          .adoptResource(sharedResourceId: sharedResourceId);
+      if (!context.mounted) {
+        return;
+      }
+      AppFeedback.success(context, '已采纳，跳转中...');
+      final entityCard = result['entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': result['entity_card'] as Map<String, dynamic>},
+              fallbackType: resourceType,
+            )
+          : null;
+      final newId = result['new_resource_id']?.toString();
+      final route = entityCard?.detailRoute ??
+          (newId == null
+              ? null
+              : resourceType == 'plan'
+                  ? '/plans/$newId'
+                  : '/tasks/$newId');
+      if (resourceType == 'plan') {
+        unawaited(ref.read(planListProvider.notifier).refresh());
+      } else {
+        unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      }
+      if (route != null && route.isNotEmpty) {
+        unawaited(context.push(route));
+      }
+    } catch (e) {
+      if (!context.mounted) {
+        return;
+      }
+      AppFeedback.error(context, '采纳失败: $e');
     }
   }
 
@@ -211,13 +273,14 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
               : DS.shadowSm,
           border: isMe ? null : Border.all(color: DS.neutral100),
         ),
-        child: Text(
-          widget.message.content ?? '',
-          style: TextStyle(
-            color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-            fontSize: 16,
-            height: 1.4,
-          ),
+        child: AiRichText(
+          content: widget.message.content ?? '',
+          textColor: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          codeBackgroundColor:
+              isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
+          linkColor: isMe ? Colors.white : DS.brandPrimary,
+          fontSize: 16,
+          height: 1.4,
         ),
       );
 

@@ -542,8 +542,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               )
             : null,
         onTap: () {
-          context.push(
-            '/community/users/${member.user.id}?name=${Uri.encodeComponent(member.user.displayName)}',
+          context.pushNamed(
+            'userProfile',
+            pathParameters: {'id': member.user.id},
+            queryParameters: {'name': member.user.displayName},
           );
         },
       ),

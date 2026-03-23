@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -222,8 +224,6 @@ class MessageDetailView extends StatelessWidget {
       textColor: DS.textPrimary,
       codeBackgroundColor: DS.surfaceTertiary.withValues(alpha: 0.35),
       linkColor: DS.primaryBase,
-      fontSize: 16,
-      height: 1.6,
       selectablePlainText: true,
     );
   }
@@ -264,9 +264,10 @@ class MessageDetailView extends StatelessWidget {
               _ActionButton(
                 icon: Icons.copy,
                 label: context.l10n.chatCopy,
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: message.content));
-                  AppFeedback.info(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: message.content));
+                  if (!context.mounted) return;
+                  AppFeedback.success(
                     context,
                     context.l10n.chatCopiedToClipboard,
                   );
@@ -300,11 +301,11 @@ class _ActionButton extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final Future<void> Function() onPressed;
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onPressed,
+        onTap: () => unawaited(onPressed()),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(

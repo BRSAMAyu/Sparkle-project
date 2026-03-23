@@ -20,17 +20,16 @@ class CapsuleGenerationPreview extends StatelessWidget {
 
   /// 根据深度偏好获取深度级别与预估模型
   (String Function(BuildContext) label, String model) get _depthLevel {
-    final composite = depthPreference * 0.7 + curiosityPreference * 0.3;
-    final useThinking = composite >= 0.8;
     if (depthPreference < 0.3) {
-      return ((context) => context.l10n.capsuleDepthShallow, 'GLM-4.7 FlashX');
-    } else if (composite < 0.72) {
-      return ((context) => context.l10n.capsuleDepthMedium, 'GLM-4.7');
-    } else if (useThinking) {
-      return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7 Thinking');
-    } else {
-      return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7');
+      return ((context) => context.l10n.capsuleDepthShallow, 'GLM-4.5 Air Batch');
     }
+    if (depthPreference < 0.72) {
+      return ((context) => context.l10n.capsuleDepthMedium, 'GLM-4.6 Batch');
+    }
+    if (curiosityPreference >= 0.8) {
+      return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7 Thinking');
+    }
+    return ((context) => context.l10n.capsuleDepthDeep, 'GLM-4.7');
   }
 
   /// 根据好奇心偏好计算预计生成数量

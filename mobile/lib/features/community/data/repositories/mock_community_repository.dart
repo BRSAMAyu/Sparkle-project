@@ -1847,10 +1847,12 @@ class MockCommunityRepository implements CommunityRepository {
     return SharedResourceInfo(
       id: const Uuid().v4(),
       resourceType: request.resourceType,
-      resourceId: request.resourceId,
-      sharerId: currentUserId,
-      groupIds: request.groupIds,
       createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      taskId:
+          request.resourceType == SharedResourceType.task ? request.resourceId : null,
+      planId:
+          request.resourceType == SharedResourceType.plan ? request.resourceId : null,
     );
   }
 

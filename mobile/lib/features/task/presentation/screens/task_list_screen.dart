@@ -1,15 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/animations/staggered_responsive_grid.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -71,7 +70,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.go('/home');
+          },
         ),
         title: AnimatedSwitcher(
           duration: DS.durationNormal,
@@ -289,7 +294,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       );
     }
 
-    if (state.error != null && tasks.isEmpty) {
+    if (state.error != null && state.tasks.isEmpty) {
       return CustomErrorWidget.page(
         context: context,
         message: state.error!,
@@ -373,36 +378,57 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       );
     }
 
-    return StaggeredResponsiveGrid(
-      itemCount: tasks.length,
-      builder: (context, index, animation) {
-        final task = tasks[index];
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.1),
-              end: Offset.zero,
-            ).animate(animation),
-            child: RepaintBoundary(
-              child: TaskCard(
-                task: task,
-                enableSwipeComplete: true,
-                onTap: () {
-                  context.push('/tasks/${task.id}');
-                },
-                onStart: () {
-                  // Handle start
-                  ref.read(taskListProvider.notifier).startTask(task.id);
-                },
-                onComplete: () {
-                  // Handle complete
-                  ref
-                      .read(taskListProvider.notifier)
-                      .completeTask(task.id, task.estimatedMinutes, null);
-                },
-              ),
-            ),
+    final showSummary =
+        !_isSearching &&
+        ref.read(taskFilterProvider) == TaskFilterOptions.all &&
+        tasks.length > 1;
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing12,
+        DS.spacing8,
+        DS.spacing12,
+        88,
+      ),
+      itemCount: tasks.length + (showSummary ? 1 : 0),
+      separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
+      itemBuilder: (context, index) {
+        if (showSummary && index == 0) {
+          return _TaskListSummary(
+            totalCount: tasks.length,
+            pendingCount: tasks
+                .where((task) => task.status == TaskStatus.pending)
+                .length,
+            inProgressCount: tasks
+                .where((task) => task.status == TaskStatus.inProgress)
+                .length,
+            completedCount: tasks
+                .where((task) => task.status == TaskStatus.completed)
+                .length,
+          );
+        }
+        final task = tasks[index - (showSummary ? 1 : 0)];
+        return RepaintBoundary(
+          child: TaskCard(
+            task: task,
+            compact: true,
+            enableSwipeComplete: false,
+            onTap: () => context.push('/tasks/${task.id}'),
+            onStart: () {
+              unawaited(
+                ref.read(taskListProvider.notifier).startTask(task.id),
+              );
+            },
+            onComplete: () {
+              unawaited(
+                ref
+                    .read(taskListProvider.notifier)
+                    .completeTask(task.id, task.estimatedMinutes, null),
+              );
+            },
           ),
         );
       },
@@ -476,13 +502,20 @@ class _FilterChips extends ConsumerWidget {
     final currentFilter = ref.watch(taskFilterProvider);
 
     return Container(
+      margin: const EdgeInsets.fromLTRB(
+        DS.spacing12,
+        DS.spacing12,
+        DS.spacing12,
+        0,
+      ),
       padding: const EdgeInsets.symmetric(
-        vertical: DS.spacing12,
-        horizontal: DS.spacing16,
+        vertical: DS.spacing8,
+        horizontal: DS.spacing8,
       ),
       decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        boxShadow: DS.shadowSm,
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.neutral300.withValues(alpha: 0.4)),
       ),
       child: SizedBox(
         height: DS.spacing40,
@@ -507,7 +540,7 @@ class _FilterChips extends ConsumerWidget {
                   ),
                   decoration: BoxDecoration(
                     gradient: isSelected ? DS.primaryGradient : null,
-                    color: isSelected ? null : DS.neutral100,
+                    color: isSelected ? null : DS.surfacePrimary,
                     borderRadius: DS.borderRadius20,
                     border: Border.all(
                       color: isSelected ? Colors.transparent : DS.neutral300,
@@ -549,4 +582,96 @@ class _FilterChips extends ConsumerWidget {
         return l10n.taskStatusCompleted;
     }
   }
+}
+
+class _TaskListSummary extends StatelessWidget {
+  const _TaskListSummary({
+    required this.totalCount,
+    required this.pendingCount,
+    required this.inProgressCount,
+    required this.completedCount,
+  });
+
+  final int totalCount;
+  final int pendingCount;
+  final int inProgressCount;
+  final int completedCount;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.neutral300.withValues(alpha: 0.35)),
+        ),
+        child: Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            _TaskMetricChip(label: '全部', value: totalCount, tone: DS.info),
+            _TaskMetricChip(
+              label: '待开始',
+              value: pendingCount,
+              tone: DS.brandPrimary,
+            ),
+            _TaskMetricChip(
+              label: '进行中',
+              value: inProgressCount,
+              tone: DS.warning,
+            ),
+            _TaskMetricChip(
+              label: '已完成',
+              value: completedCount,
+              tone: DS.semanticSuccess,
+            ),
+          ],
+        ),
+      );
+}
+
+class _TaskMetricChip extends StatelessWidget {
+  const _TaskMetricChip({
+    required this.label,
+    required this.value,
+    required this.tone,
+  });
+
+  final String label;
+  final int value;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: tone.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: tone.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: DS.fontSizeXs,
+              ),
+            ),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              '$value',
+              style: TextStyle(
+                color: tone,
+                fontWeight: DS.fontWeightBold,
+                fontSize: DS.fontSizeSm,
+              ),
+            ),
+          ],
+        ),
+      );
 }

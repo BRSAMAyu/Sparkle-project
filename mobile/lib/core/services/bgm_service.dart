@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -100,6 +101,7 @@ class BgmService {
   static String? _currentAssetPath;
   static String? _preloadedAssetPath;
   static double _currentOutputVolume = 0;
+  static final Set<String> _missingAssetPaths = <String>{};
 
   static Future<void> init() async {
     if (_player != null) {
@@ -346,6 +348,11 @@ class BgmService {
     final registration = _resolveRegistration();
     final fadeDuration = _fadeDurationForPriority(registration?.priority);
     final assetPath = await _resolveAssetPath(track);
+    if (_missingAssetPaths.contains(assetPath)) {
+      _currentTrack = null;
+      _currentAssetPath = null;
+      return;
+    }
 
     if (_currentAssetPath == assetPath) {
       _currentTrack = track;
@@ -358,11 +365,27 @@ class BgmService {
     await _fadeTo(0, duration: fadeDuration);
     await player.stop();
     await player.setReleaseMode(ReleaseMode.loop);
-    await player.play(AssetSource(assetPath), volume: 0, mode: PlayerMode.mediaPlayer);
-    _currentTrack = track;
-    _currentPriority = registration?.priority;
-    _currentAssetPath = assetPath;
-    await _fadeTo(await _targetVolume(track), duration: fadeDuration);
+    try {
+      await player.play(
+        AssetSource(assetPath),
+        volume: 0,
+        mode: PlayerMode.mediaPlayer,
+      );
+      _currentTrack = track;
+      _currentPriority = registration?.priority;
+      _currentAssetPath = assetPath;
+      await _fadeTo(await _targetVolume(track), duration: fadeDuration);
+    } catch (e) {
+      if (e.toString().contains('Unable to load asset')) {
+        _missingAssetPaths.add(assetPath);
+      } else if (kDebugMode) {
+        debugPrint('BGM switch error for $assetPath: $e');
+      }
+      _currentTrack = null;
+      _currentPriority = null;
+      _currentAssetPath = null;
+      _currentOutputVolume = 0;
+    }
   }
 
   static Future<void> _preloadLikelyNextTrack(BgmTrack currentTrack) async {
@@ -378,11 +401,17 @@ class BgmService {
     if (assetPath == _currentAssetPath || assetPath == _preloadedAssetPath) {
       return;
     }
+    if (_missingAssetPaths.contains(assetPath)) {
+      return;
+    }
     try {
       await preloadPlayer.stop();
       await preloadPlayer.setSourceAsset(assetPath);
       _preloadedAssetPath = assetPath;
-    } catch (_) {
+    } catch (e) {
+      if (e.toString().contains('Unable to load asset')) {
+        _missingAssetPaths.add(assetPath);
+      }
       _preloadedAssetPath = null;
     }
   }
@@ -431,106 +460,106 @@ class BgmService {
     switch (track) {
       case BgmTrack.dashboard:
         return switch (palette) {
-          BgmPalette.adaptive => 'audio/bgm/relax_background1.ogg',
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/relax_background1.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
         };
       case BgmTrack.plan:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/sunset_walk.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/sunset_walk.ogg',
         };
       case BgmTrack.chat:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          _ => 'audio/bgm/calm_track_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          _ => 'assets/audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.community:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/loop_city.ogg',
-          BgmPalette.adaptive => 'audio/bgm/loop_city.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/loop_city.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/loop_city.ogg',
         };
       case BgmTrack.task:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/calm_track_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.calendar:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/oceanic_drift.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/oceanic_drift.ogg',
         };
       case BgmTrack.achievement:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/heavenly_loop.ogg',
         };
       case BgmTrack.galaxy:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/heavenly_loop.ogg',
         };
       case BgmTrack.celebration:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/heavenly_loop.ogg',
         };
       case BgmTrack.insights:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          _ => 'audio/bgm/relax_background1.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          _ => 'assets/audio/bgm/relax_background1.ogg',
         };
       case BgmTrack.tools:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/oceanic_drift.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/calm_track_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/oceanic_drift.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/calm_track_loop.ogg',
         };
       case BgmTrack.profile:
         return switch (palette) {
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          _ => 'audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          _ => 'assets/audio/bgm/classical_piano_loop.ogg',
         };
       case BgmTrack.focusStart:
         return switch (palette) {
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.adaptive => 'audio/ambient/piano.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.adaptive => 'assets/audio/ambient/piano.ogg',
         };
       case BgmTrack.focus:
-        return 'audio/ambient/piano.ogg';
+        return 'assets/audio/ambient/piano.ogg';
       case BgmTrack.focusDeep:
-        return 'audio/ambient/rain.ogg';
+        return 'assets/audio/ambient/rain.ogg';
       case BgmTrack.thinking:
-        return 'audio/ambient/piano.ogg';
+        return 'assets/audio/ambient/piano.ogg';
       case BgmTrack.visualUnlock:
         return switch (palette) {
-          BgmPalette.piano => 'audio/bgm/classical_piano_loop.ogg',
-          BgmPalette.airy => 'audio/bgm/heavenly_loop.ogg',
-          BgmPalette.warm => 'audio/bgm/sunset_walk.ogg',
-          BgmPalette.adaptive => 'audio/bgm/heavenly_loop.ogg',
+          BgmPalette.piano => 'assets/audio/bgm/classical_piano_loop.ogg',
+          BgmPalette.airy => 'assets/audio/bgm/heavenly_loop.ogg',
+          BgmPalette.warm => 'assets/audio/bgm/sunset_walk.ogg',
+          BgmPalette.adaptive => 'assets/audio/bgm/heavenly_loop.ogg',
         };
     }
   }

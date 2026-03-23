@@ -12,11 +12,12 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
+import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
-import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
@@ -95,6 +96,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setBgmEnabled(bool value) async {
     setState(() => _bgmEnabled = value);
     await BgmService.setEnabled(value);
+    if (value) {
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.confirm,
+        enableHaptic: false,
+      );
+    }
   }
 
   Future<void> _setBgmVolume(double value) async {
@@ -105,26 +112,50 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setBgmPalette(BgmPalette palette) async {
     setState(() => _bgmPalette = palette);
     await BgmService.setPalette(palette);
+    if (_bgmEnabled) {
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.selection,
+        enableHaptic: false,
+      );
+    }
   }
 
   Future<void> _setBgmMode(BgmMode mode) async {
     setState(() => _bgmMode = mode);
     await BgmService.setMode(mode);
+    if (_bgmEnabled && mode != BgmMode.silent) {
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.selection,
+        enableHaptic: false,
+      );
+    }
   }
 
   Future<void> _setSoundEnabled(bool value) async {
     setState(() => _soundEnabled = value);
     await SensoryFeedbackService.setSoundEnabled(value);
+    if (value) {
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.confirm,
+        enableHaptic: false,
+      );
+    }
   }
 
   Future<void> _setHapticEnabled(bool value) async {
     setState(() => _hapticEnabled = value);
     await SensoryFeedbackService.setHapticEnabled(value);
+    if (value) {
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.selection,
+        enableSound: false,
+      );
+    }
   }
 
   Future<void> _setAmbientScene(AmbientScene scene) async {
     setState(() => _ambientScene = scene);
-    await SensoryFeedbackService.setAmbientScene(scene);
+    await SensoryFeedbackService.setAmbientScene(scene, autoplay: true);
   }
 
   Future<void> _setAmbientVolume(double value) async {
@@ -153,6 +184,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final transparencyLevel = ref.watch(transparencyLevelProvider);
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
     final aiReasoningMode = ref.watch(aiReasoningModeProvider);
+    final showChatContextToggle = ref.watch(showChatContextToggleProvider);
+    final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
     final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
     final aiOpsDashboard = ref.watch(aiOpsDashboardProvider);
     final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
@@ -299,24 +332,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     _buildSectionHeader(
                       Icons.auto_awesome,
                       l10n.capsuleGeneration,
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    Text(
-                      l10n.adjustAndGenerate,
-                      style: DS.bodySmall.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    PreferenceController2D(
-                      initialDepth: learningPrefs.depth,
-                      initialCuriosity: learningPrefs.curiosity,
-                      onPreferenceChanged: (offset) {
-                        _scheduleLearningPreferenceUpdate(
-                          depth: offset.dy,
-                          curiosity: offset.dx,
-                        );
-                      },
                     ),
                     const SizedBox(height: DS.spacing16),
                     CapsuleGenerationPreview(
@@ -574,6 +589,27 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: DS.spacing16),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('显示聊天顶部选择条'),
+                      subtitle: const Text('控制聊天页里可展开的计划/档位选择组件'),
+                      value: showChatContextToggle,
+                      onChanged: (value) => ref
+                          .read(showChatContextToggleProvider.notifier)
+                          .setEnabled(value),
+                      activeThumbColor: DS.primaryBase,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('显示聊天预测组件'),
+                      subtitle: const Text('控制输入框上方的用户行为预测与快捷建议'),
+                      value: showChatPredictionDock,
+                      onChanged: (value) => ref
+                          .read(showChatPredictionDockProvider.notifier)
+                          .setEnabled(value),
+                      activeThumbColor: DS.primaryBase,
+                    ),
                     const SizedBox(height: DS.spacing12),
                     aiUsageSummary.when(
                       data: (summary) => _buildAiUsageSummary(summary),
@@ -815,28 +851,57 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() => _isGenerating = true);
 
     try {
-      final notifier = ref.read(generationJobsProvider.notifier);
-      final learningPrefs = ref.read(learningPreferencesProvider);
-
-      // 根据好奇心偏好计算生成数量
-      final requestedCount = learningPrefs.curiosity < 0.3
-          ? 1
-          : learningPrefs.curiosity < 0.7
-              ? 2
-              : 3;
-
-      final taskId = await notifier.requestBatchGeneration(
-        depthPreference: learningPrefs.depth,
-        curiosityPreference: learningPrefs.curiosity,
-        requestedCount: requestedCount,
-      );
+      final capsule = await ref.read(capsuleRepositoryProvider).generateCapsule();
+      await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
+      await ref.read(capsuleStatsProvider.notifier).fetchStats();
+      await ref.read(generationJobsProvider.notifier).fetchJobs();
 
       if (mounted) {
-        if (taskId != null) {
-          AppFeedback.success(context, l10n.capsuleTaskCreated);
-        } else {
-          AppFeedback.error(context, l10n.generationFailed);
-        }
+        AppFeedback.success(context, '新的好奇心胶囊已生成');
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (sheetContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    capsule.title,
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    capsule.content.trim().isEmpty
+                        ? '已生成新的胶囊，点击下方即可查看完整内容。'
+                        : capsule.content.trim(),
+                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  SparkleButton(
+                    expand: true,
+                    label: '查看新胶囊',
+                    icon: const Icon(Icons.auto_awesome),
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => CapsuleDetailScreen(capsuleId: capsule.id),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

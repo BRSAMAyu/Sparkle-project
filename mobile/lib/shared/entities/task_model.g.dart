@@ -113,24 +113,30 @@ Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
 TaskUpdate _$TaskUpdateFromJson(Map<String, dynamic> json) => TaskUpdate(
       title: json['title'] as String?,
       type: $enumDecodeNullable(_$TaskTypeEnumMap, json['type']),
-      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt(),
       difficulty: (json['difficulty'] as num?)?.toInt(),
+      energyCost: (json['energy_cost'] as num?)?.toInt(),
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       status: $enumDecodeNullable(_$TaskStatusEnumMap, json['status']),
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      guideContent: json['guide_content'] as String?,
+      userNote: json['user_note'] as String?,
     );
 
 Map<String, dynamic> _$TaskUpdateToJson(TaskUpdate instance) =>
     <String, dynamic>{
       'title': instance.title,
       'type': _$TaskTypeEnumMap[instance.type],
-      'estimatedMinutes': instance.estimatedMinutes,
+      'estimated_minutes': instance.estimatedMinutes,
       'difficulty': instance.difficulty,
+      'energy_cost': instance.energyCost,
       'tags': instance.tags,
       'status': _$TaskStatusEnumMap[instance.status],
       'due_date': instance.dueDate?.toIso8601String(),
+      'guide_content': instance.guideContent,
+      'user_note': instance.userNote,
     };
 
 TaskComplete _$TaskCompleteFromJson(Map<String, dynamic> json) => TaskComplete(

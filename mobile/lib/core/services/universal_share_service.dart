@@ -22,6 +22,22 @@ enum ShareableContentType {
   cognitivePrism,
 }
 
+enum ShareCaptionStyle {
+  flex,
+  cinematic,
+  humble,
+  invite,
+}
+
+extension ShareCaptionStyleExtension on ShareCaptionStyle {
+  String get label => switch (this) {
+        ShareCaptionStyle.flex => '高光炫耀',
+        ShareCaptionStyle.cinematic => '氛围感',
+        ShareCaptionStyle.humble => '低调分享',
+        ShareCaptionStyle.invite => '邀请同行',
+      };
+}
+
 /// Extension for ShareableContentType
 extension ShareableContentTypeExtension on ShareableContentType {
   /// Returns the API-compatible resource type string for backend sharing
@@ -42,7 +58,7 @@ extension ShareableContentTypeExtension on ShareableContentType {
         ShareableContentType.planProgress => 'sparkle://plan',
         ShareableContentType.capsule => 'sparkle://capsule',
         ShareableContentType.knowledgeNode => 'sparkle://node',
-        ShareableContentType.learningReport => '',
+        ShareableContentType.learningReport => 'sparkle://report',
         ShareableContentType.cognitivePrism => 'sparkle://prism',
       };
 
@@ -156,6 +172,20 @@ class UniversalSharePayload {
   String get defaultShareMessage => shareMessage ?? title;
 }
 
+class ShareCaptionOption {
+  const ShareCaptionOption({
+    required this.style,
+    required this.title,
+    required this.caption,
+    required this.icon,
+  });
+
+  final ShareCaptionStyle style;
+  final String title;
+  final String caption;
+  final String icon;
+}
+
 /// Result of a share operation
 class UniversalShareResult {
   const UniversalShareResult({
@@ -180,6 +210,61 @@ class UniversalShareService {
   static final UniversalShareService _instance = UniversalShareService._internal();
 
   final WeChatShareService _wechatShare = WeChatShareService();
+
+  List<ShareCaptionOption> buildCaptionOptions(UniversalSharePayload payload) {
+    final metadata = payload.metadata ?? const <String, dynamic>{};
+    final title = payload.title.trim();
+    final subtitle = payload.subtitle?.trim();
+
+    String compactSummary() {
+      return switch (payload.contentType) {
+        ShareableContentType.achievement =>
+          '已解锁 ${metadata['unlocked_count'] ?? '--'} 个成就，当前 ${metadata['equipped_title'] ?? '持续成长中'}',
+        ShareableContentType.taskCompletion =>
+          '完成了一个关键任务，继续推进今天的节奏',
+        ShareableContentType.planProgress =>
+          '当前计划进度 ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%，稳步推进中',
+        ShareableContentType.capsule =>
+          subtitle?.isNotEmpty == true ? subtitle! : '记录下一个值得回看的想法',
+        ShareableContentType.knowledgeNode =>
+          '知识星图又点亮了一颗节点',
+        ShareableContentType.learningReport =>
+          '本周活跃计划 ${metadata['active_plans'] ?? '--'} 个，成长亮度 ${metadata['flame_brightness'] ?? '--'}',
+        ShareableContentType.cognitivePrism =>
+          '把最近的思考模式整理成了一张认知切片',
+      };
+    }
+
+    final summary = compactSummary();
+    final deepLink = payload.deepLink;
+
+    return [
+      ShareCaptionOption(
+        style: ShareCaptionStyle.flex,
+        title: '高光炫耀',
+        icon: '✨',
+        caption: '$title\n$summary\n这次真的有点满意，先晒一下。$deepLink',
+      ),
+      ShareCaptionOption(
+        style: ShareCaptionStyle.cinematic,
+        title: '氛围感',
+        icon: '🌌',
+        caption: '$title\n$summary\n把一段成长留成了一张图，也留给未来的自己。$deepLink',
+      ),
+      ShareCaptionOption(
+        style: ShareCaptionStyle.humble,
+        title: '低调分享',
+        icon: '🙂',
+        caption: '$title\n$summary\n最近在慢慢推进，记录一下。$deepLink',
+      ),
+      ShareCaptionOption(
+        style: ShareCaptionStyle.invite,
+        title: '邀请同行',
+        icon: '🚀',
+        caption: '$title\n$summary\n如果你也在做类似的事，欢迎一起交流。$deepLink',
+      ),
+    ];
+  }
 
   /// Share to WeChat session (friends)
   Future<UniversalShareResult> shareToWeChatSession(File imageFile) async {
@@ -270,6 +355,10 @@ class UniversalShareService {
   /// Copy deep link to clipboard
   Future<void> copyDeepLink(String deepLink) async {
     await Clipboard.setData(ClipboardData(text: deepLink));
+  }
+
+  Future<void> copyText(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
   }
 
   /// Check if WeChat is available

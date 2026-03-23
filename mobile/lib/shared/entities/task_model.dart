@@ -218,21 +218,31 @@ class TaskUpdate {
     this.type,
     this.estimatedMinutes,
     this.difficulty,
+    this.energyCost,
     this.tags,
     this.status,
     this.dueDate,
+    this.guideContent,
+    this.userNote,
   });
 
   factory TaskUpdate.fromJson(Map<String, dynamic> json) =>
       _$TaskUpdateFromJson(json);
   final String? title;
   final TaskType? type;
+  @JsonKey(name: 'estimated_minutes')
   final int? estimatedMinutes;
   final int? difficulty;
+  @JsonKey(name: 'energy_cost')
+  final int? energyCost;
   final List<String>? tags;
   final TaskStatus? status;
   @JsonKey(name: 'due_date')
   final DateTime? dueDate;
+  @JsonKey(name: 'guide_content')
+  final String? guideContent;
+  @JsonKey(name: 'user_note')
+  final String? userNote;
   Map<String, dynamic> toJson() => _$TaskUpdateToJson(this);
 }
 

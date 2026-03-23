@@ -154,7 +154,7 @@ class PlanRepository {
       return;
     }
     try {
-      await _apiClient.delete<dynamic>(ApiEndpoints.plan(id));
+      await _apiClient.post<dynamic>(ApiEndpoints.planArchive(id));
     } on DioException catch (e) {
       return _handleDioError(e, 'deletePlan');
     }
@@ -209,8 +209,17 @@ class PlanRepository {
   Future<PlanModel> activatePlan(String id) async =>
       _updateActivation(id, true);
 
-  Future<PlanModel> deactivatePlan(String id) async =>
-      _updateActivation(id, false);
+  Future<PlanModel> deactivatePlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      return _updateActivation(id, false);
+    }
+    try {
+      await _apiClient.post<dynamic>(ApiEndpoints.planArchive(id));
+      return await getPlan(id);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'deactivatePlan');
+    }
+  }
 
   Future<void> setPrimaryPlan(String id) async {
     if (DemoDataService.isDemoMode) {
@@ -348,7 +357,6 @@ class PlanRepository {
           sourceMetadata: existing.sourceMetadata,
           priority: existing.priority,
           planStage: existing.planStage,
-          isPrimary: false,
         );
       }
       return;

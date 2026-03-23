@@ -56,6 +56,12 @@ class _ToolShellState extends State<ToolShell> {
   bool get _isSheet => widget.surface == ToolSurface.sheet;
   bool get _effectiveCompactHeader => true;
 
+  void _dismissSheet() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -220,6 +226,18 @@ class _ToolShellState extends State<ToolShell> {
                       const SizedBox(width: DS.spacing12),
                       widget.headerAction!,
                     ],
+                    if (_isSheet) ...[
+                      const SizedBox(width: DS.spacing8),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 32,
+                        onPressed: _dismissSheet,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                        ),
+                      ),
+                    ],
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 32,
@@ -241,7 +259,12 @@ class _ToolShellState extends State<ToolShell> {
         if (widget.fillHeight)
           Expanded(child: widget.body)
         else if (_isSheet)
-          Flexible(child: SingleChildScrollView(child: widget.body))
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: widget.body,
+            ),
+          )
         else
           widget.body,
         if (widget.footer != null) ...[
@@ -582,12 +605,16 @@ class ToolMetricCard extends StatelessWidget {
                   Icon(icon, size: 16, color: accentColor),
                   const SizedBox(width: DS.spacing6),
                 ],
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: DS.textSecondary,
-                        fontWeight: DS.fontWeightMedium,
-                      ),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
                 ),
               ],
             ),
@@ -757,28 +784,39 @@ class ToolMetricRow extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final useWrap = screenWidth < 360 || children.length > 3;
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final useWrap = maxWidth < 420 || children.length > 2;
 
-    if (useWrap) {
-      return Wrap(
-        spacing: DS.spacing12,
-        runSpacing: DS.spacing12,
-        children: children,
+          if (useWrap) {
+            final cardWidth = ((maxWidth - DS.spacing12) / 2).clamp(
+              140.0,
+              maxWidth,
+            );
+            return Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                for (final child in children)
+                  SizedBox(width: cardWidth, child: child),
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: DS.spacing12),
+                Expanded(child: children[i]),
+              ],
+            ],
+          );
+        },
       );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) const SizedBox(width: DS.spacing12),
-          Expanded(child: children[i]),
-        ],
-      ],
-    );
-  }
 }
 
 class ToolEmptyState extends StatelessWidget {

@@ -633,6 +633,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     required AgentChatState<MessageInfo> agentState,
     required List<MessageInfo> messages,
     GroupInfo? groupInfo,
+    String preset = 'custom',
+    String reasoningMode = 'fast',
   }) {
     if (agentState.isSending) return;
     unawaited(
@@ -642,6 +644,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             prompt: prompt,
             groupName: groupInfo?.name,
             recentMessages: messages,
+            preset: preset,
+            reasoningMode: reasoningMode,
+            chatMode: 'standard',
           ),
     );
   }
@@ -735,28 +740,43 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     _AgentQuickChip(
                       label: context.l10n.communityAgentQuickSummary,
                       onTap: () => _sendAgentPrompt(
-                        prompt: context.l10n.communityAgentQuickSummaryPrompt,
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'summary',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'summary',
+                        reasoningMode: 'fast',
                       ),
                     ),
                     _AgentQuickChip(
                       label: context.l10n.communityAgentQuickReminder,
                       onTap: () => _sendAgentPrompt(
-                        prompt: context.l10n.communityAgentQuickReminderPrompt,
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'reminder',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'reminder',
+                        reasoningMode: 'fast',
                       ),
                     ),
                     _AgentQuickChip(
                       label: context.l10n.communityAgentQuickConsensus,
                       onTap: () => _sendAgentPrompt(
-                        prompt: context.l10n.communityAgentQuickConsensusPrompt,
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'consensus',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'consensus',
+                        reasoningMode: 'balanced',
                       ),
                     ),
                   ],

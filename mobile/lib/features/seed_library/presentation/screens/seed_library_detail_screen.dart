@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/ai_rich_text.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
@@ -236,8 +237,140 @@ class _SeedLibraryDetailScreenState
                             library.qualityScore!.toStringAsFixed(1),
                             context.l10n.seedLibraryQualityScore,
                           ),
+                        if ((library.userRatingCount ?? 0) > 0)
+                          _buildStatItem(
+                            context,
+                            Icons.reviews_outlined,
+                            '${library.userRatingCount}',
+                            '用户评分',
+                          ),
                       ],
                     ),
+
+                    const SizedBox(height: DS.spacing16),
+                    GraphiteCardSurface(
+                      surfaceRole: SparkleSurfaceRole.panel,
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '应用到系统',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            _buildUsageExplanation(library, state),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: DS.textSecondary,
+                                ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          Wrap(
+                            spacing: DS.spacing8,
+                            runSpacing: DS.spacing8,
+                            children: [
+                              SparkleButton(
+                                onPressed: () async {
+                                  try {
+                                    await ref
+                                        .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                                        .toggleApplied();
+                                    if (!context.mounted) return;
+                                    AppFeedback.success(
+                                      context,
+                                      (state.subscription?.isEnabled ?? false) ? '已暂停使用该种子库' : '已应用到系统',
+                                    );
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+                                    AppFeedback.error(context, '应用失败：$e');
+                                  }
+                                },
+                                label: (state.subscription?.isEnabled ?? false) ? '暂停使用' : '应用种子库',
+                                icon: Icon((state.subscription?.isEnabled ?? false)
+                                    ? Icons.pause_circle_outline
+                                    : Icons.play_circle_outline),
+                              ),
+                              SparkleButton.secondary(
+                                onPressed: () async {
+                                  try {
+                                    await ref
+                                        .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                                        .setAsPrimaryLibrary();
+                                    if (!context.mounted) return;
+                                    AppFeedback.success(context, '已设为优先使用');
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+                                    AppFeedback.error(context, '设置失败：$e');
+                                  }
+                                },
+                                label: '设为主用',
+                                icon: const Icon(Icons.vertical_align_top),
+                              ),
+                              SparkleButton.ghost(
+                                onPressed: () => _showRatingSheet(context, state),
+                                label: library.currentUserRating != null ? '修改评分' : '给个评分',
+                                icon: const Icon(Icons.star_outline),
+                              ),
+                            ],
+                          ),
+                          if (state.subscription != null) ...[
+                            const SizedBox(height: DS.spacing10),
+                            Text(
+                              '当前状态：${state.subscription!.isEnabled ? '已启用' : '已订阅未启用'} · 优先级 ${state.subscription!.priority}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    if (state.activeSubscriptions.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing12),
+                      GraphiteCardSurface(
+                        surfaceRole: SparkleSurfaceRole.panel,
+                        padding: const EdgeInsets.all(DS.spacing16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '协同中的种子库',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: DS.spacing8),
+                            Text(
+                              '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                            ),
+                            const SizedBox(height: DS.spacing10),
+                            Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: state.activeSubscriptions.take(6).map((sub) {
+                                final isCurrent = sub.libraryId == widget.libraryId;
+                                return Chip(
+                                  label: Text(
+                                    '${sub.library?.name ?? '种子库'} · P${sub.priority}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  avatar: Icon(
+                                    isCurrent ? Icons.auto_awesome : Icons.layers_outlined,
+                                    size: DS.iconSizeXs,
+                                  ),
+                                  backgroundColor: isCurrent
+                                      ? DS.primaryBase.withValues(alpha: 0.12)
+                                      : null,
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // Tags
                     if (library.tags != null && library.tags!.isNotEmpty) ...[
@@ -343,6 +476,7 @@ class _SeedLibraryDetailScreenState
                       index: index,
                       child: SeedItemCard(
                         item: item,
+                        onTap: () => _showItemDetailSheet(context, item),
                         onShare: () {
                           unawaited(
                             SensoryFeedbackService.emit(
@@ -395,6 +529,182 @@ class _SeedLibraryDetailScreenState
           ),
         ],
       );
+
+  String _buildUsageExplanation(
+    SeedLibrary library,
+    SeedLibraryDetailState state,
+  ) {
+    final categoryHint = switch (library.category) {
+      LibraryCategory.fewShot => '用于增强 AI 在相似任务中的回答风格和示例质量',
+      LibraryCategory.teachingContent => '用于给学习计划、任务说明和知识讲解提供高质量教学内容',
+      LibraryCategory.replyTemplate => '用于改善系统回复模板和表达稳定性',
+      LibraryCategory.custom => '用于你自己的内容偏好和专属示例沉淀',
+    };
+    if (state.subscription?.isEnabled ?? false) {
+      return '当前已生效。$categoryHint；系统会按优先级把它与其他启用中的种子库一起使用。';
+    }
+    if (state.isSubscribed) {
+      return '当前已订阅但未启用。启用后，$categoryHint。';
+    }
+    return '当前尚未应用。应用后，$categoryHint。';
+  }
+
+  Future<void> _showRatingSheet(
+    BuildContext context,
+    SeedLibraryDetailState state,
+  ) async {
+    final commentController = TextEditingController();
+    double score = state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: DS.spacing16,
+          right: DS.spacing16,
+          top: DS.spacing16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setModalState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('给这个种子库评分', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                '你的评分会影响这个种子库的展示质量分。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text('当前评分：${score.toStringAsFixed(1)} / 10'),
+              Slider(
+                value: score,
+                min: 0,
+                max: 10,
+                divisions: 20,
+                label: score.toStringAsFixed(1),
+                onChanged: (value) => setModalState(() => score = value),
+              ),
+              TextField(
+                controller: commentController,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: '评价说明（可选）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      onPressed: () => Navigator.pop(context),
+                      label: context.l10n.commonCancel,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton(
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                              .submitRating(
+                                score: score,
+                                comment: commentController.text.trim().isEmpty
+                                    ? null
+                                    : commentController.text.trim(),
+                              );
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          AppFeedback.success(context, '评分已提交');
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          AppFeedback.error(context, '评分失败：$e');
+                        }
+                      },
+                      label: '提交评分',
+                      expand: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showItemDetailSheet(BuildContext context, SeedItem item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title ?? item.itemTypeDisplayName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    Chip(label: Text(item.itemTypeDisplayName)),
+                    if (item.subject != null) Chip(label: Text(item.subject!)),
+                    if (item.difficultyLevelDisplayName != null)
+                      Chip(label: Text(item.difficultyLevelDisplayName!)),
+                    ...?item.tags?.map((tag) => Chip(label: Text(tag))),
+                  ],
+                ),
+                if (item.content != null && item.content!.trim().isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Text('正文', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: DS.spacing8),
+                  GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    child: AiRichText(
+                      content: item.content!,
+                      textColor: DS.textPrimary,
+                      codeBackgroundColor: DS.surfaceSecondary,
+                      linkColor: DS.info,
+                      selectablePlainText: true,
+                    ),
+                  ),
+                ],
+                if (item.contentData != null && item.contentData!.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Text('结构化内容', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: DS.spacing8),
+                  GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    child: SelectableText(
+                      const JsonEncoder.withIndent('  ').convert(item.contentData),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showDeleteDialog(
     BuildContext context,

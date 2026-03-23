@@ -987,7 +987,6 @@ async def nudge_partner(
         already_locked = await cache_service.redis.get(nudge_key)
         if already_locked:
             raise HTTPException(status_code=429, detail="Nudge cooldown is still active")
-        await cache_service.redis.setex(nudge_key, cooldown_seconds, "1")
 
     partner_id = _other_user_id(partnership, current_user.id)
     sender = await db.get(User, current_user.id)
@@ -1005,12 +1004,15 @@ async def nudge_partner(
         sender_name,
         message or None,
     )
+    if cache_service.redis is not None:
+        await cache_service.redis.setex(nudge_key, cooldown_seconds, "1")
 
     return {
         "success": True,
         "partnership_id": str(partnership_id),
         "partner_id": str(partner_id),
         "cooldown_seconds": cooldown_seconds,
+        "delivery_summary": "已通过站内提醒发送；如果对方当前在线，会实时看到这次提醒。",
         "message": (
             f"{sender_name} 提醒你看看今天的目标，别让节奏断掉。"
             if not message

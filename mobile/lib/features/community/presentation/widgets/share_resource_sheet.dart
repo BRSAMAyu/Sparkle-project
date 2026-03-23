@@ -17,6 +17,7 @@ Future<void> showShareResourceSheet(
   required String title,
   String? subtitle,
 }) async {
+  final feedbackContext = context;
   await showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -26,6 +27,7 @@ Future<void> showShareResourceSheet(
       resourceId: resourceId,
       title: title,
       subtitle: subtitle,
+      feedbackContext: feedbackContext,
     ),
   );
 }
@@ -36,6 +38,7 @@ class ShareResourceSheet extends ConsumerStatefulWidget {
     required this.resourceId,
     required this.title,
     this.subtitle,
+    this.feedbackContext,
     super.key,
   });
 
@@ -43,6 +46,7 @@ class ShareResourceSheet extends ConsumerStatefulWidget {
   final String resourceId;
   final String title;
   final String? subtitle;
+  final BuildContext? feedbackContext;
 
   @override
   ConsumerState<ShareResourceSheet> createState() => _ShareResourceSheetState();
@@ -376,8 +380,14 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
           );
 
       if (!mounted) return;
-      Navigator.pop(context);
-      AppFeedback.success(context, context.l10n.shareResourceSuccess);
+      final messengerContext = widget.feedbackContext ?? context;
+      Navigator.of(context).pop();
+      if (messengerContext.mounted) {
+        AppFeedback.success(
+          messengerContext,
+          messengerContext.l10n.shareResourceSuccess,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, context.l10n.shareResourceFailed(e));

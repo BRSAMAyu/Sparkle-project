@@ -80,6 +80,16 @@ class MockWebSocketChannel
   }
 }
 
+Future<void> _waitForEvents(
+  List<ChatStreamEvent> events, {
+  Duration timeout = const Duration(milliseconds: 250),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (events.isEmpty && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -193,7 +203,7 @@ void main() {
         'timestamp': 1234567890,
       });
       mockChannel.simulateIncomingMessage(incomingJson);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await _waitForEvents(events);
 
       expect(events, isNotEmpty);
       expect(events.first, isA<ActionStatusEvent>());
@@ -350,7 +360,7 @@ void main() {
         },
       });
       mockChannel.simulateIncomingMessage(incomingJson);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await _waitForEvents(events);
 
       expect(events, isNotEmpty);
       expect(events.first, isA<DagExecutionEvent>());

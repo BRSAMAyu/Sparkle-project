@@ -524,28 +524,38 @@ class _TaskCardState extends ConsumerState<TaskCard>
       },
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
-        decoration: BoxDecoration(
-          color: _success(context).withValues(alpha: 0.14),
-          borderRadius: _radius(context),
-          border: Border.all(
-            color: _success(context).withValues(alpha: 0.28),
-          ),
-        ),
         alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Icon(Icons.check_circle_rounded, color: _success(context)),
-            const SizedBox(width: DS.spacing8),
-            Text(
-              '滑动完成',
-              style: TextStyle(
-                color: _success(context),
-                fontWeight: DS.fontWeightBold,
-              ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+          decoration: BoxDecoration(
+            color: _success(context).withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _success(context).withValues(alpha: 0.26),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_rounded,
+                color: _success(context),
+                size: 18,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                '完成',
+                style: TextStyle(
+                  color: _success(context),
+                  fontWeight: DS.fontWeightBold,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       child: card,

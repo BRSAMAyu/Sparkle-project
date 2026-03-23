@@ -371,6 +371,17 @@ extension ChatNotifierActions on ChatNotifier {
       },
     );
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
+    state = state.copyWith(
+      lastActionStatus: 'response_feedback_sent',
+      lastActionMessage: feedbackType == 'up'
+          ? '已收到你的反馈，这条回复已标记为有帮助'
+          : '已收到你的反馈，我们会继续改进这类回复',
+    );
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
   }
 
   /// 发送计划审查反馈

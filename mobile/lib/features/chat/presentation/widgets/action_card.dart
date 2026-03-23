@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
@@ -9,6 +8,7 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
@@ -80,6 +80,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   late bool _detailsExpanded;
   bool _confirmingTasks = false;
   bool _confirmedTasks = false;
+  bool _hiddenAfterAction = false;
 
   @override
   void initState() {
@@ -109,6 +110,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.action != widget.action) {
       _detailsExpanded = !_shouldCollapseByDefault(widget.action);
+      _hiddenAfterAction = false;
     }
   }
 
@@ -171,6 +173,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (_hiddenAfterAction) {
+      return const SizedBox.shrink();
+    }
+
     // focus_card 类型直接使用 FocusActionCard，支持自动启动
     if (widget.action.type == 'focus_card') {
       final actionType = widget.action.data['action']?.toString();
@@ -445,7 +451,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             if (widget.onDismiss != null)
                               CustomButton.text(
                                 text: dismissLabel,
-                                onPressed: widget.onDismiss,
+                                onPressed: () => unawaited(
+                                  _handleGenericDismiss(widget.action),
+                                ),
                                 size: CustomButtonSize.small,
                               ),
                             const SizedBox(width: DS.spacing8),
@@ -453,7 +461,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               CustomButton.primary(
                                 text: confirmLabel,
                                 icon: Icons.check_rounded,
-                                onPressed: widget.onConfirm,
+                                onPressed: () => unawaited(
+                                  _handleGenericConfirm(widget.action),
+                                ),
                                 size: CustomButtonSize.small,
                                 customGradient:
                                     _getActionGradientFor(widget.action),
@@ -904,6 +914,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   bool _isCollapsedByDefault(String type) {
     switch (type) {
+      case 'create_task':
+      case 'create_plan':
+      case 'plan_card':
+      case 'task_list':
       case 'source_summary':
       case 'next_actions':
       case 'continuity_banner':
@@ -917,6 +931,48 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   Widget _buildCollapsedPreview(BuildContext context, WidgetPayload action) {
     final preview = _collapsedPreviewText(action);
+    final type = _resolveActionType(action);
+    final isSummaryCard = type == 'create_task' ||
+        type == 'create_plan' ||
+        type == 'plan_card' ||
+        type == 'task_list';
+    if (isSummaryCard) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing10,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.open_in_full_rounded,
+                size: DS.iconSizeXs,
+                color: DS.neutral600,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Expanded(
+                child: Text(
+                  preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral700,
+                        fontWeight: DS.fontWeightMedium,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (_shouldCollapseGenericMetadata(action)) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -991,6 +1047,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return action.data['summary']?.toString() ??
             action.data['title']?.toString() ??
             l10n.chatActionTitleExecutionSummary;
+      case 'create_task':
+        return '任务';
+      case 'create_plan':
+      case 'plan_card':
+        return '学习计划';
+      case 'task_list':
+        return '任务列表';
       default:
         final summary = _extractGenericNarrative(action);
         if (summary != null) {
@@ -1008,7 +1071,48 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _handleGenericDismiss(WidgetPayload action) async {
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    widget.onDismiss?.call();
+    if (!mounted) return;
+    setState(() {
+      _hiddenAfterAction = true;
+      _detailsExpanded = false;
+    });
+  }
+
+  Future<void> _handleGenericConfirm(WidgetPayload action) async {
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+    widget.onConfirm?.call();
+    if (!mounted) return;
+
+    final entity = EntityCardPayload.fromRaw(
+      action.data,
+      fallbackType: action.type,
+    );
+    final detailRoute = entity.detailRoute ??
+        action.data['route']?.toString() ??
+        (entity.entityType == 'plan' && entity.entityId != null
+            ? '/plans/${entity.entityId}'
+            : null) ??
+        (entity.entityType == 'task' && entity.entityId != null
+            ? '/tasks/${entity.entityId}'
+            : null);
+
+    setState(() {
+      _hiddenAfterAction = true;
+      _detailsExpanded = false;
+    });
+
+    if (detailRoute != null && detailRoute.isNotEmpty && context.mounted) {
+      unawaited(context.push(detailRoute));
+    }
+  }
+
   bool _shouldCollapseGenericMetadata(WidgetPayload action) {
+    if (_usesDedicatedContentLayout(_resolveActionType(action))) {
+      return false;
+    }
     if (_isCollapsedByDefault(_resolveActionType(action))) {
       return false;
     }
@@ -1021,6 +1125,26 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return hasInternalMetadata ||
         visibleEntries.length > 2 ||
         (narrative == null && visibleEntries.isNotEmpty);
+  }
+
+  bool _usesDedicatedContentLayout(String type) {
+    switch (type) {
+      case 'nightly_review':
+      case 'execution_summary':
+      case 'evolution_card':
+      case 'progress_card':
+      case 'source_summary':
+      case 'next_actions':
+      case 'continuity_banner':
+      case 'mode_explanation':
+      case 'blocked_input_request':
+      case 'reflection_card':
+      case 'plan_card':
+      case 'task_list':
+        return true;
+      default:
+        return false;
+    }
   }
 
   String? _extractGenericNarrative(WidgetPayload action) {
@@ -1325,19 +1449,26 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.neutral200),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: DS.iconSizeXs, color: DS.textSecondary),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              label,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: DS.fontSizeXs,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: DS.iconSizeXs, color: DS.textSecondary),
+              const SizedBox(width: DS.spacing4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeXs,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 

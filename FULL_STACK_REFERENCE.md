@@ -4,7 +4,7 @@
 # PURPOSE: Single source of truth for all AI agents modifying this codebase.
 # USAGE: Read relevant sections BEFORE making any change. Cross-check interfaces here.
 # AUDIENCE: AI coding agents, senior engineers
-# LAST UPDATED: 2026-03-21
+# LAST UPDATED: 2026-03-22
 
 ---
 
@@ -31,6 +31,11 @@ High-risk corrections applied during this audit:
 
 Companion pre-release acceptance checklist:
 - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/final_release_snapshot_1.0.0.md`
+
+Companion frontend alignment references:
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/engineering/前端改进对齐文档_2026-03-22.md`
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/engineering/technical_debt_register_2026-03-22.md`
 
 Current feature inventory snapshot from source tree:
 - Mobile feature directories currently include: `achievement`, `admin`, `auth`, `calendar`, `chat`, `cognitive`, `community`, `demo`, `document`, `error_book`, `file`, `focus`, `galaxy`, `home`, `insights`, `intent`, `knowledge`, `leaderboard`, `memory`, `notification_center`, `onboarding`, `photon`, `plan`, `reviews`, `seed_library`, `settings`, `shop`, `splash`, `task`, `tools`, `translation`, `user`, `visual_elements`, `vocabulary`

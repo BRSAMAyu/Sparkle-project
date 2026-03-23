@@ -238,7 +238,12 @@ void main() {
       await expectRoute('/growth', GrowthScreen);
       await expectRoute('/community/users/search', UserSearchScreen);
       await expectRoute('/community/groups/search', GroupSearchScreen);
-      await expectRoute('/community/friends/discover', FriendsScreen);
+      await expectRoute('/community/friends', FriendsScreen);
+      await expectRoute(
+        '/community/friends/requests',
+        FriendRequestsScreen,
+      );
+      await expectRoute('/community/friends/discover', FriendsDiscoverScreen);
       await expectRoute('/community/groups/create', CreateGroupScreen);
       await expectRoute('/community/posts/create', CreatePostScreen);
       await expectRoute(

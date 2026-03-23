@@ -76,18 +76,21 @@ class TaskRoutes {
           path: taskExecution,
           name: 'taskExecution',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => buildSparkleTransitionPage(
-            state: state,
-            motionToken: SparkleMotionToken.scene,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.focusImmersive.audioPolicy(
-                trackOverride: BgmTrack.focusDeep,
-                useSavedAmbient: true,
+          pageBuilder: (context, state) {
+            final origin = state.uri.queryParameters['origin'];
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.focusImmersive.audioPolicy(
+                  trackOverride: BgmTrack.focusDeep,
+                  useSavedAmbient: true,
+                ),
+                child: TaskExecutionScreen(origin: origin),
               ),
-              child: const TaskExecutionScreen(),
-            ),
-            type: SharedAxisTransitionType.scaled,
-          ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
         ),
       ];
 }

@@ -43,6 +43,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   List<TaskNudge> _nudges = [];
   bool _showNudgesAfterCreation = false;
   bool _didInitQuery = false;
+  String? _editingTaskId;
+  bool _isEditMode = false;
+  bool _isLoadingExistingTask = false;
 
   @override
   void initState() {
@@ -57,10 +60,42 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       return;
     }
     _didInitQuery = true;
-    final titleQueryParam =
-        GoRouterState.of(context).uri.queryParameters['title'];
+    final queryParameters = GoRouterState.of(context).uri.queryParameters;
+    final titleQueryParam = queryParameters['title'];
+    final taskId = queryParameters['taskId'];
     if (titleQueryParam != null && titleQueryParam.isNotEmpty) {
       _titleController.text = titleQueryParam;
+    }
+    if (taskId != null && taskId.isNotEmpty) {
+      _editingTaskId = taskId;
+      _isEditMode = true;
+      unawaited(_loadExistingTask(taskId));
+    }
+  }
+
+  Future<void> _loadExistingTask(String taskId) async {
+    setState(() => _isLoadingExistingTask = true);
+    try {
+      final task = await ref.read(taskRepositoryProvider).getTask(taskId);
+      if (!mounted) {
+        return;
+      }
+      _titleController.text = task.title;
+      _selectedType = task.type;
+      _estimatedMinutes = task.estimatedMinutes;
+      _difficulty = task.difficulty;
+      _energyCost = task.energyCost;
+      _dueDate = task.dueDate;
+      _tagsController.text = task.tags.join(', ');
+      setState(() {});
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '加载任务失败：$e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingExistingTask = false);
+      }
     }
   }
 
@@ -148,6 +183,26 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
           .where((e) => e.isNotEmpty)
           .toList();
 
+      if (_isEditMode && _editingTaskId != null) {
+        await ref.read(taskListProvider.notifier).updateTask(
+              _editingTaskId!,
+              TaskUpdate(
+                title: _titleController.text.trim(),
+                type: _selectedType,
+                estimatedMinutes: _estimatedMinutes,
+                difficulty: _difficulty,
+                energyCost: _energyCost,
+                tags: tags,
+                dueDate: _dueDate,
+              ),
+            );
+        if (mounted) {
+          context.pop();
+          AppFeedback.success(context, '任务已更新');
+        }
+        return;
+      }
+
       final taskCreate = TaskCreate(
         title: _titleController.text.trim(),
         type: _selectedType,
@@ -227,14 +282,31 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     return SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
-          title: Text(l10n.taskCreateTitle),
+          title: Text(_isEditMode ? '编辑任务' : l10n.taskCreateTitle),
         ),
         child: ContentConstraint(
-          child: Form(
+          child: _isLoadingExistingTask
+              ? const Center(child: CircularProgressIndicator())
+              : Form(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.all(DS.lg),
               children: [
+                if (_isEditMode) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: DS.lg),
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    decoration: BoxDecoration(
+                      color: DS.info.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: DS.info.withValues(alpha: 0.18)),
+                    ),
+                    child: Text(
+                      '这里调整的是已有任务的安排信息，例如预计时长、难度、截止时间和标签。',
+                      style: TextStyle(color: DS.textSecondary, height: 1.4),
+                    ),
+                  ),
+                ],
                 // Title
                 TextFormField(
                   controller: _titleController,
@@ -507,14 +579,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 ),
                 const SizedBox(height: DS.lg),
 
-                // AI Guide Switch
-                SwitchListTile(
-                  title: Text(l10n.taskGenerateGuideTitle),
-                  subtitle: Text(l10n.taskGenerateGuideSubtitle),
-                  value: _generateGuide,
-                  onChanged: (v) => setState(() => _generateGuide = v),
-                  secondary: const Icon(Icons.auto_awesome),
-                ),
+                if (!_isEditMode)
+                  SwitchListTile(
+                    title: Text(l10n.taskGenerateGuideTitle),
+                    subtitle: Text(l10n.taskGenerateGuideSubtitle),
+                    value: _generateGuide,
+                    onChanged: (v) => setState(() => _generateGuide = v),
+                    secondary: const Icon(Icons.auto_awesome),
+                  ),
 
                 // Nudge Suggestions (shown after task creation)
                 if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
@@ -633,7 +705,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         )
                       : const Icon(Icons.check),
                   label: Text(
-                    _isSubmitting ? l10n.taskCreating : l10n.taskCreateAction,
+                    _isSubmitting
+                        ? (_isEditMode ? '保存中...' : l10n.taskCreating)
+                        : (_isEditMode ? '保存修改' : l10n.taskCreateAction),
                   ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),

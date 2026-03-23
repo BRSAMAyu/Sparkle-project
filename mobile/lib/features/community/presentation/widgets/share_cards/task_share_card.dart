@@ -193,15 +193,15 @@ class TaskShareCard extends StatelessWidget {
                     SizedBox(height: DS.md),
 
                     // Stats row
-                    Row(
+                    Wrap(
+                      spacing: DS.md,
+                      runSpacing: DS.sm,
                       children: [
                         if (duration != null) _buildStat('时长', '${duration}m'),
                         if (points != null) ...[
-                          SizedBox(width: DS.md),
                           _buildStat('积分', '+$points'),
                         ],
                         if (streak != null && streak! > 0) ...[
-                          SizedBox(width: DS.md),
                           _buildStat('连胜', '$streak🔥'),
                         ],
                       ],
@@ -221,10 +221,16 @@ class TaskShareCard extends StatelessWidget {
                       SizedBox(height: DS.sm),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                          label: const Text('采纳任务'),
-                          onPressed: onAdopt,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 160),
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
+                            label: const Text(
+                              '采纳任务',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onPressed: onAdopt,
+                          ),
                         ),
                       ),
                     ],

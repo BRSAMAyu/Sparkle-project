@@ -127,6 +127,10 @@ class SeedLibrary {
     this.tags,
     this.extraMetadata,
     this.qualityScore,
+    this.systemQualityScore,
+    this.userRatingAvg,
+    this.userRatingCount,
+    this.currentUserRating,
     this.isSubscribed,
     this.subscriptionPriority,
   });
@@ -154,6 +158,14 @@ class SeedLibrary {
   final int usageCount;
   @JsonKey(name: 'quality_score')
   final double? qualityScore;
+  @JsonKey(name: 'system_quality_score')
+  final double? systemQualityScore;
+  @JsonKey(name: 'user_rating_avg')
+  final double? userRatingAvg;
+  @JsonKey(name: 'user_rating_count')
+  final int? userRatingCount;
+  @JsonKey(name: 'current_user_rating')
+  final double? currentUserRating;
   @JsonKey(name: 'item_count')
   final int itemCount;
   @JsonKey(name: 'subscriber_count')
@@ -216,6 +228,10 @@ class SeedLibrary {
     bool? isFeatured,
     int? usageCount,
     double? qualityScore,
+    double? systemQualityScore,
+    double? userRatingAvg,
+    int? userRatingCount,
+    double? currentUserRating,
     int? itemCount,
     int? subscriberCount,
     DateTime? createdAt,
@@ -236,6 +252,10 @@ class SeedLibrary {
       isFeatured: isFeatured ?? this.isFeatured,
       usageCount: usageCount ?? this.usageCount,
       qualityScore: qualityScore ?? this.qualityScore,
+      systemQualityScore: systemQualityScore ?? this.systemQualityScore,
+      userRatingAvg: userRatingAvg ?? this.userRatingAvg,
+      userRatingCount: userRatingCount ?? this.userRatingCount,
+      currentUserRating: currentUserRating ?? this.currentUserRating,
       itemCount: itemCount ?? this.itemCount,
       subscriberCount: subscriberCount ?? this.subscriberCount,
       createdAt: createdAt ?? this.createdAt,
@@ -416,6 +436,41 @@ class UserLibrarySubscription {
       updatedAt: updatedAt ?? this.updatedAt,
       library: library ?? this.library,
     );
+}
+
+@JsonSerializable()
+class UpdateSubscriptionRequest {
+  UpdateSubscriptionRequest({
+    this.isEnabled,
+    this.priority,
+    this.notes,
+  });
+
+  factory UpdateSubscriptionRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateSubscriptionRequestFromJson(json);
+
+  @JsonKey(name: 'is_enabled')
+  final bool? isEnabled;
+  final int? priority;
+  final String? notes;
+
+  Map<String, dynamic> toJson() => _$UpdateSubscriptionRequestToJson(this);
+}
+
+@JsonSerializable()
+class RateLibraryRequest {
+  RateLibraryRequest({
+    required this.score,
+    this.comment,
+  });
+
+  factory RateLibraryRequest.fromJson(Map<String, dynamic> json) =>
+      _$RateLibraryRequestFromJson(json);
+
+  final double score;
+  final String? comment;
+
+  Map<String, dynamic> toJson() => _$RateLibraryRequestToJson(this);
 }
 
 /// Paginated response model

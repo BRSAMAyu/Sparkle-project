@@ -26,6 +26,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final catalogAsync = ref.watch(multiAgentCatalogProvider);
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.88;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -35,11 +36,12 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
         ),
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxSheetHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+            child: Column(
+              children: [
               // Handle bar
               Container(
                 width: DS.spacing40,
@@ -79,110 +81,118 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               ),
               const SizedBox(height: DS.spacing16),
 
-              // Expert selection section
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  context.l10n.chatTeamSheetAvailableExperts,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightSemibold,
-                    color: DS.neutral500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              catalogAsync.when(
-                data: (catalog) {
-                  final experts = [
-                    ...catalog.experts.where((e) => e.enabled),
-                    ...catalog.customExperts.where((e) => e.enabled),
-                  ];
-                  if (experts.isEmpty) {
-                    return _emptyHint(context.l10n.chatTeamSheetNoExperts);
-                  }
-                  return Column(
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: DS.spacing12),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (catalog.customTeams
-                          .where((e) => e.enabled)
-                          .isNotEmpty) ...[
-                        Text(
-                          '已保存团队',
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.l10n.chatTeamSheetAvailableExperts,
                           style: TextStyle(
                             fontSize: DS.fontSizeSm,
                             fontWeight: DS.fontWeightSemibold,
                             color: DS.neutral500,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      catalogAsync.when(
+                        data: (catalog) {
+                          final experts = [
+                            ...catalog.experts.where((e) => e.enabled),
+                            ...catalog.customExperts.where((e) => e.enabled),
+                          ];
+                          if (experts.isEmpty) {
+                            return _emptyHint(
+                              context.l10n.chatTeamSheetNoExperts,
+                            );
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (catalog.customTeams
+                                  .where((e) => e.enabled)
+                                  .isNotEmpty) ...[
+                                Text(
+                                  '已保存团队',
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeSm,
+                                    fontWeight: DS.fontWeightSemibold,
+                                    color: DS.neutral500,
+                                  ),
+                                ),
+                                const SizedBox(height: DS.spacing8),
+                                _buildSavedTeams(
+                                  catalog.customTeams
+                                      .where((e) => e.enabled)
+                                      .toList(),
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                              ],
+                              _buildExpertGrid(experts),
+                            ],
+                          );
+                        },
+                        loading: () =>
+                            _emptyHint(context.l10n.chatTeamSheetLoading),
+                        error: (_, __) =>
+                            _emptyHint(context.l10n.chatTeamSheetLoadFailed),
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.l10n.chatTeamSheetCollaborationMode,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightSemibold,
+                            color: DS.neutral500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      _buildModeSelector(),
+                      if (_selectedAgents.isNotEmpty) ...[
+                        const SizedBox(height: DS.spacing16),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            context.l10n.chatTeamSheetSelectedExperts(
+                              _selectedAgents.length,
+                            ),
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral600,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: DS.spacing8),
-                        _buildSavedTeams(catalog.customTeams
-                            .where((e) => e.enabled)
-                            .toList()),
-                        const SizedBox(height: DS.spacing12),
+                        _buildSelectedChips(),
                       ],
-                      _buildExpertGrid(experts),
+                      if (_selectedAgents.length > 1) ...[
+                        const SizedBox(height: DS.spacing16),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '最终回答参与专家',
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        _buildAnswerExpertSelector(),
+                      ],
                     ],
-                  );
-                },
-                loading: () => _emptyHint(context.l10n.chatTeamSheetLoading),
-                error: (_, __) =>
-                    _emptyHint(context.l10n.chatTeamSheetLoadFailed),
-              ),
-
-              const SizedBox(height: DS.spacing16),
-
-              // Collaboration mode section
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  context.l10n.chatTeamSheetCollaborationMode,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightSemibold,
-                    color: DS.neutral500,
                   ),
                 ),
               ),
-              const SizedBox(height: DS.spacing8),
-              _buildModeSelector(),
-
-              // Selected agents summary (only when >0)
-              if (_selectedAgents.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    context.l10n
-                        .chatTeamSheetSelectedExperts(_selectedAgents.length),
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.neutral600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                _buildSelectedChips(),
-              ],
-              if (_selectedAgents.length > 1) ...[
-                const SizedBox(height: DS.spacing16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '最终回答参与专家',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.neutral600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                _buildAnswerExpertSelector(),
-              ],
-
-              const SizedBox(height: DS.spacing20),
 
               if (_selectedAgents.length > 1)
                 Align(
@@ -220,7 +230,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
               ),
               const SizedBox(height: DS.spacing16),
-            ],
+              ],
+            ),
           ),
         ),
       ),

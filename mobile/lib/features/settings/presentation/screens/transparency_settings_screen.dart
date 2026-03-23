@@ -22,7 +22,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preferences = ref.watch(transparencyPreferencesProvider);
+    final preferences = ref.watch(transparencyPreferencesNotifierProvider);
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,

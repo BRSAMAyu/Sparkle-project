@@ -499,16 +499,32 @@ class CommunityRepository {
   }
 
   Future<FriendProfileDetail> getFriendProfile(String userId) async {
-    final response =
-        await _apiClient.get<dynamic>(ApiEndpoints.friendProfile(userId));
-    if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapMap(
-        response.data,
-        action: 'getFriendProfile',
-      );
-      return FriendProfileDetail.fromJson(data);
+    try {
+      final response =
+          await _apiClient.get<dynamic>(ApiEndpoints.friendProfile(userId));
+      if (response.statusCode == 200) {
+        final data = ApiResponseParser.unwrapMap(
+          response.data,
+          action: 'getFriendProfile',
+        );
+        return FriendProfileDetail.fromJson(data);
+      }
+    } catch (_) {
+      // Fall through to a lightweight public profile so the page remains usable
+      // even when friendship detail payloads temporarily fail.
     }
-    throw Exception('Failed to load friend profile');
+
+    final brief = await getUserProfile(userId);
+    return FriendProfileDetail(
+      user: brief,
+      friendship: const <String, dynamic>{},
+      quickActions: const {
+        'can_invite_accountability': false,
+        'can_open_dashboard': false,
+        'can_chat': true,
+        'can_share': false,
+      },
+    );
   }
 
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
@@ -882,7 +898,7 @@ class CommunityRepository {
     final response = await _apiClient.get<dynamic>(
       ApiEndpoints.messageFavorites,
       queryParameters: {
-        if (tag != null) 'tag': tag,
+        if (tag != null && tag.trim().isNotEmpty) 'tags': <String>[tag.trim()],
         'limit': limit,
         'offset': offset,
       },

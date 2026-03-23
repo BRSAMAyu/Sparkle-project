@@ -334,8 +334,14 @@ class _SharePosterCanvas extends StatelessWidget {
         addMetric('学习时长', _durationMinutes(metadata['learning_time']));
       case ShareableContentType.achievement:
         addMetric('成就类型', metadata['rarity']);
+        addMetric('累计解锁', metadata['unlocked_count']);
+        addMetric('当前等级', metadata['flame_level']);
+        addMetric('荣耀称号', metadata['equipped_title']);
       case ShareableContentType.learningReport:
         addMetric('报告类型', metadata['report_type']);
+        addMetric('活跃计划', metadata['active_plans']);
+        addMetric('已解锁成就', metadata['unlocked_achievements']);
+        addMetric('成长亮度', metadata['flame_brightness']);
       case ShareableContentType.cognitivePrism:
         addMetric('模式类型', metadata['pattern_type']);
     }

@@ -756,6 +756,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         child: Container(
                           margin: const EdgeInsets.only(bottom: DS.spacing8),
                           child: ListTile(
+                            onTap: () {
+                              if (event.taskId != null &&
+                                  event.taskId!.isNotEmpty) {
+                                unawaited(
+                                  context.push('/tasks/new?taskId=${event.taskId!}'),
+                                );
+                                return;
+                              }
+                              _showEditEventDialog(context, event);
+                            },
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,
                               vertical: DS.spacing4,
@@ -1196,11 +1206,32 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
     );
   }
+
+  void _showEditEventDialog(BuildContext context, CalendarEventModel event) {
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfaceSecondary,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => _EventEditDialog(
+          selectedDate: event.startTime,
+          initialEvent: event,
+        ),
+      ),
+    );
+  }
 }
 
 class _EventEditDialog extends ConsumerStatefulWidget {
-  const _EventEditDialog({required this.selectedDate});
+  const _EventEditDialog({
+    required this.selectedDate,
+    this.initialEvent,
+  });
   final DateTime selectedDate;
+  final CalendarEventModel? initialEvent;
 
   @override
   ConsumerState<_EventEditDialog> createState() => _EventEditDialogState();
@@ -1254,9 +1285,26 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController();
-    _descController = TextEditingController();
-    _locationController = TextEditingController();
+    final initialEvent = widget.initialEvent;
+    _titleController = TextEditingController(text: initialEvent?.title ?? '');
+    _descController = TextEditingController(
+      text: initialEvent?.description ?? '',
+    );
+    _locationController = TextEditingController(
+      text: initialEvent?.location ?? '',
+    );
+
+    if (initialEvent != null) {
+      _startTime = initialEvent.startTime;
+      _endTime = initialEvent.endTime;
+      _isAllDay = initialEvent.isAllDay;
+      _colorValue = initialEvent.colorValue;
+      _reminderMinutes = initialEvent.reminderMinutes.isNotEmpty
+          ? initialEvent.reminderMinutes.first
+          : 15;
+      _recurrenceRule = initialEvent.recurrenceRule;
+      return;
+    }
 
     final now = DateTime.now();
     _startTime = DateTime(
@@ -1295,7 +1343,9 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      context.l10n.calendarCreateEvent,
+                      widget.initialEvent == null
+                          ? context.l10n.calendarCreateEvent
+                          : '编辑日程',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1610,8 +1660,9 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       _saveError = null;
     });
 
+    final existingEvent = widget.initialEvent;
     final event = CalendarEventModel(
-      id: const Uuid().v4(),
+      id: existingEvent?.id ?? const Uuid().v4(),
       title: _titleController.text,
       description: _descController.text,
       location: _locationController.text,
@@ -1621,11 +1672,22 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       colorValue: _colorValue,
       reminderMinutes: [_reminderMinutes],
       recurrenceRule: _recurrenceRule,
-      createdAt: DateTime.now(),
+      taskId: existingEvent?.taskId,
+      planId: existingEvent?.planId,
+      source: existingEvent?.source ?? 'manual',
+      sourceMetadata: existingEvent?.sourceMetadata,
+      createdAt: existingEvent?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
     try {
+      if (existingEvent != null) {
+        await ref.read(calendarProvider.notifier).updateEvent(event);
+        if (!mounted) return;
+        context.pop();
+        AppFeedback.success(context, '日程已更新');
+        return;
+      }
       final result = await ref.read(calendarProvider.notifier).addEvent(event);
       if (!mounted) return;
       context.pop();

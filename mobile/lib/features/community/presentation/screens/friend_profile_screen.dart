@@ -36,7 +36,6 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
@@ -53,27 +52,21 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.error_outline, color: DS.error, size: 48),
-                  const SizedBox(height: DS.md),
-                  Text(
-                    '好友详情加载失败',
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: DS.textSecondary),
-                  ),
-                  const SizedBox(height: DS.md),
-                  CustomButton.secondary(
-                    text: '重试',
-                    onPressed: () => setState(() {
-                      _profileFuture = ref
-                          .read(communityRepositoryProvider)
-                          .getFriendProfile(widget.userId);
-                    }),
-                  ),
-                ],
+            return _buildContent(
+              context,
+              FriendProfileDetail(
+                user: UserBrief(
+                  id: widget.userId,
+                  username: widget.displayName ?? '好友',
+                  nickname: widget.displayName,
+                ),
+                friendship: const <String, dynamic>{},
+                quickActions: const {
+                  'can_invite_accountability': false,
+                  'can_open_dashboard': false,
+                  'can_chat': true,
+                  'can_share': false,
+                },
               ),
             );
           }

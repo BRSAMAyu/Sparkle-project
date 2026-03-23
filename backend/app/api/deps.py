@@ -2,6 +2,8 @@
 API Dependencies
 FastAPI 依赖注入函数
 """
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -15,6 +17,7 @@ from app.services.auth_session_service import auth_session_service
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
+logger = logging.getLogger(__name__)
 
 
 async def get_current_user_id(
@@ -61,14 +64,22 @@ async def get_current_user(
     except Exception as e:
         # H1 Security Fix: Log session touch failure but don't block (fail open)
         # Session will eventually expire naturally
-        import structlog
-        logger = structlog.get_logger()
-        logger.warning(
-            "session_touch_failed",
-            user_id=str(user.id),
-            error=str(e),
-            error_type=type(e).__name__
-        )
+        try:
+            import structlog
+
+            structlog.get_logger().warning(
+                "session_touch_failed",
+                user_id=str(user.id),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+        except ImportError:
+            logger.warning(
+                "session_touch_failed user_id=%s error=%s error_type=%s",
+                str(user.id),
+                str(e),
+                type(e).__name__,
+            )
     return user
 
 async def get_current_active_user(

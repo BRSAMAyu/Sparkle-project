@@ -65,6 +65,8 @@ class ChatBubble extends ConsumerStatefulWidget {
 
 class _ChatBubbleState extends ConsumerState<ChatBubble>
     with TickerProviderStateMixin {
+  static final Map<String, String> _responseFeedbackSelections =
+      <String, String>{};
   late AnimationController _entryController;
   late Animation<double> _scale;
   late Animation<Offset> _position;
@@ -153,6 +155,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   String? get _responseId => (widget.message is ChatMessageModel)
       ? (widget.message as ChatMessageModel).responseId
       : null;
+
+  String? get _responseFeedbackSelection => _responseId == null
+      ? null
+      : _responseFeedbackSelections[_responseId!];
 
   List<WidgetPayload> get _widgets => widget.message is ChatMessageModel
       ? (widget.message as ChatMessageModel).widgets ?? const []
@@ -267,6 +273,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                     title: Text(context.l10n.chatHelpful),
                     onTap: () {
                       Navigator.pop(context);
+                      if (_responseId != null) {
+                        setState(() {
+                          _responseFeedbackSelections[_responseId!] = 'up';
+                        });
+                      }
                       widget.onResponseFeedback!(
                         widget.message as ChatMessageModel,
                         'up',
@@ -283,6 +294,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                     title: Text(context.l10n.chatNotHelpful),
                     onTap: () {
                       Navigator.pop(context);
+                      if (_responseId != null) {
+                        setState(() {
+                          _responseFeedbackSelections[_responseId!] = 'down';
+                        });
+                      }
                       widget.onResponseFeedback!(
                         widget.message as ChatMessageModel,
                         'down',
@@ -304,14 +320,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 ListTile(
                   leading: const Icon(Icons.copy_rounded),
                   title: Text(context.l10n.chatCopy),
-                  onTap: () {
-                    unawaited(
-                      Clipboard.setData(ClipboardData(text: _content)),
-                    );
-                    if (mounted) {
-                      Navigator.pop(context);
-                      AppFeedback.info(context, context.l10n.chatCopied);
-                    }
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: _content));
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                    AppFeedback.success(context, context.l10n.chatCopied);
                   },
                 ),
                 if (canRevoke && widget.onRevoke != null)
@@ -671,6 +684,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 );
                               },
                             ),
+                            if (!isUser) _buildResponseFeedbackRow(context),
                           ],
                         ),
                         if (_showHeart) _buildHeartAnimation(context),
@@ -796,6 +810,115 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResponseFeedbackRow(BuildContext context) {
+    if (widget.message is! ChatMessageModel ||
+        _responseId == null ||
+        _responseId!.isEmpty ||
+        widget.onResponseFeedback == null) {
+      return const SizedBox.shrink();
+    }
+
+    final selection = _responseFeedbackSelection;
+    final isPositive = selection == 'up';
+    final isNegative = selection == 'down';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: [
+          _buildFeedbackChip(
+            context,
+            label: context.l10n.chatHelpful,
+            icon: Icons.thumb_up_alt_rounded,
+            selected: isPositive,
+            onTap: selection == null
+                ? () {
+                    if (_responseId != null) {
+                      setState(() {
+                        _responseFeedbackSelections[_responseId!] = 'up';
+                      });
+                    }
+                    widget.onResponseFeedback!(
+                      widget.message as ChatMessageModel,
+                      'up',
+                    );
+                  }
+                : null,
+          ),
+          _buildFeedbackChip(
+            context,
+            label: context.l10n.chatNotHelpful,
+            icon: Icons.thumb_down_alt_rounded,
+            selected: isNegative,
+            onTap: selection == null
+                ? () {
+                    if (_responseId != null) {
+                      setState(() {
+                        _responseFeedbackSelections[_responseId!] = 'down';
+                      });
+                    }
+                    widget.onResponseFeedback!(
+                      widget.message as ChatMessageModel,
+                      'down',
+                    );
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback? onTap,
+  }) {
+    final bgColor = selected
+        ? DS.brandPrimary.withValues(alpha: 0.16)
+        : DS.surfaceSecondary;
+    final fgColor = selected ? DS.brandPrimary : DS.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: DS.borderRadiusFull,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(
+            color: selected
+                ? DS.brandPrimary.withValues(alpha: 0.4)
+                : DS.borderSubtle,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: DS.iconSizeSm, color: fgColor),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: fgColor,
+                fontWeight:
+                    selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

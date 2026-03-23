@@ -28,6 +28,7 @@ class CommunityRoutes {
   // Route constants for deep linking and navigation
   static const String home = '/community';
   static const String friends = '/community/friends';
+  static const String friendsRequests = '/community/friends/requests';
   static const String friendsDiscover = '/community/friends/discover';
   static const String userSearch = '/community/users/search';
   static const String groups = '/community/groups';
@@ -47,10 +48,9 @@ class CommunityRoutes {
   static const String accountabilityDetail = '/community/accountability/:id';
 
   static List<RouteBase> get routes => [
-        // Friends list (detail page, full-screen)
         GoRoute(
-          path: friends,
-          name: 'friends',
+          path: friendsRequests,
+          name: 'friendRequests',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
@@ -58,7 +58,7 @@ class CommunityRoutes {
               policy: ExperienceProfiles.socialWarm.audioPolicy(
                 trackOverride: BgmTrack.community,
               ),
-              child: const FriendsScreen(),
+              child: const FriendRequestsScreen(),
             ),
           ),
         ),
@@ -66,6 +66,21 @@ class CommunityRoutes {
         GoRoute(
           path: friendsDiscover,
           name: 'friendsDiscover',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendsDiscoverScreen(),
+            ),
+          ),
+        ),
+        // Friends list (detail page, full-screen)
+        GoRoute(
+          path: friends,
+          name: 'friends',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,

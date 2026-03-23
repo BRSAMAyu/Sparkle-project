@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:uuid/uuid.dart';
@@ -48,8 +49,11 @@ class ChatMessageModel {
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
-      _$ChatMessageModelFromJson(json);
+  factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['role'] = _normalizeRoleJsonValue(json['role']);
+    return _$ChatMessageModelFromJson(normalized);
+  }
   final String id;
   @JsonKey(name: 'user_id')
   final String? userId; // Optional for client-generated messages
@@ -195,6 +199,35 @@ class ChatMessageModel {
         agentsInvolved: agentsInvolved ?? this.agentsInvolved,
         agentActivities: agentActivities ?? this.agentActivities,
       );
+}
+
+String _normalizeRoleJsonValue(Object? rawRole) {
+  final role = rawRole?.toString().trim();
+  if (role == null || role.isEmpty) {
+    return MessageRole.assistant.name;
+  }
+
+  switch (role.toLowerCase()) {
+    case 'user':
+    case 'human':
+    case 'customer':
+      return MessageRole.user.name;
+    case 'assistant':
+    case 'ai':
+    case 'bot':
+    case 'model':
+    case 'tool':
+    case 'tool_result':
+      return MessageRole.assistant.name;
+    case 'system':
+    case 'developer':
+      return MessageRole.system.name;
+    default:
+      debugPrint(
+        'ChatMessageModel: unsupported role "$role", defaulting to assistant',
+      );
+      return MessageRole.assistant.name;
+  }
 }
 
 @JsonSerializable()

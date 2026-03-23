@@ -127,7 +127,11 @@ class _PartnerHero extends ConsumerWidget {
               label: pendingCount > 0 ? '查看伙伴邀请' : '去挑选责任伙伴',
               expand: true,
               onPressed: () {
-                context.push(CommunityRoutes.friends);
+                if (pendingCount > 0) {
+                  context.pushNamed('friendRequests');
+                  return;
+                }
+                context.pushNamed('friendsDiscover');
               },
             ),
           ],
@@ -244,15 +248,30 @@ class _PartnerHero extends ConsumerWidget {
                       label: '提醒',
                       onPressed: () async {
                         try {
-                          await ref
+                          final result = await ref
                               .read(accountabilityActionsProvider)
                               .nudgePartner(ref, active.id);
+                          final deliverySummary =
+                              (result['delivery_summary'] as String?) ??
+                                  '已通过站内提醒发送，对方在线时会实时看到';
                           if (context.mounted) {
-                            AppFeedback.success(context, '已提醒伙伴查看今天的目标');
+                            AppFeedback.success(
+                              context,
+                              deliverySummary,
+                            );
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            AppFeedback.error(context, '提醒失败: $e');
+                            final message = e.toString();
+                            if (message.contains('429') ||
+                                message.contains('cooldown')) {
+                              AppFeedback.info(
+                                context,
+                                '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。',
+                              );
+                            } else {
+                              AppFeedback.error(context, '提醒失败: $e');
+                            }
                           }
                         }
                       },
@@ -298,7 +317,7 @@ class _PendingInviteBanner extends StatelessWidget {
           ),
           SparkleButton.ghost(
             label: '查看',
-            onPressed: () => context.push(CommunityRoutes.friends),
+            onPressed: () => context.pushNamed('friendRequests'),
           ),
         ],
       ),
@@ -344,9 +363,15 @@ class _FriendCard extends StatelessWidget {
             : null,
       ),
       child: GraphiteCardSurface(
-        onTap: () => context.push(
-          '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-        ),
+        onTap: () {
+          if (accountability?.isPending == true) {
+            context.pushNamed('friendRequests');
+            return;
+          }
+          context.push(
+            '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+          );
+        },
         child: Row(
           children: [
             CircleAvatar(
@@ -447,8 +472,10 @@ class _FriendCard extends StatelessWidget {
                 SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.person_outline),
-                  onPressed: () => context.push(
-                    '/community/users/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+                  onPressed: () => context.pushNamed(
+                    'userProfile',
+                    pathParameters: {'id': friend.id},
+                    queryParameters: {'name': friend.displayName},
                   ),
                 ),
                 if (accountability?.partnershipId != null)
@@ -595,8 +622,8 @@ class _EmptyFriendsCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           SparkleButton(
-            label: '去添加好友',
-            onPressed: () => context.push(CommunityRoutes.friends),
+            label: '去发现好友',
+            onPressed: () => context.pushNamed('friendsDiscover'),
           ),
         ],
       ),

@@ -175,25 +175,100 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   DS.spacing16, DS.spacing8, DS.spacing16, 0,),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FilterChip(
-                    selected: _agentMode,
-                    label: Text(_agentMode ? 'AI助手 已开启' : 'AI助手'),
-                    avatar: Icon(
-                      Icons.auto_awesome,
-                      size: DS.iconSizeXs,
-                      color: _agentMode ? DS.brandPrimary : DS.neutral500,
-                    ),
-                    onSelected: (v) => setState(() => _agentMode = v),
+                  Row(
+                    children: [
+                      FilterChip(
+                        selected: _agentMode,
+                        label: Text(_agentMode ? 'AI助手 已开启' : 'AI助手'),
+                        avatar: Icon(
+                          Icons.auto_awesome,
+                          size: DS.iconSizeXs,
+                          color: _agentMode ? DS.brandPrimary : DS.neutral500,
+                        ),
+                        onSelected: (v) => setState(() => _agentMode = v),
+                      ),
+                      const Spacer(),
+                      if (agentState.isSending)
+                        Text(
+                          '思考中...',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            color: DS.brandPrimary70,
+                          ),
+                        ),
+                    ],
                   ),
-                  const Spacer(),
-                  if (agentState.isSending)
-                    Text(
-                      '思考中...',
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        color: DS.brandPrimary70,
+                  if (_agentMode)
+                    Padding(
+                      padding: const EdgeInsets.only(top: DS.spacing8),
+                      child: Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing4,
+                        children: [
+                          _PrivateAgentQuickChip(
+                            label: '润色回复',
+                            onTap: () => _sendAgentPrompt(
+                              buildPrivateAssistantPresetPrompt(
+                                'polish_reply',
+                                friendName: _displayName ?? widget.friendName,
+                              ),
+                              agentState,
+                              preset: 'polish_reply',
+                              reasoningMode: 'fast',
+                            ),
+                          ),
+                          _PrivateAgentQuickChip(
+                            label: '温和提醒',
+                            onTap: () => _sendAgentPrompt(
+                              buildPrivateAssistantPresetPrompt(
+                                'gentle_reminder',
+                                friendName: _displayName ?? widget.friendName,
+                              ),
+                              agentState,
+                              preset: 'gentle_reminder',
+                              reasoningMode: 'fast',
+                            ),
+                          ),
+                          _PrivateAgentQuickChip(
+                            label: '协调时间',
+                            onTap: () => _sendAgentPrompt(
+                              buildPrivateAssistantPresetPrompt(
+                                'schedule_sync',
+                                friendName: _displayName ?? widget.friendName,
+                              ),
+                              agentState,
+                              preset: 'schedule_sync',
+                              reasoningMode: 'balanced',
+                            ),
+                          ),
+                          _PrivateAgentQuickChip(
+                            label: '快速总结',
+                            onTap: () => _sendAgentPrompt(
+                              buildPrivateAssistantPresetPrompt(
+                                'summary',
+                                friendName: _displayName ?? widget.friendName,
+                              ),
+                              agentState,
+                              preset: 'summary',
+                              reasoningMode: 'fast',
+                            ),
+                          ),
+                          _PrivateAgentQuickChip(
+                            label: '提炼下一步',
+                            onTap: () => _sendAgentPrompt(
+                              buildPrivateAssistantPresetPrompt(
+                                'next_step',
+                                friendName: _displayName ?? widget.friendName,
+                              ),
+                              agentState,
+                              preset: 'next_step',
+                              reasoningMode: 'fast',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -276,6 +351,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   void _sendAgentPrompt(
     String prompt,
     AgentChatState<PrivateMessageInfo> agentState,
+    {String preset = 'custom',
+    String reasoningMode = 'fast',}
   ) {
     if (agentState.isSending) return;
     unawaited(
@@ -287,6 +364,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             recentMessages:
                 ref.read(privateChatProvider(widget.friendId)).valueOrNull ??
                     [],
+            preset: preset,
+            reasoningMode: reasoningMode,
+            chatMode: 'standard',
           ),
     );
   }
@@ -314,4 +394,27 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       }
     }
   }
+}
+
+class _PrivateAgentQuickChip extends StatelessWidget {
+  const _PrivateAgentQuickChip({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ActionChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            color: DS.brandPrimary,
+          ),
+        ),
+        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+        onPressed: onTap,
+      );
 }

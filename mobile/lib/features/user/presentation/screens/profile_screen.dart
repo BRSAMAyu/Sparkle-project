@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final visualState = ref.watch(visualElementProvider);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerHeight = screenHeight < 720 ? 248.0 : 320.0;
+    final headerHeight = screenHeight < 720 ? 196.0 : 244.0;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -41,7 +41,7 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                 child: Column(
                   children: [
-                    const SizedBox(height: DS.spacing24),
+                    const SizedBox(height: DS.spacing4),
                     const StatisticsCard(),
                     const SizedBox(height: DS.spacing20),
                     _buildPrestigeShowcase(
@@ -327,7 +327,7 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(DS.spacing24),
               child: Column(
                 children: [
-                  const SizedBox(height: DS.spacing16),
+                  const SizedBox(height: DS.spacing6),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -473,6 +473,15 @@ class ProfileScreen extends ConsumerWidget {
                   title: l10n.achievementTitle,
                   accentColor: const Color(0xFFFFD700),
                   onTap: () => context.push(AchievementRoutes.basePath),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.photo_library_outlined,
+                  title: '海报工坊',
+                  subtitle: '把成长、计划与灵感做成高质感分享海报',
+                  accentColor: const Color(0xFF6E8EF7),
+                  onTap: () => context.push(UserRoutes.posterStudio),
                 ),
                 const Divider(height: 1, indent: 60),
                 _buildSettingsTile(
@@ -643,6 +652,7 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
+    String? subtitle,
     required Color accentColor,
     required VoidCallback onTap,
     bool isDestructive = false,
@@ -699,7 +709,7 @@ class ProfileScreen extends ConsumerWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: DS.spacing4),
         child: Text(
-          _settingsSubtitle(title),
+          subtitle ?? _settingsSubtitle(title),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: DS.bodySmall.copyWith(

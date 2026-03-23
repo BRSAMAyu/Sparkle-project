@@ -28,6 +28,14 @@ class UserPersonaScreen extends ConsumerStatefulWidget {
 class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _inferredItemKeys = <String, GlobalKey>{};
+  final Map<String, bool> _expandedSections = <String, bool>{
+    'summary': true,
+    'l3': true,
+    'l1': false,
+    'l2': false,
+    'inference': false,
+    'context': false,
+  };
   String? _handledInitialOverrideKey;
 
   @override
@@ -101,6 +109,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final capabilities = _normalizeEntries(persona['capabilities']);
     final patterns = _normalizeEntries(layer3['patterns']);
     final fragments = _normalizeEntries(layer3['fragments']);
+    final readableSummary = _buildReadableSummary(
+      goals: goals,
+      preferences: preferences,
+      patterns: patterns,
+      fragments: fragments,
+    );
 
     return ContentConstraint(
       child: RefreshIndicator(
@@ -117,104 +131,153 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             const SizedBox(height: DS.spacing16),
             SparkleStaggerItem(
               index: 2,
-              child: _buildAsyncSection(
-              ref,
-              context,
-              title: 'Context Snapshot',
-              asyncValue: profileContextAsync,
-              builder: (data) => _buildContextSummaryRows(l10n, data),
-              onRetry: () => ref.invalidate(profileContextProvider),
-            ),
-            ),
-            const SizedBox(height: DS.spacing24),
-            _sectionTitle(l10n.personaL1Title),
-            _subSectionList(
-              l10n.personaPreferences,
-              preferences
-                  .map((item) => _preferenceRow(ref, context, l10n, item))
-                  .toList(),
-              l10n,
-            ),
-            _subSectionList(
-              l10n.personaGoals,
-              goals.map((item) => _goalRow(ref, context, l10n, item)).toList(),
-              l10n,
-            ),
-            const SizedBox(height: DS.spacing24),
-            _sectionTitle('System Inference'),
-            _buildAsyncSection(
-              ref,
-              context,
-              title: 'Inferred Preferences',
-              asyncValue: inferredPreferencesAsync,
-              builder: (items) => items
-                  .map((item) =>
-                      _inferredPreferenceRow(ref, context, l10n, item))
-                  .toList(),
-              onRetry: () => ref.invalidate(inferredPreferencesProvider),
-            ),
-            _buildAsyncSection(
-              ref,
-              context,
-              title: 'Active Policies',
-              asyncValue: activePoliciesAsync,
-              builder: (items) =>
-                  items.map((item) => _policyRow(l10n, item)).toList(),
-              onRetry: () => ref.invalidate(activePoliciesProvider),
-            ),
-            const SizedBox(height: DS.spacing24),
-            _sectionTitle(l10n.personaL2Title),
-            _subSectionList(
-              l10n.personaTags,
-              tags
-                  .map(
-                    (item) => _suggestableRow(
-                      ref,
-                      context,
-                      l10n: l10n,
-                      label: item['value']?.toString() ?? '',
-                      metadata: item['metadata'] as Map<String, dynamic>? ?? {},
-                      targetType: 'persona_tag',
-                    ),
-                  )
-                  .toList(),
-              l10n,
-            ),
-            _subSectionList(
-              l10n.personaCapabilities,
-              capabilities
-                  .map(
-                    (item) => _suggestableRow(
-                      ref,
-                      context,
-                      l10n: l10n,
-                      label: '${item['key']}: ${item['value']}',
-                      metadata: item['metadata'] as Map<String, dynamic>? ?? {},
-                      targetType: 'persona_capability',
-                      fieldName: item['key']?.toString(),
-                    ),
-                  )
-                  .toList(),
-              l10n,
-            ),
-            const SizedBox(height: DS.spacing24),
-            _sectionTitle(l10n.personaL3Title),
-            Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: Text(
-                l10n.personaL3Hint,
-                style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+              child: _buildCollapsibleSection(
+                sectionKey: 'summary',
+                title: '画像解读',
+                subtitle: '先看自然语言总结，再决定要不要展开底层结构',
+                child: _buildReadableSummaryCard(readableSummary),
               ),
             ),
-            _subSectionList(
-              l10n.personaPatterns,
-              patterns.map((item) => _readonlyRow(l10n, item)).toList(),
-              l10n,
+            _buildCollapsibleSection(
+              sectionKey: 'l3',
+              title: l10n.personaL3Title,
+              subtitle: '优先展示系统已经总结出的可感知结论',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing8),
+                    child: Text(
+                      l10n.personaL3Hint,
+                      style: TextStyle(
+                        color: DS.neutral500,
+                        fontSize: DS.fontSizeSm,
+                      ),
+                    ),
+                  ),
+                  _subSectionList(
+                    l10n.personaPatterns,
+                    patterns.map((item) => _readonlyRow(l10n, item)).toList(),
+                    l10n,
+                  ),
+                  _subSectionList(
+                    l10n.personaFragments,
+                    fragments.map((item) => _readonlyRow(l10n, item)).toList(),
+                    l10n,
+                  ),
+                ],
+              ),
             ),
-            _subSectionList(
-              l10n.personaFragments,
-              fragments.map((item) => _readonlyRow(l10n, item)).toList(),
-              l10n,
+            _buildCollapsibleSection(
+              sectionKey: 'l1',
+              title: l10n.personaL1Title,
+              subtitle: '你明确告诉系统的目标和偏好',
+              child: Column(
+                children: [
+                  _subSectionList(
+                    l10n.personaGoals,
+                    goals
+                        .map((item) => _goalRow(ref, context, l10n, item))
+                        .toList(),
+                    l10n,
+                  ),
+                  _subSectionList(
+                    l10n.personaPreferences,
+                    preferences
+                        .map((item) => _preferenceRow(ref, context, l10n, item))
+                        .toList(),
+                    l10n,
+                  ),
+                ],
+              ),
+            ),
+            _buildCollapsibleSection(
+              sectionKey: 'l2',
+              title: l10n.personaL2Title,
+              subtitle: '系统与你协作校准后的标签与能力判断',
+              child: Column(
+                children: [
+                  _subSectionList(
+                    l10n.personaTags,
+                    tags
+                        .map(
+                          (item) => _suggestableRow(
+                            ref,
+                            context,
+                            l10n: l10n,
+                            label: item['value']?.toString() ?? '',
+                            metadata:
+                                item['metadata'] as Map<String, dynamic>? ??
+                                    {},
+                            targetType: 'persona_tag',
+                          ),
+                        )
+                        .toList(),
+                    l10n,
+                  ),
+                  _subSectionList(
+                    l10n.personaCapabilities,
+                    capabilities
+                        .map(
+                          (item) => _suggestableRow(
+                            ref,
+                            context,
+                            l10n: l10n,
+                            label: '${item['key']}: ${item['value']}',
+                            metadata:
+                                item['metadata'] as Map<String, dynamic>? ??
+                                    {},
+                            targetType: 'persona_capability',
+                            fieldName: item['key']?.toString(),
+                          ),
+                        )
+                        .toList(),
+                    l10n,
+                  ),
+                ],
+              ),
+            ),
+            _buildCollapsibleSection(
+              sectionKey: 'inference',
+              title: '系统推断与策略',
+              subtitle: '更技术性的推断偏好与当前策略，默认收起',
+              child: Column(
+                children: [
+                  _buildAsyncSection(
+                    ref,
+                    context,
+                    title: 'Inferred Preferences',
+                    asyncValue: inferredPreferencesAsync,
+                    builder: (items) => items
+                        .map((item) =>
+                            _inferredPreferenceRow(ref, context, l10n, item))
+                        .toList(),
+                    onRetry: () => ref.invalidate(inferredPreferencesProvider),
+                  ),
+                  _buildAsyncSection(
+                    ref,
+                    context,
+                    title: 'Active Policies',
+                    asyncValue: activePoliciesAsync,
+                    builder: (items) =>
+                        items.map((item) => _policyRow(l10n, item)).toList(),
+                    onRetry: () => ref.invalidate(activePoliciesProvider),
+                  ),
+                ],
+              ),
+            ),
+            _buildCollapsibleSection(
+              sectionKey: 'context',
+              title: 'Context Snapshot',
+              subtitle: '底层上下文快照，默认收起，必要时再展开',
+              child: _buildAsyncSection(
+                ref,
+                context,
+                title: 'Context Snapshot',
+                asyncValue: profileContextAsync,
+                builder: (data) => _buildContextSummaryRows(l10n, data),
+                onRetry: () => ref.invalidate(profileContextProvider),
+              ),
             ),
           ],
         ),
@@ -240,6 +303,157 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ],
         ),
       );
+
+  Widget _buildCollapsibleSection({
+    required String sectionKey,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    final expanded = _expandedSections[sectionKey] ?? false;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing16),
+      child: GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              borderRadius: DS.borderRadius12,
+              onTap: () {
+                setState(() {
+                  _expandedSections[sectionKey] = !expanded;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: DS.spacing4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeLg,
+                              fontWeight: DS.fontWeightBold,
+                              color: DS.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing4),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      expanded ? Icons.expand_less : Icons.expand_more,
+                      color: DS.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (expanded) ...[
+              const SizedBox(height: DS.spacing12),
+              child,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<String> _buildReadableSummary({
+    required List<Map<String, dynamic>> goals,
+    required List<Map<String, dynamic>> preferences,
+    required List<Map<String, dynamic>> patterns,
+    required List<Map<String, dynamic>> fragments,
+  }) {
+    final lines = <String>[];
+    final activeGoal = goals.cast<Map<String, dynamic>?>().firstWhere(
+          (item) => item?['status']?.toString() != 'completed',
+          orElse: () => goals.isEmpty ? null : goals.first,
+        );
+    if (activeGoal != null) {
+      final goalTitle = activeGoal['title']?.toString() ??
+          activeGoal['value']?.toString() ??
+          '';
+      if (goalTitle.isNotEmpty) {
+        lines.add('你当前最明确的目标是：$goalTitle。');
+      }
+    }
+
+    String? learningStyle;
+    String? responseDepth;
+    for (final item in preferences) {
+      final key = item['key']?.toString();
+      if (key == 'learning_style') {
+        learningStyle = item['value']?.toString();
+      }
+      if (key == 'depth_preference') {
+        responseDepth = item['value']?.toString();
+      }
+    }
+    if (learningStyle != null || responseDepth != null) {
+      lines.add(
+        '你的学习偏好更接近${learningStyle ?? '当前未明确'}，系统回答深度倾向${responseDepth ?? '自适应'}。',
+      );
+    }
+
+    final firstPattern = patterns.isNotEmpty
+        ? (patterns.first['name']?.toString() ??
+            patterns.first['value']?.toString() ??
+            patterns.first['content']?.toString())
+        : null;
+    if (firstPattern != null && firstPattern.isNotEmpty) {
+      lines.add('系统最近观察到的主要模式是：$firstPattern。');
+    }
+
+    if (fragments.isNotEmpty) {
+      lines.add('画像里已积累 ${fragments.length} 条可用于个性化推荐的认知线索。');
+    }
+
+    if (lines.isEmpty) {
+      lines.add('当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。');
+    }
+    return lines;
+  }
+
+  Widget _buildReadableSummaryCard(List<String> summaryLines) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '这是系统目前对你的简化理解：',
+          style: TextStyle(
+            fontWeight: DS.fontWeightSemibold,
+            color: DS.textPrimary,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        ...summaryLines.map(
+          (line) => Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing6),
+            child: Text(
+              '• $line',
+              style: TextStyle(
+                color: DS.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildAsyncSection<T>(
     WidgetRef ref,
@@ -577,18 +791,6 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 label: completed ? l10n.personaRefill : l10n.personaStart,
               ),
             ],
-          ),
-        ),
-      );
-
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: DS.spacing8),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: DS.fontSizeLg,
-            fontWeight: DS.fontWeightBold,
-            color: DS.textPrimary,
           ),
         ),
       );

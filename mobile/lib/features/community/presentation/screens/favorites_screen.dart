@@ -59,7 +59,8 @@ class FavoritesScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/community'),
         ),
         title: const Text('我的收藏'),
         actions: [

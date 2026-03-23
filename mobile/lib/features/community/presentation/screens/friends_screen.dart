@@ -25,7 +25,7 @@ class FriendsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
@@ -39,7 +39,6 @@ class FriendsScreen extends StatelessWidget {
             tabs: [
               Tab(text: l10n.languageChinese == '简体中文' ? '我的好友' : 'My Friends'),
               Tab(text: l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
-              Tab(text: l10n.languageChinese == '简体中文' ? '发现' : 'Discover'),
             ],
           ),
         ),
@@ -48,10 +47,62 @@ class FriendsScreen extends StatelessWidget {
             children: [
               SparkleStaggerItem(index: 0, child: _MyFriendsTab()),
               SparkleStaggerItem(index: 1, child: _PendingRequestsTab()),
-              SparkleStaggerItem(index: 2, child: _RecommendationsTab()),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class FriendRequestsScreen extends StatelessWidget {
+  const FriendRequestsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(CommunityRoutes.home),
+        ),
+        title:
+            Text(l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
+      ),
+      child: const ContentConstraint(
+        child: SparkleStaggerItem(index: 0, child: _PendingRequestsTab()),
+      ),
+    );
+  }
+}
+
+class FriendsDiscoverScreen extends StatelessWidget {
+  const FriendsDiscoverScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(CommunityRoutes.home),
+        ),
+        title: Text(
+          l10n.languageChinese == '简体中文' ? '发现好友' : 'Discover Friends',
+        ),
+      ),
+      child: const ContentConstraint(
+        child: SparkleStaggerItem(index: 0, child: _RecommendationsTab()),
       ),
     );
   }
@@ -275,7 +326,7 @@ class _PendingRequestsTab extends ConsumerWidget {
     return requestsState.when(
       data: (requests) {
         if (requests.isEmpty) {
-          return const Center(child: Text('No pending requests'));
+          return const Center(child: Text('当前没有待处理的好友请求'));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(pendingRequestsProvider.notifier).refresh(),
@@ -296,7 +347,8 @@ class _PendingRequestsTab extends ConsumerWidget {
                         : null,
                   ),
                   title: Text(user.displayName),
-                  subtitle: const Text('Wants to be your friend'),
+                  subtitle: const Text('希望先和你建立好友关系'),
+                  onTap: () {},
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -643,9 +695,13 @@ class _RecommendationsTab extends ConsumerWidget {
         return;
       }
       if (context.mounted) {
-        unawaited(context.push(
-          '/community/users/${recommendation.user.id}?name=${Uri.encodeComponent(recommendation.user.displayName)}',
-        ));
+        unawaited(
+          context.pushNamed(
+            'userProfile',
+            pathParameters: {'id': recommendation.user.id},
+            queryParameters: {'name': recommendation.user.displayName},
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {

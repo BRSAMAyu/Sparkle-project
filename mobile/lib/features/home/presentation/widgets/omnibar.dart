@@ -126,16 +126,60 @@ class _OmniBarState extends ConsumerState<OmniBar>
               'source': 'omnibar',
             },
           ).toString();
-          context.go(target);
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
         }
         return;
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
+        if (mounted) {
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': standard.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
+        }
         return;
       case 'CAPSULE':
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
+        if (mounted) {
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': standard.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
+        }
         return;
       default:
         return;

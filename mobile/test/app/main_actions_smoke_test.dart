@@ -215,7 +215,7 @@ void main() {
         find.byWidgetPredicate(
           (widget) =>
               widget.runtimeType.toString() == 'SparkleButton' &&
-              (widget as dynamic).label == 'Create Group',
+              (widget as dynamic).label == '创建社群',
         ),
       );
       await tester.pumpAndSettle();

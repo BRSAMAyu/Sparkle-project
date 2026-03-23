@@ -232,12 +232,28 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     required bool isLoading,
   }) {
     if (isLoading) {
-      return '预测更新中';
+      return isTyping ? '正在理解你的输入' : '正在根据最近行为更新建议';
     }
     if (insight != null) {
-      final raw = insight.title.trim().isNotEmpty
-          ? insight.title.trim()
-          : insight.summary.trim();
+      if (!isTyping) {
+        final actionLabel = insight.recommendedActions
+            .map((action) => action.label.trim())
+            .firstWhere(
+              (label) => label.isNotEmpty,
+              orElse: () => '',
+            );
+        if (actionLabel.isNotEmpty) {
+          return '你现在可以先做：$actionLabel';
+        }
+        if (insight.summary.trim().isNotEmpty) {
+          return '为你整理了下一步预测';
+        }
+        return '预测你接下来最可能的动作';
+      }
+
+      final raw = insight.summary.trim().isNotEmpty
+          ? insight.summary.trim()
+          : insight.title.trim();
       final compact = raw
           .replaceFirst(RegExp('^系统预测'), '')
           .replaceFirst(RegExp('^你接下来'), '')
@@ -250,23 +266,20 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
         return compact;
       }
     }
-    return isTyping ? '下一步建议' : '推荐下一步';
+    return isTyping ? '我在判断你接下来想做什么' : '预测你接下来最可能的动作';
   }
 
   String? _sourceBadge(PredictionInsightData? insight, {required bool isTyping}) {
     if (insight == null) {
-      return isTyping ? '在线骨架' : null;
+      return null;
     }
     if (insight.horizon == 'realtime') {
-      if (!insight.fallbackUsed) {
-        return '在线AI';
-      }
-      return '在线兜底';
+      return null;
     }
     if (insight.predictionSource == 'glm_batch') {
-      return '后台增强';
+      return null;
     }
-    return '长期骨架';
+    return null;
   }
 
   void _ensureFollowupRefresh({

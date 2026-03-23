@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
   const DailyDetailScreen({required this.date, super.key});
@@ -133,7 +136,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 Icons.event,
               ),
               const SizedBox(height: DS.spacing10),
-              _buildEventList(context, events),
+              _buildEventList(context, ref, events),
               const SizedBox(height: DS.spacing20),
 
               // 7. Tasks Section
@@ -582,6 +585,7 @@ class DailyDetailScreen extends ConsumerWidget {
 
   Widget _buildEventList(
     BuildContext context,
+    WidgetRef ref,
     List<CalendarEventModel> events,
   ) {
     if (events.isEmpty) {
@@ -604,7 +608,16 @@ class DailyDetailScreen extends ConsumerWidget {
                   color: _resolveEventColor(event.colorValue), width: 3,),
             ),
           ),
-          child: Row(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              if (event.taskId != null && event.taskId!.isNotEmpty) {
+                unawaited(context.push('/tasks/new?taskId=${event.taskId!}'));
+                return;
+              }
+              _showEditEventDialog(context, ref, event);
+            },
+            child: Row(
             children: [
               Expanded(
                 child: Column(
@@ -634,6 +647,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   size: 16,
                 ),
             ],
+            ),
           ),
         );
       },
@@ -723,5 +737,160 @@ class DailyDetailScreen extends ConsumerWidget {
       default:
         return DS.brandPrimary;
     }
+  }
+
+  void _showEditEventDialog(
+    BuildContext context,
+    WidgetRef ref,
+    CalendarEventModel event,
+  ) {
+    final titleController = TextEditingController(text: event.title);
+    final descController = TextEditingController(text: event.description ?? '');
+    final locationController = TextEditingController(
+      text: event.location ?? '',
+    );
+    DateTime startTime = event.startTime;
+    DateTime endTime = event.endTime;
+    bool isAllDay = event.isAllDay;
+    int reminderMinutes = event.reminderMinutes.isNotEmpty
+        ? event.reminderMinutes.first
+        : 15;
+
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfaceSecondary,
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setModalState) => Padding(
+            padding: EdgeInsets.only(
+              left: DS.spacing16,
+              right: DS.spacing16,
+              top: DS.spacing20,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + DS.spacing16,
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '编辑日程',
+                      style: TextStyle(
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: '标题',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('全天'),
+                      value: isAllDay,
+                      onChanged: (value) => setModalState(() => isAllDay = value),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('开始时间'),
+                      subtitle: Text(Formatters.formatDateTime(startTime)),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('结束时间'),
+                      subtitle: Text(Formatters.formatDateTime(endTime)),
+                    ),
+                    TextField(
+                      controller: locationController,
+                      decoration: const InputDecoration(
+                        labelText: '地点',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: '描述',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    DropdownButtonFormField<int>(
+                      initialValue: reminderMinutes,
+                      decoration: const InputDecoration(
+                        labelText: '提醒',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('开始时')),
+                        DropdownMenuItem(value: 5, child: Text('提前 5 分钟')),
+                        DropdownMenuItem(value: 15, child: Text('提前 15 分钟')),
+                        DropdownMenuItem(value: 30, child: Text('提前 30 分钟')),
+                        DropdownMenuItem(value: 60, child: Text('提前 1 小时')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() => reminderMinutes = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SparkleButton.ghost(
+                            label: '取消',
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: SparkleButton(
+                            label: '保存',
+                            onPressed: () async {
+                              final updated = event.copyWith(
+                                title: titleController.text.trim().isEmpty
+                                    ? event.title
+                                    : titleController.text.trim(),
+                                description: descController.text.trim().isEmpty
+                                    ? null
+                                    : descController.text.trim(),
+                                location: locationController.text.trim().isEmpty
+                                    ? null
+                                    : locationController.text.trim(),
+                                startTime: startTime,
+                                endTime: endTime,
+                                isAllDay: isAllDay,
+                                reminderMinutes: [reminderMinutes],
+                                updatedAt: DateTime.now(),
+                              );
+                              await ref.read(calendarProvider.notifier).updateEvent(updated);
+                              if (sheetContext.mounted) {
+                                Navigator.of(sheetContext).pop();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

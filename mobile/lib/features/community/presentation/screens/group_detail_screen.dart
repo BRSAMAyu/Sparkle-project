@@ -359,6 +359,22 @@ class GroupDetailScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: DS.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomButton.secondary(
+                            text: '文件',
+                            icon: Icons.folder_outlined,
+                            onPressed: () {
+                              context.push('/community/groups/$groupId/files');
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: DS.lg),
+                        const Spacer(),
+                      ],
+                    ),
                   ] else ...[
                     CustomButton.primary(
                       text: '加入群组',

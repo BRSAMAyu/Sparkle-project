@@ -17,6 +17,8 @@ const String kTransparencyLevelKey = 'settings_transparency_level';
 const String kOnboardingCompletedKey = 'settings_onboarding_completed';
 const String kSystemUpdateLevelKey = 'settings_system_update_level';
 const String kAiReasoningModeKey = 'settings_ai_reasoning_mode';
+const String kShowChatContextToggleKey = 'settings_show_chat_context_toggle';
+const String kShowChatPredictionDockKey = 'settings_show_chat_prediction_dock';
 
 /// Learning preferences model
 class LearningPreferences {
@@ -310,6 +312,22 @@ final aiReasoningModeProvider =
   (ref) => AiReasoningModeNotifier(ref),
 );
 
+final showChatContextToggleProvider =
+    StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
+  (ref) => SimpleBoolPreferenceNotifier(
+    storageKey: kShowChatContextToggleKey,
+    defaultValue: true,
+  ),
+);
+
+final showChatPredictionDockProvider =
+    StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
+  (ref) => SimpleBoolPreferenceNotifier(
+    storageKey: kShowChatPredictionDockKey,
+    defaultValue: true,
+  ),
+);
+
 final aiUsageSummaryProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(authProvider).user;
@@ -463,6 +481,39 @@ class EnterToSendNotifier extends StateNotifier<bool> {
   /// Toggle the setting
   void toggle() {
     setEnabled(!state);
+  }
+}
+
+class SimpleBoolPreferenceNotifier extends StateNotifier<bool> {
+  SimpleBoolPreferenceNotifier({
+    required this.storageKey,
+    required this.defaultValue,
+  }) : super(defaultValue) {
+    _loadSettings();
+  }
+
+  final String storageKey;
+  final bool defaultValue;
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getBool(storageKey);
+      state = value ?? defaultValue;
+    } catch (_) {
+      state = defaultValue;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    if (state == enabled) return;
+    state = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(storageKey, enabled);
+    } catch (_) {
+      // Silent fail for persistence
+    }
   }
 }
 

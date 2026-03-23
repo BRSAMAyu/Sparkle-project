@@ -388,6 +388,9 @@ class ApiEndpoints {
       '/seed-libraries/subscribe/$id';
   static String seedLibraryUnsubscribe(String id) =>
       '/seed-libraries/subscribe/$id';
+  static String seedLibrarySubscription(String id) =>
+      '/seed-libraries/$id/subscription';
+  static String seedLibraryRating(String id) => '/seed-libraries/$id/rating';
   static String seedLibrarySubscriptions = '/seed-libraries/subscriptions/me';
   static String seedLibraryCrossQuery = '/seed-libraries/query';
   static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';

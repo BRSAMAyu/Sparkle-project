@@ -9,9 +9,8 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
-import 'package:sparkle/features/focus/presentation/widgets/reflection_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
-import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 正念模式屏幕
@@ -179,16 +178,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       await ref.read(mindfulnessProvider.notifier).stop();
 
       if (mounted) {
-        // Show Reflection Dialog
-        await showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const ReflectionDialog(),
-        );
-
-        if (mounted) {
-          context.pop();
-        }
+        context.pop();
       }
     }
   }
@@ -265,38 +255,52 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                         ),
                       ),
                       Expanded(
-                        child: Center(
-                          child: FadeTransition(
-                            opacity: _clockFadeAnimation,
-                            child: SlideTransition(
-                              position: _contentSlideAnimation,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ScaleTransition(
-                                    scale: _scaleAnimation,
-                                    child: FadeTransition(
-                                      opacity: _fadeAnimation,
-                                      child: _buildTaskCard(task),
-                                    ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing20,
+                          ),
+                          child: Center(
+                            child: FadeTransition(
+                              opacity: _clockFadeAnimation,
+                              child: SlideTransition(
+                                position: _contentSlideAnimation,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 520,
                                   ),
-                                  const SizedBox(height: DS.xxxl),
-                                  FadeTransition(
-                                    opacity: _clockFadeAnimation,
-                                    child: SimpleFlipClock(
-                                      seconds: mindfulness.elapsedSeconds,
-                                      fontSize: 72,
-                                    ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ScaleTransition(
+                                        scale: _scaleAnimation,
+                                        child: FadeTransition(
+                                          opacity: _fadeAnimation,
+                                          child: _buildTaskCard(task),
+                                        ),
+                                      ),
+                                      const SizedBox(height: DS.spacing24),
+                                      FadeTransition(
+                                        opacity: _clockFadeAnimation,
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: SimpleFlipClock(
+                                            seconds: mindfulness.elapsedSeconds,
+                                            fontSize: 72,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: DS.spacing24),
+                                      FadeTransition(
+                                        opacity: _clockFadeAnimation,
+                                        child: ScaleTransition(
+                                          scale: _scaleAnimation,
+                                          child: _buildFlameAnimation(),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: DS.xxl),
-                                  FadeTransition(
-                                    opacity: _clockFadeAnimation,
-                                    child: ScaleTransition(
-                                      scale: _scaleAnimation,
-                                      child: _buildFlameAnimation(),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -336,34 +340,49 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   }
 
   Widget _buildStatusBar(MindfulnessState state) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing12,
+          DS.spacing12,
+          DS.spacing12,
+          DS.spacing8,
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 返回任务按钮
             _buildBackToTaskButton(),
-
-            // 正念模式标题
-            Row(
-              children: [
-                Icon(
-                  Icons.self_improvement_rounded,
-                  color: DS.textSecondary,
-                  size: 20,
-                ),
-                const SizedBox(width: DS.sm),
-                Text(
-                  context.l10n.focusMindfulnessTitle,
-                  style: TextStyle(
-                    color: DS.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+            Expanded(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceOverlay.withValues(alpha: 0.52),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.self_improvement_rounded,
+                        color: DS.textSecondary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        context.l10n.focusMindfulnessTitle,
+                        style: TextStyle(
+                          color: DS.textSecondary,
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-
-            // 暂停按钮
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: 40,
@@ -383,78 +402,18 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
       );
 
-  Widget _buildBackToTaskButton() => SparkleButton(
-        label: context.l10n.focusReturnToTask,
+  Widget _buildBackToTaskButton() => SparkleIconButton(
         variant: ButtonVariant.ghost,
-        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        size: 40,
+        icon: const Icon(Icons.arrow_back_rounded, size: 20),
         onPressed: () {
-          unawaited(_returnToTaskExecution());
+          unawaited(_handleExit());
         },
       );
 
-  Future<void> _returnToTaskExecution() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: GraphiteModalSurface(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.focusReturnToTaskTitle,
-                style: DS.titleLarge.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                context.l10n.focusReturnToTaskMessage,
-                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-              ),
-              const SizedBox(height: DS.spacing20),
-              Row(
-                children: [
-                  Expanded(
-                    child: SparkleButton(
-                      label: context.l10n.cancel,
-                      variant: ButtonVariant.ghost,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: SparkleButton(
-                      label: context.l10n.focusReturnToTaskConfirm,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if ((confirmed ?? false) && mounted) {
-      await ref.read(mindfulnessProvider.notifier).stop();
-      if (mounted) {
-        // 🔧 修复：从mindfulnessProvider获取完整任务并设置activeTaskProvider
-        final currentTask = ref.read(mindfulnessProvider).currentTask;
-        if (currentTask != null) {
-          ref.read(activeTaskProvider.notifier).state = currentTask;
-        }
-        unawaited(context.push('/tasks/${widget.taskId}/execute'));
-      }
-    }
-  }
-
   Widget _buildTaskCard(TaskModel task) => GraphiteCardSurface(
-        margin: const EdgeInsets.symmetric(horizontal: 40),
-        padding: const EdgeInsets.all(DS.xl),
+        margin: const EdgeInsets.symmetric(horizontal: DS.spacing8),
+        padding: const EdgeInsets.all(DS.spacing20),
         borderColor: DS.brandPrimary.withValues(alpha: 0.14),
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -470,7 +429,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                   task.title,
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontSize: 22,
+                  fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -548,10 +507,16 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       );
 
   Widget _buildExitButton() => Padding(
-        padding: const EdgeInsets.all(DS.xl),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing20,
+          DS.spacing8,
+          DS.spacing20,
+          DS.spacing20,
+        ),
         child: SparkleButton(
+          expand: true,
           label: context.l10n.focusExitMindfulness,
-          variant: ButtonVariant.ghost,
+          variant: ButtonVariant.secondary,
           icon: const Icon(Icons.exit_to_app_rounded, size: 18),
           onPressed: _handleExit,
         ),

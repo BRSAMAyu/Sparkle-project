@@ -428,12 +428,17 @@ class _CustomButtonState extends State<CustomButton>
 
     if (widget.text != null) {
       children.add(
-        Text(
-          widget.text!,
-          style: TextStyle(
-            fontSize: _getFontSize(),
-            fontWeight: DS.fontWeightMedium,
-            color: textColor,
+        Flexible(
+          child: Text(
+            widget.text!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: TextStyle(
+              fontSize: _getFontSize(),
+              fontWeight: DS.fontWeightMedium,
+              color: textColor,
+            ),
           ),
         ),
       );

@@ -1710,6 +1710,18 @@ enum SharedResourceType {
   task,
   @JsonValue('plan')
   plan,
+  @JsonValue('knowledge_node')
+  knowledgeNode,
+  @JsonValue('seed_library')
+  seedLibrary,
+  @JsonValue('seed_item')
+  seedItem,
+  @JsonValue('cognitive_fragment')
+  cognitiveFragment,
+  @JsonValue('curiosity_capsule')
+  curiosityCapsule,
+  @JsonValue('cognitive_prism_pattern')
+  cognitivePrismPattern,
   @JsonValue('fragment')
   fragment,
   @JsonValue('capsule')
@@ -1720,39 +1732,153 @@ enum SharedResourceType {
   file,
 }
 
-@JsonSerializable()
 class SharedResourceInfo {
   SharedResourceInfo({
     required this.id,
     required this.resourceType,
-    required this.resourceId,
-    required this.sharerId,
-    required this.groupIds,
     required this.createdAt,
-    this.resourceData,
+    this.updatedAt,
+    this.planId,
+    this.taskId,
+    this.knowledgeNodeId,
+    this.seedLibraryId,
+    this.seedItemId,
+    this.cognitiveFragmentId,
+    this.curiosityCapsuleId,
+    this.behaviorPatternId,
+    this.permission,
+    this.comment,
+    this.viewCount,
+    this.saveCount,
     this.sharer,
-    this.adoptCount,
+    this.resourceTitle,
+    this.resourceSummary,
+    this.entityCard,
   });
 
-  factory SharedResourceInfo.fromJson(Map<String, dynamic> json) =>
-      _$SharedResourceInfoFromJson(json);
+  factory SharedResourceInfo.fromJson(Map<String, dynamic> json) {
+    SharedResourceType parseResourceType(dynamic raw) {
+      final key = raw?.toString();
+      return SharedResourceType.values.firstWhere(
+        (value) => value.name == key,
+        orElse: () => SharedResourceType.task,
+      );
+    }
+
+    DateTime? parseDate(dynamic raw) {
+      final value = raw?.toString();
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+      return DateTime.tryParse(value);
+    }
+
+    return SharedResourceInfo(
+      id: json['id'] as String,
+      resourceType: parseResourceType(json['resource_type']),
+      createdAt: parseDate(json['created_at']) ?? DateTime.now(),
+      updatedAt: parseDate(json['updated_at']),
+      planId: json['plan_id'] as String?,
+      taskId: json['task_id'] as String?,
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
+      seedLibraryId: json['seed_library_id'] as String?,
+      seedItemId: json['seed_item_id'] as String?,
+      cognitiveFragmentId: json['cognitive_fragment_id'] as String?,
+      curiosityCapsuleId: json['curiosity_capsule_id'] as String?,
+      behaviorPatternId: json['behavior_pattern_id'] as String?,
+      permission: json['permission'] as String?,
+      comment: json['comment'] as String?,
+      viewCount: (json['view_count'] as num?)?.toInt(),
+      saveCount: (json['save_count'] as num?)?.toInt(),
+      sharer: json['sharer'] is Map<String, dynamic>
+          ? UserBrief.fromJson(json['sharer'] as Map<String, dynamic>)
+          : json['sharer'] is Map
+              ? UserBrief.fromJson(
+                  Map<String, dynamic>.from(
+                    json['sharer'] as Map<Object?, Object?>,
+                  ),
+                )
+              : null,
+      resourceTitle: json['resource_title'] as String?,
+      resourceSummary: json['resource_summary'] as String?,
+      entityCard: json['entity_card'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['entity_card'] as Map<String, dynamic>)
+          : json['entity_card'] is Map
+              ? Map<String, dynamic>.from(
+                  json['entity_card'] as Map<Object?, Object?>,
+                )
+              : null,
+    );
+  }
   final String id;
   @JsonKey(name: 'resource_type')
   final SharedResourceType resourceType;
-  @JsonKey(name: 'resource_id')
-  final String resourceId;
-  @JsonKey(name: 'sharer_id')
-  final String sharerId;
-  @JsonKey(name: 'resource_data')
-  final Map<String, dynamic>? resourceData;
-  @JsonKey(name: 'group_ids')
-  final List<String> groupIds;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
+  @JsonKey(name: 'plan_id')
+  final String? planId;
+  @JsonKey(name: 'task_id')
+  final String? taskId;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
+  @JsonKey(name: 'seed_library_id')
+  final String? seedLibraryId;
+  @JsonKey(name: 'seed_item_id')
+  final String? seedItemId;
+  @JsonKey(name: 'cognitive_fragment_id')
+  final String? cognitiveFragmentId;
+  @JsonKey(name: 'curiosity_capsule_id')
+  final String? curiosityCapsuleId;
+  @JsonKey(name: 'behavior_pattern_id')
+  final String? behaviorPatternId;
+  final String? permission;
+  final String? comment;
+  @JsonKey(name: 'view_count')
+  final int? viewCount;
+  @JsonKey(name: 'save_count')
+  final int? saveCount;
   final UserBrief? sharer;
-  @JsonKey(name: 'adopt_count')
-  final int? adoptCount;
-  Map<String, dynamic> toJson() => _$SharedResourceInfoToJson(this);
+  @JsonKey(name: 'resource_title')
+  final String? resourceTitle;
+  @JsonKey(name: 'resource_summary')
+  final String? resourceSummary;
+  @JsonKey(name: 'entity_card')
+  final Map<String, dynamic>? entityCard;
+
+  String? get resourceId =>
+      planId ??
+      taskId ??
+      knowledgeNodeId ??
+      seedLibraryId ??
+      seedItemId ??
+      cognitiveFragmentId ??
+      curiosityCapsuleId ??
+      behaviorPatternId;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'resource_type': resourceType.name,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt?.toIso8601String(),
+        'plan_id': planId,
+        'task_id': taskId,
+        'knowledge_node_id': knowledgeNodeId,
+        'seed_library_id': seedLibraryId,
+        'seed_item_id': seedItemId,
+        'cognitive_fragment_id': cognitiveFragmentId,
+        'curiosity_capsule_id': curiosityCapsuleId,
+        'behavior_pattern_id': behaviorPatternId,
+        'permission': permission,
+        'comment': comment,
+        'view_count': viewCount,
+        'save_count': saveCount,
+        'sharer': sharer?.toJson(),
+        'resource_title': resourceTitle,
+        'resource_summary': resourceSummary,
+        'entity_card': entityCard,
+      };
 }
 
 @JsonSerializable()

@@ -31,15 +31,41 @@ from app.schemas.seed_content import (
     LibraryResponse,
     LibraryUpdate,
     PromoteToOfficialRequest,
+    RatingUpsertRequest,
     SubscriptionCreate,
     SubscriptionInfo,
     SubscriptionListResponse,
     SubscriptionResponse,
+    SubscriptionUpdate,
 )
 from app.services.seed_library_service import SeedLibraryService
 
 router = APIRouter()
 service = SeedLibraryService()
+
+
+async def _enrich_library_info(
+    db: AsyncSession,
+    library,
+    *,
+    user_id: UUID | None,
+    stats: dict[str, int] | None = None,
+) -> LibraryInfo:
+    lib_info = LibraryInfo.model_validate(library)
+    stats = stats or {"item_count": 0, "subscriber_count": 0}
+    rating_summary = await service.get_rating_summary(db, library.id, user_id)
+    lib_info.item_count = stats["item_count"]
+    lib_info.subscriber_count = stats["subscriber_count"]
+    lib_info.system_quality_score = library.quality_score
+    lib_info.user_rating_avg = rating_summary["user_rating_avg"]
+    lib_info.user_rating_count = rating_summary["user_rating_count"]
+    lib_info.current_user_rating = rating_summary["current_user_rating"]
+    lib_info.quality_score = service._blend_quality_score(
+        library.quality_score,
+        rating_summary["user_rating_avg"],
+        rating_summary["user_rating_count"],
+    )
+    return lib_info
 
 
 # ============ 库管理接口 ============
@@ -113,12 +139,31 @@ async def list_libraries(
     lib_ids = [lib.id for lib in libraries]
     stats_map = await service.batch_get_library_stats(db, lib_ids)
 
+    rating_map = await service.batch_get_rating_summaries(db, lib_ids, user_id)
+
     data = []
     for lib in libraries:
         stats = stats_map.get(lib.id, {"item_count": 0, "subscriber_count": 0})
         lib_info = LibraryInfo.model_validate(lib)
         lib_info.item_count = stats["item_count"]
         lib_info.subscriber_count = stats["subscriber_count"]
+        rating_summary = rating_map.get(
+            lib.id,
+            {
+                "user_rating_avg": None,
+                "user_rating_count": 0,
+                "current_user_rating": None,
+            },
+        )
+        lib_info.system_quality_score = lib.quality_score
+        lib_info.user_rating_avg = rating_summary["user_rating_avg"]
+        lib_info.user_rating_count = rating_summary["user_rating_count"]
+        lib_info.current_user_rating = rating_summary["current_user_rating"]
+        lib_info.quality_score = service._blend_quality_score(
+            lib.quality_score,
+            rating_summary["user_rating_avg"],
+            rating_summary["user_rating_count"],
+        )
         data.append(lib_info)
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
@@ -151,10 +196,7 @@ async def get_library(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
 
     stats = await service.get_library_stats(db, library_id)
-    lib_info = LibraryInfo.model_validate(library)
-    lib_info.item_count = stats["item_count"]
-    lib_info.subscriber_count = stats["subscriber_count"]
-
+    lib_info = await _enrich_library_info(db, library, user_id=current_user.id, stats=stats)
     return LibraryResponse(data=lib_info)
 
 
@@ -181,10 +223,7 @@ async def update_library(
 
         await db.commit()
         stats = await service.get_library_stats(db, library_id)
-        lib_info = LibraryInfo.model_validate(library)
-        lib_info.item_count = stats["item_count"]
-        lib_info.subscriber_count = stats["subscriber_count"]
-
+        lib_info = await _enrich_library_info(db, library, user_id=current_user.id, stats=stats)
         return LibraryResponse(data=lib_info)
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
@@ -484,6 +523,74 @@ async def unsubscribe_library(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     await db.commit()
     return None
+
+
+@router.put(
+    "/seed-libraries/{library_id}/subscription",
+    response_model=SubscriptionResponse,
+    summary="更新种子库应用状态",
+    description="启用/停用种子库并调整优先级，决定它在系统中的实际生效方式",
+)
+async def update_library_subscription(
+    library_id: UUID,
+    update_data: SubscriptionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    subscription = await service.update_subscription(
+        db,
+        library_id,
+        current_user.id,
+        update_data,
+    )
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    await db.commit()
+    library = await service.get_library(db, library_id)
+    return SubscriptionResponse(
+        data=SubscriptionInfo(
+            id=subscription.id,
+            user_id=subscription.user_id,
+            library_id=subscription.library_id,
+            library_name=library.name if library else "",
+            is_enabled=subscription.is_enabled,
+            priority=subscription.priority,
+            notes=subscription.notes,
+            subscribed_at=subscription.subscribed_at,
+            last_used_at=subscription.last_used_at,
+            created_at=subscription.created_at,
+        )
+    )
+
+
+@router.post(
+    "/seed-libraries/{library_id}/rating",
+    response_model=LibraryResponse,
+    summary="评分种子库",
+    description="提交用户评分，并更新融合后的质量分展示",
+)
+async def rate_library(
+    library_id: UUID,
+    rating_data: RatingUpsertRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await service.rate_library(
+        db,
+        library_id=library_id,
+        user_id=current_user.id,
+        score=rating_data.score,
+        comment=rating_data.comment,
+    )
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    await db.commit()
+    library = await service.get_library_for_user(db, library_id, current_user.id)
+    if not library:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
+    stats = await service.get_library_stats(db, library_id)
+    lib_info = await _enrich_library_info(db, library, user_id=current_user.id, stats=stats)
+    return LibraryResponse(data=lib_info)
 
 
 @router.post(

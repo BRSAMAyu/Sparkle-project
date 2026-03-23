@@ -9,11 +9,6 @@ import 'package:sparkle/features/visual_elements/presentation/providers/visual_r
 import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
-import 'package:sparkle/shared/providers/visual_element_provider.dart';
-
-/// 布局动画时长
-const _kLayoutAnimationDuration = Duration(milliseconds: 400);
-const _kLayoutAnimationCurve = Curves.easeOutCubic;
 
 /// 视觉元素管理页面
 class VisualElementsScreen extends ConsumerStatefulWidget {
@@ -154,7 +149,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 children: [
                   SparkleIconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
+                    onPressed: () =>
+                        context.canPop() ? context.pop() : context.go('/settings'),
                     variant: ButtonVariant.ghost,
                   ),
                   const SizedBox(width: DS.spacing8),
@@ -214,10 +210,12 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Wrap(
+        spacing: DS.spacing12,
+        runSpacing: DS.spacing12,
         children: [
-          // 解锁进度
-          Expanded(
+          SizedBox(
+            width: 240,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -250,11 +248,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               ],
             ),
           ),
-
-          const SizedBox(width: DS.spacing16),
-
-          // 装备中的元素
           Container(
+            width: 112,
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing16,
               vertical: DS.spacing12,
@@ -420,7 +415,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               state.equippedIds.contains(element.id),
             ),
             child: Container(
-              width: 220,
+              width: 236,
               padding: const EdgeInsets.all(DS.spacing16),
               decoration: BoxDecoration(
                 color: DS.surfaceSecondary,
@@ -458,14 +453,16 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: DS.spacing4),
-                  Text(
-                    element.description ?? '高曝光荣耀装扮套组',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: DS.textSecondary,
+                  Expanded(
+                    child: Text(
+                      element.description ?? '高曝光荣耀装扮套组',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -515,7 +512,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       delegate: _StickyTabBarDelegate(
         TabBar(
           controller: _tabController,
-          isScrollable: false,
+          isScrollable: true,
           indicatorSize: TabBarIndicatorSize.label,
           indicator: BoxDecoration(
             color: DS.brandPrimary,
@@ -594,49 +591,22 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
               builder: (context, constraints) {
-                return AnimatedSwitcher(
-                  duration: _kLayoutAnimationDuration,
-                  switchInCurve: _kLayoutAnimationCurve,
-                  switchOutCurve: _kLayoutAnimationCurve,
-                  layoutBuilder: (currentChild, previousChildren) {
-                    // 使用 Stack 实现交叉淡入淡出
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: <Widget>[
-                        ...previousChildren,
-                        if (currentChild != null) currentChild,
-                      ],
-                    );
-                  },
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.05),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: SliverGrid(
-                    key: ValueKey(_filterOptions.hashCode),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _calculateCrossAxisCount(
-                        constraints.crossAxisExtent,
-                      ),
-                      mainAxisSpacing: DS.spacing12,
-                      crossAxisSpacing: DS.spacing12,
-                      mainAxisExtent: 180,
+                return SliverGrid(
+                  key: ValueKey(_filterOptions.hashCode),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _calculateCrossAxisCount(
+                      constraints.crossAxisExtent,
                     ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final element = filteredElements[index];
-                        return _buildElementCard(element, state, l10n);
-                      },
-                      childCount: filteredElements.length,
-                    ),
+                    mainAxisSpacing: DS.spacing12,
+                    crossAxisSpacing: DS.spacing12,
+                    mainAxisExtent: 196,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final element = filteredElements[index];
+                      return _buildElementCard(element, state, l10n);
+                    },
+                    childCount: filteredElements.length,
                   ),
                 );
               },
@@ -675,6 +645,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementPreviewDialog.show(
       context,
       element: element,
+      availableElements: ref.read(visualElementsNotifierProvider).allElements,
       baseConfig: ref.read(visualElementsNotifierProvider).config,
       isUnlocked: isUnlocked,
       isEquipped: isEquipped,
@@ -689,7 +660,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        ref.read(visualElementProvider.notifier).loadConfig();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.visualElementEquipSuccess),
@@ -713,7 +683,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        ref.read(visualElementProvider.notifier).loadConfig();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.visualElementUnequipSuccess),
@@ -980,7 +949,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           const SizedBox(height: DS.spacing12),
           SizedBox(
-            height: 150,
+            height: 196,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: eventElements.length,
@@ -1473,27 +1442,55 @@ class _VisualElementCard extends StatelessWidget {
                       fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
 
                   const SizedBox(height: DS.spacing4),
 
-                  // 稀有度
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing6,
-                      vertical: DS.spacing2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.background,
-                      borderRadius: DS.borderRadius6,
-                    ),
-                    child: Icon(
-                      _getRarityIcon(element.rarity),
-                      size: 10,
-                      color: colors.text,
-                    ),
+                  Wrap(
+                    spacing: DS.spacing6,
+                    runSpacing: DS.spacing6,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing6,
+                          vertical: DS.spacing2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.background,
+                          borderRadius: DS.borderRadius6,
+                        ),
+                        child: Icon(
+                          _getRarityIcon(element.rarity),
+                          size: 10,
+                          color: colors.text,
+                        ),
+                      ),
+                      if (element.prestigeLabel != null &&
+                          element.prestigeLabel!.isNotEmpty)
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 120),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing6,
+                            vertical: DS.spacing2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.brandPrimary10,
+                            borderRadius: DS.borderRadius6,
+                          ),
+                          child: Text(
+                            element.prestigeLabel!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: DS.brandPrimary,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -1651,12 +1648,16 @@ class _RecommendationCard extends StatelessWidget {
                           color: DS.brandPrimary,
                         ),
                         const SizedBox(width: DS.spacing4),
-                        Text(
-                          reasonText,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeXs,
-                            color: DS.brandPrimary,
-                            fontWeight: DS.fontWeightMedium,
+                        Flexible(
+                          child: Text(
+                            reasonText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: DS.brandPrimary,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
                           ),
                         ),
                       ],

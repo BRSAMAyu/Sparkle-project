@@ -132,15 +132,23 @@ class _AccountabilityDetailScreenState
 
   Future<void> _sendNudge(String partnershipId) async {
     try {
-      await ref
+      final result = await ref
           .read(accountabilityActionsProvider)
           .nudgePartner(ref, partnershipId);
       if (mounted) {
-        AppFeedback.success(context, '已提醒伙伴查看今天的目标');
+        AppFeedback.success(
+          context,
+          (result['message'] as String?) ?? '已提醒伙伴查看今天的目标',
+        );
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '提醒失败: $e');
+        final message = e.toString();
+        if (message.contains('429') || message.contains('cooldown')) {
+          AppFeedback.info(context, '刚提醒过，稍后再试');
+        } else {
+          AppFeedback.error(context, '提醒失败: $e');
+        }
       }
     }
   }

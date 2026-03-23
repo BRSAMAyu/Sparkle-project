@@ -7,7 +7,8 @@ from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import Request
-from sqlalchemy import select, update
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -60,40 +61,46 @@ class AuthSessionService:
         request: Request | None = None,
     ) -> UserSession:
         metadata = extract_client_metadata(request)
-        result = await db.execute(select(UserSession).where(UserSession.session_id == session_id))
-        session = result.scalar_one_or_none()
         now = _utcnow_naive()
 
-        if session:
-            session.user_id = user_id
-            session.device_id = metadata["device_id"]
-            session.device_name = metadata["device_name"]
-            session.device_type = metadata["device_type"]
-            session.ip_address = metadata["ip_address"]
-            session.user_agent = metadata["user_agent"]
-            if refresh_token_jti:
-                session.refresh_token_jti = refresh_token_jti
-            session.last_active_at = now
-            session.is_active = True
-            session.revoked_at = None
-        else:
-            session = UserSession(
-                user_id=user_id,
-                session_id=session_id,
-                device_id=metadata["device_id"],
-                device_name=metadata["device_name"],
-                device_type=metadata["device_type"],
-                ip_address=metadata["ip_address"],
-                user_agent=metadata["user_agent"],
-                refresh_token_jti=refresh_token_jti,
-                is_active=True,
-                revoked_at=None,
-                last_active_at=now,
-            )
-            db.add(session)
+        insert_stmt = pg_insert(UserSession).values(
+            user_id=user_id,
+            session_id=session_id,
+            device_id=metadata["device_id"],
+            device_name=metadata["device_name"],
+            device_type=metadata["device_type"],
+            ip_address=metadata["ip_address"],
+            user_agent=metadata["user_agent"],
+            refresh_token_jti=refresh_token_jti,
+            is_active=True,
+            revoked_at=None,
+            last_active_at=now,
+        )
+        update_fields: dict[str, Any] = {
+            "user_id": user_id,
+            "device_id": metadata["device_id"],
+            "device_name": metadata["device_name"],
+            "device_type": metadata["device_type"],
+            "ip_address": metadata["ip_address"],
+            "user_agent": metadata["user_agent"],
+            "last_active_at": now,
+            "is_active": True,
+            "revoked_at": None,
+        }
+        if refresh_token_jti:
+            update_fields["refresh_token_jti"] = refresh_token_jti
+
+        await db.execute(
+            insert_stmt.on_conflict_do_update(
+                index_elements=[UserSession.session_id],
+                set_=update_fields,
+            ),
+        )
 
         await cache_service.delete(f"{SESSION_REVOKED_PREFIX}{session_id}")
         await db.flush()
+        result = await db.execute(select(UserSession).where(UserSession.session_id == session_id))
+        session = result.scalar_one()
         return session
 
     async def touch_from_payload(

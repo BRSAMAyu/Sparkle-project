@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 
 const aiContentFontFallback = <String>[
@@ -17,7 +18,11 @@ const aiContentFontFallback = <String>[
 ];
 
 bool hasSafeMarkdownSyntax(String content) {
-  if (content.trim().isEmpty) {
+  final trimmed = content.trim();
+  if (trimmed.isEmpty) {
+    return false;
+  }
+  if (!_hasBalancedMarkdownDelimiters(trimmed)) {
     return false;
   }
   return <RegExp>[
@@ -30,7 +35,109 @@ bool hasSafeMarkdownSyntax(String content) {
     RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
     RegExp(r'(^|\n)[-*+]\s', multiLine: true),
     RegExp(r'(^|\n)\d+\.\s', multiLine: true),
-  ].any((pattern) => pattern.hasMatch(content.trim()));
+  ].any((pattern) => pattern.hasMatch(trimmed));
+}
+
+String normalizeAiMarkdown(String content) {
+  var normalized = content.replaceAll('\r\n', '\n');
+  normalized = normalized.replaceAll(
+    RegExp(r'[\u200B-\u200D\uFEFF]'),
+    '',
+  );
+  normalized = normalized.replaceAll('\uFFFD', '');
+  final normalizedLines = normalized
+      .split('\n')
+      .map(_normalizeAiMarkdownLine)
+      .toList();
+  normalized = normalizedLines.join('\n');
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)([-*+])(?=\S)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)} ',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)(\d+\.)(?=\S)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)} ',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)(#{1,6})(?=\S)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)} ',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)>(?=\S)', multiLine: true),
+    (match) => '${match.group(1)}> ',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)([-*+]\s+)(?=(\*\*|__)\S)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)}',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(^|\n)([-*+])(\*\*|__)', multiLine: true),
+    (match) => '${match.group(1)}${match.group(2)} ${match.group(3)}',
+  );
+  return normalized;
+}
+
+String _normalizeAiMarkdownLine(String rawLine) {
+  var line = rawLine;
+  final trimmedLeft = line.trimLeft();
+  final leadingWhitespace = line.substring(0, line.length - trimmedLeft.length);
+  if (trimmedLeft.isEmpty) {
+    return line;
+  }
+
+  final suspiciousLeadingMarkers = <String>{
+    '•',
+    '●',
+    '▪',
+    '◦',
+    '‣',
+    '?',
+    '？',
+    '�',
+    '·',
+    '•️',
+    '◉',
+    '○',
+    '◆',
+    '◇',
+    '▶',
+    '▸',
+  };
+
+  if (suspiciousLeadingMarkers.any(trimmedLeft.startsWith)) {
+    final marker = suspiciousLeadingMarkers.firstWhere(trimmedLeft.startsWith);
+    final rest = trimmedLeft.substring(marker.length).trimLeft();
+    return '$leadingWhitespace- $rest';
+  }
+
+  final suspiciousBulletMatch = RegExp(
+    r'^[?？�]+[\s\u3000]*(\*\*|__|#+\s+|[-*+]\s+|\d+\.\s+)?',
+  ).firstMatch(trimmedLeft);
+  if (suspiciousBulletMatch != null) {
+    final rest = trimmedLeft.substring(suspiciousBulletMatch.end).trimLeft();
+    if (rest.isNotEmpty) {
+      return '$leadingWhitespace- $rest';
+    }
+  }
+
+  if (trimmedLeft.startsWith('-**') || trimmedLeft.startsWith('-__')) {
+    return '$leadingWhitespace- ${trimmedLeft.substring(1)}';
+  }
+
+  if (trimmedLeft.startsWith('***') || trimmedLeft.startsWith('*__')) {
+    return '$leadingWhitespace- ${trimmedLeft.substring(1)}';
+  }
+
+  return line;
+}
+
+bool _hasBalancedMarkdownDelimiters(String content) {
+  final tripleBackticks = RegExp('```').allMatches(content).length;
+  final doubleAsterisks = RegExp(r'\*\*').allMatches(content).length;
+  final doubleUnderscores = RegExp('__').allMatches(content).length;
+  return tripleBackticks.isEven &&
+      doubleAsterisks.isEven &&
+      doubleUnderscores.isEven;
 }
 
 MarkdownStyleSheet buildAiMarkdownStyle({
@@ -141,7 +248,8 @@ class AiRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!hasSafeMarkdownSyntax(content)) {
+    final normalizedContent = normalizeAiMarkdown(content);
+    if (!hasSafeMarkdownSyntax(normalizedContent)) {
       final textStyle = TextStyle(
         color: textColor,
         fontSize: fontSize,
@@ -149,13 +257,32 @@ class AiRichText extends StatelessWidget {
         fontFamilyFallback: aiContentFontFallback,
       );
       if (selectablePlainText) {
-        return SelectableText(content, style: textStyle);
+        return SelectableText(normalizedContent, style: textStyle);
       }
-      return Text(content, style: textStyle);
+      return Text(normalizedContent, style: textStyle);
     }
 
     return MarkdownBody(
-      data: content,
+      data: normalizedContent,
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+      listItemCrossAxisAlignment: MarkdownListItemCrossAxisAlignment.start,
+      bulletBuilder: (index, style) {
+        final bulletText =
+            style == BulletStyle.orderedList ? '${index + 1}.' : '-';
+        return Padding(
+          padding: const EdgeInsets.only(right: 8, top: 1),
+          child: Text(
+            bulletText,
+            style: TextStyle(
+              color: textColor,
+              fontSize: fontSize,
+              height: height,
+              fontFamilyFallback: aiContentFontFallback,
+            ),
+          ),
+        );
+      },
+      softLineBreak: true,
       onTapLink: (text, href, title) async {
         if (href == null) {
           return;
