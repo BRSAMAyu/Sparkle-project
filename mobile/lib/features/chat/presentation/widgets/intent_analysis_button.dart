@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
@@ -57,7 +58,7 @@ class IntentAnalysisButton extends ConsumerWidget {
       );
 
   Future<void> _showIntentPreview(BuildContext context) async {
-    final result = await showModalBottomSheet<bool>(
+    final result = await showSensoryModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),

@@ -61,8 +61,13 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 		if ts, err := strconv.ParseInt(msg.Timestamp, 10, 64); err == nil {
 			createdAt = time.Unix(ts, 0).UTC().Format(time.RFC3339)
 		}
+		// Use message ID if available, otherwise fallback to timestamp:role (for backwards compatibility)
+		msgID := msg.ID
+		if msgID == "" {
+			msgID = msg.Timestamp + ":" + msg.Role
+		}
 		result = append(result, gin.H{
-			"id":              msg.Timestamp + ":" + msg.Role,
+			"id":              msgID,
 			"conversation_id": msg.SessionID,
 			"role":            msg.Role,
 			"content":         msg.Content,

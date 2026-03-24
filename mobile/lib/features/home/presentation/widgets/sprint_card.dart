@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -20,8 +21,10 @@ class SprintCard extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardProvider);
     final sprint = dashboardState.sprint;
 
-    return GestureDetector(
+    return SparklePressable(
       onTap: onTap,
+      padding: EdgeInsets.zero,
+      borderRadius: DS.borderRadius20,
       child: MaterialStyler(
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
@@ -34,7 +37,7 @@ class SprintCard extends ConsumerWidget {
   }
 
   Widget _buildSprintContent(BuildContext context, SprintData sprint) {
-    final progress = sprint.progress;
+    final progress = sprint.progress.clamp(0.0, 1.0);
     final daysLeft = sprint.daysLeft;
     final isUrgent = daysLeft <= 3;
 
@@ -56,26 +59,41 @@ class SprintCard extends ConsumerWidget {
         // Circular progress - use Expanded to take available space
         Expanded(
           child: Center(
-            child: SizedBox(
-              width: 50,
-              height: 50,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size(50, 50),
-                    painter: _CircularProgressPainter(
-                      progress: progress,
-                      isUrgent: isUrgent,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Use the smaller of available width/height, capped at 56
+                final ringSize = math.min(
+                  constraints.maxWidth.clamp(0, 56).toDouble(),
+                  constraints.maxHeight.clamp(0, 56).toDouble(),
+                );
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: progress),
+                  duration: DS.durationSlow,
+                  curve: Curves.easeOutCubic,
+                  builder: (context, animatedProgress, child) => SizedBox(
+                    width: ringSize,
+                    height: ringSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size(ringSize, ringSize),
+                          painter: _CircularProgressPainter(
+                            progress: animatedProgress,
+                            isUrgent: isUrgent,
+                          ),
+                        ),
+                        child!,
+                      ],
                     ),
                   ),
-                  Column(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         '$daysLeft',
                         style: context.sparkleTypography.headingMedium.copyWith(
-                          fontSize: 16,
+                          fontSize: ringSize * 0.3,
                           fontWeight: FontWeight.bold,
                           color: isUrgent ? DS.error : DS.brandPrimary,
                         ),
@@ -83,14 +101,14 @@ class SprintCard extends ConsumerWidget {
                       Text(
                         '天',
                         style: context.sparkleTypography.labelSmall.copyWith(
-                          fontSize: 9,
+                          fontSize: ringSize * 0.17,
                           color: DS.textSecondary,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -98,18 +116,24 @@ class SprintCard extends ConsumerWidget {
         const SizedBox(height: 4),
 
         // Sprint name
-        Text(
-          sprint.name,
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontWeight: FontWeight.w600,
-            color: DS.textPrimary,
+        SparkleStaggerItem(
+          index: 0,
+          child: Text(
+            sprint.name,
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: DS.textPrimary,
+            ),
           ),
         ),
-        Text(
-          '${(progress * 100).toInt()}% 完成',
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontSize: 10,
-            color: DS.textSecondary,
+        SparkleStaggerItem(
+          index: 1,
+          child: Text(
+            '${(progress * 100).toInt()}% 完成',
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontSize: 10,
+              color: DS.textSecondary,
+            ),
           ),
         ),
       ],
@@ -164,20 +188,22 @@ class _CircularProgressPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4;
+    const strokeWidth = 5.0;
+    // Inset by half stroke width so the ring stays fully inside the canvas
+    final radius = size.width / 2 - strokeWidth / 2 - 1;
 
     // Background circle
     final bgPaint = Paint()
       ..color = DS.brandPrimary.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6;
+      ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius, bgPaint);
 
     // Progress arc
     final progressPaint = Paint()
       ..color = isUrgent ? DS.error : DS.primaryBase
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     final sweepAngle = 2 * math.pi * progress;

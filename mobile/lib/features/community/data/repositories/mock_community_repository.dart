@@ -62,6 +62,18 @@ class MockCommunityRepository implements CommunityRepository {
         status: FriendshipStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(days: 30)),
         updatedAt: DateTime.now(),
+        accountability: AccountabilityFriendSummary(
+          partnershipId: 'demo_core_partner',
+          slotType: 'core',
+          status: 'active',
+          myRole: 'initiator',
+          myCheckedInToday: false,
+          partnerCheckedInToday: true,
+          myStreakDays: 7,
+          partnerStreakDays: 5,
+          lastCheckinAt: DateTime.now().subtract(const Duration(hours: 2)),
+          goalPreview: '每天完成 45 分钟深度学习并同步进展',
+        ),
       ),
       FriendshipInfo(
         id: const Uuid().v4(),
@@ -69,6 +81,17 @@ class MockCommunityRepository implements CommunityRepository {
         status: FriendshipStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(days: 15)),
         updatedAt: DateTime.now(),
+        accountability: AccountabilityFriendSummary(
+          partnershipId: 'demo_pending_partner',
+          slotType: 'core',
+          status: 'pending',
+          myRole: 'partner',
+          myCheckedInToday: false,
+          partnerCheckedInToday: false,
+          myStreakDays: 0,
+          partnerStreakDays: 0,
+          goalPreview: '一起复盘算法错题',
+        ),
       ),
       FriendshipInfo(
         id: const Uuid().v4(),
@@ -78,11 +101,21 @@ class MockCommunityRepository implements CommunityRepository {
         updatedAt: DateTime.now(),
       ),
     ];
+    _mockPendingRequests = [
+      FriendshipInfo(
+        id: 'friend_request_user_eva',
+        friend: eva,
+        status: FriendshipStatus.pending,
+        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+        updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    ];
 
     // Restore Groups
     final sprintGroup = GroupInfo(
       id: 'group_sprint_001',
       name: 'CET-6 30天冲刺',
+      description: '30天打卡冲刺英语六级，适合想找节奏感和同伴监督的同学。',
       type: GroupType.sprint,
       focusTags: ['English'],
       memberCount: 45,
@@ -100,6 +133,7 @@ class MockCommunityRepository implements CommunityRepository {
     final studyGroup = GroupInfo(
       id: 'group_study_001',
       name: '数据结构互助组',
+      description: '每周刷题、答疑和知识点串讲，适合期中期末前一起抱团推进。',
       type: GroupType.squad,
       focusTags: ['CS', 'Data Structure'],
       memberCount: 28,
@@ -113,7 +147,41 @@ class MockCommunityRepository implements CommunityRepository {
       updatedAt: DateTime.now(),
       myRole: GroupRole.admin,
     );
-    _mockGroups = [sprintGroup, studyGroup];
+    final aiGroup = GroupInfo(
+      id: 'group_ai_001',
+      name: 'AI 论文共读社',
+      description: '每周一篇经典论文，从模型结构到实验设计一起拆解。',
+      type: GroupType.squad,
+      focusTags: ['AI', 'Paper', 'ML'],
+      memberCount: 33,
+      totalFlamePower: 7800,
+      todayCheckinCount: 11,
+      totalTasksCompleted: 210,
+      maxMembers: 60,
+      isPublic: true,
+      joinRequiresApproval: true,
+      createdAt: DateTime.now().subtract(const Duration(days: 35)),
+      updatedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    );
+    final mathGroup = GroupInfo(
+      id: 'group_math_001',
+      name: '高数夜航船',
+      description: '晚间固定自习和题目互助，适合一起稳步补基础。',
+      type: GroupType.sprint,
+      focusTags: ['Math', 'Calculus', 'Exam'],
+      memberCount: 19,
+      totalFlamePower: 2600,
+      todayCheckinCount: 8,
+      totalTasksCompleted: 96,
+      maxMembers: 40,
+      isPublic: true,
+      joinRequiresApproval: false,
+      createdAt: DateTime.now().subtract(const Duration(days: 6)),
+      updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      deadline: DateTime.now().add(const Duration(days: 24)),
+      sprintGoal: '一起完成高数期中复习',
+    );
+    _mockGroups = [sprintGroup, studyGroup, aiGroup, mathGroup];
 
     // Group messages with multiple members
     _mockGroupMessages = {
@@ -342,6 +410,83 @@ class MockCommunityRepository implements CommunityRepository {
         ),
       ],
     };
+
+    _mockFeedbackPrompts = [
+      RecommendationFeedbackPrompt(
+        promptId: 'friend:user_alice:immediate:demo',
+        itemType: RecommendationItemType.friend,
+        itemId: 'user_alice',
+        stage: RecommendationFeedbackStage.immediate,
+        triggerAction: 'friend_match_view',
+        title: '这位责任伙伴推荐对你来说够契合吗？',
+        subtitle: '给相似度、互补性和舒适度打个分，系统会据此微调你的匹配权重。',
+        dueAt: DateTime.now().subtract(const Duration(hours: 2)),
+        strategy: 'compatibility',
+        target: 'accountability',
+        user: alice,
+        reasonTags: const ['subject_overlap', 'preference_alignment'],
+      ),
+      RecommendationFeedbackPrompt(
+        promptId: 'group:group_ai_001:immediate:demo',
+        itemType: RecommendationItemType.group,
+        itemId: 'group_ai_001',
+        stage: RecommendationFeedbackStage.immediate,
+        triggerAction: 'reco_view',
+        title: '这个社群推荐真的对口吗？',
+        subtitle: '从兴趣匹配、活跃度和氛围三个角度告诉我们感受。',
+        dueAt: DateTime.now().subtract(const Duration(minutes: 90)),
+        group: _toGroupListItem(aiGroup),
+        reasonTags: const ['tag_overlap', 'trending'],
+      ),
+    ];
+
+    _mockFeedbackInsights = {
+      RecommendationItemType.friend: RecommendationFeedbackInsight(
+        itemType: RecommendationItemType.friend,
+        recentFeedbackCount: 3,
+        averageScores: const {
+          'overall_score': 3.7,
+          'similarity_score': 3.3,
+          'comfort_score': 4.0,
+        },
+        topPositiveSignals: const ['trustworthy', 'good_similarity'],
+        topNegativeSignals: const ['too_dissimilar'],
+        userTuning: const {
+          'feature_weights': {
+            'subject_overlap': 1.08,
+            'relationship_readiness': 1.04,
+          },
+          'strategy_bias': {
+            'compatibility': 1.06,
+          },
+        },
+        globalAdjustments: const {
+          'subject_overlap': 1.02,
+          'preference_alignment': 1.01,
+        },
+      ),
+      RecommendationItemType.group: RecommendationFeedbackInsight(
+        itemType: RecommendationItemType.group,
+        recentFeedbackCount: 2,
+        averageScores: const {
+          'overall_score': 3.5,
+          'interest_match_score': 3.0,
+          'activity_score': 3.5,
+        },
+        topPositiveSignals: const ['good_interest_match'],
+        topNegativeSignals: const ['want_more_tag_match'],
+        userTuning: const {
+          'feature_weights': {
+            'tag_score': 1.1,
+            'activity': 1.03,
+          },
+        },
+        globalAdjustments: const {
+          'tag_score': 1.03,
+          'quality': 1.01,
+        },
+      ),
+    };
   }
   factory MockCommunityRepository.instance() => _instance;
 
@@ -367,12 +512,37 @@ class MockCommunityRepository implements CommunityRepository {
 
   late final List<UserBrief> _mockUsers;
   late final List<FriendshipInfo> _mockFriends;
+  late final List<FriendshipInfo> _mockPendingRequests;
   late final List<GroupInfo> _mockGroups;
   late final Map<String, List<MessageInfo>> _mockGroupMessages;
   late final Map<String, List<PrivateMessageInfo>> _mockPrivateMessages;
+  late final List<RecommendationFeedbackPrompt> _mockFeedbackPrompts;
+  late final Map<RecommendationItemType, RecommendationFeedbackInsight>
+      _mockFeedbackInsights;
 
   static final MockCommunityRepository _instance =
       MockCommunityRepository._init();
+
+  GroupListItem _toGroupListItem(GroupInfo group) => GroupListItem(
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        type: group.type,
+        memberCount: group.memberCount,
+        totalFlamePower: group.totalFlamePower,
+        todayCheckinCount: group.todayCheckinCount,
+        focusTags: group.focusTags,
+        deadline: group.deadline,
+        daysRemaining: group.deadline == null
+            ? null
+            : group.deadline!.difference(DateTime.now()).inDays.clamp(0, 9999),
+        isPublic: group.isPublic,
+        joinRequiresApproval: group.joinRequiresApproval,
+        activityScore: group.todayCheckinCount * 4 +
+            group.memberCount +
+            (group.totalFlamePower / 100),
+        myRole: group.myRole,
+      );
 
   @override
   Future<List<FriendshipInfo>> getFriends({
@@ -548,19 +718,8 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<List<GroupListItem>> getMyGroups() async => _mockGroups
-      .map(
-        (g) => GroupListItem(
-          id: g.id,
-          name: g.name,
-          type: g.type,
-          memberCount: g.memberCount,
-          totalFlamePower: g.totalFlamePower,
-          focusTags: g.focusTags,
-          myRole: g.myRole,
-        ),
-      )
-      .toList();
+  Future<List<GroupListItem>> getMyGroups() async =>
+      _mockGroups.where((g) => g.myRole != null).map(_toGroupListItem).toList();
 
   @override
   Future<GroupInfo> getGroup(String groupId) async =>
@@ -814,33 +973,364 @@ class MockCommunityRepository implements CommunityRepository {
     String? message,
   }) async {}
   @override
-  Future<void> respondToRequest(String friendshipId, bool accept) async {}
+  Future<void> respondToRequest(String friendshipId, bool accept) async {
+    final index = _mockPendingRequests.indexWhere((item) => item.id == friendshipId);
+    if (index < 0) return;
+    final request = _mockPendingRequests.removeAt(index);
+    if (accept) {
+      _mockFriends = [
+        FriendshipInfo(
+          id: request.id,
+          friend: request.friend,
+          status: FriendshipStatus.accepted,
+          createdAt: request.createdAt,
+          updatedAt: DateTime.now(),
+          initiatedByMe: request.initiatedByMe,
+        ),
+        ..._mockFriends,
+      ];
+    }
+  }
   @override
-  Future<List<FriendshipInfo>> getPendingRequests() async => [];
+  Future<List<FriendshipInfo>> getPendingRequests() async => _mockPendingRequests;
   @override
   Future<List<FriendRecommendation>> getFriendRecommendations({
     int limit = 10,
+    FriendMatchStrategy strategy = FriendMatchStrategy.compatibility,
+    FriendRecommendationTarget target =
+        FriendRecommendationTarget.accountability,
   }) async =>
-      [];
+      (strategy == FriendMatchStrategy.complementary
+              ? [
+                  FriendRecommendation(
+                    user:
+                        _mockUsers.firstWhere((user) => user.id == 'user_bob'),
+                    matchScore: 0.91,
+                    matchReasons: const [
+                      'TA 的执行节奏更稳定，适合做监督型伙伴',
+                      '你们都在准备语言与考试相关目标，互补关系更容易落地',
+                    ],
+                    strategy: strategy.name,
+                    target: target.name,
+                    summary: '更适合做监督型责任伙伴，先建立好友关系会更顺畅。',
+                    scoreBreakdown: const {
+                      'support_strength': 0.28,
+                      'subject_bridge': 0.18,
+                      'stability': 0.14,
+                    },
+                  ),
+                  FriendRecommendation(
+                    user:
+                        _mockUsers.firstWhere((user) => user.id == 'user_eva'),
+                    matchScore: 0.83,
+                    matchReasons: const [
+                      'TA 的规划习惯更强，适合在关键节点提醒你',
+                      '学习风格差异能带来新的推进方式',
+                    ],
+                    strategy: strategy.name,
+                    target: target.name,
+                    summary: '适合作为互补型学习搭子。',
+                    scoreBreakdown: const {
+                      'support_strength': 0.25,
+                      'diversity': 0.12,
+                      'stability': 0.11,
+                    },
+                  ),
+                ]
+              : [
+                  FriendRecommendation(
+                    user: _mockUsers
+                        .firstWhere((user) => user.id == 'user_alice'),
+                    matchScore: 0.94,
+                    matchReasons: const [
+                      '你们关注的学习主题高度重合',
+                      '学习节奏和专注偏好比较接近',
+                      '你们已经是好友，建立责任伙伴关系会更顺手',
+                    ],
+                    strategy: strategy.name,
+                    target: target.name,
+                    summary: '契合度很高，适合直接发展成核心责任伙伴。',
+                    relationshipStatus: 'accepted',
+                    isExistingFriend: true,
+                    canInviteAccountability: true,
+                    recommendedAction: 'invite_accountability',
+                    scoreBreakdown: const {
+                      'subject_overlap': 0.26,
+                      'preference_alignment': 0.23,
+                      'relationship_readiness': 0.05,
+                    },
+                  ),
+                  FriendRecommendation(
+                    user: _mockUsers
+                        .firstWhere((user) => user.id == 'user_charlie'),
+                    matchScore: 0.86,
+                    matchReasons: const [
+                      '你们在相同社群里有共同经历',
+                      '你们处理学习任务的方式比较契合',
+                    ],
+                    strategy: strategy.name,
+                    target: target.name,
+                    summary: '已有默契基础，适合深入协作。',
+                    relationshipStatus: 'accepted',
+                    isExistingFriend: true,
+                    canInviteAccountability: true,
+                    recommendedAction: 'invite_accountability',
+                    scoreBreakdown: const {
+                      'group_affinity': 0.14,
+                      'cognitive_alignment': 0.09,
+                      'stability': 0.07,
+                    },
+                  ),
+                ])
+          .take(limit)
+          .toList();
+
+  @override
+  Future<void> sendFriendRecommendationFeedback({
+    required String targetUserId,
+    required FriendMatchStrategy strategy,
+    required FriendRecommendationTarget target,
+    required String action,
+    required String source,
+    double? score,
+    String? promptId,
+    RecommendationFeedbackStage? stage,
+    int? questionnaireVersion,
+    int? overallScore,
+    int? relevanceScore,
+    int? explanationScore,
+    int? actionabilityScore,
+    int? similarityScore,
+    int? complementaryScore,
+    int? comfortScore,
+    List<String>? selectedIssues,
+    List<String>? selectedStrengths,
+    String? freeText,
+  }) async {
+    if (promptId != null) {
+      _mockFeedbackPrompts.removeWhere((prompt) => prompt.promptId == promptId);
+    }
+    _updateInsight(
+      RecommendationItemType.friend,
+      scores: {
+        if (overallScore != null) 'overall_score': overallScore,
+        if (relevanceScore != null) 'relevance_score': relevanceScore,
+        if (explanationScore != null) 'explanation_score': explanationScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
+        if (similarityScore != null) 'similarity_score': similarityScore,
+        if (complementaryScore != null)
+          'complementary_score': complementaryScore,
+        if (comfortScore != null) 'comfort_score': comfortScore,
+      },
+      positiveSignals: selectedStrengths ?? const [],
+      negativeSignals: [
+        ...?selectedIssues,
+        if ((freeText ?? '').contains('不够相似')) 'too_dissimilar',
+      ],
+      featureBoosts: {
+        'subject_overlap':
+            similarityScore != null && similarityScore <= 2 ? 1.12 : 1.06,
+        'relationship_readiness':
+            comfortScore != null && comfortScore <= 2 ? 1.08 : 1.04,
+      },
+      strategyBoosts: {
+        strategy.name: overallScore != null && overallScore >= 4 ? 1.08 : 1.04,
+      },
+    );
+  }
+
   @override
   Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async =>
       [];
   @override
   Future<void> updateStatus(UserStatus status) async {}
   @override
-  Future<GroupInfo> createGroup(GroupCreate group) async => _mockGroups[0];
+  Future<GroupInfo> createGroup(GroupCreate group) async {
+    final created = GroupInfo(
+      id: const Uuid().v4(),
+      name: group.name,
+      description: group.description,
+      type: group.type,
+      focusTags: group.focusTags,
+      memberCount: 1,
+      totalFlamePower: 0,
+      todayCheckinCount: 0,
+      totalTasksCompleted: 0,
+      maxMembers: group.maxMembers,
+      isPublic: group.isPublic,
+      joinRequiresApproval: group.joinRequiresApproval,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      deadline: group.deadline,
+      sprintGoal: group.sprintGoal,
+      myRole: GroupRole.owner,
+    );
+    _mockGroups.insert(0, created);
+    _mockGroupMessages[created.id] = [];
+    return created;
+  }
+
   @override
   Future<List<GroupListItem>> searchGroups({
     String? keyword,
     GroupType? type,
     List<String>? tags,
+    GroupDirectorySort sortBy = GroupDirectorySort.latest,
     int limit = 20,
-  }) async =>
-      [];
+    int offset = 0,
+  }) async {
+    final query = keyword?.trim().toLowerCase() ?? '';
+    var groups = _mockGroups.where((group) {
+      if (!(group.isPublic || group.myRole != null)) {
+        return false;
+      }
+      if (type != null && group.type != type) {
+        return false;
+      }
+      if (query.isNotEmpty) {
+        final haystack =
+            '${group.name} ${group.description ?? ''}'.toLowerCase();
+        if (!haystack.contains(query)) {
+          return false;
+        }
+      }
+      if (tags != null && tags.isNotEmpty) {
+        final normalized =
+            group.focusTags.map((tag) => tag.toLowerCase()).toSet();
+        for (final tag in tags) {
+          if (!normalized.contains(tag.toLowerCase())) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }).toList();
+
+    switch (sortBy) {
+      case GroupDirectorySort.hot:
+        groups.sort((a, b) {
+          final scoreA = a.todayCheckinCount * 4 +
+              a.memberCount +
+              (a.totalFlamePower / 100);
+          final scoreB = b.todayCheckinCount * 4 +
+              b.memberCount +
+              (b.totalFlamePower / 100);
+          return scoreB.compareTo(scoreA);
+        });
+        break;
+      case GroupDirectorySort.latest:
+        groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case GroupDirectorySort.random:
+        groups = [...groups]..shuffle();
+        break;
+    }
+
+    return groups.skip(offset).take(limit).map(_toGroupListItem).toList();
+  }
+
   @override
-  Future<void> joinGroup(String groupId) async {}
+  Future<GroupDirectoryInfo> getGroupDirectory({
+    String? keyword,
+    GroupType? type,
+    List<String>? tags,
+    GroupDirectorySort sortBy = GroupDirectorySort.hot,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final groups = await searchGroups(
+      keyword: keyword,
+      type: type,
+      tags: tags,
+      sortBy: sortBy,
+      limit: limit,
+      offset: offset,
+    );
+    final tagCounts = <String, int>{};
+    for (final group in _mockGroups.where((group) => group.isPublic)) {
+      for (final tag in group.focusTags) {
+        tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+      }
+    }
+    final recommendations = await getGroupRecommendations(limit: 6);
+    return GroupDirectoryInfo(
+      sortBy: sortBy,
+      keyword: keyword,
+      appliedTags: tags ?? const [],
+      availableTags: tagCounts.keys.toList()
+        ..sort((a, b) => (tagCounts[b] ?? 0).compareTo(tagCounts[a] ?? 0)),
+      totalCount: (await searchGroups(
+        keyword: keyword,
+        type: type,
+        tags: tags,
+        sortBy: sortBy,
+        limit: 999,
+      ))
+          .length,
+      recommendations:
+          keyword == null || keyword.isEmpty ? recommendations : const [],
+      groups: groups,
+    );
+  }
+
   @override
-  Future<void> leaveGroup(String groupId) async {}
+  Future<void> joinGroup(String groupId) async {
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    if (group.myRole != null) return;
+    _mockGroups[index] = GroupInfo(
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      avatarUrl: group.avatarUrl,
+      type: group.type,
+      focusTags: group.focusTags,
+      memberCount: group.memberCount + 1,
+      totalFlamePower: group.totalFlamePower,
+      todayCheckinCount: group.todayCheckinCount,
+      totalTasksCompleted: group.totalTasksCompleted,
+      maxMembers: group.maxMembers,
+      isPublic: group.isPublic,
+      joinRequiresApproval: group.joinRequiresApproval,
+      createdAt: group.createdAt,
+      updatedAt: DateTime.now(),
+      deadline: group.deadline,
+      sprintGoal: group.sprintGoal,
+      announcement: group.announcement,
+      myRole: GroupRole.member,
+    );
+  }
+
+  @override
+  Future<void> leaveGroup(String groupId) async {
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    if (group.myRole == null) return;
+    _mockGroups[index] = GroupInfo(
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      avatarUrl: group.avatarUrl,
+      type: group.type,
+      focusTags: group.focusTags,
+      memberCount: group.memberCount > 0 ? group.memberCount - 1 : 0,
+      totalFlamePower: group.totalFlamePower,
+      todayCheckinCount: group.todayCheckinCount,
+      totalTasksCompleted: group.totalTasksCompleted,
+      maxMembers: group.maxMembers,
+      isPublic: group.isPublic,
+      joinRequiresApproval: group.joinRequiresApproval,
+      createdAt: group.createdAt,
+      updatedAt: DateTime.now(),
+      deadline: group.deadline,
+      sprintGoal: group.sprintGoal,
+      announcement: group.announcement,
+    );
+  }
+
   @override
   Future<CheckinResponse> checkin(
     String groupId, {
@@ -914,14 +1404,7 @@ class MockCommunityRepository implements CommunityRepository {
         .take(limit)
         .map(
           (group) => GroupRecommendationItem(
-            group: GroupListItem(
-              id: group.id,
-              name: group.name,
-              type: group.type,
-              memberCount: group.memberCount,
-              totalFlamePower: group.totalFlamePower,
-              focusTags: group.focusTags,
-            ),
+            group: _toGroupListItem(group),
             score: 0.6,
             reasons: [
               GroupRecommendationReason(
@@ -942,9 +1425,73 @@ class MockCommunityRepository implements CommunityRepository {
     required String action,
     required String source,
     List<String>? reasonTypes,
+    String? promptId,
+    RecommendationFeedbackStage? stage,
+    int? questionnaireVersion,
+    int? overallScore,
+    int? relevanceScore,
+    int? explanationScore,
+    int? actionabilityScore,
+    int? interestMatchScore,
+    int? activityScore,
+    int? atmosphereScore,
+    List<String>? selectedIssues,
+    List<String>? selectedStrengths,
+    String? freeText,
   }) async {
-    // Mock implementation - do nothing
-    return;
+    if (promptId != null) {
+      _mockFeedbackPrompts.removeWhere((prompt) => prompt.promptId == promptId);
+    }
+    _updateInsight(
+      RecommendationItemType.group,
+      scores: {
+        if (overallScore != null) 'overall_score': overallScore,
+        if (relevanceScore != null) 'relevance_score': relevanceScore,
+        if (explanationScore != null) 'explanation_score': explanationScore,
+        if (actionabilityScore != null)
+          'actionability_score': actionabilityScore,
+        if (interestMatchScore != null)
+          'interest_match_score': interestMatchScore,
+        if (activityScore != null) 'activity_score': activityScore,
+        if (atmosphereScore != null) 'atmosphere_score': atmosphereScore,
+      },
+      positiveSignals: selectedStrengths ?? const [],
+      negativeSignals: [
+        ...?selectedIssues,
+        if ((freeText ?? '').contains('标签不准')) 'want_more_tag_match',
+      ],
+      featureBoosts: {
+        'tag_score':
+            interestMatchScore != null && interestMatchScore <= 2 ? 1.12 : 1.06,
+        'activity': activityScore != null && activityScore <= 2 ? 1.08 : 1.03,
+      },
+    );
+  }
+
+  @override
+  Future<List<RecommendationFeedbackPrompt>> getRecommendationFeedbackPrompts({
+    RecommendationItemType? itemType,
+    int limit = 20,
+  }) async {
+    final prompts = itemType == null
+        ? _mockFeedbackPrompts
+        : _mockFeedbackPrompts
+            .where((prompt) => prompt.itemType == itemType)
+            .toList();
+    return prompts.take(limit).toList();
+  }
+
+  @override
+  Future<List<RecommendationFeedbackInsight>>
+      getRecommendationFeedbackInsights({
+    RecommendationItemType? itemType,
+    int days = 30,
+  }) async {
+    if (itemType != null) {
+      final insight = _mockFeedbackInsights[itemType];
+      return insight == null ? const [] : [insight];
+    }
+    return _mockFeedbackInsights.values.toList();
   }
 
   @override
@@ -976,4 +1523,394 @@ class MockCommunityRepository implements CommunityRepository {
     // Mock implementation - do nothing
     return;
   }
+
+  @override
+  Future<UserBrief> getUserProfile(String userId) async => UserBrief(id: userId, username: 'mock_user');
+
+  void _updateInsight(
+    RecommendationItemType itemType, {
+    required Map<String, int> scores,
+    required List<String> positiveSignals,
+    required List<String> negativeSignals,
+    required Map<String, double> featureBoosts,
+    Map<String, double> strategyBoosts = const {},
+  }) {
+    final current = _mockFeedbackInsights[itemType];
+    if (current == null) return;
+
+    final currentCount = current.recentFeedbackCount;
+    final nextCount = currentCount + 1;
+    final mergedScores = <String, double>{...current.averageScores};
+    scores.forEach((key, value) {
+      final oldValue = current.averageScores[key] ?? value.toDouble();
+      mergedScores[key] =
+          ((oldValue * currentCount) + value.toDouble()) / nextCount;
+    });
+
+    final mergedUserTuning = <String, dynamic>{...current.userTuning};
+    final currentFeatures = Map<String, dynamic>.from(
+      mergedUserTuning['feature_weights'] as Map? ?? const {},
+    );
+    featureBoosts.forEach((key, value) {
+      currentFeatures[key] = value;
+    });
+    mergedUserTuning['feature_weights'] = currentFeatures;
+    if (strategyBoosts.isNotEmpty) {
+      final currentStrategies = Map<String, dynamic>.from(
+        mergedUserTuning['strategy_bias'] as Map? ?? const {},
+      );
+      strategyBoosts.forEach((key, value) {
+        currentStrategies[key] = value;
+      });
+      mergedUserTuning['strategy_bias'] = currentStrategies;
+    }
+
+    _mockFeedbackInsights[itemType] = RecommendationFeedbackInsight(
+      itemType: itemType,
+      recentFeedbackCount: nextCount,
+      averageScores: mergedScores,
+      topPositiveSignals: _mergeSignals(
+        current.topPositiveSignals,
+        positiveSignals,
+      ),
+      topNegativeSignals: _mergeSignals(
+        current.topNegativeSignals,
+        negativeSignals,
+      ),
+      userTuning: mergedUserTuning,
+      globalAdjustments: current.globalAdjustments,
+    );
+  }
+
+  List<String> _mergeSignals(List<String> existing, List<String> incoming) {
+    final merged = <String>[
+      ...incoming.where((item) => item.trim().isNotEmpty),
+      ...existing,
+    ];
+    final seen = <String>{};
+    return merged.where((item) => seen.add(item)).take(5).toList();
+  }
+
+  @override
+  Future<FriendProfileDetail> getFriendProfile(String userId) async => FriendProfileDetail(
+      user: UserBrief(
+        id: userId,
+        username: 'mock_user',
+        nickname: 'Mock Partner',
+      ),
+      friendship: {
+        'id': 'friendship_$userId',
+        'status': 'accepted',
+        'initiated_by_me': false,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      accountability: userId == 'user_alice'
+          ? const {
+              'id': 'demo_core_partner',
+              'partnership_id': 'demo_core_partner',
+              'status': 'active',
+              'slot_type': 'core',
+            }
+          : userId == 'user_charlie'
+              ? const {
+                  'id': 'demo_pending_partner',
+                  'partnership_id': 'demo_pending_partner',
+                  'status': 'pending',
+                  'slot_type': 'core',
+                }
+              : const {},
+      relationshipSummary: {
+        'partner_name': 'Mock Partner',
+        'days_together': 12,
+        'my_streak_days': 5,
+        'partner_streak_days': 4,
+      },
+      achievementsSummary: const {
+        'my_total_unlocked': 2,
+        'partner_total_unlocked': 1,
+      },
+      leaderboardSummary: const {},
+      quickActions: {
+        'can_invite_accountability': false,
+        'can_open_dashboard': userId == 'user_alice',
+        'can_chat': true,
+        'can_share': true,
+      },
+    );
+
+  @override
+  Future<void> updateAnnouncement(String groupId, String? announcement) async {
+    return;
+  }
+
+  // ── Phase 1: Message Favorites ─────────────────────────────────────────────
+
+  @override
+  Future<void> addFavorite(
+    String? groupMessageId,
+    String? privateMessageId, {
+    String? note,
+    List<String>? tags,
+  }) async {}
+
+  @override
+  Future<List<MessageFavoriteInfo>> getFavorites({
+    String? tag,
+    int limit = 20,
+    int offset = 0,
+  }) async =>
+      [];
+
+  @override
+  Future<void> removeFavorite(String favoriteId) async {}
+
+  // ── Phase 1: Message Forward ───────────────────────────────────────────────
+
+  @override
+  Future<void> forwardMessage(
+    String messageId,
+    String sourceType, {
+    String? targetGroupId,
+    String? targetUserId,
+    String? comment,
+  }) async {}
+
+  // ── Phase 1: Message Report ────────────────────────────────────────────────
+
+  @override
+  Future<void> reportMessage(
+    String messageId,
+    ReportReason reason, {
+    String? description,
+  }) async {}
+
+  // ── Phase 2a: Group Member Moderation ─────────────────────────────────────
+
+  @override
+  Future<void> muteMember(
+    String groupId,
+    String userId,
+    int durationMinutes, {
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> unmuteMember(String groupId, String userId) async {}
+
+  @override
+  Future<void> warnMember(
+    String groupId,
+    String userId,
+    String reason,
+  ) async {}
+
+  // ── Phase 2b: Group Moderation Settings ───────────────────────────────────
+
+  @override
+  Future<GroupModerationSettings> getModerationSettings(
+    String groupId,
+  ) async =>
+      const GroupModerationSettings();
+
+  @override
+  Future<void> updateModerationSettings(
+    String groupId,
+    GroupModerationSettings settings,
+  ) async {}
+
+  // ── Phase 2d: Complete Task ────────────────────────────────────────────────
+
+  @override
+  Future<void> completeTask(String taskId) async {}
+
+  // ── Phase 4: Friend Management ─────────────────────────────────────────────
+
+  @override
+  Future<void> deleteFriend(String friendshipId) async {
+    _mockFriends.removeWhere((f) => f.id == friendshipId);
+  }
+
+  @override
+  Future<void> blockUser(String targetUserId, {String? reason}) async {
+    // Remove from friends if present
+    _mockFriends.removeWhere((f) => f.friend.id == targetUserId);
+  }
+
+  @override
+  Future<void> unblockUser(String userId) async {
+    // Mock implementation - no-op
+  }
+
+  @override
+  Future<List<BlockUserInfo>> getBlockedUsers({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    // Return empty list for mock
+    return [];
+  }
+
+  // ── Privacy Settings ──────────────────────────────────────────────────────
+
+  @override
+  Future<UserPrivacySettings> getPrivacySettings() async => UserPrivacySettings(searchableBy: SearchVisibility.everyone);
+
+  @override
+  Future<void> updatePrivacySettings(UserPrivacySettings settings) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Broadcast ──────────────────────────────────────────────────────────────
+
+  @override
+  Future<BroadcastMessageInfo> createBroadcast(
+    BroadcastMessageCreate request,
+  ) async => BroadcastMessageInfo(
+      id: const Uuid().v4(),
+      senderId: currentUserId,
+      content: request.content,
+      contentData: request.contentData,
+      targetGroupIds: request.targetGroupIds,
+      deliveredCount: request.targetGroupIds.length,
+      createdAt: DateTime.now(),
+    );
+
+  // ── Offline Queue ──────────────────────────────────────────────────────────
+
+  @override
+  Future<List<OfflineMessageInfo>> getPendingOfflineMessages() async => [];
+
+  @override
+  Future<List<OfflineMessageInfo>> getFailedOfflineMessages() async => [];
+
+  @override
+  Future<void> retryOfflineMessages(List<String> messageIds) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Encryption Keys ────────────────────────────────────────────────────────
+
+  @override
+  Future<EncryptionKeyInfo> registerEncryptionKey(
+    EncryptionKeyCreate request,
+  ) async => EncryptionKeyInfo(
+      id: const Uuid().v4(),
+      userId: currentUserId,
+      publicKey: request.publicKey,
+      keyType: request.keyType,
+      deviceId: request.deviceId,
+      isActive: true,
+      createdAt: DateTime.now(),
+      expiresAt: request.expiresAt,
+    );
+
+  @override
+  Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async => [];
+
+  @override
+  Future<void> revokeEncryptionKey(String keyId) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Group Files ────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<GroupFileInfo>> getGroupFiles(
+    String groupId, {
+    String? category,
+    int limit = 50,
+    int offset = 0,
+  }) async => [];
+
+  @override
+  Future<GroupFileInfo> shareFileToGroup(
+    String groupId,
+    GroupFileShareRequest request,
+  ) async => GroupFileInfo(
+      id: const Uuid().v4(),
+      groupId: groupId,
+      uploaderId: currentUserId,
+      fileName: 'mock_file.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      fileUrl: 'https://example.com/mock_file.pdf',
+      description: request.description,
+      category: request.category,
+      tags: request.tags,
+      permissions: GroupFilePermissions(),
+      createdAt: DateTime.now(),
+    );
+
+  @override
+  Future<GroupFileInfo> updateGroupFilePermissions(
+    String groupId,
+    String fileId,
+    GroupFilePermissionUpdate permissions,
+  ) async => GroupFileInfo(
+      id: fileId,
+      groupId: groupId,
+      uploaderId: currentUserId,
+      fileName: 'mock_file.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      fileUrl: 'https://example.com/mock_file.pdf',
+      permissions: GroupFilePermissions(
+        canView: permissions.canView ?? [],
+        canDownload: permissions.canDownload ?? [],
+        canDelete: permissions.canDelete ?? [],
+      ),
+      createdAt: DateTime.now(),
+    );
+
+  @override
+  Future<List<GroupFileCategoryStat>> getGroupFileCategories(
+    String groupId,
+  ) async => [];
+
+  // ── Shared Resources ───────────────────────────────────────────────────────
+
+  @override
+  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async => SharedResourceInfo(
+      id: const Uuid().v4(),
+      resourceType: request.resourceType,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      taskId:
+          request.resourceType == SharedResourceType.task ? request.resourceId : null,
+      planId:
+          request.resourceType == SharedResourceType.plan ? request.resourceId : null,
+    );
+
+  @override
+  Future<List<SharedResourceInfo>> getGroupResources(
+    String groupId, {
+    SharedResourceType? type,
+    int limit = 50,
+    int offset = 0,
+  }) async => [];
+
+  @override
+  Future<void> adoptSharedResource(String shareId) async {
+    // Mock implementation - no-op
+  }
+
+  // ── Message Reports Management ─────────────────────────────────────────────
+
+  @override
+  Future<List<MessageReportInfo>> getPendingReports(String groupId) async => [];
+
+  @override
+  Future<MessageReportInfo> reviewReport(
+    String reportId,
+    MessageReportReview review,
+  ) async => MessageReportInfo(
+      id: reportId,
+      reporterId: currentUserId,
+      reason: ReportReason.other,
+      status: review.status,
+      createdAt: DateTime.now(),
+      reviewedBy: currentUserId,
+      reviewedAt: DateTime.now(),
+      actionTaken: review.actionTaken,
+    );
 }

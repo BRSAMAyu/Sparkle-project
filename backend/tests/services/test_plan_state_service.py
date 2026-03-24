@@ -10,7 +10,7 @@ Tests cover:
 """
 import json
 import pytest
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -26,7 +26,7 @@ from app.models.plan_state import PlanState, PlanStateStatus
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @pytest.fixture

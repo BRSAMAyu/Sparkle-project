@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import timezone, date, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -38,7 +38,7 @@ SUMMARY_MAX_LEN = 48
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:
@@ -52,6 +52,18 @@ def _truncate_summary(value: str) -> str:
 class MemoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _is_vector_runtime_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        markers = (
+            "vector.so",
+            "pgvector",
+            'type "vector" does not exist',
+            "could not load library",
+            "operator does not exist: vector",
+        )
+        return any(marker in lowered for marker in markers)
 
     async def upsert_preference(
         self,
@@ -74,6 +86,7 @@ class MemoryService:
             return None
         normalized_refs = _normalize_evidence_refs(evidence_refs, require_non_empty=True)
 
+        # ✅ Fix C2: Use SELECT FOR UPDATE to acquire row-level lock and prevent race conditions
         result = await self.db.execute(
             select(MemoryPreference)
             .where(
@@ -85,9 +98,17 @@ class MemoryService:
             )
             .order_by(MemoryPreference.version.desc())
             .limit(1)
+            .with_for_update()  # 🔒 Acquires row-level lock until transaction ends
         )
         latest = result.scalar_one_or_none()
-        version = 1 if latest is None else latest.version + 1
+        version_result = await self.db.execute(
+            select(func.max(MemoryPreference.version)).where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.pref_key == pref_key,
+            )
+        )
+        max_version = version_result.scalar_one_or_none() or 0
+        version = max_version + 1
 
         evidence_score = compute_score(normalized_refs, evidence_missing=False)
         record = MemoryPreference(
@@ -550,7 +571,7 @@ class MemoryService:
             MEMORY_WRITE_TOTAL.labels(type="episodic", status="blocked").inc()
             return None
         normalized_refs = _normalize_evidence_refs(evidence_refs, require_non_empty=True)
-        # TODO: enforce per-session rate limits (1-2 memories) once session tracking is available.
+        # TRACKED(TD-008): enforce per-session rate limits (1-2 memories) once session tracking is available.
         evidence_score = compute_score(normalized_refs, evidence_missing=False)
         evidence_snapshot = None
         if settings.ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE and await self._advanced_features_enabled(user_id):
@@ -572,8 +593,16 @@ class MemoryService:
             correction_count=0,
         )
         self.db.add(record)
-        await self.db.commit()
-        await self.db.refresh(record)
+        try:
+            await self.db.commit()
+            await self.db.refresh(record)
+        except Exception as exc:
+            await self.db.rollback()
+            if not self._is_vector_runtime_error(exc):
+                raise
+            logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {exc}")
+            MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
+            return None
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(

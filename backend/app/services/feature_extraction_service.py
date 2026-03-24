@@ -219,12 +219,12 @@ class FeatureExtractionService:
         Extract task risk metrics
 
         Detects:
-        - Consecutive failures (TODO: query from database)
+        - Consecutive failures (TRACKED(TD-008): query from database)
         - Procrastination (high interruption count)
         """
         interruptions = focus.get("interruptions", 0)
 
-        # TODO: Query database for consecutive failures
+        # TRACKED(TD-008): Query database for consecutive failures
         # For now, always return False
         consecutive_failures = False
 

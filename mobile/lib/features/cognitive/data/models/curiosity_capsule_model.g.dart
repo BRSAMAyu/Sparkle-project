@@ -18,6 +18,8 @@ CuriosityCapsuleModel _$CuriosityCapsuleModelFromJson(
       depthLevel: json['depth_level'] as String?,
       generationMethod: json['generation_method'] as String?,
       sourceContext: json['source_context'] as Map<String, dynamic>?,
+      personalizationContext:
+          json['personalization_context'] as Map<String, dynamic>?,
       qualityScore: (json['quality_score'] as num?)?.toDouble(),
       feedbackCount: (json['feedback_count'] as num?)?.toInt() ?? 0,
       shareCount: (json['share_count'] as num?)?.toInt() ?? 0,
@@ -36,6 +38,7 @@ Map<String, dynamic> _$CuriosityCapsuleModelToJson(
       'depth_level': instance.depthLevel,
       'generation_method': instance.generationMethod,
       'source_context': instance.sourceContext,
+      'personalization_context': instance.personalizationContext,
       'quality_score': instance.qualityScore,
       'feedback_count': instance.feedbackCount,
       'share_count': instance.shareCount,

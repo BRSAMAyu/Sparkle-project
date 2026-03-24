@@ -2,6 +2,7 @@
 对话服务
 Chat Service - 管理用户对话和 LLM 交互
 """
+from __future__ import annotations
 import json
 import uuid
 from collections.abc import AsyncGenerator
@@ -130,7 +131,7 @@ class ChatService:
                     "actions": [action.model_dump() for action in llm_response.actions]
                 })
             }
-            # TODO: 异步执行 Actions (JobService) 或前端确认后执行
+            # TRACKED(TD-006): 异步执行 Actions (JobService) 或前端确认后执行
 
         # 6. 保存 Assistant 消息
         assistant_message = ChatMessage(

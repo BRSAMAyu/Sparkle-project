@@ -1,24 +1,11 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class CalendarRoutes {
   static const String calendar = '/calendar';
@@ -29,10 +16,18 @@ class CalendarRoutes {
         GoRoute(
           path: calendar,
           name: 'calendar',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: CalendarStatsScreen(
-              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.calendar,
+              ),
+              child: CalendarStatsScreen(
+                initialDate: _parseInitialDate(
+                  state.uri.queryParameters['date'],
+                ),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -40,10 +35,18 @@ class CalendarRoutes {
         GoRoute(
           path: calendarStats,
           name: 'calendarStats',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: CalendarStatsScreen(
-              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.calendar,
+              ),
+              child: CalendarStatsScreen(
+                initialDate: _parseInitialDate(
+                  state.uri.queryParameters['date'],
+                ),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),
@@ -51,11 +54,17 @@ class CalendarRoutes {
         GoRoute(
           path: dailyDetail,
           name: 'calendarDailyDetail',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: DailyDetailScreen(
-              date: _parseInitialDate(state.uri.queryParameters['date']) ??
-                  DateTime.now(),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.calendar,
+              ),
+              child: DailyDetailScreen(
+                date: _parseInitialDate(state.uri.queryParameters['date']) ??
+                    DateTime.now(),
+              ),
             ),
             type: SharedAxisTransitionType.scaled,
           ),

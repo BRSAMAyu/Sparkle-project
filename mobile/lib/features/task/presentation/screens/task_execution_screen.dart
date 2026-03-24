@@ -2,23 +2,35 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
-import 'package:sparkle/core/design/widgets/success_animation.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/widgets/scene_atmosphere_layer.dart';
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
+    as focus_stats;
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/task/task_routes.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 LinearGradient _taskWarmActionGradient(BuildContext context) {
@@ -39,7 +51,9 @@ LinearGradient _taskWarmActionGradient(BuildContext context) {
 }
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
-  const TaskExecutionScreen({super.key});
+  const TaskExecutionScreen({super.key, this.origin});
+
+  final String? origin;
 
   @override
   ConsumerState<TaskExecutionScreen> createState() =>
@@ -49,15 +63,24 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
 class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
   bool _showCelebration = false;
+  bool _showCompletionPanel = false;
+  bool _showCompletionStats = false;
+  bool _playCompletionConfetti = false;
   TaskCompletionResult? _completionResult;
   bool _completionFlowFinished = false;
   Timer? _celebrationDismissTimer;
+  Timer? _completionPanelTimer;
+  Timer? _completionStatsTimer;
+  Timer? _completionAudioTimer;
+  int _completionMinutesSnapshot = 0;
+  int? _todayFocusMinutesSnapshot;
 
   // Timer Enhancement State
   TimerMode _timerMode = TimerMode.countUp;
   int _currentTimerDuration = 0; // In seconds
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
+  int _timerResetVersion = 0;
 
   // Focus Protection State
   DateTime? _pageEnterTime;
@@ -66,6 +89,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   void initState() {
     super.initState();
     _pageEnterTime = DateTime.now(); // Record page entry time
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    unawaited(
+      BgmService.setPersistentDuckFactor(
+        0.80,
+        duration: const Duration(milliseconds: 600),
+      ),
+    );
     final task = ref.read(activeTaskProvider);
     _currentTimerDuration =
         task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
@@ -74,7 +104,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activeTask = ref.read(activeTaskProvider);
-      if (activeTask != null && activeTask.status == TaskStatus.pending) {
+      if (activeTask != null &&
+          isServerTaskId(activeTask.id) &&
+          activeTask.status == TaskStatus.pending) {
         ref.read(taskListProvider.notifier).startTask(activeTask.id).catchError(
           (Object error, StackTrace stackTrace) {
             debugPrint('Error starting task: $error');
@@ -82,7 +114,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      '无法启动任务: ${error is DioException ? error.message : error.toString()}',),
+                    context.l10n.taskExecutionStartFailed(
+                      error is DioException
+                          ? (error.message ?? error.toString())
+                          : error.toString(),
+                    ),
+                  ),
                   backgroundColor: DS.error,
                 ),
               );
@@ -95,7 +132,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   @override
   void dispose() {
+    unawaited(
+      BgmService.setPersistentDuckFactor(
+        1.0,
+        duration: const Duration(milliseconds: 320),
+      ),
+    );
     _celebrationDismissTimer?.cancel();
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
     super.dispose();
   }
 
@@ -117,7 +163,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     final elapsedSeconds = DateTime.now().difference(_pageEnterTime!).inSeconds;
     final elapsedMinutes = (elapsedSeconds / 60).floor();
 
-    final shouldPop = await showDialog<bool>(
+    final shouldPop = await showSensoryDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => _TaskExitConfirmationDialog(
@@ -131,18 +177,41 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   Future<void> _handleCompletion(int minutes, String? note) async {
     if (_completionFlowFinished) return;
 
-    // 1. Stop Timer
     setState(() {
       _showCelebration = true;
+      _showCompletionPanel = false;
+      _showCompletionStats = false;
+      _playCompletionConfetti = true;
       _completionFlowFinished = false;
+      _completionMinutesSnapshot = minutes;
+      _todayFocusMinutesSnapshot = null;
     });
 
-    // 2. Haptic Feedback
-    HapticFeedback.mediumImpact();
+    _scheduleFocusCompletionSequence();
 
-    // 3. API Call
     final task = ref.read(activeTaskProvider);
     if (task != null) {
+      if (isLocalOnlyTaskId(task.id)) {
+        if (mounted) {
+          setState(() {
+            _completionResult = TaskCompletionResult(
+              task: task.toJson(),
+              feedback: '本次自由专注已完成。',
+            );
+          });
+          unawaited(_loadFocusCompletionSummary(minutes));
+          final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
+              MediaQuery.maybeOf(context)?.accessibleNavigation ??
+              false;
+          if (reduceMotion) {
+            _finishCompletionFlow();
+          } else {
+            _scheduleCelebrationAutoDismiss();
+          }
+        }
+        return;
+      }
+
       // Run completion in background while animation plays
       final result = await ref
           .read(taskListProvider.notifier)
@@ -151,9 +220,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         setState(() {
           _completionResult = result;
         });
+        unawaited(_loadFocusCompletionSummary(minutes));
         if (result == null) {
           _finishCompletionFlow(showFeedbackDialog: false);
-          AppFeedback.error(context, '任务完成同步失败，请稍后重试');
+          AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
           return;
         }
         final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
@@ -162,28 +232,106 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         if (reduceMotion) {
           _finishCompletionFlow();
         } else {
-          _celebrationDismissTimer?.cancel();
-          _celebrationDismissTimer = Timer(
-            const Duration(milliseconds: 1100),
-            _finishCompletionFlow,
-          );
+          _scheduleCelebrationAutoDismiss();
         }
       }
     }
   }
 
-  void _onCelebrationComplete() {
-    _finishCompletionFlow();
+  void _scheduleFocusCompletionSequence() {
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
+
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete),
+    );
+
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
+        MediaQuery.maybeOf(context)?.accessibleNavigation ??
+        false;
+
+    if (reduceMotion) {
+      setState(() {
+        _showCompletionPanel = true;
+        _showCompletionStats = true;
+      });
+      unawaited(BgmService.duckTemporarily(factor: 0.3));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+      return;
+    }
+
+    _completionPanelTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      setState(() {
+        _showCompletionPanel = true;
+      });
+    });
+
+    _completionStatsTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        _showCompletionStats = true;
+      });
+    });
+
+    _completionAudioTimer = Timer(const Duration(milliseconds: 400), () {
+      unawaited(BgmService.duckTemporarily(factor: 0.3));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+    });
+  }
+
+  void _scheduleCelebrationAutoDismiss() {
+    _celebrationDismissTimer?.cancel();
+    _celebrationDismissTimer = Timer(
+      const Duration(milliseconds: 1650),
+      _finishCompletionFlow,
+    );
+  }
+
+  Future<void> _loadFocusCompletionSummary(int minutes) async {
+    final focusStatsState = ref.read(focus_stats.focusStatisticsProvider);
+    final fallbackToday = (focusStatsState.todayMinutes > 0
+            ? focusStatsState.todayMinutes
+            : 0) +
+        minutes;
+    if (mounted) {
+      setState(() {
+        _todayFocusMinutesSnapshot = fallbackToday;
+      });
+    }
+
+    try {
+      final stats = await ref.read(focusRepositoryProvider).getFocusStats();
+      if (!mounted) return;
+      setState(() {
+        _todayFocusMinutesSnapshot = stats.totalMinutes;
+      });
+      unawaited(
+        ref.read(focus_stats.focusStatisticsProvider.notifier).loadTodayStats(),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _todayFocusMinutesSnapshot ??= fallbackToday;
+      });
+    }
   }
 
   void _finishCompletionFlow({bool showFeedbackDialog = true}) {
     if (!mounted || _completionFlowFinished) return;
     _completionFlowFinished = true;
     _celebrationDismissTimer?.cancel();
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
 
     final result = _completionResult;
     setState(() {
       _showCelebration = false;
+      _showCompletionPanel = false;
+      _showCompletionStats = false;
+      _playCompletionConfetti = false;
     });
 
     if (!showFeedbackDialog || result == null) {
@@ -191,14 +339,22 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     }
 
     final task = ref.read(activeTaskProvider);
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TaskFeedbackDialog(
+        builder: (context) => TaskFeedbackDialog(
         result: result,
         taskId: task?.id ?? '',
         onClose: () {
           Navigator.of(context).pop();
+          if (widget.origin == 'focus') {
+            context.go('/focus');
+            return;
+          }
+          if (context.canPop()) {
+            context.pop();
+            return;
+          }
           context.go(TaskRoutes.home);
         },
       ),
@@ -241,22 +397,35 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       _pomodoroCycle = 1;
       _currentTimerDuration = 5 * 60; // Short break
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('番茄工作时间结束！休息一下。')),
+        SnackBar(content: Text(context.l10n.pomodoroWorkFinished)),
       );
     } else if (_pomodoroCycle == 1) {
       // Short break completed
       _pomodoroCycle = 0;
       _currentTimerDuration = 25 * 60; // Next work phase
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('休息时间结束！开始新的工作。')),
+        SnackBar(content: Text(context.l10n.pomodoroBreakFinished)),
       );
     }
     // Extend for long breaks if desired
     setState(() {}); // Trigger rebuild for TimerWidget to update
   }
 
+  void _resetTimer() {
+    setState(() {
+      _elapsedSeconds = 0;
+      if (_isPomodoroMode) {
+        _currentTimerDuration = _pomodoroCycle == 0 ? 25 * 60 : 5 * 60;
+      } else if (_timerMode == TimerMode.countUp) {
+        _currentTimerDuration = 0;
+      }
+      _timerResetVersion += 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final activeTask = ref.watch(activeTaskProvider);
 
     if (activeTask == null) {
@@ -283,7 +452,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '未选择任务',
+                l10n.taskExecutionNoTask,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.neutral700,
@@ -291,7 +460,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ),
               const SizedBox(height: DS.spacing24),
               CustomButton.primary(
-                text: '返回',
+                text: l10n.back,
                 icon: Icons.arrow_back,
                 onPressed: () => context.pop(),
               ),
@@ -300,6 +469,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         ),
       );
     }
+
+    final hasPersistentTask = isServerTaskId(activeTask.id);
 
     return PopScope(
       canPop: false,
@@ -377,7 +548,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
                               // 2. Timer Area (Auxiliary)
                               Text(
-                                '页面内计时器',
+                                l10n.taskExecutionTimerLabel,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeSm,
                                   color: DS.neutral500,
@@ -389,8 +560,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               Center(
                                 child: TimerWidget(
                                   key: ValueKey(
-                                    _currentTimerDuration,
-                                  ), // Force rebuild on duration change
+                                    '$_currentTimerDuration-$_timerResetVersion',
+                                  ),
                                   mode: _timerMode,
                                   initialSeconds: _currentTimerDuration,
                                   maxSeconds: _isPomodoroMode
@@ -410,6 +581,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 isPomodoroMode: _isPomodoroMode,
                                 onTogglePomodoro: _togglePomodoro,
                                 onSetPreset: _setPresetDuration,
+                                onReset: _resetTimer,
                               ),
                               const SizedBox(height: DS.spacing24),
 
@@ -448,7 +620,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                       ),
                                       const SizedBox(width: DS.spacing12),
                                       Text(
-                                        '执行指南',
+                                        l10n.taskExecutionGuideTitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -471,36 +643,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           bottomRight: Radius.circular(16),
                                         ),
                                       ),
-                                      child: MarkdownBody(
-                                        data:
-                                            activeTask.guideContent ?? '暂无执行指南',
-                                        styleSheet: MarkdownStyleSheet(
-                                          p: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: DS.neutral700,
-                                                height: 1.6,
-                                              ),
-                                          h1: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge
-                                              ?.copyWith(
-                                                fontWeight: DS.fontWeightBold,
-                                              ),
-                                          h2: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: DS.fontWeightBold,
-                                              ),
-                                          code: TextStyle(
-                                            backgroundColor: DS.neutral100,
-                                            color: DS.textPrimary,
-                                            fontFamily: 'monospace',
-                                            fontSize: DS.fontSizeSm,
-                                          ),
-                                        ),
+                                      child: SparkleMarkdown(
+                                        content: activeTask.guideContent ??
+                                            l10n.taskExecutionGuideEmpty,
+                                        textColor: DS.textPrimary,
+                                        codeBackgroundColor: DS.neutral100,
+                                        linkColor: DS.primaryBase,
+                                        contentRole:
+                                            SparkleMarkdownRole.taskGuide,
                                       ),
                                     ),
                                   ],
@@ -508,12 +658,88 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               ),
                               const SizedBox(height: DS.spacing16),
 
+                              // Subtasks Section (if task has subtasks)
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  if (!hasPersistentTask) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final subtaskState = ref.watch(
+                                    subtaskNotifierProvider(activeTask.id),
+                                  );
+                                  if (subtaskState.total == 0) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return GraphiteCardSurface(
+                                    padding: EdgeInsets.zero,
+                                    child: ExpansionTile(
+                                      shape: const Border(),
+                                      tilePadding: const EdgeInsets.symmetric(
+                                        horizontal: DS.spacing16,
+                                        vertical: DS.spacing12,
+                                      ),
+                                      title: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: DS.surfaceSecondary,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: DS.borderSubtle,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.checklist,
+                                              color: DS.primaryBase,
+                                              size: 22,
+                                            ),
+                                          ),
+                                          const SizedBox(width: DS.spacing12),
+                                          Text(
+                                            '${l10n.subtaskTitle} (${subtaskState.completed}/${subtaskState.total})',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: DS.fontWeightBold,
+                                                  color: DS.neutral900,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(
+                                            DS.spacing16,
+                                          ),
+                                          child: SubtaskListWidget(
+                                            parentTaskId: activeTask.id,
+                                            onSubtaskToggle: (_) {},
+                                            onSubtaskDelete: (_) {},
+                                            readOnly: true,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: DS.spacing16),
+
                               // 3. Quick Tools Panel
-                              QuickToolsPanel(taskId: activeTask.id),
+                              QuickToolsPanel(
+                                taskId:
+                                    hasPersistentTask ? activeTask.id : null,
+                              ),
                               const SizedBox(height: DS.spacing16),
 
                               // 4. Task Chat Panel
-                              TaskChatPanel(taskId: activeTask.id),
+                              TaskChatPanel(
+                                taskId: hasPersistentTask ? activeTask.id : '',
+                                isAvailable: hasPersistentTask,
+                              ),
                             ],
                           ),
                         ),
@@ -533,82 +759,68 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           // Celebration Overlay
           if (_showCelebration)
             Positioned.fill(
-              child: GestureDetector(
-                onTap: _skipCelebration,
-                behavior: HitTestBehavior.opaque,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: DS.overlay50.withValues(alpha: 0.84),
-                  ),
-                  child: SuccessAnimation(
-                    playAnimation: true,
-                    onAnimationComplete: _onCelebrationComplete,
-                    child: Center(
-                      child: GraphiteCardSurface(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(DS.xl),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceSecondary,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Icon(
-                                Icons.check_circle,
-                                color: DS.success,
-                                size: 72,
-                              ),
-                            ),
-                            const SizedBox(height: DS.spacing24),
-                            Text(
-                              '任务完成',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(
-                                    color: DS.textPrimary,
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                            ),
-                            const SizedBox(height: DS.spacing12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.spacing18,
-                                vertical: DS.spacing8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceSecondary,
-                                borderRadius: DS.borderRadius20,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Text(
-                                '+${activeTask.difficulty * 10} 经验值',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightBold,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(height: DS.spacing16),
-                            Text(
-                              '轻点任意位置可继续',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: DS.textSecondary),
-                            ),
-                            const SizedBox(height: DS.spacing16),
-                            SparkleButton.ghost(
-                              label: '跳过动画',
-                              onPressed: _skipCelebration,
-                            ),
+              child: BgmScope(
+                track: BgmTrack.achievement,
+                priority: BgmPriority.stage,
+                child: GestureDetector(
+                  onTap: _skipCelebration,
+                  behavior: HitTestBehavior.opaque,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 620),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, warmth, child) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color.lerp(
+                                  const Color(0xFF0D1B2A),
+                                  const Color(0xFF53321F),
+                                  warmth,
+                                ) ??
+                                const Color(0xFF0D1B2A),
+                            Color.lerp(
+                                  DS.overlay50.withValues(alpha: 0.90),
+                                  const Color(0xFFF0B77A).withValues(alpha: 0.78),
+                                  warmth,
+                                ) ??
+                                DS.overlay50.withValues(alpha: 0.84),
                           ],
                         ),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Opacity(
+                            opacity: 0.9,
+                            child: SceneAtmosphereLayer(
+                              atmosphere: ExperienceAtmosphere.focusBreath,
+                            ),
+                          ),
+                          SparkleConfetti(
+                            play: _playCompletionConfetti,
+                            intensity: SparkleCelebrationIntensity.large,
+                            alignment: Alignment.topCenter,
+                            enableSensory: false,
+                          ),
+                          child!,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: _FocusCompletionPanel(
+                        visible: _showCompletionPanel,
+                        animateStats: _showCompletionStats,
+                        sessionMinutes: _completionMinutesSnapshot,
+                        todayMinutes:
+                            _todayFocusMinutesSnapshot ??
+                            _completionMinutesSnapshot,
+                        expGained: activeTask.difficulty * 10,
+                        onSkip: _skipCelebration,
+                        continueLabel: l10n.taskExecutionTapToContinue,
+                        skipLabel: l10n.taskExecutionSkipAnimation,
                       ),
                     ),
                   ),
@@ -645,7 +857,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 const SizedBox(width: DS.md),
                 Expanded(
                   child: Text(
-                    '进入沉浸专注模式',
+                    context.l10n.taskExecutionEnterFocus,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: DS.fontWeightBold,
@@ -656,21 +868,39 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ],
             ),
             const SizedBox(height: DS.md),
-            const Wrap(
+            Wrap(
               spacing: DS.md,
               runSpacing: DS.xs,
               children: [
-                _FeatureChip(icon: Icons.fullscreen, label: '全屏专注'),
-                _FeatureChip(icon: Icons.access_time_rounded, label: '翻页时钟'),
-                _FeatureChip(icon: Icons.star_rounded, label: '星空背景'),
-                _FeatureChip(icon: Icons.visibility_off_rounded, label: '分心检测'),
-                _FeatureChip(icon: Icons.psychology_rounded, label: 'AI教练'),
-                _FeatureChip(icon: Icons.emoji_events_rounded, label: '火苗奖励'),
+                _FeatureChip(
+                  icon: Icons.fullscreen,
+                  label: context.l10n.taskExecutionFeatureFullscreen,
+                ),
+                _FeatureChip(
+                  icon: Icons.access_time_rounded,
+                  label: context.l10n.taskExecutionFeatureFlipClock,
+                ),
+                _FeatureChip(
+                  icon: Icons.star_rounded,
+                  label: context.l10n.taskExecutionFeatureStarfield,
+                ),
+                _FeatureChip(
+                  icon: Icons.visibility_off_rounded,
+                  label: context.l10n.taskExecutionFeatureDistraction,
+                ),
+                _FeatureChip(
+                  icon: Icons.psychology_rounded,
+                  label: context.l10n.taskExecutionFeatureCoach,
+                ),
+                _FeatureChip(
+                  icon: Icons.emoji_events_rounded,
+                  label: context.l10n.taskExecutionFeatureReward,
+                ),
               ],
             ),
             const SizedBox(height: DS.lg),
             CustomButton.primary(
-              text: '立即开始',
+              text: context.l10n.taskExecutionStartNow,
               icon: Icons.arrow_forward_rounded,
               customGradient: _taskWarmActionGradient(context),
               onPressed: () {
@@ -682,15 +912,262 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       );
 }
 
+class _FocusCompletionPanel extends StatelessWidget {
+  const _FocusCompletionPanel({
+    required this.visible,
+    required this.animateStats,
+    required this.sessionMinutes,
+    required this.todayMinutes,
+    required this.expGained,
+    required this.onSkip,
+    required this.continueLabel,
+    required this.skipLabel,
+  });
+
+  final bool visible;
+  final bool animateStats;
+  final int sessionMinutes;
+  final int todayMinutes;
+  final int expGained;
+  final VoidCallback onSkip;
+  final String continueLabel;
+  final String skipLabel;
+
+  String _labelForLocale(BuildContext context, String zh, String en) {
+    return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
+  }
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<Offset>(
+        tween: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: visible ? Offset.zero : const Offset(0, 0.08),
+        ),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, slideOffset, child) => Transform.translate(
+          offset: Offset(0, slideOffset.dy * 120),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            opacity: visible ? 1 : 0,
+            child: child,
+          ),
+        ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.96, end: 1),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: GraphiteCardSurface(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                    Container(
+                      padding: const EdgeInsets.all(DS.xl),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFFD79A).withValues(alpha: 0.92),
+                            const Color(0xFFFFB86B).withValues(alpha: 0.88),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFFFFC06B).withValues(alpha: 0.38),
+                            blurRadius: 36,
+                            spreadRadius: 6,
+                          ),
+                        ],
+                        border: Border.all(
+                          color: const Color(0xFFFFF1D7).withValues(alpha: 0.7),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.self_improvement_rounded,
+                        color: const Color(0xFF7E4A12),
+                        size: 72,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing20),
+                    Text(
+                      _labelForLocale(context, '专注完成', 'Focus Complete'),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      _labelForLocale(
+                        context,
+                        '状态已回暖，来看看这次沉浸带来的积累。',
+                        'You are back from deep focus. Here is what you gained.',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FocusMetricCard(
+                            icon: Icons.timer_outlined,
+                            label:
+                                _labelForLocale(context, '本次专注', 'This Session'),
+                            value: sessionMinutes,
+                            suffix: _labelForLocale(context, '分钟', ' min'),
+                            animate: animateStats,
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: _FocusMetricCard(
+                            icon: Icons.today_rounded,
+                            label: _labelForLocale(
+                              context,
+                              '今日累计',
+                              'Today Total',
+                            ),
+                            value: todayMinutes,
+                            suffix: _labelForLocale(context, '分钟', ' min'),
+                            animate: animateStats,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing18,
+                        vertical: DS.spacing10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(color: DS.borderSubtle),
+                      ),
+                      child: SparkleCountUp(
+                        end: expGained,
+                        animate: animateStats,
+                        prefix: _labelForLocale(context, '专注经验 +', 'Focus XP +'),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    Text(
+                      continueLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    SparkleButton.ghost(
+                      label: skipLabel,
+                      onPressed: onSkip,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _FocusMetricCard extends StatelessWidget {
+  const _FocusMetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.suffix,
+    required this.animate,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final String suffix;
+  final bool animate;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary.withValues(alpha: 0.92),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: DS.primaryBase, size: 18),
+                const SizedBox(width: DS.spacing6),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            RichText(
+              text: TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: SparkleCountUp(
+                      end: value,
+                      animate: animate,
+                      duration: const Duration(milliseconds: 600),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                    ),
+                  ),
+                  TextSpan(
+                    text: suffix,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
 class _TimerControls extends StatelessWidget {
   const _TimerControls({
     required this.isPomodoroMode,
     required this.onTogglePomodoro,
     required this.onSetPreset,
+    required this.onReset,
   });
   final bool isPomodoroMode;
   final VoidCallback onTogglePomodoro;
   final void Function(int minutes) onSetPreset;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -701,17 +1178,23 @@ class _TimerControls extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               CustomButton.secondary(
-                text: '番茄钟',
+                text: context.l10n.taskTimerPomodoro,
                 icon: Icons.timer,
                 onPressed: onTogglePomodoro,
                 size: CustomButtonSize.small,
               ),
               ...[15, 25, 45, 60].map(
                 (minutes) => CustomButton.secondary(
-                  text: '$minutes 分钟',
+                  text: context.l10n.taskTimerMinutes(minutes),
                   onPressed: () => onSetPreset(minutes),
                   size: CustomButtonSize.small,
                 ),
+              ),
+              CustomButton.secondary(
+                text: '重置',
+                icon: Icons.restart_alt_rounded,
+                onPressed: onReset,
+                size: CustomButtonSize.small,
               ),
             ],
           ),
@@ -760,7 +1243,7 @@ class _BottomControls extends ConsumerWidget {
     final noteController = TextEditingController();
     final minutes = Duration(seconds: elapsedSeconds).inMinutes;
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
@@ -786,7 +1269,7 @@ class _BottomControls extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    '完成任务',
+                    context.l10n.taskExecutionCompleteTitle,
                     style: DS.titleLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -802,7 +1285,7 @@ class _BottomControls extends ConsumerWidget {
                     Icon(Icons.timer_outlined, color: DS.primaryBase),
                     const SizedBox(width: DS.spacing8),
                     Text(
-                      '用时：$minutes 分钟',
+                      context.l10n.taskExecutionElapsedMinutes(minutes),
                       style: DS.bodyMedium.copyWith(
                         fontWeight: DS.fontWeightMedium,
                       ),
@@ -813,9 +1296,9 @@ class _BottomControls extends ConsumerWidget {
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: '笔记（选填）',
-                  hintText: '记录一些学习心得...',
+                decoration: InputDecoration(
+                  labelText: context.l10n.taskExecutionNoteLabel,
+                  hintText: context.l10n.taskExecutionNoteHint,
                 ),
                 maxLines: 3,
               ),
@@ -824,18 +1307,17 @@ class _BottomControls extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: CustomButton.text(
-                      text: '取消',
+                      text: context.l10n.cancel,
                       onPressed: () => Navigator.of(ctx).pop(),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: CustomButton.primary(
-                      text: '确认完成',
+                      text: context.l10n.taskExecutionConfirmComplete,
                       icon: Icons.check_rounded,
                       customGradient: _taskWarmActionGradient(context),
                       onPressed: () {
-                        HapticFeedback.heavyImpact();
                         Navigator.of(ctx).pop();
                         onComplete(
                           minutes,
@@ -857,7 +1339,7 @@ class _BottomControls extends ConsumerWidget {
   }
 
   void _abandonTask(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (ctx) => BlockingInterceptorDialog(
         taskId: task.id,
@@ -877,7 +1359,7 @@ class _BottomControls extends ConsumerWidget {
           children: [
             Expanded(
               child: CustomButton.text(
-                text: '放弃',
+                text: context.l10n.taskExecutionAbandon,
                 onPressed: () => _abandonTask(context, ref),
                 // Use error color for text if possible, or leave as primary/custom
               ),
@@ -886,7 +1368,7 @@ class _BottomControls extends ConsumerWidget {
             Expanded(
               flex: 2,
               child: CustomButton.primary(
-                text: '完成任务',
+                text: context.l10n.taskExecutionCompleteTitle,
                 customGradient: _taskWarmActionGradient(context),
                 onPressed: () => _showCompleteDialog(context, ref),
               ),
@@ -945,7 +1427,7 @@ class _TaskExitConfirmationDialogState
   }
 
   void _nextStep() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     if (_currentStep == _TaskExitStep.third) {
       // Show reflection dialog after triple confirmation
       Navigator.of(context).pop(true);
@@ -957,7 +1439,7 @@ class _TaskExitConfirmationDialogState
   }
 
   void _cancel() {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     Navigator.of(context).pop(false);
   }
 
@@ -1076,46 +1558,53 @@ class _TaskExitConfirmationDialogState
   }
 
   String _getTitle() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '确定要离开任务吗？';
+        return l10n.taskExitTitleStep1;
       case _TaskExitStep.second:
-        return '专注统计';
+        return l10n.taskExitTitleStep2;
       case _TaskExitStep.third:
-        return '最后确认';
+        return l10n.taskExitTitleStep3;
     }
   }
 
   String _getMessage() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '你正在执行任务，离开可能会影响专注效果。';
+        return l10n.taskExitMessageStep1;
       case _TaskExitStep.second:
-        return '你已经专注了 ${widget.elapsedMinutes} 分钟 ${widget.elapsedSeconds % 60} 秒。';
+        return l10n.taskExitMessageStep2(
+          widget.elapsedMinutes,
+          widget.elapsedSeconds % 60,
+        );
       case _TaskExitStep.third:
-        return '再坚持一下！现在离开会中断你的专注记录。';
+        return l10n.taskExitMessageStep3;
     }
   }
 
   String _getCancelText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '继续执行';
+        return l10n.taskExitCancelStep1;
       case _TaskExitStep.second:
-        return '返回';
+        return l10n.taskExitCancelStep2;
       case _TaskExitStep.third:
-        return '取消';
+        return l10n.taskExitCancelStep3;
     }
   }
 
   String _getConfirmText() {
+    final l10n = context.l10n;
     switch (_currentStep) {
       case _TaskExitStep.first:
-        return '确认离开';
+        return l10n.taskExitConfirmStep1;
       case _TaskExitStep.second:
-        return '继续';
+        return l10n.taskExitConfirmStep2;
       case _TaskExitStep.third:
-        return '确定离开';
+        return l10n.taskExitConfirmStep3;
     }
   }
 }

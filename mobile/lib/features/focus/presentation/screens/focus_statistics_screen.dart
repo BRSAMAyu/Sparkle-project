@@ -27,7 +27,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
     super.initState();
     // Load all data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAllData();
+      unawaited(_loadAllData());
     });
   }
 
@@ -70,65 +70,78 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Period Toggle
-                Center(
-                  child: FocusStatsPeriodToggle(
-                    period: state.period,
-                    onChanged: (period) {
-                      ref
+                SparkleStaggerItem(
+                  index: 0,
+                  child: Center(
+                    child: FocusStatsPeriodToggle(
+                      period: state.period,
+                      onChanged: (period) => ref
                           .read(feature.focusStatisticsProvider.notifier)
-                          .setPeriod(period);
-                    },
+                          .setPeriod(period),
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: DS.xl),
 
                 // Overview Cards
-                FocusStatsOverviewCards(
-                  todayMinutes: state.todayMinutes,
-                  weekTotalMinutes:
-                      state.weeklyData?['total_minutes'] as int? ?? 0,
-                  streakDays: state.streakDays,
-                  longestStreak: state.longestStreak,
+                SparkleStaggerItem(
+                  index: 1,
+                  child: FocusStatsOverviewCards(
+                    todayMinutes: state.todayMinutes,
+                    weekTotalMinutes:
+                        state.weeklyData?['total_minutes'] as int? ?? 0,
+                    streakDays: state.streakDays,
+                    longestStreak: state.longestStreak,
+                  ),
                 ),
 
                 const SizedBox(height: DS.xl),
 
                 // Chart Section
-                _buildSection(
-                  title: l10n.focusStatsTrendTitle,
-                  child: FocusStatsChart(
-                    dailyData: state.dailyBreakdown,
-                    period: state.period,
+                SparkleStaggerItem(
+                  index: 2,
+                  child: _buildSection(
+                    title: l10n.focusStatsTrendTitle,
+                    child: FocusStatsChart(
+                      dailyData: state.dailyBreakdown,
+                      period: state.period,
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: DS.xl),
 
                 // Heatmap Section
-                _buildSection(
-                  title: l10n.focusStatsHeatmapRange(90),
-                  child: FocusStatsHeatmap(
-                    data: state.heatmapData,
+                SparkleStaggerItem(
+                  index: 3,
+                  child: _buildSection(
+                    title: l10n.focusStatsHeatmapRange(90),
+                    child: FocusStatsHeatmap(
+                      data: state.heatmapData,
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: DS.xl),
 
                 // Session History
-                _buildSection(
-                  title: l10n.focusStatsRecentSessionsTitle,
-                  child: FocusStatsSessionList(
-                    sessions: state.sessionHistory,
-                    hasMore: state.sessionHistory.length >= 20,
-                    onLoadMore: () {
-                      ref
-                          .read(feature.focusStatisticsProvider.notifier)
-                          .loadSessionHistory(
-                            limit: state.sessionHistory.length + 20,
-                          );
-                    },
-                    isLoading: state.isLoading,
+                SparkleStaggerItem(
+                  index: 4,
+                  child: _buildSection(
+                    title: l10n.focusStatsRecentSessionsTitle,
+                    child: FocusStatsSessionList(
+                      sessions: state.sessionHistory,
+                      hasMore: state.sessionHistory.length >= 20,
+                      onLoadMore: () => unawaited(
+                        ref
+                            .read(feature.focusStatisticsProvider.notifier)
+                            .loadSessionHistory(
+                              limit: state.sessionHistory.length + 20,
+                            ),
+                      ),
+                      isLoading: state.isLoading,
+                    ),
                   ),
                 ),
 

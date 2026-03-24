@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 ChatOrchestrator - 生产级实现
 
@@ -17,7 +18,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -91,7 +92,7 @@ if PROMETHEUS_AVAILABLE:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CircuitBreaker:
@@ -233,7 +234,15 @@ class ProductionChatOrchestrator:
 
         # 核心组件
         self.state_manager = SessionStateManager(redis_client) if redis_client else None
-        self.validator = RequestValidator(redis_client, daily_quota=100000) if redis_client else None
+        self.validator = (
+            RequestValidator(
+                redis_client,
+                daily_quota=getattr(settings, "DAILY_QUOTA", 100000),
+                enable_quota_check=bool(getattr(settings, "LLM_QUOTA_ENABLED", False)),
+            )
+            if redis_client
+            else None
+        )
         self.tool_executor = ToolExecutor()
         self.response_composer = ResponseComposer()
 

@@ -5,7 +5,7 @@ GraphRAG 监控 API
 """
 
 import time
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -69,7 +69,7 @@ if PROMETHEUS_AVAILABLE:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _require_graph_service(db: AsyncSession) -> "GraphKnowledgeService":

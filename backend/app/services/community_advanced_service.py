@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 高级社群功能服务层
 Advanced Community Service - 加密、风控、搜索、离线队列等
@@ -13,7 +14,7 @@ Advanced Community Service - 加密、风控、搜索、离线队列等
 """
 import base64
 import binascii
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -56,7 +57,7 @@ from app.schemas.community import (
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class EncryptionService:
@@ -482,7 +483,7 @@ class FavoriteService:
             selectinload(MessageFavorite.private_message)
         ).order_by(desc(MessageFavorite.created_at)).limit(limit).offset(offset)
 
-        # TODO: 实现标签过滤 (JSON 数组包含查询)
+        # TRACKED(TD-008): 实现标签过滤 (JSON 数组包含查询)
 
         result = await db.execute(query)
         return list(result.scalars().all())

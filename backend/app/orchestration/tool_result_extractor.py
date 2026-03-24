@@ -3,6 +3,7 @@ ToolResultExtractor - 从 LangGraph State 中提取工具结果
 
 解决工具结果检索问题：从 final_state.messages 中提取 role='tool' 的消息
 """
+from __future__ import annotations
 import json
 from typing import Any
 

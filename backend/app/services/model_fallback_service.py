@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Model Fallback Service - Phase 2d
 
@@ -13,20 +14,21 @@ Model Fallback Service - Phase 2d
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 from loguru import logger
 
-from app.core.agent_profiles import TaskType
+from app.core.agent_profiles import AgentRole, TaskType
+from app.core.llm_router import llm_router
 
 # ============================================
 # 数据模型
 # ============================================
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FallbackReason(str, Enum):
@@ -123,25 +125,22 @@ class ModelFallbackService:
 
     # 模型能力映射（用于降级时的替代选择）
     MODEL_ALTERNATIVES = {
-        # 从高级模型降级
-        "claude-3-5-sonnet": ["claude-3-5-haiku", "gpt-4o-mini"],
-        "claude-3-opus": ["claude-3-5-sonnet", "claude-3-sonnet", "gpt-4o"],
-        "claude-3-sonnet": ["claude-3-haiku", "gpt-4o-mini"],
-
-        # 从中级模型降级
-        "gpt-4o": ["gpt-4o-mini", "claude-3-haiku"],
-        "claude-3-5-haiku": ["gpt-4o-mini"],
-
-        # 从轻量模型升级（质量优先时）
-        "gpt-4o-mini": ["gpt-4o", "claude-3-5-haiku"],
-        "claude-3-haiku": ["claude-3-sonnet", "gpt-4o"],
+        "mimo_pro": ["glm_5_max", "dashscope_reason", "deepseek_reason"],
+        "glm_5_max": ["mimo_pro", "dashscope_reason"],
+        "dashscope_reason": ["deepseek_reason", "dashscope_chat", "xiaomi_standard_thinking"],
+        "deepseek_reason": ["dashscope_reason", "deepseek_chat", "xiaomi_standard_thinking"],
+        "dashscope_chat": ["deepseek_chat", "xiaomi_standard_thinking", "dashscope_fast"],
+        "deepseek_chat": ["dashscope_chat", "xiaomi_standard_thinking", "dashscope_fast"],
+        "xiaomi_standard_thinking": ["dashscope_chat", "dashscope_fast", "xiaomi_chat"],
+        "dashscope_fast": ["xiaomi_chat", "glm_4_7_flash_no_thinking"],
+        "xiaomi_chat": ["dashscope_fast", "glm_4_7_flash_no_thinking"],
     }
 
     # 模型层级（用于质量优先策略）
     MODEL_TIERS = {
-        "highest": ["claude-3-opus", "claude-3-5-sonnet"],
-        "high": ["claude-3-sonnet", "gpt-4o", "claude-3-5-haiku"],
-        "medium": ["gpt-4o-mini", "claude-3-haiku"],
+        "highest": ["mimo_pro", "glm_5_max"],
+        "high": ["dashscope_reason", "deepseek_reason", "dashscope_chat", "deepseek_chat"],
+        "medium": ["xiaomi_standard_thinking", "dashscope_fast", "xiaomi_chat"],
     }
 
     def __init__(self, config: FallbackConfig | None = None):
@@ -372,7 +371,7 @@ class ModelFallbackService:
                         return model
 
         # 默认：返回常用备选
-        return "claude-3-5-sonnet"
+        return "dashscope_chat"
 
     def get_model_for_task(
         self,
@@ -411,21 +410,19 @@ class ModelFallbackService:
 
     def _get_highest_quality_model(self, task_type: TaskType) -> str:
         """获取最高质量模型"""
-        # 审查任务使用最强模型
         if task_type == TaskType.REVIEW:
-            return "claude-3-5-sonnet"
-        # 生成任务使用高质量模型
-        return "claude-3-5-sonnet"
+            return llm_router.select_model(AgentRole.REVIEWER, task_type, reasoning_mode="deep").model_key
+        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="deep").model_key
 
     def _get_balanced_model(self, task_type: TaskType) -> str:
         """获取平衡模型"""
         if task_type == TaskType.REVIEW:
-            return "claude-3-5-haiku"
-        return "claude-3-5-haiku"
+            return llm_router.select_model(AgentRole.REVIEWER, task_type, reasoning_mode="balanced").model_key
+        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="balanced").model_key
 
     def _get_fastest_model(self, task_type: TaskType) -> str:
         """获取最快模型"""
-        return "gpt-4o-mini"
+        return llm_router.select_model(AgentRole.GENERATION, task_type, reasoning_mode="fast").model_key
 
     # ============================================
     # 性能分析

@@ -1,15 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    show CustomButton, CustomButtonSize;
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ActionCard extends StatefulWidget {
   const ActionCard({
@@ -17,11 +23,17 @@ class ActionCard extends StatefulWidget {
     super.key,
     this.onConfirm,
     this.onDismiss,
+    this.onConfirmTasks,
+    this.onConfirmAllTasks,
+    this.onPlanNavigation,
     this.onWidgetAction,
   });
   final WidgetPayload action;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
+  final Future<void> Function(String toolResultId)? onConfirmTasks;
+  final Future<void> Function(String toolResultId)? onConfirmAllTasks;
+  final void Function(String planId)? onPlanNavigation;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
@@ -30,6 +42,36 @@ class ActionCard extends StatefulWidget {
 }
 
 class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
+  static const Set<String> _narrativeKeys = {
+    'summary',
+    'description',
+    'message',
+    'subtitle',
+    'label',
+    'headline',
+  };
+
+  static const Set<String> _hiddenGenericKeys = {
+    'id',
+    'plan_id',
+    'task_id',
+    'tool_result_id',
+    'status_filter',
+    'total_tasks',
+    'completed_tasks',
+    'plans',
+    'workflow_id',
+    'trace_id',
+    'response_id',
+    'session_id',
+    'run_id',
+    'entity_id',
+    'linked_entities',
+    'linkedentities',
+    'metadata',
+    'raw',
+  };
+
   late AnimationController _pulseController;
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
@@ -37,11 +79,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   String? _selectedReflectionOption;
   bool _reflectionSubmitted = false;
   late bool _detailsExpanded;
+  bool _confirmingTasks = false;
+  bool _confirmedTasks = false;
+  bool _hiddenAfterAction = false;
 
   @override
   void initState() {
     super.initState();
-    _detailsExpanded = !_isCollapsedByDefault(_resolveActionType(widget.action));
+    _detailsExpanded = !_shouldCollapseByDefault(widget.action);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -62,6 +107,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   @override
+  void didUpdateWidget(covariant ActionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.action != widget.action) {
+      _detailsExpanded = !_shouldCollapseByDefault(widget.action);
+      _hiddenAfterAction = false;
+    }
+  }
+
+  @override
   void dispose() {
     _reflectionController.dispose();
     _pulseController.dispose();
@@ -69,8 +123,67 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> _handleConfirmTasks(String toolResultId) async {
+    setState(() => _confirmingTasks = true);
+    try {
+      await widget.onConfirmTasks!(toolResultId);
+      widget.onConfirm?.call();
+      if (mounted) {
+        setState(() => _confirmedTasks = true);
+      }
+    } catch (_) {
+      // Error feedback handled by caller
+    } finally {
+      if (mounted) {
+        setState(() => _confirmingTasks = false);
+      }
+    }
+  }
+
+  Future<void> _handleConfirmAllTasks(String toolResultId) async {
+    setState(() => _confirmingTasks = true);
+    try {
+      await widget.onConfirmAllTasks!(toolResultId);
+      widget.onConfirm?.call();
+      if (mounted) {
+        setState(() => _confirmedTasks = true);
+      }
+    } catch (_) {
+      // Error feedback handled by caller
+    } finally {
+      if (mounted) {
+        setState(() => _confirmingTasks = false);
+      }
+    }
+  }
+
+  Future<void> _shareResource({
+    required String resourceType,
+    required String resourceId,
+    required String title,
+    String? subtitle,
+  }) async {
+    await showShareResourceSheet(
+      context,
+      resourceType: resourceType,
+      resourceId: resourceId,
+      title: title,
+      subtitle: subtitle,
+    );
+  }
+
+  bool _hasStablePlanId(String? id) =>
+      id != null &&
+      RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+      ).hasMatch(id);
+
   @override
   Widget build(BuildContext context) {
+    if (_hiddenAfterAction) {
+      return const SizedBox.shrink();
+    }
+
     // focus_card 类型直接使用 FocusActionCard，支持自动启动
     if (widget.action.type == 'focus_card') {
       final actionType = widget.action.data['action']?.toString();
@@ -89,36 +202,124 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (widget.action.type == 'task_card') {
       try {
         final data = Map<String, dynamic>.from(widget.action.data);
-        // 补全默认值，防止后端数据缺失导致解析失败
-        data['user_id'] ??= 'current_user';
-        data['tags'] ??= <String>[];
-        data['difficulty'] ??= 1;
-        data['energy_cost'] ??= 1;
-        final now = DateTime.now().toIso8601String();
-        data['created_at'] ??= now;
-        data['updated_at'] ??= data['created_at'];
-
-        final task = TaskModel.fromJson(data);
-        return TaskCard(
-          task: task,
-          onTap: () => context.push('/tasks/${task.id}'),
+        final entity = EntityCardPayload.fromRaw(data, fallbackType: 'task');
+        final task = taskModelFromEntityPayload(data);
+        if (task == null) {
+          throw StateError('Unable to normalize task payload');
+        }
+        final status = data['status']?.toString();
+        final isAlreadyActive =
+            status == 'IN_PROGRESS' || status == 'COMPLETED';
+        final toolResultId =
+            entity.toolResultId ?? data['tool_result_id']?.toString();
+        final canConfirm =
+            toolResultId != null && toolResultId.trim().isNotEmpty;
+        final detailRoute = entity.detailRoute;
+        final share = entity.share;
+        final canShareTask =
+            isServerTaskId(task.id) && ((share?.resourceId ?? task.id).isNotEmpty);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TaskCard(
+              task: task,
+              onTap: () => context.push(detailRoute ?? '/tasks/${task.id}'),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(
+                top: DS.spacing4,
+                left: DS.spacing8,
+                right: DS.spacing8,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: '查看任务',
+                      icon: const Icon(Icons.open_in_new_rounded),
+                      onPressed: () => unawaited(
+                        context.push(detailRoute ?? '/tasks/${task.id}'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton(
+                      label: '分享卡片',
+                      variant: ButtonVariant.ghost,
+                      icon: const Icon(Icons.share_outlined),
+                      onPressed: canShareTask
+                          ? () => unawaited(
+                                _shareResource(
+                                  resourceType: share?.resourceType ?? 'task',
+                                  resourceId: share?.resourceId ?? task.id,
+                                  title: share?.title ?? task.title,
+                                  subtitle:
+                                      share?.subtitle ?? task.guideContent,
+                                ),
+                              )
+                          : () {},
+                      disabled: !canShareTask,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isAlreadyActive &&
+                canConfirm &&
+                widget.onConfirmTasks != null &&
+                !_confirmedTasks)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: DS.spacing4,
+                  left: DS.spacing8,
+                  right: DS.spacing8,
+                ),
+                child: SparkleButton(
+                  label: _confirmingTasks ? '确认中...' : '确认任务',
+                  onPressed: _confirmingTasks
+                      ? null
+                      : () => unawaited(_handleConfirmTasks(toolResultId)),
+                ),
+              ),
+          ],
         );
       } catch (e) {
         debugPrint('Error parsing task card data: $e');
       }
     }
 
-    final hasAction = widget.onConfirm != null || widget.onDismiss != null;
+    final resolvedType = _resolveActionType(widget.action);
+    final hasAction = (widget.onConfirm != null || widget.onDismiss != null) &&
+        !_usesCustomCta(resolvedType);
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
-    final resolvedType = _resolveActionType(widget.action);
-    final isCollapsible = _isCollapsedByDefault(resolvedType);
+    final isCollapsible = _isCollapsible(widget.action);
+    final supportsTapToggle = isCollapsible;
+    final isPressable = hasAction || supportsTapToggle;
+
+    void toggleDetails() {
+      setState(() {
+        _detailsExpanded = !_detailsExpanded;
+      });
+    }
 
     return GestureDetector(
-      onTapDown: hasAction ? (_) => _pressController.forward() : null,
-      onTapUp: hasAction ? (_) => _pressController.reverse() : null,
-      onTapCancel: hasAction ? () => _pressController.reverse() : null,
-      onTap: hasAction ? HapticFeedback.selectionClick : null,
+      onTapDown: isPressable ? (_) => _pressController.forward() : null,
+      onTapUp: isPressable ? (_) => _pressController.reverse() : null,
+      onTapCancel: isPressable ? () => _pressController.reverse() : null,
+      onTap: supportsTapToggle
+          ? () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
+              toggleDetails();
+            }
+          : hasAction
+              ? () => unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  )
+              : null,
       child: SparkleMotion.pressScale(
         animation: _pressController,
         child: DecoratedBox(
@@ -211,9 +412,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: Text(
+                          Expanded(
+                            child: Text(
                               _getTitleForAction(widget.action.type),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -246,7 +449,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                   : Icons.unfold_more_rounded,
                               size: DS.iconSizeSm,
                             ),
-                            label: Text(_detailsExpanded ? '收起' : '展开'),
+                            label: Text(
+                              _detailsExpanded
+                                  ? context.l10n.commonCollapse
+                                  : context.l10n.commonExpand,
+                            ),
                           ),
                         ),
                       ],
@@ -258,7 +465,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             if (widget.onDismiss != null)
                               CustomButton.text(
                                 text: dismissLabel,
-                                onPressed: widget.onDismiss,
+                                onPressed: () => unawaited(
+                                  _handleGenericDismiss(widget.action),
+                                ),
                                 size: CustomButtonSize.small,
                               ),
                             const SizedBox(width: DS.spacing8),
@@ -266,7 +475,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               CustomButton.primary(
                                 text: confirmLabel,
                                 icon: Icons.check_rounded,
-                                onPressed: widget.onConfirm,
+                                onPressed: () => unawaited(
+                                  _handleGenericConfirm(widget.action),
+                                ),
                                 size: CustomButtonSize.small,
                                 customGradient:
                                     _getActionGradientFor(widget.action),
@@ -291,6 +502,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     return action.type;
   }
+
+  bool _usesCustomCta(String type) =>
+      type == 'task_list' || type == 'plan_card';
 
   LinearGradient _getActionGradientFor(WidgetPayload action) =>
       _getActionGradient(_resolveActionType(action));
@@ -447,58 +661,61 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   String _getTitleForAction(String type) {
+    final l10n = I18nService.instance.l10n;
     switch (type) {
       case 'create_task':
-        return 'AI建议：创建任务';
+        return l10n.chatActionTitleCreateTask;
       case 'task_list':
-        return 'AI任务拆解';
+        return l10n.chatActionTitleTaskList;
       case 'create_plan':
-        return 'AI建议：创建计划';
+        return l10n.chatActionTitleCreatePlan;
       case 'update_preference':
-        return 'AI建议：更新偏好';
+        return l10n.chatActionTitleUpdatePreference;
       case 'add_error':
-        return 'AI建议：记录错题';
+        return l10n.chatActionTitleAddError;
       case 'focus_card':
-        return 'AI建议：专注冲刺';
+        return l10n.chatActionTitleFocusSprint;
       case 'system_update':
-        return '系统更新';
+        return l10n.chatActionTitleSystemUpdate;
       case 'nightly_review':
-        return '夜间复盘';
+        return l10n.chatActionTitleNightlyReview;
       case 'execution_summary':
-        return '执行结果摘要';
+        return l10n.chatActionTitleExecutionSummary;
       case 'evolution_card':
-        return '系统进化';
+        return l10n.chatActionTitleEvolution;
       case 'progress_card':
-        return '成长回顾';
+        return l10n.chatActionTitleProgress;
       case 'reflection_card':
-        return '反思引导';
+        return l10n.chatActionTitleReflection;
       case 'source_summary':
-        return '依据与来源';
+        return l10n.chatActionTitleSourceSummary;
       case 'next_actions':
-        return '下一步';
+        return l10n.chatActionTitleNextActions;
       case 'continuity_banner':
-        return '上下文';
+        return l10n.chatActionTitleContinuity;
       case 'mode_explanation':
-        return '协作模式';
+        return l10n.chatActionTitleModeExplanation;
       case 'blocked_input_request':
-        return '继续前需要你确认';
+        return l10n.chatActionTitleBlockedInput;
       default:
-        return 'AI建议操作';
+        return l10n.chatActionTitleDefault;
     }
   }
 
   String _getConfirmLabel(String type) {
+    final l10n = I18nService.instance.l10n;
     if (type == 'nightly_review') {
-      return '已复盘';
+      return l10n.chatActionReviewed;
     }
-    return '确认';
+    return l10n.confirm;
   }
 
   String _getDismissLabel(String type) {
+    final l10n = I18nService.instance.l10n;
     if (type == 'nightly_review') {
-      return '稍后';
+      return l10n.chatActionLater;
     }
-    return '忽略';
+    return l10n.chatActionIgnore;
   }
 
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
@@ -532,6 +749,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'reflection_card') {
       return _buildReflectionCard(context, action);
+    }
+    if (action.type == 'plan_card') {
+      return _buildPlanCardContent(context, action);
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -583,7 +803,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (action.data['title'] != null) ...[
+        if (_asString(action.data['title']) != null) ...[
           Container(
             padding: const EdgeInsets.all(DS.spacing12),
             decoration: BoxDecoration(
@@ -601,7 +821,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ),
             ),
             child: Text(
-              action.data['title'] as String,
+              _asString(action.data['title'])!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                     color: DS.neutral900,
@@ -610,63 +832,111 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           const SizedBox(height: DS.spacing12),
         ],
-        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: action.data.entries
-                .where((e) => e.key != 'title')
-                .map(
-                  (entry) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing12,
-                      vertical: DS.spacing8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.neutral100,
-                      borderRadius: DS.borderRadius8,
-                      border: Border.all(color: DS.neutral200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getParamIcon(entry.key),
-                          size: DS.iconSizeXs,
-                          color: DS.neutral600,
-                        ),
-                        const SizedBox(width: DS.spacing4),
-                        Text(
-                          '${_formatParamKey(entry.key)}: ',
-                          style: TextStyle(
-                            color: DS.neutral600,
-                            fontSize: DS.fontSizeSm,
+        if (_extractGenericNarrative(action) case final narrative?) ...[
+          Text(
+            narrative,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: DS.spacing12),
+        ],
+        if (_buildVisibleGenericEntries(action).isNotEmpty)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final entries = _buildVisibleGenericEntries(action);
+              final maxChipWidth = constraints.maxWidth > 220
+                  ? 220.0
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: entries
+                    .map(
+                      (entry) => ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxChipWidth),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing12,
+                            vertical: DS.spacing8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.neutral100,
+                            borderRadius: DS.borderRadius8,
+                            border: Border.all(color: DS.neutral200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getParamIcon(entry.key),
+                                size: DS.iconSizeXs,
+                                color: DS.neutral600,
+                              ),
+                              const SizedBox(width: DS.spacing6),
+                              Expanded(
+                                child: RichText(
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  text: TextSpan(
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeSm,
+                                      color: DS.neutral900,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: '${_formatParamKey(entry.key)}: ',
+                                        style: TextStyle(
+                                          color: DS.neutral600,
+                                          fontWeight: DS.fontWeightRegular,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: entry.value,
+                                        style: TextStyle(
+                                          color: DS.neutral900,
+                                          fontWeight: DS.fontWeightSemibold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          entry.value.toString(),
-                          style: TextStyle(
-                            fontWeight: DS.fontWeightSemibold,
-                            fontSize: DS.fontSizeSm,
-                            color: DS.neutral900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
       ],
     );
   }
 
+  bool _isCollapsible(WidgetPayload action) =>
+      _isCollapsedByDefault(_resolveActionType(action)) ||
+      _shouldCollapseGenericMetadata(action);
+
+  bool _shouldCollapseByDefault(WidgetPayload action) =>
+      _isCollapsedByDefault(_resolveActionType(action)) ||
+      _shouldCollapseGenericMetadata(action);
+
   bool _isCollapsedByDefault(String type) {
     switch (type) {
+      case 'create_task':
+      case 'create_plan':
+      case 'plan_card':
+      case 'task_list':
       case 'source_summary':
       case 'next_actions':
       case 'continuity_banner':
       case 'mode_explanation':
+      case 'execution_summary':
         return true;
       default:
         return false;
@@ -675,6 +945,83 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   Widget _buildCollapsedPreview(BuildContext context, WidgetPayload action) {
     final preview = _collapsedPreviewText(action);
+    final type = _resolveActionType(action);
+    final isSummaryCard = type == 'create_task' ||
+        type == 'create_plan' ||
+        type == 'plan_card' ||
+        type == 'task_list';
+    if (isSummaryCard) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing10,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.open_in_full_rounded,
+                size: DS.iconSizeXs,
+                color: DS.neutral600,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Expanded(
+                child: Text(
+                  preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral700,
+                        fontWeight: DS.fontWeightMedium,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (_shouldCollapseGenericMetadata(action)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: DS.iconSizeXs,
+              color: DS.neutral600,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Flexible(
+              child: Text(
+                preview,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Text(
       preview,
       maxLines: 2,
@@ -687,11 +1034,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   String _collapsedPreviewText(WidgetPayload action) {
+    final l10n = I18nService.instance.l10n;
     switch (action.type) {
       case 'source_summary':
         return action.data['headline']?.toString() ??
             action.data['evidence_summary']?.toString() ??
-            '查看来源';
+            l10n.chatActionViewSources;
       case 'next_actions':
         final actions = (action.data['actions'] as List<dynamic>? ?? [])
             .whereType<Map<dynamic, dynamic>>()
@@ -700,97 +1048,477 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             .take(2)
             .join(' · ');
         return actions.isNotEmpty
-            ? '建议操作：$actions'
-            : (action.data['title']?.toString() ?? '查看下一步');
+            ? l10n.chatActionSuggestedActions(actions)
+            : (action.data['title']?.toString() ??
+                l10n.chatActionViewNextSteps);
       case 'continuity_banner':
       case 'mode_explanation':
         return action.data['message']?.toString() ??
             action.data['description']?.toString() ??
             action.data['label']?.toString() ??
-            '查看详情';
+            l10n.viewDetails;
+      case 'execution_summary':
+        return action.data['summary']?.toString() ??
+            action.data['title']?.toString() ??
+            l10n.chatActionTitleExecutionSummary;
+      case 'create_task':
+        return '任务';
+      case 'create_plan':
+      case 'plan_card':
+        return '学习计划';
+      case 'task_list':
+        return '任务列表';
       default:
-        return '';
+        final summary = _extractGenericNarrative(action);
+        if (summary != null) {
+          return summary;
+        }
+        final title = _asString(action.data['title']);
+        if (title != null) {
+          return title;
+        }
+        final entryPreview = _buildVisibleGenericEntries(action)
+            .take(2)
+            .map((entry) => '${_formatParamKey(entry.key)} ${entry.value}')
+            .join(' · ');
+        return entryPreview.isNotEmpty ? entryPreview : l10n.viewDetails;
     }
   }
 
+  Future<void> _handleGenericDismiss(WidgetPayload action) async {
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    widget.onDismiss?.call();
+    if (!mounted) return;
+    setState(() {
+      _hiddenAfterAction = true;
+      _detailsExpanded = false;
+    });
+  }
+
+  Future<void> _handleGenericConfirm(WidgetPayload action) async {
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+    widget.onConfirm?.call();
+    if (!mounted) return;
+
+    final entity = EntityCardPayload.fromRaw(
+      action.data,
+      fallbackType: action.type,
+    );
+    final detailRoute = entity.detailRoute ??
+        action.data['route']?.toString() ??
+        (entity.entityType == 'plan' && entity.entityId != null
+            ? '/plans/${entity.entityId}'
+            : null) ??
+        (entity.entityType == 'task' && entity.entityId != null
+            ? '/tasks/${entity.entityId}'
+            : null);
+
+    setState(() {
+      _hiddenAfterAction = true;
+      _detailsExpanded = false;
+    });
+
+    if (detailRoute != null && detailRoute.isNotEmpty && context.mounted) {
+      unawaited(context.push(detailRoute));
+    }
+  }
+
+  bool _shouldCollapseGenericMetadata(WidgetPayload action) {
+    if (_usesDedicatedContentLayout(_resolveActionType(action))) {
+      return false;
+    }
+    if (_isCollapsedByDefault(_resolveActionType(action))) {
+      return false;
+    }
+
+    final keys = action.data.keys.map((key) => key.toLowerCase()).toSet();
+    final hasInternalMetadata = keys.any(_hiddenGenericKeys.contains);
+    final visibleEntries = _buildVisibleGenericEntries(action);
+    final narrative = _extractGenericNarrative(action);
+
+    return hasInternalMetadata ||
+        visibleEntries.length > 2 ||
+        (narrative == null && visibleEntries.isNotEmpty);
+  }
+
+  bool _usesDedicatedContentLayout(String type) {
+    switch (type) {
+      case 'nightly_review':
+      case 'execution_summary':
+      case 'evolution_card':
+      case 'progress_card':
+      case 'source_summary':
+      case 'next_actions':
+      case 'continuity_banner':
+      case 'mode_explanation':
+      case 'blocked_input_request':
+      case 'reflection_card':
+      case 'plan_card':
+      case 'task_list':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  String? _extractGenericNarrative(WidgetPayload action) {
+    for (final key in _narrativeKeys) {
+      final text = _asString(action.data[key]);
+      if (text != null) {
+        return text;
+      }
+    }
+    return null;
+  }
+
+  List<MapEntry<String, String>> _buildVisibleGenericEntries(
+    WidgetPayload action,
+  ) {
+    final entries = <MapEntry<String, String>>[];
+    for (final entry in action.data.entries) {
+      final normalizedKey = entry.key.toLowerCase();
+      if (normalizedKey == 'title' ||
+          _narrativeKeys.contains(normalizedKey) ||
+          _hiddenGenericKeys.contains(normalizedKey)) {
+        continue;
+      }
+      final value = _formatDisplayValue(entry.value);
+      if (value == null) {
+        continue;
+      }
+      entries.add(MapEntry(entry.key, value));
+    }
+    return entries;
+  }
+
+  String? _formatDisplayValue(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    if (value is List) {
+      final scalarItems = value
+          .map((item) => item is String || item is num || item is bool
+              ? item.toString().trim()
+              : '',)
+          .where((item) => item.isNotEmpty)
+          .take(3)
+          .toList();
+      if (scalarItems.isEmpty) {
+        return null;
+      }
+      return scalarItems.join(' · ');
+    }
+    return null;
+  }
+
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final tasks = action.data['tasks'] as List<dynamic>? ?? [];
     if (tasks.isEmpty) return const SizedBox.shrink();
+    final entity = EntityCardPayload.fromRaw(action.data, fallbackType: 'task_list');
+
+    final toolResultId = entity.toolResultId ??
+        action.data['tool_result_id']?.toString() ??
+        action.data['id']?.toString();
+    final canConfirm = toolResultId != null && toolResultId.trim().isNotEmpty;
+    final planId = entity.planId ?? action.data['plan_id']?.toString();
+    final canOpenPlan = _hasStablePlanId(planId);
+    final planShareId = entity.share?.resourceId ?? planId;
+    final canSharePlan = canOpenPlan && (planShareId?.isNotEmpty ?? false);
+    final planTitle = _asString(entity.linkedEntities['plan_title']) ??
+        action.data['plan_title']?.toString() ??
+        action.data['plan_name']?.toString();
+    final ragQuality = action.data['rag_quality']?.toString();
+
+    final taskItems = tasks.take(5).map((item) {
+      final task = Map<String, dynamic>.from(item as Map);
+      final taskEntity = EntityCardPayload.fromRaw(task, fallbackType: 'task');
+      final taskId = task['id']?.toString();
+      final title = task['title']?.toString() ?? l10n.taskUntitled;
+      final taskModel = taskModelFromEntityPayload(task);
+      final canOpenTask = taskId != null && isServerTaskId(taskId);
+      final canShareTask =
+          canOpenTask && ((taskEntity.share?.resourceId ?? taskId).isNotEmpty);
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (taskModel != null)
+              TaskCard(
+                task: taskModel,
+                compact: true,
+                onTap:
+                    canOpenTask ? () => context.push('/tasks/$taskId') : null,
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
+                ),
+                child: Text(title),
+              ),
+            if (taskId != null)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: DS.spacing4,
+                  left: DS.spacing8,
+                  right: DS.spacing8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                    child: SparkleButton(
+                        label: '打开',
+                        variant: ButtonVariant.ghost,
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        onPressed: canOpenTask
+                            ? () => unawaited(context.push('/tasks/$taskId'))
+                            : () {},
+                        disabled: !canOpenTask,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: SparkleButton(
+                        label: '分享',
+                        variant: ButtonVariant.ghost,
+                        icon: const Icon(Icons.share_outlined),
+                        onPressed: canShareTask
+                            ? () => unawaited(
+                                  _shareResource(
+                                    resourceType:
+                                        taskEntity.share?.resourceType ??
+                                            'task',
+                                    resourceId:
+                                        taskEntity.share?.resourceId ?? taskId,
+                                    title: taskEntity.share?.title ?? title,
+                                    subtitle: taskEntity.share?.subtitle ??
+                                        taskModel?.guideContent,
+                                  ),
+                                )
+                            : () {},
+                        disabled: !canShareTask,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        ...tasks.take(5).map((item) {
-          final task = item as Map<String, dynamic>;
-          final title = task['title']?.toString() ?? '未命名任务';
-          final minutes = task['estimated_minutes']?.toString() ?? '30';
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: DS.spacing8),
-            child: Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: DS.neutral100,
-                borderRadius: DS.borderRadius12,
-                border: Border.all(color: DS.neutral200),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.spacing4),
-                    decoration: BoxDecoration(
-                      color: DS.primaryBase.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: DS.primaryBase,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: DS.fontWeightSemibold,
-                                    color: DS.neutral900,
-                                  ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$minutes 分钟',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DS.neutral600,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+        if (planTitle != null || ragQuality != null) ...[
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (planTitle != null)
+                _buildMetaChip(
+                  icon: Icons.flag_outlined,
+                  label: planTitle,
+                ),
+              if (ragQuality != null)
+                _buildMetaChip(
+                  icon: Icons.psychology_alt_outlined,
+                  label: '规划质量: $ragQuality',
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+        ],
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: taskItems,
             ),
-          );
-        }),
+          ),
+        ),
         if (tasks.length > 5)
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing4),
             child: Text(
-              '以及其他 ${tasks.length - 5} 个任务...',
+              l10n.chatTaskListMoreCount(tasks.length - 5),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral500,
                     fontStyle: FontStyle.italic,
                   ),
             ),
           ),
+        if (planId != null)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SparkleButton(
+                    label: '查看计划',
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.map_outlined),
+                    onPressed: canOpenPlan
+                        ? () => unawaited(context.push('/plans/$planId'))
+                        : () {},
+                    disabled: !canOpenPlan,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: SparkleButton(
+                    label: '分享计划',
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.share_outlined),
+                    onPressed: canSharePlan
+                        ? () => unawaited(
+                              _shareResource(
+                                resourceType:
+                                    entity.share?.resourceType ?? 'plan',
+                                resourceId:
+                                    entity.share?.resourceId ?? planId,
+                                title:
+                                    entity.share?.title ?? (planTitle ?? '学习计划'),
+                                subtitle: entity.share?.subtitle ??
+                                    '由 AI 生成的任务计划',
+                              ),
+                            )
+                        : () {},
+                    disabled: !canSharePlan,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (canConfirm && widget.onConfirmAllTasks != null && !_confirmedTasks)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: SparkleButton(
+              label: _confirmingTasks ? '确认中...' : '确认全部任务',
+              icon: const Icon(Icons.check_circle_outline),
+              onPressed: _confirmingTasks
+                  ? null
+                  : () => unawaited(_handleConfirmAllTasks(toolResultId)),
+            ),
+          ),
+        if ((!canConfirm || widget.onConfirmAllTasks == null) &&
+            widget.onConfirm != null)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: CustomButton.primary(
+                text: _getConfirmLabel(action.type),
+                icon: Icons.check_rounded,
+                onPressed: widget.onConfirm,
+                size: CustomButtonSize.small,
+                customGradient: _getActionGradientFor(action),
+              ),
+            ),
+          ),
       ],
     );
   }
+
+  Widget _buildPlanCardContent(BuildContext context, WidgetPayload action) {
+    final entity = EntityCardPayload.fromRaw(action.data, fallbackType: 'plan');
+    final planId = entity.entityId ??
+        action.data['id']?.toString() ??
+        action.data['plan_id']?.toString();
+    final planShareId = entity.share?.resourceId ?? planId;
+    final canSharePlan =
+        _hasStablePlanId(planId) && (planShareId?.isNotEmpty ?? false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlanCard(
+          data: action.data,
+          onTap: planId == null
+              ? null
+              : () {
+                  unawaited(context.push(entity.detailRoute ?? '/plans/$planId'));
+                  widget.onPlanNavigation?.call(planId);
+                },
+          onShare: planId == null
+              ? null
+              : (canSharePlan
+                  ? () => unawaited(
+                        _shareResource(
+                          resourceType: entity.share?.resourceType ?? 'plan',
+                          resourceId: entity.share?.resourceId ?? planId,
+                          title: entity.share?.title ??
+                              action.data['title']?.toString() ??
+                              action.data['name']?.toString() ??
+                              '学习计划',
+                          subtitle: entity.share?.subtitle ??
+                              action.data['description']?.toString(),
+                        ),
+                      )
+                  : null),
+        ),
+      ],
+    );
+  }
+
+  String? _asString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  Widget _buildMetaChip({
+    required IconData icon,
+    required String label,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: DS.iconSizeXs, color: DS.textSecondary),
+              const SizedBox(width: DS.spacing4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeXs,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _buildNightlyReviewContent(
     BuildContext context,
@@ -822,7 +1550,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (rawTodos.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '明日待办',
+            context.l10n.chatNightlyReviewTodos,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -865,6 +1593,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildExecutionSummary(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final status = action.data['status']?.toString() ?? 'success';
     final impact = action.data['impact_summary']?.toString() ?? '';
     final nextAction = action.data['next_action']?.toString() ?? '';
@@ -893,10 +1622,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           child: Text(
             status == 'failed'
-                ? '执行失败'
+                ? l10n.chatExecutionFailed
                 : status == 'partial'
-                    ? '部分完成'
-                    : '执行完成',
+                    ? l10n.chatExecutionPartial
+                    : l10n.chatExecutionCompleted,
             style: TextStyle(
               color: statusColor,
               fontWeight: DS.fontWeightSemibold,
@@ -937,7 +1666,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (nextAction.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '下一步：$nextAction',
+            l10n.chatNextActionLabel(nextAction),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                 ),
@@ -948,6 +1677,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildSourceSummary(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final headline = action.data['headline']?.toString() ?? '';
     final focus = action.data['first_screen_focus']?.toString() ?? '';
     final confidenceBand = action.data['confidence_band']?.toString() ?? '';
@@ -996,7 +1726,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
         if (whyThisAnswer.isNotEmpty) ...[
           Text(
-            '为什么这样回答',
+            l10n.chatWhyThisAnswer,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                   fontWeight: DS.fontWeightSemibold,
@@ -1021,7 +1751,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (citations.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           ...citations.take(3).map((citation) {
-            final title = citation['title']?.toString() ?? '未命名来源';
+            final title =
+                citation['title']?.toString() ?? l10n.chatSourceUntitled;
             final sectionTitle = citation['section_title']?.toString() ?? '';
             return Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -1061,6 +1792,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildNextActions(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final title = action.data['title']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final actions = (action.data['actions'] as List<dynamic>? ?? [])
@@ -1085,7 +1817,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       bool secondary = false,
     }) {
       final label = item['label']?.toString() ?? '';
-      final style = item['style']?.toString() ?? (secondary ? 'secondary' : 'primary');
+      final style =
+          item['style']?.toString() ?? (secondary ? 'secondary' : 'primary');
       final isPrimary = style == 'primary' && !secondary;
       final isGhost = style == 'ghost';
       final backgroundColor = isPrimary
@@ -1157,7 +1890,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (retryOptions.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '如果这轮还不够，可以这样继续：',
+            l10n.chatNextActionsRetryHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.neutral600,
                 ),
@@ -1190,14 +1923,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildEvolutionCard(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final evolutionKind = action.data['evolution_kind']?.toString() ?? '';
-    final headline = action.data['headline']?.toString() ?? '系统正在继续适应你';
+    final headline = action.data['headline']?.toString() ??
+        l10n.chatEvolutionHeadlineDefault;
     final summary = action.data['summary']?.toString() ?? '';
     final insightText = action.data['insight_text']?.toString() ?? '';
     final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
     final weeklySummary = action.data['weekly_summary']?.toString() ?? '';
-    final oneKeyAdjustment = action.data['one_key_adjustment']?.toString() ?? '';
-    final comparisonHighlight = action.data['comparison_highlight']?.toString() ?? '';
+    final oneKeyAdjustment =
+        action.data['one_key_adjustment']?.toString() ?? '';
+    final comparisonHighlight =
+        action.data['comparison_highlight']?.toString() ?? '';
     final periodRange = action.data['period_range']?.toString() ?? '';
     final reasoningSummary = action.data['reasoning_summary']?.toString() ?? '';
     final alignmentSummary = action.data['alignment_summary']?.toString() ?? '';
@@ -1259,7 +1996,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             if (why.isNotEmpty) ...[
               const SizedBox(height: DS.spacing6),
               Text(
-                '为什么：$why',
+                l10n.chatEvolutionWhy(why),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral700,
                     ),
@@ -1268,7 +2005,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             if (effect.isNotEmpty) ...[
               const SizedBox(height: DS.spacing6),
               Text(
-                '预期效果：$effect',
+                l10n.chatEvolutionExpectedEffect(effect),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral700,
                     ),
@@ -1318,7 +2055,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ],
           if (confidence != null) ...[
             const SizedBox(height: DS.spacing8),
-            _buildMetaPill('置信度 ${(confidence * 100).toInt()}%'),
+            _buildMetaPill(
+              l10n.chatConfidenceLabel((confidence * 100).toInt()),
+            ),
           ],
         ],
         if (evolutionKind == 'weekly_learning_report') ...[
@@ -1344,10 +2083,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           if (oneKeyAdjustment.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '下周我会这样继续适配：$oneKeyAdjustment',
+              l10n.chatEvolutionNextWeekPlan(oneKeyAdjustment),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral700,
-              ),
+                  ),
             ),
           ],
           if (evidenceSummary.isNotEmpty) ...[
@@ -1383,7 +2122,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
           ],
         ],
-        if (evolutionKind == 'progress_comparison' && comparison.isNotEmpty) ...[
+        if (evolutionKind == 'progress_comparison' &&
+            comparison.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
             comparison['delta_text']?.toString() ?? '',
@@ -1394,11 +2134,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
           const SizedBox(height: DS.spacing8),
           _buildMetaPill(
-            '${comparison['before_label'] ?? '之前'}: ${comparison['before_value'] ?? '-'}',
+            '${comparison['before_label'] ?? l10n.chatComparisonBefore}: ${comparison['before_value'] ?? '-'}',
           ),
           const SizedBox(height: DS.spacing6),
           _buildMetaPill(
-            '${comparison['after_label'] ?? '现在'}: ${comparison['after_value'] ?? '-'}',
+            '${comparison['after_label'] ?? l10n.chatComparisonAfter}: ${comparison['after_value'] ?? '-'}',
           ),
           if ((comparison['why_it_matters']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
@@ -1419,7 +2159,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
           ],
         ],
-        if ((evolutionKind == 'plan_reasoning' || reasoningSummary.isNotEmpty) &&
+        if ((evolutionKind == 'plan_reasoning' ||
+                reasoningSummary.isNotEmpty) &&
             reasoningSummary.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
@@ -1427,7 +2168,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.neutral900,
                   fontWeight: DS.fontWeightSemibold,
-              ),
+                ),
           ),
         ],
         if (alignmentSummary.isNotEmpty) ...[
@@ -1441,7 +2182,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
         if (alignmentScore != null) ...[
           const SizedBox(height: DS.spacing8),
-          _buildMetaPill('画像对齐度 ${(alignmentScore * 100).toInt()}%'),
+          _buildMetaPill(
+            l10n.chatAlignmentScoreLabel((alignmentScore * 100).toInt()),
+          ),
         ],
         if (evolutionKind == 'plan_reasoning' &&
             evidenceSummary.isNotEmpty &&
@@ -1460,23 +2203,27 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '查看规划依据',
+              l10n.chatViewPlanRationale,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.info,
                     fontWeight: DS.fontWeightSemibold,
                   ),
             ),
-            children: reasoningDetails.map((detail) => buildDetailBlock({
-                'what_changed': detail['label'],
-                'why': detail['evidence'],
-                'expected_effect': detail['impact'],
-              })).toList(),
+            children: reasoningDetails
+                .map(
+                  (detail) => buildDetailBlock({
+                    'what_changed': detail['label'],
+                    'why': detail['evidence'],
+                    'expected_effect': detail['impact'],
+                  }),
+                )
+                .toList(),
           ),
         ],
         if (recommendedAction != null) ...[
           const SizedBox(height: DS.spacing12),
           CustomButton.primary(
-            text: recommendedAction['label']?.toString() ?? '继续',
+            text: recommendedAction['label']?.toString() ?? l10n.commonContinue,
             onPressed: () => unawaited(
               widget.onWidgetAction?.call(
                 recommendedAction['type']?.toString() ?? 'prompt',
@@ -1493,7 +2240,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '了解详情',
+              l10n.commonLearnMore,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.info,
                     fontWeight: DS.fontWeightSemibold,
@@ -1510,16 +2257,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildProgressCard(BuildContext context, WidgetPayload action) {
+    final l10n = context.l10n;
     final highlights = (action.data['highlights'] as List<dynamic>? ?? [])
         .map((e) => '$e')
         .where((e) => e.isNotEmpty)
         .toList();
-    final streakInfo =
-        (action.data['streak_info'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
-            .map<String, dynamic>((key, value) => MapEntry('$key', value));
-    final comparisons =
-        (action.data['comparisons'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
-            .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final streakInfo = (action.data['streak_info'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final comparisons = (action.data['comparisons'] as Map<dynamic, dynamic>? ??
+            const <dynamic, dynamic>{})
+        .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final currentStreak = (streakInfo['current_streak'] as num?)?.toInt() ?? 0;
+    final maxStreak = (streakInfo['max_streak'] as num?)?.toInt() ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1537,10 +2287,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-        if ((streakInfo['current_streak'] ?? 0) != 0) ...[
+        if (currentStreak != 0) ...[
           const SizedBox(height: DS.spacing8),
           _buildMetaPill(
-            '当前连胜 ${streakInfo['current_streak']} 天 / 最长 ${streakInfo['max_streak'] ?? 0} 天',
+            l10n.chatStreakSummary(
+              currentStreak,
+              maxStreak,
+            ),
           ),
         ],
         if (comparisons.isNotEmpty) ...[
@@ -1549,7 +2302,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: Text(
-              '查看对比数据',
+              l10n.chatViewComparisonData,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.success,
                     fontWeight: DS.fontWeightSemibold,
@@ -1557,8 +2310,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
             children: comparisons.entries.map((entry) {
               final value = entry.value is Map<dynamic, dynamic>
-                  ? Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>)
+                  ? Map<String, dynamic>.from(
+                      entry.value as Map<dynamic, dynamic>,
+                    )
                   : const <String, dynamic>{};
+              final currentValue = value['current']?.toString() ?? '-';
+              final previousValue = value['previous']?.toString() ?? '-';
               return Container(
                 margin: const EdgeInsets.only(top: DS.spacing8),
                 padding: const EdgeInsets.all(DS.spacing12),
@@ -1571,7 +2328,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(_formatParamKey(entry.key)),
-                    Text('${value['current'] ?? '-'} / 上期 ${value['previous'] ?? '-'}'),
+                    Text(
+                      l10n.chatComparisonCurrentPrevious(
+                        currentValue,
+                        previousValue,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -1594,7 +2356,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
     if (submitted) {
       return Text(
-        '谢谢你的反馈，我会据此优化后续计划。',
+        context.l10n.chatFeedbackThanks,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: DS.neutral700,
             ),
@@ -1656,9 +2418,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           controller: _reflectionController,
           minLines: 1,
           maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: '可选补充说明',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: context.l10n.chatOptionalNotesHint,
+            border: const OutlineInputBorder(),
             isDense: true,
           ),
         ),
@@ -1666,7 +2428,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         Align(
           alignment: Alignment.centerRight,
           child: CustomButton.primary(
-            text: '提交反馈',
+            text: context.l10n.chatSubmitFeedback,
             onPressed: submit,
             size: CustomButtonSize.small,
             customGradient: DS.warningGradient,
@@ -1713,7 +2475,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final reason = action.data['reason']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
-        .map((e) => e is Map ? Map<String, dynamic>.from(e) : {'label': '$e', 'type': 'prompt', 'payload': {'prompt': '$e'}})
+        .map((e) => e is Map
+            ? Map<String, dynamic>.from(e)
+            : {
+                'label': '$e',
+                'type': 'prompt',
+                'payload': {'prompt': '$e'},
+              },
+        )
         .where((e) => (e['label']?.toString() ?? '').isNotEmpty)
         .toList();
 
@@ -1751,48 +2520,46 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: retryOptions
-                .map(
-                  (item) {
-                    final nestedPayload = item['payload'];
-                    final actionPayload = nestedPayload is Map
-                        ? <String, dynamic>{
-                            ...Map<String, dynamic>.from(nestedPayload),
-                            'label': item['label'],
-                            'type': item['type'],
-                          }
-                        : item;
+            children: retryOptions.map(
+              (item) {
+                final nestedPayload = item['payload'];
+                final actionPayload = nestedPayload is Map
+                    ? <String, dynamic>{
+                        ...Map<String, dynamic>.from(nestedPayload),
+                        'label': item['label'],
+                        'type': item['type'],
+                      }
+                    : item;
 
-                    return InkWell(
-                      onTap: () => unawaited(
-                        widget.onWidgetAction?.call(
-                          item['type']?.toString() ?? 'prompt',
-                          actionPayload,
-                        ),
-                      ),
-                    borderRadius: DS.borderRadius20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceTertiary,
-                        borderRadius: DS.borderRadius20,
-                        border: Border.all(color: DS.neutral200),
-                      ),
-                      child: Text(
-                        item['label']?.toString() ?? '',
-                        style: TextStyle(
-                          color: DS.neutral700,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
+                return InkWell(
+                  onTap: () => unawaited(
+                    widget.onWidgetAction?.call(
+                      item['type']?.toString() ?? 'prompt',
+                      actionPayload,
+                    ),
+                  ),
+                  borderRadius: DS.borderRadius20,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceTertiary,
+                      borderRadius: DS.borderRadius20,
+                      border: Border.all(color: DS.neutral200),
+                    ),
+                    child: Text(
+                      item['label']?.toString() ?? '',
+                      style: TextStyle(
+                        color: DS.neutral700,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                     ),
-                  );
-                  },
-                )
-                .toList(),
+                  ),
+                );
+              },
+            ).toList(),
           ),
         ],
       ],
@@ -1819,28 +2586,30 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       );
 
   String _mapConfidenceLabel(String band) {
+    final l10n = I18nService.instance.l10n;
     switch (band) {
       case 'high':
-        return '可信度高';
+        return l10n.chatConfidenceHigh;
       case 'cautious':
-        return '结论需审慎';
+        return l10n.chatConfidenceCautious;
       default:
-        return '可信度中等';
+        return l10n.chatConfidenceMedium;
     }
   }
 
   String _mapCompletionLabel(String state) {
+    final l10n = I18nService.instance.l10n;
     switch (state) {
       case 'done':
-        return '本轮已完成';
+        return l10n.chatCompletionDone;
       case 'partial':
-        return '部分完成';
+        return l10n.chatCompletionPartial;
       case 'needs_input':
-        return '等待你补充';
+        return l10n.chatCompletionNeedsInput;
       case 'blocked':
-        return '当前受阻';
+        return l10n.chatCompletionBlocked;
       default:
-        return '处理中';
+        return l10n.chatCompletionProcessing;
     }
   }
 

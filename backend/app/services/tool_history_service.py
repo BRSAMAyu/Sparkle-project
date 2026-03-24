@@ -7,8 +7,9 @@ Tool History Service - 工具执行历史记录和学习服务
 3. 支持路由器的偏好学习
 4. 性能监控
 """
+from __future__ import annotations
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -19,7 +20,7 @@ from app.models.tool_history import ToolSuccessRateView, UserToolHistory, UserTo
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ToolHistoryService:

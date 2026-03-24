@@ -2,30 +2,37 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
-class NotesTool extends StatefulWidget {
+class NotesTool extends ConsumerStatefulWidget {
   const NotesTool({
     super.key,
+    this.taskId,
     this.surface = ToolSurface.page,
   });
 
+  final String? taskId;
   final ToolSurface surface;
 
   @override
-  State<NotesTool> createState() => _NotesToolState();
+  ConsumerState<NotesTool> createState() => _NotesToolState();
 }
 
-class _NotesToolState extends State<NotesTool> {
+class _NotesToolState extends ConsumerState<NotesTool> {
   static const String _notesKey = 'quick_notes_content';
   static const String _notesTimestampKey = 'quick_notes_timestamp';
+  static const String _notesSyncedAtKey = 'quick_notes_synced_at';
 
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = true;
+  bool _isSyncing = false;
   DateTime? _savedAt;
+  DateTime? _lastSyncedAt;
 
   int get _charCount => _controller.text.trim().length;
   int get _lineCount => _controller.text.trim().isEmpty
@@ -42,10 +49,12 @@ class _NotesToolState extends State<NotesTool> {
     final prefs = await SharedPreferences.getInstance();
     final notes = prefs.getString(_notesKey) ?? '';
     final timestamp = prefs.getString(_notesTimestampKey);
+    final syncedAt = prefs.getString(_notesSyncedAtKey);
     if (mounted) {
       setState(() {
         _controller.text = notes;
         _savedAt = timestamp == null ? null : DateTime.tryParse(timestamp);
+        _lastSyncedAt = syncedAt == null ? null : DateTime.tryParse(syncedAt);
         _isLoading = false;
       });
     }
@@ -67,10 +76,12 @@ class _NotesToolState extends State<NotesTool> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_notesKey);
     await prefs.remove(_notesTimestampKey);
+    await prefs.remove(_notesSyncedAtKey);
     if (mounted) {
       setState(() {
         _controller.clear();
         _savedAt = null;
+        _lastSyncedAt = null;
       });
       AppFeedback.info(context, '笔记已清空');
     }
@@ -84,6 +95,47 @@ class _NotesToolState extends State<NotesTool> {
     if (mounted) {
       AppFeedback.success(context, '笔记已复制');
     }
+  }
+
+  Future<void> _syncToPrism() async {
+    final content = _controller.text.trim();
+    if (content.isEmpty) {
+      AppFeedback.info(context, '先写下一点内容，再同步到认知棱镜');
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _isSyncing = true);
+    }
+
+    await _saveNotes();
+    final fragment = await ref.read(cognitiveProvider.notifier).createFragment(
+          content: content,
+          sourceType: 'quick_note',
+          taskId: widget.taskId,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (fragment == null) {
+      setState(() => _isSyncing = false);
+      AppFeedback.error(context, '同步失败，请稍后再试');
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    await prefs.setString(_notesSyncedAtKey, now.toIso8601String());
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSyncing = false;
+      _lastSyncedAt = now;
+    });
+    AppFeedback.success(context, '已同步到认知棱镜');
   }
 
   @override
@@ -118,19 +170,24 @@ class _NotesToolState extends State<NotesTool> {
           accentColor: accent,
           icon: Icons.notes_rounded,
         ),
+        ToolHeroChip(
+          label: _lastSyncedAt == null
+              ? '未同步'
+              : '已入棱镜 ${_lastSyncedAt!.hour.toString().padLeft(2, '0')}:${_lastSyncedAt!.minute.toString().padLeft(2, '0')}',
+          accentColor: accent,
+          icon: Icons.psychology_alt_rounded,
+        ),
       ],
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: accent))
           : LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 620;
-                final editorHeight = compact ? 260.0 : 320.0;
+                final editorHeight = (MediaQuery.sizeOf(context).height * 0.3)
+                    .clamp(180.0, 360.0);
 
                 return Column(
                   children: [
-                    Wrap(
-                      spacing: DS.spacing12,
-                      runSpacing: DS.spacing12,
+                    ToolMetricRow(
                       children: [
                         ToolMetricCard(
                           label: '字数',
@@ -197,6 +254,13 @@ class _NotesToolState extends State<NotesTool> {
               label: '立即保存',
               onPressed: _saveNotes,
               icon: const Icon(Icons.check_rounded),
+              expand: true,
+            ),
+            SparkleButton(
+              label: _isSyncing ? '同步中...' : '同步到棱镜',
+              onPressed: _isSyncing ? null : _syncToPrism,
+              icon: const Icon(Icons.psychology_alt_rounded),
+              loading: _isSyncing,
               expand: true,
             ),
           ];

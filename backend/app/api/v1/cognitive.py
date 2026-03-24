@@ -9,11 +9,14 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.config import settings
+from app.core.celery_app import get_celery_queue_status
 from app.db.session import AsyncSessionLocal
 from app.models.cognitive import BehaviorPattern
 from app.models.user import User
 from app.schemas.cognitive import BehaviorPatternResponse, CognitiveFragmentCreate, CognitiveFragmentResponse
 from app.services.cognitive_service import CognitiveService
+from app.services.glm_batch_service import glm_batch_service
 
 router = APIRouter()
 
@@ -37,9 +40,10 @@ async def create_fragment(
     创建一个新的认知碎片 (闪念/拦截)
     """
     service = CognitiveService(db)
+    user_id = current_user.id
 
     fragment = await service.create_fragment(
-        user_id=current_user.id,
+        user_id=user_id,
         content=fragment_in.content,
         source_type=fragment_in.source_type,
         resource_type=fragment_in.resource_type,
@@ -52,13 +56,34 @@ async def create_fragment(
         persona_version=fragment_in.persona_version
     )
 
-    # Trigger AI Analysis via Background Task
-    background_tasks.add_task(
-        _analyze_fragment_task,
-        current_user.id,
-        fragment.id,
-        AsyncSessionLocal
+    celery_status = get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    dispatch = glm_batch_service.decide_cognitive_dispatch(
+        severity=fragment.severity,
+        context_tags=fragment.context_tags,
+        error_tags=fragment.error_tags,
+        celery_status=celery_status,
     )
+    should_enqueue_glm_batch = (
+        settings.GLM_BATCH_ENABLED
+        and settings.GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED
+        and dispatch.should_enqueue
+    )
+
+    if should_enqueue_glm_batch:
+        glm_batch_service.enqueue_cognitive_analysis(
+            user_id=user_id,
+            fragment_id=fragment.id,
+            severity=fragment.severity,
+            context_tags=fragment.context_tags,
+            error_tags=fragment.error_tags,
+        )
+    else:
+        background_tasks.add_task(
+            _analyze_fragment_task,
+            user_id,
+            fragment.id,
+            AsyncSessionLocal
+        )
 
     return fragment
 

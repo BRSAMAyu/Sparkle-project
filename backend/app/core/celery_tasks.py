@@ -7,9 +7,21 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
+import asyncio
+
 from loguru import logger
 
 from app.core.celery_app import celery_app
+
+_worker_event_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _run_async(coro):
+    global _worker_event_loop
+    if _worker_event_loop is None or _worker_event_loop.is_closed():
+        _worker_event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_event_loop)
+    return _worker_event_loop.run_until_complete(coro)
 
 
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
@@ -457,6 +469,187 @@ def promote_perceptible_cohort(self):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="generate_long_horizon_prediction")
+def generate_long_horizon_prediction(self, user_id: str):
+    """使用 GLM batch 生成后台长期行为预测，并写入缓存。"""
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.predictive_service import PredictiveService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = PredictiveService(session)
+            return await service.generate_long_horizon_forecast(UUID(user_id))
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ Long horizon prediction generated for user {user_id}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Long horizon prediction failed for user {user_id}: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+    rate_limit="10/m",  # M2 Security Fix: 每分钟最多10封邮件
+    name="send_verification_email_task"
+)
+def send_verification_email_task(self, to_email: str, verify_token: str, username: str):
+    """
+    M2 Security Fix: 发送验证邮件 (Celery 任务)
+
+    通过 Celery 队列化邮件发送，添加速率限制防止邮件服务商封禁。
+    """
+    import asyncio
+
+    from app.core.email_service import email_service
+
+    async def _send():
+        try:
+            await email_service.send_verification_email(
+                to_email=to_email,
+                verify_token=verify_token,
+                username=username
+            )
+            logger.info(f"✅ Verification email sent to {to_email}")
+            return {"status": "success", "to_email": to_email}
+        except Exception as e:
+            logger.error(f"❌ Failed to send email to {to_email}: {e}")
+            raise
+
+    try:
+        return asyncio.run(_send())
+    except Exception as exc:
+        logger.error(f"Email send failed to {to_email}, retrying: {exc}")
+        raise self.retry(exc=exc)
+
+
+@celery_app.task(bind=True, max_retries=2, name="send_task_reminders")
+def send_task_reminders(self):
+    """
+    发送任务提醒（每15分钟执行一次）
+
+    检查启用任务提醒的用户，为即将到期的任务发送通知。
+    提醒时间默认为：24小时前、1小时前、15分钟前
+    """
+    from datetime import datetime, timedelta
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.models.task import Task, TaskStatus
+    from app.models.user_settings import UserSettings
+    from app.schemas.notification import NotificationCreate
+    from app.services.notification_service import NotificationService
+    from sqlalchemy import and_, select
+
+    async def _send():
+        if cache_service.redis is None:
+            await cache_service.init_redis()
+
+        async with AsyncSessionLocal() as session:
+            # 获取启用任务提醒的用户
+            result = await session.execute(
+                select(UserSettings).where(
+                    UserSettings.task_reminders_enabled == True,
+                    UserSettings.deleted_at.is_(None),
+                )
+            )
+            settings_rows = [
+                {
+                    "user_id": settings.user_id,
+                    "task_reminder_times": list(settings.task_reminder_times or []),
+                }
+                for settings in result.scalars().all()
+            ]
+
+            sent_count = 0
+            skipped_count = 0
+
+            for settings in settings_rows:
+                user_id = settings["user_id"]
+                try:
+                    reminder_times = settings["task_reminder_times"] or [1440, 60, 15]
+
+                    # 计算提醒时间窗口
+                    now = datetime.utcnow()
+                    windows = []
+                    for minutes in reminder_times:
+                        # 窗口：目标时间前后 30 秒（因为任务是每 15 分钟运行一次）
+                        window_start = now + timedelta(minutes=minutes, seconds=-30)
+                        window_end = now + timedelta(minutes=minutes, seconds=30)
+                        windows.append((window_start.date(), window_end.date(), minutes))
+
+                    # 查询即将到期的任务
+                    for due_date_start, due_date_end, minutes in windows:
+                        tasks_result = await session.execute(
+                            select(Task).where(
+                                and_(
+                                    Task.user_id == user_id,
+                                    Task.due_date.is_not(None),
+                                    Task.due_date.between(due_date_start, due_date_end),
+                                    Task.status != TaskStatus.COMPLETED,
+                                    Task.deleted_at.is_(None),
+                                )
+                            )
+                        )
+                        tasks = tasks_result.scalars().all()
+
+                        for task in tasks:
+                            # 检查是否已发送提醒（使用 Redis 去重）
+                            reminder_key = f"task_reminder:{task.id}:{minutes}"
+                            if await cache_service.get(reminder_key):
+                                skipped_count += 1
+                                continue
+
+                            # 格式化提醒消息
+                            if minutes >= 1440:
+                                time_desc = f"{minutes // 1440}天"
+                            elif minutes >= 60:
+                                time_desc = f"{minutes // 60}小时"
+                            else:
+                                time_desc = f"{minutes}分钟"
+
+                            # 发送提醒
+                            await NotificationService.create(
+                                session,
+                                user_id,
+                                NotificationCreate(
+                                    title="任务即将到期",
+                                    content=f"任务「{task.title}」将在{time_desc}后到期",
+                                    type="task_reminder",
+                                    data={
+                                        "task_id": str(task.id),
+                                        "minutes": minutes,
+                                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                                    },
+                                ),
+                            )
+
+                            # 标记已发送（24小时内有效）
+                            await cache_service.set(reminder_key, "1", ttl=86400)
+                            sent_count += 1
+
+                    await session.commit()
+
+                except Exception as e:
+                    await session.rollback()
+                    logger.warning(f"Failed to send reminders for user {user_id}: {e}")
+
+            logger.info(f"✅ Task reminders sent: {sent_count}, skipped (duplicate): {skipped_count}")
+            return {"sent_count": sent_count, "skipped_count": skipped_count}
+
+    try:
+        return _run_async(_send())
+    except Exception as exc:
+        logger.error(f"❌ Task reminders failed: {exc}")
+        raise self.retry(exc=exc, countdown=300)
+
+
 # =============================================================================
 # 任务监控装饰器
 # =============================================================================
@@ -487,7 +680,8 @@ def monitor_task_execution(task_func):
                     duration,
                     {"status": "success"}
                 )
-            except:
+            except Exception as exc:
+                logger.debug(f"Skip celery success metric for {task_name}: {exc}")
                 pass
 
             logger.info(f"✅ Task {task_name} completed in {duration:.2f}s")
@@ -504,7 +698,8 @@ def monitor_task_execution(task_func):
                     duration,
                     {"status": "failed"}
                 )
-            except:
+            except Exception as exc:
+                logger.debug(f"Skip celery failure metric for {task_name}: {exc}")
                 pass
 
             logger.error(f"❌ Task {task_name} failed after {duration:.2f}s: {e}")
@@ -519,3 +714,26 @@ for task_name in dir():
     if hasattr(task_obj, 'apply_async'):
         # 可以在这里应用装饰器
         pass
+
+
+@celery_app.task(bind=True, name="acceptance.sleep_probe_task")
+def sleep_probe_task(self, seconds: float = 2.0):
+    """Acceptance-only probe task used to verify Celery state transitions."""
+    import time
+
+    delay = max(0.1, float(seconds))
+    time.sleep(delay)
+    return {
+        "status": "success",
+        "slept_seconds": delay,
+        "task_id": self.request.id,
+    }
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=1, name="acceptance.fail_probe_task")
+def fail_probe_task(self):
+    """Acceptance-only probe task used to verify retry/failure handling."""
+    attempt = int(self.request.retries or 0)
+    if attempt < 1:
+        raise self.retry(exc=RuntimeError("intentional acceptance retry"), countdown=1)
+    raise RuntimeError("intentional acceptance failure")

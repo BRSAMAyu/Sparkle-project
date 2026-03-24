@@ -2,10 +2,13 @@
 Database Error Handler
 将 SQLAlchemy 异常转换为应用自定义异常
 """
+
 import functools
 import logging
 from collections.abc import Callable
-from typing import ParamSpec, TypeVar
+from typing import TypeVar
+
+from typing_extensions import ParamSpec
 
 from sqlalchemy.exc import (
     DataError,
@@ -52,96 +55,57 @@ def handle_db_error(error: Exception) -> None:
     if isinstance(error, IntegrityError):
         if "unique" in error_str or "duplicate" in error_str:
             logger.warning(f"Duplicate key error: {error}")
-            raise DuplicateKeyError(
-                message="数据已存在，请检查是否重复",
-                detail={"original_error": str(error)}
-            )
+            raise DuplicateKeyError(message="数据已存在，请检查是否重复", detail={"original_error": str(error)})
         elif "foreign key" in error_str or "foreignkey" in error_str:
             logger.warning(f"Foreign key violation: {error}")
-            raise ForeignKeyViolationError(
-                message="关联数据不存在或无法删除",
-                detail={"original_error": str(error)}
-            )
+            raise ForeignKeyViolationError(message="关联数据不存在或无法删除", detail={"original_error": str(error)})
         else:
             logger.error(f"Data integrity error: {error}")
-            raise DataIntegrityError(
-                message="数据完整性错误",
-                detail={"original_error": str(error)}
-            )
+            raise DataIntegrityError(message="数据完整性错误", detail={"original_error": str(error)})
 
     # 处理连接相关异常
     if isinstance(error, (DisconnectionError, InterfaceError)):
         logger.error(f"Database connection error: {error}")
-        raise DatabaseConnectionError(
-            message="数据库连接失败，请稍后重试",
-            detail={"original_error": str(error)}
-        )
+        raise DatabaseConnectionError(message="数据库连接失败，请稍后重试", detail={"original_error": str(error)})
 
     # 处理超时异常
     if isinstance(error, SQLAlchemyTimeoutError):
         logger.error(f"Database timeout error: {error}")
-        raise DatabaseTimeoutError(
-            message="数据库操作超时，请稍后重试",
-            detail={"original_error": str(error)}
-        )
+        raise DatabaseTimeoutError(message="数据库操作超时，请稍后重试", detail={"original_error": str(error)})
 
     # 处理操作异常 (包括死锁)
     if isinstance(error, OperationalError):
         if "deadlock" in error_str:
             logger.warning(f"Database deadlock detected: {error}")
-            raise DeadlockError(
-                message="数据库死锁，请重试操作",
-                detail={"original_error": str(error)}
-            )
+            raise DeadlockError(message="数据库死锁，请重试操作", detail={"original_error": str(error)})
         elif "timeout" in error_str or "timed out" in error_str:
             logger.error(f"Database timeout error: {error}")
-            raise DatabaseTimeoutError(
-                message="数据库操作超时",
-                detail={"original_error": str(error)}
-            )
+            raise DatabaseTimeoutError(message="数据库操作超时", detail={"original_error": str(error)})
         elif "connection" in error_str or "connect" in error_str:
             logger.error(f"Database connection error: {error}")
-            raise DatabaseConnectionError(
-                message="数据库连接失败",
-                detail={"original_error": str(error)}
-            )
+            raise DatabaseConnectionError(message="数据库连接失败", detail={"original_error": str(error)})
         else:
             logger.error(f"Database operational error: {error}")
-            raise DatabaseError(
-                message="数据库操作失败",
-                detail={"original_error": str(error)}
-            )
+            raise DatabaseError(message="数据库操作失败", detail={"original_error": str(error)})
 
     # 处理数据错误
     if isinstance(error, DataError):
         logger.error(f"Database data error: {error}")
-        raise DataIntegrityError(
-            message="数据格式错误",
-            detail={"original_error": str(error)}
-        )
+        raise DataIntegrityError(message="数据格式错误", detail={"original_error": str(error)})
 
     # 处理编程错误 (SQL 语法错误等)
     if isinstance(error, ProgrammingError):
         logger.error(f"Database programming error: {error}")
-        raise DatabaseError(
-            message="数据库查询错误",
-            detail={"original_error": str(error)}
-        )
+        raise DatabaseError(message="数据库查询错误", detail={"original_error": str(error)})
 
     # 处理无效请求错误
     if isinstance(error, InvalidRequestError):
         logger.error(f"Invalid database request: {error}")
-        raise DatabaseError(
-            message="无效的数据库操作",
-            detail={"original_error": str(error)}
-        )
+        raise DatabaseError(message="无效的数据库操作", detail={"original_error": str(error)})
 
     # 未知的数据库错误
     logger.error(f"Unknown database error: {error}")
-    raise DatabaseError(
-        message="数据库操作失败",
-        detail={"original_error": str(error)}
-    )
+    raise DatabaseError(message="数据库操作失败", detail={"original_error": str(error)})
 
 
 def db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
@@ -153,18 +117,28 @@ def db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
         def create_user(db, user_data):
             ...
     """
+
     @functools.wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            if isinstance(e, (
-                IntegrityError, OperationalError, SQLAlchemyTimeoutError,
-                DisconnectionError, InterfaceError, DataError,
-                ProgrammingError, InvalidRequestError
-            )):
+            if isinstance(
+                e,
+                (
+                    IntegrityError,
+                    OperationalError,
+                    SQLAlchemyTimeoutError,
+                    DisconnectionError,
+                    InterfaceError,
+                    DataError,
+                    ProgrammingError,
+                    InvalidRequestError,
+                ),
+            ):
                 handle_db_error(e)
             raise
+
     return wrapper
 
 
@@ -177,27 +151,32 @@ def async_db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
         async def create_user(db, user_data):
             ...
     """
+
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            if isinstance(e, (
-                IntegrityError, OperationalError, SQLAlchemyTimeoutError,
-                DisconnectionError, InterfaceError, DataError,
-                ProgrammingError, InvalidRequestError
-            )):
+            if isinstance(
+                e,
+                (
+                    IntegrityError,
+                    OperationalError,
+                    SQLAlchemyTimeoutError,
+                    DisconnectionError,
+                    InterfaceError,
+                    DataError,
+                    ProgrammingError,
+                    InvalidRequestError,
+                ),
+            ):
                 handle_db_error(e)
             raise
+
     return wrapper
 
 
-async def retry_on_deadlock(
-    func: Callable[P, T],
-    *args: P.args,
-    max_retries: int = 3,
-    **kwargs: P.kwargs
-) -> T:
+async def retry_on_deadlock(func: Callable[P, T], *args: P.args, max_retries: int = 3, **kwargs: P.kwargs) -> T:
     """
     死锁重试机制
 
@@ -230,11 +209,8 @@ async def retry_on_deadlock(
             last_error = e
             if attempt < max_retries - 1:
                 # 指数退避
-                wait_time = (2 ** attempt) * 0.1
-                logger.warning(
-                    f"Deadlock detected, retry {attempt + 1}/{max_retries} "
-                    f"after {wait_time}s"
-                )
+                wait_time = (2**attempt) * 0.1
+                logger.warning(f"Deadlock detected, retry {attempt + 1}/{max_retries} after {wait_time}s")
                 await asyncio.sleep(wait_time)
             else:
                 logger.error(f"Deadlock persists after {max_retries} retries")

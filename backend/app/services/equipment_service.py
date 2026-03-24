@@ -2,12 +2,14 @@
 Equipment Service
 统一处理用户装备真源与派生字段同步
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
 from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import noload
 
 from app.models.achievement import UserGalaxySkin, UserTitle
 from app.models.shop import ShopItem, ShopItemType, ShopPurchase
@@ -15,7 +17,7 @@ from app.models.user import User
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class EquipmentSource:
@@ -142,7 +144,15 @@ class EquipmentService:
             await self.db.flush()
 
     async def _get_locked_user(self, user_id: str) -> User:
-        result = await self.db.execute(select(User).where(User.id == user_id).with_for_update())
+        # Use options(noload()) to prevent eager loading of relationships that cause
+        # "FOR UPDATE cannot be applied to the nullable side of an outer join" error
+        from sqlalchemy.orm import noload
+        result = await self.db.execute(
+            select(User)
+            .where(User.id == user_id)
+            .options(noload(User.push_preference), noload(User.intervention_settings))
+            .with_for_update()
+        )
         user = result.scalar_one_or_none()
         if not user:
             raise ValueError(f"User {user_id} not found")

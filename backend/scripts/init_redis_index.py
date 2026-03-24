@@ -17,7 +17,13 @@ async def init_index():
     logger.info("Connecting to Redis...")
     # Ensure decode_responses=True for text handling
     resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
-    redis = Redis.from_url(settings.REDIS_URL, password=resolved_password, decode_responses=True)
+    # Note: Redis 7.x with ACL requires username='default' when password is set
+    redis = Redis.from_url(
+        settings.REDIS_URL,
+        username='default',
+        password=resolved_password,
+        decode_responses=True
+    )
     
     index_name = "idx:knowledge"
     

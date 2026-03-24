@@ -40,7 +40,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		if authHeader != "" {
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-				userID, isAdmin, err := validateJWT(cfg, tokenString)
+				userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
 				if err != nil {
 					log.Printf("[WsAuth] JWT header validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
@@ -61,7 +61,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		if cfg.AllowWsQueryToken {
 			if queryToken := c.Query("token"); queryToken != "" {
 				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v", cfg.AllowWsQueryToken)
-				userID, isAdmin, err := validateJWT(cfg, queryToken)
+				userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
 				if err != nil {
 					log.Printf("[WsAuth] JWT query validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()

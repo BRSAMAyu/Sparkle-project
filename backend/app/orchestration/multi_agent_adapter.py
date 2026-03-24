@@ -4,8 +4,8 @@ Multi-agent mode workflow adapter.
 This module upgrades non-standard chat modes from prompt-only behavior to
 full planning/execution workflows while keeping backward-compatible entrypoints.
 """
-
 from __future__ import annotations
+
 
 import uuid
 from collections.abc import AsyncGenerator
@@ -261,6 +261,13 @@ class MultiAgentWorkflowAdapter:
             f"quality_score={validation_result.quality_score:.2f}, "
             f"aborted={validation_result.aborted}"
         )
+        answer_experts = context_data.get("answer_experts")
+        answer_expert_instruction = ""
+        if isinstance(answer_experts, list) and answer_experts:
+            answer_expert_instruction = (
+                "\n4. 最终综合时优先吸收以下专家视角并明确其贡献："
+                + "、".join(str(item) for item in answer_experts if str(item).strip())
+            )
         if validation_issues:
             validation_summary += "\nissues=" + " | ".join(str(issue) for issue in validation_issues[:5])
 
@@ -271,7 +278,8 @@ class MultiAgentWorkflowAdapter:
             "你必须同时遵守以下要求：\n"
             "1. 最终回答必须以已执行完成的工具结果为事实基础。\n"
             "2. 保留用户画像、历史上下文、当前计划上下文的一致性。\n"
-            "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。\n\n"
+            "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。"
+            f"{answer_expert_instruction}\n\n"
             "## 已验证的执行结果摘要\n"
             f"{summary}\n\n"
             "## 执行质量验证\n"

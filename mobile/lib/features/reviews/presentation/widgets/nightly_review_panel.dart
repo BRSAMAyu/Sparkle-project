@@ -30,7 +30,7 @@ class NightlyReviewPanel extends ConsumerWidget {
               DS.spacing16,
               0,
               DS.spacing16,
-              compact ? DS.spacing8 : DS.spacing12,
+              compact ? DS.spacing8 : DS.spacing10,
             ),
             child: DashboardEntrance(
               index: 6,

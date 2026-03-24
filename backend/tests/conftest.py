@@ -23,6 +23,7 @@ from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
 from app.models.event import TrackingEvent  # noqa: F401
 from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
 from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
+from app.models.recommendation import RecommendationCache, UserItemInteraction  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401
     ScaffoldingState,
     PassiveSignal,
@@ -32,8 +33,11 @@ from app.models.intervention_adaptive import (  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.community import (  # noqa: F401
     Group, GroupMember, GroupMessage, PrivateMessage,
-    Friendship, GroupType, GroupRole
+    Friendship, GroupType, GroupRole, UserBlock
 )
+from app.models.accountability import AccountabilityPartnership, AccountabilityCheckin  # noqa: F401
+from app.models.achievement import Achievement, UserAchievement  # noqa: F401
+from app.models.cognitive import BehaviorPattern  # noqa: F401
 from app.models.shop import (  # noqa: F401
     ShopItem, ShopPurchase, UserConsumable,
     PhotonTransactionType, ShopItemType, ItemRarity, ConsumableEffectType

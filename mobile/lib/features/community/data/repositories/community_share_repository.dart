@@ -1,18 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 
 final communityShareRepositoryProvider = Provider((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return CommunityShareRepository(apiClient);
+  final eventStream = ref.watch(appEventStreamServiceProvider);
+  return CommunityShareRepository(apiClient, eventStream);
 });
 
 class CommunityShareRepository {
-  CommunityShareRepository(this._apiClient);
+  CommunityShareRepository(this._apiClient, this._eventStream);
 
   final ApiClient _apiClient;
+  final AppEventStreamService _eventStream;
 
-  Future<void> shareResource({
+  Future<Map<String, dynamic>> shareResource({
     required String resourceType,
     required String resourceId,
     String? targetGroupId,
@@ -35,5 +39,37 @@ class CommunityShareRepository {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Failed to share resource');
     }
+
+    final data = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'shareResource',
+    );
+    await _eventStream.recordSharedResourceAction(
+      action: 'created',
+      sharedResourceId: data['id']?.toString() ?? '',
+      resourceType: resourceType,
+      resourceId: resourceId,
+    );
+    return data;
+  }
+
+  Future<Map<String, dynamic>> adoptResource({
+    required String sharedResourceId,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.adoptSharedResource(sharedResourceId),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to adopt shared resource');
+    }
+    final data =
+        ApiResponseParser.unwrapMap(response.data, action: 'adoptResource');
+    await _eventStream.recordSharedResourceAction(
+      action: 'adopted',
+      sharedResourceId: sharedResourceId,
+      resourceType: data['resource_type']?.toString() ?? 'unknown',
+      adoptedEntityId: data['new_resource_id']?.toString(),
+    );
+    return data;
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +29,7 @@ void main() {
   group('Live local full-stack smoke', () {
     test('api and gateway health endpoints are reachable', () async {
       final apiHealth = await http
-          .get(Uri.parse(_stripApiSuffix(_liveApiBase) + '/health'))
+          .get(Uri.parse('${_stripApiSuffix(_liveApiBase)}/health'))
           .timeout(const Duration(seconds: 10));
       expect(apiHealth.statusCode, 200, reason: apiHealth.body);
 
@@ -74,8 +73,7 @@ void main() {
       expect(ticket, isNotNull);
       expect(ticket, isNotEmpty);
 
-      final sessionId =
-          'mobile-live-${DateTime.now().millisecondsSinceEpoch.toString()}';
+      final sessionId = 'mobile-live-${DateTime.now().millisecondsSinceEpoch}';
       final channel = WebSocketChannel.connect(
         Uri.parse('$_liveWsBase/ws/chat?ticket=$ticket'),
       );
@@ -83,11 +81,13 @@ void main() {
         await channel.sink.close();
       });
 
-      channel.sink.add(jsonEncode({
-        'message': '本地最终联调验收，请返回任意响应',
-        'session_id': sessionId,
-        'chat_mode': 'chat',
-      }));
+      channel.sink.add(
+        jsonEncode(<String, dynamic>{
+          'message': '本地最终联调验收，请返回任意响应',
+          'session_id': sessionId,
+          'chat_mode': 'chat',
+        }),
+      );
 
       final firstFrame = await channel.stream
           .firstWhere((event) => event != null)
@@ -113,6 +113,10 @@ Future<_LiveSession> _login() async {
       )
       .timeout(const Duration(seconds: 15));
 
+  if (login.statusCode == 429) {
+    return _registerEphemeralUser();
+  }
+
   if (login.statusCode != 200) {
     throw TestFailure('login failed: ${login.statusCode} ${login.body}');
   }
@@ -121,6 +125,44 @@ Future<_LiveSession> _login() async {
   final token = data['access_token'] as String?;
   if (token == null || token.isEmpty) {
     throw TestFailure('login response missing access_token: ${login.body}');
+  }
+  return _LiveSession(token);
+}
+
+Future<_LiveSession> _registerEphemeralUser() async {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final username = 'mobile_e2e_$now';
+  final email = '$username@example.com';
+
+  final register = await http
+      .post(
+        Uri.parse('$_liveApiBase/auth/register'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'email': email,
+          'password': _password,
+          'accepted_tos': true,
+          'accepted_privacy': true,
+          'tos_version': 'mobile-e2e',
+          'privacy_version': 'mobile-e2e',
+          'agreed_locale': 'zh-CN',
+        }),
+      )
+      .timeout(const Duration(seconds: 15));
+
+  if (register.statusCode != 200 && register.statusCode != 201) {
+    throw TestFailure(
+      'register fallback failed: ${register.statusCode} ${register.body}',
+    );
+  }
+
+  final data = jsonDecode(register.body) as Map<String, dynamic>;
+  final token = data['access_token'] as String?;
+  if (token == null || token.isEmpty) {
+    throw TestFailure(
+      'register fallback missing access_token: ${register.body}',
+    );
   }
   return _LiveSession(token);
 }

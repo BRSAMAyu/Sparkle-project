@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
@@ -38,6 +41,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     try {
       final message =
@@ -79,12 +83,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    '请输入邮件中的重置码，并设置一个新的登录密码。',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SparkleStaggerItem(
+                    index: 0,
+                    child: Text(
+                      '请输入邮件中的重置码，并设置一个新的登录密码。',
+                    ),
                   ),
                   const SizedBox(height: DS.spacing24),
-                  TextFormField(
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: TextFormField(
                     controller: _tokenController,
                     decoration: const InputDecoration(
                       labelText: '重置码',
@@ -95,9 +103,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         (value == null || value.trim().isEmpty)
                             ? '请输入重置码'
                             : null,
+                    ),
                   ),
                   const SizedBox(height: DS.spacing16),
-                  TextFormField(
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
@@ -111,9 +122,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                         ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
+                        onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
                       ),
                     ),
                     validator: (value) {
@@ -122,9 +138,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       }
                       return null;
                     },
+                    ),
                   ),
                   const SizedBox(height: DS.spacing16),
-                  TextFormField(
+                  SparkleStaggerItem(
+                    index: 3,
+                    child: TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
@@ -138,10 +157,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                         ),
-                        onPressed: () => setState(
-                          () => _obscureConfirmPassword =
-                              !_obscureConfirmPassword,
-                        ),
+                        onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          setState(
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          );
+                        },
                       ),
                     ),
                     validator: (value) {
@@ -150,14 +176,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       }
                       return null;
                     },
+                    ),
                   ),
                   const SizedBox(height: DS.spacing24),
-                  SparkleButton(
-                    label: '确认重置',
-                    onPressed: authState.isLoading ? null : _submit,
-                    loading: authState.isLoading,
-                    disabled: authState.isLoading,
-                    expand: true,
+                  SparkleStaggerItem(
+                    index: 4,
+                    child: SparkleButton(
+                      label: '确认重置',
+                      onPressed: authState.isLoading ? null : _submit,
+                      loading: authState.isLoading,
+                      disabled: authState.isLoading,
+                      expand: true,
+                    ),
                   ),
                 ],
               ),

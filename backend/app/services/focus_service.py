@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import datetime
+from datetime import timezone
 from typing import Any
 from uuid import UUID
 
@@ -9,11 +12,12 @@ from app.core.event_bus import event_bus
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.services.llm_service import llm_service
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
+from app.services.llm_fallback_utils import focus_llm
 
 
 def _utcnow() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    return datetime.datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FocusService:
@@ -21,7 +25,7 @@ class FocusService:
     def _to_utc_naive(ts: datetime.datetime) -> datetime.datetime:
         if ts.tzinfo is None:
             return ts
-        return ts.astimezone(datetime.UTC).replace(tzinfo=None)
+        return ts.astimezone(timezone.utc).replace(tzinfo=None)
 
     @staticmethod
     async def log_session(
@@ -48,6 +52,9 @@ class FocusService:
             status=status
         )
         db.add(session)
+        await db.flush()
+        session_uuid = session.id
+        session_id = str(session.id)
 
         # Calculate Rewards
         flame_earned = 0
@@ -93,7 +100,7 @@ class FocusService:
 
             base_kwargs = {
                 "study_minutes": duration_minutes,
-                "session_id": str(session.id) if session else None,
+                "session_id": session_id,
                 "session_start_time": start_time,
             }
 
@@ -130,22 +137,33 @@ class FocusService:
         # ============================================
 
         await db.commit()
-        await db.refresh(session)
         try:
             await event_bus.publish("focus.session.completed", {
                 "event_type": "focus.session.completed",
                 "user_id": str(user_id),
-                "duration_minutes": session.duration_minutes,
-                "started_at": session.start_time.isoformat(),
-                "completed": session.status == FocusStatus.COMPLETED,
+                "duration_minutes": duration_minutes,
+                "started_at": start_time.isoformat(),
+                "completed": status == FocusStatus.COMPLETED,
                 "timestamp": _utcnow().isoformat(),
             })
         except Exception as e:
             import logging
             logging.warning(f"Focus session event publish failed: {e}")
 
+        try:
+            auto_collector = AutoFragmentCollector(db)
+            await auto_collector.collect_from_focus_session(
+                user_id=user_id,
+                session_id=session_uuid,
+                duration_minutes=duration_minutes,
+                status=status,
+            )
+        except Exception as e:
+            import logging
+            logging.warning(f"Auto fragment collection failed for focus session: {e}")
+
         return {
-            "session": session,
+            "session_id": session_id,
             "rewards": {
                 "flame_earned": flame_earned,
                 "leveled_up": leveled_up,
@@ -211,7 +229,7 @@ class FocusService:
             {"role": "user", "content": f"Task: {task_context}\n\nUser Question/Context: {user_input}"}
         ]
 
-        return await llm_service.chat(messages, temperature=0.7)
+        return await focus_llm.call(messages, fallback="继续专注，你做得很好！如果感到困惑，试着把问题分解成更小的部分。", temperature=0.7)
 
     @staticmethod
     async def breakdown_task_via_llm(
@@ -239,12 +257,14 @@ class FocusService:
         if persona_prompt:
             prompt += f"\n\n{persona_prompt}"
 
-        return await llm_service.chat_json(
+        result = await focus_llm.json_call(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            fallback=[]  # 降级返回空列表
         )
+        return result if isinstance(result, list) else []
 
     @staticmethod
     async def get_weekly_stats(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
@@ -48,40 +50,100 @@ class TaskDaySummary {
 
   @override
   int get hashCode =>
-      pending.hashCode ^ inProgress.hashCode ^ completed.hashCode ^ overdue.hashCode;
+      pending.hashCode ^
+      inProgress.hashCode ^
+      completed.hashCode ^
+      overdue.hashCode;
 }
 
 class CalendarState {
-  CalendarState({this.events = const [], this.isLoading = false});
+  CalendarState({
+    this.events = const [],
+    this.isLoading = false,
+    this.error,
+    this.lastMutationMessage,
+  });
   final List<CalendarEventModel> events;
   final bool isLoading;
+  final String? error;
+  final String? lastMutationMessage;
+
+  CalendarState copyWith({
+    List<CalendarEventModel>? events,
+    bool? isLoading,
+    String? error,
+    String? lastMutationMessage,
+    bool clearError = false,
+    bool clearMutationMessage = false,
+  }) =>
+      CalendarState(
+        events: events ?? this.events,
+        isLoading: isLoading ?? this.isLoading,
+        error: clearError ? null : error ?? this.error,
+        lastMutationMessage: clearMutationMessage
+            ? null
+            : lastMutationMessage ?? this.lastMutationMessage,
+      );
 }
 
 class CalendarNotifier extends StateNotifier<CalendarState> {
   CalendarNotifier(this._repository) : super(CalendarState()) {
-    loadEvents();
+    unawaited(loadEvents());
   }
   final CalendarRepository _repository;
 
   Future<void> loadEvents() async {
-    state = CalendarState(events: state.events, isLoading: true);
-    final events = await _repository.getEvents();
-    state = CalendarState(events: events);
+    if (!mounted) return;
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearMutationMessage: true,
+    );
+    try {
+      final events = await _repository.getEvents();
+      if (!mounted) return;
+      state = state.copyWith(events: events, isLoading: false);
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
   }
 
-  Future<void> addEvent(CalendarEventModel event) async {
-    await _repository.addEvent(event);
-    loadEvents();
+  Future<CalendarMutationResult> addEvent(CalendarEventModel event) async {
+    if (!mounted) {
+      throw StateError('CalendarNotifier is disposed');
+    }
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearMutationMessage: true,
+    );
+    try {
+      final result = await _repository.addEvent(event);
+      await loadEvents();
+      if (!mounted) {
+        throw StateError('CalendarNotifier is disposed');
+      }
+      state = state.copyWith(
+        isLoading: false,
+        lastMutationMessage: result.message,
+      );
+      return result;
+    } catch (e) {
+      if (!mounted) rethrow;
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> updateEvent(CalendarEventModel event) async {
     await _repository.updateEvent(event);
-    loadEvents();
+    await loadEvents();
   }
 
   Future<void> deleteEvent(String id) async {
     await _repository.deleteEvent(id);
-    loadEvents();
+    await loadEvents();
   }
 
   List<CalendarEventModel> getEventsForDay(DateTime day) =>
@@ -90,6 +152,10 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
   bool isSameDay(DateTime? a, DateTime? b) {
     if (a == null || b == null) return false;
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  void clearMutationMessage() {
+    state = state.copyWith(clearMutationMessage: true);
   }
 }
 
@@ -128,7 +194,8 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
   /// Load tasks for a specific month and calculate summaries
   Future<void> loadTasksForMonth(DateTime month, {bool force = false}) async {
     try {
-      final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      final monthKey =
+          '${month.year}-${month.month.toString().padLeft(2, '0')}';
       if (!force && state.loadedMonths.contains(monthKey)) {
         return;
       }
@@ -208,7 +275,8 @@ final taskCalendarProvider =
 ///
 /// Persists the user's selected date in the calendar view.
 final selectedCalendarDateProvider =
-    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) => SelectedCalendarDateNotifier());
+    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>(
+        (ref) => SelectedCalendarDateNotifier(),);
 
 /// Notifier for the selected calendar date
 class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {
@@ -312,12 +380,16 @@ final dayTasksAsyncProvider =
     return taskDueDate == normalizedDate && task.status != TaskStatus.abandoned;
   }).toList();
 
-  // Sort by priority (highest first), then by status (pending > inProgress > completed)
-  dayTasks.sort((a, b) {
+  _sortCalendarTasks(dayTasks);
+
+  return dayTasks;
+});
+
+void _sortCalendarTasks(List<TaskModel> tasks) {
+  tasks.sort((a, b) {
     final priorityCompare = b.priority.compareTo(a.priority);
     if (priorityCompare != 0) return priorityCompare;
 
-    // Secondary sort by status
     final statusOrder = {
       TaskStatus.pending: 0,
       TaskStatus.inProgress: 1,
@@ -327,6 +399,4 @@ final dayTasksAsyncProvider =
     final bStatusOrder = statusOrder[b.status] ?? 3;
     return aStatusOrder.compareTo(bStatusOrder);
   });
-
-  return dayTasks;
-});
+}

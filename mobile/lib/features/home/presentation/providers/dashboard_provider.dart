@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 
 // Data models for dashboard state
@@ -10,6 +11,7 @@ class DashboardState {
     required this.sprint,
     required this.nextActions,
     required this.cognitive,
+    this.nextIntentForecast,
     this.growth,
     this.isLoading = false,
     this.error,
@@ -22,6 +24,7 @@ class DashboardState {
         growth = null,
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
+        nextIntentForecast = null,
         isLoading = true,
         error = null;
 
@@ -32,6 +35,7 @@ class DashboardState {
         growth = null,
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
+        nextIntentForecast = null,
         isLoading = false,
         error = errorMessage;
   final WeatherData weather;
@@ -40,6 +44,7 @@ class DashboardState {
   final GrowthData? growth; // Added Growth Plan
   final List<TaskData> nextActions;
   final CognitiveData cognitive;
+  final PredictionInsightData? nextIntentForecast;
   final bool isLoading;
   final String? error;
 
@@ -50,6 +55,7 @@ class DashboardState {
     GrowthData? growth,
     List<TaskData>? nextActions,
     CognitiveData? cognitive,
+    PredictionInsightData? nextIntentForecast,
     bool? isLoading,
     String? error,
   }) =>
@@ -60,6 +66,7 @@ class DashboardState {
         growth: growth ?? this.growth,
         nextActions: nextActions ?? this.nextActions,
         cognitive: cognitive ?? this.cognitive,
+        nextIntentForecast: nextIntentForecast ?? this.nextIntentForecast,
         isLoading: isLoading ?? this.isLoading,
         error: error ?? this.error,
       );
@@ -154,15 +161,23 @@ final dashboardProvider =
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
   DashboardNotifier(this._repository) : super(DashboardState.loading()) {
-    fetchData();
+    Future<void>.microtask(fetchData);
   }
   final DashboardRepository _repository;
 
   Future<void> fetchData() async {
     try {
+      if (!mounted) return;
       state = DashboardState.loading();
 
       final dashboardData = await _repository.getDashboardStatus();
+      var predictiveData = <String, dynamic>{};
+      try {
+        predictiveData = await _repository.getPredictiveDashboard();
+      } catch (e) {
+        debugPrint('Predictive dashboard unavailable: $e');
+      }
+      if (!mounted) return;
 
       // Parse weather data
       final weatherMap = dashboardData['weather'] as Map<String, dynamic>;
@@ -244,6 +259,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         hasNewInsight: cognitiveMap['has_new_insight'] as bool? ?? false,
       );
 
+      final nextIntentMap =
+          predictiveData['next_intent_forecast'] as Map<String, dynamic>?;
+      final nextIntent = nextIntentMap == null
+          ? null
+          : PredictionInsightData.fromJson(nextIntentMap);
+
       state = DashboardState(
         weather: weather,
         flame: flame,
@@ -251,9 +272,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         growth: growth,
         nextActions: nextActions,
         cognitive: cognitive,
+        nextIntentForecast: nextIntent,
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');
+      if (!mounted) return;
+      state = DashboardState.error(e.toString());
     }
   }
 

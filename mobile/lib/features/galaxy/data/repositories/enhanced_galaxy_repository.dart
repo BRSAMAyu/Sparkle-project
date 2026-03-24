@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -181,6 +182,48 @@ class EnhancedGalaxyRepository {
     Offset position,
   ) =>
       updateNodePositions(<String, Offset>{nodeId: position});
+
+  Future<NetworkResult<Map<String, dynamic>>> updateNodeMastery(
+    String nodeId, {
+    required int mastery,
+    String reason = 'manual_update',
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return NetworkResult.success(<String, dynamic>{
+        'success': true,
+        'node_id': nodeId,
+        'old_mastery': 0,
+        'new_mastery': mastery,
+        'reason': reason,
+      });
+    }
+
+    try {
+      final response = await RetryStrategy.executeWithRetry<Map<String, dynamic>>(
+        () async {
+          final response = await _apiClient.post<Map<String, dynamic>>(
+            ApiEndpoints.galaxyUpdateMastery(nodeId),
+            data: {
+              'mastery': mastery,
+              'reason': reason,
+            },
+          );
+          return ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'updateGalaxyNodeMastery',
+          );
+        },
+      );
+
+      _graphCache.clear();
+      _detailCache.remove(nodeId);
+      return NetworkResult.success(response);
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
 
   /// 激活节点
   Future<NetworkResult<void>> sparkNode(String id) async {
@@ -401,18 +444,19 @@ class GalaxyError implements Exception {
   });
 
   factory GalaxyError.network(DioException e) {
+    final l10n = I18nService.instance.l10n;
     String message;
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
-        message = '连接超时，请检查网络';
+        message = l10n.galaxyErrorConnectionTimeout;
       case DioExceptionType.receiveTimeout:
-        message = '服务器响应超时';
+        message = l10n.galaxyErrorResponseTimeout;
       case DioExceptionType.connectionError:
-        message = '网络连接失败';
+        message = l10n.galaxyErrorConnectionFailed;
       default:
         message = _extractDetailFromResponse(
           e,
-          fallback: '网络请求失败',
+          fallback: l10n.galaxyErrorRequestFailed,
         );
     }
     return GalaxyError._(
@@ -424,7 +468,8 @@ class GalaxyError implements Exception {
 
   factory GalaxyError.circuitBreakerOpen() => GalaxyError._(
         type: GalaxyErrorType.circuitBreakerOpen,
-        message: '服务暂时不可用，请稍后重试',
+        message:
+            I18nService.instance.l10n.galaxyErrorServiceTemporarilyUnavailable,
       );
 
   factory GalaxyError.unknown(String message) => GalaxyError._(
@@ -444,13 +489,14 @@ class GalaxyError implements Exception {
 
   /// 获取用户友好的错误消息
   String get userMessage {
+    final l10n = I18nService.instance.l10n;
     switch (type) {
       case GalaxyErrorType.network:
         return message;
       case GalaxyErrorType.circuitBreakerOpen:
-        return '服务暂时不可用，请稍后重试';
+        return l10n.galaxyErrorServiceTemporarilyUnavailable;
       case GalaxyErrorType.unknown:
-        return '发生未知错误';
+        return l10n.galaxyErrorUnknown;
     }
   }
 

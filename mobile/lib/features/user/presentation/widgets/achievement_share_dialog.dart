@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -362,20 +362,7 @@ Future<void> _saveImageToGallery(
     throw Exception(S.noGalleryPermission);
   }
 
-  final result = await ImageGallerySaver.saveFile(
-    file.path,
-    name: 'sparkle_${shareCard.achievement.id}',
-  );
-  if (result == null) {
-    throw Exception(S.saveResultEmpty);
-  }
-
-  if (result is Map) {
-    final isSuccess = result['isSuccess'] == true || result['success'] == true;
-    if (!isSuccess) {
-      throw Exception(S.gallerySaveFailed);
-    }
-  }
+  await Gal.putImage(file.path, album: 'Sparkle');
 }
 
 String _resolveCardUrl(String rawUrl) {

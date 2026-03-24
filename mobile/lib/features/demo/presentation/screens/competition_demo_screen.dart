@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 竞赛演示模式 - Week 8
 ///
@@ -119,7 +119,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
 
     setState(() => _currentStep = index);
     _animationController.forward(from: 0);
-    HapticFeedback.mediumImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
 
     final duration = _steps[index].duration;
     _autoPlayTimer = Timer(duration, () {
@@ -132,7 +132,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       _stopAutoPlay();
       setState(() => _currentStep++);
       _animationController.forward(from: 0);
-      HapticFeedback.lightImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     }
   }
 
@@ -141,7 +141,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       _stopAutoPlay();
       setState(() => _currentStep--);
       _animationController.forward(from: 0);
-      HapticFeedback.lightImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     }
   }
 

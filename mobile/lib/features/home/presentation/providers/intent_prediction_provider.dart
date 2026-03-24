@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/dio_provider.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
+import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
+import 'package:sparkle/features/home/data/repositories/prediction_repository.dart';
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -23,6 +28,9 @@ class PredictedAction {
     required this.action,
     this.confidence = 0.0,
     this.color,
+    this.candidateId,
+    this.actionType,
+    this.reason,
   });
 
   final String label;
@@ -30,6 +38,9 @@ class PredictedAction {
   final VoidCallback action;
   final double confidence;
   final Color? color;
+  final String? candidateId;
+  final String? actionType;
+  final String? reason;
 }
 
 /// Intent prediction state
@@ -37,24 +48,28 @@ class IntentPredictionState {
   IntentPredictionState({
     this.idlePredictions = const [],
     this.typingPredictions = const [],
+    this.typingInsight,
     this.isTyping = false,
     this.currentInput = '',
   });
 
   final List<PredictedAction> idlePredictions;
   final List<PredictedAction> typingPredictions;
+  final PredictionInsightData? typingInsight;
   final bool isTyping;
   final String currentInput;
 
   IntentPredictionState copyWith({
     List<PredictedAction>? idlePredictions,
     List<PredictedAction>? typingPredictions,
+    PredictionInsightData? typingInsight,
     bool? isTyping,
     String? currentInput,
   }) =>
       IntentPredictionState(
         idlePredictions: idlePredictions ?? this.idlePredictions,
         typingPredictions: typingPredictions ?? this.typingPredictions,
+        typingInsight: typingInsight ?? this.typingInsight,
         isTyping: isTyping ?? this.isTyping,
         currentInput: currentInput ?? this.currentInput,
       );
@@ -63,10 +78,16 @@ class IntentPredictionState {
 /// Intent prediction notifier
 class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   IntentPredictionNotifier(this._ref) : super(IntentPredictionState()) {
+    _feedbackService = CandidateFeedbackService(_ref.read(dioProvider));
+    _eventStream = _ref.read(appEventStreamServiceProvider);
+    _predictionAttribution = _ref.read(predictionAttributionServiceProvider);
     _generateIdlePredictions();
   }
 
   final Ref _ref;
+  late final CandidateFeedbackService _feedbackService;
+  late final AppEventStreamService _eventStream;
+  late final PredictionAttributionService _predictionAttribution;
   Timer? _backendDebounce;
   int _backendRequestId = 0;
   String _lastBackendText = '';
@@ -204,8 +225,8 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     _backendDebounce = Timer(const Duration(milliseconds: 250), () async {
       try {
         final activePlanId = _ref.read(activePlanProvider);
-        final response =
-            await _ref.read(intentRepositoryProvider).predictIntent(
+        final insight =
+            await _ref.read(predictionRepositoryProvider).getRealtimeNextStep(
                   partialText: normalized,
                   activePlanId: activePlanId,
                 );
@@ -213,13 +234,11 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         if (requestId != _backendRequestId) return;
         if (normalized != state.currentInput.trim()) return;
 
-        final backendIntent = _mapBackendIntent(response.intentType);
-        if (backendIntent == null) return;
-        if (response.confidence < 0.5) return;
-        if (response.confidence + 0.05 < localConfidence) return;
+        if (insight == null) return;
+        if (insight.confidence < 0.45) return;
+        if (insight.confidence + 0.05 < localConfidence) return;
 
-        final backendPredictions = _predictionsForIntent(
-            backendIntent, response.confidence, normalized,)
+        final backendPredictions = _predictionsFromInsight(insight)
           ..sort((a, b) => b.confidence.compareTo(a.confidence));
         if (backendPredictions.isEmpty) return;
 
@@ -227,32 +246,132 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
           isTyping: true,
           currentInput: normalized,
           typingPredictions: backendPredictions,
+          typingInsight: insight,
         );
         _lastBackendText = normalized;
       } catch (e) {
-        debugPrint('Intent prediction API failed, using local classifier: $e');
+        debugPrint('Realtime next-step API failed, using local classifier: $e');
       }
     });
   }
 
-  EnhancedIntentType? _mapBackendIntent(String intentType) {
-    switch (intentType) {
-      case 'task_management':
-      case 'time_planning':
-        return EnhancedIntentType.task;
-      case 'knowledge_query':
-      case 'learning':
-        return EnhancedIntentType.learn;
-      case 'reflection':
-        return EnhancedIntentType.review;
-      case 'social':
-        return EnhancedIntentType.chat;
-      case 'tool_call':
-        return EnhancedIntentType.task;
+  List<PredictedAction> _predictionsFromInsight(PredictionInsightData insight) {
+    final actions = insight.recommendedActions.isNotEmpty
+        ? insight.recommendedActions
+        : [
+            PredictionActionData(
+              id: '${insight.predictionId}:chat',
+              label: '继续推进',
+              actionType: insight.predictedActionType,
+              targetRoute: '/chat',
+              suggestedPrompt: insight.suggestedPrompt,
+            ),
+          ];
+
+    return actions.map((action) {
+      final config = _visualConfigForAction(action.actionType);
+      return PredictedAction(
+        label: action.label,
+        icon: config.$1,
+        color: config.$2,
+        confidence: insight.confidence,
+        candidateId: insight.trackingCandidateId,
+        actionType: action.actionType,
+        reason: insight.summary,
+        action: () => _handlePredictionAction(insight, action),
+      );
+    }).toList();
+  }
+
+  (IconData, Color?) _visualConfigForAction(String actionType) {
+    switch (actionType) {
+      case 'create_task':
+        return (Icons.add_task_rounded, DS.success);
+      case 'study_plan':
+        return (Icons.edit_calendar_rounded, DS.brandPrimary);
+      case 'error_diagnosis':
+        return (Icons.healing_rounded, DS.warning);
+      case 'resume_task':
+      case 'resume_priority_task':
+        return (Icons.play_arrow_rounded, DS.prismBlue);
+      case 'start_focus':
+        return (Icons.center_focus_strong_rounded, DS.warning);
+      case 'translate':
+        return (Icons.translate_rounded, DS.info);
       default:
-        return null;
+        return (Icons.auto_awesome_rounded, DS.brandPrimary);
     }
   }
+
+  Future<void> _handlePredictionAction(
+    PredictionInsightData insight,
+    PredictionActionData action,
+  ) async {
+    unawaited(_feedbackService.recordFeedback(
+      candidateId: insight.trackingCandidateId,
+      actionType: action.actionType.isNotEmpty
+          ? action.actionType
+          : insight.trackingActionType,
+      feedbackType: 'accept',
+      contextSnapshot: _feedbackContext(insight),
+    ),);
+    unawaited(_eventStream.recordPredictionFeedback(
+      predictionId: insight.predictionId,
+      feedbackType: 'accept',
+      actionType: action.actionType.isNotEmpty
+          ? action.actionType
+          : insight.trackingActionType,
+      surface: insight.surface ?? 'chat_input',
+      suggestedPrompt: action.suggestedPrompt.isNotEmpty
+          ? action.suggestedPrompt
+          : insight.suggestedPrompt,
+      entityType: insight.entityCard?.entityType,
+      entityId: insight.entityCard?.entityId,
+    ),);
+    unawaited(
+      _predictionAttribution.rememberAcceptedPrediction(
+        predictionId: insight.predictionId,
+        candidateId: insight.trackingCandidateId,
+        actionType: action.actionType.isNotEmpty
+            ? action.actionType
+            : insight.trackingActionType,
+        surface: insight.surface ?? 'chat_input',
+        horizon: insight.horizon,
+        source: insight.predictionSource,
+        suggestedPrompt: action.suggestedPrompt.isNotEmpty
+            ? action.suggestedPrompt
+            : insight.suggestedPrompt,
+        entityType: insight.entityCard?.entityType,
+        entityId: insight.entityCard?.entityId,
+      ),
+    );
+
+    if (action.targetRoute == '/chat') {
+      await _sendChatMessage(
+        action.suggestedPrompt.isNotEmpty
+            ? action.suggestedPrompt
+            : insight.suggestedPrompt,
+      );
+      return;
+    }
+
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      unawaited(GoRouter.of(context).push(action.targetRoute));
+    }
+    _ref.invalidate(dashboardProvider);
+  }
+
+  Map<String, dynamic> _feedbackContext(PredictionInsightData insight) => {
+        'prediction': {
+          'prediction_id': insight.predictionId,
+          'horizon': insight.horizon,
+          'surface': insight.surface ?? 'chat_input',
+          'source': insight.predictionSource,
+          'tier': insight.predictionTier,
+          'action_type': insight.predictedActionType,
+        },
+      };
 
   List<PredictedAction> _predictionsForIntent(
     EnhancedIntentType intent,

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 PlanStateService - 计划状态管理服务
 
@@ -17,10 +18,9 @@ Usage:
     state = await service.get_plan_state(user_id, plan_id)
     await service.upsert_plan_state(user_id, plan_id, {"facts": {"difficulty_preference": 0.7}})
 """
-from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -37,7 +37,7 @@ PLAN_STATE_CACHE_PREFIX = "state:plan:"
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PlanStateService:

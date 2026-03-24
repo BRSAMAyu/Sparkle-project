@@ -2,8 +2,9 @@
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
+from __future__ import annotations
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -25,6 +26,7 @@ from app.models.community import (
     GroupTaskClaim,
     GroupType,
     MessageType,
+    UserBlock,
 )
 from app.models.plan import Plan, PlanType
 from app.models.user import User
@@ -34,7 +36,7 @@ from app.services.community_signal_collector import CommunitySignalCollector
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _record_community_signal(
@@ -214,9 +216,70 @@ class FriendshipService:
         )
         return list(result.scalars().all())
 
+    @staticmethod
+    async def delete_friendship(
+        db: AsyncSession,
+        user_id: UUID,
+        friendship_id: UUID
+    ) -> bool:
+        """
+        删除好友关系
+
+        - 双方都会解除好友关系
+        - 不会拉黑对方
+        """
+        friendship = await Friendship.get_by_id(db, friendship_id)
+        if not friendship:
+            raise ValueError("好友关系不存在")
+
+        # 验证当前用户是好友关系的一方
+        if user_id not in (friendship.user_id, friendship.friend_id):
+            raise ValueError("无权操作此好友关系")
+
+        # 软删除好友关系
+        await friendship.delete(db, soft=True)
+        return True
+
 
 class GroupService:
     """群组服务"""
+
+    @staticmethod
+    async def _get_active_member(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember | None:
+        result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter(),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def _require_active_member(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember:
+        member = await GroupService._get_active_member(db, group_id, user_id)
+        if not member:
+            raise ValueError("不是群组成员")
+        return member
+
+    @staticmethod
+    def _can_manage_member(
+        operator_role: GroupRole,
+        target_role: GroupRole,
+    ) -> bool:
+        if operator_role == GroupRole.OWNER:
+            return target_role != GroupRole.OWNER
+        if operator_role == GroupRole.ADMIN:
+            return target_role == GroupRole.MEMBER
+        return False
 
     @staticmethod
     async def search_groups(
@@ -225,6 +288,9 @@ class GroupService:
         group_type: Any | None = None,
         tags: list[str] | None = None,
         limit: int = 20,
+        offset: int = 0,
+        sort_by: str = "latest",
+        user_id: UUID | None = None,
     ) -> list[dict[str, Any]]:
         """搜索公开群组并返回轻量列表数据。"""
         member_count_subquery = (
@@ -236,16 +302,118 @@ class GroupService:
             .group_by(GroupMember.group_id)
             .subquery()
         )
+        recent_window_start = _utcnow() - timedelta(days=7)
+        message_count_subquery = (
+            select(
+                GroupMessage.group_id.label("group_id"),
+                func.count(GroupMessage.id).label("message_count"),
+            )
+            .where(
+                GroupMessage.created_at >= recent_window_start,
+                GroupMessage.not_deleted_filter(),
+            )
+            .group_by(GroupMessage.group_id)
+            .subquery()
+        )
+        membership_subquery = None
+        if user_id is not None:
+            membership_subquery = (
+                select(
+                    GroupMember.group_id.label("group_id"),
+                    GroupMember.role.label("my_role"),
+                )
+                .where(
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                )
+                .subquery()
+            )
+
+        activity_score = (
+            func.coalesce(message_count_subquery.c.message_count, 0) * 2
+            + Group.today_checkin_count * 4
+            + func.coalesce(member_count_subquery.c.member_count, 0)
+            + (Group.total_flame_power / 100.0)
+        )
 
         stmt = (
             select(
                 Group,
                 func.coalesce(member_count_subquery.c.member_count, 0).label("member_count"),
+                func.coalesce(message_count_subquery.c.message_count, 0).label("message_count"),
+                activity_score.label("activity_score"),
             )
             .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
+            .outerjoin(message_count_subquery, message_count_subquery.c.group_id == Group.id)
             .where(Group.is_public.is_(True), Group.not_deleted_filter())
-            .order_by(desc(Group.updated_at))
-            .limit(limit)
+        )
+        if membership_subquery is not None:
+            stmt = stmt.add_columns(membership_subquery.c.my_role).outerjoin(
+                membership_subquery,
+                membership_subquery.c.group_id == Group.id,
+            )
+
+        if keyword:
+            pattern = f"%{keyword}%"
+            stmt = stmt.where(
+                or_(
+                    Group.name.ilike(pattern),
+                    Group.description.ilike(pattern),
+                )
+            )
+        if group_type is not None:
+            stmt = stmt.where(Group.type == group_type)
+        if tags:
+            stmt = stmt.where(Group.focus_tags.contains(tags))
+
+        if sort_by == "hot":
+            stmt = stmt.order_by(desc(activity_score), desc(Group.updated_at))
+        elif sort_by == "random":
+            stmt = stmt.order_by(func.random())
+        else:
+            stmt = stmt.order_by(desc(Group.created_at), desc(Group.updated_at))
+
+        stmt = stmt.offset(offset).limit(limit)
+
+        result = await db.execute(stmt)
+        rows = result.all()
+        groups = []
+        for row in rows:
+            if membership_subquery is not None:
+                group, member_count, message_count, score, my_role = row
+            else:
+                group, member_count, message_count, score = row
+                my_role = None
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "description": group.description,
+                    "type": group.type,
+                    "member_count": int(member_count or 0),
+                    "total_flame_power": group.total_flame_power,
+                    "today_checkin_count": group.today_checkin_count,
+                    "deadline": group.deadline,
+                    "focus_tags": group.focus_tags or [],
+                    "is_public": group.is_public,
+                    "join_requires_approval": group.join_requires_approval,
+                    "activity_score": float(score or 0.0),
+                    "message_count_7d": int(message_count or 0),
+                    "my_role": my_role,
+                }
+            )
+        return groups
+
+    @staticmethod
+    async def count_public_groups(
+        db: AsyncSession,
+        keyword: str | None = None,
+        group_type: Any | None = None,
+        tags: list[str] | None = None,
+    ) -> int:
+        stmt = select(func.count(Group.id)).where(
+            Group.is_public.is_(True),
+            Group.not_deleted_filter(),
         )
 
         if keyword:
@@ -262,18 +430,35 @@ class GroupService:
             stmt = stmt.where(Group.focus_tags.contains(tags))
 
         result = await db.execute(stmt)
-        rows = result.all()
+        return int(result.scalar() or 0)
+
+    @staticmethod
+    async def get_public_group_tags(
+        db: AsyncSession,
+        *,
+        limit: int = 24,
+    ) -> list[str]:
+        result = await db.execute(
+            select(Group.focus_tags).where(
+                Group.is_public.is_(True),
+                Group.not_deleted_filter(),
+            )
+        )
+        tag_counts: dict[str, int] = {}
+        for tags in result.scalars().all():
+            if not tags:
+                continue
+            for tag in tags:
+                normalized = str(tag).strip()
+                if not normalized:
+                    continue
+                tag_counts[normalized] = tag_counts.get(normalized, 0) + 1
         return [
-            {
-                "id": group.id,
-                "name": group.name,
-                "type": group.type,
-                "member_count": int(member_count or 0),
-                "total_flame_power": group.total_flame_power,
-                "deadline": group.deadline,
-                "focus_tags": group.focus_tags or [],
-            }
-            for group, member_count in rows
+            tag
+            for tag, _ in sorted(
+                tag_counts.items(),
+                key=lambda item: (-item[1], item[0].lower()),
+            )[:limit]
         ]
 
     @staticmethod
@@ -380,8 +565,50 @@ class GroupService:
             'updated_at': group.updated_at,
             'member_count': member_count,
             'my_role': my_role,
-            'days_remaining': days_remaining
+            'days_remaining': days_remaining,
+            'announcement': group.announcement,
         }
+
+    @staticmethod
+    async def get_group_members(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> list[GroupMember]:
+        """获取群成员列表，仅允许群成员查看。"""
+        group = await Group.get_by_id(db, group_id)
+        if not group or group.is_deleted:
+            raise ValueError("群组不存在")
+
+        await GroupService._require_active_member(db, group_id, user_id)
+
+        result = await db.execute(
+            select(GroupMember)
+            .options(selectinload(GroupMember.user))
+            .where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter(),
+            )
+            .order_by(
+                GroupMember.role.asc(),
+                GroupMember.flame_contribution.desc(),
+                GroupMember.joined_at.asc(),
+            )
+        )
+        members = list(result.scalars().all())
+        role_priority = {
+            GroupRole.OWNER: 0,
+            GroupRole.ADMIN: 1,
+            GroupRole.MEMBER: 2,
+        }
+        members.sort(
+            key=lambda member: (
+                role_priority.get(member.role, 99),
+                -(member.flame_contribution or 0),
+                member.joined_at,
+            )
+        )
+        return members
 
     @staticmethod
     async def join_group(
@@ -591,6 +818,90 @@ class GroupService:
 
         return True
 
+    @staticmethod
+    async def kick_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> bool:
+        """移出群成员。"""
+        if operator_id == target_user_id:
+            raise ValueError("不能移除自己，请使用退出群组")
+
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if not GroupService._can_manage_member(operator.role, target.role):
+            raise ValueError("无权移除此成员")
+
+        await target.delete(db, soft=True)
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"成员已被移出群组：{target.user_id}",
+        )
+        return True
+
+    @staticmethod
+    async def promote_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> GroupMember:
+        """将成员提升为管理员，仅群主可操作。"""
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        if operator.role != GroupRole.OWNER:
+            raise ValueError("只有群主可以提升管理员")
+
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if target.role == GroupRole.OWNER:
+            raise ValueError("不能修改群主角色")
+        if target.role == GroupRole.ADMIN:
+            return target
+
+        target.role = GroupRole.ADMIN
+        await db.flush()
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"成员已晋升为管理员：{target.user_id}",
+        )
+        return target
+
+    @staticmethod
+    async def demote_member(
+        db: AsyncSession,
+        group_id: UUID,
+        operator_id: UUID,
+        target_user_id: UUID,
+    ) -> GroupMember:
+        """将管理员降级为普通成员，仅群主可操作。"""
+        operator = await GroupService._require_active_member(db, group_id, operator_id)
+        if operator.role != GroupRole.OWNER:
+            raise ValueError("只有群主可以调整管理员角色")
+
+        target = await GroupService._get_active_member(db, group_id, target_user_id)
+        if not target:
+            raise ValueError("目标用户不是群成员")
+        if target.role == GroupRole.OWNER:
+            raise ValueError("不能修改群主角色")
+        if target.role == GroupRole.MEMBER:
+            return target
+
+        target.role = GroupRole.MEMBER
+        await db.flush()
+        await GroupMessageService.send_system_message(
+            db,
+            group_id,
+            f"管理员已调整为普通成员：{target.user_id}",
+        )
+        return target
+
 
 class GroupMessageService:
     """群消息服务"""
@@ -752,6 +1063,15 @@ class GroupMessageService:
         msg.reactions = None
         db.add(msg)
         await db.flush()
+
+        # 发送WebSocket通知给群组成员
+        await manager.broadcast({
+            "type": "group_message_revoke",
+            "message_id": str(message_id),
+            "group_id": str(group_id),
+            "revoked_by": str(user_id),
+            "revoked_at": msg.revoked_at.isoformat()
+        }, str(group_id))
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
@@ -1180,6 +1500,7 @@ class GroupTaskService:
         # 获取群任务 (Use with_for_update to lock row)
         result = await db.execute(
             select(GroupTask)
+            .options(selectinload(GroupTask.group))
             .where(GroupTask.id == task_id)
             .with_for_update()
         )
@@ -1258,35 +1579,77 @@ class GroupTaskService:
         db: AsyncSession,
         claim_id: UUID
     ) -> GroupTaskClaim | None:
-        """完成群任务（由个人任务完成时触发）"""
-        claim = await GroupTaskClaim.get_by_id(db, claim_id)
-        if not claim or claim.is_completed:
-            return claim
+        """
+        完成群任务（由个人任务完成时触发）
 
-        claim.is_completed = True
-        claim.completed_at = _utcnow()
-
-        # 更新群任务完成计数
-        group_task = await GroupTask.get_by_id(db, claim.group_task_id)
-        group_task.total_completions += 1
-
-        # 更新成员完成任务数
-        membership_result = await db.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group_task.group_id,
-                GroupMember.user_id == claim.user_id,
-                GroupMember.not_deleted_filter()
+        数据一致性保护：
+        - 使用 SAVEPOINT 确保原子性
+        - 使用 SELECT FOR UPDATE 锁定相关行防止并发问题
+        - 确保群任务、成员统计、群组统计在同一事务中更新
+        """
+        # 使用 SAVEPOINT 确保操作原子性
+        async with db.begin_nested():
+            # 锁定认领记录
+            claim_result = await db.execute(
+                select(GroupTaskClaim)
+                .where(GroupTaskClaim.id == claim_id)
+                .with_for_update()
             )
-        )
-        member = membership_result.scalar_one_or_none()
-        if member:
-            member.tasks_completed += 1
+            claim = claim_result.scalar_one_or_none()
 
-        # 更新群组统计
-        group = await Group.get_by_id(db, group_task.group_id)
-        group.total_tasks_completed += 1
+            if not claim or claim.is_completed:
+                return claim
 
-        await db.flush()
+            # 锁定群任务
+            group_task_result = await db.execute(
+                select(GroupTask)
+                .where(GroupTask.id == claim.group_task_id)
+                .with_for_update()
+            )
+            group_task = group_task_result.scalar_one_or_none()
+
+            if not group_task:
+                raise ValueError("群任务不存在")
+
+            # 锁定群成员记录
+            member_result = await db.execute(
+                select(GroupMember)
+                .where(
+                    GroupMember.group_id == group_task.group_id,
+                    GroupMember.user_id == claim.user_id,
+                    GroupMember.not_deleted_filter()
+                )
+                .with_for_update()
+            )
+            member = member_result.scalar_one_or_none()
+
+            # 锁定群组
+            group_result = await db.execute(
+                select(Group)
+                .where(Group.id == group_task.group_id)
+                .with_for_update()
+            )
+            group = group_result.scalar_one_or_none()
+
+            if not group:
+                raise ValueError("群组不存在")
+
+            # 更新认领记录
+            claim.is_completed = True
+            claim.completed_at = _utcnow()
+
+            # 更新群任务完成计数
+            group_task.total_completions += 1
+
+            # 更新成员完成任务数
+            if member:
+                member.tasks_completed += 1
+
+            # 更新群组统计
+            group.total_tasks_completed += 1
+
+            await db.flush()
+
         return claim
 
     @staticmethod
@@ -1481,6 +1844,7 @@ class PrivateMessageService:
     ) -> Any:
         """撤回私聊消息"""
         from app.models.community import PrivateMessage
+        from app.schemas.community import MESSAGE_REVOKE_TIME_LIMIT_SECONDS
 
         msg = await db.get(PrivateMessage, message_id)
         if not msg or msg.is_deleted:
@@ -1489,8 +1853,11 @@ class PrivateMessageService:
             raise ValueError("无权限撤回该消息")
         if msg.is_revoked:
             return msg
-        if (_utcnow() - msg.created_at).total_seconds() > 86400:
-            raise ValueError("超过撤回时限")
+
+        # 使用配置的撤回时间限制
+        revoke_time_limit = MESSAGE_REVOKE_TIME_LIMIT_SECONDS
+        if (_utcnow() - msg.created_at).total_seconds() > revoke_time_limit:
+            raise ValueError(f"超过撤回时限（{revoke_time_limit // 60}分钟内可撤回）")
 
         msg.is_revoked = True
         msg.revoked_at = _utcnow()
@@ -1499,6 +1866,25 @@ class PrivateMessageService:
         msg.reactions = None
         db.add(msg)
         await db.flush()
+
+        # 发送WebSocket通知给接收方
+        await manager.send_personal_message({
+            "type": "private_message_revoke",
+            "message_id": str(message_id),
+            "revoked_by": str(user_id),
+            "revoked_at": msg.revoked_at.isoformat(),
+            "conversation_id": str(msg.sender_id) if str(msg.sender_id) < str(msg.receiver_id) else str(msg.receiver_id)
+        }, str(msg.receiver_id))
+
+        # 也通知发送方（如果发送方和接收方不同）
+        if msg.sender_id != msg.receiver_id:
+            await manager.send_personal_message({
+                "type": "private_message_revoke",
+                "message_id": str(message_id),
+                "revoked_by": str(user_id),
+                "revoked_at": msg.revoked_at.isoformat(),
+                "conversation_id": str(msg.sender_id) if str(msg.sender_id) < str(msg.receiver_id) else str(msg.receiver_id)
+            }, str(msg.sender_id))
 
         stmt = select(PrivateMessage).options(
             selectinload(PrivateMessage.sender),
@@ -1635,3 +2021,279 @@ class PrivateMessageService:
 
         result = await db.execute(stmt)
         return result.rowcount
+
+
+class UserBlockService:
+    """用户拉黑服务"""
+
+    @staticmethod
+    async def block_user(
+        db: AsyncSession,
+        blocker_id: UUID,
+        blocked_id: UUID,
+        reason: str | None = None
+    ) -> UserBlock:
+        """
+        拉黑用户
+
+        逻辑说明：
+        1. 检查是否已拉黑
+        2. 自动解除好友关系
+        3. 创建拉黑记录
+        """
+        if blocker_id == blocked_id:
+            raise ValueError("不能拉黑自己")
+
+        # 检查是否已拉黑（包括软删除的记录）
+        existing = await db.execute(
+            select(UserBlock).where(
+                UserBlock.blocker_id == blocker_id,
+                UserBlock.blocked_id == blocked_id,
+            )
+        )
+        existing_block = existing.scalar_one_or_none()
+
+        if existing_block:
+            if existing_block.deleted_at is None:
+                raise ValueError("已拉黑该用户")
+            # 恢复已解除的拉黑
+            existing_block.deleted_at = None
+            existing_block.reason = reason
+            await db.flush()
+            await db.refresh(existing_block)
+        else:
+            existing_block = UserBlock(
+                blocker_id=blocker_id,
+                blocked_id=blocked_id,
+                reason=reason
+            )
+            db.add(existing_block)
+            await db.flush()
+            await db.refresh(existing_block)
+
+        # 自动解除好友关系
+        if str(blocker_id) < str(blocked_id):
+            small_id, large_id = blocker_id, blocked_id
+        else:
+            small_id, large_id = blocked_id, blocker_id
+
+        friendship = await db.execute(
+            select(Friendship).where(
+                Friendship.user_id == small_id,
+                Friendship.friend_id == large_id,
+                Friendship.not_deleted_filter()
+            )
+        )
+        existing_friendship = friendship.scalar_one_or_none()
+        if existing_friendship:
+            existing_friendship.soft_delete()
+
+        await db.flush()
+        return existing_block
+
+    @staticmethod
+    async def unblock_user(
+        db: AsyncSession,
+        blocker_id: UUID,
+        blocked_id: UUID
+    ) -> bool:
+        """
+        解除拉黑
+
+        Returns:
+            是否成功解除
+        """
+        existing = await db.execute(
+            select(UserBlock).where(
+                UserBlock.blocker_id == blocker_id,
+                UserBlock.blocked_id == blocked_id,
+                UserBlock.not_deleted_filter()
+            )
+        )
+        existing_block = existing.scalar_one_or_none()
+
+        if not existing_block:
+            raise ValueError("未拉黑该用户")
+
+        existing_block.soft_delete()
+        await db.flush()
+        return True
+
+    @staticmethod
+    async def get_blocked_users(
+        db: AsyncSession,
+        blocker_id: UUID,
+        limit: int = 50,
+        offset: int = 0
+    ) -> list[UserBlock]:
+        """获取拉黑列表"""
+        result = await db.execute(
+            select(UserBlock)
+            .where(
+                UserBlock.blocker_id == blocker_id,
+                UserBlock.not_deleted_filter()
+            )
+            .options(selectinload(UserBlock.blocked))
+            .order_by(desc(UserBlock.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def is_blocked(
+        db: AsyncSession,
+        user_id: UUID,
+        target_id: UUID
+    ) -> bool:
+        """
+        检查用户是否被目标用户拉黑
+
+        Returns:
+            True 如果 target_id 拉黑了 user_id
+        """
+        result = await db.execute(
+            select(UserBlock).where(
+                UserBlock.blocker_id == target_id,
+                UserBlock.blocked_id == user_id,
+                UserBlock.not_deleted_filter()
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    @staticmethod
+    async def has_block_relationship(
+        db: AsyncSession,
+        user1_id: UUID,
+        user2_id: UUID
+    ) -> bool:
+        """
+        检查两个用户之间是否存在拉黑关系（任一方拉黑另一方）
+
+        Returns:
+            True 如果任一方拉黑了另一方
+        """
+        result = await db.execute(
+            select(UserBlock).where(
+                or_(
+                    and_(
+                        UserBlock.blocker_id == user1_id,
+                        UserBlock.blocked_id == user2_id,
+                        UserBlock.not_deleted_filter()
+                    ),
+                    and_(
+                        UserBlock.blocker_id == user2_id,
+                        UserBlock.blocked_id == user1_id,
+                        UserBlock.not_deleted_filter()
+                    )
+                )
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+
+class UserSearchService:
+    """用户搜索服务（带隐私控制）"""
+
+    @staticmethod
+    async def search_users(
+        db: AsyncSession,
+        query: str,
+        current_user_id: UUID,
+        limit: int = 20,
+        offset: int = 0
+    ) -> list[User]:
+        """
+        搜索用户（带隐私过滤）
+
+        逻辑说明：
+        1. 过滤不可搜索的用户
+        2. 过滤已拉黑当前用户的用户
+        3. 按匹配度排序
+        """
+        from app.models.user import SearchVisibility
+
+        # 获取当前用户的好友ID列表
+        friends_result = await db.execute(
+            select(Friendship).where(
+                or_(
+                    Friendship.user_id == current_user_id,
+                    Friendship.friend_id == current_user_id
+                ),
+                Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter()
+            )
+        )
+        friends = friends_result.scalars().all()
+        friend_ids = set()
+        for f in friends:
+            if f.user_id == current_user_id:
+                friend_ids.add(f.friend_id)
+            else:
+                friend_ids.add(f.user_id)
+
+        # 构建查询
+        search_query = select(User).where(
+            User.is_active == True,
+            User.id != current_user_id,
+            or_(
+                User.username.ilike(f"%{query}%"),
+                User.nickname.ilike(f"%{query}%"),
+                User.full_name.ilike(f"%{query}%")
+            )
+        )
+
+        # 执行查询
+        result = await db.execute(search_query.limit(limit).offset(offset))
+        users = list(result.scalars().all())
+
+        # 过滤不可搜索的用户
+        filtered_users = []
+        for user in users:
+            # 检查隐私设置
+            if user.searchable_by == SearchVisibility.NOBODY:
+                continue
+            if user.searchable_by == SearchVisibility.FRIENDS and user.id not in friend_ids:
+                continue
+
+            # 检查拉黑关系
+            if await UserBlockService.has_block_relationship(db, current_user_id, user.id):
+                continue
+
+            filtered_users.append(user)
+
+        return filtered_users
+
+    @staticmethod
+    async def get_user_searchability(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> str:
+        """获取用户的搜索可见性设置"""
+        from app.models.user import SearchVisibility
+
+        user = await db.get(User, user_id)
+        if not user:
+            return SearchVisibility.EVERYONE.value
+        return user.searchable_by.value if user.searchable_by else SearchVisibility.EVERYONE.value
+
+    @staticmethod
+    async def update_searchability(
+        db: AsyncSession,
+        user_id: UUID,
+        searchable_by: str
+    ) -> bool:
+        """更新用户搜索可见性设置"""
+        from app.models.user import SearchVisibility
+
+        user = await db.get(User, user_id)
+        if not user:
+            raise ValueError("用户不存在")
+
+        try:
+            user.searchable_by = SearchVisibility(searchable_by)
+        except ValueError:
+            raise ValueError(f"无效的搜索可见性设置: {searchable_by}")
+
+        await db.flush()
+        return True

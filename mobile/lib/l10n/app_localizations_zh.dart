@@ -264,6 +264,71 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createSprintPlan => '创建冲刺计划';
 
   @override
+  String get planCreateTitle => '创建计划';
+
+  @override
+  String get planCreateSuccess => '计划创建成功';
+
+  @override
+  String planCreateFailed(Object error) {
+    return '创建计划失败: $error';
+  }
+
+  @override
+  String get planNameLabel => '计划名称';
+
+  @override
+  String get planNameHint => '输入计划名称...';
+
+  @override
+  String get planNameRequired => '请输入计划名称';
+
+  @override
+  String get planDescLabel => '计划描述';
+
+  @override
+  String get planDescHint => '描述你的计划目标...';
+
+  @override
+  String get planSubjectLabel => '主题/学科';
+
+  @override
+  String get planSubjectHint => '如：计算机科学、英语...';
+
+  @override
+  String get planTargetDateLabel => '目标日期';
+
+  @override
+  String get planTargetDateUnset => '未设置目标日期';
+
+  @override
+  String get planDailyMinutesLabel => '每日可用时间';
+
+  @override
+  String get planDailyMinutesHint => '每天计划投入多少分钟';
+
+  @override
+  String get planPriorityLabel => '优先级';
+
+  @override
+  String get planPriorityCritical => '紧急';
+
+  @override
+  String get planPriorityHigh => '高';
+
+  @override
+  String get planPriorityNormal => '普通';
+
+  @override
+  String get planPriorityLow => '低';
+
+  @override
+  String get planCreating => '创建中...';
+
+  @override
+  String get planCreateAction => '创建计划';
+
+  @override
   String get featureComingSoon => '精彩功能即将登场';
 
   @override
@@ -389,7 +454,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planId => '计划ID';
 
   @override
-  String get featureInDevelopment => '此功能正在开发中，即将推出';
+  String get featureInDevelopment => '功能开发中...';
 
   @override
   String get sprintHistory => '冲刺历史';
@@ -496,6 +561,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiStatusDisconnected => '已断开连接';
+
+  @override
+  String get levelPrefix => 'Lv.';
 
   @override
   String get toolsSpeechToTextTitle => '语音转文字';
@@ -621,7 +689,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsCognitivePatternsDesc => '查看行为定式与认知洞察';
 
   @override
-  String get chatModeStandard => '标准模式';
+  String get chatModeStandard => '标准对话';
 
   @override
   String get chatModeDeep => '深度专注';
@@ -660,13 +728,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeExpertAutoDesc => '自动选择最佳专家';
 
   @override
-  String get chatModeExpertDirect => '专家直连';
+  String get chatModeExpertDirect => '专家直达';
 
   @override
   String get chatModeExpertDirectDesc => '直连专家咨询';
 
   @override
   String get chatModeSelectorTitle => '选择 AI 协作模式';
+
+  @override
+  String chatModeActivated(Object mode) {
+    return '$mode 模式已激活';
+  }
+
+  @override
+  String get chatPlanContextSwitched => '已切换到计划上下文';
+
+  @override
+  String get chatPlanSwitchTitle => '切换计划上下文';
+
+  @override
+  String get chatPlanSwitchMessage => '切换计划将清空当前对话记录，是否继续？';
+
+  @override
+  String chatPlanSwitchUnsavedCount(Object count) {
+    return '$count 条未保存的消息';
+  }
+
+  @override
+  String get chatReconnecting => '正在重新连接...';
+
+  @override
+  String get chatReconnected => '已重新连接';
+
+  @override
+  String get chatConnectionFailed => '连接失败';
 
   @override
   String get aiCollabModeTitle => 'AI 协作';
@@ -687,6 +783,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatInputPlaceholder => '输入消息...';
+
+  @override
+  String get chatInputAttachment => '附件';
+
+  @override
+  String get chatInputVoice => '语音';
+
+  @override
+  String get chatInputShare => '分享';
+
+  @override
+  String get chatInputTapToShare => '点击选择分享内容';
 
   @override
   String get chatVoiceInput => '语音输入';
@@ -746,6 +854,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatShare => '分享';
 
   @override
+  String get chatCharacters => '字';
+
+  @override
+  String get chatWords => '词';
+
+  @override
   String get chatFeedback => '反馈';
 
   @override
@@ -767,7 +881,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatWelcome => '你好！今天我能帮你什么？';
 
   @override
-  String get chatWelcomeSubtitle => '问我任何关于学习的问题';
+  String get chatWelcomeSubtitle => '今天想做点什么？';
 
   @override
   String get chatSuggestion1 => '帮我规划学习';
@@ -864,6 +978,400 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get achievementNew => '新！';
+
+  @override
+  String get achievementSearch => '搜索成就';
+
+  @override
+  String get achievementFilter => '筛选';
+
+  @override
+  String get achievementFilterActive => '筛选中';
+
+  @override
+  String get achievementAll => '全部';
+
+  @override
+  String get achievementStatusUnlocked => '已解锁';
+
+  @override
+  String get achievementStatusLocked => '未解锁';
+
+  @override
+  String get achievementStatusInProgress => '进行中';
+
+  @override
+  String get achievementCategoryStreak => '连胜';
+
+  @override
+  String get achievementCategoryMilestone => '里程碑';
+
+  @override
+  String get achievementCategoryMastery => '精通';
+
+  @override
+  String get achievementCategoryExploration => '探索';
+
+  @override
+  String get achievementCategoryTask => '任务';
+
+  @override
+  String get achievementNoMatch => '没有找到匹配的成就';
+
+  @override
+  String get achievementAdjustFilter => '试试调整筛选条件';
+
+  @override
+  String get achievementFilterSheet => '筛选成就';
+
+  @override
+  String get achievementRarity => '稀有度';
+
+  @override
+  String get achievementStatus => '状态';
+
+  @override
+  String get achievementApplyFilter => '应用筛选';
+
+  @override
+  String get achievementDescription => '描述';
+
+  @override
+  String get achievementNoDescription => '暂无描述';
+
+  @override
+  String get achievementPrerequisites => '前置成就';
+
+  @override
+  String get achievementPrerequisitesHint => '需要先完成以下成就：';
+
+  @override
+  String get achievementRewards => '奖励';
+
+  @override
+  String get achievementUnlockRewards => '解锁奖励';
+
+  @override
+  String achievementRewardPhotons(Object count) {
+    return '$count 光子';
+  }
+
+  @override
+  String get achievementRewardTitle => '称号';
+
+  @override
+  String get achievementRewardSkin => '星系皮肤';
+
+  @override
+  String achievementRewardXp(Object count) {
+    return '$count 经验';
+  }
+
+  @override
+  String get achievementRewardMystery => '神秘奖励';
+
+  @override
+  String get achievementStatType => '类型';
+
+  @override
+  String get achievementCategory => '分类';
+
+  @override
+  String get achievementUnlockedAt => '解锁时间';
+
+  @override
+  String get achievementShareCount => '分享次数';
+
+  @override
+  String get achievementUnlockRank => '解锁排名';
+
+  @override
+  String get achievementFirstUnlocker => '首位解锁者';
+
+  @override
+  String get achievementNotFound => '成就未找到';
+
+  @override
+  String get achievementShareLocked => '解锁后才可以分享这个成就';
+
+  @override
+  String get achievementCompletionRate => '完成率';
+
+  @override
+  String get achievementTotalLabel => '总成就';
+
+  @override
+  String get achievementPhotons => '光子';
+
+  @override
+  String get achievementOverallProgress => '总体进度';
+
+  @override
+  String get achievementRarityDistribution => '稀有度分布';
+
+  @override
+  String achievementHiddenCount(Object count) {
+    return '隐藏: $count';
+  }
+
+  @override
+  String get achievementTypeMastery => '精通';
+
+  @override
+  String get achievementTypeTaskComplete => '任务';
+
+  @override
+  String get achievementTypeNodeExplore => '探索';
+
+  @override
+  String get achievementTypeStudyTime => '学习时长';
+
+  @override
+  String get achievementTypeSocial => '社交';
+
+  @override
+  String get achievementTypeContract => '契约';
+
+  @override
+  String get achievementTypeSprint => '冲刺';
+
+  @override
+  String get achievementAlmostThere => '即将解锁';
+
+  @override
+  String achievementNeedMore(Object action) {
+    return '再$action即可解锁';
+  }
+
+  @override
+  String achievementCompleteTasks(Object count) {
+    return '完成$count个任务';
+  }
+
+  @override
+  String achievementUnlockNodes(Object count) {
+    return '解锁$count个知识点';
+  }
+
+  @override
+  String achievementChatCount(Object count) {
+    return '聊天$count次';
+  }
+
+  @override
+  String achievementCheckinDays(Object count) {
+    return '连续签到$count天';
+  }
+
+  @override
+  String achievementCreatePlans(Object count) {
+    return '创建$count个计划';
+  }
+
+  @override
+  String achievementProgressGeneric(Object count) {
+    return '进度$count%';
+  }
+
+  @override
+  String get achievementLimitedTitle => '限时活动';
+
+  @override
+  String get achievementLimitedSubtitle => '活动期间可获得';
+
+  @override
+  String get achievementLimitedTime => '限时';
+
+  @override
+  String get achievementEventWindow => '活动时间';
+
+  @override
+  String get achievementEventStatusUpcoming => '即将开始';
+
+  @override
+  String get achievementEventStatusLive => '进行中';
+
+  @override
+  String get achievementEventStatusEnded => '已结束';
+
+  @override
+  String achievementEventStartsAt(String time) {
+    return '开始于$time';
+  }
+
+  @override
+  String achievementEventEndsAt(String time) {
+    return '结束于$time';
+  }
+
+  @override
+  String achievementEventEndsIn(String time) {
+    return '将于$time结束';
+  }
+
+  @override
+  String get achievementEventEnded => '活动已结束';
+
+  @override
+  String get achievementRewardVisualElement => '视觉元素';
+
+  @override
+  String get achievementUnlockToEquip => '解锁后可装备';
+
+  @override
+  String get achievementEquipAction => '装备';
+
+  @override
+  String get achievementEquipped => '已装备';
+
+  @override
+  String get achievementMapTitle => '成就地图';
+
+  @override
+  String get achievementMapSubtitle => '探索成就路径';
+
+  @override
+  String get achievementMapEmpty => '暂无成就节点';
+
+  @override
+  String get contractEntryTitle => '学习契约';
+
+  @override
+  String get contractEntrySubtitle => '创建学习挑战';
+
+  @override
+  String get contractTitle => '学习契约';
+
+  @override
+  String get contractCreateTitle => '创建契约';
+
+  @override
+  String get contractCreateSubtitle => '设定连续目标并投入光子';
+
+  @override
+  String get contractTargetMinutes => '每日分钟';
+
+  @override
+  String get contractTargetDays => '目标天数';
+
+  @override
+  String get contractPhotonStake => '投入光子';
+
+  @override
+  String get contractCreateAction => '创建契约';
+
+  @override
+  String get contractActiveTitle => '当前契约';
+
+  @override
+  String contractProgressLabel(int current, int target) {
+    return '已完成$current/$target天';
+  }
+
+  @override
+  String get contractDailyTarget => '每日目标';
+
+  @override
+  String contractMinutesTarget(int current, int target) {
+    return '$current/$target分钟';
+  }
+
+  @override
+  String get contractEndsAt => '结束时间';
+
+  @override
+  String get contractCancelAction => '取消契约';
+
+  @override
+  String get contractInputInvalid => '请输入有效的契约数值';
+
+  @override
+  String get contractCreateFailed => '创建契约失败';
+
+  @override
+  String get contractCreateSuccess => '契约创建成功';
+
+  @override
+  String get contractCancelSuccess => '契约已取消';
+
+  @override
+  String get contractCancelFailed => '取消契约失败';
+
+  @override
+  String get contractCountdown => '倒计时';
+
+  @override
+  String contractDaysRemaining(int days) {
+    return '还剩$days天';
+  }
+
+  @override
+  String get contractDeadlineReached => '已到截止日期';
+
+  @override
+  String get contractRewardMultiplier => '奖励倍率';
+
+  @override
+  String get contractCreatedCelebration => '契约创建成功！';
+
+  @override
+  String get streakCurrentLabel => '当前连胜';
+
+  @override
+  String get streakBestRecord => '最高记录';
+
+  @override
+  String get streakTotalCheckin => '总签到';
+
+  @override
+  String get streakFreezeUsed => '冻结使用';
+
+  @override
+  String get streakCalendarTitle => '连胜日历';
+
+  @override
+  String streakCalendarRange(int days) {
+    return '最近$days天';
+  }
+
+  @override
+  String get streakHistoryEmpty => '暂无连胜记录';
+
+  @override
+  String get streakStatusActive => '学习日';
+
+  @override
+  String get streakStatusFrozen => '冻结';
+
+  @override
+  String get streakStatusMissed => '中断';
+
+  @override
+  String get streakRiskNoFreeze => '冻结卡已用完，断签将中断连胜。';
+
+  @override
+  String get streakRiskLowFreeze => '仅剩1次冻结卡，建议及时补充。';
+
+  @override
+  String get streakShopTitle => '需要冻结卡保护？';
+
+  @override
+  String get streakShopSubtitle => '前往光子商城获取补给';
+
+  @override
+  String get streakShopAction => '打开商城';
+
+  @override
+  String get streakDetails => '连胜详情';
+
+  @override
+  String get dashboardCustomizeCards => '可定制卡片区';
+
+  @override
+  String get dashboardEmptyHint => '至少保留一张卡片，编辑后会立即保存到本地配置。';
+
+  @override
+  String get achievementViewStreakStatus => '查看成就与连续学习状态';
 
   @override
   String get taskStatusPending => '待处理';
@@ -1589,6 +2097,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonOk => '确定';
 
   @override
+  String get commonCancel => '取消';
+
+  @override
   String get commonSave => '保存';
 
   @override
@@ -1930,6 +2441,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shopCategoryBoost => '加成';
+
+  @override
+  String get shopCategoryVisualElement => '视觉元素';
 
   @override
   String get shopEmpty => '暂无物品';
@@ -2457,7 +2971,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveResultEmpty => '保存结果为空';
 
   @override
-  String get gallerySaveFailed => '相册保存失败';
+  String get gallerySaveFailed => '保存到相册失败';
 
   @override
   String shareUnlockMessage(Object achievementName) {
@@ -3536,6 +4050,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subtaskEmpty => '暂无子任务';
 
   @override
+  String get subtaskTitle => '子任务';
+
+  @override
   String get taskFeedbackSubmitted => '反馈已提交';
 
   @override
@@ -3703,6 +4220,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String shareResourceFailed(Object error) {
     return '分享失败：$error';
   }
+
+  @override
+  String get shareTypeNotSupportedYet => '该类型暂不支持分享到社群，请使用图片分享';
 
   @override
   String get threadDiscussion => '线程讨论';
@@ -4065,6 +4585,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleFeedbackOther => '其他';
 
   @override
+  String get capsuleFeedbackCategoryLabel => '想让我们改进哪一点？';
+
+  @override
   String get capsuleDepthShallow => '浅度';
 
   @override
@@ -4072,6 +4595,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get capsuleDepthDeep => '深度';
+
+  @override
+  String get capsulePersonalizationTitle => '为什么推荐给你';
+
+  @override
+  String capsulePersonalizationBadge(String pattern) {
+    return '基于你的$pattern模式';
+  }
+
+  @override
+  String capsulePersonalizationExplanation(String patterns) {
+    return '基于你最近的$patterns行为模式，AI为你精选了这个知识点。';
+  }
+
+  @override
+  String get patternPlanningOptimism => '计划乐观偏差';
+
+  @override
+  String get patternFocusDecay => '专注力衰减';
+
+  @override
+  String get patternProcrastination => '拖延倾向';
 
   @override
   String get cognitiveSelectGalaxyNodes => '请先在 Galaxy 中选择要复习的节点';
@@ -4333,4 +4878,4000 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get patternTypeDefault => '行为模式';
+
+  @override
+  String get chatTitle => 'AI学习助手';
+
+  @override
+  String get chatSubtitle => '随时为你解答';
+
+  @override
+  String get chatHistoryTitle => '历史对话';
+
+  @override
+  String get chatNewConversation => '新建对话';
+
+  @override
+  String chatHistoryLoadFailed(String error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String chatHistoryLoadMoreFailed(String error) {
+    return '加载更多失败：$error';
+  }
+
+  @override
+  String get chatHistoryEmpty => '暂无历史记录';
+
+  @override
+  String get chatSessionUntitled => '未命名会话';
+
+  @override
+  String get chatInvalidNavigationTarget => '无法识别跳转地址';
+
+  @override
+  String get chatNavigationFailed => '页面跳转失败，请重试';
+
+  @override
+  String get chatSessionDataError => '会话数据异常，请重试';
+
+  @override
+  String get chatWelcomeTitle => '你好，我是你的 AI 导师';
+
+  @override
+  String get chatQuickActionNewTask => '新建微任务';
+
+  @override
+  String get chatQuickActionNewTaskPrompt => '帮我创建一个新的微任务';
+
+  @override
+  String get chatQuickActionLongPlan => '生成长期计划';
+
+  @override
+  String get chatQuickActionLongPlanPrompt => '帮我生成一个长期学习计划';
+
+  @override
+  String get chatQuickActionErrorAttribution => '错误归因';
+
+  @override
+  String get chatQuickActionErrorAttributionPrompt => '我想分析一下最近的错误原因';
+
+  @override
+  String get chatPlanUnbound => '未绑定计划';
+
+  @override
+  String get chatFileProcessing => '文件处理中，完成后可用于对话';
+
+  @override
+  String get chatPromptDeepAnalysis1 => '先给综合判断，再展开依据';
+
+  @override
+  String get chatPromptDeepAnalysis2 => '只看关键结论和风险';
+
+  @override
+  String get chatPromptDeepAnalysis3 => '补一个反方观点帮我校准';
+
+  @override
+  String get chatPromptStudyPlan1 => '先按今天能开始的节奏排';
+
+  @override
+  String get chatPromptStudyPlan2 => '拆成今天/本周两个层级';
+
+  @override
+  String get chatPromptStudyPlan3 => '按我现在水平再降一点难度';
+
+  @override
+  String get chatPromptErrorDiagnosis1 => '先定位错因和证据';
+
+  @override
+  String get chatPromptErrorDiagnosis2 => '给我一条针对性修复练习';
+
+  @override
+  String get chatPromptErrorDiagnosis3 => '告诉我下次怎么避免再错';
+
+  @override
+  String get chatPromptExpertAuto1 => '自动选专家给我综合结论';
+
+  @override
+  String get chatPromptExpertAuto2 => '先告诉我这轮请了谁';
+
+  @override
+  String get chatPromptExpertAuto3 => '把专家结果压成执行清单';
+
+  @override
+  String get chatPromptDefault1 => '直接回答我的当前问题';
+
+  @override
+  String get chatPromptDefault2 => '先给我 3 步执行清单';
+
+  @override
+  String get chatPromptDefault3 => '结合我当前计划继续推进';
+
+  @override
+  String get chatHelpful => '有帮助';
+
+  @override
+  String get chatNotHelpful => '没帮助';
+
+  @override
+  String get chatQuote => '引用';
+
+  @override
+  String get chatUndo => '撤销';
+
+  @override
+  String get chatRecalledSelf => '你撤回了一条消息';
+
+  @override
+  String get chatRecalledPeer => '对方撤回了一条消息';
+
+  @override
+  String get chatRead => '已读';
+
+  @override
+  String get chatAgentNavigator => '星图导航';
+
+  @override
+  String get chatAgentExamStrategist => '考试策略师';
+
+  @override
+  String get chatAgentTimeCoach => '时间教练';
+
+  @override
+  String get chatAgentDeepAnalyst => '深度分析师';
+
+  @override
+  String get chatAgentCorrectionExpert => '纠错专家';
+
+  @override
+  String get chatAgentLearningBuddy => '学伴';
+
+  @override
+  String get chatAgentMathExpert => '数学专家';
+
+  @override
+  String get chatAgentCodingExpert => '编程专家';
+
+  @override
+  String get chatAgentWritingExpert => '写作专家';
+
+  @override
+  String get chatAgentScienceExpert => '理科专家';
+
+  @override
+  String get chatAgentSearchExpert => '搜索专家';
+
+  @override
+  String get chatCollabParallel => '并行协作';
+
+  @override
+  String get chatCollabDebate => '辩论协作';
+
+  @override
+  String get chatCollabDelegation => '委派协作';
+
+  @override
+  String get chatCollabSequential => '分步协作';
+
+  @override
+  String get chatCollabExpert => '专家协作';
+
+  @override
+  String get chatTeamSheetTitle => '组建你的专家团队';
+
+  @override
+  String get chatTeamSheetAvailableExperts => '可选专家';
+
+  @override
+  String get chatTeamSheetNoExperts => '暂无可用专家';
+
+  @override
+  String get chatTeamSheetLoading => '专家目录加载中…';
+
+  @override
+  String get chatTeamSheetLoadFailed => '加载失败，请稍后重试';
+
+  @override
+  String get chatTeamSheetCollaborationMode => '协作方式';
+
+  @override
+  String chatTeamSheetSelectedExperts(int count) {
+    return '已选 $count 位专家';
+  }
+
+  @override
+  String get chatTeamSheetEnterExpert => '进入专家直达';
+
+  @override
+  String get chatTeamSheetStartCollaboration => '开始协作';
+
+  @override
+  String get chatCollabAuto => '自动';
+
+  @override
+  String get chatCollabAutoDesc => '系统根据问题类型自动选择最佳协作方式';
+
+  @override
+  String get chatCollabSequentialShort => '分步';
+
+  @override
+  String get chatCollabSequentialDesc => '专家按顺序依次分析，后者可参考前者结论';
+
+  @override
+  String get chatCollabParallelShort => '并行';
+
+  @override
+  String get chatCollabParallelDesc => '所有专家同时分析，最后汇总各方观点';
+
+  @override
+  String get chatCollabDebateShort => '辩论';
+
+  @override
+  String get chatCollabDebateDesc => '专家独立分析后交叉审阅，最终给出共识结论';
+
+  @override
+  String get chatCollabDelegationShort => '委派';
+
+  @override
+  String get chatCollabDelegationDesc => '主专家拆解任务后分派给其他专家执行';
+
+  @override
+  String get chatLabelMe => '我';
+
+  @override
+  String get chatLabelAssistant => 'AI助手';
+
+  @override
+  String get chatNoContent => '无内容';
+
+  @override
+  String get chatTransparencyTitle => '透明模式';
+
+  @override
+  String chatActiveToolsCount(int count) {
+    return '$count 个工具';
+  }
+
+  @override
+  String get chatActiveTools => '活跃工具';
+
+  @override
+  String get chatTokenStats => 'Token 统计';
+
+  @override
+  String get chatPromptTokens => '提示词 Token';
+
+  @override
+  String get chatCompletionTokens => '补全 Token';
+
+  @override
+  String get chatTokenUsageToday => '今日使用';
+
+  @override
+  String get chatTokenCostEstimate => '成本估算';
+
+  @override
+  String get chatExecutionSteps => '执行步骤';
+
+  @override
+  String chatExecutionStepsCount(int count) {
+    return '$count 个步骤';
+  }
+
+  @override
+  String get chatModeSelect => '选择模式';
+
+  @override
+  String chatModeTeamSummary(int count, String mode) {
+    return '$count位专家·$mode';
+  }
+
+  @override
+  String get chatModeCustomTeamLabel => '自定义团队';
+
+  @override
+  String get chatModeCustomTeamTitle => '自定义专家团队';
+
+  @override
+  String get chatModeCustomTeamSubtitle => '选择参与专家和协作方式';
+
+  @override
+  String get chatMetadataContinuity => '承接上文';
+
+  @override
+  String get chatMetadataEvidence => '依据';
+
+  @override
+  String get chatMetadataNext => '下一步';
+
+  @override
+  String get chatMetadataCollaboration => '协作';
+
+  @override
+  String get chatLoginRequired => '请先登录';
+
+  @override
+  String get chatReviewRegenerationRequested => '已请求重新生成';
+
+  @override
+  String get chatReviewHumanReviewRequested => '已提交人工审查请求';
+
+  @override
+  String get chatReviewOverrideAcceptedEvenFail => '已接受内容（尽管未通过审查）';
+
+  @override
+  String get chatReviewOverrideRejectedEvenPass => '已拒绝内容（尽管审查通过）';
+
+  @override
+  String get chatSubmitFailedRetry => '提交失败，请重试';
+
+  @override
+  String get chatAppealSubmitted => '申诉已提交，正在处理...';
+
+  @override
+  String get commonBack => '返回';
+
+  @override
+  String get noData => '暂无数据';
+
+  @override
+  String get operationSuccess => '操作成功';
+
+  @override
+  String get operationFailed => '操作失败';
+
+  @override
+  String get confirmDeleteTitle => '确认删除';
+
+  @override
+  String get confirmDeleteMessage => '此操作无法撤销';
+
+  @override
+  String get errorBookTitle => '错题档案';
+
+  @override
+  String get errorBookTabAll => '全部';
+
+  @override
+  String get errorBookTabNeedReview => '待复习';
+
+  @override
+  String get errorBookAddError => '添加错题';
+
+  @override
+  String get errorBookAddFirst => '添加第一道错题';
+
+  @override
+  String get errorBookFilterTitle => '筛选选项';
+
+  @override
+  String get errorBookSearchHint => '搜索题目内容...';
+
+  @override
+  String get errorBookNoErrors => '还没有错题记录';
+
+  @override
+  String get errorBookNoErrorsHint => '点击右下角 + 按钮添加错题';
+
+  @override
+  String get errorBookNoReview => '暂无需要复习的错题';
+
+  @override
+  String get errorBookNoReviewHint => '做得很好！继续保持';
+
+  @override
+  String get errorBookDeleteSuccess => '删除成功';
+
+  @override
+  String get errorBookDeleteFailed => '删除失败';
+
+  @override
+  String get errorBookDeleteConfirmTitle => '确认删除';
+
+  @override
+  String get errorBookDeleteConfirmMessage => '删除后无法恢复，确定要删除这道错题吗？';
+
+  @override
+  String get errorBookDetailTitle => '错题详情';
+
+  @override
+  String get errorBookEdit => '编辑';
+
+  @override
+  String get errorBookReanalyze => '重新分析';
+
+  @override
+  String get errorBookDelete => '删除';
+
+  @override
+  String errorBookCreatedAt(String date) {
+    return '创建于 $date';
+  }
+
+  @override
+  String errorBookMasteryPercent(int percent) {
+    return '$percent%掌握';
+  }
+
+  @override
+  String get errorBookSimilarSummary => '同类错因分析';
+
+  @override
+  String get errorBookRootCause => '根本原因';
+
+  @override
+  String get errorBookStrategySuggestions => '策略建议';
+
+  @override
+  String get errorBookSimilarErrors => '相似错误';
+
+  @override
+  String get errorBookSimilarCauseFallback => '未分类';
+
+  @override
+  String get errorBookQuestionContent => '题目内容';
+
+  @override
+  String get errorBookImageLoadFailed => '图片加载失败';
+
+  @override
+  String get errorBookAnswerComparison => '答案对比';
+
+  @override
+  String get errorBookYourAnswer => '你的答案';
+
+  @override
+  String get errorBookCorrectAnswer => '正确答案';
+
+  @override
+  String get errorBookAiAnalysis => 'AI 分析';
+
+  @override
+  String get errorBookKnowledgeLinks => '关联知识点';
+
+  @override
+  String get errorBookKnowledgeLinkTooltip => '查看学习路径';
+
+  @override
+  String errorBookKnowledgeLinkSnack(String nodeName) {
+    return '即将跳转到 $nodeName 知识点';
+  }
+
+  @override
+  String get errorBookReviewStats => '复习统计';
+
+  @override
+  String get errorBookLastReview => '上次复习';
+
+  @override
+  String get errorBookNextReview => '下次复习';
+
+  @override
+  String get errorBookStartReview => '开始复习';
+
+  @override
+  String get errorBookLoadFailed => '加载失败';
+
+  @override
+  String get errorBookEditInProgress => '编辑功能即将上线';
+
+  @override
+  String get errorBookReanalyzing => '正在重新分析...';
+
+  @override
+  String get errorBookReviewInProgress => '复习功能即将上线';
+
+  @override
+  String errorBookDeleteFailedMessage(String error) {
+    return '删除失败：$error';
+  }
+
+  @override
+  String errorBookCognitiveFilter(String dimension) {
+    return '正针对 \"$dimension\" 维度进行针对性复习';
+  }
+
+  @override
+  String errorBookReviewCount(int count) {
+    return '复习 $count 次';
+  }
+
+  @override
+  String get errorBookAIAnalyzed => 'AI已分析';
+
+  @override
+  String errorBookTimeAgoMinutes(int count) {
+    return '$count分钟前';
+  }
+
+  @override
+  String errorBookTimeAgoHours(int count) {
+    return '$count小时前';
+  }
+
+  @override
+  String errorBookTimeAgoDays(int count) {
+    return '$count天前';
+  }
+
+  @override
+  String get reviewModeToday => '今日复习';
+
+  @override
+  String get reviewModeTodayDesc => '完成今天到期的所有错题';
+
+  @override
+  String get reviewModeBySubject => '按科目';
+
+  @override
+  String get reviewModeBySubjectDesc => '选择一个科目进行专项复习';
+
+  @override
+  String get reviewModeWeakest => '薄弱专攻';
+
+  @override
+  String get reviewModeWeakestDesc => '优先复习掌握度最低的错题';
+
+  @override
+  String get reviewModeRandom => '随机抽查';
+
+  @override
+  String get reviewModeRandomDesc => '随机抽取错题进行复习';
+
+  @override
+  String reviewProgress(int current, int total) {
+    return '进度: $current/$total';
+  }
+
+  @override
+  String get reviewQuestion => '题目';
+
+  @override
+  String get reviewYourAnswer => '你的答案';
+
+  @override
+  String get reviewCorrectAnswer => '正确答案';
+
+  @override
+  String get reviewAIAnalysis => 'AI 分析';
+
+  @override
+  String get reviewHideAnalysis => '隐藏';
+
+  @override
+  String get reviewViewAnalysis => '查看 AI 分析';
+
+  @override
+  String get reviewViewAnswer => '查看答案';
+
+  @override
+  String get reviewViewAnswerHint => '先思考答案，再点击查看';
+
+  @override
+  String reviewSubmitFailed(String error) {
+    return '提交失败: $error';
+  }
+
+  @override
+  String get reviewNoErrorsToday => '暂无需要复习的错题';
+
+  @override
+  String get reviewKeepGoing => '做得很好！继续保持';
+
+  @override
+  String get reviewComplete => '复习完成！';
+
+  @override
+  String reviewTotalReviewed(int count) {
+    return '本次共复习 $count 道题';
+  }
+
+  @override
+  String get reviewResults => '复习成果';
+
+  @override
+  String get reviewRemembered => '记住了';
+
+  @override
+  String get reviewFuzzy => '模糊';
+
+  @override
+  String get reviewForgotten => '忘记了';
+
+  @override
+  String get reviewEncourageExcellent => '太棒了！掌握得非常扎实 🎉';
+
+  @override
+  String get reviewEncourageGood => '很好！继续保持这个势头 💪';
+
+  @override
+  String get reviewEncourageFair => '不错！再多复习几次会更好 📚';
+
+  @override
+  String get reviewEncourageNeedsWork => '加油！多复习几次就能记住了 🌟';
+
+  @override
+  String get reviewBackToList => '返回列表';
+
+  @override
+  String get reviewAnotherRound => '再来一轮';
+
+  @override
+  String get reviewConfirmExitTitle => '确认退出';
+
+  @override
+  String get reviewConfirmExitMessage => '复习还未完成，确定要退出吗？';
+
+  @override
+  String get reviewContinue => '继续复习';
+
+  @override
+  String get reviewExit => '退出';
+
+  @override
+  String get reviewNoMatchingErrors => '没有符合条件的错题';
+
+  @override
+  String get communityTitle => '星火社群';
+
+  @override
+  String get communitySearch => '搜索';
+
+  @override
+  String get communitySearchUsers => '搜索用户';
+
+  @override
+  String get communitySearchGroups => '搜索群组';
+
+  @override
+  String get communityDiscoverFriends => '发现新好友';
+
+  @override
+  String get communityDiscoverFriendsHint => '查看推荐的好友';
+
+  @override
+  String get communityCreateGroup => '创建群组';
+
+  @override
+  String get communityCreateGroupHint => '创建一个新的学习群组';
+
+  @override
+  String get communityActions => '社群操作';
+
+  @override
+  String get communityNoFriends => '还没有好友';
+
+  @override
+  String get communityNoGroups => '还没有加入群组';
+
+  @override
+  String get communityStatusOnline => '在线';
+
+  @override
+  String get communityStatusOffline => '离线';
+
+  @override
+  String get communityFocusModeOn => '专注模式开启中';
+
+  @override
+  String get communityFocusModeOff => '开启专注模式';
+
+  @override
+  String get communityFocusModeEnabled => '已开启专注模式，消息将不会打扰您';
+
+  @override
+  String get communityFocusModeDisabled => '已关闭专注模式';
+
+  @override
+  String get communityTabFriends => '好友';
+
+  @override
+  String get communityTabGroups => '群组';
+
+  @override
+  String get communityAddFriend => '添加好友';
+
+  @override
+  String communityMembers(int count) {
+    return '$count 成员';
+  }
+
+  @override
+  String get taskMonitorTitle => '后台任务监控';
+
+  @override
+  String get taskMonitorFilterAll => '全部';
+
+  @override
+  String get taskMonitorFilterRunning => '运行中';
+
+  @override
+  String get taskMonitorFilterCompleted => '已完成';
+
+  @override
+  String get taskMonitorFilterFailed => '失败';
+
+  @override
+  String get taskMonitorEmpty => '暂无后台任务';
+
+  @override
+  String get taskMonitorStatusPending => '等待中';
+
+  @override
+  String get taskMonitorStatusCancelled => '已取消';
+
+  @override
+  String get planHistoryTitle => '历史计划';
+
+  @override
+  String get planHistoryEmpty => '暂无历史计划';
+
+  @override
+  String get planHistoryRestore => '恢复计划';
+
+  @override
+  String get planHistoryRestoreSuccess => '计划已恢复';
+
+  @override
+  String get planHistoryDeleteConfirm => '确定要删除这个历史计划吗？';
+
+  @override
+  String get planTypeSprint => '冲刺计划';
+
+  @override
+  String get planTypeGrowth => '成长计划';
+
+  @override
+  String planProgressPercent(String percent) {
+    return '$percent% 完成';
+  }
+
+  @override
+  String get authForgotPassword => '忘记密码？';
+
+  @override
+  String get authUserAgreement => '用户协议';
+
+  @override
+  String get authPrivacyPolicy => '隐私政策';
+
+  @override
+  String get authLoginAgreement => '登录即表示你同意';
+
+  @override
+  String get authAnd => '和';
+
+  @override
+  String get authDemoLogin => '演示账号登录';
+
+  @override
+  String get authResetPassword => '重置密码';
+
+  @override
+  String get authResetPasswordHint => '请输入您的邮箱，我们将发送重置密码链接';
+
+  @override
+  String get authSendResetEmail => '发送重置邮件';
+
+  @override
+  String get authResetEmailSent => '重置邮件已发送';
+
+  @override
+  String get authBackToLogin => '返回登录';
+
+  @override
+  String get authForgotPasswordTitle => '忘记密码';
+
+  @override
+  String get authForgotPasswordHint => '输入注册邮箱，我们会发送一封包含重置码的邮件给你。';
+
+  @override
+  String get authInvalidEmail => '请输入有效邮箱';
+
+  @override
+  String get authHaveResetCode => '我已经有重置码';
+
+  @override
+  String get toolsLibraryTitle => '工具库';
+
+  @override
+  String get toolsTabBrowse => '浏览';
+
+  @override
+  String get toolsTabManage => '管理';
+
+  @override
+  String get toolsSearchHint => '搜索工具、能力或关键词';
+
+  @override
+  String get toolsRecentTitle => '最近使用';
+
+  @override
+  String get toolsManagePinned => '管理固定';
+
+  @override
+  String get toolsCategoryInput => '输入处理';
+
+  @override
+  String get toolsCategoryStudy => '学习辅助';
+
+  @override
+  String get toolsCategoryEfficiency => '效率辅助';
+
+  @override
+  String get toolsCategoryCognition => '认知洞察';
+
+  @override
+  String get toolsNoTools => '暂无工具';
+
+  @override
+  String get toolsPinnedEmpty => '还没有固定的工具';
+
+  @override
+  String get toolsManageHint => '首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。';
+
+  @override
+  String get toolsBackToBrowse => '回到浏览';
+
+  @override
+  String get toolsPositionFirstScreen => '首屏';
+
+  @override
+  String get toolsPositionExpanded => '展开区';
+
+  @override
+  String get toolsPositionMore => '更多页';
+
+  @override
+  String get knowledgeLoadFailed => '知识节点加载失败';
+
+  @override
+  String get knowledgeReload => '重新加载';
+
+  @override
+  String get knowledgeGeneratePath => '生成学习路径';
+
+  @override
+  String get knowledgeDescription => '描述';
+
+  @override
+  String get knowledgeNoDescription => '暂无描述';
+
+  @override
+  String get knowledgeRelatedNodes => '相关节点';
+
+  @override
+  String get knowledgePrerequisites => '前置知识';
+
+  @override
+  String get knowledgeMasteryProgress => '掌握进度';
+
+  @override
+  String get knowledgeKeywords => '关键词';
+
+  @override
+  String get knowledgeEstimated => '预计';
+
+  @override
+  String get knowledgeMinutes => '分钟';
+
+  @override
+  String get knowledgeRelatedTasks => '相关任务';
+
+  @override
+  String get knowledgeRelatedPlans => '相关计划';
+
+  @override
+  String get knowledgeMastery => '掌握度';
+
+  @override
+  String get knowledgeStudyMinutes => '学习分钟';
+
+  @override
+  String get knowledgeStudyCount => '学习次数';
+
+  @override
+  String get knowledgeNextReview => '下次复习';
+
+  @override
+  String get knowledgeDecayPaused => '遗忘衰减已暂停';
+
+  @override
+  String get knowledgeToday => '今天';
+
+  @override
+  String get knowledgeTomorrow => '明天';
+
+  @override
+  String knowledgeDaysLater(int days) {
+    return '$days天后';
+  }
+
+  @override
+  String knowledgeWeeksLater(int weeks) {
+    return '$weeks周后';
+  }
+
+  @override
+  String get seedLibraryTitle => '种子库';
+
+  @override
+  String get seedLibrarySearchHint => '搜索种子库...';
+
+  @override
+  String get seedLibraryCreate => '创建种子库';
+
+  @override
+  String get seedLibraryNotFound => '种子库不存在';
+
+  @override
+  String get seedLibraryDeleteConfirm => '确定要删除这个种子库吗？此操作不可撤销。';
+
+  @override
+  String get seedLibraryEmpty => '还没有创建种子库';
+
+  @override
+  String get seedLibraryCreateFirst => '创建一个新的种子库开始使用';
+
+  @override
+  String seedLibraryItemCount(int count) {
+    return '$count 个条目';
+  }
+
+  @override
+  String seedLibraryLastUpdated(String date) {
+    return '最后更新: $date';
+  }
+
+  @override
+  String get seedLibraryDetail => '种子库详情';
+
+  @override
+  String get seedLibraryFilter => '筛选';
+
+  @override
+  String get seedLibraryCategory => '分类';
+
+  @override
+  String get seedLibraryVisibility => '可见性';
+
+  @override
+  String get seedLibraryClear => '清除';
+
+  @override
+  String get seedLibraryApply => '应用';
+
+  @override
+  String get seedLibrarySubscribe => '订阅';
+
+  @override
+  String get seedLibraryUnsubscribe => '取消订阅';
+
+  @override
+  String get seedLibraryContentItems => '内容项';
+
+  @override
+  String get seedLibraryNoContent => '暂无内容';
+
+  @override
+  String get seedLibraryContent => '内容';
+
+  @override
+  String get seedLibrarySubscribers => '订阅者';
+
+  @override
+  String get seedLibraryUsage => '使用';
+
+  @override
+  String get seedLibraryQualityScore => '质量分';
+
+  @override
+  String get seedLibraryDeleteTitle => '删除种子库';
+
+  @override
+  String seedLibraryDeleteFailed(String error) {
+    return '删除失败：$error';
+  }
+
+  @override
+  String get translationHistoryTitle => '翻译历史';
+
+  @override
+  String get translationClearHistory => '清空历史';
+
+  @override
+  String get translationTranslating => '翻译中...';
+
+  @override
+  String get translationSaveToVocabulary => '保存到生词卡';
+
+  @override
+  String get translationCopy => '复制';
+
+  @override
+  String get translationCopied => '已复制';
+
+  @override
+  String get translationSearchHint => '搜索翻译记录...';
+
+  @override
+  String get translationNoHistory => '暂无翻译记录';
+
+  @override
+  String get translationStartTranslate => '开始翻译文本后会显示在这里';
+
+  @override
+  String get translationClearConfirm => '确定要清空所有翻译历史吗？';
+
+  @override
+  String get translationClearConfirmDetail => '此操作不可撤销';
+
+  @override
+  String get translationClearAll => '清空历史';
+
+  @override
+  String get translationFilterAll => '全部';
+
+  @override
+  String get translationFilterFavorites => '收藏';
+
+  @override
+  String get translationFilterImportant => '重要';
+
+  @override
+  String get translationFilterRecent => '最近';
+
+  @override
+  String get translationNoSearchResults => '未找到结果';
+
+  @override
+  String get translationTryOtherKeywords => '尝试其他关键词';
+
+  @override
+  String get translationNoFavorites => '暂无收藏';
+
+  @override
+  String get translationNoFavoritesHint => '给翻译打星标收藏起来';
+
+  @override
+  String get translationNoImportant => '暂无重要翻译';
+
+  @override
+  String get translationNoImportantHint => '给4星及以上的翻译会显示在这里';
+
+  @override
+  String get translationNoRecordsHint => '使用翻译功能后会自动保存';
+
+  @override
+  String get translationRating => '评分';
+
+  @override
+  String get translationSelectImportance => '选择重要程度';
+
+  @override
+  String get translationDelete => '删除翻译';
+
+  @override
+  String get translationDeleteConfirm => '确定要删除这条翻译记录吗？';
+
+  @override
+  String get translationOriginal => '原文';
+
+  @override
+  String get translationTranslated => '译文';
+
+  @override
+  String get translationHistorySessionOnly => '历史记录仅在当前会话有效';
+
+  @override
+  String get translationJustNow => '刚刚';
+
+  @override
+  String translationMinutesAgo(int minutes) {
+    return '$minutes分钟前';
+  }
+
+  @override
+  String translationHoursAgo(int hours) {
+    return '$hours小时前';
+  }
+
+  @override
+  String get translationToday => '今天';
+
+  @override
+  String get translationYesterday => '昨天';
+
+  @override
+  String translationDaysAgo(int days) {
+    return '$days天前';
+  }
+
+  @override
+  String get translationSourceLanguage => '源语言';
+
+  @override
+  String get translationTargetLanguage => '目标语言';
+
+  @override
+  String get translationSwapLanguages => '交换语言';
+
+  @override
+  String get translationDetectLanguage => '检测语言';
+
+  @override
+  String get translationHistoryEmpty => '暂无翻译历史';
+
+  @override
+  String get memoryEvidenceChain => '证据链';
+
+  @override
+  String get memoryNoEvidence => '暂无证据';
+
+  @override
+  String get memoryCurrentVersion => '当前版本';
+
+  @override
+  String get memoryVersionHistory => '版本历史';
+
+  @override
+  String get memorySortNewest => '最新';
+
+  @override
+  String get memorySortOldest => '最旧';
+
+  @override
+  String get memorySortImportance => '重要度';
+
+  @override
+  String get memoryEvidenceResolveFailed => '证据解析失败';
+
+  @override
+  String get memoryStatus => '状态';
+
+  @override
+  String get memoryGoalDate => '目标日期';
+
+  @override
+  String get memoryDeadline => '截止时间';
+
+  @override
+  String get memoryLastUpdated => '最后更新';
+
+  @override
+  String get memorySource => '来源';
+
+  @override
+  String get memoryOccurredAt => '发生时间';
+
+  @override
+  String get memoryImportanceScore => '重要度';
+
+  @override
+  String get memoryRetractedAt => '撤回时间';
+
+  @override
+  String get memoryUpdate => '更新';
+
+  @override
+  String get memoryConfidence => '置信度';
+
+  @override
+  String get memoryDiff => 'Diff';
+
+  @override
+  String get memoryRevertToVersion => '撤回到此版本';
+
+  @override
+  String get memoryNeedEnableRetraction => '需要开启 ENABLE_MEMORY_RETRACTION';
+
+  @override
+  String get memoryInitialVersion => '初始版本';
+
+  @override
+  String get memoryNoChanges => '无变化';
+
+  @override
+  String get memoryRevertNotEnabled => 'Revert 功能尚未启用';
+
+  @override
+  String get memoryWhyThisMemory => '为什么有这条记忆？';
+
+  @override
+  String get memoryEvidenceCount => '证据数';
+
+  @override
+  String get memoryVersions => '版本数';
+
+  @override
+  String get memoryBudget => '预算';
+
+  @override
+  String get memoryViewEvidence => '查看证据';
+
+  @override
+  String get memoryAllowedCapture => '已允许捕获';
+
+  @override
+  String get memoryCaptureLevel => '捕获级别';
+
+  @override
+  String get memoryTypeNone => '无';
+
+  @override
+  String get memoryTypePreference => '偏好';
+
+  @override
+  String get memoryTypeGoal => '目标';
+
+  @override
+  String get memoryTypeEpisodic => '经历';
+
+  @override
+  String get memoryDisabledHint => '当前已关闭长期记忆，后续不会记录此类记忆。';
+
+  @override
+  String get memoryPreferenceDisabledHint => '当前设置已关闭偏好捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memoryGoalDisabledHint => '当前设置已关闭目标捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memoryEpisodicDisabledHint => '当前设置已关闭经历捕获，后续不会记录此类记忆。';
+
+  @override
+  String get memorySourceBlockedHint => '该来源已被屏蔽，后续不会记录此类记忆。';
+
+  @override
+  String get memoryKeyBlockedHint => '该偏好已被屏蔽，后续不会记录此类记忆。';
+
+  @override
+  String get memoryExplanationPreference => '已记录，因为您的偏好最近更新了。';
+
+  @override
+  String get memoryExplanationEpisodic => '已记录，因为这段经历被标记为重要。';
+
+  @override
+  String get memoryExplanationGoal => '已记录，以保持您的活跃目标可见。';
+
+  @override
+  String get memoryCopied => '已复制记忆内容';
+
+  @override
+  String get memoryExportView => '导出视图';
+
+  @override
+  String get memoryCorrectionActions => '纠错操作';
+
+  @override
+  String get memoryCorrectionReject => '不正确';
+
+  @override
+  String get memoryCorrectionNoLongerApplies => '不再适用';
+
+  @override
+  String get memoryCorrectionLowerConfidence => '置信度较低';
+
+  @override
+  String get memoryCorrectionMerge => '合并';
+
+  @override
+  String get memoryMergeComingSoon => '合并功能即将上线';
+
+  @override
+  String get memoryCorrectionSubmitted => '已提交纠错';
+
+  @override
+  String get memoryCorrectionFailed => '纠错失败';
+
+  @override
+  String get memoryHistoryLoadFailed => '历史记录加载失败';
+
+  @override
+  String get memorySettingsLoadFailed => '加载记忆设置失败';
+
+  @override
+  String get memoryAddEvidence => '添加证据';
+
+  @override
+  String get memoryEvidenceType => '证据类型';
+
+  @override
+  String get memoryEvidenceSource => '来源';
+
+  @override
+  String get memoryEvidenceContent => '内容';
+
+  @override
+  String get shareOptionsTitle => '分享成就';
+
+  @override
+  String get shareToWeChatFriends => '分享到微信好友';
+
+  @override
+  String get shareToWeChatMoments => '分享到朋友圈';
+
+  @override
+  String get shareToSystem => '系统分享';
+
+  @override
+  String get shareToCommunity => '分享到社群';
+
+  @override
+  String get saveImageToGallery => '保存图片';
+
+  @override
+  String get copyDeepLink => '复制链接';
+
+  @override
+  String get linkCopied => '链接已复制';
+
+  @override
+  String get wechatNotInstalled => '请先安装微信';
+
+  @override
+  String get shareTemplateTitle => '选择模板';
+
+  @override
+  String get shareTemplateCosmic => '星空';
+
+  @override
+  String get shareTemplateMinimal => '简约';
+
+  @override
+  String get shareTemplateNeon => '霓虹';
+
+  @override
+  String get shareTemplateElegant => '典雅';
+
+  @override
+  String get shareTemplateCosmicDesc => '深蓝渐变，金色粒子漂浮，柔和光晕';
+
+  @override
+  String get shareTemplateMinimalDesc => '纯色背景，极简线条，黑色主文字';
+
+  @override
+  String get shareTemplateNeonDesc => '纯黑背景，霓虹发光，赛博朋克配色';
+
+  @override
+  String get shareTemplateElegantDesc => '米色金色背景，优雅衬线字体，金色装饰';
+
+  @override
+  String get sharePrivacyTitle => '隐私设置';
+
+  @override
+  String get sharePrivacyDisplayName => '显示名称';
+
+  @override
+  String get sharePrivacyDisplayNameHint => '使用默认昵称';
+
+  @override
+  String get sharePrivacyDisplayNameNote => '留空则使用您的默认昵称';
+
+  @override
+  String get sharePrivacyShowAvatar => '显示头像';
+
+  @override
+  String get sharePrivacyShowAvatarDesc => '在分享卡上显示您的头像';
+
+  @override
+  String get sharePrivacyShowDate => '显示解锁日期';
+
+  @override
+  String get sharePrivacyShowDateDesc => '显示成就解锁的具体日期';
+
+  @override
+  String get sharePrivacyShowStats => '显示进度统计';
+
+  @override
+  String get sharePrivacyShowStatsDesc => '显示进度条和统计数据';
+
+  @override
+  String get sharePrivacyShowFirstBadge => '首位解锁者徽章';
+
+  @override
+  String get sharePrivacyShowFirstBadgeDesc => '如您是首位解锁者，显示专属徽章';
+
+  @override
+  String get sharePreviewLoading => '正在生成预览...';
+
+  @override
+  String get sharePreviewError => '预览生成失败';
+
+  @override
+  String get shareRegenerateCard => '重新生成';
+
+  @override
+  String get notificationPermissionStatus => '通知权限状态';
+
+  @override
+  String get notificationPermissionGranted => '已授权';
+
+  @override
+  String get notificationPermissionDenied => '未授权';
+
+  @override
+  String get notificationPermissionPartial => '部分授权';
+
+  @override
+  String get notificationPermissionRequest => '请求权限';
+
+  @override
+  String get notificationPermissionOpenSettings => '打开设置';
+
+  @override
+  String get notificationPermissionDeniedHint => '通知权限被拒绝，请在系统设置中开启';
+
+  @override
+  String get notificationPermissionPartialHint => '部分通知功能受限，建议开启完整权限';
+
+  @override
+  String get visualElementsTitle => '视觉元素';
+
+  @override
+  String get visualElementsUnlockProgress => '解锁进度';
+
+  @override
+  String get visualElementsEquipped => '已装备';
+
+  @override
+  String get visualElementsRecommended => '为你推荐';
+
+  @override
+  String get visualRecommendationFocus => '适合专注学习';
+
+  @override
+  String get visualRecommendationRelax => '适合休息放松';
+
+  @override
+  String get visualRecommendationSprint => '适合冲刺模式';
+
+  @override
+  String get visualRecommendationNight => '夜间护眼';
+
+  @override
+  String get visualRecommendationStreak => '连胜加成';
+
+  @override
+  String get visualElementTabAll => '全部';
+
+  @override
+  String get visualElementTabBackground => '背景';
+
+  @override
+  String get visualElementTabParticle => '粒子';
+
+  @override
+  String get visualElementTabEffect => '特效';
+
+  @override
+  String get visualElementTabUnlocked => '已解锁';
+
+  @override
+  String get visualElementEmpty => '暂无视觉元素';
+
+  @override
+  String get visualElementFilter => '筛选';
+
+  @override
+  String get visualElementApplyFilter => '应用筛选';
+
+  @override
+  String get visualElementType => '类型';
+
+  @override
+  String get visualElementCategory => '分类';
+
+  @override
+  String get visualElementSource => '来源';
+
+  @override
+  String get visualElementRarity => '稀有度';
+
+  @override
+  String get visualElementEquipped => '已装备';
+
+  @override
+  String get visualElementUnlocked => '已解锁';
+
+  @override
+  String get visualElementLocked => '未解锁';
+
+  @override
+  String get visualElementEquip => '装备';
+
+  @override
+  String get visualElementUnequip => '卸下';
+
+  @override
+  String get visualElementEquipSuccess => '装备成功';
+
+  @override
+  String get visualElementEquipFailed => '装备失败';
+
+  @override
+  String get visualElementUnequipSuccess => '已卸下';
+
+  @override
+  String get visualElementUnequipFailed => '卸下失败';
+
+  @override
+  String get visualElementUnlockSystem => '系统赠送';
+
+  @override
+  String get visualElementUnlockAchievement => '成就解锁';
+
+  @override
+  String get visualElementUnlockShop => '商城购买';
+
+  @override
+  String get visualElementUnlockEvent => '活动获取';
+
+  @override
+  String get visualElementUnlockSeason => '赛季奖励';
+
+  @override
+  String get visualElementUnlockHintSystem => '系统自动赠送';
+
+  @override
+  String visualElementUnlockHintAchievement(Object achievement) {
+    return '完成成就「$achievement」解锁';
+  }
+
+  @override
+  String get visualElementUnlockHintAchievementDefault => '完成指定成就解锁';
+
+  @override
+  String visualElementUnlockHintShop(Object price) {
+    return '在商城花费 $price 光子购买';
+  }
+
+  @override
+  String get visualElementUnlockHintShopDefault => '在商城购买';
+
+  @override
+  String get visualElementUnlockHintEvent => '参与限时活动获取';
+
+  @override
+  String get visualElementUnlockHintSeason => '赛季奖励解锁';
+
+  @override
+  String get visualElementBackground => '背景';
+
+  @override
+  String get visualElementParticle => '粒子';
+
+  @override
+  String get visualElementEffect => '特效';
+
+  @override
+  String get visualElementBundle => '套装';
+
+  @override
+  String get visualElementsEntrySubtitle => '自定义你的场景';
+
+  @override
+  String get visualElementShare => '分享';
+
+  @override
+  String visualElementShareMessage(Object name) {
+    return '我在 Sparkle 使用了「$name」的视觉元素！';
+  }
+
+  @override
+  String visualElementShareFailed(Object error) {
+    return '分享失败：$error';
+  }
+
+  @override
+  String get visualElementShareUnavailable => '预览尚未就绪';
+
+  @override
+  String get visualElementEventTitle => '限时活动';
+
+  @override
+  String visualElementEventEndsIn(Object time) {
+    return '距离结束 $time';
+  }
+
+  @override
+  String get visualElementEventEnded => '活动已结束';
+
+  @override
+  String visualElementEventCountdownDays(Object days, Object hours) {
+    return '$days天 $hours小时';
+  }
+
+  @override
+  String visualElementEventCountdownHours(Object hours, Object minutes) {
+    return '$hours小时 $minutes分钟';
+  }
+
+  @override
+  String visualElementEventCountdownMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
+
+  @override
+  String get visualElementCategorySpace => '太空';
+
+  @override
+  String get visualElementCategoryNature => '自然';
+
+  @override
+  String get visualElementCategoryCyberpunk => '赛博朋克';
+
+  @override
+  String get visualElementCategoryAbstract => '抽象';
+
+  @override
+  String get visualElementCategoryAmbient => '氛围';
+
+  @override
+  String visualElementEmptyType(Object type) {
+    return '暂无$type';
+  }
+
+  @override
+  String get visualElementStatus => '状态';
+
+  @override
+  String get visualElementSort => '排序';
+
+  @override
+  String get visualElementSortDefault => '默认';
+
+  @override
+  String get visualElementSortName => '名称';
+
+  @override
+  String get visualElementSortRarity => '稀有度';
+
+  @override
+  String get visualElementSortUnlockDate => '解锁时间';
+
+  @override
+  String get visualElementUnlockTitle => '解锁视觉元素';
+
+  @override
+  String get visualElementUnlockSubtitle => '恭喜获得新的视觉元素！';
+
+  @override
+  String get visualElementViewCollection => '查看收藏';
+
+  @override
+  String get achievementMapFocusTooltip => '定位到最近的成就';
+
+  @override
+  String achievementMapFocusHint(Object name) {
+    return '尝试解锁：$name';
+  }
+
+  @override
+  String get cognitiveDimensionMemory => '记忆';
+
+  @override
+  String get cognitiveDimensionUnderstanding => '理解';
+
+  @override
+  String get cognitiveDimensionApplication => '应用';
+
+  @override
+  String get cognitiveDimensionAnalysis => '分析';
+
+  @override
+  String get cognitiveDimensionEvaluation => '评价';
+
+  @override
+  String get cognitiveDimensionCreation => '创造';
+
+  @override
+  String get photonTransactionGrantAchievement => '成就奖励';
+
+  @override
+  String get photonTransactionGrantDailyFirst => '每日首成奖励';
+
+  @override
+  String get photonTransactionGrantContract => '契约奖励';
+
+  @override
+  String get photonTransactionGrantContractBonus => '契约加成';
+
+  @override
+  String get photonTransactionDeductContractStake => '契约押注';
+
+  @override
+  String get photonTransactionPurchase => '购买';
+
+  @override
+  String get photonTransactionTransferOut => '转出';
+
+  @override
+  String get photonTransactionTransferIn => '转入';
+
+  @override
+  String get photonTransactionRefund => '退款';
+
+  @override
+  String get photonTransactionPenalty => '惩罚';
+
+  @override
+  String get photonTransactionAdminAdjustment => '管理员调整';
+
+  @override
+  String get shopItemTypeSkin => '皮肤';
+
+  @override
+  String get shopItemTypeTitle => '称号';
+
+  @override
+  String get shopItemTypeConsumable => '消耗品';
+
+  @override
+  String get shopItemTypeBoost => '增益';
+
+  @override
+  String get shopItemTypeVisualElement => '视觉元素';
+
+  @override
+  String get taskDueDateUnset => '无截止日期';
+
+  @override
+  String chatAchievementUnlocked(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatActionErrorSuggestion(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatActionErrorTitle => '操作错误';
+
+  @override
+  String get chatActionIgnore => '忽略';
+
+  @override
+  String get chatActionLater => '稍后';
+
+  @override
+  String get chatActionReviewed => '已审阅';
+
+  @override
+  String get chatActionStatusCompleted => '已完成';
+
+  @override
+  String get chatActionStatusConfirmed => '已确认';
+
+  @override
+  String get chatActionStatusDismissed => '已忽略';
+
+  @override
+  String get chatActionStatusFailed => '失败';
+
+  @override
+  String get chatActionStatusProcessing => '处理中';
+
+  @override
+  String chatActionStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatActionSuggestedActions(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatActionTitleAddError => '添加错误';
+
+  @override
+  String get chatActionTitleBlockedInput => '输入被阻止';
+
+  @override
+  String get chatActionTitleContinuity => '延续性';
+
+  @override
+  String get chatActionTitleCreatePlan => '创建计划';
+
+  @override
+  String get chatActionTitleCreateTask => '创建任务';
+
+  @override
+  String get chatActionTitleDefault => '默认标题';
+
+  @override
+  String get chatActionTitleEvolution => '演进';
+
+  @override
+  String get chatActionTitleExecutionSummary => '执行摘要';
+
+  @override
+  String get chatActionTitleFocusSprint => '专注冲刺';
+
+  @override
+  String get chatActionTitleModeExplanation => '模式说明';
+
+  @override
+  String get chatActionTitleNextActions => '下一步行动';
+
+  @override
+  String get chatActionTitleNightlyReview => '夜间回顾';
+
+  @override
+  String get chatActionTitleProgress => '进度';
+
+  @override
+  String get chatActionTitleReflection => '反思';
+
+  @override
+  String get chatActionTitleSourceSummary => '来源摘要';
+
+  @override
+  String get chatActionTitleSystemUpdate => '系统更新';
+
+  @override
+  String get chatActionTitleTaskList => '任务列表';
+
+  @override
+  String get chatActionTitleUpdatePreference => '更新偏好';
+
+  @override
+  String get chatActionViewNextSteps => '查看下一步';
+
+  @override
+  String get chatActionViewSources => '查看来源';
+
+  @override
+  String get chatAgentRouting => '智能路由';
+
+  @override
+  String chatAgentRoutingFallback(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAgentRoutingStrategy(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAlignmentScoreLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAudioParseFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAudioRecordFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAudioStartFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatAudioWsConnectFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatAuthExpired => '认证已过期';
+
+  @override
+  String get chatAuthRefreshing => '正在刷新认证';
+
+  @override
+  String get chatBlockedInputTitle => '输入已阻止';
+
+  @override
+  String chatCitationLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatCitationRelevance(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatCitationSourcesCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatCollabTimelineTitle => '协作时间线';
+
+  @override
+  String get chatComparisonAfter => '之后';
+
+  @override
+  String get chatComparisonBefore => '之前';
+
+  @override
+  String chatComparisonCurrentPrevious(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get chatCompletionBlocked => '补全已阻止';
+
+  @override
+  String get chatCompletionDone => '补全完成';
+
+  @override
+  String get chatCompletionNeedsInput => '需要输入';
+
+  @override
+  String get chatCompletionPartial => '部分完成';
+
+  @override
+  String get chatCompletionProcessing => '处理中';
+
+  @override
+  String get chatConfidenceCautious => '谨慎';
+
+  @override
+  String get chatConfidenceHigh => '高';
+
+  @override
+  String chatConfidenceLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatConfidenceMedium => '中';
+
+  @override
+  String get chatConfirmationActionDefault => '确认操作';
+
+  @override
+  String get chatConfirmationConfirmUpdate => '确认更新';
+
+  @override
+  String get chatConfirmationTitleDefault => '确认';
+
+  @override
+  String get chatConfirmationTitleUpdatePreference => '确认更新偏好';
+
+  @override
+  String get chatConfirmationUpdatePreferenceGeneric => '更新偏好设置';
+
+  @override
+  String chatConfirmationUpdatePreferenceKeyOnly(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatConfirmationUpdatePreferenceWithValue(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get chatCopiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get chatDagExecutionAbortedDefault => '执行已中止';
+
+  @override
+  String get chatDagExecutionCompleted => '执行已完成';
+
+  @override
+  String get chatDagExecutionEndAbortedDefault => '执行已中止';
+
+  @override
+  String chatDagLayerAborted(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatDagLayerCompleted(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatDagLayerStart(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
+
+  @override
+  String chatDagStepCompleted(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatDagStepCompletedWithDuration(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String chatDagStepFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatDagStepFallback => '步骤回退';
+
+  @override
+  String chatDurationLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatErrorWithSuggestion(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String chatEvolutionExpectedEffect(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatEvolutionHeadlineDefault => '演进过程';
+
+  @override
+  String chatEvolutionNextWeekPlan(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatEvolutionWhy(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatExecutionCompleted => '执行完成';
+
+  @override
+  String get chatExecutionFailed => '执行失败';
+
+  @override
+  String get chatExecutionPartial => '部分执行';
+
+  @override
+  String get chatFeedbackThanks => '感谢您的反馈！';
+
+  @override
+  String get chatFocusSprintDefaultTitle => '专注冲刺';
+
+  @override
+  String get chatFocusStart => '开始专注';
+
+  @override
+  String get chatInputDocumentClean => '清理文档';
+
+  @override
+  String get chatInterventionViewPlan => '查看计划';
+
+  @override
+  String get chatInterventionViewSettings => '查看设置';
+
+  @override
+  String get chatKnowledgeCitationBody => '知识引用';
+
+  @override
+  String chatKnowledgeCitationTitle(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatModeCustomTeam => '自定义团队';
+
+  @override
+  String get chatModeCustomTeamDesc => '选择特定的 AI 助手组成您的专属团队';
+
+  @override
+  String get chatModeKeepCurrent => '保持当前模式';
+
+  @override
+  String get chatModeSuggestionTitle => '模式建议';
+
+  @override
+  String get chatModeSwitch => '切换模式';
+
+  @override
+  String get chatMultiAgentCollab => '多智能体协作';
+
+  @override
+  String chatNextActionLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatNextActionsRetryHint => '点击重试';
+
+  @override
+  String get chatNextActionsTitle => '下一步行动';
+
+  @override
+  String get chatNightlyReviewTodos => '夜间待办';
+
+  @override
+  String get chatNotificationGroupMessage => '群组消息';
+
+  @override
+  String get chatNotificationMention => '有人@我';
+
+  @override
+  String get chatOptionalNotesHint => '可选备注...';
+
+  @override
+  String get chatOrchestrationTraceStep => '编排步骤';
+
+  @override
+  String get chatOrchestrationTraceTitle => '编排追踪';
+
+  @override
+  String chatPendingMessagesFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatPlanContextClear => '清除上下文';
+
+  @override
+  String get chatPlanContextSelect => '选择计划上下文';
+
+  @override
+  String get chatPlanEmptySubtitle => '还没有计划，开始创建一个吧';
+
+  @override
+  String get chatPlanEmptyTitle => '暂无计划';
+
+  @override
+  String get chatPlanReviewAcknowledged => '已确认';
+
+  @override
+  String get chatPlanReviewApproved => '已批准';
+
+  @override
+  String get chatPlanReviewModifyRequested => '请求修改';
+
+  @override
+  String get chatPlanReviewRejected => '已拒绝';
+
+  @override
+  String chatPlanReviewStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatPlanSelect => '选择计划';
+
+  @override
+  String chatQuotePrefix(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatReasoningProcess => '推理过程';
+
+  @override
+  String get chatReasoningStatusAnalyzing => '正在分析...';
+
+  @override
+  String get chatReasoningStatusAudioProcessing => '正在处理音频...';
+
+  @override
+  String get chatReasoningStatusCalculating => '正在计算...';
+
+  @override
+  String get chatReasoningStatusCoding => '正在编程...';
+
+  @override
+  String get chatReasoningStatusDataAnalyzing => '正在分析数据...';
+
+  @override
+  String get chatReasoningStatusDone => '完成';
+
+  @override
+  String get chatReasoningStatusImageProcessing => '正在处理图像...';
+
+  @override
+  String get chatReasoningStatusPlanning => '正在规划...';
+
+  @override
+  String get chatReasoningStatusPreparing => '正在准备...';
+
+  @override
+  String get chatReasoningStatusReasoning => '正在推理...';
+
+  @override
+  String get chatReasoningStatusRetrieving => '正在检索...';
+
+  @override
+  String get chatReasoningStatusSearching => '正在搜索...';
+
+  @override
+  String get chatReasoningStatusTranslating => '正在翻译...';
+
+  @override
+  String get chatReasoningStatusWriting => '正在撰写...';
+
+  @override
+  String chatReasoningStepsCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatReasoningSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get chatReflectionDegraded => '反思质量下降';
+
+  @override
+  String get chatReflectionFailed => '反思失败';
+
+  @override
+  String chatReflectionFixed(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String chatReflectionImproved(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get chatReflectionNoChange => '无需变更';
+
+  @override
+  String chatReflectionStatusUpdate(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatRoundsInfo(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatSourceUnknown => '未知来源';
+
+  @override
+  String get chatSourceUntitled => '无标题';
+
+  @override
+  String get chatSourcesAvailable => '有可用来源';
+
+  @override
+  String get chatSourcesUnavailable => '无可用来源';
+
+  @override
+  String chatStreakSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get chatSubmitFeedback => '提交反馈';
+
+  @override
+  String get chatSynthesisSuggestions => '综合建议';
+
+  @override
+  String chatTaskDataInvalid(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatTaskListMoreCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatTeamExpertsCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatUnknownWidgetType(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatUsingTool(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatViewComparisonData => '查看对比数据';
+
+  @override
+  String get chatViewPlanRationale => '查看计划依据';
+
+  @override
+  String get chatVoiceNoMicPermission => '没有麦克风权限';
+
+  @override
+  String chatVoiceStartFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatWhyThisAnswer => '为什么是这个答案？';
+
+  @override
+  String get chatWorkflowDebateProcessing => '辩论处理中...';
+
+  @override
+  String get chatWorkflowDebateSubtitle => '多角度探讨';
+
+  @override
+  String get chatWorkflowDebateTitle => '辩论模式';
+
+  @override
+  String get chatWorkflowDefault => '默认工作流';
+
+  @override
+  String get chatWorkflowDelegationSubtitle => '委派给专业助手';
+
+  @override
+  String get chatWorkflowDelegationTitle => '委派模式';
+
+  @override
+  String get chatWorkflowErrorDiagnosis => '错误诊断';
+
+  @override
+  String get chatWorkflowExpertRouting => '专家路由';
+
+  @override
+  String chatWorkflowExpertsCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String chatWorkflowParallelCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatWorkflowParallelSubtitle => '并行处理多个任务';
+
+  @override
+  String chatWorkflowPhaseLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get chatWorkflowProgressiveExploration => '渐进式探索';
+
+  @override
+  String get chatWorkflowStatusActive => '活跃';
+
+  @override
+  String get chatWorkflowStatusDone => '完成';
+
+  @override
+  String get chatWorkflowStatusError => '错误';
+
+  @override
+  String get chatWorkflowStatusWaiting => '等待中';
+
+  @override
+  String get chatWorkflowTaskDecomposition => '任务分解';
+
+  @override
+  String get commonMinutesShort => '分钟';
+
+  @override
+  String get commonUnknown => '未知';
+
+  @override
+  String get communityAgentCollabOff => 'AI 协作已关闭';
+
+  @override
+  String get communityAgentCollabOn => 'AI 协作已开启';
+
+  @override
+  String get communityAgentName => '星火AI';
+
+  @override
+  String get communityAgentOnlyYou => '只有你在群里';
+
+  @override
+  String get communityAgentProcessing => 'AI 正在处理...';
+
+  @override
+  String get communityAgentPromptHint => '输入提示词...';
+
+  @override
+  String get communityAgentQuickConsensus => '快速共识';
+
+  @override
+  String get communityAgentQuickConsensusPrompt => '帮我快速总结群内共识';
+
+  @override
+  String get communityAgentQuickReminder => '快速提醒';
+
+  @override
+  String get communityAgentQuickReminderPrompt => '帮我设置一个提醒';
+
+  @override
+  String get communityAgentQuickSummary => '快速总结';
+
+  @override
+  String get communityAgentQuickSummaryPrompt => '帮我总结最近的讨论';
+
+  @override
+  String get communityAgentThinking => 'AI 思考中...';
+
+  @override
+  String get communityChatEmpty => '暂无消息';
+
+  @override
+  String get communityChatTitle => '社群聊天';
+
+  @override
+  String get communityCheckInAction => '打卡';
+
+  @override
+  String get communityCheckInDurationLabel => '时长';
+
+  @override
+  String communityCheckInFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get communityCheckInMessageHint => '分享你的心得...';
+
+  @override
+  String get communityCheckInMessageLabel => '打卡内容';
+
+  @override
+  String get communityCheckInSuccess => '打卡成功！';
+
+  @override
+  String get communityCheckInTitle => '每日打卡';
+
+  @override
+  String communityFileSharedFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get communityFileSharedSuccess => '文件分享成功';
+
+  @override
+  String get communityGroupFiles => '群文件';
+
+  @override
+  String communityGroupMembersCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get communityMessageFallback => '消息加载中...';
+
+  @override
+  String get communityMessageInputHint => '输入消息...';
+
+  @override
+  String get communitySearchGroupMessages => '搜索群消息';
+
+  @override
+  String get deleteAccountChecklistItem1 => '您的所有个人数据将被永久删除';
+
+  @override
+  String get deleteAccountChecklistItem2 => '删除后将无法恢复账户';
+
+  @override
+  String get deleteAccountChecklistItem3 => '您的所有有效订阅将自动取消';
+
+  @override
+  String get deleteAccountChecklistTitle => '请仔细阅读以下注意事项：';
+
+  @override
+  String get deleteAccountConfirmButton => '确认注销账户';
+
+  @override
+  String get deleteAccountConfirmInputHint => '请输入 \"DELETE\" 以确认';
+
+  @override
+  String get deleteAccountConfirmInputTitle => '确认注销';
+
+  @override
+  String get deleteAccountNoSocialProvider => '未找到关联的第三方账户';
+
+  @override
+  String get deleteAccountPasswordHint => '请输入您的密码';
+
+  @override
+  String get deleteAccountPasswordLabel => '密码';
+
+  @override
+  String get deleteAccountReauthButton => '验证';
+
+  @override
+  String get deleteAccountReauthDone => '验证完成';
+
+  @override
+  String get deleteAccountReauthSuccess => '身份验证成功';
+
+  @override
+  String get deleteAccountRequireDeleteInput => '请输入 DELETE 以确认操作';
+
+  @override
+  String get deleteAccountRequirePassword => '请输入密码';
+
+  @override
+  String get deleteAccountRequireReauth => '需要进行身份验证';
+
+  @override
+  String get deleteAccountSocialProvider => '第三方账户';
+
+  @override
+  String deleteAccountSocialReauthNotice(Object arg0) {
+    return '请使用 $arg0 进行身份验证';
+  }
+
+  @override
+  String get deleteAccountSuccess => '账户已成功注销';
+
+  @override
+  String get deleteAccountTitle => '注销账户';
+
+  @override
+  String get deleteAccountWeChatUnavailable => '微信暂不可用';
+
+  @override
+  String get editProfileEmailUnverified => '未验证';
+
+  @override
+  String get editProfileEmailUnverifiedDesc => '请验证您的邮箱地址以确保账号安全';
+
+  @override
+  String get editProfileEmailVerified => '已验证';
+
+  @override
+  String get editProfileEmailVerifiedDesc => '您的邮箱地址已通过验证';
+
+  @override
+  String get editProfileEnterCode => '输入验证码';
+
+  @override
+  String get editProfileRegistrationMethod => '注册方式';
+
+  @override
+  String get editProfileSendEmail => '发送验证邮件';
+
+  @override
+  String get editProfileSetPassword => '设置密码';
+
+  @override
+  String get editProfileSetPasswordHint => '为您的账户设置一个安全密码';
+
+  @override
+  String get editProfileVerifyEmailConfirm => '确认';
+
+  @override
+  String get editProfileVerifyEmailHint => '请输入邮件中的验证码';
+
+  @override
+  String get editProfileVerifyEmailTitle => '验证邮箱';
+
+  @override
+  String get fileStatusFailed => '上传失败';
+
+  @override
+  String get fileStatusProcessing => '处理中';
+
+  @override
+  String get fileStatusReady => '就绪';
+
+  @override
+  String get fileStatusUploaded => '已上传';
+
+  @override
+  String get galaxyA11yActionStartLearning => '开始学习';
+
+  @override
+  String get galaxyA11yActionUnlockNode => '解锁节点';
+
+  @override
+  String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
+
+  @override
+  String get galaxyA11yHintStartLearning => '点击开始学习此知识点';
+
+  @override
+  String get galaxyA11yHintUnlockNode => '点击解锁此节点';
+
+  @override
+  String galaxyA11yNavigateTo(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyA11yNavigationHint => '使用手势导航知识星图';
+
+  @override
+  String galaxyA11yNodeImportance(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyA11yNodeLocked => '节点已锁定';
+
+  @override
+  String galaxyA11yNodeMastery(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String galaxyA11yNodePrefix(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String galaxyA11yNodeStudyCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyA11yNodeUnlocked => '节点已解锁';
+
+  @override
+  String galaxyA11ySectorLabel(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String galaxyA11yZoomLevel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyControlOverview => '概览';
+
+  @override
+  String get galaxyControlReplayStart => '开始回放';
+
+  @override
+  String get galaxyControlReplayStop => '停止回放';
+
+  @override
+  String get galaxyControlSearchClose => '关闭搜索';
+
+  @override
+  String get galaxyControlSearchOpen => '打开搜索';
+
+  @override
+  String get galaxyControlSettings => '设置';
+
+  @override
+  String get galaxyControlZoomIn => '放大';
+
+  @override
+  String get galaxyControlZoomOut => '缩小';
+
+  @override
+  String get galaxyEmptyMessage => '开始探索，点亮你的知识星图';
+
+  @override
+  String get galaxyEmptyTitle => '星图空空如也';
+
+  @override
+  String get galaxyErrorConnectionFailed => '连接失败';
+
+  @override
+  String get galaxyErrorConnectionTimeout => '连接超时';
+
+  @override
+  String get galaxyErrorLoadFailed => '加载失败';
+
+  @override
+  String get galaxyErrorNetwork => '网络错误';
+
+  @override
+  String get galaxyErrorNetworkFailed => '网络请求失败';
+
+  @override
+  String get galaxyErrorRequestFailed => '请求失败';
+
+  @override
+  String get galaxyErrorResponseTimeout => '响应超时';
+
+  @override
+  String get galaxyErrorRetryHint => '点击重试';
+
+  @override
+  String get galaxyErrorServiceTemporarilyUnavailable => '服务暂时不可用';
+
+  @override
+  String get galaxyErrorServiceUnavailable => '服务不可用';
+
+  @override
+  String get galaxyErrorUnknown => '未知错误';
+
+  @override
+  String get galaxyGraphRagGraph => '图谱检索';
+
+  @override
+  String get galaxyGraphRagSearching => '正在检索...';
+
+  @override
+  String get galaxyGraphRagTime => '时间';
+
+  @override
+  String get galaxyGraphRagVector => '向量检索';
+
+  @override
+  String get galaxyImportanceAdvanced => '进阶';
+
+  @override
+  String get galaxyImportanceBasic => '基础';
+
+  @override
+  String get galaxyImportanceCore => '核心';
+
+  @override
+  String get galaxyImportanceEntry => '入门';
+
+  @override
+  String get galaxyImportanceIntermediate => '中级';
+
+  @override
+  String get galaxyImportanceNormal => '普通';
+
+  @override
+  String galaxyLLMActionFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyLoadFailed => '加载失败';
+
+  @override
+  String get galaxyLoadFailedTitle => '星图加载失败';
+
+  @override
+  String get galaxyLoadingMessage => '正在加载星图...';
+
+  @override
+  String get galaxyLoadingTitle => '加载中';
+
+  @override
+  String get galaxyNodeFocus => '聚焦节点';
+
+  @override
+  String get galaxyNodeInspectConnections => '查看连接';
+
+  @override
+  String get galaxyNodeLocked => '已锁定';
+
+  @override
+  String galaxyNodePreviewSubtitle(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get galaxyNodeUnlocked => '已解锁';
+
+  @override
+  String get galaxyOfflineMode => '离线模式';
+
+  @override
+  String get galaxyOverviewMastery => '掌握度';
+
+  @override
+  String get galaxyOverviewNodes => '节点数';
+
+  @override
+  String get galaxyOverviewUnlocked => '已解锁';
+
+  @override
+  String galaxyPerfHighJank(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String galaxyPerfLowFpsCritical(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String galaxyPerfLowFpsWarning(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyPerfRecommendationDisableParticles => '禁用粒子效果';
+
+  @override
+  String get galaxyPerfRecommendationLowQualityMode => '低质量模式';
+
+  @override
+  String get galaxyPerfRecommendationOptimizeLayout => '优化布局';
+
+  @override
+  String get galaxyPerfRecommendationReduceNodes => '减少显示节点';
+
+  @override
+  String galaxyPerfSlowRender(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get galaxyPerfStatusCritical => '性能严重不足';
+
+  @override
+  String get galaxyPerfStatusDegraded => '性能下降';
+
+  @override
+  String get galaxyPerfStatusOptimal => '性能最佳';
+
+  @override
+  String get galaxyReload => '重新加载';
+
+  @override
+  String get galaxySearchHint => '搜索知识节点...';
+
+  @override
+  String get galaxySearchHintDetail => '输入关键词搜索';
+
+  @override
+  String get galaxySearchNoResults => '未找到相关节点';
+
+  @override
+  String galaxySearchResultSubtitle(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
+
+  @override
+  String get galaxySearchTitle => '搜索星图';
+
+  @override
+  String get galaxySectorArt => '艺术';
+
+  @override
+  String get galaxySectorCivilization => '文明';
+
+  @override
+  String get galaxySectorCosmos => '宇宙';
+
+  @override
+  String get galaxySectorLife => '生命';
+
+  @override
+  String get galaxySectorTech => '科技';
+
+  @override
+  String get galaxySectorVoid => '虚空';
+
+  @override
+  String get galaxySectorWisdom => '智慧';
+
+  @override
+  String get galaxySimulationCenterGravity => '中心引力';
+
+  @override
+  String get galaxySimulationGravity => '引力';
+
+  @override
+  String get galaxySimulationReplaySpeed => '回放速度';
+
+  @override
+  String get galaxySimulationRepulsion => '斥力';
+
+  @override
+  String get galaxySimulationReset => '重置';
+
+  @override
+  String get galaxySimulationSubtitle => '调整物理参数';
+
+  @override
+  String get galaxySimulationTitle => '模拟设置';
+
+  @override
+  String get galaxyUsingCache => '使用缓存数据';
+
+  @override
+  String get guestUpgradeAcceptPoliciesRequired => '请先阅读并同意用户协议与隐私政策';
+
+  @override
+  String get guestUpgradeAgreePrivacy => '我已阅读并同意《隐私政策》';
+
+  @override
+  String get guestUpgradeAgreeTerms => '我已阅读并同意《用户协议》';
+
+  @override
+  String get guestUpgradeIntro => '升级您的游客账户，以确保数据安全并享受多设备同步等完整功能。';
+
+  @override
+  String get guestUpgradePasswordMinLength => '密码至少需要8个字符';
+
+  @override
+  String get guestUpgradeSocialSectionTitle => '或使用第三方账户升级';
+
+  @override
+  String get guestUpgradeSocialSuccess => '账户升级成功';
+
+  @override
+  String get guestUpgradeSuccess => '账户升级成功';
+
+  @override
+  String get guestUpgradeTitle => '升级账户';
+
+  @override
+  String get guestUpgradeUsernameMinLength => '用户名至少需要3个字符';
+
+  @override
+  String get guestUpgradeViewPrivacy => '查看隐私政策';
+
+  @override
+  String get guestUpgradeViewTerms => '查看用户协议';
+
+  @override
+  String get guestUpgradeWithApple => '使用 Apple 升级';
+
+  @override
+  String get guestUpgradeWithEmail => '使用邮箱升级';
+
+  @override
+  String get guestUpgradeWithGoogle => '使用 Google 升级';
+
+  @override
+  String get guestUpgradeWithWeChat => '使用微信升级';
+
+  @override
+  String get passwordSetConfirm => '确认设置密码';
+
+  @override
+  String get passwordSetHint => '请输入至少8位密码';
+
+  @override
+  String get passwordSetLabel => '设置密码';
+
+  @override
+  String get passwordSetSuccess => '密码设置成功';
+
+  @override
+  String get passwordSetTitle => '设置密码';
+
+  @override
+  String get planArchive => '归档计划';
+
+  @override
+  String get planArchiveConfirm => '确认归档';
+
+  @override
+  String get planArchiveMessage => '归档后计划将移至历史记录，确定要归档吗？';
+
+  @override
+  String get planArchiveTitle => '归档计划';
+
+  @override
+  String get planArchivedSuccess => '计划已归档';
+
+  @override
+  String get planContextTitle => '计划上下文';
+
+  @override
+  String planDaysRemaining(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planDetailTitle => '计划详情';
+
+  @override
+  String get planDueToday => '今日到期';
+
+  @override
+  String planFactsFeedbackSummary(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get planKeyFacts => '关键事实';
+
+  @override
+  String planLoadFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planNoContent => '暂无内容';
+
+  @override
+  String get planNoTasks => '暂无任务';
+
+  @override
+  String get planNoVisualizationData => '暂无可视化数据';
+
+  @override
+  String planOverdueDays(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planProgressLabel => '计划进度';
+
+  @override
+  String get planRecentFeedback => '最近反馈';
+
+  @override
+  String get planRelatedTasks => '相关任务';
+
+  @override
+  String get planRestore => '恢复计划';
+
+  @override
+  String get planRestoredSuccess => '计划已恢复';
+
+  @override
+  String get planReviewAdditionalNotesHint => '添加备注（可选）...';
+
+  @override
+  String get planReviewAdditionalNotesRequired => '请填写备注';
+
+  @override
+  String get planReviewApproveExecute => '批准并执行';
+
+  @override
+  String planReviewConfidenceTierLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planReviewConfidenceTitle => '置信度评估';
+
+  @override
+  String get planReviewDecisionApproved => '已批准';
+
+  @override
+  String get planReviewDecisionNeedsModification => '需要修改';
+
+  @override
+  String get planReviewDecisionRejected => '已拒绝';
+
+  @override
+  String get planReviewDecisionRequiresConfirmation => '需要确认';
+
+  @override
+  String planReviewEvidenceLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String planReviewImpactLabel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planReviewModifyPlan => '修改计划';
+
+  @override
+  String get planReviewReasonDifficultyTooHigh => '难度过高';
+
+  @override
+  String get planReviewReasonDifficultyTooLow => '难度过低';
+
+  @override
+  String get planReviewReasonMissingKeyTask => '缺少关键任务';
+
+  @override
+  String get planReviewReasonOther => '其他原因';
+
+  @override
+  String get planReviewReasonScheduleUnreasonable => '时间安排不合理';
+
+  @override
+  String get planReviewReasonTasksTooFew => '任务太少';
+
+  @override
+  String get planReviewReasonTasksTooMany => '任务太多';
+
+  @override
+  String get planReviewRejectReasonTitle => '拒绝原因';
+
+  @override
+  String get planReviewRejectWithFeedback => '拒绝并反馈';
+
+  @override
+  String get planReviewSelectReasonRequired => '请选择原因';
+
+  @override
+  String get planReviewSubmitFeedback => '提交反馈';
+
+  @override
+  String get planReviewSummaryApproved => '计划已批准';
+
+  @override
+  String get planReviewSummaryNeedsModification => '计划需要修改';
+
+  @override
+  String get planReviewSummaryRejected => '计划已拒绝';
+
+  @override
+  String get planReviewSummaryRequiresConfirmation => '计划需要确认';
+
+  @override
+  String get planSectionCompletionRate => '完成率';
+
+  @override
+  String get planSectionDailyCompletion => '每日完成情况';
+
+  @override
+  String get planSectionTaskTypeDistribution => '任务类型分布';
+
+  @override
+  String get planShare => '分享计划';
+
+  @override
+  String get planStatusActive => '进行中';
+
+  @override
+  String get planStatusArchived => '已归档';
+
+  @override
+  String get planStatusCompleted => '已完成';
+
+  @override
+  String get planStatusPaused => '已暂停';
+
+  @override
+  String get planStatusUnknown => '未知状态';
+
+  @override
+  String get planTabOverview => '概览';
+
+  @override
+  String get planTabProgress => '进度';
+
+  @override
+  String planTargetDate(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String planTargetMastery(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get planTaskProgress => '任务进度';
+
+  @override
+  String get planUpcomingTasks => '即将到来的任务';
+
+  @override
+  String get pomodoroBreakFinished => '休息结束！';
+
+  @override
+  String get pomodoroWorkFinished => '工作完成！';
+
+  @override
+  String get account => '账户';
+
+  @override
+  String get accountSecurity => '账户与安全';
+
+  @override
+  String get accountSecurityIntro => '管理您的关联账户、登录设备和安全日志';
+
+  @override
+  String get personalGrowth => '个人成长';
+
+  @override
+  String get profileDeleteAccount => '注销账户';
+
+  @override
+  String get profileLinkedAccounts => '关联账户';
+
+  @override
+  String get profilePersonalInfo => '个人信息';
+
+  @override
+  String get profileSecurityLog => '安全日志';
+
+  @override
+  String get profileSessionManagement => '设备管理';
+
+  @override
+  String get profileUpgradeGuest => '升级账户';
+
+  @override
+  String get regenCustomHint => '描述你想要的修改...';
+
+  @override
+  String get regenDescCompleted => '重新生成完成';
+
+  @override
+  String get regenDescFailed => '重新生成失败';
+
+  @override
+  String get regenDescInProgress => '正在重新生成...';
+
+  @override
+  String get regenDescPending => '等待重新生成';
+
+  @override
+  String get regenHintAddExamples => '添加更多示例';
+
+  @override
+  String get regenHintFixErrors => '修正错误';
+
+  @override
+  String get regenHintFriendlierTone => '更友好的语气';
+
+  @override
+  String get regenHintMoreAccurate => '更准确';
+
+  @override
+  String get regenHintMoreConcise => '更简洁';
+
+  @override
+  String get regenHintMoreDetailed => '更详细';
+
+  @override
+  String get regenHintsOptional => '可选提示';
+
+  @override
+  String get regenImprovementsTitle => '改进建议';
+
+  @override
+  String get regenProgressTitle => '重新生成进度';
+
+  @override
+  String regenQualityImprovement(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get regenResultFailed => '生成失败';
+
+  @override
+  String get regenResultSuccess => '生成成功';
+
+  @override
+  String get regenRetryMessage => '点击重试';
+
+  @override
+  String get regenSelectType => '选择类型';
+
+  @override
+  String get regenStart => '开始重新生成';
+
+  @override
+  String get regenTitleCompleted => '重新生成完成';
+
+  @override
+  String get regenTitleFailed => '重新生成失败';
+
+  @override
+  String get regenTitleIdle => '等待操作';
+
+  @override
+  String get regenTitleInProgress => '正在生成...';
+
+  @override
+  String get regenTitlePending => '等待中';
+
+  @override
+  String get regenTypeAddDetails => '添加细节';
+
+  @override
+  String get regenTypeChangeStyle => '改变风格';
+
+  @override
+  String get regenTypeCustom => '自定义';
+
+  @override
+  String get regenTypeFixIssues => '修复问题';
+
+  @override
+  String get regenTypeImproveQuality => '提高质量';
+
+  @override
+  String get regenTypeSimplify => '简化';
+
+  @override
+  String get reviewRatingAccuracyTitle => '准确性评价';
+
+  @override
+  String get reviewRatingAccurate => '准确';
+
+  @override
+  String get reviewRatingAddInaccuratePoint => '添加不准确点';
+
+  @override
+  String get reviewRatingCommentsHint => '输入您的评价...';
+
+  @override
+  String get reviewRatingCommentsTitle => '评价内容';
+
+  @override
+  String get reviewRatingHelpful => '有帮助';
+
+  @override
+  String get reviewRatingInaccurate => '不准确';
+
+  @override
+  String get reviewRatingInaccuratePointHint => '描述不准确的地方...';
+
+  @override
+  String get reviewRatingInaccuratePointsTitle => '不准确之处';
+
+  @override
+  String get reviewRatingLessOptions => '收起选项';
+
+  @override
+  String get reviewRatingMoreOptions => '更多选项';
+
+  @override
+  String get reviewRatingNotHelpful => '没帮助';
+
+  @override
+  String get reviewRatingSpecificityTitle => '具体性评价';
+
+  @override
+  String get reviewRatingSubmit => '提交评价';
+
+  @override
+  String get reviewRatingSubmitFailed => '提交失败';
+
+  @override
+  String get reviewRatingSubmitSuccess => '评价提交成功';
+
+  @override
+  String get reviewRatingSubtitle => '您的反馈将帮助我们改进';
+
+  @override
+  String get reviewRatingTagsTitle => '选择标签';
+
+  @override
+  String get reviewRatingTitle => '评价回复';
+
+  @override
+  String get reviewSpecificityAppropriate => '恰当';
+
+  @override
+  String get reviewSpecificityTooDetailed => '太详细';
+
+  @override
+  String get reviewSpecificityTooVague => '太模糊';
+
+  @override
+  String get reviewTagAccurate => '准确';
+
+  @override
+  String get reviewTagClear => '清晰';
+
+  @override
+  String get reviewTagNeedsImprovement => '需要改进';
+
+  @override
+  String get reviewTagPractical => '实用';
+
+  @override
+  String get reviewTagTooLenient => '太宽松';
+
+  @override
+  String get reviewTagTooStrict => '太严格';
+
+  @override
+  String get securityLogActionAccountDelete => '注销账户';
+
+  @override
+  String get securityLogActionEmailVerify => '验证邮箱';
+
+  @override
+  String get securityLogActionGuestUpgrade => '游客升级';
+
+  @override
+  String get securityLogActionLoginFailed => '登录失败';
+
+  @override
+  String get securityLogActionLoginSuccess => '登录成功';
+
+  @override
+  String get securityLogActionLogout => '登出';
+
+  @override
+  String get securityLogActionPasswordChange => '修改密码';
+
+  @override
+  String get securityLogActionPasswordReset => '重置密码';
+
+  @override
+  String get securityLogActionRegister => '注册';
+
+  @override
+  String get securityLogActionSocialLink => '绑定第三方账户';
+
+  @override
+  String get securityLogActionSocialUnlink => '解绑第三方账户';
+
+  @override
+  String get securityLogActionTokenRefresh => '刷新令牌';
+
+  @override
+  String securityLogAdditionalInfo(Object arg0) {
+    return '详细信息: $arg0';
+  }
+
+  @override
+  String get securityLogEmpty => '暂无安全日志记录';
+
+  @override
+  String get securityLogIntro => '最近的账户安全相关活动记录';
+
+  @override
+  String securityLogOccurredAt(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get securityLogTitle => '安全日志';
+
+  @override
+  String get sessionManagementCurrent => '当前设备';
+
+  @override
+  String get sessionManagementEmpty => '暂无活动设备';
+
+  @override
+  String sessionManagementFirstLogin(Object arg0) {
+    return '首次登录: $arg0';
+  }
+
+  @override
+  String get sessionManagementIntro => '管理您已登录的设备与会话。若发现异常活动，请及时注销相关设备。';
+
+  @override
+  String sessionManagementLastActive(Object arg0) {
+    return '最后活跃: $arg0';
+  }
+
+  @override
+  String get sessionManagementRevokeOthers => '注销其他设备';
+
+  @override
+  String get sessionManagementRevokeThis => '注销';
+
+  @override
+  String get sessionManagementTitle => '设备管理';
+
+  @override
+  String get sessionManagementUnknownDevice => '未知设备';
+
+  @override
+  String get socialAccountsIntro => '关联第三方账户以便快速登录';
+
+  @override
+  String get socialAccountsLink => '绑定';
+
+  @override
+  String get socialAccountsLinked => '已绑定';
+
+  @override
+  String get socialAccountsTitle => '关联账户';
+
+  @override
+  String get socialAccountsUnlink => '解绑';
+
+  @override
+  String get socialAccountsUnlinkConfirm => '确认解绑';
+
+  @override
+  String get socialAccountsUnlinkMessage => '解绑后您将无法使用该账号登录';
+
+  @override
+  String socialAccountsUnlinkTitle(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get socialAccountsUnlinkedHint => '未绑定';
+
+  @override
+  String get socialAccountsWeChatPending => '微信绑定处理中';
+
+  @override
+  String get socialAccountsWeChatUnavailable => '微信暂不可用';
+
+  @override
+  String get sprintActionAbandonButton => '放弃冲刺';
+
+  @override
+  String get sprintActionAbandonSubtitle => '放弃当前冲刺';
+
+  @override
+  String get sprintActionAbandonTitle => '放弃冲刺';
+
+  @override
+  String get sprintActionCompleteButton => '完成冲刺';
+
+  @override
+  String get sprintActionCompleteSubtitle => '标记冲刺为完成';
+
+  @override
+  String get sprintActionCompleteTitle => '完成冲刺';
+
+  @override
+  String get sprintActionExtendSubtitle => '延长冲刺时间';
+
+  @override
+  String get sprintActionExtendTitle => '延长冲刺';
+
+  @override
+  String get sprintActionsTitle => '冲刺操作';
+
+  @override
+  String get sprintCompletedTasks => '已完成任务';
+
+  @override
+  String get sprintCompletionRate => '完成率';
+
+  @override
+  String get sprintConfirmAbandonDesc => '确定要放弃这个冲刺吗？未完成的任务将保留。';
+
+  @override
+  String sprintConfirmAbandonMessage(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sprintConfirmAbandonTitle => '确认放弃';
+
+  @override
+  String get sprintConfirmCompleteDesc => '恭喜完成冲刺！确定要标记为完成吗？';
+
+  @override
+  String sprintConfirmCompleteMessage(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sprintConfirmCompleteTitle => '确认完成';
+
+  @override
+  String get sprintDailyCompletion => '每日完成情况';
+
+  @override
+  String get sprintDurationDaysLabel => '持续天数';
+
+  @override
+  String sprintDurationDaysValue(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sprintDurationLabel => '持续时间';
+
+  @override
+  String get sprintEndDateLabel => '结束日期';
+
+  @override
+  String sprintExtendConfirm(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String sprintExtendMessage(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String sprintExtendOptionDays(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sprintExtendSelectDays => '选择延长天数';
+
+  @override
+  String get sprintExtendTitle => '延长冲刺';
+
+  @override
+  String get sprintIncompleteTasks => '未完成任务';
+
+  @override
+  String get sprintInfoTitle => '冲刺信息';
+
+  @override
+  String get sprintOngoing => '进行中';
+
+  @override
+  String get sprintProgressTitle => '冲刺进度';
+
+  @override
+  String get sprintRemainingTasks => '剩余任务';
+
+  @override
+  String get sprintStartDateLabel => '开始日期';
+
+  @override
+  String get sprintStatsEmpty => '暂无统计数据';
+
+  @override
+  String get sprintStatsTitle => '冲刺统计';
+
+  @override
+  String get sprintStatusCompleted => '已完成';
+
+  @override
+  String get sprintStatusInProgress => '进行中';
+
+  @override
+  String get sprintStatusLabel => '冲刺状态';
+
+  @override
+  String get sprintStatusTodo => '待开始';
+
+  @override
+  String sprintTaskCount(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get sprintTaskSummaryTitle => '任务摘要';
+
+  @override
+  String get sprintTotalTasks => '总任务数';
+
+  @override
+  String get statusCompleted => '已完成';
+
+  @override
+  String get statusFailed => '失败';
+
+  @override
+  String get statusInProgress => '进行中';
+
+  @override
+  String get statusPending => '待处理';
+
+  @override
+  String taskBatchCreateTitle(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskChatAssistantTitle => '任务助手';
+
+  @override
+  String get taskChatEmptyPrompt => '有什么可以帮你的？';
+
+  @override
+  String get taskChatInputHint => '输入消息...';
+
+  @override
+  String get taskCreateAction => '创建任务';
+
+  @override
+  String taskCreateFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskCreateSuccess => '任务创建成功';
+
+  @override
+  String get taskCreateTitle => '创建任务';
+
+  @override
+  String get taskCreatedWithSuggestions => '已根据建议创建任务';
+
+  @override
+  String get taskCreating => '正在创建任务...';
+
+  @override
+  String get taskDeadline => '截止时间';
+
+  @override
+  String get taskDeadlineLabel => '截止时间';
+
+  @override
+  String get taskDeleteConfirm => '确定要删除这个任务吗？';
+
+  @override
+  String get taskDeleteTitle => '删除任务';
+
+  @override
+  String taskDetailLoadFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskDetailLoading => '加载任务详情...';
+
+  @override
+  String get taskDifficulty => '难度';
+
+  @override
+  String get taskDifficultyLabel => '难度';
+
+  @override
+  String taskDifficultyLevel(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskEnergyCost => '精力消耗';
+
+  @override
+  String get taskEnergyCostLabel => '精力消耗';
+
+  @override
+  String taskEnergyCostValue(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskEstimatedDuration => '预计时长';
+
+  @override
+  String get taskEstimatedDurationLabel => '预计时长';
+
+  @override
+  String get taskExecutionAbandon => '放弃执行';
+
+  @override
+  String get taskExecutionCompleteTitle => '完成任务';
+
+  @override
+  String get taskExecutionCompletedTitle => '任务已完成';
+
+  @override
+  String get taskExecutionConfirmComplete => '确认完成';
+
+  @override
+  String taskExecutionElapsedMinutes(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskExecutionEnterFocus => '进入专注模式';
+
+  @override
+  String taskExecutionExpGained(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskExecutionFeatureCoach => '专注教练';
+
+  @override
+  String get taskExecutionFeatureDistraction => '分心检测';
+
+  @override
+  String get taskExecutionFeatureFlipClock => '翻页时钟';
+
+  @override
+  String get taskExecutionFeatureFullscreen => '全屏模式';
+
+  @override
+  String get taskExecutionFeatureReward => '完成奖励';
+
+  @override
+  String get taskExecutionFeatureStarfield => '星空背景';
+
+  @override
+  String get taskExecutionGuideEmpty => '暂无执行指南';
+
+  @override
+  String get taskExecutionGuideTitle => '执行指南';
+
+  @override
+  String get taskExecutionNoTask => '当前没有执行中的任务';
+
+  @override
+  String get taskExecutionNoteHint => '添加执行笔记...';
+
+  @override
+  String get taskExecutionNoteLabel => '执行笔记';
+
+  @override
+  String get taskExecutionSkipAnimation => '跳过动画';
+
+  @override
+  String taskExecutionStartFailed(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskExecutionStartNow => '立即开始';
+
+  @override
+  String get taskExecutionSyncFailed => '同步失败';
+
+  @override
+  String get taskExecutionTapToContinue => '点击继续';
+
+  @override
+  String get taskExecutionTimerLabel => '计时器';
+
+  @override
+  String get taskExitCancelStep1 => '取消退出';
+
+  @override
+  String get taskExitCancelStep2 => '继续取消';
+
+  @override
+  String get taskExitCancelStep3 => '保留任务';
+
+  @override
+  String get taskExitConfirmStep1 => '确认退出';
+
+  @override
+  String get taskExitConfirmStep2 => '再次确认';
+
+  @override
+  String get taskExitConfirmStep3 => '放弃任务';
+
+  @override
+  String get taskExitMessageStep1 => '确定要退出吗？进度将丢失。';
+
+  @override
+  String taskExitMessageStep2(Object arg0, Object arg1) {
+    return '$arg0 $arg1';
+  }
+
+  @override
+  String get taskExitMessageStep3 => '任务已放弃，下次继续加油！';
+
+  @override
+  String get taskExitTitleStep1 => '退出任务';
+
+  @override
+  String get taskExitTitleStep2 => '再次确认';
+
+  @override
+  String get taskExitTitleStep3 => '已放弃';
+
+  @override
+  String get taskGenerateGuideSubtitle => 'AI 正在生成执行指南...';
+
+  @override
+  String get taskGenerateGuideTitle => '生成执行指南';
+
+  @override
+  String get taskGuideEmpty => '暂无指南';
+
+  @override
+  String get taskGuideTitle => '任务指南';
+
+  @override
+  String get taskListLoading => '加载任务列表...';
+
+  @override
+  String get taskListTitle => '任务列表';
+
+  @override
+  String taskMinutesOption(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String taskNudgeApplied(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskNudgeApply => '应用建议';
+
+  @override
+  String taskNudgeConfidence(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskNudgeDismiss => '忽略';
+
+  @override
+  String get taskNudgeTitle => '任务建议';
+
+  @override
+  String get taskReminderEnableSubtitle => '开启任务提醒功能';
+
+  @override
+  String get taskReminderEnableTitle => '开启提醒';
+
+  @override
+  String get taskReminderInfoBody => '任务提醒会在截止时间前通知您';
+
+  @override
+  String get taskReminderInfoTitle => '提醒说明';
+
+  @override
+  String get taskReminderPermissionDenied => '没有通知权限';
+
+  @override
+  String get taskReminderRefreshAll => '刷新所有提醒';
+
+  @override
+  String get taskReminderRefreshSuccess => '提醒已刷新';
+
+  @override
+  String get taskReminderSettingsTitle => '提醒设置';
+
+  @override
+  String get taskReminderTimesTitle => '提醒时间';
+
+  @override
+  String get taskSearchHint => '搜索任务...';
+
+  @override
+  String get taskStart => '开始任务';
+
+  @override
+  String get taskSuggestedKnowledge => '推荐知识';
+
+  @override
+  String get taskTagsHint => '添加标签...';
+
+  @override
+  String get taskTagsLabel => '标签';
+
+  @override
+  String taskTimerMinutes(Object arg0) {
+    return '$arg0';
+  }
+
+  @override
+  String get taskTimerPomodoro => '番茄钟';
+
+  @override
+  String get taskTitleHint => '输入任务标题...';
+
+  @override
+  String get taskTitleLabel => '任务标题';
+
+  @override
+  String get taskTitleRequired => '请输入任务标题';
+
+  @override
+  String get taskTypeLabel => '任务类型';
+
+  @override
+  String get taskTypeOcr => 'OCR识别';
+
+  @override
+  String get taskUntitled => '未命名任务';
+
+  @override
+  String get taskViewAll => '查看全部';
+
+  @override
+  String get weeklyAgendaCollapsedHint => '展开查看完整周日程';
+
+  @override
+  String get weeklyAgendaEmptyHint => '本周暂无日程安排';
+
+  @override
+  String weeklyAgendaSummary(Object arg0, Object arg1, Object arg2) {
+    return '$arg0 $arg1 $arg2';
+  }
+
+  @override
+  String securityLogDevice(Object arg0) {
+    return '设备: $arg0';
+  }
+
+  @override
+  String get sessionManagementCurrentHint => '这是您当前正在使用的设备';
+
+  @override
+  String get personaAdjustInferredPreference => '调整推断偏好';
+
+  @override
+  String get personaNewValue => '新值';
+
+  @override
+  String get personaAdjustInferredPreferenceTitle => '调整推断偏好';
 }

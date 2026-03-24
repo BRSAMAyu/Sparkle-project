@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from app.services.memory_service import MemoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class UnifiedAnalysisService:
@@ -95,18 +95,24 @@ class UnifiedAnalysisService:
         return str(record.id)
 
     async def _build_similar_text(self, fragment: CognitiveFragment) -> str:
-        if fragment.embedding is None:
+        fragment_embedding = fragment.__dict__.get("embedding")
+        if fragment_embedding is None:
             return ""
-        rag_query = (
-            select(CognitiveFragment)
-            .where(CognitiveFragment.user_id == fragment.user_id)
-            .where(CognitiveFragment.id != fragment.id)
-            .where(CognitiveFragment.embedding.isnot(None))
-            .order_by(CognitiveFragment.embedding.cosine_distance(fragment.embedding))
-            .limit(3)
-        )
-        rag_result = await self.db.execute(rag_query)
-        similar_fragments = rag_result.scalars().all()
+        try:
+            rag_query = (
+                select(CognitiveFragment)
+                .where(CognitiveFragment.user_id == fragment.user_id)
+                .where(CognitiveFragment.id != fragment.id)
+                .where(CognitiveFragment.embedding.isnot(None))
+                .order_by(CognitiveFragment.embedding.cosine_distance(fragment_embedding))
+                .limit(3)
+            )
+            rag_result = await self.db.execute(rag_query)
+            similar_fragments = rag_result.scalars().all()
+        except Exception as exc:
+            logger.warning(f"Unified analysis skipped similar fragment retrieval: {exc}")
+            return ""
+
         return "\n".join(
             [f"- {item.content} (Tags: {item.error_tags})" for item in similar_fragments]
         )

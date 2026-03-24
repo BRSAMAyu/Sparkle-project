@@ -2,6 +2,7 @@
 File processing orchestrator
 文件处理编排服务
 """
+from __future__ import annotations
 import json
 import os
 import tempfile

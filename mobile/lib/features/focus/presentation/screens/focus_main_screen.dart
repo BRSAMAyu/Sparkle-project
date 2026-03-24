@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -23,7 +26,13 @@ class FocusMainScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.go('/home');
+          },
         ),
         title: Text(context.l10n.focusSelectTaskTitle),
       ),
@@ -34,35 +43,73 @@ class FocusMainScreen extends ConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  DS.spacing20,
                   DS.spacing16,
-                  DS.spacing20,
                   DS.spacing12,
+                  DS.spacing16,
+                  DS.spacing10,
                 ),
-                child: Text(
-                  context.l10n.focusReadyPrompt,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: DS.textPrimary,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  child: Column(
+                    children: [
+                      Text(
+                        context.l10n.focusReadyPrompt,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        '先选一个任务开始，或直接进入自由专注。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               Expanded(
                 child: todayTasks.isEmpty
                     ? _buildEmptyState(context, ref)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: todayTasks.length,
-                        itemBuilder: (context, index) {
-                          final task = todayTasks[index];
-                          return _buildTaskItem(context, task);
-                        },
+                    : SparkleStaggerList(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing16,
+                        ),
+                        shrinkWrap: false,
+                        physics: const BouncingScrollPhysics(),
+                        gap: DS.spacing10,
+                        children: [
+                          for (final task in todayTasks)
+                            _buildTaskItem(context, task),
+                        ],
                       ),
               ),
-              _buildQuickFocusButton(context, ref),
-              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing16,
+                  DS.spacing10,
+                  DS.spacing16,
+                  DS.spacing16,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.surfacePrimary.withValues(alpha: 0.94),
+                  border: Border(
+                    top: BorderSide(
+                      color: DS.borderSubtle,
+                    ),
+                  ),
+                ),
+                child: _buildQuickFocusButton(context, ref),
+              ),
             ],
           ),
         ),
@@ -96,6 +143,9 @@ class FocusMainScreen extends ConsumerWidget {
               child: SparkleButton(
                 expand: true,
                 onPressed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                  );
                   final dummyTask = TaskModel(
                     id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
                     userId: '',
@@ -112,7 +162,7 @@ class FocusMainScreen extends ConsumerWidget {
                   );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = dummyTask;
-                  context.push('/tasks/${dummyTask.id}/execute');
+                  context.push('/tasks/${dummyTask.id}/execute?origin=focus');
                 },
                 icon: const Icon(Icons.play_circle_outline),
                 label: context.l10n.focusStartNow,
@@ -121,7 +171,14 @@ class FocusMainScreen extends ConsumerWidget {
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
               label: context.l10n.focusCreateTask,
-              onPressed: () => context.push('/tasks/new'),
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
+                context.push('/tasks/new');
+              },
             ),
           ],
         ),
@@ -130,12 +187,14 @@ class FocusMainScreen extends ConsumerWidget {
   Widget _buildTaskItem(BuildContext context, TaskModel task) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: DS.spacing8),
         padding: EdgeInsets.zero,
         child: Consumer(
           builder: (context, ref, child) => ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing10,
+            ),
             title: Text(
               task.title,
               style: TextStyle(
@@ -153,39 +212,59 @@ class FocusMainScreen extends ConsumerWidget {
               size: 16,
             ),
             onTap: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;
-              context.push('/tasks/${task.id}/execute');
+              context.push('/tasks/${task.id}/execute?origin=focus');
             },
           ),
         ),
       );
 
   Widget _buildQuickFocusButton(BuildContext context, WidgetRef ref) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: SparkleButton(
-          expand: true,
-          label: context.l10n.focusQuickStart,
-          onPressed: () {
-            // Create a dummy task for quick focus if needed, or just push a generic task
-            final dummyTask = TaskModel(
-              id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
-              userId: '',
-              title: context.l10n.focusQuickStart,
-              type: TaskType.learning,
-              estimatedMinutes: 25,
-              difficulty: 1,
-              energyCost: 1,
-              priority: 1,
-              tags: [],
-              status: TaskStatus.pending,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            );
-            // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
-            ref.read(activeTaskProvider.notifier).state = dummyTask;
-            context.push('/tasks/${dummyTask.id}/execute');
-          },
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SparkleButton(
+              expand: true,
+              label: context.l10n.focusQuickStart,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                final dummyTask = TaskModel(
+                  id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
+                  userId: '',
+                  title: context.l10n.focusQuickStart,
+                  type: TaskType.learning,
+                  estimatedMinutes: 25,
+                  difficulty: 1,
+                  energyCost: 1,
+                  priority: 1,
+                  tags: [],
+                  status: TaskStatus.pending,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                ref.read(activeTaskProvider.notifier).state = dummyTask;
+                context.push('/tasks/${dummyTask.id}/execute?origin=focus');
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              Localizations.localeOf(context).languageCode == 'zh'
+                  ? '完成后会生成专注结算与今日累计'
+                  : 'Completion reveals a focus summary and today total',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
         ),
       );
 }

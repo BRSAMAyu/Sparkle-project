@@ -3,7 +3,7 @@ Learning Assets Models (学习资产模型)
 Represents user's vocabulary, sentences, and concepts collected from translation lookups.
 """
 import enum
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import (
     JSON,
@@ -25,7 +25,7 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AssetStatus(str, enum.Enum):

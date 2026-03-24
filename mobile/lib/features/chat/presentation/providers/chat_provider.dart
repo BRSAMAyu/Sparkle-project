@@ -1,12 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:async/async.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -22,12 +29,16 @@ import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 part 'chat_notifier_reviews.dart';
 part 'chat_notifier_history.dart';
@@ -69,14 +80,117 @@ class ChatNotifier extends StateNotifier<ChatState> {
   // Review service (lazy initialized)
   ReviewGrpcService? _reviewService;
 
+  // P0修复: 跟踪当前正在加载历史的会话ID，防止并发加载和计划切换竞态
+  String? loadingConversationId;
+
+  // P0修复: 可取消的历史加载操作，用于切换会话时取消之前的加载请求
+  CancelableOperation<List<ChatMessageModel>>? _historyLoadOperation;
+
+  // P0修复: 计划切换进行中标志，阻止切换期间发送消息防止消息发送到错误上下文
+  bool isSwitchingPlan = false;
+
+  // Any response stream created before the latest generation value becomes
+  // stale and must not mutate the current chat UI.
+  int _streamGeneration = 0;
+  int _runSequence = 0;
+
   /// 手动触发重连
   Future<void> reconnect() async {
     await _chatRepository.reconnect();
   }
 
+  String _nextClientRunId() =>
+      'run_${DateTime.now().microsecondsSinceEpoch}_${_runSequence++}';
+
+  ActiveRunSummary _buildRunSummary({
+    String? status,
+    String? details,
+    String? agentName,
+    int? currentStepIndex,
+    int? totalSteps,
+    List<String>? activeTools,
+    int? startedAtEpochMs,
+  }) =>
+      ActiveRunSummary(
+        status: status ?? state.aiStatus,
+        details: details ?? state.aiStatusDetails,
+        agentName: agentName ?? state.currentAgentName,
+        toolCount: activeTools?.length ?? state.activeTools.length,
+        currentStepIndex: currentStepIndex ?? state.currentStepIndex,
+        totalSteps: totalSteps ??
+            state.transparencyData?.steps.length ??
+            state.activeRunSummary?.totalSteps,
+        startedAtEpochMs:
+            startedAtEpochMs ?? state.activeRunSummary?.startedAtEpochMs,
+      );
+
+  void _invalidateActiveStreamState({
+    ChatRunPhase phase = ChatRunPhase.cancelled,
+    String? completedLabel,
+    bool clearCompletedLabel = false,
+  }) {
+    _streamGeneration++;
+    state = state.copyWith(
+      isSending: false,
+      streamingContent: '',
+      clearAiStatus: true,
+      clearReasoning: true,
+      clearDagExecution: true,
+      clearTransparency: true,
+      agentActivities: const [],
+      activeTools: const [],
+      clearActiveRunId: true,
+      runPhase: phase,
+      clearActiveRunSummary: true,
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(
+        isExpanded: false,
+        isDismissed: false,
+        lastCompletedLabel: completedLabel,
+        clearLastCompletedLabel: clearCompletedLabel,
+      ),
+    );
+  }
+
+  void _beginRun({
+    required String runId,
+    required ChatMessageModel userMessage,
+  }) {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
+      isSending: true,
+      streamingContent: '',
+      activeTools: const [],
+      agentActivities: const [],
+      clearDagExecution: true,
+      clearTransparency: true,
+      clearError: true,
+      activeRunId: runId,
+      runPhase: ChatRunPhase.sending,
+      activeRunSummary: ActiveRunSummary(startedAtEpochMs: nowMs),
+      transparencyPresentationState:
+          state.transparencyPresentationState.copyWith(
+        isExpanded: false,
+        isDismissed: false,
+        clearLastCompletedLabel: true,
+      ),
+    );
+  }
+
+  void cancelActiveRun({String reason = 'superseded'}) {
+    if (!state.isSending && state.activeRunId == null) {
+      return;
+    }
+    debugPrint('[Chat] cancelActiveRun: $reason');
+    _invalidateActiveStreamState();
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
+    unawaited(_historyLoadOperation?.cancel());
+    _historyLoadOperation = null;
     unawaited(_connectionStateSubscription?.cancel());
     _streamDebouncer.cancel();
     _chatRepository.dispose();
@@ -127,8 +241,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           ? Map<String, dynamic>.from(item['payload'] as Map)
           : <String, dynamic>{};
       final type = item['type']?.toString() ?? defaultType;
-      final label =
-          item['label']?.toString() ??
+      final label = item['label']?.toString() ??
           payload['label']?.toString() ??
           item['prompt']?.toString() ??
           payload['prompt']?.toString() ??
@@ -214,6 +327,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? uxEnvelope,
   ) {
     if (uxEnvelope == null || uxEnvelope.isEmpty) return;
+    final l10n = I18nService.instance.l10n;
 
     void addWidget(String type, Map<String, dynamic>? data) {
       if (data == null || data.isEmpty) return;
@@ -252,7 +366,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final nextActions = _normalizeUxActionList(nextActionsRaw);
       final retryOptions = _normalizeUxActionList(retryOptionsRaw);
       addWidget('next_actions', {
-        'title': followthrough['next_actions_title']?.toString() ?? '下一步建议',
+        'title': followthrough['next_actions_title']?.toString() ??
+            l10n.chatNextActionsTitle,
         'actions': nextActions,
         'retry_options': retryOptions,
         'recovery_message': followthrough['recovery_message'],
@@ -277,7 +392,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final completionState = result['completion_state']?.toString();
       if (completionState == 'needs_input' || completionState == 'blocked') {
         addWidget('blocked_input_request', {
-          'title': result['headline']?.toString() ?? '继续前我还需要你确认一下',
+          'title': result['headline']?.toString() ?? l10n.chatBlockedInputTitle,
           'reason': result['why_this_answer'],
           'failure_kind': result['failure_kind'],
           'recovery_message': followthrough is Map<String, dynamic>
@@ -296,7 +411,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  WidgetPayload _normalizeWidgetPayload(String type, Map<String, dynamic> data) {
+  WidgetPayload _normalizeWidgetPayload(
+    String type,
+    Map<String, dynamic> data,
+  ) {
     if (type == 'system_update') {
       final category = data['category']?.toString();
       final metadata = data['metadata'];
@@ -313,7 +431,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           type: 'evolution_card',
           data: {
             'evolution_kind': evolutionKind,
-            'headline': data['title']?.toString() ?? '系统正在继续适应你',
+            'headline': data['title']?.toString() ??
+                I18nService.instance.l10n.chatEvolutionHeadlineDefault,
             'summary': data['description']?.toString() ?? '',
             if (metadata['insight_text'] != null)
               'insight_text': metadata['insight_text'],
@@ -323,7 +442,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
               'recommended_action': Map<String, dynamic>.from(
                 metadata['recommended_action'] as Map,
               ),
-            if (metadata['confidence'] != null) 'confidence': metadata['confidence'],
+            if (metadata['confidence'] != null)
+              'confidence': metadata['confidence'],
             if (metadata['weekly_summary'] != null)
               'weekly_summary': metadata['weekly_summary'],
             if (metadata['top_learnings'] is List<dynamic>)
@@ -367,6 +487,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
+    // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文
+    if (isSwitchingPlan) {
+      debugPrint('[Chat] sendMessage blocked: plan switch in progress');
+      return;
+    }
+
+    if (state.isSending) {
+      cancelActiveRun(reason: 'new_message');
+    }
+
     // 获取当前用户信息
     final authState = _ref.read(authProvider);
     final user = authState.user;
@@ -385,6 +515,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       nickname = guestService.getGuestNickname();
     }
 
+    final runId = _nextClientRunId();
+    final requestGeneration = ++_streamGeneration;
+    bool isCurrentRequest() => requestGeneration == _streamGeneration;
+    final queuedAttachments = List<StoredFile>.from(state.attachedFiles);
+    final hasQueuedAttachments = queuedAttachments.isNotEmpty;
+
     // 1. 立即添加用户消息到 UI
     final userMessage = ChatMessageModel(
       id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
@@ -396,15 +532,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       createdAt: DateTime.now(),
     );
 
-    state = state.copyWith(
-      messages: [...state.messages, userMessage],
-      isSending: true,
-      streamingContent: '',
-      activeTools: const [],
-      agentActivities: const [],
-      clearDagExecution: true,
-      clearError: true,
-    );
+    _beginRun(runId: runId, userMessage: userMessage);
 
     var accumulatedContent = '';
     String? responseId;
@@ -417,6 +545,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? accumulatedUxEnvelope;
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
+    String? accumulatedCollaborationNarrative;
+    String? accumulatedCollaborationMode;
+    List<String>? accumulatedAgentsInvolved;
+    final accumulatedMeta = <String, dynamic>{};
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -427,10 +559,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     int? pendingReasoningStartTime;
     var planContextInjected = false;
     List<Map<String, dynamic>>? snapshotAgentActivities;
+    var sawTerminalEvent = false;
+    var shouldResetSending = true;
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
-        if (_isDisposed) return;
+        if (_isDisposed || !isCurrentRequest()) return;
         if (pendingStreamingContent == null &&
             pendingAiStatus == null &&
             pendingAiStatusDetails == null &&
@@ -446,6 +580,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
           reasoningSteps: pendingReasoningSteps,
           isReasoningActive: pendingReasoningActive,
           reasoningStartTime: pendingReasoningStartTime,
+          runPhase: (pendingStreamingContent?.isNotEmpty ?? false) ||
+                  (pendingReasoningActive ?? false) ||
+                  (pendingAiStatus?.isNotEmpty ?? false)
+              ? ChatRunPhase.streaming
+              : state.runPhase,
+          activeRunSummary: _buildRunSummary(
+            status: pendingAiStatus,
+            details: pendingAiStatusDetails,
+          ),
         );
         pendingStreamingContent = null;
         pendingAiStatus = null;
@@ -462,8 +605,103 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
 
-    // 🔧 P1-1: 使用 finally 确保 isSending 总是被重置
-    var shouldResetSending = true;
+    void finalizeRun({
+      required ChatRunPhase phase,
+      String? errorMessage,
+      String? errorCode,
+      bool isRetryable = false,
+      bool restoreAttachments = false,
+    }) {
+      if (!isCurrentRequest() || sawTerminalEvent) {
+        return;
+      }
+      sawTerminalEvent = true;
+      _streamDebouncer.cancel();
+      unawaited(BgmService.setPersistentDuckFactor(1.0));
+      _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
+
+      final hasRenderableMessage = accumulatedContent.trim().isNotEmpty ||
+          accumulatedWidgets.isNotEmpty ||
+          accumulatedCollaboration != null ||
+          accumulatedUxEnvelope != null;
+
+      if (hasRenderableMessage) {
+        String? reasoningSummary;
+        if (accumulatedReasoningSteps.isNotEmpty &&
+            reasoningStartTime != null) {
+          final durationMs =
+              DateTime.now().millisecondsSinceEpoch - reasoningStartTime;
+          reasoningSummary = I18nService.instance.l10n.chatReasoningSummary(
+            (durationMs / 1000).toStringAsFixed(1),
+            accumulatedReasoningSteps.length,
+          );
+        }
+
+        final messageMeta = accumulatedMeta.isNotEmpty
+            ? MessageMeta.fromLooseJson(accumulatedMeta)
+            : null;
+
+        final aiMessage = ChatMessageModel(
+          id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          userId: 'ai_assistant',
+          conversationId: state.conversationId ?? 'temp_conversation',
+          role: MessageRole.assistant,
+          content: accumulatedContent,
+          createdAt: DateTime.now(),
+          widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
+          agentCollaboration: accumulatedCollaboration,
+          orchestrationTrace: accumulatedOrchestrationTrace,
+          modeSuggestion: accumulatedModeSuggestion,
+          collaborationNarrative: accumulatedCollaborationNarrative,
+          collaborationMode: accumulatedCollaborationMode,
+          agentsInvolved: accumulatedAgentsInvolved ?? const [],
+          aiStatus: lastAiStatus,
+          agentActivities: snapshotAgentActivities ?? const [],
+          reasoningSteps: accumulatedReasoningSteps.isNotEmpty
+              ? accumulatedReasoningSteps
+              : null,
+          reasoningSummary: reasoningSummary,
+          isReasoningComplete: accumulatedReasoningSteps.isNotEmpty,
+          meta: messageMeta,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          uxEnvelope: accumulatedUxEnvelope,
+        );
+
+        state = state.copyWith(
+          messages: [...state.messages, aiMessage],
+        );
+      }
+
+      state = state.copyWith(
+        isSending: false,
+        streamingContent: '',
+        clearDagExecution: true,
+        clearAiStatus: true,
+        clearReasoning: true,
+        clearTransparency: true,
+        agentActivities: const [],
+        activeTools: const [],
+        clearActiveRunId: true,
+        runPhase: phase,
+        clearActiveRunSummary: true,
+        transparencyPresentationState:
+            state.transparencyPresentationState.copyWith(
+          isExpanded: false,
+          isDismissed: false,
+          lastCompletedLabel: phase == ChatRunPhase.completed ? '已完成' : null,
+          clearLastCompletedLabel: phase != ChatRunPhase.completed,
+        ),
+        error: errorMessage,
+        errorCode: errorCode,
+        isErrorRetryable: errorMessage == null ? false : isRetryable,
+        attachedFiles: restoreAttachments ? queuedAttachments : const [],
+      );
+      shouldResetSending = false;
+    }
+
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
@@ -471,14 +709,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
-      final extraContext =
-          selectedPlanId != null ? {'plan_id': selectedPlanId} : null;
+      final reasoningMode = _ref.read(aiReasoningModeProvider);
+      final extraContext = <String, dynamic>{
+        if (selectedPlanId != null) 'plan_id': selectedPlanId,
+        'reasoning_mode': reasoningMode,
+      };
 
       // Get selected chat mode
       final chatMode = _ref.read(chatModeProvider);
       final chatModeValue = chatMode.apiValue;
 
-      await for (final event in _chatRepository.chatStream(
+      // Long-running expert and study-plan flows can stay silent for minutes
+      // before the first token arrives. Keep a hard inactivity guard, but do
+      // not abort healthy generations too early.
+      const streamTimeout = Duration(minutes: 8);
+
+      // Create a timeout wrapper for the stream
+      final rawStream = _chatRepository.chatStream(
         content,
         state.conversationId,
         userId: userId,
@@ -488,7 +735,31 @@ class ChatNotifier extends StateNotifier<ChatState> {
         includeReferences: fileIds.isNotEmpty,
         extraContext: extraContext,
         chatMode: chatModeValue,
-      )) {
+        requestId: runId,
+      );
+
+      // Wrap with timeout check
+      final timedStream = rawStream.timeout(
+        streamTimeout,
+        onTimeout: (sink) {
+          debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
+          sink
+            ..add(
+              ErrorEvent(
+                code: 'STREAM_TIMEOUT',
+                message:
+                    'Stream timed out after ${streamTimeout.inSeconds} seconds of inactivity',
+                retryable: true,
+              ),
+            )
+            ..close();
+        },
+      );
+
+      await for (final event in timedStream) {
+        if (!isCurrentRequest()) {
+          break;
+        }
         if (event.responseId != null && event.responseId!.isNotEmpty) {
           responseId = event.responseId;
         }
@@ -501,9 +772,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
           promptVersion = event.promptVersion;
         }
+        // Capture sessionId from backend response to maintain conversation continuity
+        if (event.sessionId != null && event.sessionId!.isNotEmpty) {
+          state = state.copyWith(conversationId: event.sessionId);
+        }
 
         if (event is TextEvent) {
+          unawaited(BgmService.setPersistentDuckFactor(0.72));
           final metadata = event.metadata;
+          if (metadata != null) {
+            accumulatedMeta.addAll(metadata);
+          }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
             accumulatedUxEnvelope = {
@@ -533,10 +812,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
           }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
+            final answerExpertsRaw = metadata['answer_experts'];
             final routingStrategy = metadata['routing_strategy'];
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final collaborationNarrative =
+                metadata['collaboration_narrative']?.toString();
+            final collaborationMode =
+                metadata['collaboration_mode']?.toString();
+            final agentsInvolved = _parseSelectedExperts(
+              metadata['agents_involved'],
+            );
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -546,11 +833,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
+                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
                 'routing_strategy': routingStrategy,
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
               };
+            }
+            if (collaborationNarrative != null &&
+                collaborationNarrative.trim().isNotEmpty) {
+              accumulatedCollaborationNarrative = collaborationNarrative.trim();
+            }
+            if (collaborationMode != null &&
+                collaborationMode.trim().isNotEmpty) {
+              accumulatedCollaborationMode = collaborationMode.trim();
+            }
+            if (agentsInvolved.isNotEmpty) {
+              accumulatedAgentsInvolved = agentsInvolved;
             }
           }
           // 流式文本片段（delta）
@@ -559,6 +858,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
+          if (event.state == 'THINKING' || event.state == 'GENERATING') {
+            unawaited(BgmService.setPersistentDuckFactor(0.72));
+          } else {
+            unawaited(BgmService.setPersistentDuckFactor(1.0));
+          }
           final uxProgress = event.metadata?['ux_progress'];
           lastAiStatus = event.state;
           pendingAiStatus = event.state;
@@ -575,6 +879,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
           state = state.copyWith(
             currentAgentName: event.currentAgentName,
             activeAgentType: event.activeAgentType,
+            activeRunSummary: _buildRunSummary(
+              status: event.state,
+              details: pendingAiStatusDetails,
+              agentName: event.currentAgentName,
+            ),
           );
           flushPending();
         } else if (event is DagExecutionEvent) {
@@ -589,6 +898,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
           final metadata = event.metadata;
+          if (metadata != null) {
+            accumulatedMeta.addAll(metadata);
+          }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
             accumulatedUxEnvelope = {
@@ -598,10 +910,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
           }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
+            final answerExpertsRaw = metadata['answer_experts'];
             final routingStrategy = metadata['routing_strategy'];
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final collaborationNarrative =
+                metadata['collaboration_narrative']?.toString();
+            final collaborationMode =
+                metadata['collaboration_mode']?.toString();
+            final agentsInvolved = _parseSelectedExperts(
+              metadata['agents_involved'],
+            );
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -611,19 +931,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
+                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
                 'routing_strategy': routingStrategy,
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
               };
             }
+            if (collaborationNarrative != null &&
+                collaborationNarrative.trim().isNotEmpty) {
+              accumulatedCollaborationNarrative = collaborationNarrative.trim();
+            }
+            if (collaborationMode != null &&
+                collaborationMode.trim().isNotEmpty) {
+              accumulatedCollaborationMode = collaborationMode.trim();
+            }
+            if (agentsInvolved.isNotEmpty) {
+              accumulatedAgentsInvolved = agentsInvolved;
+            }
           }
           accumulatedContent = event.content;
           pendingStreamingContent = accumulatedContent;
           flushPending(immediate: true);
         } else if (event is ErrorEvent) {
-          // 错误事件 - 使用用户友好的错误消息
-          _streamDebouncer.cancel();
           final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
             event.code,
             event.message,
@@ -633,18 +963,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final isRetryable = ErrorMessages.isRetryable(event.code);
 
           state = state.copyWith(
-            error: actionSuggestion.isEmpty
-                ? userFriendlyMessage
-                : '$userFriendlyMessage\n建议：$actionSuggestion',
-            errorCode: event.code,
-            isErrorRetryable: isRetryable,
-            isSending: false,
-            streamingContent: '',
-            clearDagExecution: true,
-            clearAiStatus: true,
-            clearReasoning: true,
+            activeRunSummary: _buildRunSummary(
+              status: lastAiStatus,
+              details: event.message,
+            ),
           );
-          shouldResetSending = false; // 已经重置过了
+          finalizeRun(
+            phase: ChatRunPhase.failed,
+            errorMessage: actionSuggestion.isEmpty
+                ? userFriendlyMessage
+                : I18nService.instance.l10n.chatErrorWithSuggestion(
+                    userFriendlyMessage,
+                    actionSuggestion,
+                  ),
+            errorCode: event.code,
+            isRetryable: isRetryable,
+            restoreAttachments: hasQueuedAttachments,
+          );
           return; // 提前退出
         } else if (event is WidgetEvent) {
           if (event.widgetType == 'system_update' &&
@@ -658,7 +993,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // 显示"正在使用工具: xxx"
           lastAiStatus = 'EXECUTING_TOOL';
           pendingAiStatus = 'EXECUTING_TOOL';
-          pendingAiStatusDetails = '正在使用 ${event.toolName}...';
+          pendingAiStatusDetails =
+              I18nService.instance.l10n.chatUsingTool(event.toolName);
           final nextTools = List<String>.from(state.activeTools);
           if (!nextTools.contains(event.toolName)) {
             nextTools.add(event.toolName);
@@ -679,7 +1015,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 !_shouldIncludeSystemUpdate(widgetData)) {
               continue;
             }
-            accumulatedWidgets.add(_normalizeWidgetPayload(widgetType, widgetData));
+            accumulatedWidgets
+                .add(_normalizeWidgetPayload(widgetType, widgetData));
           }
         } else if (event is CitationEvent) {
           accumulatedWidgets.add(
@@ -694,8 +1031,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
                     ? 'file_only'
                     : 'mixed',
                 'evidence_summary': event.citations.isNotEmpty
-                    ? '这轮回答带有可展开的依据来源。'
-                    : '这轮回答没有附带可展开的引用来源。',
+                    ? I18nService.instance.l10n.chatSourcesAvailable
+                    : I18nService.instance.l10n.chatSourcesUnavailable,
                 'citations': event.citations,
               },
             ),
@@ -707,6 +1044,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
             lastTotalTokens: event.totalTokens,
           );
           await _updateDailyUsage(event);
+        } else if (event is MetaEvent) {
+          accumulatedMeta.addAll(event.meta);
+          flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization
           reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
@@ -749,6 +1089,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
           flushPending();
         } else if (event is AchievementMilestoneEvent) {
           // Achievement Milestone Event
@@ -759,12 +1100,24 @@ class ChatNotifier extends StateNotifier<ChatState> {
           state = state.copyWith(
             currentStepId: event.currentStep,
             currentStepIndex: event.stepIndex,
+            activeRunSummary: _buildRunSummary(
+              currentStepIndex: event.stepIndex,
+              totalSteps: event.totalSteps > 0 ? event.totalSteps : null,
+            ),
           );
           flushPending();
         } else if (event is TransparencyCompleteEvent) {
           // Transparency Complete Event
           state = state.copyWith(
             transparencyData: event.transparencyData,
+            activeRunSummary: _buildRunSummary(
+              totalSteps: event.transparencyData?.steps.length,
+            ),
+          );
+          flushPending();
+        } else if (event is RunLedgerSnapshotEvent) {
+          state = state.copyWith(
+            runLedgerSummary: event.summary,
           );
           flushPending();
         } else if (event is OrchestrationTraceEvent) {
@@ -775,7 +1128,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is AgentActivityEvent) {
           final activities = [...state.agentActivities];
-          final idx = activities.indexWhere((item) => item.agentId == event.agentId);
+          final idx =
+              activities.indexWhere((item) => item.agentId == event.agentId);
           if (idx >= 0) {
             activities[idx] = event;
           } else {
@@ -787,6 +1141,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
           flushPending();
+        } else if (event is NotificationEvent) {
+          // Notification Event - 实时通知推送
+          _handleNotificationEvent(event);
+          flushPending();
         } else if (event is CollaborationTimelineEvent) {
           accumulatedCollaboration = event.collaborationData;
           flushPending();
@@ -794,6 +1152,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // 流结束
           // finishReason: event.finishReason
           flushPending(immediate: true);
+          state = state.copyWith(runPhase: ChatRunPhase.finalizing);
           if (state.activeTools.isNotEmpty) {
             state = state.copyWith(activeTools: []);
           }
@@ -810,83 +1169,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
                     if (item.durationMs != null) 'duration_ms': item.durationMs,
                     if (item.resultSummary != null)
                       'result_summary': item.resultSummary,
+                    if (item.collaborationMode != null)
+                      'collaboration_mode': item.collaborationMode,
+                    if (item.phase != null) 'phase': item.phase,
                   },
                 )
                 .toList();
           }
           // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
-          state = state.copyWith(
-            clearAiStatus: true,
-            clearDagExecution: true,
-            streamingContent: '',
-          );
-          // 🔧 修复：立即退出流循环，确保执行清理代码（设置 isSending: false）
+          finalizeRun(phase: ChatRunPhase.completed);
           break;
         }
       }
 
-      _streamDebouncer.cancel();
-      _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
-      // 流结束后，将累积的内容转为正式消息
-      if (accumulatedContent.isNotEmpty ||
-          accumulatedWidgets.isNotEmpty ||
-          accumulatedCollaboration != null ||
-          accumulatedUxEnvelope != null) {
-        // Calculate total duration if reasoning steps exist
-        String? reasoningSummary;
-        if (accumulatedReasoningSteps.isNotEmpty &&
-            reasoningStartTime != null) {
-          final durationMs =
-              DateTime.now().millisecondsSinceEpoch - reasoningStartTime;
-          reasoningSummary =
-              '完成于 ${(durationMs / 1000).toStringAsFixed(1)}s，${accumulatedReasoningSteps.length}个步骤';
-        }
-
-        final aiMessage = ChatMessageModel(
-          id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-          userId: 'ai_assistant',
-          conversationId: state.conversationId ?? 'temp_conversation',
-          role: MessageRole.assistant,
-          content: accumulatedContent,
-          createdAt: DateTime.now(),
-          widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
-          agentCollaboration: accumulatedCollaboration,
-          orchestrationTrace: accumulatedOrchestrationTrace,
-          modeSuggestion: accumulatedModeSuggestion,
-          aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
-          agentActivities: snapshotAgentActivities ?? const [],
-          reasoningSteps: accumulatedReasoningSteps.isNotEmpty
-              ? accumulatedReasoningSteps
-              : null,
-          reasoningSummary: reasoningSummary,
-          isReasoningComplete: accumulatedReasoningSteps.isNotEmpty,
-          responseId: responseId,
-          traceId: traceId,
-          workflowId: workflowId,
-          promptVersion: promptVersion,
-          uxEnvelope: accumulatedUxEnvelope,
-        );
-
-        state = state.copyWith(
-          isSending: false,
-          messages: [...state.messages, aiMessage],
-          streamingContent: '',
-          clearDagExecution: true,
-          clearAiStatus: true,
-          clearReasoning: true, // Clear real-time reasoning state
-          agentActivities: const [],
-        );
-      } else {
-        state = state.copyWith(
-          isSending: false,
-          streamingContent: '',
-          clearDagExecution: true,
-          clearAiStatus: true,
-          clearReasoning: true,
-          agentActivities: const [],
-        );
+      if (!isCurrentRequest() || sawTerminalEvent) {
+        return;
       }
+      finalizeRun(phase: ChatRunPhase.completed);
     } catch (e) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       _streamDebouncer.cancel();
       // 捕获未处理的异常，提供友好的错误提示
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
@@ -894,20 +1197,28 @@ class ChatNotifier extends StateNotifier<ChatState> {
         e.toString(),
       );
 
-      state = state.copyWith(
-        isSending: false,
-        streamingContent: '',
-        clearDagExecution: true,
-        agentActivities: const [],
-        error: errorMessage,
+      finalizeRun(
+        phase: ChatRunPhase.failed,
+        errorMessage: errorMessage,
         errorCode: 'UNKNOWN',
-        isErrorRetryable: true, // 未知错误默认可重试
+        isRetryable: true,
+        restoreAttachments: hasQueuedAttachments,
       );
-      shouldResetSending = false; // 已经重置过了
     } finally {
       // 🔧 P1-1: 确保 isSending 总是被重置（如果还没被重置）
-      if (shouldResetSending && mounted && state.isSending) {
-        state = state.copyWith(isSending: false);
+      if (isCurrentRequest() &&
+          shouldResetSending &&
+          mounted &&
+          state.isSending) {
+        state = state.copyWith(
+          isSending: false,
+          runPhase: state.runPhase == ChatRunPhase.idle
+              ? ChatRunPhase.completed
+              : state.runPhase,
+          clearTransparency: true,
+          clearActiveRunId: true,
+          clearActiveRunSummary: true,
+        );
       }
     }
   }

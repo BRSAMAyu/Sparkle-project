@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -22,6 +23,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _acceptedTos = false;
+  bool _acceptedPrivacy = false;
 
   @override
   void dispose() {
@@ -34,11 +37,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
+      if (!_acceptedTos || !_acceptedPrivacy) {
+        AppFeedback.info(context, '请先同意用户协议与隐私政策');
+        return;
+      }
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       unawaited(
         ref.read(authProvider.notifier).register(
               _usernameController.text.trim(),
               _emailController.text.trim(),
               _passwordController.text.trim(),
+              acceptedTos: _acceptedTos,
+              acceptedPrivacy: _acceptedPrivacy,
+              agreedLocale: Localizations.localeOf(context).toLanguageTag(),
             ),
       );
     }
@@ -98,19 +109,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: DS.spacing20),
-                        Text(
-                          l10n.joinSparkle,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
+                        SparkleStaggerItem(
+                          index: 0,
+                          child: Text(
+                            l10n.joinSparkle,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.secondary,
+                                ),
+                          ),
                         ),
                         const SizedBox(height: DS.xxl),
-                        TextFormField(
+                        SparkleStaggerItem(
+                          index: 1,
+                          child: TextFormField(
                           controller: _usernameController,
                           decoration: InputDecoration(
                             labelText: l10n.username,
@@ -126,9 +142,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             return null;
                           },
+                          ),
                         ),
                         const SizedBox(height: DS.lg),
-                        TextFormField(
+                        SparkleStaggerItem(
+                          index: 2,
+                          child: TextFormField(
                           controller: _emailController,
                           decoration: InputDecoration(
                             labelText: l10n.email,
@@ -144,9 +163,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             return null;
                           },
+                          ),
                         ),
                         const SizedBox(height: DS.lg),
-                        TextFormField(
+                        SparkleStaggerItem(
+                          index: 3,
+                          child: TextFormField(
                           controller: _passwordController,
                           obscureText: !_isPasswordVisible,
                           decoration: InputDecoration(
@@ -159,9 +181,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     ? Icons.visibility_off
                                     : Icons.visibility,
                               ),
-                              onPressed: () => setState(
-                                () => _isPasswordVisible = !_isPasswordVisible,
-                              ),
+                              onPressed: () {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.selection,
+                                  ),
+                                );
+                                setState(
+                                  () => _isPasswordVisible = !_isPasswordVisible,
+                                );
+                              },
                               variant: ButtonVariant.ghost,
                             ),
                           ),
@@ -171,9 +200,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             return null;
                           },
+                          ),
                         ),
                         const SizedBox(height: DS.lg),
-                        TextFormField(
+                        SparkleStaggerItem(
+                          index: 4,
+                          child: TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: !_isPasswordVisible,
                           decoration: InputDecoration(
@@ -187,14 +219,67 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             return null;
                           },
+                          ),
+                        ),
+                        const SizedBox(height: DS.lg),
+                        SparkleStaggerItem(
+                          index: 5,
+                          child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedTos,
+                          onChanged: (value) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() => _acceptedTos = value ?? false);
+                          },
+                          title: const Text('我已阅读并同意《用户协议》'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => context.push('/legal/terms'),
+                            child: const Text('查看用户协议'),
+                          ),
+                        ),
+                        SparkleStaggerItem(
+                          index: 6,
+                          child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _acceptedPrivacy,
+                          onChanged: (value) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() => _acceptedPrivacy = value ?? false);
+                          },
+                          title: const Text('我已阅读并同意《隐私政策》'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => context.push('/legal/privacy'),
+                            child: const Text('查看隐私政策'),
+                          ),
                         ),
                         const SizedBox(height: DS.xl),
-                        SparkleButton(
-                          label: l10n.register,
-                          onPressed: authState.isLoading ? null : _submit,
-                          expand: true,
-                          loading: authState.isLoading,
-                          disabled: authState.isLoading,
+                        SparkleStaggerItem(
+                          index: 7,
+                          child: SparkleButton(
+                            label: l10n.register,
+                            onPressed: authState.isLoading ? null : _submit,
+                            expand: true,
+                            loading: authState.isLoading,
+                            disabled: authState.isLoading,
+                          ),
                         ),
                         const Spacer(),
                         SparkleButton.ghost(

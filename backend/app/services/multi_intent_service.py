@@ -5,14 +5,18 @@ Multi-Intent Splitting Service
 从简单字符串匹配升级为 LLM 驱动的智能意图识别
 支持多意图检测、依赖分析、并行执行规划
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+import asyncio
+from datetime import timezone, datetime
+import re
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agent_profiles import AgentRole
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.llm_router import llm_router
 from app.schemas.intent import (
     IntentAnalysisPreview,
     IntentExecuteRequest,
@@ -26,7 +30,7 @@ from app.services.llm_service import LLMService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class MultiIntentService:
@@ -39,6 +43,24 @@ class MultiIntentService:
     3. 规划执行顺序和并行策略
     4. 集成现有的 orchestrator 执行意图
     """
+
+    FREE_FAST_TIMEOUT_SECONDS = 0.9
+    FAST_TIMEOUT_SECONDS = 2.2
+    MAX_FREE_FAST_ATTEMPTS = 1
+    MAX_FAST_ATTEMPTS = 2
+    _CLAUSE_SPLIT_PATTERN = re.compile(
+        r"(?:，然后|然后|并且|同时|再去|接着|另外|;\s*|；\s*|\n+|\band then\b|\band\b)",
+        re.IGNORECASE,
+    )
+    _INTENT_KEYWORDS: list[tuple[IntentType, tuple[str, ...]]] = [
+        (IntentType.TASK_MANAGEMENT, ("创建任务", "建个任务", "新增任务", "待办", "todo", "任务", "提醒我")),
+        (IntentType.TIME_PLANNING, ("安排", "计划", "排一下", "日历", "几点", "明天", "今天", "下周", "会议")),
+        (IntentType.KNOWLEDGE_QUERY, ("什么是", "为什么", "怎么", "解释", "原理", "区别", "总结一下")),
+        (IntentType.LEARNING, ("学习", "复习", "练习", "刷题", "背单词", "课程")),
+        (IntentType.SOCIAL, ("好友", "群组", "社群", "伙伴", "拉群", "加入群")),
+        (IntentType.REFLECTION, ("复盘", "反思", "总结", "回顾")),
+        (IntentType.TOOL_CALL, ("番茄钟", "计时器", "翻译", "查词", "闪卡", "专注")),
+    ]
 
     # 意图识别系统提示词
     INTENT_DETECTION_PROMPT = """你是Sparkle AI的意图识别专家。
@@ -98,6 +120,15 @@ class MultiIntentService:
         """
         # 构建上下文字符串
         context_str = self._format_context(request.context)
+        heuristic_result = self._heuristic_parse(request.message)
+
+        # 对于已经被规则稳定识别出的明显多意图，直接返回，避免实时场景被 LLM 试探拖慢。
+        if (
+            heuristic_result is not None
+            and heuristic_result.is_multi_intent
+            and all(intent.type is not IntentType.UNKNOWN for intent in heuristic_result.intents)
+        ):
+            return heuristic_result
 
         # 调用 LLM 进行意图识别
         messages = [
@@ -107,19 +138,19 @@ class MultiIntentService:
             },
             {
                 "role": "user",
-                "content": self.INTENT_DETECTION_PROMPT.format(
-                    message=request.message,
-                    context=context_str or "无"
-                )
+                "content": self.INTENT_DETECTION_PROMPT
+                .replace("{message}", request.message)
+                .replace("{context}", context_str or "无")
             }
         ]
 
         try:
-            result = await self.llm.chat_json(messages, temperature=0.1)
+            result = await self._parse_with_llm(messages)
 
             # 验证并构造返回结果
             if not result or "intents" not in result:
-                # 默认为单意图
+                if heuristic_result is not None:
+                    return heuristic_result
                 return self._fallback_single_intent(request.message)
 
             # 验证意图类型
@@ -150,6 +181,8 @@ class MultiIntentService:
 
         except Exception as e:
             logger.error(f"Intent parsing failed: {e}")
+            if heuristic_result is not None:
+                return heuristic_result
             return self._fallback_single_intent(request.message)
 
     async def execute_intents(
@@ -284,6 +317,120 @@ class MultiIntentService:
             execution_order=[0],
             dependencies=[],
             should_parallel=[False]
+        )
+
+    async def _parse_with_llm(self, messages: list[dict[str, str]]) -> dict[str, Any] | None:
+        """短超时分层尝试，避免 free_fast 限流拖挂整条主链。"""
+        last_error: Exception | None = None
+
+        for model_key, timeout_seconds in self._select_model_attempts():
+            try:
+                llm = LLMService(agent_role=AgentRole.ROUTER)
+                await llm.switch_to_specific_model(model_key)
+                result = await asyncio.wait_for(
+                    llm.chat_json(messages, temperature=0.1),
+                    timeout=timeout_seconds,
+                )
+                if isinstance(result, dict) and result.get("intents"):
+                    return result
+                logger.warning("Multi-intent parse returned empty result from {}", model_key)
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Multi-intent parse failed on model {} within {:.2f}s: {}",
+                    model_key,
+                    timeout_seconds,
+                    exc,
+                )
+
+        if last_error is not None:
+            logger.warning(
+                "Multi-intent parse exhausted LLM attempts, falling back to heuristics: {}",
+                last_error,
+            )
+        return None
+
+    def _select_model_attempts(self) -> list[tuple[str, float]]:
+        attempts: list[tuple[str, float]] = []
+
+        def _append_attempts(
+            tier: ModelTier,
+            timeout_seconds: float,
+            preferred_order: list[str],
+            limit: int,
+        ) -> None:
+            candidates = llm_router.resolve_candidate_models(
+                AgentRole.ROUTER,
+                TaskType.QUICK_QUERY,
+                force_tier=tier,
+            )
+            ordered = [model for model in preferred_order if model in candidates]
+            ordered.extend(model for model in candidates if model not in ordered)
+            for model_key in ordered[:limit]:
+                attempts.append((model_key, timeout_seconds))
+
+        _append_attempts(
+            ModelTier.FREE_FAST,
+            timeout_seconds=self.FREE_FAST_TIMEOUT_SECONDS,
+            preferred_order=["glm_4_5_air_free", "glm_4_7_flash_thinking", "siliconflow_free"],
+            limit=self.MAX_FREE_FAST_ATTEMPTS,
+        )
+        _append_attempts(
+            ModelTier.FAST,
+            timeout_seconds=self.FAST_TIMEOUT_SECONDS,
+            preferred_order=["xiaomi_chat", "dashscope_fast", "glm_4_7_flash_no_thinking"],
+            limit=self.MAX_FAST_ATTEMPTS,
+        )
+        return attempts
+
+    def _heuristic_parse(self, message: str) -> MultiIntentResult | None:
+        """在 LLM 超时/限流时提供稳定、快速的规则兜底。"""
+        clauses = [
+            segment.strip(" ，,。.；;！!？?")
+            for segment in self._CLAUSE_SPLIT_PATTERN.split(message)
+            if segment and segment.strip(" ，,。.；;！!？?")
+        ]
+
+        if not clauses:
+            return None
+
+        intents = [self._classify_clause(clause) for clause in clauses[:3]]
+        if not intents:
+            return None
+
+        is_multi = len(intents) > 1
+        return MultiIntentResult(
+            is_multi_intent=is_multi,
+            intents=intents,
+            execution_order=list(range(len(intents))),
+            dependencies=[] if not is_multi else [[index] for index in range(len(intents))],
+            should_parallel=[is_multi] * len(intents),
+            estimated_total_time=15 * len(intents) if is_multi else 15,
+        )
+
+    def _classify_clause(self, clause: str) -> SubIntent:
+        normalized = clause.lower()
+        intent_type = IntentType.UNKNOWN
+
+        for candidate_type, keywords in self._INTENT_KEYWORDS:
+            if any(keyword.lower() in normalized for keyword in keywords):
+                intent_type = candidate_type
+                break
+
+        agent_role = None
+        if intent_type in {IntentType.KNOWLEDGE_QUERY, IntentType.LEARNING}:
+            agent_role = AgentRole.STUDY_BUDDY.value
+        elif intent_type in {IntentType.TASK_MANAGEMENT, IntentType.TIME_PLANNING}:
+            agent_role = AgentRole.TIME_TUTOR.value
+        elif intent_type == IntentType.SOCIAL:
+            agent_role = AgentRole.STUDY_BUDDY.value
+
+        return SubIntent(
+            type=intent_type,
+            confidence=0.72 if intent_type is not IntentType.UNKNOWN else 0.45,
+            content=clause,
+            entities={},
+            agent_role=agent_role,
         )
 
     def _generate_execution_plan(self, result: MultiIntentResult) -> str:

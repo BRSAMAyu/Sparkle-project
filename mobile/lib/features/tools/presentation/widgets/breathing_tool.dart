@@ -291,9 +291,7 @@ class _BreathingToolState extends State<BreathingTool>
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '当前节律',

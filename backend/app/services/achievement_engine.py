@@ -2,8 +2,9 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
+from __future__ import annotations
 import asyncio
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -18,8 +19,10 @@ from app.models.achievement import (
     AchievementRarity,
     ContractStatus,
     SparkContract,
+    StreakDayStatus,
     UserAchievement,
     UserGalaxySkin,
+    UserStreakDay,
     UserStreakStats,
     UserTitle,
 )
@@ -30,7 +33,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AchievementEvent:
@@ -82,7 +85,23 @@ class AchievementEngine:
         "TASKS_TOTAL",
         "WEEKEND_WARRIOR",
     }
-    SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title"}
+    SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
+    PRESTIGE_LANES = {
+        "streak": {"id": "streak_lane", "label": "连胜王者线", "color": "#FF8A3D", "x": 120},
+        "sprint": {"id": "sprint_lane", "label": "冲刺战绩线", "color": "#2FB6FF", "x": 390},
+        "conquest": {"id": "conquest_lane", "label": "探索征服线", "color": "#63E6BE", "x": 660},
+        "hidden": {"id": "hidden_lane", "label": "隐藏猎人线", "color": "#B197FC", "x": 930},
+        "prestige": {"id": "prestige_lane", "label": "声望进阶线", "color": "#FFD43B", "x": 1200},
+    }
+    CATEGORY_TO_LANE = {
+        "streak": "streak",
+        "sprint": "sprint",
+        "exploration": "conquest",
+        "mastery": "conquest",
+        "study_time": "conquest",
+        "hidden": "hidden",
+        "tasks": "prestige",
+    }
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
@@ -91,6 +110,14 @@ class AchievementEngine:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _coerce_activity_date(value: date | datetime | None) -> date | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        return value
 
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
@@ -114,6 +141,13 @@ class AchievementEngine:
         """获取所有成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return list(self._achievement_cache.values())
+
+    def _is_achievement_active(self, achievement: Achievement, now: datetime) -> bool:
+        if achievement.active_from and now < achievement.active_from:
+            return False
+        if achievement.active_to and now > achievement.active_to:
+            return False
+        return True
 
     async def process_event(
         self,
@@ -747,6 +781,8 @@ class AchievementEngine:
 
         # 处理奖励
         await self._grant_rewards(user_id, achievement)
+        reward_preview = self._build_reward_preview(achievement.reward_config)
+        surface_preview = self._surface_preview_for_rewards(achievement.reward_config)
         unlock_payload = {
             "achievement_id": achievement.id,
             "name": achievement.name,
@@ -754,6 +790,8 @@ class AchievementEngine:
             "visual_effect": achievement.visual_config,
             "visual_effect_type": achievement.visual_effect_type,
             "rewards": achievement.reward_config,
+            "reward_preview": reward_preview,
+            "surface_preview": surface_preview,
             "is_first": is_first,
             "unlocked_at": now,
         }
@@ -847,12 +885,20 @@ class AchievementEngine:
                             amount=quantity,
                             source=f"achievement:{achievement.id}",
                             transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
-                            metadata={"achievement_name": achievement.name}
+                            metadata={"achievement_name": achievement.name},
+                            related_item_id=achievement.id,
+                            record_history=True,
                         )
 
                         logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
                     except Exception as e:
                         logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
+
+                case "visual_element":
+                    # 解锁视觉元素
+                    element_id = reward.get("element_id")
+                    if element_id:
+                        await self._unlock_visual_element(user_id, element_id, achievement.id)
 
     async def _unlock_title(self, user_id: str, title_id: str, display: str, achievement_id: str):
         """解锁称号"""
@@ -898,6 +944,32 @@ class AchievementEngine:
             self.db.add(user_skin)
             await self.db.flush()
 
+    async def _unlock_visual_element(self, user_id: str, element_id: str, achievement_id: str):
+        """解锁视觉元素"""
+        from app.models.visual_element import UserVisualElement
+
+        # 检查是否已解锁
+        query = select(UserVisualElement).where(
+            and_(
+                UserVisualElement.user_id == user_id,
+                UserVisualElement.element_id == element_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_element = result.scalar_one_or_none()
+
+        if not user_element:
+            user_element = UserVisualElement(
+                user_id=user_id,
+                element_id=element_id,
+                unlocked_at=_utcnow(),
+                unlock_source="achievement",
+                source_id=achievement_id
+            )
+            self.db.add(user_element)
+            await self.db.flush()
+            logger.info(f"Unlocked visual element {element_id} for user {user_id} via achievement {achievement_id}")
+
     async def _notify_unlocks(self, user_id: str, unlocked: list[dict]):
         """发送成就解锁通知"""
         from app.core.websocket import get_ws_manager
@@ -915,6 +987,7 @@ class AchievementEngine:
                     if reward.get("type") == "photon":
                         photon_granted = reward.get("quantity", 0)
                         break
+            glory_lines = self._build_glory_lines(unlock)
 
             # 通过 WebSocket 发送成就解锁事件
             message = {
@@ -926,10 +999,13 @@ class AchievementEngine:
                     "visual_effect": unlock.get("visual_effect"),
                     "visual_effect_type": unlock.get("visual_effect_type"),
                     "rewards": unlock.get("rewards"),
+                    "reward_preview": unlock.get("reward_preview"),
+                    "surface_preview": unlock.get("surface_preview"),
                     "is_first": unlock.get("is_first", False),
                     "unlocked_at": unlock["unlocked_at"].isoformat() if isinstance(unlock["unlocked_at"], datetime) else unlock["unlocked_at"],
                     # 添加连击信息
                     "combo_info": unlock.get("combo_info"),
+                    "glory_lines": glory_lines,
                     # 显式添加光子奖励信息
                     "photon_granted": photon_granted,
                     "has_photon_reward": photon_granted > 0
@@ -943,10 +1019,48 @@ class AchievementEngine:
             except Exception as e:
                 logger.error(f"Failed to send achievement unlock notification: {e}")
 
+    async def _upsert_streak_day(
+        self,
+        user_id: str,
+        day: date,
+        status: StreakDayStatus,
+        used_freeze: bool = False,
+        source_event: str | None = None,
+    ) -> None:
+        query = select(UserStreakDay).where(
+            and_(
+                UserStreakDay.user_id == user_id,
+                UserStreakDay.day == day,
+                UserStreakDay.deleted_at.is_(None),
+            )
+        )
+        result = await self.db.execute(query)
+        record = result.scalar_one_or_none()
+        persisted_status = status.value if hasattr(status, "value") else status
+
+        if record:
+            record.status = persisted_status
+            record.used_freeze = used_freeze
+            record.source_event = source_event
+        else:
+            record = UserStreakDay(
+                user_id=user_id,
+                day=day,
+                status=persisted_status,
+                used_freeze=used_freeze,
+                source_event=source_event,
+            )
+            self.db.add(record)
+
+        await self.db.flush()
+
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
         today = _utcnow().date()
+        last_activity_date = self._coerce_activity_date(stats.last_activity_date)
+        if last_activity_date != stats.last_activity_date:
+            stats.last_activity_date = last_activity_date
 
         # 只有核心活动才更新连胜
         if event_type not in [AchievementEvent.DAILY_CHECKIN,
@@ -954,17 +1068,33 @@ class AchievementEngine:
                               AchievementEvent.NODE_MASTERED]:
             return
 
-        if not stats.last_activity_date:
+        if not last_activity_date:
             stats.current_streak = 1
+            stats.max_streak = max(int(stats.max_streak or 0), 1)
+            stats.longest_streak = max(int(stats.longest_streak or 0), 1)
+            stats.total_checkin_days = max(int(stats.total_checkin_days or 0), 1)
             stats.last_activity_date = today
             stats.longest_streak_start = today
+            stats.longest_streak_end = today
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
             await self.db.flush()
             return
 
-        delta = (today - stats.last_activity_date).days
+        delta = (today - last_activity_date).days
 
         if delta == 0:
             # 今天已活动，无需更新
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
             return
         elif delta == 1:
             # 连续活动
@@ -977,6 +1107,13 @@ class AchievementEngine:
                 stats.longest_streak = stats.current_streak
                 stats.longest_streak_start = stats.longest_streak_start or today
                 stats.longest_streak_end = today
+
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
         else:
             # 演了活动，检查保护卡
             days_missed = delta - 1
@@ -987,10 +1124,37 @@ class AchievementEngine:
                 stats.last_freeze_used_at = _utcnow()
                 stats.current_streak += 1  # 今天也算
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
+
+                for offset in range(1, days_missed + 1):
+                    day = last_activity_date + timedelta(days=offset)
+                    await self._upsert_streak_day(
+                        user_id,
+                        day,
+                        StreakDayStatus.FROZEN,
+                        used_freeze=True,
+                        source_event="freeze",
+                    )
             else:
                 # 保护不足，连胜断裂
                 stats.current_streak = 1
                 logger.info(f"User {user_id} streak broken at {stats.max_streak} days")
+
+                for offset in range(1, days_missed + 1):
+                    day = last_activity_date + timedelta(days=offset)
+                    await self._upsert_streak_day(
+                        user_id,
+                        day,
+                        StreakDayStatus.MISSED,
+                        used_freeze=False,
+                        source_event="missed",
+                    )
+
+            await self._upsert_streak_day(
+                user_id,
+                today,
+                StreakDayStatus.ACTIVE,
+                source_event=event_type,
+            )
 
         stats.last_activity_date = today
         await self.db.flush()
@@ -1016,6 +1180,100 @@ class AchievementEngine:
 
         return stats
 
+    def _lane_config_for_achievement(self, achievement: Achievement) -> dict[str, Any]:
+        lane_key = self.CATEGORY_TO_LANE.get(achievement.category or "", "prestige")
+        return self.PRESTIGE_LANES[lane_key]
+
+    def _build_reward_preview(self, reward_config: Any) -> list[str]:
+        rewards = reward_config if isinstance(reward_config, list) else (reward_config or {}).get("rewards", [])
+        preview: list[str] = []
+        for reward in rewards:
+            reward_type = reward.get("type")
+            if reward_type == "title":
+                preview.append(f"称号 · {reward.get('display') or reward.get('value') or '荣耀称号'}")
+            elif reward_type == "galaxy_skin":
+                preview.append(f"星图皮肤 · {reward.get('skin_id')}")
+            elif reward_type == "visual_element":
+                preview.append(f"荣耀装扮 · {reward.get('element_id')}")
+            elif reward_type == "freeze_charge":
+                preview.append(f"连胜保护 · x{reward.get('quantity', 1)}")
+            elif reward_type == "photon":
+                preview.append(f"光子积分 · x{reward.get('quantity', 0)}")
+        return preview[:4]
+
+    def _surface_preview_for_rewards(self, reward_config: Any) -> list[str]:
+        rewards = reward_config if isinstance(reward_config, list) else (reward_config or {}).get("rewards", [])
+        surfaces: list[str] = []
+        for reward in rewards:
+            reward_type = reward.get("type")
+            if reward_type == "title" and "个人主页身份条" not in surfaces:
+                surfaces.append("个人主页身份条")
+            elif reward_type == "galaxy_skin" and "星图主题" not in surfaces:
+                surfaces.append("星图主题")
+            elif reward_type == "visual_element":
+                if "首页氛围" not in surfaces:
+                    surfaces.append("首页氛围")
+                if "个人主页荣耀位" not in surfaces:
+                    surfaces.append("个人主页荣耀位")
+        return surfaces
+
+    def _build_unlock_hint(
+        self,
+        achievement: Achievement,
+        progress_value: int,
+        progress_target: int,
+        display_state: str,
+    ) -> str | None:
+        if display_state == "hidden_unrevealed":
+            return achievement.hint or "继续探索，也许下一次会被看见。"
+        if display_state == "blocked" and achievement.prerequisites:
+            return f"先完成前置成就：{len(achievement.prerequisites)} 项"
+        if progress_target > 0 and progress_value < progress_target:
+            return f"还差 {max(progress_target - progress_value, 0)} 即可解锁"
+        return achievement.description
+
+    def _build_glory_lines(self, unlock_payload: dict[str, Any]) -> list[str]:
+        lines: list[str] = []
+        combo_info = unlock_payload.get("combo_info") or {}
+        combo = combo_info.get("combo")
+        if combo and combo > 1:
+            lines.append(f"{combo} 连成就")
+        rarity = unlock_payload.get("rarity")
+        rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
+        percentile_map = {
+            "common": "击败了 50% 的普通解锁节奏",
+            "rare": "击败了 82% 的普通解锁节奏",
+            "epic": "击败了 95% 的普通解锁节奏",
+            "legendary": "击败了 99% 的普通解锁节奏",
+        }
+        if rarity_value in percentile_map:
+            lines.append(percentile_map[rarity_value])
+        if unlock_payload.get("is_first"):
+            lines.append("你是首批解锁者之一")
+        for surface in unlock_payload.get("surface_preview", [])[:2]:
+            lines.append(f"将显眼展示在{surface}")
+        return lines[:4]
+
+    def _build_achievement_detail(
+        self,
+        achievement: Achievement,
+        locale: str | None = None,
+    ):
+        from app.schemas.achievement import AchievementDetail
+
+        detail = AchievementDetail.model_validate(
+            achievement,
+            from_attributes=True,
+        )
+        if locale:
+            detail = detail.model_copy(
+                update={
+                    "name": achievement.get_localized_name(locale),
+                    "description": achievement.get_localized_description(locale),
+                }
+            )
+        return detail
+
     # ========== 公共API方法 ==========
 
     async def get_user_achievements(
@@ -1023,14 +1281,19 @@ class AchievementEngine:
         user_id: str,
         category: str | None = None,
         rarity: AchievementRarity | None = None,
-        include_hidden: bool = False
+        include_hidden: bool = False,
+        include_inactive: bool = False,
+        locale: str | None = None,
     ) -> dict[str, Any]:
         """获取用户成就列表"""
         all_achievements = await self._get_all_achievements()
+        now = _utcnow()
 
         # 过滤
         filtered = []
         for achievement in all_achievements:
+            if not include_inactive and not self._is_achievement_active(achievement, now):
+                continue
             if category and achievement.category != category:
                 continue
             if rarity and achievement.rarity != rarity:
@@ -1055,7 +1318,6 @@ class AchievementEngine:
 
         # 组装结果
         from app.schemas.achievement import (
-            AchievementDetail,
             AchievementWithProgress,
             UserAchievementProgressPayload,
         )
@@ -1067,9 +1329,9 @@ class AchievementEngine:
             progress_percentage = int((user_ach.progress if user_ach else 0) * 100)
 
             # 转换为schema
-            achievement_detail = AchievementDetail.model_validate(
+            achievement_detail = self._build_achievement_detail(
                 achievement,
-                from_attributes=True,
+                locale,
             )
             user_progress_detail = (
                 UserAchievementProgressPayload.model_validate(
@@ -1109,54 +1371,121 @@ class AchievementEngine:
             }
         }
 
-    async def get_achievement_map(self, user_id: str) -> dict[str, Any]:
+    async def get_achievement_map(
+        self,
+        user_id: str,
+        locale: str | None = None,
+    ) -> dict[str, Any]:
         """获取成就地图数据"""
         all_achievements = await self._get_all_achievements()
+        progress_result = await self.db.execute(
+            select(UserAchievement).where(UserAchievement.user_id == user_id)
+        )
+        progress_map = {
+            item.achievement_id: item
+            for item in progress_result.scalars().all()
+        }
 
-        # 按类别分组获取位置
-        categories = {}
-        positions = {}
-        _x, _y = 0, 0
-        row_width = 5
+        lane_groups: dict[str, list[Achievement]] = {}
+        positions: dict[str, dict[str, float]] = {}
+        sorted_achievements = sorted(
+            all_achievements,
+            key=lambda item: (
+                self._lane_config_for_achievement(item)["x"],
+                item.sort_order,
+                item.id,
+            ),
+        )
+        for achievement in sorted_achievements:
+            lane = self._lane_config_for_achievement(achievement)
+            lane_groups.setdefault(lane["id"], []).append(achievement)
 
-        for achievement in all_achievements:
-            cat = achievement.category or "other"
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append(achievement)
-
-        # 计算位置（简单的网格布局）
-        for cat, achievements in categories.items():
-            for i, achievement in enumerate(achievements):
-                positions[achievement.id] = {
-                    "x": (i % row_width) * 100 + (len(cat) * 50),
-                    "y": (i // row_width) * 100
-                }
+        for lane_id, achievements in lane_groups.items():
+            lane = next(value for value in self.PRESTIGE_LANES.values() if value["id"] == lane_id)
+            ordered = sorted(achievements, key=lambda item: (item.sort_order, item.id))
+            for index, achievement in enumerate(ordered):
+                y = 130 + index * 156
+                x = lane["x"] + (18 if index % 2 == 0 else -18)
+                positions[achievement.id] = {"x": float(x), "y": float(y)}
 
         # 生成节点
         from app.schemas.achievement import AchievementMapNode
 
         nodes = []
         connections = []
+        recommended_candidates: list[tuple[int, int, int, int, str]] = []
 
         for achievement in all_achievements:
-            is_unlocked = await self._is_unlocked(user_id, achievement.id)
+            progress = progress_map.get(achievement.id)
+            is_unlocked = bool(progress and progress.unlocked_at is not None)
+            progress_percentage = int((progress.progress if progress else 0) * 100)
+            progress_value = progress.progress_value if progress else 0
+            progress_target = progress.progress_target if progress else 1
+            prerequisites = achievement.prerequisites or []
+            prerequisites_ready = all(
+                bool(progress_map.get(prereq) and progress_map[prereq].unlocked_at is not None)
+                for prereq in prerequisites
+            )
+            if achievement.is_hidden and not is_unlocked:
+                display_state = "hidden_unrevealed"
+            elif is_unlocked:
+                display_state = "unlocked"
+            elif progress_percentage >= 75:
+                display_state = "close_to_unlock"
+            elif prerequisites_ready:
+                display_state = "ready_to_pursue"
+            else:
+                display_state = "blocked"
+
+            if not is_unlocked and display_state in {"close_to_unlock", "ready_to_pursue"}:
+                rarity_score = {
+                    AchievementRarity.COMMON: 1,
+                    AchievementRarity.RARE: 2,
+                    AchievementRarity.EPIC: 3,
+                    AchievementRarity.LEGENDARY: 4,
+                }.get(achievement.rarity, 0)
+                recommended_candidates.append(
+                    (
+                        0 if display_state == "close_to_unlock" else 1,
+                        -progress_percentage,
+                        -rarity_score,
+                        achievement.sort_order,
+                        achievement.id,
+                    )
+                )
+
+            lane = self._lane_config_for_achievement(achievement)
+            reward_preview = self._build_reward_preview(achievement.reward_config)
+            unlock_hint = self._build_unlock_hint(
+                achievement,
+                progress_value=progress_value,
+                progress_target=progress_target,
+                display_state=display_state,
+            )
 
             nodes.append(AchievementMapNode(
                 id=achievement.id,
-                name=achievement.name,
+                name=achievement.get_localized_name(locale),
                 rarity=achievement.rarity,
                 category=achievement.category or "other",
+                lane=lane["id"],
+                lane_label=lane["label"],
                 position=positions.get(achievement.id, {"x": 0, "y": 0}),
                 is_unlocked=is_unlocked,
                 is_hidden=achievement.is_hidden,
-                prerequisites=achievement.prerequisites or [],
-                parent_id=achievement.parent_id
+                prerequisites=prerequisites,
+                parent_id=achievement.parent_id,
+                display_state=display_state,
+                reward_preview=reward_preview,
+                progress_percentage=progress_percentage,
+                progress_value=progress_value,
+                progress_target=progress_target,
+                unlock_hint=unlock_hint,
             ))
 
             # 生成连接线
-            if achievement.prerequisites:
-                for prereq in achievement.prerequisites:
+            if prerequisites:
+                for prereq in prerequisites:
                     connections.append({
                         "from": prereq,
                         "to": achievement.id,
@@ -1170,14 +1499,27 @@ class AchievementEngine:
                     "type": "parent"
                 })
 
-        # 分类信息
+        recommended_candidates.sort()
+        recommended_target_id = recommended_candidates[0][4] if recommended_candidates else None
+
+        node_payloads = []
+        for node in nodes:
+            payload = node.model_dump()
+            payload["is_recommended_target"] = node.id == recommended_target_id
+            node_payloads.append(payload)
+
         category_info = [
-            {"id": cat, "name": cat, "count": len(achievements)}
-            for cat, achievements in categories.items()
+            {
+                "id": lane["id"],
+                "name": lane["label"],
+                "count": len(lane_groups.get(lane["id"], [])),
+                "color": lane["color"],
+            }
+            for lane in self.PRESTIGE_LANES.values()
         ]
 
         return {
-            "nodes": [n.model_dump() for n in nodes],
+            "nodes": node_payloads,
             "connections": connections,
             "categories": category_info
         }
@@ -1188,6 +1530,50 @@ class AchievementEngine:
 
         from app.schemas.achievement import StreakStatsResponse
         return StreakStatsResponse.model_validate(stats, from_attributes=True).model_dump()
+
+    async def get_streak_history(self, user_id: str, days: int = 90) -> dict[str, Any]:
+        """获取连胜日历历史（默认最近90天）"""
+        from app.schemas.achievement import StreakDayRecord, StreakHistoryResponse
+
+        today = _utcnow().date()
+        start_day = today - timedelta(days=days - 1)
+
+        query = select(UserStreakDay).where(
+            and_(
+                UserStreakDay.user_id == user_id,
+                UserStreakDay.day >= start_day,
+                UserStreakDay.day <= today,
+            )
+        )
+        result = await self.db.execute(query)
+        records = result.scalars().all()
+        record_map = {record.day: record for record in records}
+
+        days_data: list[StreakDayRecord] = []
+        for offset in range(days):
+            day = start_day + timedelta(days=offset)
+            record = record_map.get(day)
+            if record:
+                status = record.status.value if hasattr(record.status, "value") else str(record.status)
+                days_data.append(
+                    StreakDayRecord(
+                        day=day,
+                        status=status,
+                        used_freeze=record.used_freeze,
+                        source_event=record.source_event,
+                    )
+                )
+            else:
+                days_data.append(
+                    StreakDayRecord(
+                        day=day,
+                        status=StreakDayStatus.MISSED.value,
+                        used_freeze=False,
+                        source_event=None,
+                    )
+                )
+
+        return StreakHistoryResponse(days=days_data).model_dump()
 
     async def get_achievement_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户成就统计"""
@@ -1371,7 +1757,8 @@ class AchievementEngine:
         self,
         user_id: str,
         threshold: float = 0.8,
-        category: str | None = None
+        category: str | None = None,
+        locale: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         获取接近解锁的成就（用于临界提示）
@@ -1391,7 +1778,6 @@ class AchievementEngine:
             all_achievements = [a for a in all_achievements if a.category == category]
 
         from app.schemas.achievement import (
-            AchievementDetail,
             AchievementWithProgress,
             UserAchievementProgressPayload,
         )
@@ -1427,7 +1813,10 @@ class AchievementEngine:
                 )
                 close_achievements.append(
                     AchievementWithProgress(
-                        achievement=AchievementDetail.model_validate(achievement),
+                        achievement=self._build_achievement_detail(
+                            achievement,
+                            locale,
+                        ),
                         user_progress=user_progress,
                         is_unlocked=False,
                         progress_percentage=int(progress * 100),
@@ -1530,10 +1919,12 @@ class ContractService:
                 source=f"contract:{contract.id}",
                 transaction_type=PhotonTransactionType.GRANT_CONTRACT,
                 metadata={
-                    "contract_id": contract.id,
+                    "contract_id": str(contract.id),
                     "stake": contract.photon_stake,
                     "multiplier": contract.reward_multiplier
-                }
+                },
+                related_item_id=str(contract.id),
+                record_history=True,
             )
 
             logger.info(f"Contract rewards granted: {reward_amount} photons to user {contract.user_id}")
@@ -1553,9 +1944,11 @@ class ContractService:
                 reason=f"Contract failed: {contract.id}",
                 transaction_type=PhotonTransactionType.DEDUCT_CONTRACT,
                 metadata={
-                    "contract_id": contract.id,
+                    "contract_id": str(contract.id),
                     "failure_reason": contract.failure_reason
-                }
+                },
+                related_item_id=str(contract.id),
+                record_history=True,
             )
 
             logger.info(f"Contract photons deducted: {contract.photon_stake} from user {contract.user_id}")

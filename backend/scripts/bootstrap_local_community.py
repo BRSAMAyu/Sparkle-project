@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Bootstrap a minimal real community graph for local mobile/device testing."""
+from __future__ import annotations
+
 import asyncio
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import select
 
@@ -22,7 +24,7 @@ SECONDARY_EMAIL = "chat_test@sparkle.demo"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def _get_or_create_user(

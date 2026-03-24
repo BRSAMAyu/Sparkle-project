@@ -56,7 +56,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       if (mounted) {
         AppFeedback.success(
           context,
-          _isSocialAccount ? '密码设置成功，请重新登录' : l10n.passwordResetSuccess,
+          _isSocialAccount
+              ? l10n.passwordSetSuccess
+              : l10n.passwordResetSuccess,
         );
         if (_isSocialAccount) {
           await ref.read(authProvider.notifier).logout();
@@ -89,7 +91,8 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(_isSocialAccount ? '设置密码' : l10n.passwordReset),
+        title:
+            Text(_isSocialAccount ? l10n.passwordSetTitle : l10n.passwordReset),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -104,7 +107,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                 children: [
                   Text(
                     _isSocialAccount
-                        ? '为当前社交账号设置一个密码，之后你就可以直接用邮箱和密码登录。'
+                        ? l10n.passwordSetHint
                         : l10n.passwordResetHint,
                     style: TextStyle(
                       color:
@@ -131,7 +134,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   ],
                   _buildPasswordField(
                     label:
-                        _isSocialAccount ? '设置密码' : l10n.passwordResetNewLabel,
+                        _isSocialAccount
+                            ? l10n.passwordSetLabel
+                            : l10n.passwordResetNewLabel,
                     controller: _newPasswordController,
                     obscureText: _obscureNew,
                     onToggle: () => setState(() => _obscureNew = !_obscureNew),
@@ -162,7 +167,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   const SizedBox(height: DS.spacing32),
                   SparkleButton(
                     onPressed: _isLoading ? null : _handleReset,
-                    label: _isSocialAccount ? '确认设置' : l10n.passwordResetButton,
+                    label: _isSocialAccount
+                        ? l10n.passwordSetConfirm
+                        : l10n.passwordResetButton,
                     loading: _isLoading,
                     expand: true,
                   ),

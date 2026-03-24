@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -62,9 +64,12 @@ class _TaskReminderSettingsScreenState
         IOSFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.requestNotificationsPermission();
-      if ((granted ?? false) == false && mounted) {
+        if ((granted ?? false) == false && mounted) {
         if (context.mounted) {
-          AppFeedback.warning(context, '通知权限被拒绝，您将无法收到任务提醒');
+          AppFeedback.warning(
+            context,
+            context.l10n.taskReminderPermissionDenied,
+          );
         }
       }
       return granted ?? false;
@@ -77,7 +82,10 @@ class _TaskReminderSettingsScreenState
       );
       if ((granted ?? false) == false && mounted) {
         if (context.mounted) {
-          AppFeedback.warning(context, '通知权限被拒绝，您将无法收到任务提醒');
+          AppFeedback.warning(
+            context,
+            context.l10n.taskReminderPermissionDenied,
+          );
         }
       }
       return granted ?? false;
@@ -103,7 +111,7 @@ class _TaskReminderSettingsScreenState
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('任务提醒设置'),
+        title: Text(context.l10n.taskReminderSettingsTitle),
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -131,8 +139,8 @@ class _TaskReminderSettingsScreenState
         margin: const EdgeInsets.all(DS.lg),
         padding: EdgeInsets.zero,
         child: SwitchListTile(
-          title: const Text('启用任务提醒'),
-          subtitle: const Text('在任务到期前发送通知'),
+          title: Text(context.l10n.taskReminderEnableTitle),
+          subtitle: Text(context.l10n.taskReminderEnableSubtitle),
           value: config.enabled,
           onChanged: (value) {
             ref.read(taskReminderConfigProvider.notifier).updateConfig(
@@ -153,7 +161,7 @@ class _TaskReminderSettingsScreenState
             Padding(
               padding: const EdgeInsets.all(DS.lg),
               child: Text(
-                '提醒时间',
+                context.l10n.taskReminderTimesTitle,
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 16,
@@ -206,12 +214,15 @@ class _TaskReminderSettingsScreenState
             await scheduler.refreshAllReminders(tasks.items, config: config);
 
             if (mounted) {
-              AppFeedback.success(context, '已刷新所有任务提醒');
+              AppFeedback.success(
+                context,
+                context.l10n.taskReminderRefreshSuccess,
+              );
             }
           },
           icon: Icon(Icons.refresh, color: DS.brandPrimary),
           label: Text(
-            '刷新所有任务提醒',
+            context.l10n.taskReminderRefreshAll,
             style: TextStyle(color: DS.brandPrimary),
           ),
           style: ButtonStyle(
@@ -234,7 +245,7 @@ class _TaskReminderSettingsScreenState
                   Icon(Icons.info_outline, color: DS.primaryBase, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    '关于任务提醒',
+                    context.l10n.taskReminderInfoTitle,
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontWeight: FontWeight.bold,
@@ -244,10 +255,7 @@ class _TaskReminderSettingsScreenState
               ),
               const SizedBox(height: 12),
               Text(
-                '• 提醒将在任务到期前按设定时间发送\n'
-                '• 修改任务截止日期会自动重新调度提醒\n'
-                '• 完成或删除任务会自动取消提醒\n'
-                '• 建议开启系统通知权限以接收提醒',
+                context.l10n.taskReminderInfoBody,
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: 13,
@@ -260,14 +268,15 @@ class _TaskReminderSettingsScreenState
       );
 
   String _formatReminderTime(int minutes) {
+    final l10n = I18nService.instance.l10n;
     if (minutes >= 1440) {
       final days = minutes ~/ 1440;
-      return '$days天前';
+      return l10n.timeDaysAgo(days);
     } else if (minutes >= 60) {
       final hours = minutes ~/ 60;
-      return '$hours小时前';
+      return l10n.timeHoursAgo(hours);
     } else {
-      return '$minutes分钟前';
+      return l10n.timeMinutesAgo(minutes);
     }
   }
 }

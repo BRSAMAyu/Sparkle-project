@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import uuid4
 
 import pytest
@@ -14,7 +14,7 @@ from app.services.memory_service import MemoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def test_context_focus_resolver_prefers_emotional_focus_without_plan_action() -> None:

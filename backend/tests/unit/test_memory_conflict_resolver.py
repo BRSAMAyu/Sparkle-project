@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from uuid import uuid4
 
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
@@ -6,7 +6,7 @@ from app.services.memory_conflict_resolver import MemoryConflictResolver
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def test_preference_conflict_resolution():

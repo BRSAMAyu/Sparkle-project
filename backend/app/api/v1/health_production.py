@@ -8,13 +8,16 @@
 - 性能指标
 - 业务指标
 """
+from __future__ import annotations
 
+import shutil
 import time
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser
@@ -35,6 +38,10 @@ router = APIRouter(prefix="/health", tags=["Health"])
 
 # 全局启动时间
 START_TIME = time.time()
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 @router.get("", response_model=dict[str, Any])
@@ -259,6 +266,82 @@ async def queue_status(
     except Exception as e:
         logger.error(f"Queue status check failed: {e}")
         return {"status": "error", "error": str(e)}
+
+
+@router.get("/capacity", response_model=dict[str, Any])
+async def capacity_overview(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser),
+) -> dict[str, Any]:
+    del current_user
+    now = _utcnow()
+    disk = shutil.disk_usage("/")
+    disk_used_ratio = disk.used / disk.total if disk.total else 0.0
+
+    database_latency_ms: float | None = None
+    try:
+        start = time.time()
+        await db.execute(text("SELECT 1"))
+        database_latency_ms = round((time.time() - start) * 1000, 2)
+    except Exception as exc:
+        logger.warning(f"Capacity DB probe failed: {exc}")
+
+    redis_info: dict[str, Any] = {"status": "disabled"}
+    queue_lengths: dict[str, int] = {}
+    redis_client = cache_service.redis
+    if redis_client:
+        try:
+            memory_info = await redis_client.info(section="memory")
+            client_info = await redis_client.info(section="clients")
+            redis_info = {
+                "status": "ok",
+                "used_memory_human": memory_info.get("used_memory_human"),
+                "used_memory_peak_human": memory_info.get("used_memory_peak_human"),
+                "maxmemory_human": memory_info.get("maxmemory_human"),
+                "connected_clients": client_info.get("connected_clients"),
+            }
+            for name, key in {
+                "summarization": "queue:summarization",
+                "billing": "queue:billing",
+                "expansion": "queue:expansion",
+            }.items():
+                queue_lengths[name] = await redis_client.llen(key)
+        except Exception as exc:
+            redis_info = {"status": "error", "error": str(exc)}
+
+    recommendations = []
+    if disk_used_ratio >= 0.8:
+        recommendations.append("磁盘使用率已超过 80%，请尽快清理日志或扩容。")
+    total_pending = sum(queue_lengths.values())
+    if total_pending >= 300:
+        recommendations.append("后台队列积压偏高，建议扩 worker 或降频非核心任务。")
+    if database_latency_ms is not None and database_latency_ms >= 200:
+        recommendations.append("数据库探针延迟偏高，请检查连接池、慢查询与锁等待。")
+
+    return {
+        "generated_at": now.isoformat(),
+        "database": {
+            "probe_latency_ms": database_latency_ms,
+            "pool_size": getattr(settings, "DB_POOL_SIZE", None),
+            "max_overflow": getattr(settings, "DB_MAX_OVERFLOW", None),
+            "pool_timeout_seconds": getattr(settings, "DB_POOL_TIMEOUT", None),
+        },
+        "redis": redis_info,
+        "queues": queue_lengths,
+        "disk": {
+            "total_gb": round(disk.total / 1024 / 1024 / 1024, 2),
+            "used_gb": round(disk.used / 1024 / 1024 / 1024, 2),
+            "free_gb": round(disk.free / 1024 / 1024 / 1024, 2),
+            "used_ratio_percent": round(disk_used_ratio * 100, 2),
+        },
+        "thresholds": {
+            "disk_warning_percent": 80,
+            "queue_warning_total": 300,
+            "queue_critical_total": 500,
+            "db_probe_warning_ms": 200,
+        },
+        "recommendations": recommendations,
+    }
 
 
 @router.get("/prometheus/alerts")

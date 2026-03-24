@@ -5,7 +5,7 @@ import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 
 class FakeFocusRepository implements FocusRepository {
   @override
-  Future<FocusSessionResponse> logFocusSession({
+  Future<LoggedFocusSession> logFocusSession({
     required DateTime startTime,
     required DateTime endTime,
     required int durationMinutes,

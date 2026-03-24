@@ -3,6 +3,7 @@ GraphRAG 检索器
 
 结合向量检索和图检索，提供增强的知识检索能力
 """
+from __future__ import annotations
 
 import asyncio
 import hashlib
@@ -213,24 +214,30 @@ class GraphRAGRetriever:
         Returns:
             实体名称列表
         """
-        prompt = f"""
-        从以下查询中提取知识实体名称，返回 JSON 数组。
-        只提取明确的知识点、概念或领域名称。
+        system_prompt = """You are a knowledge entity extractor. Extract knowledge entity names from user queries.
+Return ONLY a valid JSON array of strings. No markdown, no explanation, no extra text.
 
-        查询: {query}
+Extract only explicit knowledge points, concepts, or domain names.
 
-        示例:
-        查询: "学习量子计算需要什么前置知识"
-        返回: ["量子计算"]
+Examples:
+Query: "学习量子计算需要什么前置知识"
+Return: ["量子计算"]
 
-        查询: "Python 和 Java 的区别"
-        返回: ["Python", "Java"]
+Query: "Python 和 Java 的区别"
+Return: ["Python", "Java"]"""
 
-        返回格式 (JSON):
-        """
+        user_prompt = f"""Extract knowledge entities from this query: {query}
+
+Return ONLY a JSON array of entity names."""
 
         try:
-            response = await llm_service.chat(prompt)
+            # llm_service.chat() expects messages parameter
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+            response = await llm_service.chat(messages)
+
             # 清理响应
             response = response.strip()
             if response.startswith('```'):
@@ -313,15 +320,16 @@ class GraphRAGRetriever:
                 MATCH (start:KnowledgeNode {{name: $entity}})
                 -[r*1..{depth}]-(related)
                 WHERE ALL(edge IN r WHERE edge.strength > $min_strength)
-                RETURN
-                    start.id as start_id,
-                    start.name as start_name,
-                    related.id as id,
-                    related.name as name,
-                    related.description as description,
-                    type(r[0]) as relation_type,
-                    r[0].strength as strength,
-                    related.sector as sector
+                RETURN {{
+                    start_id: start.id,
+                    start_name: start.name,
+                    id: related.id,
+                    name: related.name,
+                    description: related.description,
+                    relation_type: type(r[0]),
+                    strength: r[0].strength,
+                    sector: related.sector
+                }} as result
                 ORDER BY r[0].strength DESC
                 LIMIT 10
                 """
@@ -366,10 +374,11 @@ class GraphRAGRetriever:
         """
         try:
             cypher = """
-            MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
-            WHERE r.strength > 0.3
-            RETURN DISTINCT k.name as name
-            ORDER BY r.strength DESC
+            MATCH (u:User {id: $user_id})-[r]->(k:KnowledgeNode)
+            WHERE type(r) IN ["INTERESTED_IN", "STUDIED"]
+              AND toFloat(r.strength) > 0.3
+            RETURN DISTINCT {name: k.name} as result
+            ORDER BY toFloat(r.strength) DESC
             LIMIT 10
             """
 
@@ -578,14 +587,14 @@ class GraphRAGRetriever:
         """
         try:
             cypher = """
-            MATCH path = shortestPath(
-                (start:KnowledgeNode {name: $start})-[*1..5]-(end:KnowledgeNode {name: $target})
-            )
+            MATCH path =
+                (start:KnowledgeNode {name: $start})-[:PREREQUISITE*1..5]->(goal:KnowledgeNode {name: $target})
             UNWIND nodes(path) as node
-            RETURN
-                node.name as name,
-                node.description as description,
-                node.importance as importance
+            RETURN {
+                name: node.name,
+                description: node.description,
+                importance: node.importance
+            } as result
             """
 
             results = await self.age_client.execute_cypher(
@@ -613,14 +622,16 @@ class GraphRAGRetriever:
         """
         try:
             cypher = """
-            MATCH (c:KnowledgeNode {name: $concept})-[r:RELATED|PREREQUISITE|APPLIES_TO]-(related)
-            WHERE r.strength > 0.3
-            RETURN
-                related.name as name,
-                related.description as description,
-                type(r) as relation,
-                r.strength as strength
-            ORDER BY r.strength DESC
+            MATCH (c:KnowledgeNode {name: $concept})-[r]-(related)
+            WHERE type(r) IN ["RELATED", "PREREQUISITE", "APPLIES_TO"]
+              AND toFloat(r.strength) > 0.3
+            RETURN {
+                name: related.name,
+                description: related.description,
+                relation: type(r),
+                strength: r.strength
+            } as result
+            ORDER BY toFloat(r.strength) DESC
             LIMIT $limit
             """
 

@@ -3,6 +3,7 @@ Curiosity Capsule Service
 
 整合新的胶囊生成服务，保持向后兼容
 """
+from __future__ import annotations
 import random
 from uuid import UUID
 
@@ -155,6 +156,25 @@ class CuriosityCapsuleService:
         )
         return result.scalars().all()
 
+    async def get_user_capsules(
+        self,
+        user_id: UUID,
+        db: AsyncSession,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[CuriosityCapsule]:
+        """
+        Get all capsules for a user (paginated).
+        """
+        result = await db.execute(
+            select(CuriosityCapsule)
+            .where(CuriosityCapsule.user_id == user_id)
+            .order_by(desc(CuriosityCapsule.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+        return result.scalars().all()
+
     async def mark_as_read(self, capsule_id: UUID, db: AsyncSession):
         capsule = await db.get(CuriosityCapsule, capsule_id)
         if capsule:
@@ -171,6 +191,8 @@ class CuriosityCapsuleService:
         curiosity_preference: float = 0.5,
         generation_type: str = "manual",
         requested_count: int | None = None,
+        model_key: str | None = None,
+        execution_mode: str = "online",
     ):
         """
         批量生成胶囊（委托给生成服务）
@@ -182,6 +204,8 @@ class CuriosityCapsuleService:
             curiosity_preference=curiosity_preference,
             generation_type=generation_type,
             requested_count=requested_count,
+            model_key=model_key,
+            execution_mode=execution_mode,
         )
 
     async def submit_feedback(

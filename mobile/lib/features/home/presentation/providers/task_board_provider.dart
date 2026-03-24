@@ -74,11 +74,13 @@ class TaskBoardState {
     Set<String>? expandedTaskIds,
     String? selectedPlanId,
     SprintTaskFilter? sprintFilter,
+    bool clearSelectedPlan = false,
   }) =>
       TaskBoardState(
         currentView: currentView ?? this.currentView,
         expandedTaskIds: expandedTaskIds ?? this.expandedTaskIds,
-        selectedPlanId: selectedPlanId ?? this.selectedPlanId,
+        selectedPlanId:
+            clearSelectedPlan ? null : selectedPlanId ?? this.selectedPlanId,
         sprintFilter: sprintFilter ?? this.sprintFilter,
       );
 }
@@ -147,7 +149,7 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
   }
 
   void clearPlanSelection() {
-    state = state.copyWith();
+    state = state.copyWith(clearSelectedPlan: true);
   }
 
   void collapseAll() {

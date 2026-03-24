@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 // Mock needed dependencies
 class MockChatNotifier extends ChatNotifier {
@@ -62,7 +63,10 @@ void main() {
         overrides: [
           chatProvider.overrideWith((ref) => mockChatNotifier),
         ],
-        child: const MaterialApp(home: ChatScreen()),
+        child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),home: ChatScreen(),),
       ),
     );
 
@@ -81,7 +85,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Initial check - find ListView
-    final listFinder = find.byType(ListView);
+    final listFinder = find.byWidgetPredicate(
+      (widget) => widget is ListView && widget.reverse,
+      description: 'reversed chat message list',
+    );
     expect(listFinder, findsOneWidget);
     final scrollFinder = find.descendant(
       of: listFinder,
@@ -104,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Scroll up (visually) -> offset increases
-    await tester.drag(find.byType(ListView), const Offset(0, 300));
+    await tester.drag(listFinder, const Offset(0, 300));
     await tester.pumpAndSettle();
 
     // Add new message

@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/sparkle/gateway/internal/agent"
 )
 
 // P3: Comprehensive health check handler for production readiness
@@ -17,10 +19,11 @@ import (
 
 // HealthHandler provides health check endpoints
 type HealthHandler struct {
-	db        *pgxpool.Pool
-	redis     *redis.Client
-	startTime time.Time
-	version   string
+	db          *pgxpool.Pool
+	redis       *redis.Client
+	agentClient *agent.Client // gRPC agent client for health checking
+	startTime   time.Time
+	version     string
 
 	// Cache to avoid excessive health checks
 	mu          sync.RWMutex
@@ -31,19 +34,20 @@ type HealthHandler struct {
 
 // HealthResponse represents the full health check response
 type HealthResponse struct {
-	Status     string                 `json:"status"`
-	Version    string                 `json:"version"`
-	Uptime     string                 `json:"uptime"`
-	Timestamp  time.Time              `json:"timestamp"`
+	Status     string                    `json:"status"`
+	Version    string                    `json:"version"`
+	Uptime     string                    `json:"uptime"`
+	Timestamp  time.Time                 `json:"timestamp"`
 	Components map[string]ComponentStatus `json:"components"`
-	System     *SystemInfo            `json:"system,omitempty"`
+	System     *SystemInfo               `json:"system,omitempty"`
 }
 
 // ComponentStatus represents the health of a single component
 type ComponentStatus struct {
-	Status  string  `json:"status"`
-	Latency float64 `json:"latency_ms,omitempty"`
-	Message string  `json:"message,omitempty"`
+	Status       string `json:"status"`
+	Latency      int64  `json:"latency_ms,omitempty"`
+	Message      string `json:"message,omitempty"`
+	CircuitState string `json:"circuit_state,omitempty"` // for gRPC agent
 }
 
 // SystemInfo provides system-level information
@@ -55,13 +59,14 @@ type SystemInfo struct {
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(db *pgxpool.Pool, redis *redis.Client, version string) *HealthHandler {
+func NewHealthHandler(db *pgxpool.Pool, redis *redis.Client, agentClient *agent.Client, version string) *HealthHandler {
 	return &HealthHandler{
-		db:        db,
-		redis:     redis,
-		startTime: time.Now(),
-		version:   version,
-		cacheTTL:  5 * time.Second,
+		db:          db,
+		redis:       redis,
+		agentClient: agentClient,
+		startTime:   time.Now(),
+		version:     version,
+		cacheTTL:    5 * time.Second,
 	}
 }
 
@@ -93,22 +98,45 @@ func (h *HealthHandler) handleReadiness(c *gin.Context) {
 	defer cancel()
 
 	// Check critical dependencies
-	dbOK := h.checkDatabase(ctx)
-	redisOK := h.checkRedis(ctx)
+	components := make(map[string]ComponentStatus)
+	components["database"] = h.checkDatabase(ctx)
+	components["redis"] = h.checkRedis(ctx)
+	components["grpc_agent"] = h.checkGRPCAgent(ctx)
 
-	if !dbOK.isHealthy() || !redisOK.isHealthy() {
+	// Determine overall status
+	allHealthy := true
+	anyDegraded := false
+	for _, comp := range components {
+		if comp.Status == "unhealthy" && comp.Message != "agent client not configured" {
+			// Agent being unhealthy is not a blocker for readiness (degraded mode)
+			if comp.Status == "unhealthy" {
+				allHealthy = false
+			}
+		}
+		if comp.Status == "degraded" {
+			anyDegraded = true
+		}
+	}
+
+	// Agent unhealthy = degraded, not unavailable
+	if !allHealthy {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status":    "not_ready",
-			"timestamp": time.Now().UTC(),
-			"database":  dbOK.Status,
-			"redis":     redisOK.Status,
+			"status":     "not_ready",
+			"timestamp":  time.Now().UTC(),
+			"components": components,
 		})
 		return
 	}
 
+	status := "ready"
+	if anyDegraded {
+		status = "degraded"
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"status":    "ready",
-		"timestamp": time.Now().UTC(),
+		"status":     status,
+		"timestamp":  time.Now().UTC(),
+		"components": components,
 	})
 }
 
@@ -131,6 +159,7 @@ func (h *HealthHandler) handleHealth(c *gin.Context) {
 	components := make(map[string]ComponentStatus)
 	components["database"] = h.checkDatabase(ctx)
 	components["redis"] = h.checkRedis(ctx)
+	components["grpc_agent"] = h.checkGRPCAgent(ctx)
 
 	// Calculate overall status
 	overallStatus := "healthy"
@@ -186,7 +215,7 @@ func (h *HealthHandler) checkDatabase(ctx context.Context) ComponentStatus {
 
 	start := time.Now()
 	err := h.db.Ping(ctx)
-	latency := float64(time.Since(start).Microseconds()) / 1000.0
+	latency := time.Since(start).Milliseconds()
 
 	if err != nil {
 		return ComponentStatus{
@@ -214,7 +243,7 @@ func (h *HealthHandler) checkRedis(ctx context.Context) ComponentStatus {
 
 	start := time.Now()
 	_, err := h.redis.Ping(ctx).Result()
-	latency := float64(time.Since(start).Microseconds()) / 1000.0
+	latency := time.Since(start).Milliseconds()
 
 	if err != nil {
 		return ComponentStatus{
@@ -233,6 +262,61 @@ func (h *HealthHandler) checkRedis(ctx context.Context) ComponentStatus {
 		Status:  status,
 		Latency: latency,
 	}
+}
+
+// checkGRPCAgent checks the health of the gRPC agent service
+func (h *HealthHandler) checkGRPCAgent(ctx context.Context) ComponentStatus {
+	if h.agentClient == nil {
+		return ComponentStatus{Status: "unhealthy", Message: "agent client not configured"}
+	}
+
+	// Check if health checker is available
+	healthChecker := h.agentClient.GetHealthChecker()
+	if healthChecker == nil {
+		// No health checker, just check if client is connected
+		if h.agentClient.IsHealthy() {
+			return ComponentStatus{
+				Status:  "healthy",
+				Message: "connected (no health checker)",
+			}
+		}
+		return ComponentStatus{
+			Status:  "degraded",
+			Message: "connection status unknown",
+		}
+	}
+
+	// Get health status from checker
+	status := healthChecker.GetStatus()
+
+	compStatus := ComponentStatus{
+		Latency:      status.Latency.Milliseconds(),
+		CircuitState: status.CircuitState.String(),
+	}
+
+	// Determine component status based on health and circuit state
+	switch {
+	case !status.IsHealthy:
+		compStatus.Status = "unhealthy"
+		if status.LastError != nil {
+			compStatus.Message = status.LastError.Error()
+		} else {
+			compStatus.Message = "health check failed"
+		}
+	case status.CircuitState == agent.CircuitOpen:
+		compStatus.Status = "unhealthy"
+		compStatus.Message = "circuit breaker open"
+	case status.CircuitState == agent.CircuitHalfOpen:
+		compStatus.Status = "degraded"
+		compStatus.Message = "circuit breaker half-open (probing)"
+	case status.Failures > 0:
+		compStatus.Status = "degraded"
+		compStatus.Message = "experiencing failures"
+	default:
+		compStatus.Status = "healthy"
+	}
+
+	return compStatus
 }
 
 func (cs ComponentStatus) isHealthy() bool {

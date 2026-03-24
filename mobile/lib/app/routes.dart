@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
@@ -19,46 +26,61 @@ import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
+import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/translation/translation.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
-  // Create a notifier to sync auth state with GoRouter without rebuilding the router itself
-  final authStateNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
+  final navigationObserver = SensoryNavigationObserver();
 
-  // Update the notifier when auth state changes
+  final routerRefreshNotifier = ValueNotifier<int>(0);
+
   ref
     ..listen<AuthState>(
       authProvider,
       (_, next) {
-        authStateNotifier.value = next;
+        routerRefreshNotifier.value++;
       },
     )
-    // Dispose the notifier when the provider is disposed
-    ..onDispose(authStateNotifier.dispose);
+    ..listen<bool>(
+      onboardingCompletedProvider,
+      (_, __) {
+        routerRefreshNotifier.value++;
+      },
+    )
+    ..onDispose(routerRefreshNotifier.dispose);
 
   return GoRouter(
     navigatorKey: navigatorKey, // Set the global navigator key
     initialLocation: '/',
     debugLogDiagnostics: true,
-    refreshListenable: authStateNotifier,
+    observers: [navigationObserver],
+    refreshListenable: routerRefreshNotifier,
     redirect: (context, state) {
-      // Access the latest value from the notifier
-      final authState = authStateNotifier.value;
+      final authState = ref.read(authProvider);
 
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
       final isOnSplash = state.uri.path == '/';
-      final isOnAuth =
-          state.uri.path == '/login' || state.uri.path == '/register';
+      final publicAuthPaths = {
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/legal/terms',
+        '/legal/privacy',
+      };
+      final isOnAuth = publicAuthPaths.contains(state.uri.path);
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding;
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
+      final isGuestUser = authState.user?.registrationSource == 'guest';
 
       // Still loading authentication state
       if (isLoading) {
@@ -78,11 +100,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
-      if (isAuthenticated && !onboardingCompleted && !isOnPersonaOnboarding) {
+      if (isAuthenticated &&
+          !isGuestUser &&
+          !onboardingCompleted &&
+          !isOnPersonaOnboarding) {
         return UserRoutes.personaOnboarding;
       }
 
-      if (isAuthenticated && onboardingCompleted && isOnPersonaOnboarding) {
+      if (isAuthenticated &&
+          (onboardingCompleted || isGuestUser) &&
+          isOnPersonaOnboarding) {
         return '/home';
       }
 
@@ -100,9 +127,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/home',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const DashboardScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  child: const SceneAudioScope(
+                    policy: SceneAudioPolicy(
+                      track: BgmTrack.dashboard,
+                    ),
+                    child: DashboardScreen(),
+                  ),
                 ),
               ),
             ],
@@ -112,9 +144,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/galaxy',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const GalaxyScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  motionToken: SparkleMotionToken.scene,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.focusImmersive.audioPolicy(
+                      trackOverride: BgmTrack.galaxy,
+                    ),
+                    child: const GalaxyScreen(),
+                  ),
                 ),
               ),
             ],
@@ -124,9 +162,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/chat',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const ChatScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  motionToken: SparkleMotionToken.scene,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.assistantFlow.audioPolicy(),
+                    child: ChatScreen(
+                      initialPrompt: state.uri.queryParameters['prompt'],
+                      initialChatMode: state.uri.queryParameters['chat_mode'],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -136,9 +181,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/community',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const CommunityMainScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.socialWarm.audioPolicy(
+                      trackOverride: BgmTrack.community,
+                    ),
+                    child: const CommunityMainScreen(),
+                  ),
                 ),
               ),
             ],
@@ -148,9 +198,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/profile',
-                pageBuilder: (context, state) => MaterialPage<void>(
-                  key: state.pageKey,
-                  child: const ProfileScreen(),
+                pageBuilder: (context, state) => buildSparkleTransitionPage(
+                  state: state,
+                  child: SceneAudioScope(
+                    policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                      trackOverride: BgmTrack.profile,
+                    ),
+                    child: const ProfileScreen(),
+                  ),
                 ),
               ),
             ],
@@ -180,6 +235,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...TranslationRoutes.routes,
       ...SeedLibraryRoutes.routes,
       ...ToolsRoutes.routes,
+      ...VisualElementsRoutes.routes,
+      ...ShopRoutes.routes,
     ],
   );
 });

@@ -8,23 +8,37 @@ class UserPreferencesService {
   UserPreferencesService(this._prefs);
 
   static const String _prefsKey = 'user_preferences';
+  static const Map<String, dynamic> _defaultPreferences = <String, dynamic>{
+    'theme_mode': 'system',
+    'notifications_enabled': true,
+    'haptics_enabled': true,
+    'sound_enabled': true,
+    'memory_strategy': 'balanced',
+    'default_focus_minutes': 25,
+    'default_break_minutes': 5,
+    'pomodoro_enabled': true,
+    'ambient_scene': 'rain',
+  };
 
   final SharedPreferences _prefs;
 
   Future<Map<String, dynamic>> getPreferences() async {
     final raw = _prefs.getString(_prefsKey);
     if (raw == null || raw.isEmpty) {
-      return <String, dynamic>{};
+      return Map<String, dynamic>.from(_defaultPreferences);
     }
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
-        return decoded;
+        return <String, dynamic>{
+          ..._defaultPreferences,
+          ...decoded,
+        };
       }
     } catch (_) {
       // Fall through to return empty preferences on decode errors.
     }
-    return <String, dynamic>{};
+    return Map<String, dynamic>.from(_defaultPreferences);
   }
 
   Future<void> updatePreferences(Map<String, dynamic> updates) async {
@@ -35,5 +49,7 @@ class UserPreferencesService {
 }
 
 final userPreferencesServiceProvider = Provider<UserPreferencesService>((ref) {
-  throw UnimplementedError('UserPreferencesService must be overridden in main.dart');
+  throw UnimplementedError(
+    'UserPreferencesService must be overridden in main.dart',
+  );
 });

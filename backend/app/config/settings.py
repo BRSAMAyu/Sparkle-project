@@ -2,21 +2,27 @@
 Application Configuration Management
 使用 pydantic-settings 管理配置
 """
+
 import json
+import logging
 import os
+from typing import Dict, Optional, Union
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 获取当前文件的绝对路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(current_dir)  # backend/app
-project_root = os.path.dirname(backend_dir)  # backend
-repo_root = os.path.dirname(project_root)  # repo root
+logger = logging.getLogger(__name__)
+
+# 获取当前文件的绝对路径，并兼容本地源码结构与容器内 /app 结构。
+current_dir = os.path.dirname(os.path.abspath(__file__))  # .../app/config
+app_dir = os.path.dirname(current_dir)  # .../app
+project_root = os.path.dirname(app_dir)  # local: .../backend, container: /app
+repo_root = os.path.dirname(project_root) if os.path.basename(project_root) == "backend" else project_root
 repo_env_path = os.path.join(repo_root, ".env")
 service_env_path = os.path.join(project_root, ".env")
-backend_env_path = os.path.join(backend_dir, ".env")
+backend_env_path = service_env_path
+
 
 def _is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv") or os.getenv("IN_DOCKER") == "true"
@@ -55,13 +61,13 @@ def normalize_database_url(raw_url: str, *, prefer_async: bool = True) -> str:
         return ""
     url = raw_url.strip()
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     if prefer_async:
         for prefix in ("postgresql+psycopg://", "postgresql+psycopg2://"):
             if url.startswith(prefix):
-                url = "postgresql+asyncpg://" + url[len(prefix):]
+                url = "postgresql+asyncpg://" + url[len(prefix) :]
         if url.startswith("postgresql://"):
-            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+            url = "postgresql+asyncpg://" + url[len("postgresql://") :]
     host = urlparse(url).hostname
     if host:
         url = _replace_url_host(url, _normalize_local_docker_host(host))
@@ -73,14 +79,23 @@ def to_sync_database_url(raw_url: str) -> str:
         return ""
     url = raw_url.strip()
     if url.startswith("postgresql+asyncpg://"):
-        url = "postgresql://" + url[len("postgresql+asyncpg://"):]
+        url = "postgresql://" + url[len("postgresql+asyncpg://") :]
     if url.startswith("postgresql+psycopg://"):
-        url = "postgresql://" + url[len("postgresql+psycopg://"):]
+        url = "postgresql://" + url[len("postgresql+psycopg://") :]
     if url.startswith("postgresql+psycopg2://"):
-        url = "postgresql://" + url[len("postgresql+psycopg2://"):]
+        url = "postgresql://" + url[len("postgresql+psycopg2://") :]
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     return url
+
+
+def _normalize_local_path(raw_path: str | None, *, base_dir: str) -> str:
+    if not raw_path:
+        return ""
+    expanded = os.path.expanduser(raw_path.strip())
+    if os.path.isabs(expanded):
+        return os.path.abspath(expanded)
+    return os.path.abspath(os.path.join(base_dir, expanded))
 
 
 def normalize_redis_url(raw_url: str) -> str:
@@ -92,21 +107,23 @@ def normalize_redis_url(raw_url: str) -> str:
         url = _replace_url_host(url, _normalize_local_docker_host(host))
     return url
 
+
 class Settings(BaseSettings):
     """Application settings"""
+
     model_config = SettingsConfigDict(
         # Load repo root .env first, then backend/.env, then backend/app/.env
         env_file=[repo_env_path, service_env_path, backend_env_path],
-        env_file_encoding='utf-8',
+        env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
     )
 
     # Application
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
-    DEBUG: bool | None = None
+    DEBUG: Optional[bool] = None
     SERVICE_ROLE: str = "api"  # api | grpc
 
     # Security
@@ -114,6 +131,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = Field("", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
     JWT_ISSUER: str = "sparkle-gateway"
     JWT_AUDIENCE: str = "sparkle-app"
+
+    # Community Settings
+    MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
+    MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
@@ -173,7 +194,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     APPLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_ID: str = ""
-    WS_ALLOW_QUERY_TOKEN: bool | None = None
+    WS_ALLOW_QUERY_TOKEN: Optional[bool] = None
 
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
@@ -195,19 +216,38 @@ class Settings(BaseSettings):
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
+    AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
+    AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
+    AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
+    AI_PREDICTION_FREE_TIMEOUT_SECONDS: float = 1.5
+    AI_PREDICTION_FREE_FAST_TIMEOUT_SECONDS: float = 2.5
+    FRONTEND_TELEMETRY_ENABLED: bool = True
+    FRONTEND_TELEMETRY_SAMPLE_RATE: float = 1.0
+    PRODUCTION_BACKUP_DIR: str = "./backups"
     # LLM Tier Routing (comma-separated model keys from LLMRouter)
+    LLM_TIER_FREE: str = ""
     LLM_TIER_FREE_FAST: str = ""
     LLM_TIER_FREE_REASONING: str = ""
     LLM_TIER_FAST: str = ""
     LLM_TIER_STANDARD: str = ""
+    LLM_TIER_PLUS: str = ""
+    LLM_TIER_PRO: str = ""
     LLM_TIER_REASONING: str = ""
+    LLM_TIER_MAX: str = ""
+    LLM_TIER_GLM_BATCH: str = ""
     LLM_TIER_SPECIALIST: str = ""
 
     # XiaoMi MIMO Configuration (快速响应)
     XIAOMI_MIMO_API_KEY: str = ""
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
+    XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
+
+    # XiaoMi MIMO Pro Configuration (最高层，支持联网搜索)
+    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
+    XIAOMI_PRO_TEMPERATURE: float = 1.0  # mimo-v2-pro 默认值
+    XIAOMI_WEB_SEARCH_ENABLED: bool = True  # 启用内置联网搜索
 
     # Prompt Snapshot (debug observability)
     PROMPT_SNAPSHOT_ENABLED: bool = False
@@ -223,10 +263,14 @@ class Settings(BaseSettings):
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+    ZHIPU_CODING_BASE_URL: str = "https://open.bigmodel.cn/api/coding/paas/v4"
     ZHIPU_CHAT_MODEL: str = "glm-4.7"
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
     GLM_4_7_FLASH_MODEL: str = "glm-4.7-flash"  # GLM-4.7-Flash 模型（支持思考模式）
+    ZHIPU_AIR_MODEL: str = "glm-4.5-air"
+    ZHIPU_LIGHT_MODEL: str = "glm-4.6"
+    ZHIPU_MAX_MODEL: str = "glm-5"
     ZHIPU_TEMPERATURE: float = 0.3
     ZHIPU_OCR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_OCR_MODEL: str = "glm-ocr"
@@ -235,7 +279,9 @@ class Settings(BaseSettings):
     # SiliconFlow API
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
+    SILICONFLOW_FREE_MODEL: str = "Qwen/Qwen3.5-4B"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
+    SILICONFLOW_OCR_TIMEOUT_SECONDS: int = 120
 
     # Translation Service (via SiliconFlow)
     # Uses Hunyuan-MT-7B (Machine Translation model) for best translation quality
@@ -243,20 +289,33 @@ class Settings(BaseSettings):
     HUNYUAN_API_KEY: str = ""  # Optional: overrides SILICONFLOW_API_KEY for translation
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
     HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
+    SILICONFLOW_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
+    TRANSLATION_PRIMARY_PROVIDER: str = "hunyuan"  # hunyuan | siliconflow
+    TRANSLATION_BACKUP_PROVIDER: str = "siliconflow"  # hunyuan | siliconflow
+    TRANSLATION_PROVIDER_TIMEOUT_SECONDS: int = 30
+    REVIEWER_LLM_TIMEOUT_SECONDS: int = 12
+
+    # OCR / Document Cleaning
+    OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow
+    OCR_BACKUP_PROVIDER: str = "siliconflow"  # zhipu | siliconflow
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    EMBEDDING_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
     RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
 
     # DashScope (Aliyun)
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen-plus"
-    DASHSCOPE_REASON_MODEL: str = "qwen-plus"
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.5-plus"  # 标准/推理模型
+    DASHSCOPE_REASON_MODEL: str = "qwen3.5-plus"
+    DASHSCOPE_FAST_MODEL: str = "qwen3.5-flash"  # 快速响应模型
+    DASHSCOPE_STANDARD_MODEL: str = "qwen3.5-flash"
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
     DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
@@ -267,7 +326,28 @@ class Settings(BaseSettings):
 
     # STT (Speech to Text) Service
     STT_PROVIDER: str = "zhipu"  # zhipu
+    STT_BACKUP_PROVIDER: str = "xunfei"  # xunfei | zhipu
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+
+    # GLM Batch
+    GLM_BATCH_ENABLED: bool = True
+    GLM_BATCH_QUEUE: str = "glm_batch"
+    GLM_BATCH_MIN_CONCURRENCY: int = 1
+    GLM_BATCH_MAX_CONCURRENCY: int = 6
+    GLM_BATCH_PEAK_START_HOUR: int = 14
+    GLM_BATCH_PEAK_END_HOUR: int = 18
+    GLM_BATCH_PEAK_CONCURRENCY: int = 2
+    GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY: int = 3
+    GLM_BATCH_ADAPTIVE_ENABLED: bool = True
+    GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD: int = 8
+    GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS: int = 180
+    GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS: int = 300
+    GLM_BATCH_SPILLOVER_ENABLED: bool = True
+    GLM_BATCH_SPILLOVER_BACKLOG_FACTOR: int = 2
+    GLM_BATCH_CAPSULES_ENABLED: bool = True
+    GLM_BATCH_COGNITIVE_ANALYSIS_ENABLED: bool = True
+    GLM_BATCH_THINKING_DEPTH_THRESHOLD: float = 0.72
+    GLM_BATCH_THINKING_SEVERITY_THRESHOLD: int = 4
 
     # Zhipu ASR Configuration
     ZHIPU_ASR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
@@ -319,6 +399,14 @@ class Settings(BaseSettings):
     NEXT_STEP_MAX_RECOMMENDATIONS: int = 3  # 最多推荐数量
     NEXT_STEP_DEFAULT_DURATION: int = 15  # 默认推荐时长
     NEXT_STEP_DEFAULT_ENERGY: int = 2  # 默认精力消耗
+
+    # Complexity-Aware Routing (P3)
+    COMPLEXITY_ROUTING_ENABLED: bool = True  # 总开关
+    COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
+    COMPLEXITY_UPGRADE_ENABLED: bool = True  # 允许复杂消息升级到更强模型
+    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层
+    FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
+    EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
 
     # Feature Flags
     USE_CONTEXT_PACK: bool = True
@@ -384,11 +472,14 @@ class Settings(BaseSettings):
     TRANSPARENCY_SHOW_AGENT_SWITCHING: bool = True  # Show agent switching
     TRANSPARENCY_SHOW_REASONING_STEPS: bool = True  # Show LLM reasoning steps
     TRANSPARENCY_STEP_DEBOUNCE_MS: int = 100  # Minimum time between step updates
+    RUN_LEDGER_ENABLED: bool = True  # Unified control-tower ledger toggle
+    RUN_LEDGER_STREAM_SNAPSHOTS: bool = True  # Stream live ledger snapshots to clients
+    RUN_LEDGER_TTL_SECONDS: int = 86400  # 24h trace replay window in Redis
 
     # Plan Quota Settings (并行计划数限制)
-    PLAN_QUOTA_DEFAULT: int = 3           # 免费用户默认3个活跃计划
-    PLAN_QUOTA_PREMIUM: int = 10          # 付费用户10个活跃计划
-    PLAN_QUOTA_UNLIMITED: int = -1        # 无限制 (特殊用户)
+    PLAN_QUOTA_DEFAULT: int = 3  # 免费用户默认3个活跃计划
+    PLAN_QUOTA_PREMIUM: int = 10  # 付费用户10个活跃计划
+    PLAN_QUOTA_UNLIMITED: int = -1  # 无限制 (特殊用户)
 
     # Event Retention
     EVENT_RETENTION_DAYS: int = 30
@@ -401,7 +492,9 @@ class Settings(BaseSettings):
     # MDX Dictionary Configuration
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
-    MDD_RESOURCES_PATH: str | None = None
+    MDD_RESOURCES_PATH: Optional[str] = None
+    DICTIONARY_PACKAGE_DIR: str = "data/dictionaries/packages"
+    DICTIONARY_PACKAGE_BASE_URL: str = ""
 
     # Internal API
     INTERNAL_API_KEY: str = ""
@@ -430,6 +523,9 @@ class Settings(BaseSettings):
     ENABLE_WEEKLY_LEARNING_REPORT: bool = False
     ENABLE_PROGRESS_COMPARISONS: bool = False
     ENABLE_SUMMARIZATION_WORKER: bool = True
+    ENABLE_AGENT_QUALITY_FEEDBACK: bool = True
+    ENABLE_AGENT_LLM_COLLAB_ROUTING: bool = True
+    AGENT_COMBINATION_EXPLORATION_RATE: float = 0.1
 
     # Optional Graph Sync Worker
     ENABLE_GRAPH_SYNC_WORKER: bool = False
@@ -440,6 +536,7 @@ class Settings(BaseSettings):
     # Event Bus reliability
     EVENT_BUS_MAX_RETRIES: int = 3
     EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
+    EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
 
     # Translation Service
     TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation
@@ -447,7 +544,7 @@ class Settings(BaseSettings):
     # gRPC Server
     GRPC_PORT: int = 50051
     GRPC_ENABLE_REFLECTION: bool = False
-    GRPC_REQUIRE_TLS: bool | None = None
+    GRPC_REQUIRE_TLS: Optional[bool] = None
     GRPC_TLS_CERT_PATH: str = ""
     GRPC_TLS_KEY_PATH: str = ""
 
@@ -472,8 +569,36 @@ class Settings(BaseSettings):
             return ""
         return v
 
+    @field_validator("UPLOAD_DIR", mode="before")
+    @classmethod
+    def validate_upload_dir(cls, v):
+        if not v:
+            return _normalize_local_path("./uploads", base_dir=project_root)
+        return _normalize_local_path(str(v), base_dir=project_root)
+
+    @field_validator("MDX_DICTIONARY_PATH", mode="before")
+    @classmethod
+    def validate_mdx_dictionary_path(cls, v):
+        if not v:
+            return ""
+        return _normalize_local_path(str(v), base_dir=repo_root)
+
+    @field_validator("MDD_RESOURCES_PATH", mode="before")
+    @classmethod
+    def validate_mdd_resources_path(cls, v):
+        if not v:
+            return None
+        return _normalize_local_path(str(v), base_dir=repo_root)
+
+    @field_validator("DICTIONARY_PACKAGE_DIR", mode="before")
+    @classmethod
+    def validate_dictionary_package_dir(cls, v):
+        if not v:
+            return _normalize_local_path("data/dictionaries/packages", base_dir=repo_root)
+        return _normalize_local_path(str(v), base_dir=repo_root)
+
     @property
-    def CONTEXT_SEMANTIC_GATING_RULES(self) -> dict[str, dict[str, float | int]]:
+    def CONTEXT_SEMANTIC_GATING_RULES(self) -> Dict[str, Dict[str, Union[float, int]]]:
         raw = str(self.CONTEXT_SEMANTIC_GATING_RULES_JSON or "").strip()
         if not raw:
             return {}
@@ -563,15 +688,26 @@ class Settings(BaseSettings):
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
 
-        if (
-            env in ("prod", "production")
-            and self.SERVICE_ROLE == "grpc"
-            and not self.GRPC_REQUIRE_TLS
-        ):
+        if env in ("prod", "production") and self.SERVICE_ROLE == "grpc" and not self.GRPC_REQUIRE_TLS:
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
 
-        if not self.DEBUG and not self.SECRET_KEY:
-            raise ValueError("SECRET_KEY must be set when DEBUG is false")
+        # C6 Security Fix: 强制所有环境设置 SECRET_KEY
+        if not self.SECRET_KEY:
+            raise ValueError(
+                "SECRET_KEY must be set in environment variables. "
+                'Generate a secure key with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+            )
+
+        # 最小长度警告（不阻止启动）
+        if len(self.SECRET_KEY) < 32:
+            logger.warning(
+                f"SECRET_KEY is only {len(self.SECRET_KEY)} characters. "
+                "Recommended minimum: 32 characters for production."
+            )
+
+        # 生产环境额外检查：禁止使用常见默认值
+        if not self.DEBUG and self.SECRET_KEY in ["", "dev", "test", "secret", "changeme", "your-secret-key"]:
+            raise ValueError("SECRET_KEY cannot be a default value in production")
 
         if env in ("prod", "production") and not self.DATABASE_URL:
             raise ValueError("DATABASE_URL must be set in production")
@@ -588,6 +724,30 @@ class Settings(BaseSettings):
             and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH)
         ):
             raise ValueError("GRPC TLS is required but cert/key are not configured")
+
+        self.GLM_BATCH_MIN_CONCURRENCY = max(1, int(self.GLM_BATCH_MIN_CONCURRENCY or 1))
+        self.GLM_BATCH_MAX_CONCURRENCY = max(
+            self.GLM_BATCH_MIN_CONCURRENCY,
+            min(int(self.GLM_BATCH_MAX_CONCURRENCY or 6), 6),
+        )
+        self.GLM_BATCH_PEAK_CONCURRENCY = max(
+            self.GLM_BATCH_MIN_CONCURRENCY,
+            min(int(self.GLM_BATCH_PEAK_CONCURRENCY or 2), self.GLM_BATCH_MAX_CONCURRENCY),
+        )
+        self.GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY = max(
+            self.GLM_BATCH_PEAK_CONCURRENCY,
+            min(int(self.GLM_BATCH_OFFPEAK_DEFAULT_CONCURRENCY or 3), self.GLM_BATCH_MAX_CONCURRENCY),
+        )
+        self.GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD = max(1, int(self.GLM_BATCH_ADAPTIVE_SUCCESS_THRESHOLD or 8))
+        self.GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS = max(
+            30,
+            int(self.GLM_BATCH_ADAPTIVE_INCREASE_COOLDOWN_SECONDS or 180),
+        )
+        self.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS = max(
+            30,
+            int(self.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS or 300),
+        )
+        self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR = max(1, int(self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR or 2))
 
         return self
 

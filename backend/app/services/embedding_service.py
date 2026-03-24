@@ -1,14 +1,20 @@
 """
 向量嵌入服务 (Embedding Service)
 用于将文本转换为向量表示，支持语义搜索
+
+支持双供应商自动故障切换：
+- DashScope (阿里云百炼 SDK) - 主供应商
+- SiliconFlow (HTTP API) - 备用供应商
 """
 import asyncio
 from http import HTTPStatus
 
 import httpx
+from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 try:
     import dashscope
@@ -20,22 +26,30 @@ class EmbeddingService:
     """
     文本向量嵌入服务
 
-    支持多个 Provider：
-    - DashScope (阿里云百炼 SDK)
-    - SiliconFlow (HTTP API)
+    支持双供应商自动故障切换：
+    - DashScope (阿里云百炼 SDK) - 使用 text-embedding-v4
+    - SiliconFlow (HTTP API) - 使用 Qwen/Qwen3-Embedding-4B (同款模型)
+
+    当主供应商失败时，自动切换到备用供应商
     """
 
+    # 供应商优先级顺序
+    PROVIDER_ORDER = ["dashscope", "siliconflow"]
+
     def __init__(self):
-        self.provider = settings.EMBEDDING_PROVIDER
+        self.primary_provider = settings.EMBEDDING_PROVIDER
+        self.backup_provider = settings.EMBEDDING_BACKUP_PROVIDER
         self.embedding_dim = settings.EMBEDDING_DIM
 
+        # DashScope 配置 (阿里云百炼)
         self.dashscope_api_key = settings.DASHSCOPE_API_KEY
         self.dashscope_base_url = settings.DASHSCOPE_BASE_HTTP_API_URL
-        self.dashscope_model = settings.DASHSCOPE_EMBEDDING_MODEL or settings.EMBEDDING_MODEL
+        self.dashscope_model = settings.DASHSCOPE_EMBEDDING_MODEL  # text-embedding-v4
 
+        # SiliconFlow 配置 (备用)
         self.siliconflow_api_key = settings.SILICONFLOW_API_KEY
         self.siliconflow_base_url = settings.SILICONFLOW_BASE_URL
-        self.siliconflow_model = settings.SILICONFLOW_EMBEDDING_MODEL or settings.EMBEDDING_MODEL
+        self.siliconflow_model = settings.SILICONFLOW_EMBEDDING_MODEL  # Qwen/Qwen3-Embedding-4B
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def get_embedding(self, text: str, text_type: str = "document") -> list[float]:
@@ -55,7 +69,7 @@ class EmbeddingService:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def batch_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         """
-        批量获取文本向量
+        批量获取文本向量 (支持双供应商自动故障切换)
 
         Args:
             texts: 文本列表
@@ -67,20 +81,47 @@ class EmbeddingService:
         if not texts:
             return []
 
-        if self.provider == "dashscope":
-            if not self.dashscope_api_key:
-                if settings.DEMO_MODE:
-                    return [[0.0] * self.embedding_dim for _ in texts]
-                raise ValueError("DASHSCOPE_API_KEY not set for dashscope embedding provider")
-            return await self._dashscope_embeddings(texts, text_type=text_type)
-        if self.provider == "siliconflow":
-            if not self.siliconflow_api_key:
-                if settings.DEMO_MODE:
-                    return [[0.0] * self.embedding_dim for _ in texts]
-                raise ValueError("SILICONFLOW_API_KEY not set for siliconflow embedding provider")
-            return await self._siliconflow_embeddings(texts)
+        # 构建供应商尝试顺序：主供应商优先，备用供应商其次
+        providers_to_try = self._get_provider_order()
 
-        raise ValueError(f"Unsupported embedding provider: {self.provider}")
+        last_error = None
+        for provider in providers_to_try:
+            try:
+                await circuit_breaker_service.check(f"embedding:{provider}")
+                if provider == "dashscope":
+                    if not self.dashscope_api_key:
+                        continue
+                    result = await self._dashscope_embeddings(texts, text_type=text_type)
+                elif provider == "siliconflow":
+                    if not self.siliconflow_api_key:
+                        continue
+                    result = await self._siliconflow_embeddings(texts)
+                else:
+                    continue
+                await circuit_breaker_service.record_success(f"embedding:{provider}")
+                return result
+            except CircuitBreakerOpenException as e:
+                logger.warning(f"Embedding provider {provider} skipped because circuit breaker is open: {e}")
+                last_error = e
+                continue
+            except Exception as e:
+                logger.warning(f"Embedding provider {provider} failed: {e}")
+                await circuit_breaker_service.record_failure(f"embedding:{provider}")
+                last_error = e
+                continue
+
+        # 所有供应商都失败
+        if settings.DEMO_MODE:
+            return [[0.0] * self.embedding_dim for _ in texts]
+        raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
+
+    def _get_provider_order(self) -> list[str]:
+        """获取供应商尝试顺序 (主供应商优先)"""
+        order = [self.primary_provider, self.backup_provider]
+        for provider in self.PROVIDER_ORDER:
+            if provider not in order:
+                order.append(provider)
+        return order
 
     async def _dashscope_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         if dashscope is None:

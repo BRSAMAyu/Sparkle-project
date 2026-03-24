@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -27,6 +28,9 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
     setState(() => _isSubmitting = true);
 
     try {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+      );
       final l10n = context.l10n;
       final content = l10n.focusReflectionSummary(
         _feelingLabel(l10n, _feeling!),
@@ -80,21 +84,28 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.focusReflectionPrompt,
-            style: TextStyle(color: DS.brandPrimaryConst),
+          SparkleStaggerItem(
+            index: 0,
+            child: Text(
+              l10n.focusReflectionPrompt,
+              style: TextStyle(color: DS.brandPrimaryConst),
+            ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          SparkleStaggerWrap(
             children: moods
                 .map(
                   (entry) => ChoiceChip(
                     label: Text(entry.$2),
                     selected: _feeling == entry.$1,
-                    onSelected: (b) =>
-                        setState(() => _feeling = b ? entry.$1 : null),
+                    onSelected: (b) {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      setState(() => _feeling = b ? entry.$1 : null);
+                    },
                     backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                     selectedColor: DS.brandPrimary,
                     labelStyle: TextStyle(
@@ -110,24 +121,27 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
                 .toList(),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _noteController,
-            decoration: InputDecoration(
-              hintText: l10n.focusReflectionNoteHint,
-              hintStyle:
-                  TextStyle(color: DS.brandPrimary.withValues(alpha: 0.5)),
-              enabledBorder: OutlineInputBorder(
-                borderSide:
-                    BorderSide(color: DS.brandPrimary.withValues(alpha: 0.3)),
-                borderRadius: BorderRadius.circular(12),
+          SparkleStaggerItem(
+            index: 1,
+            child: TextField(
+              controller: _noteController,
+              decoration: InputDecoration(
+                hintText: l10n.focusReflectionNoteHint,
+                hintStyle:
+                    TextStyle(color: DS.brandPrimary.withValues(alpha: 0.5)),
+                enabledBorder: OutlineInputBorder(
+                  borderSide:
+                      BorderSide(color: DS.brandPrimary.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: DS.brandPrimary),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: DS.brandPrimary),
-                borderRadius: BorderRadius.circular(12),
-              ),
+              style: TextStyle(color: DS.brandPrimaryConst),
+              maxLines: 2,
             ),
-            style: TextStyle(color: DS.brandPrimaryConst),
-            maxLines: 2,
           ),
         ],
       ),

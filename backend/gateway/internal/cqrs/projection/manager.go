@@ -113,8 +113,8 @@ func (m *Manager) GetProjectionInfo(ctx context.Context, name string) (*Projecti
 	}
 
 	if meta.LastProcessedPosition.Valid {
-		if position, err := strconv.ParseInt(meta.LastProcessedPosition.String, 10, 64); err == nil && position > 0 {
-			info.LastProcessedPosition = position
+		if pos, err := strconv.ParseInt(meta.LastProcessedPosition.String, 10, 64); err == nil && pos > 0 {
+			info.LastProcessedPosition = pos
 		}
 	}
 
@@ -147,8 +147,8 @@ func (m *Manager) GetAllProjections(ctx context.Context) ([]ProjectionInfo, erro
 		}
 
 		if meta.LastProcessedPosition.Valid {
-			if position, err := strconv.ParseInt(meta.LastProcessedPosition.String, 10, 64); err == nil && position > 0 {
-				info.LastProcessedPosition = position
+			if pos, err := strconv.ParseInt(meta.LastProcessedPosition.String, 10, 64); err == nil && pos > 0 {
+				info.LastProcessedPosition = pos
 			}
 		}
 
@@ -264,15 +264,15 @@ func (s *SnapshotManager) SaveSnapshot(ctx context.Context, projectionName strin
 		return fmt.Errorf("failed to marshal snapshot data: %w", err)
 	}
 
-	aggID := pgtype.UUID{}
+	aggIDPg := pgtype.UUID{}
 	if aggregateID != nil {
-		aggID = pgtype.UUID{Bytes: *aggregateID, Valid: true}
+		aggIDPg = pgtype.UUID{Bytes: *aggregateID, Valid: true}
 	}
 
 	return s.queries.SaveSnapshot(ctx, db.SaveSnapshotParams{
 		ID:             pgtype.UUID{Bytes: uuid.New(), Valid: true},
 		ProjectionName: projectionName,
-		AggregateID:    aggID,
+		AggregateID:    aggIDPg,
 		SnapshotData:   dataJSON,
 		StreamPosition: strconv.FormatInt(streamPosition, 10),
 	})
@@ -280,14 +280,14 @@ func (s *SnapshotManager) SaveSnapshot(ctx context.Context, projectionName strin
 
 // GetLatestSnapshot retrieves the latest snapshot for a projection.
 func (s *SnapshotManager) GetLatestSnapshot(ctx context.Context, projectionName string, aggregateID *uuid.UUID) (*Snapshot, error) {
-	aggID := pgtype.UUID{}
+	aggIDPg := pgtype.UUID{}
 	if aggregateID != nil {
-		aggID = pgtype.UUID{Bytes: *aggregateID, Valid: true}
+		aggIDPg = pgtype.UUID{Bytes: *aggregateID, Valid: true}
 	}
 
 	row, err := s.queries.GetLatestSnapshot(ctx, db.GetLatestSnapshotParams{
 		ProjectionName: projectionName,
-		AggregateID:    aggID,
+		AggregateID:    aggIDPg,
 	})
 	if err != nil {
 		return nil, err
@@ -300,24 +300,18 @@ func (s *SnapshotManager) GetLatestSnapshot(ctx context.Context, projectionName 
 
 	snapshotID, _ := uuid.FromBytes(row.ID.Bytes[:])
 
+	streamPos, _ := strconv.ParseInt(row.StreamPosition, 10, 64)
 	snapshot := &Snapshot{
 		ID:             snapshotID,
 		ProjectionName: row.ProjectionName,
 		Data:           data,
-		StreamPosition: 0,
+		StreamPosition: streamPos,
 		CreatedAt:      row.CreatedAt.Time,
 	}
 
-	if row.StreamPosition != "" {
-		if position, err := strconv.ParseInt(row.StreamPosition, 10, 64); err == nil {
-			snapshot.StreamPosition = position
-		}
-	}
-
 	if row.AggregateID.Valid {
-		if aggUUID, err := uuid.FromBytes(row.AggregateID.Bytes[:]); err == nil {
-			snapshot.AggregateID = &aggUUID
-		}
+		aggUUID := uuid.UUID(row.AggregateID.Bytes)
+		snapshot.AggregateID = &aggUUID
 	}
 
 	return snapshot, nil

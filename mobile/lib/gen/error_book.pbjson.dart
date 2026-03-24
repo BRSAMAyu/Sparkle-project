@@ -83,6 +83,14 @@ const ErrorRecord$json = {
       '6': '.google.protobuf.Timestamp',
       '10': 'updatedAt'
     },
+    {'1': 'cognitive_tags', '3': 17, '4': 3, '5': 9, '10': 'cognitiveTags'},
+    {
+      '1': 'ai_analysis_summary',
+      '3': 18,
+      '4': 1,
+      '5': 9,
+      '10': 'aiAnalysisSummary'
+    },
   ],
 };
 
@@ -101,7 +109,8 @@ final $typed_data.Uint8List errorRecordDescriptor = $convert.base64Decode(
     'D2tub3dsZWRnZV9saW5rcxgOIAMoCzIeLmVycm9yX2Jvb2suS25vd2xlZGdlTGlua0JyaWVmUg'
     '5rbm93bGVkZ2VMaW5rcxI5CgpjcmVhdGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRp'
     'bWVzdGFtcFIJY3JlYXRlZEF0EjkKCnVwZGF0ZWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idW'
-    'YuVGltZXN0YW1wUgl1cGRhdGVkQXQ=');
+    'YuVGltZXN0YW1wUgl1cGRhdGVkQXQSJQoOY29nbml0aXZlX3RhZ3MYESADKAlSDWNvZ25pdGl2'
+    'ZVRhZ3MSLgoTYWlfYW5hbHlzaXNfc3VtbWFyeRgSIAEoCVIRYWlBbmFseXNpc1N1bW1hcnk=');
 
 @$core.Deprecated('Use errorAnalysisResultDescriptor instead')
 const ErrorAnalysisResult$json = {
@@ -150,6 +159,114 @@ final $typed_data.Uint8List knowledgeLinkBriefDescriptor = $convert.base64Decode
     'USHAoJcmVsZXZhbmNlGAMgASgBUglyZWxldmFuY2USHQoKaXNfcHJpbWFyeRgEIAEoCFIJaXNQ'
     'cmltYXJ5');
 
+@$core.Deprecated('Use semanticConceptBriefDescriptor instead')
+const SemanticConceptBrief$json = {
+  '1': 'SemanticConceptBrief',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+  ],
+};
+
+/// Descriptor for `SemanticConceptBrief`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List semanticConceptBriefDescriptor = $convert.base64Decode(
+    'ChRTZW1hbnRpY0NvbmNlcHRCcmllZhIOCgJpZBgBIAEoCVICaWQSEgoEbmFtZRgCIAEoCVIEbm'
+    'FtZRIgCgtkZXNjcmlwdGlvbhgDIAEoCVILZGVzY3JpcHRpb24=');
+
+@$core.Deprecated('Use strategyNodeSummaryDescriptor instead')
+const StrategyNodeSummary$json = {
+  '1': 'StrategyNodeSummary',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'subject_code', '3': 4, '4': 1, '5': 9, '10': 'subjectCode'},
+    {'1': 'tags', '3': 5, '4': 3, '5': 9, '10': 'tags'},
+    {
+      '1': 'created_at',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+  ],
+};
+
+/// Descriptor for `StrategyNodeSummary`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List strategyNodeSummaryDescriptor = $convert.base64Decode(
+    'ChNTdHJhdGVneU5vZGVTdW1tYXJ5Eg4KAmlkGAEgASgJUgJpZBIUCgV0aXRsZRgCIAEoCVIFdG'
+    'l0bGUSIAoLZGVzY3JpcHRpb24YAyABKAlSC2Rlc2NyaXB0aW9uEiEKDHN1YmplY3RfY29kZRgE'
+    'IAEoCVILc3ViamVjdENvZGUSEgoEdGFncxgFIAMoCVIEdGFncxI5CgpjcmVhdGVkX2F0GAYgAS'
+    'gLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJY3JlYXRlZEF0');
+
+@$core.Deprecated('Use similarErrorSummaryDescriptor instead')
+const SimilarErrorSummary$json = {
+  '1': 'SimilarErrorSummary',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'subject_code', '3': 2, '4': 1, '5': 9, '10': 'subjectCode'},
+    {'1': 'root_cause', '3': 3, '4': 1, '5': 9, '10': 'rootCause'},
+    {
+      '1': 'created_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+  ],
+};
+
+/// Descriptor for `SimilarErrorSummary`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List similarErrorSummaryDescriptor = $convert.base64Decode(
+    'ChNTaW1pbGFyRXJyb3JTdW1tYXJ5Eg4KAmlkGAEgASgJUgJpZBIhCgxzdWJqZWN0X2NvZGUYAi'
+    'ABKAlSC3N1YmplY3RDb2RlEh0KCnJvb3RfY2F1c2UYAyABKAlSCXJvb3RDYXVzZRI5CgpjcmVh'
+    'dGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJY3JlYXRlZEF0');
+
+@$core.Deprecated('Use errorSemanticSummaryDescriptor instead')
+const ErrorSemanticSummary$json = {
+  '1': 'ErrorSemanticSummary',
+  '2': [
+    {'1': 'error_id', '3': 1, '4': 1, '5': 9, '10': 'errorId'},
+    {'1': 'root_cause', '3': 2, '4': 1, '5': 9, '10': 'rootCause'},
+    {
+      '1': 'linked_concepts',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.error_book.SemanticConceptBrief',
+      '10': 'linkedConcepts'
+    },
+    {
+      '1': 'strategies',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.error_book.StrategyNodeSummary',
+      '10': 'strategies'
+    },
+    {
+      '1': 'similar_errors',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.error_book.SimilarErrorSummary',
+      '10': 'similarErrors'
+    },
+  ],
+};
+
+/// Descriptor for `ErrorSemanticSummary`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List errorSemanticSummaryDescriptor = $convert.base64Decode(
+    'ChRFcnJvclNlbWFudGljU3VtbWFyeRIZCghlcnJvcl9pZBgBIAEoCVIHZXJyb3JJZBIdCgpyb2'
+    '90X2NhdXNlGAIgASgJUglyb290Q2F1c2USSQoPbGlua2VkX2NvbmNlcHRzGAMgAygLMiAuZXJy'
+    'b3JfYm9vay5TZW1hbnRpY0NvbmNlcHRCcmllZlIObGlua2VkQ29uY2VwdHMSPwoKc3RyYXRlZ2'
+    'llcxgEIAMoCzIfLmVycm9yX2Jvb2suU3RyYXRlZ3lOb2RlU3VtbWFyeVIKc3RyYXRlZ2llcxJG'
+    'Cg5zaW1pbGFyX2Vycm9ycxgFIAMoCzIfLmVycm9yX2Jvb2suU2ltaWxhckVycm9yU3VtbWFyeV'
+    'INc2ltaWxhckVycm9ycw==');
+
 @$core.Deprecated('Use createErrorRequestDescriptor instead')
 const CreateErrorRequest$json = {
   '1': 'CreateErrorRequest',
@@ -167,6 +284,14 @@ const CreateErrorRequest$json = {
     {'1': 'correct_answer', '3': 5, '4': 1, '5': 9, '10': 'correctAnswer'},
     {'1': 'subject_code', '3': 6, '4': 1, '5': 9, '10': 'subjectCode'},
     {'1': 'chapter', '3': 7, '4': 1, '5': 9, '10': 'chapter'},
+    {'1': 'cognitive_tags', '3': 8, '4': 3, '5': 9, '10': 'cognitiveTags'},
+    {
+      '1': 'ai_analysis_summary',
+      '3': 9,
+      '4': 1,
+      '5': 9,
+      '10': 'aiAnalysisSummary'
+    },
   ],
 };
 
@@ -176,7 +301,9 @@ final $typed_data.Uint8List createErrorRequestDescriptor = $convert.base64Decode
     '9uX3RleHQYAiABKAlSDHF1ZXN0aW9uVGV4dBIsChJxdWVzdGlvbl9pbWFnZV91cmwYAyABKAlS'
     'EHF1ZXN0aW9uSW1hZ2VVcmwSHwoLdXNlcl9hbnN3ZXIYBCABKAlSCnVzZXJBbnN3ZXISJQoOY2'
     '9ycmVjdF9hbnN3ZXIYBSABKAlSDWNvcnJlY3RBbnN3ZXISIQoMc3ViamVjdF9jb2RlGAYgASgJ'
-    'UgtzdWJqZWN0Q29kZRIYCgdjaGFwdGVyGAcgASgJUgdjaGFwdGVy');
+    'UgtzdWJqZWN0Q29kZRIYCgdjaGFwdGVyGAcgASgJUgdjaGFwdGVyEiUKDmNvZ25pdGl2ZV90YW'
+    'dzGAggAygJUg1jb2duaXRpdmVUYWdzEi4KE2FpX2FuYWx5c2lzX3N1bW1hcnkYCSABKAlSEWFp'
+    'QW5hbHlzaXNTdW1tYXJ5');
 
 @$core.Deprecated('Use listErrorsRequestDescriptor instead')
 const ListErrorsRequest$json = {
@@ -216,6 +343,13 @@ const ListErrorsRequest$json = {
     {'1': 'keyword', '3': 8, '4': 1, '5': 9, '10': 'keyword'},
     {'1': 'page', '3': 9, '4': 1, '5': 5, '10': 'page'},
     {'1': 'page_size', '3': 10, '4': 1, '5': 5, '10': 'pageSize'},
+    {
+      '1': 'cognitive_dimension',
+      '3': 11,
+      '4': 1,
+      '5': 9,
+      '10': 'cognitiveDimension'
+    },
   ],
   '8': [
     {'1': '_mastery_min'},
@@ -231,8 +365,9 @@ final $typed_data.Uint8List listErrorsRequestDescriptor = $convert.base64Decode(
     'cm9yX3R5cGUYBCABKAlSCWVycm9yVHlwZRIkCgttYXN0ZXJ5X21pbhgFIAEoAUgAUgptYXN0ZX'
     'J5TWluiAEBEiQKC21hc3RlcnlfbWF4GAYgASgBSAFSCm1hc3RlcnlNYXiIAQESJAoLbmVlZF9y'
     'ZXZpZXcYByABKAhIAlIKbmVlZFJldmlld4gBARIYCgdrZXl3b3JkGAggASgJUgdrZXl3b3JkEh'
-    'IKBHBhZ2UYCSABKAVSBHBhZ2USGwoJcGFnZV9zaXplGAogASgFUghwYWdlU2l6ZUIOCgxfbWFz'
-    'dGVyeV9taW5CDgoMX21hc3RlcnlfbWF4Qg4KDF9uZWVkX3Jldmlldw==');
+    'IKBHBhZ2UYCSABKAVSBHBhZ2USGwoJcGFnZV9zaXplGAogASgFUghwYWdlU2l6ZRIvChNjb2du'
+    'aXRpdmVfZGltZW5zaW9uGAsgASgJUhJjb2duaXRpdmVEaW1lbnNpb25CDgoMX21hc3RlcnlfbW'
+    'luQg4KDF9tYXN0ZXJ5X21heEIOCgxfbmVlZF9yZXZpZXc=');
 
 @$core.Deprecated('Use listErrorsResponseDescriptor instead')
 const ListErrorsResponse$json = {
@@ -333,6 +468,16 @@ const UpdateErrorRequest$json = {
       '10': 'questionImageUrl',
       '17': true
     },
+    {'1': 'cognitive_tags', '3': 9, '4': 3, '5': 9, '10': 'cognitiveTags'},
+    {
+      '1': 'ai_analysis_summary',
+      '3': 10,
+      '4': 1,
+      '5': 9,
+      '9': 6,
+      '10': 'aiAnalysisSummary',
+      '17': true
+    },
   ],
   '8': [
     {'1': '_question_text'},
@@ -341,6 +486,7 @@ const UpdateErrorRequest$json = {
     {'1': '_subject_code'},
     {'1': '_chapter'},
     {'1': '_question_image_url'},
+    {'1': '_ai_analysis_summary'},
   ],
 };
 
@@ -351,9 +497,11 @@ final $typed_data.Uint8List updateErrorRequestDescriptor = $convert.base64Decode
     'iAEBEiQKC3VzZXJfYW5zd2VyGAQgASgJSAFSCnVzZXJBbnN3ZXKIAQESKgoOY29ycmVjdF9hbn'
     'N3ZXIYBSABKAlIAlINY29ycmVjdEFuc3dlcogBARImCgxzdWJqZWN0X2NvZGUYBiABKAlIA1IL'
     'c3ViamVjdENvZGWIAQESHQoHY2hhcHRlchgHIAEoCUgEUgdjaGFwdGVyiAEBEjEKEnF1ZXN0aW'
-    '9uX2ltYWdlX3VybBgIIAEoCUgFUhBxdWVzdGlvbkltYWdlVXJsiAEBQhAKDl9xdWVzdGlvbl90'
-    'ZXh0Qg4KDF91c2VyX2Fuc3dlckIRCg9fY29ycmVjdF9hbnN3ZXJCDwoNX3N1YmplY3RfY29kZU'
-    'IKCghfY2hhcHRlckIVChNfcXVlc3Rpb25faW1hZ2VfdXJs');
+    '9uX2ltYWdlX3VybBgIIAEoCUgFUhBxdWVzdGlvbkltYWdlVXJsiAEBEiUKDmNvZ25pdGl2ZV90'
+    'YWdzGAkgAygJUg1jb2duaXRpdmVUYWdzEjMKE2FpX2FuYWx5c2lzX3N1bW1hcnkYCiABKAlIBl'
+    'IRYWlBbmFseXNpc1N1bW1hcnmIAQFCEAoOX3F1ZXN0aW9uX3RleHRCDgoMX3VzZXJfYW5zd2Vy'
+    'QhEKD19jb3JyZWN0X2Fuc3dlckIPCg1fc3ViamVjdF9jb2RlQgoKCF9jaGFwdGVyQhUKE19xdW'
+    'VzdGlvbl9pbWFnZV91cmxCFgoUX2FpX2FuYWx5c2lzX3N1bW1hcnk=');
 
 @$core.Deprecated('Use deleteErrorRequestDescriptor instead')
 const DeleteErrorRequest$json = {

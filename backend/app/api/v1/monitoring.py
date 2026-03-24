@@ -3,7 +3,8 @@ WebSocket Monitoring API
 Provides endpoints for monitoring WebSocket connection status and health.
 Also includes device token management for push notifications.
 """
-from datetime import UTC
+from __future__ import annotations
+from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -196,7 +197,7 @@ async def register_device(
             device = result.scalar_one_or_none()
 
             from datetime import datetime
-            now = datetime.now(UTC)
+            now = datetime.now(timezone.utc)
 
             if device:
                 # 更新现有设备

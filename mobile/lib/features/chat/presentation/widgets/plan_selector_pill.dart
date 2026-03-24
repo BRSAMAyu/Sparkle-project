@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -76,9 +78,9 @@ class PlanSelectorPill extends ConsumerWidget {
     WidgetRef ref,
     List<PlanModel> activePlans,
   ) {
-    HapticFeedback.lightImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
@@ -123,7 +125,7 @@ class _UnselectedPill extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing6),
                 Text(
-                  '选择计划',
+                  context.l10n.chatPlanSelect,
                   style: TextStyle(
                     color: DS.neutral600,
                     fontSize: DS.fontSizeSm,
@@ -152,7 +154,7 @@ class _SelectedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final planColor = _getPlanColor();
-    final progressLabel = _progressLabel();
+    final progressLabel = _progressLabel(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -227,7 +229,7 @@ class _SelectedPill extends StatelessWidget {
     );
   }
 
-  String _progressLabel() {
+  String _progressLabel(BuildContext context) {
     final tasks = plan.tasks;
     if (tasks != null && tasks.isNotEmpty) {
       final total = tasks.length;
@@ -237,7 +239,7 @@ class _SelectedPill extends StatelessWidget {
         return '$completed/$total';
       }
     }
-    return '${(plan.progress * 100).toInt()}%';
+    return context.l10n.numberPercent((plan.progress * 100).toInt());
   }
 
   Color _getPlanColor() {
@@ -300,7 +302,7 @@ class _PlanSelectorSheet extends StatelessWidget {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    '选择计划上下文',
+                    context.l10n.chatPlanContextSelect,
                     style: TextStyle(
                       fontSize: DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
@@ -350,7 +352,7 @@ class _ClearOptionTile extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(activePlanProvider.notifier).clearSelection();
-        HapticFeedback.lightImpact();
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
         Navigator.pop(context);
       },
       child: Container(
@@ -371,7 +373,7 @@ class _ClearOptionTile extends ConsumerWidget {
             ),
             const SizedBox(width: DS.spacing16),
             Text(
-              '不使用计划上下文',
+              context.l10n.chatPlanContextClear,
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight:
@@ -411,7 +413,7 @@ class _PlanListTile extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(activePlanProvider.notifier).selectPlan(plan.id);
-        HapticFeedback.lightImpact();
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
         Navigator.pop(context);
       },
       child: Container(
@@ -467,7 +469,7 @@ class _PlanListTile extends ConsumerWidget {
                   Row(
                     children: [
                       Text(
-                        _getPlanTypeLabel(),
+                        _getPlanTypeLabel(context),
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: planColor,
@@ -481,7 +483,9 @@ class _PlanListTile extends ConsumerWidget {
                       ),
                       const SizedBox(width: DS.spacing8),
                       Text(
-                        '${(plan.progress * 100).toInt()}% 完成',
+                        context.l10n.numberProgress(
+                          (plan.progress * 100).toInt(),
+                        ),
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.neutral500,
@@ -522,12 +526,12 @@ class _PlanListTile extends ConsumerWidget {
     }
   }
 
-  String _getPlanTypeLabel() {
+  String _getPlanTypeLabel(BuildContext context) {
     switch (plan.type) {
       case PlanType.sprint:
-        return '冲刺';
+        return context.l10n.planTypeSprint;
       case PlanType.growth:
-        return '成长';
+        return context.l10n.planTypeGrowth;
     }
   }
 }
@@ -549,7 +553,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '暂无活跃计划',
+              context.l10n.chatPlanEmptyTitle,
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 color: DS.neutral600,
@@ -557,7 +561,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '创建一个计划后即可在此选择',
+              context.l10n.chatPlanEmptySubtitle,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: DS.neutral500,

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM Factory - LangGraph 兼容的模型工厂
 
@@ -16,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 from langchain_openai import ChatOpenAI
 
 from app.config import settings
-from app.core.agent_profiles import AgentRole, TaskType
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.llm_router import llm_router
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ class LLMFactory:
         agent_role: str,
         override_model: str | None = None,
         task_type: TaskType | None = None,
+        force_tier: ModelTier | None = None,
     ) -> BaseChatModel:
         """
         根据 Agent 角色获取 LangChain ChatModel
@@ -77,15 +79,15 @@ class LLMFactory:
             role_enum = AgentRole.GENERATION  # 默认
 
         # 使用 LLMRouter 选择模型
-        if task_type:
-            selection = llm_router.select_model(role_enum, task_type)
-        elif override_model:
+        if override_model:
             # 强制指定已注册模型key（调试用）
             selection = llm_router.select_specific_model(
                 override_model,
                 agent_role=role_enum,
                 task_type=task_type,
             )
+        elif task_type or force_tier:
+            selection = llm_router.select_model(role_enum, task_type, force_tier=force_tier)
         else:
             selection = llm_router.select_model(role_enum)
 

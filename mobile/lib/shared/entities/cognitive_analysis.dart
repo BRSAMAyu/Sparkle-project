@@ -1,4 +1,7 @@
 /// 认知维度枚举 (Bloom's Taxonomy Revised)
+library;
+import 'package:sparkle/core/services/i18n_service.dart';
+
 enum CognitiveDimension {
   memory, // 记忆
   understanding, // 理解
@@ -11,19 +14,20 @@ enum CognitiveDimension {
 /// 认知维度扩展方法
 extension CognitiveDimensionExtension on CognitiveDimension {
   String get label {
+    final l10n = I18nService.instance.l10n;
     switch (this) {
       case CognitiveDimension.memory:
-        return '记忆';
+        return l10n.cognitiveDimensionMemory;
       case CognitiveDimension.understanding:
-        return '理解';
+        return l10n.cognitiveDimensionUnderstanding;
       case CognitiveDimension.application:
-        return '应用';
+        return l10n.cognitiveDimensionApplication;
       case CognitiveDimension.analysis:
-        return '分析';
+        return l10n.cognitiveDimensionAnalysis;
       case CognitiveDimension.evaluation:
-        return '评价';
+        return l10n.cognitiveDimensionEvaluation;
       case CognitiveDimension.creation:
-        return '创造';
+        return l10n.cognitiveDimensionCreation;
     }
   }
 

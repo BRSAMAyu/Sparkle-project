@@ -5,13 +5,14 @@ Collaborative Filtering Recommendation Service
 实现"学过X的人也学Y"的个性化推荐
 使用 Jaccard 相似度计算用户相似度
 """
+from __future__ import annotations
 import time
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode
@@ -34,7 +35,7 @@ from app.schemas.recommendation import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CollaborativeFilteringService:
@@ -463,10 +464,10 @@ class CollaborativeFilteringService:
         """获取缓存的推荐"""
         query = select(RecommendationCache).where(
             RecommendationCache.user_id == user_id,
-            RecommendationCache.recommendation_type == item_type.value if item_type else "collaborative",
+            RecommendationCache.recommendation_type == (item_type.value if item_type else literal("collaborative")),
             RecommendationCache.expires_at > _utcnow(),
             RecommendationCache.not_deleted_filter()
-        ).order_by(desc(RecommendationCache.generated_at)).first()
+        ).order_by(desc(RecommendationCache.generated_at)).limit(1)
 
         result = await self.db.execute(query)
         return result.scalar_one_or_none()

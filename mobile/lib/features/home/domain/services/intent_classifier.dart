@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:sparkle/core/design/color_extensions.dart';
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 
 /// Legacy enum for backward compatibility
@@ -50,25 +51,19 @@ class IntentClassifier {
   }
 
   /// Get intent color for UI visualization
-  static Color getIntentColor(EnhancedIntentType type) {
-    switch (type) {
-      case EnhancedIntentType.chat:
-        return const Color(0xFF42A5F5); // Blue
-      case EnhancedIntentType.task:
-        return const Color(0xFF66BB6A); // Green
-      case EnhancedIntentType.capsule:
-        return const Color(0xFFAB47BC); // Purple
-      case EnhancedIntentType.translation:
-        return const Color(0xFF26C6DA); // Cyan
-      case EnhancedIntentType.prism:
-        return const Color(0xFF7E57C2); // Deep Purple
-      case EnhancedIntentType.sprint:
-        return const Color(0xFFFFA726); // Orange
-      case EnhancedIntentType.learn:
-        return const Color(0xFFEC407A); // Pink
-      case EnhancedIntentType.review:
-        return const Color(0xFF5C6BC0); // Indigo
-    }
+  static Color getIntentColorFromType(EnhancedIntentType type) {
+    final intentName = switch (type) {
+      EnhancedIntentType.chat => 'chat',
+      EnhancedIntentType.task => 'task',
+      EnhancedIntentType.capsule => 'capsule',
+      EnhancedIntentType.translation => 'translation',
+      EnhancedIntentType.prism => 'prism',
+      EnhancedIntentType.sprint => 'sprint',
+      EnhancedIntentType.learn => 'learn',
+      EnhancedIntentType.review => 'review',
+    };
+    // Use the top-level getIntentColor function from color_extensions.dart
+    return getIntentColor(intentName);
   }
 
   /// Get intent icon for UI

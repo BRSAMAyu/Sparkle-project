@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 import y_py as Y
 from redis.asyncio import Redis
@@ -9,7 +9,7 @@ from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CRDTPersistenceManager:
@@ -56,7 +56,7 @@ class CRDTPersistenceManager:
         stmt = insert(CRDTSnapshot).values(
             galaxy_id=galaxy_id,
             state_data=update_data,
-            operation_count=0, # TODO: implement operation count tracking
+            operation_count=0, # TRACKED(TD-008): implement operation count tracking
             updated_at=_utcnow()
         ).on_conflict_do_update(
             index_elements=['galaxy_id'],

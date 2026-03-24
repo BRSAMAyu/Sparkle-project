@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   Widget buildTestWidget({
     required List<WidgetPayload> actions,
     required bool isLatestMessage,
   }) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
       home: Scaffold(
         body: AssistantMessageMetadataTray(
           actions: actions,
@@ -34,13 +38,15 @@ void main() {
       buildTestWidget(actions: actions, isLatestMessage: false),
     );
 
-    expect(find.text('下一步'), findsNothing);
+    // When not latest, next_actions badge should not appear
+    expect(find.byIcon(Icons.bookmark_added_rounded), findsNothing);
 
     await tester.pumpWidget(
       buildTestWidget(actions: actions, isLatestMessage: true),
     );
 
-    expect(find.text('下一步'), findsOneWidget);
+    // When latest, next_actions badge appears (icon only when collapsed)
+    expect(find.byIcon(Icons.bookmark_added_rounded), findsOneWidget);
   });
 
   testWidgets('source summary stays collapsed until explicitly opened',
@@ -63,12 +69,19 @@ void main() {
       ),
     );
 
+    // Initially collapsed - evidence summary content not visible
     expect(find.text('这里是展开后的来源摘要'), findsNothing);
+    expect(find.text('结论来自最近一轮检索'), findsNothing);
 
-    await tester.tap(find.text('来源'));
+    // Source summary badge shows icon (iconOnlyWhenCollapsed=true)
+    expect(find.byIcon(Icons.library_books_outlined), findsOneWidget);
+
+    // Tap the badge to expand
+    await tester.tap(find.byIcon(Icons.library_books_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('这里是展开后的来源摘要'), findsOneWidget);
+    // Now the headline and citations are visible
+    expect(find.text('结论来自最近一轮检索'), findsOneWidget);
     expect(find.text('来源 A'), findsOneWidget);
   });
 }

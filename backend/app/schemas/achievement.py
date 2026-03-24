@@ -1,5 +1,6 @@
 """Achievement Schemas - Achievement system request/response models"""
-from datetime import datetime
+from __future__ import annotations
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -24,6 +25,10 @@ class AchievementBase(BaseSchema):
     hint: str | None = Field(default=None, description="Hint for hidden achievement")
     sort_order: int = Field(default=0, description="Display order")
     parent_id: str | None = Field(default=None, description="Parent achievement ID")
+    active_from: datetime | None = Field(default=None, description="Active start time (UTC)")
+    active_to: datetime | None = Field(default=None, description="Active end time (UTC)")
+    is_limited: bool = Field(default=False, description="Is limited-time achievement")
+    event_tag: str | None = Field(default=None, description="Event tag for limited-time achievements")
 
 
 class AchievementDetail(AchievementBase):
@@ -95,11 +100,20 @@ class AchievementMapNode(BaseModel):
     name: str = Field(description="Achievement name")
     rarity: AchievementRarity = Field(description="Achievement rarity")
     category: str = Field(description="Category")
+    lane: str = Field(default="prestige_lane", description="Prestige lane identifier")
+    lane_label: str = Field(default="声望进阶线", description="Prestige lane label")
     position: dict[str, float] = Field(description="Position {x, y}")
     is_unlocked: bool = Field(default=False, description="Is unlocked")
     is_hidden: bool = Field(default=False, description="Is hidden")
     prerequisites: list[str] = Field(default_factory=list, description="Prerequisites")
     parent_id: str | None = Field(default=None, description="Parent achievement ID")
+    display_state: str = Field(default="blocked", description="unlocked | ready_to_pursue | close_to_unlock | blocked | hidden_unrevealed")
+    is_recommended_target: bool = Field(default=False, description="Is the current best next target")
+    reward_preview: list[str] = Field(default_factory=list, description="Reward summary for the node")
+    progress_percentage: int = Field(default=0, description="User progress percentage")
+    progress_value: int = Field(default=0, description="User progress current value")
+    progress_target: int = Field(default=1, description="User progress target value")
+    unlock_hint: str | None = Field(default=None, description="What the user still needs to do")
 
 
 class AchievementMapResponse(BaseModel):
@@ -122,6 +136,19 @@ class StreakStatsResponse(BaseModel):
     total_checkin_days: int = Field(default=0, description="Total check-in days")
     longest_streak_start: datetime | None = Field(default=None, description="Longest streak start")
     longest_streak_end: datetime | None = Field(default=None, description="Longest streak end")
+
+
+class StreakDayRecord(BaseModel):
+    """Single streak day record"""
+    day: date = Field(description="Calendar day")
+    status: str = Field(description="active | frozen | missed")
+    used_freeze: bool = Field(default=False, description="Whether freeze was used")
+    source_event: str | None = Field(default=None, description="Source event type")
+
+
+class StreakHistoryResponse(BaseModel):
+    """Streak history response for calendar view"""
+    days: list[StreakDayRecord] = Field(default_factory=list, description="Streak day records")
 
 
 # ========== Contract Schemas ==========
@@ -246,14 +273,79 @@ class AchievementEventProcessResponse(BaseModel):
 
 # ========== Share Schemas ==========
 
+
+class ShareCardPrivacySettings(BaseModel):
+    """Privacy settings for achievement share cards"""
+
+    display_name: str | None = Field(
+        default=None,
+        description="Custom display name. None means use default nickname.",
+    )
+    show_avatar: bool = Field(default=False, description="Show user avatar on card")
+    show_unlock_date: bool = Field(default=True, description="Show unlock date on card")
+    show_progress_stats: bool = Field(
+        default=True,
+        description="Show progress statistics on card",
+    )
+    show_first_unlocker_badge: bool = Field(
+        default=True,
+        description="Show first unlocker badge if applicable",
+    )
+
+    def get_effective_display_name(self, default_name: str) -> str:
+        """Get effective display name, using default if custom name not set."""
+        return self.display_name if self.display_name else default_name
+
+    def settings_hash(self) -> str:
+        """Generate a hash of settings for cache key."""
+        import hashlib
+
+        data = f"{self.display_name}|{self.show_avatar}|{self.show_unlock_date}|{self.show_progress_stats}|{self.show_first_unlocker_badge}"
+        return hashlib.md5(data.encode()).hexdigest()[:8]
+
+
+class ShareTemplateInfo(BaseModel):
+    """Share card template information"""
+
+    id: str = Field(description="Template ID")
+    name: str = Field(description="Template display name")
+    description: str | None = Field(default=None, description="Template description")
+    preview_url: str | None = Field(default=None, description="Template preview image URL")
+
+
+class AchievementShareRequest(BaseModel):
+    """Request body for generating achievement share card"""
+
+    template_id: str = Field(default="cosmic", description="Template ID (cosmic, minimal, neon, elegant)")
+    privacy: ShareCardPrivacySettings = Field(
+        default_factory=ShareCardPrivacySettings,
+        description="Privacy settings for the share card",
+    )
+
+
 class AchievementShareResponse(BaseModel):
     """Achievement share response"""
+
     card_url: str = Field(description="Share card image URL")
     mime_type: str = Field(default="image/png", description="Share card MIME type")
     width: int = Field(description="Share card width in pixels")
     height: int = Field(description="Share card height in pixels")
     generated_at: datetime = Field(description="Share card generation time")
+    template_id: str = Field(default="cosmic", description="Template used for generation")
+    privacy_settings: ShareCardPrivacySettings = Field(
+        default_factory=ShareCardPrivacySettings,
+        description="Privacy settings applied to card",
+    )
     achievement: AchievementDetail = Field(description="Achievement info")
+
+
+class ShareTemplateListResponse(BaseModel):
+    """Response for listing available share card templates"""
+
+    templates: list[ShareTemplateInfo] = Field(
+        default_factory=list,
+        description="Available templates",
+    )
 
 
 class AchievementPinResponse(BaseModel):

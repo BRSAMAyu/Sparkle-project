@@ -21,7 +21,7 @@ class HomeNotificationCard extends ConsumerWidget {
             DS.spacing16,
             0,
             DS.spacing16,
-            DS.spacing8,
+            DS.spacing10,
           ),
           child: _NotificationBanner(
             icon: Icons.forum_outlined,
@@ -44,12 +44,12 @@ class HomeNotificationCard extends ConsumerWidget {
 
         return ContentConstraint(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              DS.spacing16,
-              0,
-              DS.spacing16,
-              DS.spacing8,
-            ),
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing10,
+          ),
             child: _NotificationBanner(
               icon: _getIcon(notifications.first.type),
               iconColor: _getIconColor(notifications.first.type),

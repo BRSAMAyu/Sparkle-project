@@ -7,8 +7,9 @@ Creates draft knowledge nodes that users can review and publish.
 Author: Claude Code (Opus 4.5)
 Created: 2026-01-15
 """
+from __future__ import annotations
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -20,7 +21,7 @@ from app.services.embedding_service import embedding_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class KnowledgeIntegrationService:

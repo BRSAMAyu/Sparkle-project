@@ -299,9 +299,9 @@ class ErrorOperations extends _$ErrorOperations {
   /// 成功后会自动刷新相关的 Provider
   Future<ErrorRecord> createError({
     required String questionText,
-    required String userAnswer,
-    required String correctAnswer,
     required String subject,
+    String? userAnswer,
+    String? correctAnswer,
     String? chapter,
     String? questionImageUrl,
   }) async {

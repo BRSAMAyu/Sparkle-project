@@ -3,6 +3,7 @@ Enhanced Educational Agents - 教育导向的增强智能体
 
 基于 Sparkle 的知识星图、遗忘曲线和任务系统，提供深度个性化的学习支持
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -138,7 +139,7 @@ class StudyPlannerAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error(f"[StudyPlannerAgent] Error: {e}", exc_info=True)
+            logger.opt(exception=e).error("[StudyPlannerAgent] Error")
             return self.format_response(
                 text=f"抱歉，生成学习计划时遇到错误：{str(e)}",
                 confidence=0.0,
@@ -157,7 +158,7 @@ class StudyPlannerAgent(BaseAgent):
         # 这里需要实际的 DB session，简化示例中使用模拟数据
         # 生产环境应该从 context 中获取 db session
 
-        # TODO: 从 context 中获取 db session
+        # TRACKED(TD-008): 从 context 中获取 db session
         # db = context.db_session
         # galaxy_service = GalaxyService(db)
         # decay_service = DecayService(db)
@@ -418,7 +419,7 @@ class ProblemSolverAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error(f"[ProblemSolverAgent] Error: {e}", exc_info=True)
+            logger.opt(exception=e).error("[ProblemSolverAgent] Error")
             return self.format_response(
                 text=f"抱歉，解答问题时遇到错误：{str(e)}",
                 confidence=0.0,

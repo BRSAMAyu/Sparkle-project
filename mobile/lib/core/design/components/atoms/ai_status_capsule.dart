@@ -33,8 +33,16 @@ class AiStatusCapsule extends StatelessWidget {
   Widget build(BuildContext context) {
     // 🔧 修复：安全获取baseColor，避免SparkleThemeExtension未注册错误
     final baseColor = color ?? _safeGetColor(context);
-    final background = baseColor.withValues(alpha: 0.12);
-    final border = baseColor.withValues(alpha: 0.3);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark
+        ? Color.alphaBlend(
+            baseColor.withValues(alpha: 0.18),
+            DS.surfaceSecondary,
+          )
+        : baseColor.withValues(alpha: 0.12);
+    final border = isDark
+        ? baseColor.withValues(alpha: 0.48)
+        : baseColor.withValues(alpha: 0.3);
     final horizontal = dense ? 4.0 : 8.0;
     final vertical = dense ? 2.0 : 4.0;
 

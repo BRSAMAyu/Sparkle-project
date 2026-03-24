@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 
@@ -72,6 +75,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isThinking != widget.isThinking) {
       _syncShimmerState();
+      if (oldWidget.isThinking && !widget.isThinking) {
+        unawaited(
+          SensoryFeedbackService.emit(
+            SensoryFeedbackEvent.selection,
+            enableSound: false,
+          ),
+        );
+      }
     }
   }
 
@@ -83,8 +94,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       unawaited(_shimmerController.repeat());
       return;
     }
-    _shimmerController.stop();
-    _shimmerController.value = 0;
+    _shimmerController
+      ..stop()
+      ..value = 0;
   }
 
   @override
@@ -168,33 +180,37 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         child: Row(
           children: [
             // Animated Agent Icon
-            AnimatedContainer(
-              duration: transitionDuration,
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: activeAgentColor,
-                boxShadow: widget.isThinking
-                    ? [
-                        BoxShadow(
-                          color: activeAgentColor.withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: AnimatedSwitcher(
+            SparkleAttentionPulse(
+              active: widget.isThinking,
+              glowColor: activeAgentColor,
+              child: AnimatedContainer(
                 duration: transitionDuration,
-                child: Icon(
-                  _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
-                  color: ThemeUtils.getContrastSafeText(
-                    activeAgentColor,
-                    darkText: DS.textPrimary,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: activeAgentColor,
+                  boxShadow: widget.isThinking
+                      ? [
+                          BoxShadow(
+                            color: activeAgentColor.withValues(alpha: 0.28),
+                            blurRadius: 12,
+                            spreadRadius: 1.5,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: AnimatedSwitcher(
+                  duration: transitionDuration,
+                  child: Icon(
+                    _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
+                    color: ThemeUtils.getContrastSafeText(
+                      activeAgentColor,
+                      darkText: DS.textPrimary,
+                    ),
+                    size: 18,
+                    key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                   ),
-                  size: 18,
-                  key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                 ),
               ),
             ),
@@ -215,7 +231,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   ),
                   if (widget.totalDurationMs != null && isCompleted)
                     Text(
-                      '耗时: ${(widget.totalDurationMs! / 1000).toStringAsFixed(1)}s',
+                      context.l10n.chatDurationLabel(
+                        (widget.totalDurationMs! / 1000).toStringAsFixed(1),
+                      ),
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -316,7 +334,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '思考过程',
+                  context.l10n.chatReasoningProcess,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     color: DS.brandPrimary,
                     fontWeight: FontWeight.w600,
@@ -324,7 +342,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
                 const Spacer(),
                 Text(
-                  '${widget.steps.length} steps',
+                  context.l10n.chatReasoningStepsCount(widget.steps.length),
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -437,7 +455,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '引用: $citation',
+                                          context.l10n
+                                              .chatCitationLabel(citation),
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: DS.brandPrimary,
@@ -571,38 +590,39 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   String _getStatusText(ReasoningStep? activeStep, bool isCompleted) {
+    final l10n = context.l10n;
     if (isCompleted) {
-      return '✅ 思考完成';
+      return l10n.chatReasoningStatusDone;
     }
     if (widget.isThinking && activeStep != null) {
       switch (activeStep.agent) {
         case AgentType.orchestrator:
-          return '🧠 正在规划...';
+          return l10n.chatReasoningStatusPlanning;
         case AgentType.math:
-          return '📐 正在计算...';
+          return l10n.chatReasoningStatusCalculating;
         case AgentType.code:
-          return '💻 正在编码...';
+          return l10n.chatReasoningStatusCoding;
         case AgentType.writing:
-          return '✍️ 正在撰写...';
+          return l10n.chatReasoningStatusWriting;
         case AgentType.science:
-          return '🔬 正在分析...';
+          return l10n.chatReasoningStatusAnalyzing;
         case AgentType.knowledge:
-          return '🌌 正在检索...';
+          return l10n.chatReasoningStatusRetrieving;
         case AgentType.search:
-          return '🔍 正在搜索...';
+          return l10n.chatReasoningStatusSearching;
         case AgentType.dataAnalysis:
-          return '📊 正在分析数据...';
+          return l10n.chatReasoningStatusDataAnalyzing;
         case AgentType.translation:
-          return '🌐 正在翻译...';
+          return l10n.chatReasoningStatusTranslating;
         case AgentType.image:
-          return '🖼️ 正在处理图像...';
+          return l10n.chatReasoningStatusImageProcessing;
         case AgentType.audio:
-          return '🎵 正在处理音频...';
+          return l10n.chatReasoningStatusAudioProcessing;
         case AgentType.reasoning:
-          return '🤔 正在推理...';
+          return l10n.chatReasoningStatusReasoning;
       }
     }
-    return '准备中...';
+    return l10n.chatReasoningStatusPreparing;
   }
 
   Color _getStatusColor(
@@ -629,18 +649,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   void _showCitationDialog(String citation) {
     if (!mounted) return;
     unawaited(
-      showDialog<void>(
+      showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('知识引用: $citation'),
-          content: const Text(
-            '这是一个来自知识星图的节点。\n\n'
-            '在实际实现中，这里会显示该知识点的摘要内容，\n'
-            '证明AI确实检索了相关知识，而非凭空想象。',
-          ),
+          title: Text(context.l10n.chatKnowledgeCitationTitle(citation)),
+          content: Text(context.l10n.chatKnowledgeCitationBody),
           actions: [
             SparkleButton.ghost(
-              label: '关闭',
+              label: context.l10n.commonClose,
               onPressed: () => Navigator.pop(context),
             ),
           ],
@@ -709,7 +725,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 const SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
-                    '多专家协作回答',
+                    context.l10n.chatMultiAgentCollab,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: accent,
                       fontWeight: FontWeight.bold,
@@ -717,7 +733,9 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text('${contributions.length} 位专家'),
+                  label: Text(
+                    context.l10n.chatTeamExpertsCount(contributions.length),
+                  ),
                   backgroundColor: accent.withValues(alpha: 0.14),
                   labelStyle: TextStyle(
                     color: accent,
@@ -770,7 +788,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '综合建议',
+                        context.l10n.chatSynthesisSuggestions,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: accent,
                           fontWeight: FontWeight.bold,
@@ -839,7 +857,9 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 if (contribution.confidence != null) ...[
                   const Spacer(),
                   Text(
-                    '置信度: ${(contribution.confidence! * 100).toStringAsFixed(0)}%',
+                    context.l10n.chatConfidenceLabel(
+                      (contribution.confidence! * 100).toStringAsFixed(0),
+                    ),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

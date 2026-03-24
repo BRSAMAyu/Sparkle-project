@@ -10,6 +10,15 @@ from app.models.galaxy import KnowledgeNode
 from app.core.event_bus import event_bus, ErrorCreated
 from app.schemas.error_book import ErrorRecordCreate, SubjectEnum
 
+
+class _AsyncNullContext:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
 @pytest.mark.asyncio
 async def test_error_to_galaxy_loop_flow():
     """
@@ -48,6 +57,7 @@ async def test_error_to_galaxy_loop_flow():
     mock_db.execute.return_value = mock_result_error
     mock_db.add.return_value = None
     mock_db.commit.return_value = None
+    mock_db.begin_nested = MagicMock(return_value=_AsyncNullContext())
     
     # Mock LLM and Embedding services to avoid external calls
     with patch('app.services.error_book_service.llm_client') as mock_llm, \

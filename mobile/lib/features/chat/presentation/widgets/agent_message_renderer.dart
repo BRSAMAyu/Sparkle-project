@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collaboration_timeline.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/prism_behavior_card.dart';
@@ -7,7 +9,7 @@ import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.d
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 /// Agent 消息渲染器
 /// 根据消息中的 widgets 字段动态渲染不同类型的组件
@@ -63,23 +65,14 @@ class AgentMessageRenderer extends StatelessWidget {
     switch (widget.type) {
       case 'task_card':
         try {
-          // Ensure mandatory fields for TaskModel are present
-          final data = Map<String, dynamic>.from(widget.data);
-          data['user_id'] ??= 'unknown';
-          data['tags'] ??= <String>[];
-          data['difficulty'] ??= 1;
-          data['energy_cost'] ??= 1;
-          data['priority'] ??= 1;
-          data['created_at'] ??= DateTime.now().toIso8601String();
-          data['updated_at'] ??= DateTime.now().toIso8601String();
-
-          // Handle 'type' mapping if it's a string that might not match exactly or needs defaulting
-          // Assuming the backend/LLM sends correct string matching the enum (e.g., "learning")
-
-          final task = TaskModel.fromJson(data);
+          final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'task');
+          final task = taskModelFromEntityPayload(widget.data);
+          if (task == null) {
+            throw StateError('Unable to parse task entity payload');
+          }
           return TaskCard(
             task: task,
-            onTap: () => onTaskAction?.call(task.id),
+            onTap: () => onTaskAction?.call(entity.entityId ?? task.id),
           );
         } catch (e) {
           debugPrint('Error parsing TaskModel in AgentMessageRenderer: $e');
@@ -87,7 +80,9 @@ class AgentMessageRenderer extends StatelessWidget {
             color: Theme.of(context).colorScheme.errorContainer,
             child: Padding(
               padding: const EdgeInsets.all(DS.sm),
-              child: Text('Invalid task data: $e'),
+              child: Text(
+                context.l10n.chatTaskDataInvalid(e.toString()),
+              ),
             ),
           );
         }
@@ -104,7 +99,17 @@ class AgentMessageRenderer extends StatelessWidget {
         );
 
       case 'plan_card':
-        return PlanCard(data: widget.data);
+        final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'plan');
+        final planId =
+            entity.entityId ??
+            widget.data['id']?.toString() ??
+            widget.data['plan_id']?.toString();
+        return GestureDetector(
+          onTap: planId != null
+              ? () => context.push(entity.detailRoute ?? '/plans/$planId')
+              : null,
+          child: PlanCard(data: widget.data),
+        );
 
       case 'plan_context_summary':
       case 'plan_state': // Legacy alias for compatibility
@@ -115,7 +120,7 @@ class AgentMessageRenderer extends StatelessWidget {
 
       default:
         // 未知类型：显示 JSON
-        return _buildUnknownWidget(widget);
+        return _buildUnknownWidget(context, widget);
     }
   }
 
@@ -135,7 +140,7 @@ class AgentMessageRenderer extends StatelessWidget {
                   ),
                   const SizedBox(width: DS.sm),
                   Text(
-                    '操作遇到问题',
+                    context.l10n.chatActionErrorTitle,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -153,7 +158,9 @@ class AgentMessageRenderer extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    '建议：${errors.firstWhere((e) => e.suggestion != null).suggestion}',
+                    context.l10n.chatActionErrorSuggestion(
+                      errors.firstWhere((e) => e.suggestion != null).suggestion!,
+                    ),
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -169,22 +176,27 @@ class AgentMessageRenderer extends StatelessWidget {
     BuildContext context,
     ConfirmationData data,
   ) {
-    var title = '需要确认';
+    final l10n = context.l10n;
+    var title = l10n.chatConfirmationTitleDefault;
     var description = data.description;
-    var confirmLabel = '确认执行';
+    var confirmLabel = l10n.chatConfirmationActionDefault;
 
     if (data.toolName == 'update_user_preference') {
-      title = '确认偏好更新';
+      title = l10n.chatConfirmationTitleUpdatePreference;
       final prefKey = data.preview['pref_key'] ?? data.preview['key'];
       final prefValue = data.preview['pref_value'] ?? data.preview['value'];
       if (prefKey != null && prefValue != null) {
-        description = '将偏好「$prefKey」更新为「$prefValue」。';
+        description = l10n.chatConfirmationUpdatePreferenceWithValue(
+          prefKey.toString(),
+          prefValue.toString(),
+        );
       } else if (prefKey != null) {
-        description = '确认更新你的偏好「$prefKey」。';
+        description =
+            l10n.chatConfirmationUpdatePreferenceKeyOnly(prefKey.toString());
       } else {
-        description = '确认更新你的偏好设置。';
+        description = l10n.chatConfirmationUpdatePreferenceGeneric;
       }
-      confirmLabel = '确认更新';
+      confirmLabel = l10n.chatConfirmationConfirmUpdate;
     }
 
     return Card(
@@ -206,7 +218,7 @@ class AgentMessageRenderer extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 SparkleButton.ghost(
-                  label: '取消',
+                  label: l10n.cancel,
                   onPressed: () => onConfirmation?.call(data.actionId, false),
                 ),
                 const SizedBox(width: DS.sm),
@@ -264,7 +276,11 @@ class AgentMessageRenderer extends StatelessWidget {
             (expert) => AgentTimelineStep.fromJson({
               'agent': expert,
               'action':
-                  routingStrategy == null ? '专家路由' : '策略: $routingStrategy',
+                  routingStrategy == null
+                      ? context.l10n.chatAgentRouting
+                      : context.l10n.chatAgentRoutingStrategy(
+                          routingStrategy,
+                        ),
             }),
           ),
         ];
@@ -272,7 +288,8 @@ class AgentMessageRenderer extends StatelessWidget {
           synthesized.add(
             AgentTimelineStep.fromJson({
               'agent': 'orchestrator',
-              'action': '降级: $fallbackReason',
+              'action':
+                  context.l10n.chatAgentRoutingFallback(fallbackReason),
             }),
           );
         }
@@ -302,11 +319,15 @@ class AgentMessageRenderer extends StatelessWidget {
     }
   }
 
-  Widget _buildUnknownWidget(WidgetPayload widget) => Card(
+  Widget _buildUnknownWidget(
+    BuildContext context,
+    WidgetPayload widget,
+  ) =>
+      Card(
         margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
         child: Padding(
           padding: const EdgeInsets.all(DS.sm),
-          child: Text('Unknown widget type: ${widget.type}'),
+          child: Text(context.l10n.chatUnknownWidgetType(widget.type)),
         ),
       );
 }

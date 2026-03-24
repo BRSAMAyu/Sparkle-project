@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
@@ -99,7 +99,7 @@ class MultiAgentBar extends ConsumerWidget {
     WidgetRef ref,
     ChatMode mode,
   ) {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     // Set the mode before navigating
     ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).state = mode;
@@ -128,8 +128,8 @@ class _ModeChipState extends State<_ModeChip> {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor =
-        widget.isDark ? const Color(0xFFF1E7DA) : DS.neutral900;
+    final colors = context.colorExtensions;
+    final foregroundColor = colors.adaptiveTextPrimary;
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {

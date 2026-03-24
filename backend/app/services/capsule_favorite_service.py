@@ -3,6 +3,7 @@ Capsule Favorite Service
 
 处理胶囊收藏功能
 """
+from __future__ import annotations
 from uuid import UUID
 
 from loguru import logger
@@ -76,9 +77,6 @@ class CapsuleFavoriteService:
         )
         db.add(favorite)
 
-        # 更新胶囊分享计数（用于统计受欢迎程度）
-        capsule.share_count += 1
-
         await db.commit()
         await db.refresh(favorite)
 
@@ -111,11 +109,6 @@ class CapsuleFavoriteService:
 
         # 删除收藏
         await db.delete(favorite)
-
-        # 更新胶囊计数
-        capsule = await db.get(CuriosityCapsule, capsule_id)
-        if capsule and capsule.share_count > 0:
-            capsule.share_count -= 1
 
         await db.commit()
 

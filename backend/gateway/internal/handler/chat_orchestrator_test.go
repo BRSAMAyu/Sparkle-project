@@ -33,6 +33,7 @@ func TestNormalizeChatMode(t *testing.T) {
 	assert.Equal(t, "standard", normalizeChatMode("unknown"))
 	assert.Equal(t, "expert_auto", normalizeChatMode("expert_auto"))
 	assert.Equal(t, "expert::math_agent", normalizeChatMode("expert::math_agent"))
+	assert.Equal(t, `team::{"agents":["deep_analyst"]}`, normalizeChatMode(`team::{"agents":["deep_analyst"]}`))
 }
 
 func TestWorkflowIDForChatMode(t *testing.T) {
@@ -40,6 +41,7 @@ func TestWorkflowIDForChatMode(t *testing.T) {
 	assert.Equal(t, "deep_analysis_workflow", workflowIDForChatMode("deep_analysis"))
 	assert.Equal(t, "expert_auto_workflow", workflowIDForChatMode("expert_auto"))
 	assert.Equal(t, "expert_code_agent_workflow", workflowIDForChatMode("expert::code_agent"))
+	assert.Equal(t, "expert_team_workflow", workflowIDForChatMode(`team::{"agents":["deep_analyst"]}`))
 }
 
 func TestConvertResponseToJSONCitations(t *testing.T) {
@@ -65,7 +67,7 @@ func TestConvertResponseToJSONCitations(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	citationsAny, ok := result["citations"].([]map[string]interface{})
 	assert.True(t, ok)
 	assert.Len(t, citationsAny, 1)
@@ -114,7 +116,7 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, "intervention", result["type"])
 	intervention, ok := result["intervention"].(map[string]interface{})
 	assert.True(t, ok)
@@ -138,7 +140,7 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
@@ -150,6 +152,7 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		RequestId:  "req-expert-meta",
 		Metadata: map[string]string{
 			"selected_experts":    `["deep_analyst","code_agent"]`,
+			"answer_experts":      `["code_agent"]`,
 			"routing_strategy":    "auto_multi_expert",
 			"fallback_reason":     "",
 			"route_confidence":    "0.82",
@@ -160,12 +163,15 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	selected, ok := meta["selected_experts"].([]interface{})
 	assert.True(t, ok)
 	assert.Len(t, selected, 2)
+	answerExperts, ok := meta["answer_experts"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, []interface{}{"code_agent"}, answerExperts)
 	assert.Equal(t, "auto_multi_expert", meta["routing_strategy"])
 	assert.Equal(t, "0.82", meta["route_confidence"])
 }
@@ -182,13 +188,28 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	uxProgress, ok := meta["ux_progress"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "executing", uxProgress["stage"])
 	assert.Equal(t, "我在替你执行需要的步骤", uxProgress["headline"])
+}
+
+func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId:   "resp-done",
+		RequestId:    "req-done",
+		FinishReason: agentv1.FinishReason_STOP,
+	}
+
+	result := convertResponseToJSON(resp)
+	assert.Equal(t, "done", result["type"])
+	assert.Equal(t, "STOP", result["finish_reason"])
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, true, meta["done"])
 }
 
 func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
@@ -215,7 +236,7 @@ func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	toolResult, ok := result["tool_result"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "execution_summary", toolResult["widget_type"])
@@ -236,7 +257,7 @@ func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	assert.Equal(t, now.UnixMilli(), result["event_time"])
 }
 
@@ -253,7 +274,7 @@ func TestConvertResponseToJSONErrorIncludesEnumOnly(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "rate_limited", errObj["error_code"])
@@ -274,7 +295,7 @@ func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp, "")
+	result := convertResponseToJSON(resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	if _, ok := errObj["code"]; ok {

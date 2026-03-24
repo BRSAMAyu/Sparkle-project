@@ -18,14 +18,38 @@ def assert_status(resp: httpx.Response, expected: int, label: str) -> None:
         raise RuntimeError(f"{label} failed: {resp.status_code} {resp.text}")
 
 
+def _register_ephemeral_user(client: httpx.Client) -> tuple[str, str]:
+    username = f"community_smoke_{uuid.uuid4().hex[:10]}"
+    resp = client.post(
+        f"{API_BASE}/auth/register",
+        json={
+            "username": username,
+            "password": DEMO_PASSWORD,
+            "email": f"{username}@example.com",
+            "accepted_tos": True,
+            "accepted_privacy": True,
+            "tos_version": "local-acceptance",
+            "privacy_version": "local-acceptance",
+            "agreed_locale": "zh-CN",
+        },
+    )
+    assert_status(resp, 200, "register fallback")
+    payload = resp.json()
+    return payload["access_token"], username
+
+
 def main() -> int:
     with httpx.Client(timeout=20.0) as client:
         login = client.post(
             f"{API_BASE}/auth/login",
             json={"username": DEMO_USERNAME, "password": DEMO_PASSWORD},
         )
-        assert_status(login, 200, "login")
-        token = login.json()["access_token"]
+        if login.status_code == 429:
+            token, active_username = _register_ephemeral_user(client)
+        else:
+            assert_status(login, 200, "login")
+            token = login.json()["access_token"]
+            active_username = DEMO_USERNAME
         headers = {"Authorization": f"Bearer {token}"}
 
         friends = client.get(f"{API_BASE}/community/friends", headers=headers)
@@ -62,11 +86,15 @@ def main() -> int:
         )
         assert_status(create_post, 201, "gateway create post")
         post_id = create_post.json()["id"]
-        print(f"gateway post created: id={post_id}")
+        print(f"gateway post created: id={post_id} source={active_username}")
 
         found = False
         for _ in range(12):
-            feed = client.get(f"{GATEWAY_BASE}/community/feed", params={"page": 1, "limit": 20})
+            feed = client.get(
+                f"{GATEWAY_BASE}/community/feed",
+                headers=headers,
+                params={"page": 1, "limit": 20},
+            )
             assert_status(feed, 200, "gateway feed")
             items = feed.json()
             if any((item.get("content") or "") == post_marker for item in items):

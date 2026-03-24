@@ -3,14 +3,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/file/file.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   const GroupChatBubble({
@@ -21,6 +34,9 @@ class GroupChatBubble extends ConsumerStatefulWidget {
     this.onEdit,
     this.onReaction,
     this.onThread,
+    this.onFavorite,
+    this.onForward,
+    this.onReport,
     super.key,
   });
   final MessageInfo message;
@@ -30,6 +46,9 @@ class GroupChatBubble extends ConsumerStatefulWidget {
   final void Function(MessageInfo message, String content)? onEdit;
   final void Function(MessageInfo message, String emoji)? onReaction;
   final void Function(MessageInfo message)? onThread;
+  final void Function(MessageInfo message)? onFavorite;
+  final void Function(MessageInfo message)? onForward;
+  final void Function(MessageInfo message)? onReport;
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -40,13 +59,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: DS.motionDuration(SparkleMotionToken.standard),
     );
 
     _slideAnimation = Tween<Offset>(
@@ -56,6 +76,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     unawaited(_controller.forward());
@@ -76,7 +99,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         DateTime.now().difference(widget.message.createdAt).inHours < 24;
 
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         builder: (context) => DecoratedBox(
@@ -124,6 +147,24 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       widget.onThread!(widget.message);
                     },
                   ),
+                if (widget.onFavorite != null)
+                  ListTile(
+                    leading: const Icon(Icons.bookmark_add_outlined),
+                    title: const Text('收藏'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onFavorite!(widget.message);
+                    },
+                  ),
+                if (widget.onForward != null)
+                  ListTile(
+                    leading: const Icon(Icons.forward_rounded),
+                    title: const Text('转发'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onForward!(widget.message);
+                    },
+                  ),
                 if (isMe &&
                     widget.onEdit != null &&
                     widget.message.messageType == MessageType.text)
@@ -132,9 +173,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     title: Text(l10n.communityEdit),
                     onTap: () {
                       Navigator.pop(context);
-                      // Trigger edit flow (implementation dependent, but typically shows input)
-                      // For now, we assume onEdit is called with new content from some dialog
-                      // widget.onEdit!(widget.message, newContent);
                     },
                   ),
                 if (canRevoke && widget.onRevoke != null)
@@ -147,6 +185,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     onTap: () {
                       Navigator.pop(context);
                       widget.onRevoke!(widget.message);
+                    },
+                  ),
+                if (!isMe && widget.onReport != null)
+                  ListTile(
+                    leading: Icon(Icons.flag_outlined, color: DS.error),
+                    title: Text(
+                      '举报',
+                      style: TextStyle(color: DS.error),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onReport!(widget.message);
                     },
                   ),
                 const SizedBox(height: DS.sm),
@@ -212,11 +262,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: GestureDetector(
-          onLongPress: () => _showContextMenu(context, isMe),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: Row(
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: GestureDetector(
+            onLongPress: () => _showContextMenu(context, isMe),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+              child: Row(
               mainAxisAlignment:
                   isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -231,11 +284,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         ? CrossAxisAlignment.end
                         : CrossAxisAlignment.start,
                     children: [
-                      if (!isMe && widget.message.sender != null)
+                      if (!isMe &&
+                          (widget.message.sender != null ||
+                              isCommunityAgentMessage(widget.message)))
                         Padding(
                           padding: const EdgeInsets.only(left: 4, bottom: 4),
                           child: Text(
-                            widget.message.sender!.displayName,
+                            widget.message.sender?.displayName ??
+                                (isCommunityAgentMessage(widget.message)
+                                    ? kCommunityAgentDisplayName
+                                    : ''),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
                               color: DS.neutral500,
@@ -243,6 +303,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                           ),
                         ),
                       _buildContent(context, isMe),
+                      _buildReactions(context),
                       const SizedBox(height: DS.xs),
                       // Timestamp and read status
                       Padding(
@@ -270,9 +331,60 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   _buildAvatar(widget.message.sender),
                 ],
               ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReactions(BuildContext context) {
+    final reactions = widget.message.reactions;
+    if (reactions == null || reactions.isEmpty) return const SizedBox.shrink();
+
+    final entries = reactions.entries.where((e) {
+      final v = e.value;
+      if (v is int) return v > 0;
+      if (v is List) return v.isNotEmpty;
+      return false;
+    }).toList();
+
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DS.xs),
+      child: Wrap(
+        spacing: DS.xs,
+        runSpacing: DS.xs,
+        children: entries.map((e) {
+          final count =
+              e.value is int ? e.value as int : (e.value as List).length;
+          return GestureDetector(
+            onTap: widget.onReaction != null
+                ? () => widget.onReaction!(widget.message, e.key)
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(e.key, style: const TextStyle(fontSize: 13)),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$count',
+                    style: TextStyle(fontSize: 11, color: DS.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -307,13 +419,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       color: DS.neutral200,
                     ),
                     child: ClipOval(
-                      child: Image.network(
-                        _readAvatarUrl(
+                      child: SparkleNetworkImage(
+                        imageUrl: _readAvatarUrl(
                           readerId: readBy[i],
                           readByUsers: readByUsers,
                         ),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(
+                        width: 18,
+                        height: 18,
+                        errorWidget: Center(
                           child: Text(
                             '?',
                             style: TextStyle(fontSize: 8, color: DS.neutral500),
@@ -360,6 +474,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         return _buildCheckinBubble(context, isMe);
       case MessageType.taskShare:
         return _buildTaskShareBubble(context, isMe);
+      case MessageType.planShare:
+        return _buildPlanShareBubble(context, isMe);
+      case MessageType.capsuleShare:
+        return _buildCapsuleShareBubble(context, isMe);
+      case MessageType.prismShare:
+        return _buildPrismShareBubble(context, isMe);
+      case MessageType.achievement:
+        return _buildAchievementShareBubble(context, isMe);
       case MessageType.fileShare:
         final data = FileMessageData.fromJson(widget.message.contentData ?? {});
         if (data.fileId.isEmpty) {
@@ -405,17 +527,25 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           children: [
             if (widget.message.replyToId != null)
               _buildQuotePreview(context, isMe),
-            Text(
-              widget.message.content ?? '',
-              style: TextStyle(
-                color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-                fontSize: 16,
-                height: 1.4,
-              ),
-            ),
+            _buildTextContent(context, isMe),
           ],
         ),
       );
+
+  Widget _buildTextContent(BuildContext context, bool isMe) {
+    final rawContent = isCommunityAgentMessage(widget.message)
+        ? normalizeCommunityAgentOutput(widget.message.content ?? '')
+        : widget.message.content ?? '';
+    final textColor = isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText;
+    return SparkleMarkdown(
+      content: rawContent,
+      textColor: textColor,
+      codeBackgroundColor:
+          isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
+      linkColor: isMe ? Colors.white : DS.brandPrimary,
+      contentRole: SparkleMarkdownRole.chatBubble,
+    );
+  }
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {
     final quoted = widget.message.quotedMessage;
@@ -626,46 +756,494 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ],
       );
 
-  Widget _buildTaskShareBubble(BuildContext context, bool isMe) => Container(
-        padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: isMe
-              ? Color.lerp(DS.chatBubbleUser, DS.brandSecondary, 0.2)
-              : DS.surfacePrimaryElevated,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: DS.shadowSm,
-          border: isMe ? null : Border.all(color: DS.borderSubtle),
+  Widget _buildTaskShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.taskCompletion,
+      resourceId: data['resource_id'] as String? ?? '',
+      title:
+          data['resource_title'] as String? ?? widget.message.content ?? '任务',
+      subtitle: data['resource_summary'] as String?,
+      metadata: {
+        'duration': meta['estimated_minutes'],
+        'completed_at': meta['completed_at'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
+      child: TaskShareCardFactory.fromPayload(
+        payload,
+        onTap: () => _handleSharedResourceTap(payload),
+        sharedResourceId: sharedResourceId,
+        onAdopt: sharedResourceId == null
+            ? null
+            : () => _handleAdopt(context, sharedResourceId, 'task'),
+      ),
+    );
+  }
+
+  Widget _buildPlanShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
+    final progress = (meta['progress'] as num?)?.toDouble();
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.planProgress,
+      resourceId: data['resource_id'] as String? ?? '',
+      title:
+          data['resource_title'] as String? ?? widget.message.content ?? '计划',
+      subtitle: progress != null
+          ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+          : null,
+      metadata: {
+        'progress': progress,
+        'deadline': meta['target_date'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
+      child: PlanShareCardFactory.fromPayload(
+        payload,
+        onTap: () => _handleSharedResourceTap(payload),
+        sharedResourceId: sharedResourceId,
+        onAdopt: sharedResourceId == null
+            ? null
+            : () => _handleAdopt(context, sharedResourceId, 'plan'),
+      ),
+    );
+  }
+
+  Widget _buildCapsuleShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    final sharedResourceType = data['resource_type'] as String?;
+    if (sharedResourceType == 'knowledge_node') {
+      final payload = UniversalSharePayload(
+        contentType: ShareableContentType.knowledgeNode,
+        resourceId: data['resource_id'] as String? ?? '',
+        title: data['resource_title'] as String? ??
+            data['title'] as String? ??
+            widget.message.content ??
+            '知识节点',
+        subtitle:
+            data['resource_summary'] as String? ?? data['summary'] as String?,
+        metadata: {
+          ...data,
+          ...((data['resource_meta'] as Map<String, dynamic>?) ?? const {}),
+        },
+      );
+
+      return _buildRichCardWrapper(
+        isMe: isMe,
+        onTap: () => _handleSharedResourceTap(payload),
+        child: NodeShareCardFactory.fromPayload(
+          payload,
+          onTap: () => _handleSharedResourceTap(payload),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.task_alt,
-              color: isMe ? Colors.white : DS.brandSecondary,
-            ),
-            const SizedBox(width: DS.sm),
-            Flexible(
-              child: Text(
-                widget.message.content ?? context.l10n.communitySharedTask,
-                style: TextStyle(
-                  color: isMe ? Colors.white : DS.textPrimary,
+      );
+    }
+    if (sharedResourceType == 'seed_library' ||
+        sharedResourceType == 'seed_item') {
+      return _buildRichCardWrapper(
+        isMe: isMe,
+        child: _buildGenericSeedShareCard(isMe, data),
+      );
+    }
+
+    final payload = UniversalSharePayload(
+      contentType: ShareableContentType.capsule,
+      resourceId:
+          data['resource_id'] as String? ?? data['capsule_id'] as String? ?? '',
+      title: data['resource_title'] as String? ??
+          data['title'] as String? ??
+          widget.message.content ??
+          '时光胶囊',
+      subtitle:
+          data['resource_summary'] as String? ?? data['summary'] as String?,
+      metadata: {
+        'type': data['type'],
+        'depth': data['depth'],
+        'word_count': data['word_count'],
+        'tags': data['tags'],
+        'created_at': data['created_at'],
+      },
+    );
+
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
+      child: CapsuleShareCardFactory.fromPayload(
+        payload,
+        onTap: () => _handleSharedResourceTap(payload),
+      ),
+    );
+  }
+
+  Widget _buildGenericSeedShareCard(bool isMe, Map<String, dynamic> data) {
+    final resourceType = data['resource_type'] as String? ?? 'seed_item';
+    final title = data['resource_title'] as String? ??
+        widget.message.content ??
+        (resourceType == 'seed_library' ? '种子库' : '种子内容');
+    final summary = data['resource_summary'] as String?;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius8,
+                ),
+                child: Icon(
+                  resourceType == 'seed_library'
+                      ? Icons.inventory_2
+                      : Icons.auto_stories,
+                  color: isMe ? Colors.white : DS.brandPrimary,
+                  size: 20,
                 ),
               ),
+              const SizedBox(width: DS.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.white : DS.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      resourceType == 'seed_library' ? '种子库分享' : '种子内容分享',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isMe
+                            ? Colors.white.withValues(alpha: 0.72)
+                            : DS.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (summary != null && summary.isNotEmpty) ...[
+            const SizedBox(height: DS.sm),
+            Text(
+              summary,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: isMe
+                    ? Colors.white.withValues(alpha: 0.92)
+                    : DS.textSecondary,
+              ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrismShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: _buildPrismPreviewCard(context, isMe, data),
+    );
+  }
+
+  Widget _buildAchievementShareBubble(BuildContext context, bool isMe) {
+    final data = widget.message.contentData ?? {};
+    return _buildRichCardWrapper(
+      isMe: isMe,
+      child: _buildAchievementPreviewCard(context, isMe, data),
+    );
+  }
+
+  Future<void> _handleAdopt(
+    BuildContext context,
+    String sharedResourceId,
+    String fallbackResourceType,
+  ) async {
+    try {
+      final result = await ref
+          .read(communityShareRepositoryProvider)
+          .adoptResource(sharedResourceId: sharedResourceId);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '已采纳，跳转中...');
+      final resourceType =
+          result['resource_type']?.toString() ?? fallbackResourceType;
+      final entityCard = result['entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': result['entity_card'] as Map<String, dynamic>},
+              fallbackType: resourceType,
+            )
+          : null;
+      final newId = result['new_resource_id']?.toString();
+      if (resourceType == 'plan') {
+        unawaited(ref.read(planListProvider.notifier).refresh());
+      } else if (resourceType == 'task') {
+        unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      }
+      final route = entityCard?.detailRoute ??
+          (newId == null
+              ? null
+              : resourceType == 'plan'
+                  ? '/plans/$newId'
+                  : resourceType == 'task'
+                      ? '/tasks/$newId'
+                      : null);
+      if (route != null && route.isNotEmpty) {
+        unawaited(context.push(route));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, '采纳失败: $e');
+    }
+  }
+
+  Widget _buildRichCardWrapper({
+    required bool isMe,
+    required Widget child,
+    VoidCallback? onTap,
+  }) =>
+      SparkleTappable(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          decoration: BoxDecoration(
+            color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isMe
+                ? [
+                    BoxShadow(
+                      color: DS.chatBubbleUser.withValues(alpha: 0.24),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : DS.shadowSm,
+            border: isMe ? null : Border.all(color: DS.borderSubtle),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: child,
+          ),
+        ),
+      );
+
+  Widget _buildPrismPreviewCard(
+    BuildContext context,
+    bool isMe,
+    Map<String, dynamic> data,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.prismPurple.withValues(alpha: 0.15),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    Icons.psychology,
+                    color: isMe ? Colors.white : DS.prismPurple,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '认知棱镜',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : DS.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        data['title'] as String? ?? '学习模式分析',
+                        style: TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          color: isMe ? Colors.white : DS.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (data['patterns'] != null) ...[
+              const SizedBox(height: DS.sm),
+              Wrap(
+                spacing: DS.xs,
+                children: (data['patterns'] as List)
+                    .take(3)
+                    .map<Widget>((p) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.sm,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : DS.prismPurple.withValues(alpha: 0.1),
+                            borderRadius: DS.borderRadius4,
+                          ),
+                          child: Text(
+                            p.toString(),
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: isMe ? Colors.white : DS.prismPurple,
+                            ),
+                          ),
+                        ),)
+                    .toList(),
+              ),
+            ],
           ],
         ),
       );
 
-  Widget _buildAvatar(UserBrief? user) => DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: DS.brandPrimaryConst, width: 2),
-          boxShadow: DS.shadowSm,
-        ),
-        child: SparkleAvatar(
-          radius: 16,
-          url: user?.avatarUrl,
-          fallbackText: user?.displayName,
+  Widget _buildAchievementPreviewCard(
+    BuildContext context,
+    bool isMe,
+    Map<String, dynamic> data,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.15),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    Icons.emoji_events,
+                    color: isMe ? Colors.white : DS.warning,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '成就解锁',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : DS.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        data['name'] as String? ?? '新成就',
+                        style: TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          color: isMe ? Colors.white : DS.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (data['rarity'] != null) ...[
+              const SizedBox(height: DS.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: _getRarityColor(data['rarity'] as String)
+                      .withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius4,
+                ),
+                child: Text(
+                  data['rarity'] as String,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightBold,
+                    color: _getRarityColor(data['rarity'] as String),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       );
+
+  Color _getRarityColor(String rarity) => switch (rarity.toLowerCase()) {
+        'legendary' => DS.warning,
+        'epic' => DS.prismPurple,
+        'rare' => DS.info,
+        _ => DS.neutral400,
+      };
+
+  void _handleSharedResourceTap(UniversalSharePayload payload) {
+    final deepLink = payload.deepLink;
+    if (deepLink.isNotEmpty) {
+      // 使用深链接服务导航，而非复制链接
+      if (!DeepLinkService.handleDeepLink(context, deepLink)) {
+        // 导航失败时回退到复制链接
+        unawaited(UniversalShareService().copyDeepLink(deepLink));
+        AppFeedback.info(context, '链接已复制');
+      }
+    }
+  }
+
+  Widget _buildAvatar(UserBrief? user) {
+    final resolvedUser = user ??
+        (isCommunityAgentMessage(widget.message)
+            ? buildCommunityAgentUser()
+            : null);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: DS.brandPrimaryConst, width: 2),
+        boxShadow: DS.shadowSm,
+      ),
+      child: SparkleAvatar(
+        radius: 16,
+        url: resolvedUser?.avatarUrl,
+        fallbackText: resolvedUser?.displayName,
+      ),
+    );
+  }
 }

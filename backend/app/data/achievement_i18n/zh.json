@@ -1,0 +1,130 @@
+{
+  "streak_7": {
+    "name": "一周坚持",
+    "description": "连续学习7天，养成学习习惯"
+  },
+  "streak_30": {
+    "name": "月度冠军",
+    "description": "连续学习30天，毅力可嘉"
+  },
+  "streak_100": {
+    "name": "百日征服",
+    "description": "连续学习100天，成就非凡"
+  },
+  "streak_365": {
+    "name": "年度传说",
+    "description": "连续学习365天，传奇不朽"
+  },
+  "first_light": {
+    "name": "初次点亮",
+    "description": "解锁第一个知识点"
+  },
+  "nodes_10": {
+    "name": "星火燎原",
+    "description": "解锁10个知识点"
+  },
+  "nodes_50": {
+    "name": "知识新星",
+    "description": "解锁50个知识点"
+  },
+  "nodes_100": {
+    "name": "星图探索者",
+    "description": "解锁100个知识点"
+  },
+  "nodes_500": {
+    "name": "知识领航员",
+    "description": "解锁500个知识点"
+  },
+  "all_sectors": {
+    "name": "全域精通",
+    "description": "解锁所有7个星域的知识点"
+  },
+  "math_master": {
+    "name": "数学大师",
+    "description": "数学领域掌握度达到80%"
+  },
+  "physics_master": {
+    "name": "物理大师",
+    "description": "物理领域掌握度达到80%"
+  },
+  "study_1hour": {
+    "name": "学习一小时",
+    "description": "累计学习时长达到1小时"
+  },
+  "study_10hours": {
+    "name": "学习十小时",
+    "description": "累计学习时长达到10小时"
+  },
+  "study_100hours": {
+    "name": "学习百小时",
+    "description": "累计学习时长达到100小时"
+  },
+  "study_1000hours": {
+    "name": "学习千小时",
+    "description": "累计学习时长达到1000小时"
+  },
+  "tasks_1": {
+    "name": "第一任务",
+    "description": "完成第一个学习任务"
+  },
+  "tasks_10": {
+    "name": "任务达人",
+    "description": "完成10个学习任务"
+  },
+  "tasks_100": {
+    "name": "任务专家",
+    "description": "完成100个学习任务"
+  },
+  "night_owl": {
+    "name": "深夜学者",
+    "description": "在深夜23:00-05:00时段学习10次"
+  },
+  "early_bird": {
+    "name": "早起鸟儿",
+    "description": "在清晨05:00-08:00时段学习10次"
+  },
+  "perfectionist": {
+    "name": "完美主义者",
+    "description": "单个知识点掌握度达到100%"
+  },
+  "speed_learner": {
+    "name": "速通大师",
+    "description": "24小时内解锁20个新知识点"
+  },
+  "weekend_warrior": {
+    "name": "周末战士",
+    "description": "连续4个周末都有学习记录"
+  },
+  "sprint_first": {
+    "name": "初出茅庐",
+    "description": "完成第一个冲刺计划"
+  },
+  "sprint_5": {
+    "name": "冲刺能手",
+    "description": "完成5个冲刺计划"
+  },
+  "sprint_10": {
+    "name": "冲刺大师",
+    "description": "完成10个冲刺计划"
+  },
+  "sprint_perfect_1": {
+    "name": "完美首秀",
+    "description": "以100%完成率完成第一个冲刺"
+  },
+  "sprint_perfect_5": {
+    "name": "完美主义",
+    "description": "以100%完成率完成5个冲刺"
+  },
+  "sprint_streak_3": {
+    "name": "三连胜",
+    "description": "连续完成3个冲刺计划"
+  },
+  "sprint_streak_10": {
+    "name": "冲刺传奇",
+    "description": "连续完成10个冲刺计划"
+  },
+  "sprint_ahead": {
+    "name": "超前完成",
+    "description": "提前完成冲刺计划（在目标日期前达到100%进度）"
+  }
+}

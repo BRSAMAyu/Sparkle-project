@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -24,6 +25,8 @@ class CuriosityCapsuleCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
+    final localizedPatterns = _localizedPatterns(context, rawPatterns);
     // 1. Resolve base material (NeoGlass)
     var material = AppMaterials.neoGlass;
 
@@ -63,17 +66,21 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             collapsedBackgroundColor: DS.surfacePrimary.withValues(alpha: 0),
 
             // Icon
-            leading: Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: BoxDecoration(
-                gradient: DS.secondaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: context.sparkleShadows.small,
-              ),
-              child: Icon(
-                Icons.lightbulb_outline,
-                color: DS.textOnPrimary,
-                size: 20,
+            leading: SparkleAttentionPulse(
+              active: !capsule.isRead,
+              glowColor: DS.secondaryBase,
+              child: Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  gradient: DS.secondaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: context.sparkleShadows.small,
+                ),
+                child: Icon(
+                  Icons.lightbulb_outline,
+                  color: DS.textOnPrimary,
+                  size: 20,
+                ),
               ),
             ),
 
@@ -88,15 +95,21 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             // Subtitle (New Badge)
             subtitle: capsule.isRead
                 ? null
-                : Text(
-                    context.l10n.capsuleNewDiscovery,
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: context.sparkleColors.brandPrimary,
-                      fontWeight: FontWeight.bold,
+                : SparkleAttentionPulse(
+                    glowColor: context.sparkleColors.brandPrimary,
+                    child: Text(
+                      context.l10n.capsuleNewDiscovery,
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: context.sparkleColors.brandPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
 
             onExpansionChanged: (expanded) {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               if (expanded && !capsule.isRead) {
                 unawaited(
                   ref.read(capsuleProvider.notifier).markAsRead(capsule.id),
@@ -114,13 +127,21 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                     // Divider line (optional, maybe just space)
                     const SizedBox(height: DS.sm),
 
-                    MarkdownBody(
-                      data: capsule.content,
-                      styleSheet: MarkdownStyleSheet(
-                        p: context.sparkleTypography.bodyMedium,
-                        strong: context.sparkleTypography.bodyMedium
-                            .copyWith(fontWeight: FontWeight.bold),
+                    if (localizedPatterns.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing8),
+                        child: _buildPersonalizationBadge(
+                          context,
+                          patterns: localizedPatterns,
+                        ),
                       ),
+
+                    SparkleMarkdown(
+                      content: capsule.content,
+                      textColor: DS.textPrimary,
+                      codeBackgroundColor: DS.surfaceTertiary,
+                      linkColor: DS.brandPrimary,
+                      fontSize: 14,
                     ),
                     const SizedBox(height: DS.md),
 
@@ -145,6 +166,11 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                             : context.l10n.capsuleArchiveAction,
                         variant: ButtonVariant.ghost,
                         onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.confirm,
+                            ),
+                          );
                           ref
                               .read(capsuleArchiveProvider.notifier)
                               .toggleArchive(capsule.id);
@@ -168,6 +194,67 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  List<String> _localizedPatterns(BuildContext context, dynamic rawPatterns) {
+    if (rawPatterns is! List) {
+      return [];
+    }
+    return rawPatterns
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .map((item) => _localizePatternName(context, item))
+        .toList();
+  }
+
+  String _localizePatternName(BuildContext context, String name) {
+    final l10n = context.l10n;
+    switch (name) {
+      case 'Planning Optimism':
+        return l10n.patternPlanningOptimism;
+      case 'Focus Decay':
+        return l10n.patternFocusDecay;
+      case 'Procrastination':
+        return l10n.patternProcrastination;
+      default:
+        return name;
+    }
+  }
+
+  Widget _buildPersonalizationBadge(BuildContext context, {required List<String> patterns}) {
+    if (patterns.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: DS.prismPurple.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius8,
+        border: Border.all(
+          color: DS.prismPurple.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.psychology_outlined, size: 13, color: DS.prismPurple),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            l10n.capsulePersonalizationBadge(patterns.first),
+            style: TextStyle(
+              fontSize: 11,
+              color: DS.prismPurple,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

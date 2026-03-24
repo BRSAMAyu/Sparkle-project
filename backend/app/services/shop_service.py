@@ -2,7 +2,8 @@
 Shop Service - 商城核心业务逻辑
 处理商城物品查询、购买流程、物品发放等
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -17,7 +18,7 @@ from app.services.photon_service import PhotonService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ShopService:
@@ -157,6 +158,19 @@ class ShopService:
             purchase = result.scalar_one_or_none()
             return purchase is not None
 
+        # 对于视觉元素，检查是否已解锁
+        if item_type == "visual_element":
+            from app.models.visual_element import UserVisualElement
+            query = select(UserVisualElement).where(
+                and_(
+                    UserVisualElement.user_id == user_id,
+                    UserVisualElement.element_id == item_id
+                )
+            )
+            result = await self.db.execute(query)
+            element = result.scalar_one_or_none()
+            return element is not None
+
         return False
 
     async def purchase_item(
@@ -277,7 +291,7 @@ class ShopService:
             )
 
             # 10. 发送 WebSocket 通知（异步，不阻塞）
-            # TODO: 实现购买成功通知
+            # TRACKED(TD-006): 实现购买成功通知
             # await websocket_manager.broadcast_to_user(
             #     user_id,
             #     {
@@ -353,6 +367,20 @@ class ShopService:
         elif item.item_type in ["skin", "title"]:
             # 非消耗品 ownership 以购买记录为准，自动装备在购买记录落库后统一处理
             pass
+
+        elif item.item_type == "visual_element":
+            # 视觉元素：解锁对应的视觉元素
+            from app.services.visual_element_service import VisualElementService
+            visual_service = VisualElementService(self.db)
+
+            element_id = item.item_config.get("element_id") if item.item_config else None
+            if element_id:
+                await visual_service.unlock_element_for_user(
+                    user_id=user_id,
+                    element_id=element_id,
+                    unlock_source="shop",
+                    source_id=item.id
+                )
 
         await self.db.flush()
 

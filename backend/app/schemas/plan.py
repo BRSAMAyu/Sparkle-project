@@ -1,4 +1,6 @@
 """Plan Schemas - Plan creation, update, query, etc."""
+
+from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
@@ -6,11 +8,14 @@ from pydantic import BaseModel, Field
 
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.schemas.common import BaseSchema
+from app.schemas.task import TaskDetail
 
 # ========== Request Schemas ==========
 
+
 class PlanCreate(BaseModel):
     """Create plan"""
+
     name: str = Field(min_length=1, max_length=255, description="Plan name")
     type: PlanType = Field(description="Plan type")
     description: str | None = Field(default=None, description="Plan description")
@@ -21,8 +26,10 @@ class PlanCreate(BaseModel):
     priority: PlanPriority | None = Field(default=PlanPriority.NORMAL, description="Plan priority")
     plan_stage: PlanStage | None = Field(default=None, description="Plan stage")
 
+
 class PlanUpdate(BaseModel):
     """Update plan"""
+
     name: str | None = Field(default=None, min_length=1, max_length=255, description="Plan name")
     description: str | None = Field(default=None, description="Plan description")
     target_date: date | None = Field(default=None, description="Target date")
@@ -32,19 +39,26 @@ class PlanUpdate(BaseModel):
     priority: PlanPriority | None = Field(default=None, description="Plan priority")
     plan_stage: PlanStage | None = Field(default=None, description="Plan stage")
 
+
 class PlanActivate(BaseModel):
     """Activate plan"""
+
     plan_id: UUID = Field(description="Plan ID")
+
 
 class GenerateTasksRequest(BaseModel):
     """Generate tasks request"""
+
     plan_id: UUID = Field(description="Plan ID")
     ai_context: str | None = Field(default=None, description="AI context for task generation")
 
+
 # ========== Response Schemas ==========
+
 
 class PlanBase(BaseSchema):
     """Plan basic information"""
+
     name: str = Field(description="Plan name")
     type: PlanType = Field(description="Plan type")
     subject: str | None = Field(description="Subject/Course")
@@ -55,8 +69,10 @@ class PlanBase(BaseSchema):
     is_primary: bool = Field(description="Is primary plan")
     plan_stage: PlanStage = Field(description="Plan stage")
 
+
 class PlanDetail(PlanBase):
     """Plan detailed information"""
+
     user_id: UUID = Field(description="User ID")
     description: str | None = Field(description="Plan description")
     daily_available_minutes: int = Field(description="Daily available minutes")
@@ -64,9 +80,14 @@ class PlanDetail(PlanBase):
     mastery_level: float = Field(description="Mastery level")
     task_count: int = Field(default=0, description="Total tasks")
     completed_task_count: int = Field(default=0, description="Completed tasks")
+    source: str | None = Field(default=None, description="Plan source (e.g., 'learning_path')")
+    source_metadata: dict | None = Field(default=None, description="Source-specific metadata")
+    tasks: list[TaskDetail] | None = Field(default=None, description="Related tasks for the plan")
+
 
 class PlanProgress(BaseModel):
     """Plan progress information"""
+
     plan_id: UUID = Field(description="Plan ID")
     progress: float = Field(description="Progress percentage")
     mastery_level: float = Field(description="Mastery level")
@@ -78,8 +99,10 @@ class PlanProgress(BaseModel):
     class Config:
         from_attributes = True
 
+
 class PlanSummary(BaseModel):
     """Plan summary statistics"""
+
     total: int = Field(description="Total plans")
     active: int = Field(description="Active plans")
     sprint_plans: int = Field(description="Sprint plans")
@@ -88,8 +111,10 @@ class PlanSummary(BaseModel):
 
 # ========== Quota Related Schemas ==========
 
+
 class PlanQuotaStatus(BaseModel):
     """Plan quota status"""
+
     used: int = Field(description="Number of active plans")
     limit: int = Field(description="Quota limit")
     remaining: int = Field(description="Remaining quota (-1 if unlimited)")
@@ -102,9 +127,11 @@ class PlanQuotaStatus(BaseModel):
 
 class SetPrimaryPlanRequest(BaseModel):
     """Set primary plan request"""
+
     plan_id: UUID = Field(description="Plan ID to set as primary")
 
 
 class PlanPriorityUpdate(BaseModel):
     """Update plan priority request"""
+
     priority: PlanPriority = Field(description="New priority")

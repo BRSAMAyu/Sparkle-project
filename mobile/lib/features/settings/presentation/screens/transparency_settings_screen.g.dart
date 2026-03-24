@@ -7,7 +7,7 @@ part of 'transparency_settings_screen.dart';
 // **************************************************************************
 
 String _$transparencyPreferencesHash() =>
-    r'2cc83b17f2ec88b6db15e531ed24bcb2c72c5377';
+    r'e25ca7d83a60d9e7e2709d42abd6a9470abe9a0f';
 
 /// Provider for transparency preferences
 ///
@@ -27,7 +27,7 @@ final transparencyPreferencesProvider =
 typedef TransparencyPreferencesRef
     = AutoDisposeFutureProviderRef<TransparencyPreferences>;
 String _$transparencyPreferencesNotifierHash() =>
-    r'8d6a238d615539b57b59708bd70e0787ab5f2941';
+    r'5991e09f451f49c85d22d307257361c7d106b0d8';
 
 /// Notifier for transparency preferences
 ///

@@ -2,6 +2,7 @@
 知识拓展后台任务处理器
 定期处理 NodeExpansionQueue 中的待处理任务
 """
+from __future__ import annotations
 import asyncio
 import logging
 

@@ -73,7 +73,7 @@ class SuggestionService:
             suggestions.extend(personalized)
 
         # 3. Context-Aware Suggestions (Placeholder for AI/History)
-        # TODO: Fetch recent user context or use a small language model
+        # TRACKED(TD-008): Fetch recent user context or use a small language model
         if len(query) > 5 and not suggestions:
              suggestions.append({
                  "text": f"Ask about '{query}'",

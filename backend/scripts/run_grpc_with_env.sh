@@ -11,4 +11,14 @@ fi
 
 # Run the gRPC server
 cd "$(dirname "$0")/.."
-exec python grpc_server.py
+PYTHON_BIN="${BACKEND_PYTHON:-}"
+if [ -z "$PYTHON_BIN" ]; then
+    if [ -n "$VIRTUAL_ENV" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then
+        PYTHON_BIN="$VIRTUAL_ENV/bin/python"
+    elif [ -x "$(pwd)/.venv/bin/python" ]; then
+        PYTHON_BIN="$(pwd)/.venv/bin/python"
+    else
+        PYTHON_BIN="python3"
+    fi
+fi
+exec "$PYTHON_BIN" grpc_server.py

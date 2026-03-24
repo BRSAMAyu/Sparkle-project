@@ -87,7 +87,6 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				Email:              email,
 				HashedPassword:     h.randomString(32),
 				Nickname:           pgtype.Text{String: claims.Name, Valid: claims.Name != ""},
-				EmailVerified:      true,
 				RegistrationSource: "apple",
 				IsActive:           true,
 				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
@@ -99,7 +98,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		}
 	}
 
-	if err == nil && (userNeedsLink || !user.EmailVerified || !user.AppleID.Valid) {
+	if err == nil && (userNeedsLink || !user.AppleID.Valid) {
 		user, err = h.queries.LinkAppleUser(ctx, db.LinkAppleUserParams{
 			ID:      user.ID,
 			AppleID: pgtype.Text{String: claims.Subject, Valid: true},
@@ -114,12 +113,13 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	_ = h.queries.UpdateUserLastLogin(ctx, user.ID)
 
 	// 3. Issue System Token
-	accessToken, err := h.createAccessToken(user.ID)
+	sessionID := uuid.New().String()
+	accessToken, err := h.createAccessToken(user.ID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
 		return
 	}
-	refreshToken, err := h.createRefreshToken(user.ID)
+	refreshToken, err := h.createRefreshToken(user.ID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发刷新令牌失败"})
 		return
@@ -149,11 +149,19 @@ func (h *AuthHandler) randomString(n int) string {
 	return hex.EncodeToString(b)
 }
 
-func (h *AuthHandler) createAccessToken(userID pgtype.UUID) (string, error) {
+func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
+
+	// Get expiration time from config, default to 30 minutes
+	expireMinutes := h.cfg.JWTAccessTokenExpireMinutes
+	if expireMinutes <= 0 {
+		expireMinutes = 30
+	}
+
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
-		"exp":  now.Add(time.Hour * 24).Unix(),
+		"sid":  sessionID,
+		"exp":  now.Add(time.Duration(expireMinutes) * time.Minute).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),
 		"type": "access",
@@ -169,11 +177,19 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID) (string, error) {
 	return token.SignedString([]byte(h.cfg.JWTSecret))
 }
 
-func (h *AuthHandler) createRefreshToken(userID pgtype.UUID) (string, error) {
+func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, error) {
 	now := time.Now()
+
+	// Get expiration time from config, default to 7 days
+	expireDays := h.cfg.JWTRefreshTokenExpireDays
+	if expireDays <= 0 {
+		expireDays = 7
+	}
+
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
-		"exp":  now.Add(7 * 24 * time.Hour).Unix(),
+		"sid":  sessionID,
+		"exp":  now.Add(time.Duration(expireDays) * 24 * time.Hour).Unix(),
 		"iat":  now.Unix(),
 		"jti":  uuid.New().String(),
 		"type": "refresh",

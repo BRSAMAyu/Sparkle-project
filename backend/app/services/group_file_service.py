@@ -2,6 +2,8 @@
 Group file service
 群组文件服务
 """
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy import func, select

@@ -42,12 +42,15 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   final Ref _ref;
 
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
+    if (!mounted) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await action();
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     } finally {
+      if (!mounted) return;
       // In case the action itself doesn't set isLoading to false
       if (state.isLoading) {
         state = state.copyWith(isLoading: false);
@@ -58,6 +61,7 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   Future<void> loadPlans({PlanType? type}) async {
     await _runWithErrorHandling(() async {
       final plans = await _planRepository.getPlans(type: type);
+      if (!mounted) return;
       state = state.copyWith(plans: plans);
     });
   }
@@ -65,6 +69,7 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   Future<void> loadActivePlans() async {
     await _runWithErrorHandling(() async {
       final activePlans = await _planRepository.getActivePlans();
+      if (!mounted) return;
       state = state.copyWith(activePlans: activePlans);
     });
   }
@@ -100,6 +105,13 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   Future<void> deactivatePlan(String id) async {
     await _runWithErrorHandling(() async {
       await _planRepository.deactivatePlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> setPrimaryPlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.setPrimaryPlan(id);
       await refresh();
     });
   }

@@ -5,7 +5,7 @@ import importlib.util
 import json
 import math
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -29,7 +29,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _week_bucket(value: datetime | None = None) -> str:

@@ -44,6 +44,7 @@ import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
 export 'breakpoints.dart';
+export 'color_extensions.dart';
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
 export 'responsive_widgets.dart';
@@ -56,6 +57,7 @@ export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
 export 'widgets/app_feedback.dart';
 export 'widgets/graphite_surfaces.dart';
+export 'widgets/sparkle_motion_primitives.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -617,6 +619,7 @@ class DS {
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.5);
 
   static Color get brandPrimary10 => brandPrimary.withValues(alpha: 0.1);
+  static Color get brandPrimary20 => brandPrimary.withValues(alpha: 0.2);
   static Color get brandPrimary12 => brandPrimary.withValues(alpha: 0.12);
   static Color get brandPrimary24 => brandPrimary.withValues(alpha: 0.24);
   static Color get brandPrimary26 => brandPrimary.withValues(alpha: 0.26);
@@ -890,6 +893,7 @@ class DS {
   static const double xxl = 48.0;
   static const double xxxl = 64.0;
 
+  static const double spacing2 = 2.0;
   static const double spacing4 = 4.0;
   static const double spacing6 = 6.0;
   static const double spacing8 = 8.0;
@@ -918,12 +922,15 @@ class DS {
   static const double opacityDisabled = 0.4;
 
   // Radius
+  static const double radius6 = 6.0;
   static const double radius8 = 8.0;
   static const double radius12 = 12.0;
   static const double radius16 = 16.0;
   static const double radius20 = 20.0;
   static const BorderRadius borderRadius4 =
       BorderRadius.all(Radius.circular(4.0));
+  static const BorderRadius borderRadius6 =
+      BorderRadius.all(Radius.circular(radius6));
   static const BorderRadius borderRadius8 =
       BorderRadius.all(Radius.circular(radius8));
   static const BorderRadius borderRadius12 =
@@ -941,7 +948,9 @@ class DS {
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 20.0;
   static const double iconSizeBase = 24.0;
+  static const double iconSizeMd = iconSizeBase;
   static const double iconSizeLg = 32.0;
+  static const double iconSizeXl = 40.0;
   static const double iconSize3xl = 48.0;
 
   // Typography

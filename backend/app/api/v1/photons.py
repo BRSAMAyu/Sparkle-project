@@ -2,6 +2,7 @@
 Photon API Endpoints
 光子积分系统 API 端点
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
@@ -9,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.photon import (
@@ -19,6 +20,9 @@ from app.schemas.photon import (
 from app.services.photon_service import get_photon_service
 
 router = APIRouter()
+
+# 访客用户 ID（与 guest_seed_service.py 和 guest_service.dart 保持一致）
+GUEST_USER_ID = "guest_sparkle_demo_visitor"
 
 
 @router.get("/balance", response_model=dict[str, Any])
@@ -114,6 +118,13 @@ async def transfer_photons(
 
     Transfers photons from current user to another user.
     """
+    # 访客用户禁止转账
+    if str(current_user.id) == GUEST_USER_ID or current_user.username == GUEST_USER_ID:
+        raise HTTPException(
+            status_code=403,
+            detail="Guest users cannot transfer photons. Please register for a full account."
+        )
+
     photon_service = get_photon_service(db)
 
     try:
@@ -152,7 +163,7 @@ async def transfer_photons(
 @router.post("/adjust", response_model=dict[str, Any])
 async def adjust_photons(
     request: PhotonAdjustmentRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -160,10 +171,6 @@ async def adjust_photons(
 
     Adjusts a user's photon balance. Admin only.
     """
-    # TODO: Add admin check
-    # if not current_user.is_superuser:
-    #     raise HTTPException(status_code=403, detail="Admin access required")
-
     photon_service = get_photon_service(db)
 
     try:
@@ -173,7 +180,7 @@ async def adjust_photons(
                 amount=request.amount,
                 source=request.reason,
                 transaction_type=request.transaction_type.value,
-                metadata=request.metadata
+                metadata=request.extra_data
             )
         else:
             result = await photon_service.deduct_photons(
@@ -181,7 +188,7 @@ async def adjust_photons(
                 amount=abs(request.amount),
                 reason=request.reason,
                 transaction_type=request.transaction_type.value,
-                metadata=request.metadata
+                metadata=request.extra_data
             )
 
         # Record transaction history
@@ -193,7 +200,7 @@ async def adjust_photons(
             balance_after=result["new_balance"],
             source=request.reason,
             related_item_id=request.related_item_id,
-            metadata=request.metadata
+            metadata=request.extra_data
         )
 
         return {

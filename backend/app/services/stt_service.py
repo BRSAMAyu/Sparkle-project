@@ -1,3 +1,5 @@
+from __future__ import annotations
+import asyncio
 import os
 import uuid
 from collections.abc import AsyncGenerator
@@ -16,53 +18,136 @@ class STTService:
         self.upload_dir = settings.UPLOAD_DIR
         os.makedirs(self.upload_dir, exist_ok=True)
 
-        # Initialize STT Provider based on configuration
         self.provider: STTProvider | None = None
+        self.backup_provider: STTProvider | None = None
+        self.stream_provider: STTProvider | None = None
         self._init_provider()
 
     def _init_provider(self):
         """根据配置初始化STT Provider"""
         provider_name = (settings.STT_PROVIDER or "zhipu").lower()
-        if provider_name == "xunfei":
-            logger.warning("STT_PROVIDER=xunfei 已废弃，自动切换到 zhipu")
-            provider_name = "zhipu"
+        backup_name = (settings.STT_BACKUP_PROVIDER or "").lower()
+        self.provider = self._build_provider(provider_name)
+        alternate_name = backup_name or ("xunfei" if provider_name == "zhipu" else "zhipu")
+        self.backup_provider = self._build_provider(alternate_name)
 
-        if provider_name != "zhipu":
-            logger.warning(f"STT Provider not supported: {provider_name}")
-            self.provider = None
-            return
+        # 移动端的聊天、群聊、工具页都通过 WebSocket 走流式识别。
+        # 当讯飞凭证可用时，优先用其原生流式协议，避免智谱配额问题直接打断实时链路。
+        if provider_name == "zhipu" and self.backup_provider is not None:
+            self.stream_provider = self.backup_provider
+        else:
+            self.stream_provider = self.provider
 
+        if self.provider is not None:
+            logger.info(f"STT primary provider initialized: {provider_name}")
+        else:
+            logger.warning(f"STT primary provider unavailable: {provider_name}")
+
+        if self.backup_provider is not None:
+            logger.info(f"STT backup provider initialized: {alternate_name}")
+
+    def _build_provider(self, provider_name: str) -> STTProvider | None:
         try:
-            from app.services.stt.providers.zhipu_provider import ZhipuProvider
+            if provider_name == "zhipu":
+                from app.services.stt.providers.zhipu_provider import ZhipuProvider
 
-            self.provider = ZhipuProvider()
-            logger.info("STT Provider initialized: zhipu")
+                if not self._is_configured_value(settings.ZHIPU_API_KEY):
+                    return None
+                return ZhipuProvider()
+
+            if provider_name == "xunfei":
+                from app.services.stt.providers.xunfei_provider import XunFeiProvider
+
+                if not all(
+                    self._is_configured_value(value)
+                    for value in (
+                        settings.XUNFEI_APP_ID,
+                        settings.XUNFEI_API_KEY,
+                        settings.XUNFEI_API_SECRET,
+                    )
+                ):
+                    return None
+                return XunFeiProvider()
         except Exception as e:
-            logger.error(f"Failed to initialize ZhipuProvider: {e}")
-            self.provider = None
+            logger.error(f"Failed to initialize STT provider {provider_name}: {e}")
+            return None
+
+        logger.warning(f"STT Provider not supported: {provider_name}")
+        return None
+
+    def _is_configured_value(self, value: Any) -> bool:
+        return isinstance(value, str) and bool(value.strip())
+
+    def _ordered_providers(self) -> list[STTProvider]:
+        providers: list[STTProvider] = []
+        for provider in (self.provider, self.backup_provider):
+            if provider is not None and provider not in providers:
+                providers.append(provider)
+        return providers
+
+    def _should_try_backup(self, error_message: str) -> bool:
+        lowered = error_message.lower()
+        fallback_markers = (
+            "余额不足",
+            "无可用资源包",
+            "rate limit",
+            "rate_limit",
+            "429",
+            "ffprobe",
+            "ffmpeg",
+            "no such file or directory",
+            "provider unavailable",
+            "api key",
+            "未配置",
+            "识别失败",
+            "request failed",
+            "timeout",
+            "timed out",
+        )
+        return any(marker in lowered for marker in fallback_markers)
+
+    def _provider_timeout(self, provider: STTProvider) -> float:
+        if provider.__class__.__name__ == "XunFeiProvider":
+            return 60.0
+        return 90.0
 
     async def transcribe_file(self, file_path: str, language: str | None = None) -> dict[str, Any]:
         """
         Transcribe an audio file using configured STT Provider.
         """
-        if not self.provider:
+        providers = self._ordered_providers()
+        if not providers:
             return {"text": "STT Service Unavailable (Provider Not Initialized)", "error": True}
 
         if not os.path.exists(file_path):
             return {"text": "", "error": "File not found"}
 
-        try:
-            logger.info(f"Transcribing file: {file_path} using {settings.STT_PROVIDER}")
+        last_error: str | None = None
+        for index, provider in enumerate(providers):
+            provider_name = provider.__class__.__name__
+            try:
+                logger.info(f"Transcribing file: {file_path} using {provider_name}")
+                text = await asyncio.wait_for(
+                    provider.transcribe_file(file_path, language=language),
+                    timeout=self._provider_timeout(provider),
+                )
 
-            text = await self.provider.transcribe_file(file_path, language=language)
+                if not text:
+                    raise RuntimeError("Empty transcription result")
+                if index < len(providers) - 1 and self._should_try_backup(text):
+                    raise RuntimeError(text)
 
-            return {"text": text, "error": False}
-        except Exception as e:
-            logger.error(f"Transcription failed: {e}")
-            # Mock response in Demo Mode if failure
-            if settings.DEMO_MODE:
-                return {"text": "这是演示模式下的模拟语音转写结果。实际调用失败，请检查 API 配置。", "error": False}
-            return {"text": f"Transcription Error: {str(e)}", "error": True}
+                return {"text": text, "error": False}
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"STT provider {provider_name} failed: {e}")
+                if index == len(providers) - 1 or not self._should_try_backup(last_error):
+                    break
+
+        if settings.DEMO_MODE:
+            return {"text": "这是演示模式下的模拟语音转写结果。实际调用失败，请检查 API 配置。", "error": False}
+
+        return {"text": f"Transcription Error: {last_error or 'Unknown STT error'}", "error": True}
 
     async def enhance_transcript(self, text: str) -> str:
         """
@@ -73,6 +158,8 @@ class STTService:
         """
         if not text or len(text) < 2:
             return text
+
+        from app.services.llm_fallback_utils import stt_llm
 
         system_prompt = """
         You are a professional transcript editor.
@@ -88,12 +175,8 @@ class STTService:
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": text}]
 
-        try:
-            enhanced_text = await llm_service.chat(messages, temperature=0.3)
-            return enhanced_text.strip()
-        except Exception as e:
-            logger.error(f"Enhancement failed: {e}")
-            return text
+        enhanced_text = await stt_llm.call(messages, fallback=text, temperature=0.3)
+        return enhanced_text.strip() if enhanced_text else text
 
     async def handle_websocket_stream(self, websocket: WebSocket):
         """
@@ -107,7 +190,8 @@ class STTService:
         session_id = str(uuid.uuid4())
         logger.info(f"WebSocket STT stream started: {session_id}")
 
-        if not self.provider:
+        active_provider = self.stream_provider or self.provider
+        if not active_provider:
             await websocket.send_json(
                 {"type": "error", "content": "STT Service Unavailable (Provider Not Initialized)"}
             )
@@ -119,7 +203,7 @@ class STTService:
             audio_stream = self._create_audio_stream_generator(websocket)
 
             # Transcribe using the provider
-            async for text in self.provider.transcribe_stream(audio_stream):
+            async for text in active_provider.transcribe_stream(audio_stream):
                 await websocket.send_json({"type": "transcription", "text": text, "is_final": False})
 
             # Send completion signal
@@ -132,8 +216,8 @@ class STTService:
             await websocket.send_json({"type": "error", "content": str(e)})
         finally:
             # Cleanup
-            if self.provider:
-                await self.provider.close()
+            for provider in self._ordered_providers():
+                await provider.close()
 
     async def _create_audio_stream_generator(self, websocket: WebSocket) -> AsyncGenerator[bytes, None]:
         """

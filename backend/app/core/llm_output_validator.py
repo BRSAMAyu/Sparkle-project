@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 LLM 输出验证与过滤模块
 

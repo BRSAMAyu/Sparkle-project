@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import inspect
 import uuid
@@ -149,7 +150,7 @@ class StateGraph:
         current_node_name: str = self.entry_point
         state = initial_state
 
-        # Load from checkpoint if available (TODO: Implement resume logic)
+        # Load from checkpoint if available (TRACKED(TD-008): implement resume logic)
         # For now, we always start fresh or from provided state
 
         steps = 0

@@ -45,6 +45,7 @@ func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) 
 	defer span.End()
 
 	payload := map[string]string{
+		"id":         uuid.New().String(), // Generate stable UUID for message ID
 		"session_id": sessionID,
 		"user_id":    userID,
 		"role":       role,
@@ -224,7 +225,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 			// Handle task list dismissal (user rejected generated tasks)
 			log.Printf("Task list creation dismissed by user %s", userID)
 
-			// TODO: In future, could mark tasks as rejected in DB
+			// TRACKED(TD-009): In future, could mark tasks as rejected in DB
 			// For now, just send status update
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
 				"message":     "任务已忽略",

@@ -12,15 +12,18 @@
 """
 
 import pytest
+import pytest_asyncio
 from typing import Dict
 from unittest.mock import MagicMock
 from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.pool import StaticPool
 
+from app.models.base import Base
 from app.models.user import User
 from app.models.community import (
     Friendship, Group, GroupMember, GroupMessage,
@@ -34,6 +37,32 @@ from app.db.session import get_db
 # ============================================================
 # Test Fixtures
 # ============================================================
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """Use isolated sqlite for these route-level integration tests."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async with session_factory() as session:
+        yield session
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
 
 @pytest.fixture
 def test_client(db_session: AsyncSession):

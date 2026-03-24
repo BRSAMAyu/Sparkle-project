@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -130,7 +130,7 @@ class PushService:
         if not prefs:
             return False
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         # Cooldown check (e.g., at least 2 hours between pushes)
         if prefs and prefs.last_push_time:
@@ -153,7 +153,7 @@ class PushService:
 
         # Start of local day in UTC
         local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        utc_start_of_day = local_start_of_day.astimezone(UTC)
+        utc_start_of_day = local_start_of_day.astimezone(timezone.utc)
 
         query = select(func.count()).select_from(PushHistory).where(
             and_(
@@ -247,7 +247,7 @@ class PushService:
         self.db.add(history)
 
         # 3. Update User Preferences (Last push time)
-        user.push_preference.last_push_time = datetime.now(UTC)
+        user.push_preference.last_push_time = datetime.now(timezone.utc)
 
         await self.db.commit()
         logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")

@@ -77,7 +77,8 @@ async def _init(clear_first: bool = False):
             type_result = await session.execute(type_query)
             logger.info("\n📊 Shop items by type:")
             for item_type, count in type_result:
-                logger.info(f"  - {item_type.value}: {count} items")
+                item_type_label = getattr(item_type, "value", item_type)
+                logger.info(f"  - {item_type_label}: {count} items")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize shop: {e}")

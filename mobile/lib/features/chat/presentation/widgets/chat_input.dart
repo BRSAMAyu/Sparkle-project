@@ -3,13 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
-import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
+/// AI 对话输入组件（原始设计）
+/// 左侧：附件 + 语音按钮，中间：输入框，右侧：发送按钮
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({
     super.key,
@@ -40,84 +45,87 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final FocusNode _focusNode = FocusNode();
   final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
+  bool _isAttachmentBursting = false;
   bool _isButtonPressed = false;
-  // 🔧 Android输入法修复：防止快速聚焦/失焦导致输入法崩溃
   bool _isFocusChanging = false;
 
   void _showAttachmentSheet() {
-    if (widget.onFileUploaded != null) {
-      unawaited(
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-          builder: (context) => FilePickerWithPresignedUpload(
-            groupId: widget.fileUploadGroupId,
-            onUploaded: (file) {
-              Navigator.pop(context);
-              widget.onFileUploaded?.call(file);
-            },
-            onError: (message) => AppFeedback.error(context, message),
-            secondaryActionLabel: '文档清洗',
-            onSecondaryAction: () {
-              Navigator.pop(context);
-              unawaited(
-                launchTool(
-                  this.context,
-                  ref,
-                  'document_cleaner',
-                  launchContext: ToolLaunchContext.chatInput,
-                  preference: ToolOpenPreference.sheet,
-                  onTextResult: (result) {
-                    if (!mounted) {
-                      return;
-                    }
-                    setState(() {
-                      _controller.text = result;
-                    });
-                    if (!_isFocusChanging) {
-                      _isFocusChanging = true;
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted && _focusNode.canRequestFocus) {
-                          _focusNode.requestFocus();
-                        }
-                        _isFocusChanging = false;
-                      });
-                    }
-                  },
-                ),
-              );
-            },
-          ),
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+    _pulseAttachmentButton();
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => AttachmentPickerSheet(
+          onDirectUpload: _openFileUpload,
+          onDocumentClean: _openDocumentCleaner,
         ),
-      );
+      ),
+    );
+  }
+
+  void _pulseAttachmentButton() {
+    if (!mounted) {
       return;
     }
+    setState(() {
+      _isAttachmentBursting = true;
+    });
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isAttachmentBursting = false;
+      });
+    });
+  }
 
+  void _openFileUpload() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     unawaited(
-      launchTool(
-        context,
-        ref,
-        'document_cleaner',
-        launchContext: ToolLaunchContext.chatInput,
-        preference: ToolOpenPreference.sheet,
-        onTextResult: (result) {
-          if (!mounted) {
-            return;
-          }
-          setState(() {
-            _controller.text = result;
-          });
-          if (!_isFocusChanging) {
-            _isFocusChanging = true;
-            Future.delayed(const Duration(milliseconds: 150), () {
-              if (mounted && _focusNode.canRequestFocus) {
-                _focusNode.requestFocus();
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => FilePickerWithPresignedUpload(
+          groupId: widget.fileUploadGroupId,
+          onUploaded: (file) {
+            Navigator.pop(context);
+            widget.onFileUploaded?.call(file);
+          },
+          onError: (message) => AppFeedback.error(context, message),
+        ),
+      ),
+    );
+  }
+
+  void _openDocumentCleaner() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DocumentCleanerSheet(
+          onResult: (result) {
+            if (mounted) {
+              setState(() {
+                _controller.text = result;
+              });
+              if (!_isFocusChanging) {
+                _isFocusChanging = true;
+                Future.delayed(const Duration(milliseconds: 150), () {
+                  if (mounted && _focusNode.canRequestFocus) {
+                    _focusNode.requestFocus();
+                  }
+                  _isFocusChanging = false;
+                });
               }
-              _isFocusChanging = false;
-            });
-          }
-        },
+            }
+          },
+        ),
       ),
     );
   }
@@ -133,7 +141,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (_textNotEmpty.value != hasText) {
       _textNotEmpty.value = hasText;
     }
-    // Notify intent prediction
     widget.onTextChanged?.call(_controller.text);
   }
 
@@ -143,12 +150,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
       _focusNode.requestFocus();
     }
-    // 🔧 修复：当enabled状态从false变为true时，恢复可用状态但不自动聚焦
-    // 这样可以避免在Android上输入法异常显示/隐藏
-    if (widget.enabled && !oldWidget.enabled) {
-      // enabled状态恢复，但不主动请求焦点，让用户手动点击
-      // 这可以避免Android输入法的竞态条件
-    }
   }
 
   @override
@@ -156,7 +157,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     _controller
       ..removeListener(_handleTextChange)
       ..dispose();
-    // widget.onTextChanged?.call(''); // Removed to prevent unsafe ancestor lookup during disposal
     _focusNode.dispose();
     _textNotEmpty.dispose();
     super.dispose();
@@ -166,40 +166,37 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isSending) return;
 
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
+
     if (widget.onSend != null) {
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
       _controller.clear();
       widget.onCancelQuote?.call();
 
-      // 🔧 Android输入法修复：延迟焦点请求，避免与输入法冲突
-      if (!_isFocusChanging) {
-        _isFocusChanging = true;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && _focusNode.canRequestFocus) {
-            _focusNode.requestFocus();
-          }
-          _isFocusChanging = false;
-        });
-      }
+      _restoreFocus();
       return;
     }
 
     setState(() => _isSending = true);
     try {
       _controller.clear();
-      // 🔧 Android输入法修复：延迟焦点请求
-      if (!_isFocusChanging) {
-        _isFocusChanging = true;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && _focusNode.canRequestFocus) {
-            _focusNode.requestFocus();
-          }
-          _isFocusChanging = false;
-        });
-      }
+      _restoreFocus();
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  void _restoreFocus() {
+    if (_isFocusChanging) {
+      return;
+    }
+    _isFocusChanging = true;
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted && _focusNode.canRequestFocus) {
+        _focusNode.requestFocus();
+      }
+      _isFocusChanging = false;
+    });
   }
 
   @override
@@ -208,19 +205,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final reduceMotion = context.reduceMotion;
-    // Use ResponsiveSystem instead of MediaQuery width for consistency
     final isNarrow = ResponsiveSystem.isMobile(context);
     final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
     final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
+    final attachmentPadding = isNarrow ? 4.0 : 8.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Quote Preview
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-
           Padding(
             padding: const EdgeInsets.all(DS.spacing8),
             child: Row(
@@ -234,15 +229,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     child: SizedBox(
                       width: attachmentVisualSize,
                       height: attachmentVisualSize,
-                      child: SparkleIconButton(
-                        icon: Icon(
-                          Icons.add_circle_outline_rounded,
-                          color: DS.textSecondary,
-                          size: attachmentIconSize,
+                      child: AnimatedScale(
+                        duration: DS.durationFast,
+                        curve: Curves.easeOutBack,
+                        scale: _isAttachmentBursting ? 1.08 : 1,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: DS.textSecondary,
+                          ),
+                          iconSize: attachmentIconSize,
+                          onPressed: widget.enabled ? _showAttachmentSheet : null,
+                          padding: EdgeInsets.all(attachmentPadding),
+                          constraints: BoxConstraints.tightFor(
+                            width: attachmentVisualSize,
+                            height: attachmentVisualSize,
+                          ),
                         ),
-                        onPressed: widget.enabled ? _showAttachmentSheet : null,
-                        variant: ButtonVariant.ghost,
-                        size: attachmentVisualSize,
                       ),
                     ),
                   ),
@@ -251,9 +254,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 // --- Voice Input Button ---
                 VoiceInputButton(
                   onTranscription: (text) {
-                    // 将语音识别结果填入文本框
                     _controller.text = text;
-                    // 🔧 Android输入法修复：延迟焦点请求
                     if (!_isFocusChanging) {
                       _isFocusChanging = true;
                       Future.delayed(const Duration(milliseconds: 150), () {
@@ -265,7 +266,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     }
                   },
                   onError: (error) {
-                    // 显示错误提示
                     AppFeedback.error(context, error);
                   },
                   onRecordingStarted: () {
@@ -276,10 +276,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         _isFocusChanging = false;
                       }
                     });
-                  },
-                  onRecordingStopped: () {
-                    // 🔧 Android输入法修复：录音结束后不立即请求焦点
-                    // 等待onTranscription回调设置文本后再聚焦
                   },
                 ),
 
@@ -292,12 +288,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       final canSend = widget.enabled && !_isSending && hasText;
                       return DecoratedBox(
                         decoration: BoxDecoration(
-                          // Use surfaceTertiary for consistent theming
                           color: DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: DS.surfaceTertiary,
-                          ),
+                          border: Border.all(color: DS.surfaceTertiary),
                         ),
                         child: TextField(
                           controller: _controller,
@@ -308,13 +301,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           textInputAction: enterToSend
                               ? TextInputAction.send
                               : TextInputAction.newline,
-                          // 🔧 Android输入法修复：确保键盘类型正确
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
                             hintText: widget.hintText ?? 'Type a message...',
-                            hintStyle: TextStyle(
-                              color: DS.textSecondary,
-                            ),
+                            hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,
                               vertical: DS.spacing10,
@@ -331,72 +321,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
-                ValueListenableBuilder<bool>(
-                  valueListenable: _textNotEmpty,
-                  builder: (context, hasText, child) {
-                    final canSend = widget.enabled && !_isSending && hasText;
-                    return Semantics(
-                      button: true,
-                      enabled: canSend,
-                      label: 'Send message',
-                      child: AnimatedScale(
-                        scale: _isButtonPressed ? 0.9 : 1.0,
-                        duration: reduceMotion ? Duration.zero : DS.quick,
-                        curve: Curves.easeInOut,
-                        child: AnimatedContainer(
-                          duration: reduceMotion ? Duration.zero : DS.normal,
-                          width: DS.touchTargetMinSize,
-                          height: DS.touchTargetMinSize,
-                          decoration: BoxDecoration(
-                            gradient: canSend ? DS.primaryGradient : null,
-                            color: canSend ? null : DS.surfaceTertiary,
-                            shape: BoxShape.circle,
-                            boxShadow: canSend
-                                ? [
-                                    BoxShadow(
-                                      color: DS.brandPrimary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Material(
-                            color: DS.surfacePrimary.withValues(alpha: 0),
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: canSend ? _handleSend : null,
-                              onHighlightChanged: (pressed) {
-                                if (!mounted) return;
-                                setState(() => _isButtonPressed = pressed);
-                              },
-                              child: Center(
-                                child: _isSending
-                                    ? SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: DS.textOnPrimary,
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.arrow_upward_rounded,
-                                        color: canSend
-                                            ? DS.textOnPrimary
-                                            : DS.textSecondary,
-                                        size: DS.iconSizeBase,
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                _buildSendButton(reduceMotion),
               ],
             ),
           ),
@@ -405,18 +330,79 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  Widget _buildSendButton(bool reduceMotion) => ValueListenableBuilder<bool>(
+      valueListenable: _textNotEmpty,
+      builder: (context, hasText, child) {
+        final canSend = widget.enabled && !_isSending && hasText;
+        return Semantics(
+          button: true,
+          enabled: canSend,
+          label: 'Send message',
+          child: AnimatedScale(
+            scale: _isButtonPressed ? 0.9 : 1.0,
+            duration: reduceMotion ? Duration.zero : DS.quick,
+            curve: Curves.easeInOut,
+            child: AnimatedContainer(
+              duration: reduceMotion ? Duration.zero : DS.normal,
+              width: DS.touchTargetMinSize,
+              height: DS.touchTargetMinSize,
+              decoration: BoxDecoration(
+                gradient: canSend ? DS.primaryGradient : null,
+                color: canSend ? null : DS.surfaceTertiary,
+                shape: BoxShape.circle,
+                boxShadow: canSend
+                    ? [
+                        BoxShadow(
+                          color: DS.brandPrimary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: canSend ? _handleSend : null,
+                  onHighlightChanged: (pressed) {
+                    if (!mounted) return;
+                    setState(() => _isButtonPressed = pressed);
+                  },
+                  child: Center(
+                    child: _isSending
+                        ? SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: DS.textOnPrimary,
+                            ),
+                          )
+                        : Icon(
+                            Icons.arrow_upward_rounded,
+                            color:
+                                canSend ? DS.textOnPrimary : DS.textSecondary,
+                            size: DS.iconSizeBase,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
   Widget _buildQuotePreview(bool isDark) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing4,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark ? DS.surfaceSecondary : DS.surfacePanel,
+          color: isDark
+              ? DS.surfaceSecondary
+              : DS.brandPrimary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border(
             left: BorderSide(color: DS.brandPrimaryConst, width: 4),
@@ -443,7 +429,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     overflow: TextOverflow.fade,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: isDark ? DS.textSecondary : DS.textPrimary,
+                      color: DS.textSecondary,
                     ),
                   ),
                 ],
@@ -452,14 +438,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: SparkleIconButton(
+              child: IconButton(
                 icon: Icon(
                   Icons.close_rounded,
                   size: DS.iconSizeSm,
                   color: DS.textSecondary,
                 ),
                 onPressed: widget.onCancelQuote,
-                variant: ButtonVariant.ghost,
+                padding: const EdgeInsets.all(12),
               ),
             ),
           ],

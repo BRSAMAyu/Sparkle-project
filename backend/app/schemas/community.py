@@ -2,6 +2,7 @@
 社群功能 Pydantic Schemas
 Community Schemas - 好友、群组、消息、任务相关的请求/响应模型
 """
+from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Optional
@@ -91,12 +92,27 @@ class FriendResponse(BaseModel):
     accept: bool = Field(description="是否接受")
 
 
+class AccountabilityFriendSummary(BaseModel):
+    """好友列表中的责任伙伴摘要"""
+    partnership_id: UUID = Field(description="伙伴关系ID")
+    slot_type: str = Field(description="伙伴槽位类型")
+    status: str = Field(description="伙伴关系状态")
+    my_role: str | None = Field(default=None, description="我在伙伴关系中的角色")
+    my_checked_in_today: bool | None = Field(default=None, description="我今天是否已打卡")
+    partner_checked_in_today: bool | None = Field(default=None, description="对方今天是否已打卡")
+    my_streak_days: int | None = Field(default=None, description="我的连续打卡天数")
+    partner_streak_days: int | None = Field(default=None, description="对方连续打卡天数")
+    last_checkin_at: datetime | None = Field(default=None, description="最近一次打卡时间")
+    goal_preview: str | None = Field(default=None, description="伙伴目标摘要")
+
+
 class FriendshipInfo(BaseSchema):
     """好友关系信息"""
     friend: UserBrief = Field(description="好友信息")
     status: FriendshipStatusEnum = Field(description="关系状态")
     match_reason: dict[str, Any] | None = Field(default=None, description="匹配原因")
     initiated_by_me: bool = Field(default=False, description="是否由我发起")
+    accountability: AccountabilityFriendSummary | None = Field(default=None, description="责任伙伴摘要")
 
 
 class FriendRecommendation(BaseModel):
@@ -104,9 +120,116 @@ class FriendRecommendation(BaseModel):
     user: UserBrief = Field(description="推荐用户")
     match_score: float = Field(ge=0, le=1, description="匹配得分")
     match_reasons: list[str] = Field(description="匹配原因列表")
+    strategy: str = Field(default="compatibility", description="匹配策略")
+    target: str = Field(default="accountability", description="推荐目标")
+    summary: str | None = Field(default=None, description="推荐摘要")
+    relationship_status: str = Field(default="none", description="当前关系状态")
+    is_existing_friend: bool = Field(default=False, description="是否已经是好友")
+    can_invite_accountability: bool = Field(default=False, description="是否可直接邀请为责任伙伴")
+    recommended_action: str = Field(default="send_friend_request", description="推荐动作")
+    score_breakdown: dict[str, float] = Field(default_factory=dict, description="评分拆解")
 
     class Config:
         from_attributes = True
+
+
+class FriendMatchStrategyEnum(str, Enum):
+    """好友/责任伙伴匹配策略"""
+
+    COMPATIBILITY = "compatibility"
+    COMPLEMENTARY = "complementary"
+
+
+class FriendRecommendationTargetEnum(str, Enum):
+    """好友推荐目标"""
+
+    FRIEND = "friend"
+    ACCOUNTABILITY = "accountability"
+
+
+class RecommendationItemTypeEnum(str, Enum):
+    """推荐对象类型"""
+
+    FRIEND = "friend"
+    GROUP = "group"
+
+
+class RecommendationFeedbackStageEnum(str, Enum):
+    """推荐反馈阶段"""
+
+    IMMEDIATE = "immediate"
+    FOLLOW_UP = "follow_up"
+    OUTCOME = "outcome"
+
+
+class RecommendationFeedbackMixin(BaseModel):
+    """推荐反馈通用问卷字段"""
+
+    prompt_id: str | None = Field(default=None, max_length=128, description="待反馈提示ID")
+    stage: RecommendationFeedbackStageEnum = Field(
+        default=RecommendationFeedbackStageEnum.IMMEDIATE,
+        description="反馈阶段",
+    )
+    questionnaire_version: int = Field(default=1, ge=1, description="问卷版本")
+    overall_score: int | None = Field(default=None, ge=1, le=5, description="总体满意度")
+    relevance_score: int | None = Field(default=None, ge=1, le=5, description="相关度评分")
+    explanation_score: int | None = Field(default=None, ge=1, le=5, description="推荐理由解释性评分")
+    actionability_score: int | None = Field(default=None, ge=1, le=5, description="推荐可行动性评分")
+    similarity_score: int | None = Field(default=None, ge=1, le=5, description="相似度预期评分")
+    complementary_score: int | None = Field(default=None, ge=1, le=5, description="互补性预期评分")
+    comfort_score: int | None = Field(default=None, ge=1, le=5, description="信任/舒适度评分")
+    interest_match_score: int | None = Field(default=None, ge=1, le=5, description="兴趣匹配评分")
+    activity_score: int | None = Field(default=None, ge=1, le=5, description="活跃度评分")
+    atmosphere_score: int | None = Field(default=None, ge=1, le=5, description="社群氛围评分")
+    selected_issues: list[str] = Field(default_factory=list, description="用户勾选的问题点")
+    selected_strengths: list[str] = Field(default_factory=list, description="用户勾选的优点")
+    free_text: str | None = Field(default=None, max_length=1000, description="自然语言补充反馈")
+
+
+class FriendRecommendationFeedbackRequest(RecommendationFeedbackMixin):
+    """好友推荐反馈"""
+
+    target_user_id: UUID = Field(description="被推荐用户ID")
+    strategy: FriendMatchStrategyEnum = Field(description="匹配策略")
+    target: FriendRecommendationTargetEnum = Field(description="推荐目标")
+    action: Literal[
+        "view",
+        "dismiss",
+        "friend_request",
+        "accountability_invite",
+    ] = Field(description="反馈动作")
+    source: str = Field(default="friends_discover", max_length=64, description="来源位置")
+    score: float | None = Field(default=None, ge=0, le=1, description="展示时的匹配分")
+
+
+class RecommendationFeedbackPrompt(BaseModel):
+    """待处理的推荐反馈提示"""
+
+    prompt_id: str = Field(description="提示ID")
+    item_type: RecommendationItemTypeEnum = Field(description="推荐对象类型")
+    item_id: UUID = Field(description="对象ID")
+    stage: RecommendationFeedbackStageEnum = Field(description="当前反馈阶段")
+    trigger_action: str = Field(description="触发提示的行为")
+    title: str = Field(description="提示标题")
+    subtitle: str | None = Field(default=None, description="提示副标题")
+    due_at: datetime = Field(description="建议反馈时间")
+    strategy: str | None = Field(default=None, description="对应的推荐策略")
+    target: str | None = Field(default=None, description="对应推荐目标")
+    user: UserBrief | None = Field(default=None, description="好友候选快照")
+    group: GroupListItem | None = Field(default=None, description="社群候选快照")
+    reason_tags: list[str] = Field(default_factory=list, description="展示过的理由标签")
+
+
+class RecommendationFeedbackInsight(BaseModel):
+    """推荐反馈洞察摘要"""
+
+    item_type: RecommendationItemTypeEnum = Field(description="推荐对象类型")
+    recent_feedback_count: int = Field(default=0, description="近期反馈数")
+    average_scores: dict[str, float] = Field(default_factory=dict, description="各维度平均分")
+    top_positive_signals: list[str] = Field(default_factory=list, description="高频正向信号")
+    top_negative_signals: list[str] = Field(default_factory=list, description="高频负向信号")
+    user_tuning: dict[str, Any] = Field(default_factory=dict, description="用户个性化调优参数")
+    global_adjustments: dict[str, float] = Field(default_factory=dict, description="全局算法调优参数")
 
 
 # ============ 群组 Schemas ============
@@ -180,12 +303,17 @@ class GroupListItem(BaseModel):
     """群组列表项（简要信息）"""
     id: UUID = Field(description="群组ID")
     name: str = Field(description="群组名称")
+    description: str | None = Field(default=None, description="群组简介")
     type: GroupTypeEnum = Field(description="群组类型")
     member_count: int = Field(description="成员数量")
     total_flame_power: int = Field(description="火苗总能量")
+    today_checkin_count: int = Field(default=0, description="今日打卡数量")
     deadline: datetime | None = Field(description="冲刺截止日期")
     days_remaining: int | None = Field(description="剩余天数")
     focus_tags: list[str] = Field(description="关注标签")
+    is_public: bool = Field(default=True, description="是否公开")
+    join_requires_approval: bool = Field(default=False, description="加入是否需要审批")
+    activity_score: float | None = Field(default=None, description="目录排序用活跃度得分")
     my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
     class Config:
@@ -193,6 +321,14 @@ class GroupListItem(BaseModel):
 
 
 # ============ 群组推荐 ============
+
+
+class GroupDirectorySortEnum(str, Enum):
+    """群组目录排序方式"""
+
+    HOT = "hot"
+    LATEST = "latest"
+    RANDOM = "random"
 
 class GroupRecommendationReason(BaseModel):
     """推荐理由"""
@@ -210,12 +346,27 @@ class GroupRecommendationItem(BaseModel):
     requires_approval: bool = Field(default=False, description="是否需要审批")
 
 
-class GroupRecommendationFeedbackRequest(BaseModel):
+class GroupRecommendationFeedbackRequest(RecommendationFeedbackMixin):
     """群组推荐反馈"""
     group_id: UUID = Field(description="群组ID")
     action: Literal["view", "dismiss", "join"] = Field(description="反馈动作")
     source: Literal["list", "discover"] = Field(description="来源位置")
     reason_types: list[str] | None = Field(default=None, description="展示的理由类型")
+
+
+class GroupDirectoryResponse(BaseModel):
+    """公开群组目录聚合响应"""
+
+    sort_by: GroupDirectorySortEnum = Field(description="当前排序方式")
+    keyword: str | None = Field(default=None, description="搜索关键词")
+    applied_tags: list[str] = Field(default_factory=list, description="当前筛选标签")
+    available_tags: list[str] = Field(default_factory=list, description="可浏览标签")
+    total_count: int = Field(default=0, description="符合筛选条件的群组总数")
+    recommendations: list[GroupRecommendationItem] = Field(
+        default_factory=list,
+        description="个性化推荐",
+    )
+    groups: list[GroupListItem] = Field(default_factory=list, description="公开群组目录结果")
 
 
 # ============ 群成员 Schemas ============
@@ -434,6 +585,8 @@ class SharedResourceTypeEnum(str, Enum):
     PLAN = "plan"
     TASK = "task"
     KNOWLEDGE_NODE = "knowledge_node"
+    SEED_LIBRARY = "seed_library"
+    SEED_ITEM = "seed_item"
     COGNITIVE_FRAGMENT = "cognitive_fragment"
     CURIOSITY_CAPSULE = "curiosity_capsule"
     COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
@@ -461,6 +614,8 @@ class SharedResourceInfo(BaseSchema):
     plan_id: UUID | None = None
     task_id: UUID | None = None
     knowledge_node_id: UUID | None = None
+    seed_library_id: UUID | None = None
+    seed_item_id: UUID | None = None
     cognitive_fragment_id: UUID | None = None
     curiosity_capsule_id: UUID | None = None
     behavior_pattern_id: UUID | None = None
@@ -477,6 +632,7 @@ class SharedResourceInfo(BaseSchema):
     # Ideally we'd have a 'resource_title' or 'resource_summary' field computed
     resource_title: str | None = None
     resource_summary: str | None = None
+    entity_card: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -627,12 +783,15 @@ class MessageFavoriteCreate(BaseModel):
 
 class MessageFavoriteInfo(BaseSchema):
     """消息收藏信息"""
+    user_id: UUID = Field(description="收藏用户ID")
     group_message_id: UUID | None = Field(default=None)
     private_message_id: UUID | None = Field(default=None)
     note: str | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     # 可选：嵌入消息摘要
     message_preview: str | None = Field(default=None, description="消息预览")
+    group_message: MessageInfo | None = Field(default=None, description="群消息详情")
+    private_message: PrivateMessageInfo | None = Field(default=None, description="私聊消息详情")
 
 
 # ============ 转发相关 Schemas ============
@@ -740,3 +899,44 @@ class MessageSearchResult(BaseModel):
     page: int = Field(description="当前页码")
     page_size: int = Field(description="每页数量")
     has_more: bool = Field(description="是否有更多")
+
+
+# ============ 拉黑相关 Schemas ============
+
+class BlockUserRequest(BaseModel):
+    """拉黑用户请求"""
+    target_user_id: UUID = Field(description="要拉黑的用户ID")
+    reason: str | None = Field(default=None, max_length=500, description="拉黑原因")
+
+
+class BlockUserInfo(BaseSchema):
+    """被拉黑用户信息"""
+    blocked_user: UserBrief = Field(description="被拉黑的用户")
+    reason: str | None = Field(default=None, description="拉黑原因")
+
+
+class SearchVisibilityEnum(str, Enum):
+    """搜索可见性设置"""
+    EVERYONE = "everyone"
+    FRIENDS = "friends"
+    NOBODY = "nobody"
+
+
+class UserPrivacySettings(BaseModel):
+    """用户隐私设置"""
+    searchable_by: SearchVisibilityEnum = Field(description="谁可以搜索到我")
+
+
+# ============ 消息撤回配置 ============
+
+# 从settings导入配置
+def get_message_revoke_time_limit() -> int:
+    """获取消息撤回时间限制（秒）"""
+    from app.config import settings
+    return getattr(settings, 'MESSAGE_REVOKE_TIME_LIMIT_SECONDS', 120)
+
+
+# 保留常量作为默认值（向后兼容）
+MESSAGE_REVOKE_TIME_LIMIT_SECONDS = 120  # 2分钟内可撤回
+
+RecommendationFeedbackPrompt.model_rebuild()

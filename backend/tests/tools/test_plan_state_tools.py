@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from app.models.plan import Plan
 from app.tools.plan_state_tools import (
     GetPlanStateTool,
     GetTaskSummaryTool,
@@ -43,15 +44,49 @@ class TestGetPlanStateTool:
     """Tests for GetPlanStateTool"""
 
     @pytest.mark.asyncio
-    async def test_returns_error_on_invalid_uuid(self, mock_db, user_id):
-        """Should return error for invalid plan_id format"""
+    async def test_falls_back_to_available_plan_for_non_uuid_ref(self, mock_db, user_id, plan_id):
+        """Should gracefully resolve natural-language plan refs instead of hard failing on UUID parsing."""
         tool = GetPlanStateTool()
-        params = GetPlanStateParams(plan_id="not-a-uuid")
+        params = GetPlanStateParams(plan_id="Python 学习计划")
 
-        result = await tool.execute(params, str(user_id), mock_db)
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "计算机科学基础巩固"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
 
-        assert result.success is False
-        assert "无效的ID格式" in result.error_message
+        mock_state = MagicMock()
+        mock_state.plan_id = plan_id
+        mock_state.status = PlanStateStatus.ACTIVE.value
+        mock_state.version = 1
+        mock_state.facts = {}
+        mock_state.milestones = []
+        mock_state.task_index = {"total": 3, "completed": 1}
+        mock_state.task_summaries = []
+        mock_state.feedback_log = []
+        mock_state.constraints = {}
+
+        mock_plan_result = MagicMock()
+        mock_plan_result.scalars.return_value.all.return_value = [mock_plan]
+
+        with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
+            "app.tools.plan_state_tools.PlanStateService"
+        ) as mock_service_class:
+            mock_service = mock_service_class.return_value
+            mock_service.get_plan_state = AsyncMock(return_value=mock_state)
+
+            result = await tool.execute(params, str(user_id), mock_db)
+
+        assert result.success is True
+        assert result.data["plan_id"] == str(plan_id)
+        assert result.data["plan_name"] == "计算机科学基础巩固"
+        assert result.data["resolved_via"] == "primary_fallback"
 
     @pytest.mark.asyncio
     async def test_returns_error_when_state_not_found(self, mock_db, user_id, plan_id):
@@ -59,7 +94,19 @@ class TestGetPlanStateTool:
         tool = GetPlanStateTool()
         params = GetPlanStateParams(plan_id=str(plan_id))
 
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "测试计划"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
+
         with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
             "app.tools.plan_state_tools.PlanStateService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value
@@ -76,7 +123,15 @@ class TestGetPlanStateTool:
         tool = GetPlanStateTool()
         params = GetPlanStateParams(plan_id=str(plan_id))
 
-        now = datetime.now(timezone.utc)
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "测试计划"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
+
         mock_state = MagicMock()
         mock_state.plan_id = plan_id
         mock_state.status = PlanStateStatus.ACTIVE.value
@@ -87,6 +142,9 @@ class TestGetPlanStateTool:
         mock_state.constraints = {}
 
         with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
             "app.tools.plan_state_tools.PlanStateService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value
@@ -105,15 +163,38 @@ class TestGetTaskSummaryTool:
     """Tests for GetTaskSummaryTool"""
 
     @pytest.mark.asyncio
-    async def test_returns_error_on_invalid_uuid(self, mock_db, user_id):
-        """Should return error for invalid plan_id format"""
+    async def test_resolves_plan_by_name_or_fallback(self, mock_db, user_id, plan_id):
+        """Should resolve non-UUID plan references for task summary queries."""
         tool = GetTaskSummaryTool()
-        params = GetTaskSummaryParams(plan_id="not-a-uuid")
+        params = GetTaskSummaryParams(plan_id="Python")
 
-        result = await tool.execute(params, str(user_id), mock_db)
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "计算机科学基础巩固"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
 
-        assert result.success is False
-        assert "无效的ID格式" in result.error_message
+        mock_summaries = [
+            {"task_id": str(uuid4()), "title": "Task 1", "status": "PENDING"},
+        ]
+
+        with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
+            "app.tools.plan_state_tools.TaskStateSyncService"
+        ) as mock_service_class:
+            mock_service = mock_service_class.return_value
+            mock_service.get_task_summaries = AsyncMock(return_value=mock_summaries)
+
+            result = await tool.execute(params, str(user_id), mock_db)
+
+        assert result.success is True
+        assert result.data["plan_name"] == "计算机科学基础巩固"
+        assert result.data["resolved_via"] == "primary_fallback"
 
     @pytest.mark.asyncio
     async def test_returns_task_summaries(self, mock_db, user_id, plan_id):
@@ -121,12 +202,24 @@ class TestGetTaskSummaryTool:
         tool = GetTaskSummaryTool()
         params = GetTaskSummaryParams(plan_id=str(plan_id), limit=10)
 
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "测试计划"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
+
         mock_summaries = [
             {"task_id": str(uuid4()), "title": "Task 1", "status": "PENDING"},
             {"task_id": str(uuid4()), "title": "Task 2", "status": "COMPLETED"},
         ]
 
         with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
             "app.tools.plan_state_tools.TaskStateSyncService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value

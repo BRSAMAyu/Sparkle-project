@@ -6,12 +6,17 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
 import 'package:sparkle/features/community/presentation/widgets/thread_sheet.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -27,44 +32,257 @@ class GroupChatScreen extends ConsumerStatefulWidget {
 class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo? _quotedMessage;
   bool _agentMode = false;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      unawaited(
+        ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages(),
+      );
+    }
+  }
+
+  void _handleFavorite(MessageInfo msg) {
+    unawaited(
+      ref.read(communityRepositoryProvider).addFavorite(msg.id, null).then((_) {
+        if (!mounted) return;
+        AppFeedback.success(context, '已收藏');
+      }).catchError((Object e) {
+        if (!mounted) return;
+        AppFeedback.error(context, '收藏失败: $e');
+      }),
+    );
+  }
+
+  void _handleForward(MessageInfo msg) {
+    unawaited(_showForwardDialog(msg));
+  }
+
+  Future<void> _showForwardDialog(MessageInfo msg) async {
+    final groups = await ref.read(communityRepositoryProvider).getMyGroups();
+    if (!mounted) return;
+
+    await showSensoryModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (ctx) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '转发到群组',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
+                ),
+                const SizedBox(height: DS.spacing16),
+                SizedBox(
+                  height: 300,
+                  child: ListView.builder(
+                    itemCount: groups.length,
+                    itemBuilder: (ctx, i) {
+                      final g = groups[i];
+                      return ListTile(
+                        title: Text(g.name),
+                        subtitle: Text('${g.memberCount} 成员'),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          try {
+                            await ref
+                                .read(communityRepositoryProvider)
+                                .forwardMessage(
+                                  msg.id,
+                                  'group',
+                                  targetGroupId: g.id,
+                                );
+                            if (!mounted) return;
+                            AppFeedback.success(context, '已转发到 ${g.name}');
+                          } catch (e) {
+                            if (!mounted) return;
+                            AppFeedback.error(context, '转发失败: $e');
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleReport(MessageInfo msg) {
+    unawaited(_showReportSheet(msg));
+  }
+
+  Future<void> _showReportSheet(MessageInfo msg) async {
+    var selectedReason = ReportReason.spam;
+    final descController = TextEditingController();
+
+    await showSensoryModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: DS.spacing16,
+                right: DS.spacing16,
+                top: DS.spacing16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + DS.spacing16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '举报消息',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  RadioGroup<ReportReason>(
+                    groupValue: selectedReason,
+                    onChanged: (value) => setState(
+                      () => selectedReason = value ?? ReportReason.spam,
+                    ),
+                    child: Column(
+                      children: [
+                        ...[
+                          (ReportReason.spam, '垃圾信息'),
+                          (ReportReason.harassment, '骚扰'),
+                          (ReportReason.violence, '暴力'),
+                          (ReportReason.hateSpeech, '仇恨言论'),
+                          (ReportReason.misinformation, '虚假信息'),
+                          (ReportReason.other, '其他'),
+                        ].map(
+                          (entry) => RadioListTile<ReportReason>(
+                            title: Text(entry.$2),
+                            value: entry.$1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      hintText: '补充说明（可选）',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SparkleButton.primary(
+                      label: '提交举报',
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          await ref
+                              .read(communityRepositoryProvider)
+                              .reportMessage(
+                                msg.id,
+                                selectedReason,
+                                description: descController.text.trim().isEmpty
+                                    ? null
+                                    : descController.text.trim(),
+                              );
+                          if (!mounted) return;
+                          AppFeedback.success(context, '举报已提交，感谢反馈');
+                        } catch (e) {
+                          if (!mounted) return;
+                          AppFeedback.error(context, '举报失败: $e');
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    descController.dispose();
+  }
 
   void _showCheckinDialog() {
     final durationController = TextEditingController(text: '60');
     final messageController = TextEditingController();
 
     unawaited(
-      showDialog<void>(
+      showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Daily Check-in'),
+          title: Text(context.l10n.communityCheckInTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: durationController,
-                decoration: const InputDecoration(
-                  labelText: 'Duration (minutes)',
-                  suffixText: 'min',
+                decoration: InputDecoration(
+                  labelText: context.l10n.communityCheckInDurationLabel,
+                  suffixText: context.l10n.commonMinutesShort,
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: DS.lg),
               TextField(
                 controller: messageController,
-                decoration: const InputDecoration(
-                  labelText: 'Message (optional)',
-                  hintText: 'What did you learn today?',
+                decoration: InputDecoration(
+                  labelText: context.l10n.communityCheckInMessageLabel,
+                  hintText: context.l10n.communityCheckInMessageHint,
                 ),
               ),
             ],
           ),
           actions: [
             SparkleButton.ghost(
-              label: 'Cancel',
+              label: context.l10n.cancel,
               onPressed: () => Navigator.pop(context),
             ),
             SparkleButton.primary(
-              label: 'Check-in',
+              label: context.l10n.communityCheckInAction,
               onPressed: () async {
                 final duration = int.tryParse(durationController.text) ?? 0;
                 final message = messageController.text;
@@ -78,10 +296,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   // Refresh chat to see the checkin message
                   ref.invalidate(groupChatProvider(widget.groupId));
 
-                  AppFeedback.success(context, 'Checked in successfully!');
+                  AppFeedback.success(
+                    context,
+                    context.l10n.communityCheckInSuccess,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, 'Failed: $e');
+                  AppFeedback.error(
+                    context,
+                    context.l10n.communityCheckInFailed(e.toString()),
+                  );
                 }
               },
             ),
@@ -113,18 +337,22 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(group.name,
-                    style: const TextStyle(fontSize: DS.fontSizeBase),),
                 Text(
-                  '${group.memberCount} members',
+                  group.name,
+                  style: const TextStyle(fontSize: DS.fontSizeBase),
+                ),
+                Text(
+                  context.l10n.communityGroupMembersCount(group.memberCount),
                   style: TextStyle(
-                      fontSize: DS.fontSizeXs, color: DS.brandPrimary54,),
+                    fontSize: DS.fontSizeXs,
+                    color: DS.brandPrimary54,
+                  ),
                 ),
               ],
             ),
           ),
-          loading: () => const Text('Chat'),
-          error: (_, __) => const Text('Chat'),
+          loading: () => Text(context.l10n.communityChatTitle),
+          error: (_, __) => Text(context.l10n.communityChatTitle),
         ),
         actions: [
           SparkleIconButton(
@@ -137,13 +365,23 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
               );
             },
-            semanticLabel: '群文件',
+            semanticLabel: context.l10n.communityGroupFiles,
+            variant: ButtonVariant.ghost,
+          ),
+          SparkleIconButton(
+            icon: const Icon(Icons.assignment_outlined),
+            onPressed: () => unawaited(
+              context.push(
+                CommunityRoutes.groupTasks.replaceFirst(':id', widget.groupId),
+              ),
+            ),
+            semanticLabel: '群组任务',
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
             icon: Icon(Icons.local_fire_department, color: DS.brandPrimary),
             onPressed: _showCheckinDialog,
-            semanticLabel: 'Check-in',
+            semanticLabel: context.l10n.communityCheckInAction,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
@@ -176,62 +414,82 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       agentState.streamingContent.isEmpty;
 
                   if (mergedMessages.isEmpty) {
-                    return const Center(
-                        child: Text('No messages yet. Say hi!'),);
+                    return Center(
+                      child: Text(context.l10n.communityChatEmpty),
+                    );
                   }
-                  return ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    itemCount:
-                        mergedMessages.length + (showAgentStatus ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (showAgentStatus && index == 0) {
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: DS.spacing16),
-                          child: AiStatusIndicator(
-                            status: 'THINKING',
-                            details: 'AI助手正在整理思路...',
-                          ),
-                        );
-                      }
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      reverse: true,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      itemCount:
+                          mergedMessages.length + (showAgentStatus ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (showAgentStatus && index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: DS.spacing16),
+                            child: AiStatusIndicator(
+                              status: 'THINKING',
+                              details: context.l10n.communityAgentThinking,
+                              enableStatusTrack: false,
+                            ),
+                          );
+                        }
 
-                      final messageIndex = showAgentStatus ? index - 1 : index;
-                      final message = mergedMessages[messageIndex];
-                      return GroupChatBubble(
-                        message: message,
-                        groupId: widget.groupId,
-                        onQuote: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg) => setState(() {
-                                  _quotedMessage = msg;
-                                  ref
-                                      .read(
-                                        groupChatProvider(widget.groupId)
-                                            .notifier,
-                                      )
-                                      .setQuote(msg);
-                                }),
-                        onRevoke: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .revokeMessage(msg.id),
-                        onEdit: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg, content) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .editMessage(msg.id, content),
-                        onReaction: isCommunityAgentMessage(message)
-                            ? null
-                            : (msg, emoji) => ref
-                                .read(
-                                    groupChatProvider(widget.groupId).notifier,)
-                                .toggleReaction(msg.id, emoji),
-                        onThread: _openThread,
-                      );
-                    },
+                        final messageIndex =
+                            showAgentStatus ? index - 1 : index;
+                        final message = mergedMessages[messageIndex];
+                        return GroupChatBubble(
+                          message: message,
+                          groupId: widget.groupId,
+                          onQuote: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg) => setState(() {
+                                    _quotedMessage = msg;
+                                    ref
+                                        .read(
+                                          groupChatProvider(widget.groupId)
+                                              .notifier,
+                                        )
+                                        .setQuote(msg);
+                                  }),
+                          onRevoke: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .revokeMessage(msg.id),
+                          onEdit: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg, content) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .editMessage(msg.id, content),
+                          onReaction: isCommunityAgentMessage(message)
+                              ? null
+                              : (msg, emoji) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .toggleReaction(msg.id, emoji),
+                          onThread: _openThread,
+                          onFavorite: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleFavorite,
+                          onForward: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleForward,
+                          onReport: isCommunityAgentMessage(message)
+                              ? null
+                              : _handleReport,
+                        );
+                      },
+                    ),
                   );
                 },
                 loading: () => const Center(child: LoadingIndicator()),
@@ -263,9 +521,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               groupInfo: groupInfoState.valueOrNull,
               messages: chatState.valueOrNull ?? const [],
             ),
-            ChatInput(
+            CommunityChatInput(
               enabled: !_agentMode || !agentState.isSending,
-              hintText: _agentMode ? '向AI提问（仅你可见）' : '输入消息...',
+              hintText: _agentMode
+                  ? context.l10n.communityAgentPromptHint
+                  : context.l10n.communityMessageInputHint,
               fileUploadGroupId: widget.groupId,
               onFileUploaded: (file) async {
                 try {
@@ -275,17 +535,26 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     file.id,
                   );
                   if (!context.mounted) return;
-                  AppFeedback.success(context, '文件已分享至群聊');
+                  AppFeedback.success(
+                    context,
+                    context.l10n.communityFileSharedSuccess,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, '分享失败: $e');
+                  AppFeedback.error(
+                    context,
+                    context.l10n.communityFileSharedFailed(e.toString()),
+                  );
                 }
               },
               quotedMessage: !_agentMode && _quotedMessage != null
                   ? PrivateMessageInfo(
                       id: _quotedMessage!.id,
                       sender: _quotedMessage!.sender ??
-                          UserBrief(id: '', username: 'Unknown'),
+                          UserBrief(
+                            id: '',
+                            username: context.l10n.commonUnknown,
+                          ),
                       receiver: UserBrief(id: '', username: ''),
                       messageType: _quotedMessage!.messageType,
                       content: _quotedMessage!.content,
@@ -323,6 +592,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       ),
                 );
               },
+              onQuickShare: _handleQuickShare,
             ),
           ],
         ),
@@ -353,7 +623,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo _buildStreamingAgentMessage(String content) => MessageInfo(
         id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
         messageType: MessageType.text,
-        sender: buildCommunityAgentUser(),
+        sender: buildCommunityAgentUser(
+            localizedName: context.l10n.communityAgentName,),
         content: content,
         contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
         createdAt: DateTime.now(),
@@ -365,6 +636,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     required AgentChatState<MessageInfo> agentState,
     required List<MessageInfo> messages,
     GroupInfo? groupInfo,
+    String preset = 'custom',
+    String reasoningMode = 'fast',
   }) {
     if (agentState.isSending) return;
     unawaited(
@@ -374,8 +647,41 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             prompt: prompt,
             groupName: groupInfo?.name,
             recentMessages: messages,
+            preset: preset,
+            reasoningMode: reasoningMode,
           ),
     );
+  }
+
+  Future<void> _handleQuickShare(UniversalSharePayload payload) async {
+    try {
+      if (payload.contentType == ShareableContentType.achievement) {
+        await ref.read(communityRepositoryProvider).sendMessage(
+              widget.groupId,
+              type: MessageType.achievement,
+              content: payload.shareMessage,
+              contentData: {
+                'achievement_id': payload.resourceId,
+                'name': payload.title,
+                'description': payload.subtitle,
+                ...?payload.metadata,
+              },
+            );
+      } else {
+        await ref.read(communityShareRepositoryProvider).shareResource(
+              resourceType: payload.contentType.stringValue,
+              resourceId: payload.resourceId,
+              targetGroupId: widget.groupId,
+              comment: payload.shareMessage,
+            );
+      }
+      if (!mounted) return;
+      ref.invalidate(groupChatProvider(widget.groupId));
+      AppFeedback.success(context, context.l10n.shareResourceSuccess);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, context.l10n.shareResourceFailed(e));
+    }
   }
 
   Widget _buildAgentToolbar(
@@ -386,7 +692,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing8, DS.spacing16, 0,),
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing16,
+          0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -394,7 +704,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               children: [
                 FilterChip(
                   selected: _agentMode,
-                  label: Text(_agentMode ? 'AI协作已开启' : 'AI协作'),
+                  label: Text(
+                    _agentMode
+                        ? context.l10n.communityAgentCollabOn
+                        : context.l10n.communityAgentCollabOff,
+                  ),
                   avatar: Icon(
                     Icons.auto_awesome,
                     size: DS.iconSizeXs,
@@ -415,16 +729,20 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 const SizedBox(width: DS.spacing8),
                 if (_agentMode)
                   Text(
-                    '仅你可见',
+                    context.l10n.communityAgentOnlyYou,
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.neutral500,),
+                      fontSize: DS.fontSizeSm,
+                      color: DS.neutral500,
+                    ),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
                   Text(
-                    'AI处理中...',
+                    context.l10n.communityAgentProcessing,
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.brandPrimary70,),
+                      fontSize: DS.fontSizeSm,
+                      color: DS.brandPrimary70,
+                    ),
                   ),
               ],
             ),
@@ -436,30 +754,43 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   runSpacing: DS.spacing4,
                   children: [
                     _AgentQuickChip(
-                      label: '总结讨论',
+                      label: context.l10n.communityAgentQuickSummary,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请用3条要点总结当前讨论，并给出下一步建议。',
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'summary',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'summary',
                       ),
                     ),
                     _AgentQuickChip(
-                      label: '生成提醒',
+                      label: context.l10n.communityAgentQuickReminder,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请给群里写一句温和的学习提醒，保持积极友好的语气。',
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'reminder',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'reminder',
                       ),
                     ),
                     _AgentQuickChip(
-                      label: '共识整理',
+                      label: context.l10n.communityAgentQuickConsensus,
                       onTap: () => _sendAgentPrompt(
-                        prompt: '请找出群里目前的共识和待确认的问题，列表化输出。',
+                        prompt: buildGroupAssistantPresetPrompt(
+                          'consensus',
+                          groupName: groupInfo?.name,
+                        ),
                         agentState: agentState,
                         groupInfo: groupInfo,
                         messages: messages,
+                        preset: 'consensus',
+                        reasoningMode: 'balanced',
                       ),
                     ),
                   ],
@@ -471,7 +802,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   void _openThread(MessageInfo message) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -488,7 +819,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     var isLoading = false;
 
     try {
-      await showModalBottomSheet<void>(
+      await showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -523,15 +854,20 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: '搜索群消息',
-                        prefixIcon: Icon(Icons.search),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.communitySearchGroupMessages,
+                        prefixIcon: const Icon(Icons.search),
                       ),
                       onSubmitted: (value) async {
                         if (value.trim().isEmpty) return;
                         setState(() => isLoading = true);
-                        results = await notifier.searchMessages(value.trim());
-                        setState(() => isLoading = false);
+                        try {
+                          results = await notifier.searchMessages(value.trim());
+                        } catch (_) {
+                          results = [];
+                        } finally {
+                          setState(() => isLoading = false);
+                        }
                       },
                     ),
                     const SizedBox(height: DS.spacing16),
@@ -544,9 +880,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           itemBuilder: (context, index) {
                             final msg = results[index];
                             return ListTile(
-                              title: Text(msg.content ?? '消息'),
+                              title: Text(
+                                msg.content ??
+                                    context.l10n.communityMessageFallback,
+                              ),
                               subtitle: Text(
-                                '${msg.sender?.displayName ?? '成员'} • ${msg.createdAt}',
+                                '${msg.sender?.displayName ?? context.l10n.communityMemberFallback} • ${msg.createdAt}',
                               ),
                               onTap: () => Navigator.pop(context),
                             );
@@ -574,8 +913,10 @@ class _AgentQuickChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ActionChip(
-        label: Text(label,
-            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),),
+        label: Text(
+          label,
+          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),
+        ),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
       );

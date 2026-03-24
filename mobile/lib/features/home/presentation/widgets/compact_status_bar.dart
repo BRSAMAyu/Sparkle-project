@@ -19,6 +19,7 @@ class CompactStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nickname = user?.nickname ?? user?.username ?? 'Sparkle';
+    final weatherSummary = dashboardState.weather.condition;
 
     return ContentConstraint(
       child: Padding(
@@ -26,7 +27,7 @@ class CompactStatusBar extends StatelessWidget {
           DS.spacing16,
           DS.spacing8,
           DS.spacing16,
-          DS.spacing8,
+          DS.spacing10,
         ),
         child: DashboardEntrance(
           slideOffset: const Offset(0, -0.05),
@@ -68,16 +69,33 @@ class CompactStatusBar extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                nickname,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.sparkleTypography.labelLarge
-                                    .copyWith(
-                                  color: DS.textPrimary,
-                                  fontWeight: DS.fontWeightBold,
-                                ),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    nickname,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.sparkleTypography.labelLarge
+                                        .copyWith(
+                                      color: DS.textPrimary,
+                                      fontWeight: DS.fontWeightBold,
+                                    ),
+                                  ),
+                                  Text(
+                                    showWeatherLabel
+                                        ? '今天适合保持节奏，$weatherSummary'
+                                        : '今天适合保持节奏',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.sparkleTypography.labelSmall
+                                        .copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (showUserBadge) ...[
@@ -172,11 +190,12 @@ class _MiniBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: DS.surfacePanel,
           borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: DS.borderSubtle),
         ),
         child: Text(
           label,
           style: context.sparkleTypography.labelSmall.copyWith(
-            color: DS.warning,
+            color: DS.textSecondary,
             fontWeight: DS.fontWeightBold,
           ),
         ),

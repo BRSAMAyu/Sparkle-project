@@ -27,15 +27,15 @@ import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/calendar/presentation/screens/calendar_stats_screen.dart';
 import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
-import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
-import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
+import 'package:sparkle/features/cognitive/presentation/screens/curiosity_capsule_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
-import 'package:sparkle/features/cognitive/presentation/screens/curiosity_capsule_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
@@ -48,9 +48,9 @@ import 'package:sparkle/features/home/presentation/screens/notification_list_scr
 import 'package:sparkle/features/insights/presentation/screens/learning_forecast_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
-import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_list_screen.dart';
@@ -63,8 +63,8 @@ import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.d
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -116,7 +116,7 @@ void main() {
     testWidgets('redirects unauthenticated users to login', (tester) async {
       final harness = await _pumpRouter(
         tester,
-        authState: AuthState(isAuthenticated: false),
+        authState: AuthState(),
         onboardingCompleted: true,
       );
 
@@ -140,8 +140,10 @@ void main() {
 
       await _pumpFrames(tester);
 
-      expect(harness.router.routeInformationProvider.value.uri.path,
-          '/onboarding/persona',);
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/onboarding/persona',
+      );
       expect(find.byType(PersonaOnboardingScreen), findsOneWidget);
     });
 
@@ -221,9 +223,13 @@ void main() {
       await expectRoute('/tasks', TaskListScreen);
       await expectRoute('/notifications', NotificationListScreen);
       await expectRoute(
-          '/calendar?date=2026-03-06T00:00:00.000', CalendarStatsScreen,);
+        '/calendar?date=2026-03-06T00:00:00.000',
+        CalendarStatsScreen,
+      );
       await expectRoute(
-          '/calendar-stats?date=2026-03-07T00:00:00.000', CalendarStatsScreen,);
+        '/calendar-stats?date=2026-03-07T00:00:00.000',
+        CalendarStatsScreen,
+      );
       await expectRoute(
         '/calendar/day?date=2026-03-08T00:00:00.000',
         DailyDetailScreen,
@@ -232,7 +238,12 @@ void main() {
       await expectRoute('/growth', GrowthScreen);
       await expectRoute('/community/users/search', UserSearchScreen);
       await expectRoute('/community/groups/search', GroupSearchScreen);
-      await expectRoute('/community/friends/discover', FriendsScreen);
+      await expectRoute('/community/friends', FriendsScreen);
+      await expectRoute(
+        '/community/friends/requests',
+        FriendRequestsScreen,
+      );
+      await expectRoute('/community/friends/discover', FriendsDiscoverScreen);
       await expectRoute('/community/groups/create', CreateGroupScreen);
       await expectRoute('/community/posts/create', CreatePostScreen);
       await expectRoute(
@@ -331,7 +342,7 @@ Future<_RouterHarness> _pumpRouter(
     overrides: [
       authProvider.overrideWith((ref) => _FakeAuthNotifier(authState)),
       onboardingCompletedProvider.overrideWith(
-        (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted),
+        (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),
       ),
       enhancedGalaxyRepositoryProvider.overrideWithValue(
         _TestGalaxyRepository(),
@@ -387,12 +398,13 @@ UserModel _buildUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1),
-      updatedAt: DateTime(2026, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier(AuthState authState) : super(_UnusedAuthRepository()) {
+  _FakeAuthNotifier(AuthState authState)
+      : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = authState;
   }
 
@@ -400,9 +412,19 @@ class _FakeAuthNotifier extends AuthNotifier {
   Future<void> checkAuthStatus() async {}
 }
 
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
-  _FakeOnboardingCompletedNotifier(bool completed) : super() {
-    state = completed;
+  _FakeOnboardingCompletedNotifier(this._completed, Ref ref) : super(ref);
+
+  final bool _completed;
+
+  @override
+  Future<void> syncForUser(UserModel? user) async {
+    state = _completed;
   }
 
   @override

@@ -2,15 +2,19 @@
 生词本与词典 API
 Vocabulary & Dictionary API
 """
+from __future__ import annotations
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config.settings import settings
+from app.services.dictionary_package_service import dictionary_package_service
 from app.db.session import get_db
 from app.models.user import User
 from app.services.mdx_dictionary_service import create_mdx_service
@@ -23,11 +27,48 @@ router = APIRouter()
 _mdx_service = None
 
 
+def _external_base_url(request: Request) -> str:
+    """Build a client-reachable base URL behind the gateway/proxy."""
+    if settings.DICTIONARY_PACKAGE_BASE_URL:
+        return settings.DICTIONARY_PACKAGE_BASE_URL.rstrip("/")
+
+    gateway_base = getattr(settings, "GATEWAY_INTERNAL_URL", "") or ""
+    if gateway_base.startswith(("http://", "https://")):
+        return gateway_base.rstrip("/")
+
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    forwarded_host = request.headers.get("x-forwarded-host")
+    forwarded_prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+
+    scheme = forwarded_proto or request.url.scheme
+    host = forwarded_host or request.headers.get("host") or request.url.netloc
+
+    if host:
+        return f"{scheme}://{host}{forwarded_prefix}".rstrip("/")
+
+    return str(request.base_url).rstrip("/")
+
+
 def get_mdx_service():
     """获取或初始化 MDX 词典服务"""
     global _mdx_service
     if _mdx_service is None:
+        if not settings.MDX_DICTIONARY_ENABLED:
+            return None
         mdx_path = getattr(settings, 'MDX_DICTIONARY_PATH', None)
+        if not mdx_path:
+            candidates: list[Path] = []
+            package_dir = getattr(settings, "DICTIONARY_PACKAGE_DIR", None)
+            if package_dir:
+                candidates.append(Path(package_dir).resolve().parent / "oaldpe.mdx")
+            current_path = Path(__file__).resolve()
+            for parent_index in (3, 4):
+                if len(current_path.parents) > parent_index:
+                    candidates.append(current_path.parents[parent_index] / "data" / "dictionaries" / "oaldpe.mdx")
+            for candidate in candidates:
+                if candidate.exists():
+                    mdx_path = str(candidate)
+                    break
         mdd_path = getattr(settings, 'MDD_RESOURCES_PATH', None)
         if mdx_path:
             try:
@@ -87,8 +128,7 @@ class WordBookResponse(BaseModel):
     source_translation_id: str | None = None
     context_sentence: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VocabularyStats(BaseModel):
@@ -97,6 +137,22 @@ class VocabularyStats(BaseModel):
     due_for_review: int
     accuracy_rate: float
     by_importance: dict[str, int]
+
+
+class DictionaryPackageInfo(BaseModel):
+    id: str
+    name: str
+    version: str
+    description: str
+    package_scope: str
+    source: str
+    format: str
+    entry_count: int
+    size_bytes: int | None = None
+    sha256: str | None = None
+    generated_at: str | None = None
+    download_available: bool
+    download_url: str
 
 
 # ============ Endpoints ============
@@ -109,10 +165,19 @@ async def lookup_word(
     """
     查询单词释义
 
-    首先查询本地数据库，如果未找到则回退到 MDX 词典（如果配置）。
+    优先查询 Oxford MDX 词典；若未命中，再查本地数据库，最后回退到 LLM 合成释义。
     """
-    # 1. 先查本地数据库
-    entry = await vocabulary_service.lookup(db, word)
+    normalized_word = word.strip().lower()
+
+    # 1. 优先查 MDX 词典（Oxford 数据）
+    mdx = get_mdx_service()
+    if mdx:
+        mdx_result = mdx.lookup(normalized_word)
+        if mdx_result:
+            return mdx_result
+
+    # 2. 再查数据库镜像/导入词典
+    entry = await vocabulary_service.lookup(db, normalized_word)
     if entry:
         return {
             "word": entry.word,
@@ -120,17 +185,50 @@ async def lookup_word(
             "pos": entry.pos,
             "definitions": entry.definitions,
             "examples": entry.examples,
-            "source": entry.source
+            "source": entry.source,
         }
 
-    # 2. 回退到 MDX 词典
-    mdx = get_mdx_service()
-    if mdx:
-        mdx_result = mdx.lookup(word)
-        if mdx_result:
-            return mdx_result
+    # 3. 最后回退到 LLM
+    return await vocabulary_service.synthesize_lookup(normalized_word)
 
-    return await vocabulary_service.synthesize_lookup(word)
+
+@router.get("/dictionary/packages", summary="获取离线词典包", response_model=list[DictionaryPackageInfo])
+async def list_dictionary_packages(request: Request):
+    download_path_template = request.app.url_path_for(
+        "download_dictionary_package",
+        package_id="__PACKAGE_ID__",
+    )
+    external_base = _external_base_url(request)
+    packages = []
+    for package in dictionary_package_service.list_packages():
+        download_path = str(download_path_template).replace("__PACKAGE_ID__", package["id"])
+        packages.append(
+            DictionaryPackageInfo(
+                **package,
+                download_url=f"{external_base}{download_path}",
+            )
+        )
+    return packages
+
+
+@router.get(
+    "/dictionary/packages/{package_id}/download",
+    summary="下载离线词典包",
+    name="download_dictionary_package",
+)
+async def download_dictionary_package(package_id: str):
+    try:
+        package_path = dictionary_package_service.ensure_package(package_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Dictionary package unavailable: {exc}")
+
+    return FileResponse(
+        path=package_path,
+        media_type="application/gzip",
+        filename=package_path.name,
+    )
 
 
 @router.post("/wordbook", summary="添加到生词本", response_model=WordBookResponse)

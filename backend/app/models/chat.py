@@ -2,6 +2,7 @@
 聊天消息模型
 ChatMessage Model - 用户与AI的对话记录
 """
+
 import enum
 import uuid
 from datetime import datetime
@@ -14,9 +15,10 @@ from app.models.base import GUID, BaseModel
 
 class MessageRole(str, enum.Enum):
     """消息角色枚举"""
-    USER = "user"           # 用户消息
-    ASSISTANT = "assistant" # AI助手消息
-    SYSTEM = "system"       # 系统消息
+
+    USER = "user"  # 用户消息
+    ASSISTANT = "assistant"  # AI助手消息
+    SYSTEM = "system"  # 系统消息
 
 
 class ChatMessage(BaseModel):
@@ -123,6 +125,8 @@ class TokenUsage(BaseModel):
     total_tokens = Column(Integer, nullable=False, default=0)
 
     model = Column(String(100), nullable=False, default="gpt-4")
+    model_tier = Column(String(40), nullable=True)
+    ai_reasoning_mode = Column(String(16), nullable=False, default="balanced")
     cost = Column(Float, nullable=True)  # 估算成本（美元）
 
     # 关系

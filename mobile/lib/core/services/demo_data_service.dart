@@ -23,6 +23,7 @@ class DemoDataService {
   final _uuid = const Uuid();
 
   String? _currentAvatarUrl;
+  List<PlanModel>? _demoPlansCache;
 
   // --- User Data ---
   UserModel get demoUser => UserModel(
@@ -44,6 +45,11 @@ class DemoDataService {
 
   void updateDemoAvatar(String url) {
     _currentAvatarUrl = url;
+  }
+
+  void resetDemoState() {
+    _currentAvatarUrl = null;
+    _demoPlansCache = null;
   }
 
   // --- Task Data ---
@@ -1153,57 +1159,69 @@ class DemoDataService {
     var edgeId = 0;
 
     // 数学 -> 算法（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_0', // 高等数学
-      targetId: 'node_13', // 算法设计
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.9,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_0', // 高等数学
+        targetId: 'node_13', // 算法设计
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.9,
+      ),
+    );
 
     // 概率论 -> 机器学习（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_2', // 概率论
-      targetId: 'node_21', // 机器学习
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.9,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_2', // 概率论
+        targetId: 'node_21', // 机器学习
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.9,
+      ),
+    );
 
     // 线性代数 -> 机器学习（前置知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_1', // 线性代数
-      targetId: 'node_21', // 机器学习
-      relationType: EdgeRelationType.prerequisite,
-      strength: 0.8,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_1', // 线性代数
+        targetId: 'node_21', // 机器学习
+        relationType: EdgeRelationType.prerequisite,
+        strength: 0.8,
+      ),
+    );
 
     // 心理学 -> 设计思维（相关知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${23 + 5}', // 心理学导论
-      targetId: 'node_27', // 设计思维
-      strength: 0.7,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${23 + 5}', // 心理学导论
+        targetId: 'node_27', // 设计思维
+        strength: 0.7,
+      ),
+    );
 
     // 批判性思维 -> 编程（应用）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${30 + 3}', // 批判性思维
-      targetId: 'node_9', // 程序设计
-      relationType: EdgeRelationType.application,
-      strength: 0.6,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${30 + 3}', // 批判性思维
+        targetId: 'node_9', // 程序设计
+        relationType: EdgeRelationType.application,
+        strength: 0.6,
+      ),
+    );
 
     // 经济学 -> 管理学（衍生知识）
-    edges.add(GalaxyEdgeModel(
-      id: 'edge_${edgeId++}',
-      sourceId: 'node_${23 + 3}', // 经济学
-      targetId: 'node_${23 + 4}', // 管理学
-      relationType: EdgeRelationType.derived,
-      strength: 0.8,
-    ),);
+    edges.add(
+      GalaxyEdgeModel(
+        id: 'edge_${edgeId++}',
+        sourceId: 'node_${23 + 3}', // 经济学
+        targetId: 'node_${23 + 4}', // 管理学
+        relationType: EdgeRelationType.derived,
+        strength: 0.8,
+      ),
+    );
 
     return edges;
   }
@@ -1290,8 +1308,95 @@ class DemoDataService {
   }
 
   // --- Plan Data ---
-  List<PlanModel> get demoPlans {
+  List<PlanModel> get demoPlans => _demoPlansCache ??= _buildDemoPlans();
+
+  List<PlanModel> _buildDemoPlans() {
     final now = DateTime.now();
+    final growthCoreTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_core_task_1',
+        title: '梳理计算机组成原理知识地图',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 9)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+        estimatedMinutes: 50,
+        difficulty: 3,
+        type: TaskType.learning,
+        status: TaskStatus.completed,
+        actualMinutes: 55,
+        userNote: '把 CPU、内存层次和总线的关联重新串起来了。',
+        tags: const ['Architecture', 'Knowledge Map'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_core_task_2',
+        title: '完成操作系统并发专题错题回看',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(hours: 12)),
+        estimatedMinutes: 40,
+        difficulty: 4,
+        type: TaskType.training,
+        status: TaskStatus.inProgress,
+        dueDate: now.add(const Duration(days: 2)),
+        tags: const ['OS', 'Concurrency'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_core_task_3',
+        title: '补齐网络层与传输层前置概念',
+        planId: 'plan_growth_1',
+        createdAt: now.subtract(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(hours: 6)),
+        estimatedMinutes: 35,
+        difficulty: 2,
+        type: TaskType.learning,
+        status: TaskStatus.pending,
+        dueDate: now.add(const Duration(days: 4)),
+        tags: const ['Network', 'Prerequisites'],
+      ),
+    ];
+    final archivedGrowthTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_archived_task_1',
+        title: '完成数据库索引策略练习',
+        planId: 'plan_growth_archived',
+        createdAt: now.subtract(const Duration(days: 40)),
+        updatedAt: now.subtract(const Duration(days: 20)),
+        estimatedMinutes: 35,
+        difficulty: 2,
+        type: TaskType.training,
+        status: TaskStatus.completed,
+        actualMinutes: 32,
+        tags: const ['Database', 'Index'],
+      ),
+    ];
+    final emergingGrowthTasks = [
+      _buildPlanTask(
+        id: 'plan_growth_emerging_task_1',
+        title: '建立 Python 自动化复盘脚本',
+        planId: 'plan_growth_2',
+        createdAt: now.subtract(const Duration(days: 6)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+        estimatedMinutes: 45,
+        difficulty: 2,
+        type: TaskType.training,
+        status: TaskStatus.inProgress,
+        dueDate: now.add(const Duration(days: 3)),
+        tags: const ['Python', 'Automation'],
+      ),
+      _buildPlanTask(
+        id: 'plan_growth_emerging_task_2',
+        title: '把错题本高频模式沉淀成学习清单',
+        planId: 'plan_growth_2',
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(hours: 8)),
+        estimatedMinutes: 30,
+        difficulty: 3,
+        type: TaskType.learning,
+        status: TaskStatus.pending,
+        dueDate: now.add(const Duration(days: 5)),
+        tags: const ['Review', 'Error Book'],
+      ),
+    ];
     return [
       PlanModel(
         id: 'plan_sprint_1',
@@ -1307,6 +1412,11 @@ class DemoDataService {
         targetDate: now.add(const Duration(days: 7)),
         description: '集中攻克链表、栈、队列和二叉树，准备期中考试。',
         totalEstimatedHours: 20,
+        tasks: demoTasks
+            .where((task) =>
+                task.title.contains('数据结构') || task.title.contains('算法设计'),)
+            .take(3)
+            .toList(),
       ),
       PlanModel(
         id: 'plan_growth_1',
@@ -1322,9 +1432,82 @@ class DemoDataService {
         targetDate: now.add(const Duration(days: 90)), // 3 months
         description: '系统性复习CS基础四大件，构建完整的知识体系。',
         totalEstimatedHours: 100,
+        planStage: PlanStage.daily,
+        priority: PlanPriority.high,
+        tasks: growthCoreTasks,
+      ),
+      PlanModel(
+        id: 'plan_growth_2',
+        userId: 'CS_Sophomore_12345',
+        name: '学习效率与自动化升级',
+        type: PlanType.growth,
+        dailyAvailableMinutes: 45,
+        masteryLevel: 0.38,
+        progress: 0.22,
+        isActive: true,
+        createdAt: now.subtract(const Duration(days: 18)),
+        updatedAt: now.subtract(const Duration(hours: 4)),
+        targetDate: now.add(const Duration(days: 45)),
+        description: '围绕复盘、自动化和错题反馈，持续优化学习效率。',
+        totalEstimatedHours: 48,
+        subject: '学习方法',
+        planStage: PlanStage.daily,
+        tasks: emergingGrowthTasks,
+      ),
+      PlanModel(
+        id: 'plan_growth_archived',
+        userId: 'CS_Sophomore_12345',
+        name: '数据库基础补强',
+        type: PlanType.growth,
+        dailyAvailableMinutes: 35,
+        masteryLevel: 0.8,
+        progress: 1.0,
+        isActive: false,
+        createdAt: now.subtract(const Duration(days: 60)),
+        updatedAt: now.subtract(const Duration(days: 15)),
+        targetDate: now.subtract(const Duration(days: 3)),
+        description: '已完成的数据库基础回炉计划，可在历史记录中查看。',
+        totalEstimatedHours: 24,
+        subject: '数据库系统',
+        planStage: PlanStage.review,
+        tasks: archivedGrowthTasks,
       ),
     ];
   }
+
+  TaskModel _buildPlanTask({
+    required String id,
+    required String title,
+    required String planId,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    required int estimatedMinutes,
+    required int difficulty,
+    required TaskType type,
+    required TaskStatus status,
+    List<String> tags = const [],
+    DateTime? dueDate,
+    int? actualMinutes,
+    String? userNote,
+  }) =>
+      TaskModel(
+        id: id,
+        userId: demoUser.id,
+        planId: planId,
+        title: title,
+        type: type,
+        tags: tags,
+        estimatedMinutes: estimatedMinutes,
+        difficulty: difficulty,
+        energyCost: difficulty >= 4 ? 4 : 2,
+        status: status,
+        priority: difficulty >= 4 ? 3 : 2,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        dueDate: dueDate,
+        actualMinutes: actualMinutes,
+        userNote: userNote,
+      );
 
   // --- Chat Data (保留真实LLM功能，只展示历史记录) ---
   List<ChatMessageModel> get demoChatHistory => [
@@ -1360,9 +1543,10 @@ class DemoDataService {
           createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
           toolResults: [
             ToolResultModel(
-                success: true,
-                toolName: 'generate_plan',
-                data: {'status': 'completed'},),
+              success: true,
+              toolName: 'generate_plan',
+              data: {'status': 'completed'},
+            ),
           ],
         ),
         ChatMessageModel(
@@ -1908,7 +2092,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_1',
         userId: 'user_alice',
-        content: '今天终于搞懂了快速排序的partition过程！感觉打开了新世界的大门🎉 分享一下我的理解：选一个pivot，比它小的放左边，大的放右边，然后递归处理两边。关键是理解"分治"的思想！',
+        content:
+            '今天终于搞懂了快速排序的partition过程！感觉打开了新世界的大门🎉 分享一下我的理解：选一个pivot，比它小的放左边，大的放右边，然后递归处理两边。关键是理解"分治"的思想！',
         createdAt: now.subtract(const Duration(hours: 2)),
         user: const PostUser(
           id: 'user_alice',
@@ -1934,7 +2119,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_3',
         userId: 'user_carol',
-        content: '分享一个学习技巧：用费曼学习法复习知识点效果超好！试着把今天学的内容讲给室友听，结果发现自己还有很多不懂的地方😅 教是最好的学！',
+        content:
+            '分享一个学习技巧：用费曼学习法复习知识点效果超好！试着把今天学的内容讲给室友听，结果发现自己还有很多不懂的地方😅 教是最好的学！',
         createdAt: now.subtract(const Duration(hours: 8)),
         user: const PostUser(
           id: 'user_carol',
@@ -1960,7 +2146,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_5',
         userId: 'user_emma',
-        content: '今天用Sparkle的认知棱镜发现了自己的学习模式：我在下午3-5点效率最高！以后要把难题放在这个时间段解决✨ 数据驱动真的有用！',
+        content:
+            '今天用Sparkle的认知棱镜发现了自己的学习模式：我在下午3-5点效率最高！以后要把难题放在这个时间段解决✨ 数据驱动真的有用！',
         createdAt: now.subtract(const Duration(days: 1)),
         user: const PostUser(
           id: 'user_emma',
@@ -1986,7 +2173,8 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_7',
         userId: 'user_grace',
-        content: '分享一个Git技巧：用git stash暂存当前修改，切换分支处理紧急bug，然后git stash pop恢复。再也不用到处commit了！',
+        content:
+            '分享一个Git技巧：用git stash暂存当前修改，切换分支处理紧急bug，然后git stash pop恢复。再也不用到处commit了！',
         createdAt: now.subtract(const Duration(days: 2)),
         user: const PostUser(
           id: 'user_grace',
@@ -2045,7 +2233,9 @@ main  →  [A] → [B] → [C]
       {
         'id': 'session_1',
         'start_time': now.subtract(const Duration(hours: 2)).toIso8601String(),
-        'end_time': now.subtract(const Duration(hours: 1, minutes: 30)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(hours: 1, minutes: 30))
+            .toIso8601String(),
         'duration_minutes': 30,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2054,8 +2244,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_2',
-        'start_time': now.subtract(const Duration(days: 1, hours: 3)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 1, hours: 1, minutes: 30)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 1, hours: 3)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 1, hours: 1, minutes: 30))
+            .toIso8601String(),
         'duration_minutes': 90,
         'focus_type': 'deep_work',
         'status': 'completed',
@@ -2064,8 +2257,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_3',
-        'start_time': now.subtract(const Duration(days: 1, hours: 15)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 1, hours: 14, minutes: 35)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 1, hours: 15)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 1, hours: 14, minutes: 35))
+            .toIso8601String(),
         'duration_minutes': 25,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2073,8 +2269,10 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_4',
-        'start_time': now.subtract(const Duration(days: 2, hours: 4)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 2, hours: 2)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 2, hours: 4)).toIso8601String(),
+        'end_time':
+            now.subtract(const Duration(days: 2, hours: 2)).toIso8601String(),
         'duration_minutes': 120,
         'focus_type': 'deep_work',
         'status': 'completed',
@@ -2082,8 +2280,11 @@ main  →  [A] → [B] → [C]
       },
       {
         'id': 'session_5',
-        'start_time': now.subtract(const Duration(days: 3, hours: 5)).toIso8601String(),
-        'end_time': now.subtract(const Duration(days: 3, hours: 4, minutes: 20)).toIso8601String(),
+        'start_time':
+            now.subtract(const Duration(days: 3, hours: 5)).toIso8601String(),
+        'end_time': now
+            .subtract(const Duration(days: 3, hours: 4, minutes: 20))
+            .toIso8601String(),
         'duration_minutes': 40,
         'focus_type': 'pomodoro',
         'status': 'completed',
@@ -2109,7 +2310,8 @@ main  →  [A] → [B] → [C]
         'chapter': '排序算法',
         'difficulty': 3,
         'next_review_at': now.add(const Duration(days: 2)).toIso8601String(),
-        'ai_analysis_summary': '你对partition过程的理解基本正确，但需要注意不同实现方式（Lomuto vs Hoare）会影响结果。建议画图模拟完整过程。',
+        'ai_analysis_summary':
+            '你对partition过程的理解基本正确，但需要注意不同实现方式（Lomuto vs Hoare）会影响结果。建议画图模拟完整过程。',
       },
       {
         'id': 'error_2',
@@ -2124,7 +2326,8 @@ main  →  [A] → [B] → [C]
         'chapter': 'TCP协议',
         'difficulty': 4,
         'next_review_at': now.add(const Duration(days: 3)).toIso8601String(),
-        'ai_analysis_summary': '这是一个经典的边界情况问题。关键是理解TCP的状态机：客户端进入ESTABLISHED，服务器仍在SYN_RCVD。',
+        'ai_analysis_summary':
+            '这是一个经典的边界情况问题。关键是理解TCP的状态机：客户端进入ESTABLISHED，服务器仍在SYN_RCVD。',
       },
       {
         'id': 'error_3',
@@ -2283,9 +2486,323 @@ main  →  [A] → [B] → [C]
           'recent_activity': '30分钟前获得新成就',
         },
       ];
-}
 
-enum NodeStatus { locked, unlocked, review, mastered }
+  // --- 🤝 责任伙伴 Data ---
+  List<Map<String, dynamic>> get demoAccountabilityPartners => [
+        {
+          'id': 'partner_1',
+          'partner_id': 'friend_1',
+          'partner_name': 'Alice_Codes',
+          'partner_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'status': 'active',
+          'started_at': DateTime.now()
+              .subtract(const Duration(days: 14))
+              .toIso8601String(),
+          'my_streak': 7,
+          'partner_streak': 5,
+          'total_checkins': 12,
+          'last_checkin': DateTime.now()
+              .subtract(const Duration(hours: 3))
+              .toIso8601String(),
+        },
+        {
+          'id': 'partner_2',
+          'partner_id': 'friend_3',
+          'partner_name': 'Carol_学习',
+          'partner_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'status': 'active',
+          'started_at': DateTime.now()
+              .subtract(const Duration(days: 7))
+              .toIso8601String(),
+          'my_streak': 3,
+          'partner_streak': 4,
+          'total_checkins': 8,
+          'last_checkin': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+        },
+      ];
+
+  // --- 🏘️ 群组 Data ---
+  List<Map<String, dynamic>> get demoGroups => [
+        {
+          'id': 'group_1',
+          'name': '算法刷题小分队',
+          'description': '每天一起刷算法题，互相监督共同进步',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=algo',
+          'member_count': 15,
+          'is_member': true,
+          'is_public': true,
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 30))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+        },
+        {
+          'id': 'group_2',
+          'name': 'Flutter开发者联盟',
+          'description': 'Flutter/Dart技术交流群，分享开发经验和最佳实践',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=flutter',
+          'member_count': 42,
+          'is_member': true,
+          'is_public': true,
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 60))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(minutes: 30))
+              .toIso8601String(),
+        },
+        {
+          'id': 'group_3',
+          'name': 'AI学习小组',
+          'description': '人工智能和机器学习爱好者社区',
+          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=ai',
+          'member_count': 28,
+          'is_member': false,
+          'is_public': true,
+          'created_at': DateTime.now()
+              .subtract(const Duration(days: 15))
+              .toIso8601String(),
+          'last_activity': DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
+        },
+      ];
+
+  // --- 💬 群组消息 Data ---
+  List<Map<String, dynamic>> get demoGroupMessages => [
+        {
+          'id': 'msg_1',
+          'group_id': 'group_1',
+          'sender_id': 'friend_1',
+          'sender_name': 'Alice_Codes',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+          'content': '今天有人一起刷动态规划吗？',
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 30))
+              .toIso8601String(),
+          'reactions': [
+            {'emoji': '👍', 'count': 3},
+          ],
+        },
+        {
+          'id': 'msg_2',
+          'group_id': 'group_1',
+          'sender_id': 'friend_2',
+          'sender_name': 'Bob_Dev',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+          'content': '我来！正好要做背包问题的练习',
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 25))
+              .toIso8601String(),
+          'reactions': [
+            {'emoji': '💪', 'count': 2},
+          ],
+        },
+        {
+          'id': 'msg_3',
+          'group_id': 'group_1',
+          'sender_id': 'friend_3',
+          'sender_name': 'Carol_学习',
+          'sender_avatar':
+              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+          'content': '加油！动态规划确实需要多练 💯',
+          'created_at': DateTime.now()
+              .subtract(const Duration(minutes: 20))
+              .toIso8601String(),
+          'reactions': <Map<String, dynamic>>[],
+        },
+      ];
+
+  // --- 📊 责任伙伴打卡热力图 Data ---
+  List<Map<String, dynamic>> get demoAccountabilityHeatmap {
+    final now = DateTime.now();
+    final heatmap = <Map<String, dynamic>>[];
+
+    // 生成过去365天的模拟数据
+    for (var i = 0; i < 365; i++) {
+      final date = now.subtract(Duration(days: i));
+      // 随机生成打卡强度 (0-4)
+      final intensity =
+          i < 30 ? (date.weekday % 3 == 0 ? 2 : 0) : (i % 7 == 0 ? 3 : (i % 3));
+      heatmap.add({
+        'date': date.toIso8601String().split('T')[0],
+        'intensity': intensity,
+        'checkins': intensity > 0
+            ? <Map<String, dynamic>>[
+                {'time': '09:00', 'content': '早起学习一小时！'},
+                if (intensity > 2) {'time': '21:00', 'content': '晚上复习总结'},
+              ]
+            : <Map<String, dynamic>>[],
+      });
+    }
+    return heatmap;
+  }
+
+  // --- 🔥 打卡记录 Data ---
+  List<Map<String, dynamic>> get demoCheckins => [
+        {
+          'id': 'checkin_1',
+          'partnership_id': 'partner_1',
+          'user_id': 'CS_Sophomore_12345',
+          'content': '今天完成了算法 chapter 3 的学习，理解了递归的核心思想！',
+          'created_at': DateTime.now()
+              .subtract(const Duration(hours: 3))
+              .toIso8601String(),
+          'likes_count': 2,
+          'encouragements': [
+            {'user_id': 'friend_1', 'message': '太棒了！递归确实需要多练习 💪'},
+          ],
+        },
+        {
+          'id': 'checkin_2',
+          'partnership_id': 'partner_1',
+          'user_id': 'friend_1',
+          'content': '早起完成了 React Hooks 的复习，感觉理解更深了',
+          'created_at': DateTime.now()
+              .subtract(const Duration(hours: 5))
+              .toIso8601String(),
+          'likes_count': 3,
+          'encouragements': <Map<String, dynamic>>[],
+        },
+      ];
+
+  // --- 🎯 视觉元素 Data ---
+  List<Map<String, dynamic>> get demoVisualElements => [
+        {
+          'id': 've_bg_1',
+          'name': '星空背景',
+          'description': '深邃的宇宙星空背景',
+          'element_type': 'background',
+          'rarity': 'common',
+          'category': '宇宙',
+          'is_unlocked': true,
+          'is_equipped': true,
+          'unlock_condition': '默认解锁',
+          'preview_url':
+              'https://images.unsplash.com/photo-1419248682-f54b?w=200',
+        },
+        {
+          'id': 've_bg_2',
+          'name': '极光背景',
+          'description': '绚丽的北极光效果',
+          'element_type': 'background',
+          'rarity': 'rare',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': false,
+          'unlock_condition': '连续学习7天',
+          'preview_url':
+              'https://images.unsplash.com/photo-1486402638-b5b?w=200',
+        },
+        {
+          'id': 've_bg_3',
+          'name': '赛博朋克背景',
+          'description': '霓虹灯与未来城市',
+          'element_type': 'background',
+          'rarity': 'epic',
+          'category': '科幻',
+          'is_unlocked': false,
+          'is_equipped': false,
+          'unlock_condition': '完成10个任务',
+          'preview_url':
+              'https://images.unsplash.com/photo-1550751827-f584?w=200',
+        },
+        {
+          'id': 've_particle_1',
+          'name': '萤火虫粒子',
+          'description': '温暖的萤火虫飘动效果',
+          'element_type': 'particle',
+          'rarity': 'common',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': true,
+          'unlock_condition': '默认解锁',
+          'preview_url': null,
+        },
+        {
+          'id': 've_particle_2',
+          'name': '雪花粒子',
+          'description': '轻柔的雪花飘落效果',
+          'element_type': 'particle',
+          'rarity': 'rare',
+          'category': '自然',
+          'is_unlocked': true,
+          'is_equipped': false,
+          'unlock_condition': '在冬季学习',
+          'preview_url': null,
+        },
+        {
+          'id': 've_effect_1',
+          'name': '金色光环',
+          'description': '完成任务时的金色光环效果',
+          'element_type': 'effect',
+          'rarity': 'epic',
+          'category': '特效',
+          'is_unlocked': false,
+          'is_equipped': false,
+          'unlock_condition': '连续打卡30天',
+          'preview_url': null,
+        },
+      ];
+
+  // --- 🏆 成就系统扩展 Data ---
+  List<Map<String, dynamic>> get demoAchievementDetails => [
+        {
+          'id': 'achv_1',
+          'name': '初出茅庐',
+          'description': '完成第一个任务',
+          'type': 'milestone',
+          'rarity': 'common',
+          'icon_url': '🎯',
+          'is_unlocked': true,
+          'unlocked_at': DateTime.now()
+              .subtract(const Duration(days: 30))
+              .toIso8601String(),
+          'progress': {'current': 1, 'target': 1},
+        },
+        {
+          'id': 'achv_2',
+          'name': '持之以恒',
+          'description': '连续学习7天',
+          'type': 'streak',
+          'rarity': 'rare',
+          'icon_url': '🔥',
+          'is_unlocked': true,
+          'unlocked_at': DateTime.now()
+              .subtract(const Duration(days: 10))
+              .toIso8601String(),
+          'progress': {'current': 7, 'target': 7},
+        },
+        {
+          'id': 'achv_3',
+          'name': '知识星探',
+          'description': '解锁50个知识节点',
+          'type': 'node_explore',
+          'rarity': 'epic',
+          'icon_url': '🌟',
+          'is_unlocked': false,
+          'progress': {'current': 23, 'target': 50},
+        },
+        {
+          'id': 'achv_4',
+          'name': '完美主义',
+          'description': '任务完成率达到95%',
+          'type': 'mastery',
+          'rarity': 'legendary',
+          'icon_url': '💎',
+          'is_unlocked': false,
+          'progress': {'current': 78, 'target': 100},
+        },
+      ];
+}
 
 /// Provider for DemoDataService
 final demoDataServiceProvider =

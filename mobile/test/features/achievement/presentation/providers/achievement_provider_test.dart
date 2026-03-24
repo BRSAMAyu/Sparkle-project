@@ -92,6 +92,7 @@ class _FakeAchievementRepository extends AchievementRepository {
     String? category,
     AchievementRarity? rarity,
     bool includeHidden = false,
+    bool includeInactive = false,
   }) async =>
       AchievementListResponse(
         achievements: const <AchievementWithProgress>[],
@@ -152,7 +153,6 @@ class _FakeAchievementRepository extends AchievementRepository {
     getTitlesCalls += 1;
     return <UserTitle>[
       UserTitle(
-        userId: 'user-1',
         titleId: 'night_owl',
         titleName: '夜航者',
         titleDisplay: '夜航者',
@@ -178,14 +178,19 @@ class _FakeAchievementRepository extends AchievementRepository {
   }
 
   @override
-  Future<AchievementShareCard> shareAchievement(String achievementId) async {
+  Future<AchievementShareCard> shareAchievement(
+    String achievementId, {
+    String templateId = 'cosmic',
+    ShareCardPrivacySettings? privacySettings,
+  }) async {
     shareAchievementCalls.add(achievementId);
     return AchievementShareCard(
       cardUrl: '/uploads/achievement-cards/user-1/$achievementId.png',
-      mimeType: 'image/png',
       width: 1080,
       height: 1440,
       generatedAt: DateTime(2026, 3, 10),
+      templateId: templateId,
+      privacySettings: privacySettings,
       achievement: AchievementModel(
         id: achievementId,
         name: '分享成就',
@@ -203,7 +208,7 @@ class _FakeAchievementRepository extends AchievementRepository {
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
-  _FakeAuthNotifier() : super(_UnusedAuthRepository()) {
+  _FakeAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
       isAuthenticated: true,
       user: _buildUser(),
@@ -219,6 +224,11 @@ class _FakeAuthNotifier extends AuthNotifier {
   Future<void> refreshUser() async {
     refreshUserCalls += 1;
   }
+}
+
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 UserModel _buildUser() => UserModel(

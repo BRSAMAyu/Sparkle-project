@@ -1,13 +1,14 @@
 """
 Tasks API Endpoints
 """
+from __future__ import annotations
 from datetime import date
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from loguru import logger
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -15,12 +16,16 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
     TaskAbandon,
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskReorderRequest,
+    TaskResourceLinkCreate,
+    TaskResourceLinkInfo,
     TaskRecommendationResponse,
     TaskSuggestionRequest,
     TaskSuggestionResponse,
@@ -36,10 +41,66 @@ from app.schemas.task_feedback import (
 )
 from app.services.feedback_service import feedback_service
 from app.services.intelligent_task_service import IntelligentTaskService
+from app.services.seed_library_service import SeedLibraryService
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
 
 router = APIRouter()
+
+
+async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != user_id:
+        raise NotFoundError(message="Task not found")
+    return task
+
+
+async def _resolve_task_resource_defaults(
+    db: AsyncSession,
+    payload: TaskResourceLinkCreate,
+    user_id: UUID,
+) -> tuple[str | None, str | None, dict | None]:
+    title = payload.title
+    summary = payload.summary
+    metadata = dict(payload.resource_metadata or {})
+    seed_service = SeedLibraryService()
+
+    if payload.resource_type == TaskResourceType.SEED_LIBRARY.value:
+        if not payload.resource_id:
+            raise HTTPException(status_code=400, detail="seed_library resource_id is required")
+        library = await seed_service.get_library_for_user(db, payload.resource_id, user_id)
+        if not library:
+            raise HTTPException(status_code=404, detail="Seed library not found")
+        title = title or library.name
+        summary = summary or library.description
+        metadata.setdefault("category", library.category)
+        metadata.setdefault("visibility", library.visibility)
+        metadata.setdefault("language", library.language)
+    elif payload.resource_type == TaskResourceType.SEED_ITEM.value:
+        if not payload.resource_id:
+            raise HTTPException(status_code=400, detail="seed_item resource_id is required")
+        item = await seed_service.get_item_for_user(db, payload.resource_id, user_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Seed item not found")
+        title = title or item.title or "Seed Item"
+        summary = summary or item.content
+        metadata.setdefault("item_type", item.item_type)
+        metadata.setdefault("subject", item.subject)
+        metadata.setdefault("library_id", str(item.library_id))
+    elif payload.resource_type == TaskResourceType.KNOWLEDGE_NODE.value:
+        if not payload.resource_id:
+            raise HTTPException(status_code=400, detail="knowledge_node resource_id is required")
+    elif payload.resource_type == TaskResourceType.EXTERNAL_URL.value:
+        if not payload.url:
+            raise HTTPException(status_code=400, detail="external_url requires url")
+    elif payload.resource_type == TaskResourceType.FILE.value:
+        if not payload.resource_id:
+            raise HTTPException(status_code=400, detail="file resource_id is required")
+    elif payload.resource_type == TaskResourceType.NOTE.value:
+        if not (title or summary):
+            raise HTTPException(status_code=400, detail="note requires title or summary")
+
+    return title, summary, metadata or None
 
 @router.get("", response_model=dict[str, Any])
 async def list_tasks(
@@ -67,14 +128,21 @@ async def list_tasks(
     if plan_id:
         query = query.where(Task.plan_id == plan_id)
     if tags:
-        pass # Tag filtering implementation pending DB specific JSON operators
+        # Check if task tags contain any of the filter tags (OR logic)
+        # Uses JSONB @> operator for PostgreSQL, falls back to LIKE for SQLite
+        tag_conditions = []
+        for tag in tags:
+            # PostgreSQL: tags @> '["tag"]' checks if array contains the tag
+            # Using contains for JSONB array
+            tag_conditions.append(Task.tags.op('@>')(f'["{tag}"]'))
+        query = query.where(or_(*tag_conditions))
     if due_date_start:
         query = query.where(Task.due_date >= due_date_start)
     if due_date_end:
         query = query.where(Task.due_date <= due_date_end)
 
-    # Order by created_at desc
-    query = query.order_by(desc(Task.created_at))
+    # Persisted display order with created_at fallback
+    query = query.order_by(Task.order_index.asc(), desc(Task.created_at))
 
     # Pagination
     total_query = select(func.count()).select_from(query.subquery())
@@ -129,6 +197,28 @@ async def create_task(
     return {
         "data": TaskDetail.model_validate(task),
         "nudges": nudges
+    }
+
+
+@router.post("/reorder", response_model=dict[str, Any])
+async def reorder_tasks(
+    request: TaskReorderRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persist the display order of tasks for the current user."""
+    try:
+        tasks = await TaskService.reorder_tasks(
+            db,
+            user_id=current_user.id,
+            ordered_task_ids=request.task_ids,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "success": True,
+        "data": [TaskDetail.model_validate(task) for task in tasks],
     }
 
 @router.post("/suggestions", response_model=TaskSuggestionResponse)
@@ -187,7 +277,7 @@ async def get_today_tasks(
             | (Task.due_date <= today)
             | (Task.completed_at.is_not(None)),
         )
-        .order_by(desc(Task.priority), desc(Task.updated_at))
+        .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
         .limit(50)
     )
     result = await db.execute(query)
@@ -244,11 +334,81 @@ async def get_task(
     """
     Get task details
     """
-    task = await db.get(Task, task_id)
-    if not task or task.user_id != current_user.id:
-        raise NotFoundError(message="Task not found")
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
 
     return {"data": TaskDetail.model_validate(task)}
+
+
+@router.get("/{task_id}/resources", response_model=dict[str, Any])
+async def list_task_resources(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List resources attached to a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    result = await db.execute(
+        select(TaskResourceLink)
+        .where(TaskResourceLink.task_id == task_id, TaskResourceLink.deleted_at.is_(None))
+        .order_by(TaskResourceLink.order_index.asc(), TaskResourceLink.created_at.asc())
+    )
+    resources = result.scalars().all()
+    return {"data": [TaskResourceLinkInfo.model_validate(link) for link in resources]}
+
+
+@router.post("/{task_id}/resources", response_model=dict[str, Any])
+async def attach_task_resource(
+    payload: TaskResourceLinkCreate,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Attach a seed resource or external reference to a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    title, summary, metadata = await _resolve_task_resource_defaults(db, payload, current_user.id)
+
+    order_index = payload.order_index
+    if order_index is None:
+        max_order_result = await db.execute(
+            select(func.max(TaskResourceLink.order_index)).where(
+                TaskResourceLink.task_id == task_id,
+                TaskResourceLink.deleted_at.is_(None),
+            )
+        )
+        order_index = (max_order_result.scalar() or -1) + 1
+
+    link = TaskResourceLink(
+        task_id=task_id,
+        resource_type=payload.resource_type,
+        resource_id=payload.resource_id,
+        title=title,
+        url=payload.url,
+        summary=summary,
+        resource_metadata=metadata,
+        order_index=order_index,
+        is_primary=payload.is_primary,
+    )
+    db.add(link)
+    await db.commit()
+    await db.refresh(link)
+    return {"data": TaskResourceLinkInfo.model_validate(link)}
+
+
+@router.delete("/{task_id}/resources/{link_id}", status_code=204)
+async def delete_task_resource(
+    task_id: UUID = Path(..., description="Task ID"),
+    link_id: UUID = Path(..., description="Task resource link ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove an attached resource from a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    link = await db.get(TaskResourceLink, link_id)
+    if not link or link.task_id != task_id or link.deleted_at is not None:
+        raise NotFoundError(message="Task resource not found")
+    await link.delete(db, soft=True)
+    await db.commit()
+    return None
 
 @router.put("/{task_id}", response_model=dict[str, Any])
 async def update_task(
@@ -273,6 +433,28 @@ async def update_task(
 
     return {"data": TaskDetail.model_validate(task)}
 
+@router.post("/{task_id}/generate-guide", response_model=dict[str, Any])
+async def generate_task_guide(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate or regenerate AI guide for an existing task using fast LLM tier.
+    """
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise NotFoundError(message="Task not found")
+
+    guide = await task_guide_service.generate_guide(task, current_user, db)
+    task.guide_content = guide
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    return {"data": TaskDetail.model_validate(task)}
+
+
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -286,8 +468,7 @@ async def delete_task(
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
 
-    await db.delete(task)
-    await db.commit()
+    await TaskService.delete(db, task)
 
     return {"success": True}
 
@@ -312,8 +493,8 @@ async def start_task(
 
 @router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
-    request: TaskAbandon,
     task_id: UUID = Path(..., description="Task ID"),
+    request: TaskAbandon | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -324,11 +505,12 @@ async def abandon_task(
     - 状态同步
     - 发布 task.abandoned 事件 (用于认知分析)
     """
+    reason = request.reason if request else None
     task = await TaskService.abandon_task(
         db=db,
         task_id=task_id,
         user_id=current_user.id,
-        reason=request.reason
+        reason=reason
     )
 
     try:
@@ -341,7 +523,7 @@ async def abandon_task(
         await reflection_service.create_abandon_feedback_and_prompt(
             user_id=current_user.id,
             task=task,
-            reason=request.reason,
+            reason=reason,
             time_spent_minutes=time_spent,
         )
         await db.commit()
@@ -472,6 +654,19 @@ async def complete_task(
             logger.info(f"User {current_user.id} unlocked {len(unlocked)} achievements on task completion")
     except Exception as e:
         logger.warning(f"Achievement processing failed: {e}")
+    # ============================================
+
+    # ========== Contract Progress Integration ==========
+    try:
+        from app.services.achievement_engine import ContractService
+
+        contract_service = ContractService(db)
+        await contract_service.update_daily_progress(
+            str(current_user.id),
+            actual_minutes,
+        )
+    except Exception as e:
+        logger.warning(f"Contract progress update failed: {e}")
     # ============================================
 
     # 返回数据

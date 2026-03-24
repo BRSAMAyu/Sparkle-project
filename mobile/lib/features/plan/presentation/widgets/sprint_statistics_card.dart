@@ -2,8 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/domain/entities/sprint_statistics.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_statistics_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Sprint statistics card widget
 ///
@@ -16,10 +18,11 @@ class SprintStatisticsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final stats = ref.watch(sprintStatisticsProvider);
 
     if (stats.totalTasks == 0) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(context, l10n);
     }
 
     return Container(
@@ -44,7 +47,7 @@ class SprintStatisticsCard extends ConsumerWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                '冲刺统计',
+                l10n.sprintStatsTitle,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -54,24 +57,25 @@ class SprintStatisticsCard extends ConsumerWidget {
           const SizedBox(height: DS.spacing16),
 
           // Completion rate donut chart
-          _buildCompletionRateSection(context, stats),
+          _buildCompletionRateSection(context, l10n, stats),
 
           const SizedBox(height: DS.spacing16),
 
           // Task status distribution
-          _buildTaskStatusSection(context, stats),
+          _buildTaskStatusSection(context, l10n, stats),
 
           // Daily progress chart (if data available)
           if (stats.dailyProgress.isNotEmpty) ...[
             const SizedBox(height: DS.spacing16),
-            _buildDailyProgressSection(context, stats),
+            _buildDailyProgressSection(context, l10n, stats),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) => Container(
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) =>
+      Container(
       padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -90,7 +94,7 @@ class SprintStatisticsCard extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '暂无统计数据',
+              l10n.sprintStatsEmpty,
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
@@ -100,95 +104,109 @@ class SprintStatisticsCard extends ConsumerWidget {
       ),
     );
 
-  Widget _buildCompletionRateSection(BuildContext context, SprintStatistics stats) => Row(
-        children: [
-          // Donut chart
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 0,
-                      centerSpaceRadius: 28,
-                      sections: [
-                        PieChartSectionData(
-                          value: stats.completionRate * 100,
-                          color: _getCompletionRateColor(stats.completionRate),
-                          radius: 32,
-                          showTitle: false,
-                        ),
-                        PieChartSectionData(
-                          value: (1 - stats.completionRate) * 100,
-                          color: DS.surfaceTertiary,
-                          radius: 32,
-                          showTitle: false,
-                        ),
-                      ],
+  Widget _buildCompletionRateSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    SprintStatistics stats,
+  ) {
+    // Donut sizing: centerSpaceRadius + sectionRadius must fit within half the container
+    // Container = 88, half = 44, so centerSpace=22, sectionRadius=12 → total 34 < 44
+    const chartSize = 88.0;
+    const centerSpace = 22.0;
+    const sectionRadius = 12.0;
+
+    return Row(
+      children: [
+        // Donut chart — properly sized to avoid overflow
+        SizedBox(
+          width: chartSize,
+          height: chartSize,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: centerSpace,
+                  sections: [
+                    PieChartSectionData(
+                      value: stats.completionRate * 100,
+                      color: _getCompletionRateColor(stats.completionRate),
+                      radius: sectionRadius,
+                      showTitle: false,
                     ),
-                  ),
-                ),
-                // Center percentage
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${(stats.completionRate * 100).toInt()}%',
-                      style: context.sparkleTypography.labelLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    if (stats.completionRate < 1.0)
+                      PieChartSectionData(
+                        value: (1 - stats.completionRate) * 100,
+                        color: DS.surfaceTertiary,
+                        radius: sectionRadius,
+                        showTitle: false,
                       ),
-                    ),
-                    Text(
-                      '完成率',
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        fontSize: 8,
-                        color: DS.textSecondary,
-                      ),
-                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Center percentage
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${(stats.completionRate * 100).toInt()}%',
+                    style: context.sparkleTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    l10n.sprintCompletionRate,
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      fontSize: 8,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: DS.spacing16),
-          // Stats details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildStatRow(
-                  context,
-                  label: '总任务',
-                  value: '${stats.totalTasks} 个',
-                  color: DS.textSecondary,
-                ),
-                const SizedBox(height: DS.spacing4),
-                _buildStatRow(
-                  context,
-                  label: '已完成',
-                  value: '${stats.completedTasks} 个',
-                  color: DS.semanticSuccess,
-                ),
-                const SizedBox(height: DS.spacing4),
-                _buildStatRow(
-                  context,
-                  label: '剩余',
-                  value: '${stats.remainingTasks} 个',
-                  color: DS.semanticWarning,
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(width: DS.spacing16),
+        // Stats details
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatRow(
+                context,
+                label: l10n.sprintTotalTasks,
+                value: l10n.sprintTaskCount(stats.totalTasks),
+                color: DS.textSecondary,
+              ),
+              const SizedBox(height: DS.spacing8),
+              _buildStatRow(
+                context,
+                label: l10n.sprintCompletedTasks,
+                value: l10n.sprintTaskCount(stats.completedTasks),
+                color: DS.semanticSuccess,
+              ),
+              const SizedBox(height: DS.spacing8),
+              _buildStatRow(
+                context,
+                label: l10n.sprintRemainingTasks,
+                value: l10n.sprintTaskCount(stats.remainingTasks),
+                color: DS.semanticWarning,
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
-  Widget _buildTaskStatusSection(BuildContext context, SprintStatistics stats) => Container(
+  Widget _buildTaskStatusSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    SprintStatistics stats,
+  ) =>
+      Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
@@ -199,7 +217,7 @@ class SprintStatisticsCard extends ConsumerWidget {
           Expanded(
             child: _buildStatusItem(
               context,
-              label: '待办',
+              label: l10n.sprintStatusTodo,
               count: stats.todoTasks,
               color: DS.semanticWarning,
             ),
@@ -212,7 +230,7 @@ class SprintStatisticsCard extends ConsumerWidget {
           Expanded(
             child: _buildStatusItem(
               context,
-              label: '进行中',
+              label: l10n.sprintStatusInProgress,
               count: stats.inProgressTasks,
               color: DS.info,
             ),
@@ -225,7 +243,7 @@ class SprintStatisticsCard extends ConsumerWidget {
           Expanded(
             child: _buildStatusItem(
               context,
-              label: '已完成',
+              label: l10n.sprintStatusCompleted,
               count: stats.completedTasks,
               color: DS.semanticSuccess,
             ),
@@ -234,7 +252,11 @@ class SprintStatisticsCard extends ConsumerWidget {
       ),
     );
 
-  Widget _buildDailyProgressSection(BuildContext context, SprintStatistics stats) {
+  Widget _buildDailyProgressSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    SprintStatistics stats,
+  ) {
     // Show last 7 days of progress
     final recentProgress = stats.dailyProgress.length > 7
         ? stats.dailyProgress.sublist(stats.dailyProgress.length - 7)
@@ -248,7 +270,7 @@ class SprintStatisticsCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '每日完成',
+          l10n.sprintDailyCompletion,
           style: context.sparkleTypography.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: FontWeight.w500,

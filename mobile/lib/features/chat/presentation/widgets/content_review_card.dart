@@ -11,10 +11,13 @@
 // 作者: Claude Code (Opus 4.5)
 // 创建时间: 2026-01-25
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -285,7 +288,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       begin: const Offset(0, -0.1),
       end: Offset.zero,
     ).animate(
-        CurvedAnimation(parent: _slideInController, curve: Curves.easeOut),);
+      CurvedAnimation(parent: _slideInController, curve: Curves.easeOut),
+    );
     _slideInController.forward();
   }
 
@@ -575,7 +579,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       );
 
-  Widget _buildScoreBar(BuildContext context, Color color, AppLocalizations l10n) {
+  Widget _buildScoreBar(
+      BuildContext context, Color color, AppLocalizations l10n,) {
     final score = widget.review.overallScore;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,17 +700,20 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (criticalIssues.isNotEmpty) ...[
-          _buildIssueGroup(context, l10n.contentReviewCriticalIssues, criticalIssues, DS.error),
+          _buildIssueGroup(context, l10n.contentReviewCriticalIssues,
+              criticalIssues, DS.error,),
           if (warningIssues.isNotEmpty || infoIssues.isNotEmpty)
             const SizedBox(height: DS.spacing8),
         ],
         if (warningIssues.isNotEmpty) ...[
-          _buildIssueGroup(context, l10n.contentReviewWarnings, warningIssues, DS.warning),
+          _buildIssueGroup(
+              context, l10n.contentReviewWarnings, warningIssues, DS.warning,),
           if (infoIssues.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoIssues.isNotEmpty &&
             widget.review.decision != ContentReviewDecision.passed)
-          _buildIssueGroup(context, l10n.contentReviewHints, infoIssues, DS.info),
+          _buildIssueGroup(
+              context, l10n.contentReviewHints, infoIssues, DS.info,),
       ],
     );
   }
@@ -918,7 +926,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     );
   }
 
-  _ReflectionStatusInfo _getReflectionStatusInfo(String status, AppLocalizations l10n) {
+  _ReflectionStatusInfo _getReflectionStatusInfo(
+      String status, AppLocalizations l10n,) {
     switch (status) {
       case 'pending':
         return _ReflectionStatusInfo(
@@ -1033,7 +1042,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   /// Phase 2e: 更多操作菜单
-  Widget _buildMoreActionsMenu(BuildContext context, Color color, AppLocalizations l10n) =>
+  Widget _buildMoreActionsMenu(
+          BuildContext context, Color color, AppLocalizations l10n,) =>
       PopupMenuButton<String>(
         icon: Icon(
           Icons.more_horiz_rounded,
@@ -1057,7 +1067,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   ),
                   const SizedBox(width: DS.spacing8),
                   Text(
-                    widget.review.passed ? l10n.contentReviewDisagreePass : l10n.contentReviewAgreePass,
+                    widget.review.passed
+                        ? l10n.contentReviewDisagreePass
+                        : l10n.contentReviewAgreePass,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1084,7 +1096,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       );
 
-  void _handleMenuAction(BuildContext context, String action, AppLocalizations l10n) {
+  void _handleMenuAction(
+      BuildContext context, String action, AppLocalizations l10n,) {
     if (action == 'override') {
       _showOverrideDialog(context, l10n);
     } else if (action == 'appeal') {
@@ -1101,7 +1114,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             : 'failed';
     final newDecision = currentDecision == 'passed' ? 'failed' : 'passed';
 
-    showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -1117,7 +1130,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              currentDecision == 'passed' ? l10n.contentReviewDisagreePassTitle : l10n.contentReviewAgreePassTitle,
+              currentDecision == 'passed'
+                  ? l10n.contentReviewDisagreePassTitle
+                  : l10n.contentReviewAgreePassTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1157,7 +1172,8 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   onPressed: () async {
                     final reason = reasonController.text.trim();
                     if (reason.isEmpty) {
-                      AppFeedback.error(context, l10n.contentReviewReasonRequired);
+                      AppFeedback.error(
+                          context, l10n.contentReviewReasonRequired,);
                       return;
                     }
                     Navigator.pop(context);
@@ -1169,7 +1185,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ],
         ),
       ),
-    );
+    ),);
   }
 
   /// 显示申诉对话框
@@ -1184,7 +1200,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       l10n.contentReviewAppealSuggestionNotFeasible,
     ];
 
-    showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -1290,11 +1306,13 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                     onPressed: () async {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
-                        AppFeedback.error(context, l10n.contentReviewAppealDetailRequired);
+                        AppFeedback.error(
+                            context, l10n.contentReviewAppealDetailRequired,);
                         return;
                       }
                       if (selectedIssues.isEmpty) {
-                        AppFeedback.error(context, l10n.contentReviewAppealTypeRequired);
+                        AppFeedback.error(
+                            context, l10n.contentReviewAppealTypeRequired,);
                         return;
                       }
                       Navigator.pop(context);
@@ -1307,7 +1325,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ),
         ),
       ),
-    );
+    ),);
   }
 }
 

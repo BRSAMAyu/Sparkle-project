@@ -1,6 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/features/photon/presentation/screens/photon_transfer_screen.dart';
 import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -22,6 +23,7 @@ Page<dynamic> _buildTransitionPage({
 
 class PhotonRoutes {
   static const String transactionHistory = '/photon/history';
+  static const String transfer = '/photon/transfer';  // 新增
 
   static List<RouteBase> get routes => [
         GoRoute(
@@ -30,6 +32,15 @@ class PhotonRoutes {
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const TransactionHistoryScreen(),
+          ),
+        ),
+        // 新增转账路由
+        GoRoute(
+          path: transfer,
+          name: 'photonTransfer',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const PhotonTransferScreen(),
           ),
         ),
       ];

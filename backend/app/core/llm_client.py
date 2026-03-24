@@ -2,6 +2,7 @@
 LLM Client Wrapper
 Provides a unified interface for different LLM providers (Qwen, DeepSeek, OpenAI)
 """
+from __future__ import annotations
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -45,7 +46,7 @@ class LLMClient:
             self.reason_model_name = settings.XIAOMI_CHAT_MODEL  # Xiaomi使用相同模型，通过tag控制
         elif self.provider == "zhipu":
             self.api_key = settings.ZHIPU_API_KEY
-            self.base_url = settings.ZHIPU_BASE_URL
+            self.base_url = settings.ZHIPU_CODING_BASE_URL
             self.model_name = settings.ZHIPU_CHAT_MODEL
             self.chat_model_name = settings.ZHIPU_CHAT_MODEL
             self.reason_model_name = settings.ZHIPU_CHAT_MODEL  # Zhipu使用相同模型，通过tag控制

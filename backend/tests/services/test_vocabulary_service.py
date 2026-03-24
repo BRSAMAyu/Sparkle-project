@@ -3,14 +3,14 @@
 Vocabulary Service Unit Tests
 """
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.vocabulary_service import VocabularyService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class TestCalculateNextReview:

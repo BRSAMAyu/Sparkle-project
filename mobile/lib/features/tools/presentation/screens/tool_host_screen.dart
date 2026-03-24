@@ -28,39 +28,94 @@ class ToolHostScreen extends StatelessWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        title: const SizedBox.shrink(),
-        actions: [
-          IconButton(
-            tooltip: '工具库',
-            onPressed: () => context.push('/tools/library'),
-            icon: const Icon(Icons.grid_view_rounded),
-          ),
-        ],
-      ),
       child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => Padding(
-            padding: const EdgeInsets.fromLTRB(
-              DS.spacing16,
-              DS.spacing8,
-              DS.spacing16,
-              DS.spacing24,
-            ),
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: tool.embeddedBuilder?.call(request) ??
-                  Center(
-                    child: Text(
-                      '${tool.title}暂不可用',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
+        bottom: false,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      DS.surfacePrimary,
+                      Color.alphaBlend(
+                        DS.info.withValues(alpha: 0.03),
+                        DS.surfaceCanvas,
+                      ),
+                    ],
                   ),
+                ),
+              ),
             ),
-          ),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing12,
+                  DS.spacing12,
+                  DS.spacing12,
+                  DS.spacing16,
+                ),
+                child: tool.embeddedBuilder?.call(request) ??
+                    Center(
+                      child: Text(
+                        '${tool.title}暂不可用',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing12,
+                  DS.spacing4,
+                  DS.spacing12,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: DS.surfaceOverlay.withValues(alpha: 0.9),
+                        borderRadius: DS.borderRadius12,
+                        border: Border.all(
+                          color: DS.border.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                    ),
+                    const Spacer(),
+                    Tooltip(
+                      message: '工具库',
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: DS.surfaceOverlay.withValues(alpha: 0.9),
+                          borderRadius: DS.borderRadius12,
+                          border: Border.all(
+                            color: DS.border.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          onPressed: () => context.push('/tools/library'),
+                          icon: const Icon(Icons.grid_view_rounded),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

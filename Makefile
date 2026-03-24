@@ -1,4 +1,7 @@
-.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
+.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets
+
+# Load environment variables from .env
+include .env
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
@@ -7,6 +10,7 @@ PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
 BACKEND_VENV?=backend/.venv/bin
 BACKEND_PYTHON?=$(BACKEND_VENV)/python
 ALEMBIC?=$(BACKEND_VENV)/alembic
+BACKEND_PYTHON_ABS?=$(abspath $(BACKEND_PYTHON))
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -34,7 +38,7 @@ dev-preflight:
 	@if [ -d postgres_data ]; then \
 		echo "ℹ️  Detected existing postgres_data. If auth fails, run 'make db-reset'."; \
 	fi
-	@python backend/scripts/check_shadowing.py
+	@python3 backend/scripts/check_shadowing.py
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
 sync-db: db-migrate db-dump db-sqlc
@@ -58,6 +62,9 @@ db-migrate:
 			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				if [ -t 0 ]; then \
+					read -p "⚠️  This will skip consistency checks. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1; \
+				fi; \
 				../$(ALEMBIC) stamp heads; \
 			else \
 				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
@@ -71,6 +78,9 @@ db-migrate:
 			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				if [ -t 0 ]; then \
+					read -p "⚠️  This will skip consistency checks. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1; \
+				fi; \
 				../$(ALEMBIC) stamp heads; \
 				../$(ALEMBIC) upgrade head; \
 			else \
@@ -99,21 +109,52 @@ db-sqlc:
 # RAG 相关命令 (v2.0)
 init-rag:
 	@echo "🏗️ Initializing Redis Index..."
-	python backend/scripts/init_redis_index.py
+	$(BACKEND_PYTHON) backend/scripts/init_redis_index.py
 
 sync-rag:
 	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
-	python backend/scripts/sync_pg_to_redis.py
+	$(BACKEND_PYTHON) backend/scripts/sync_pg_to_redis.py
+
+init-minio-buckets:
+	@echo "🪣 Ensuring MinIO buckets exist..."
+	$(BACKEND_PYTHON) backend/scripts/init_minio_buckets.py
 
 smoke:
 	@set -e; \
 	echo "🔎 Running config self-check..."; \
 	$(BACKEND_PYTHON) backend/scripts/check_config_effective.py; \
 	echo "🔎 Checking backend health..."; \
-	curl -fsS http://localhost:8000/health > /dev/null || (echo "❌ Backend /health failed" && exit 1); \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8000/health > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Backend /health failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
 	echo "🔎 Checking gateway health..."; \
-	curl -fsS http://localhost:8080/api/v1/health > /dev/null || (echo "❌ Gateway /api/v1/health failed" && exit 1); \
-	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8080/api/v1/health > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Gateway /api/v1/health failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
+	for i in 1 2 3 4 5 6 7 8 9 10; do \
+		if curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null; then \
+			break; \
+		fi; \
+		if [ $$i -eq 10 ]; then \
+			echo "❌ Gateway /api/v1/health/cqrs failed"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
 	echo "✅ Smoke checks passed."
 
 quality-baseline:
@@ -174,6 +215,7 @@ proto-gen-legacy:
 	@echo "  → Go..."
 	mkdir -p backend/gateway/gen/agent/v1
 	mkdir -p backend/gateway/gen/galaxy/v1
+	mkdir -p backend/gateway/gen/stt/v1
 	protoc --proto_path=proto \
 	       --go_out=backend/gateway/gen/agent/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/agent/v1 --go-grpc_opt=paths=source_relative \
@@ -182,6 +224,10 @@ proto-gen-legacy:
 	       --go_out=backend/gateway/gen/galaxy/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/galaxy/v1 --go-grpc_opt=paths=source_relative \
 	       proto/galaxy_service.proto
+	protoc --proto_path=proto \
+	       --go_out=backend/gateway/gen/stt/v1 --go_opt=paths=source_relative \
+	       --go-grpc_out=backend/gateway/gen/stt/v1 --go-grpc_opt=paths=source_relative \
+	       proto/stt_service.proto
 	@echo "  → WebSocket..."
 	mkdir -p backend/gateway/gen/ws
 	protoc --proto_path=proto \
@@ -190,19 +236,26 @@ proto-gen-legacy:
 	@echo "  → Python..."
 	mkdir -p backend/app/gen/agent/v1
 	mkdir -p backend/app/gen/galaxy/v1
-	python -m grpc_tools.protoc \
+	mkdir -p backend/app/gen/stt/v1
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/agent/v1 \
 	       --grpc_python_out=backend/app/gen/agent/v1 \
 	       --pyi_out=backend/app/gen/agent/v1 \
 	       proto/agent_service.proto
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/galaxy/v1 \
 	       --grpc_python_out=backend/app/gen/galaxy/v1 \
 	       --pyi_out=backend/app/gen/galaxy/v1 \
 	       proto/galaxy_service.proto
-	python -m grpc_tools.protoc \
+	python3 -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen/stt/v1 \
+	       --grpc_python_out=backend/app/gen/stt/v1 \
+	       --pyi_out=backend/app/gen/stt/v1 \
+	       proto/stt_service.proto
+	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen \
 	       --pyi_out=backend/app/gen \
@@ -211,7 +264,7 @@ proto-gen-legacy:
 	@if [ -x "$$HOME/.pub-cache/bin/protoc-gen-dart" ]; then \
 		if PATH="$$HOME/.pub-cache/bin:$$PATH" protoc --proto_path=proto \
 			--dart_out=grpc:mobile/lib/gen \
-			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto; then \
+			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto proto/stt_service.proto; then \
 			echo "✅ Dart protobuf generated"; \
 		else \
 			echo "⚠️  Dart protobuf generation failed in current environment"; \
@@ -224,12 +277,12 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	@/bin/bash backend/scripts/run_grpc_with_env.sh
+	@BACKEND_PYTHON=$(BACKEND_PYTHON_ABS) /bin/bash backend/scripts/run_grpc_with_env.sh
 
 # Python FastAPI 服务
 api-server:
 	@echo "🚀 Starting Python FastAPI Server..."
-	cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
+	cd backend && $(BACKEND_PYTHON_ABS) -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."
@@ -264,33 +317,46 @@ celery-up:
 		cd backend && docker build -t sparkle_backend .; \
 	fi
 	@echo "   Starting services..."
-	@docker run -d --name sparkle_celery_worker --network sparkle-flutter_default \
+	@docker run -d --name sparkle_celery_worker --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
 		-v $$(pwd)/backend:/app \
-		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2 2>/dev/null || echo "Worker may already be running"
-	@docker run -d --name sparkle_celery_beat --network sparkle-flutter_default \
+		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4 2>/dev/null || echo "Worker may already be running"
+	@docker run -d --name sparkle_celery_glm_batch_worker --network sparkle-project_default \
+		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
+		-e GLM_BATCH_MAX_CONCURRENCY=2 \
+		-v $$(pwd)/backend:/app \
+		sparkle_backend celery -A app.core.celery_app worker -l info -Q glm_batch --concurrency=2 --hostname=glm-batch@%h 2>/dev/null || echo "GLM batch worker may already be running"
+	@docker run -d --name sparkle_celery_beat --network sparkle-project_default \
 		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
 		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
 	@if [ "$(FLOWER_ENABLE)" = "1" ]; then \
-		docker run -d --name sparkle_flower --network sparkle-flutter_default -p 5555:5555 \
+		docker run -d --name sparkle_flower --network sparkle-project_default -p 5555:5555 \
 			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
 	else \
 		echo "ℹ️  Flower disabled. Set FLOWER_ENABLE=1 to start it."; \
 	fi
 	@echo "✅ Celery services started!"
 	@echo "   Worker: docker logs -f sparkle_celery_worker"
+	@echo "   GLM Batch Worker: docker logs -f sparkle_celery_glm_batch_worker"
 	@echo "   Beat: docker logs -f sparkle_celery_beat"
 	@echo "   Flower: http://localhost:5555"
 
 celery-logs-worker:
 	@echo "📊 Celery Worker Logs..."
 	@docker logs -f sparkle_celery_worker 2>/dev/null || echo "Worker not running"
+
+celery-logs-glm:
+	@echo "📊 Celery GLM Batch Worker Logs..."
+	@docker logs -f sparkle_celery_glm_batch_worker 2>/dev/null || echo "GLM batch worker not running"
 
 celery-logs-beat:
 	@echo "📊 Celery Beat Logs..."
@@ -302,8 +368,8 @@ celery-flower:
 
 celery-restart:
 	@echo "🔄 Restarting Celery services..."
-	@docker stop sparkle_celery_worker sparkle_celery_beat 2>/dev/null || true
-	@docker rm sparkle_celery_worker sparkle_celery_beat 2>/dev/null || true
+	@docker stop sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat 2>/dev/null || true
+	@docker rm sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat 2>/dev/null || true
 	@make celery-up
 
 celery-flush:
@@ -312,12 +378,12 @@ celery-flush:
 
 celery-status:
 	@echo "📊 Celery Services Status..."
-	@docker ps --filter "name=sparkle_celery" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No Celery services running"
+	@docker ps --filter "name=celery_" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No Celery services running"
 
 celery-stop:
 	@echo "🛑 Stopping Celery services..."
-	@docker stop sparkle_celery_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
-	@docker rm sparkle_celery_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
+	@docker stop sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
+	@docker rm sparkle_celery_worker sparkle_celery_glm_batch_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
 	@echo "✅ Celery services stopped"
 
 # 启动完整开发环境 (包含 Celery)
@@ -360,6 +426,23 @@ mobile-run:
 		unset CC CXX; \
 	fi; \
 	cd mobile && flutter run
+
+# Build variants for different markets
+mobile-build-china:
+	@echo "🇨🇳 Building for China market (Google services disabled)..."
+	cd mobile && flutter build apk --dart-define=ENABLE_GOOGLE_SERVICES=false --dart-define=FCM_ENABLED=false
+
+mobile-build-intl:
+	@echo "🌍 Building for International market..."
+	cd mobile && flutter build apk --dart-define=ENABLE_GOOGLE_SERVICES=true
+
+mobile-build-china-ios:
+	@echo "🇨🇳 Building iOS for China market..."
+	cd mobile && flutter build ios --dart-define=ENABLE_GOOGLE_SERVICES=false --dart-define=FCM_ENABLED=false
+
+mobile-build-intl-ios:
+	@echo "🌍 Building iOS for International market..."
+	cd mobile && flutter build ios --dart-define=ENABLE_GOOGLE_SERVICES=true
 # 配置自检
 env-check:
 	@echo "🔍 Checking effective config + connectivity..."
@@ -387,7 +470,7 @@ community-test:
 
 file-pipeline-test:
 	@echo "📎 Running file upload + vectorization smoke..."
-	@TOKEN=$$(cd backend && ../$(BACKEND_PYTHON) -c "import httpx; resp = httpx.post('http://127.0.0.1:8000/api/v1/auth/login', json={'username':'chat_test','password':'Chat123456'}, timeout=20.0); resp.raise_for_status(); print(resp.json()['access_token'])"); \
+	@TOKEN=$$(cd backend && ../$(BACKEND_PYTHON) scripts/print_local_smoke_token.py); \
 	DATABASE_URL=$$(cd backend && ../$(BACKEND_PYTHON) -c "import os, sys; sys.path.append(os.getcwd()); from app.config import settings; print(settings.DATABASE_URL)"); \
 	TOKEN="$$TOKEN" DATABASE_URL="$$DATABASE_URL" $(BACKEND_PYTHON) scripts/smoke_file_pipeline.py --file backend/test_weekly_report.pdf --token "$$TOKEN" --database-url "$$DATABASE_URL"
 
@@ -404,3 +487,26 @@ local-mobile-smoke:
 
 local-acceptance: local-backend-smoke local-ai-check local-mobile-smoke
 	@echo "✅ Local full-stack acceptance passed."
+
+# ═══════════════════════════════════════════════════════════════════
+# China Network Mirror Configuration
+# ═══════════════════════════════════════════════════════════════════
+
+china-mirrors-setup:
+	@echo "🇨🇳 Setting up China network mirrors..."
+	@bash scripts/setup_china_mirrors.sh
+
+mobile-setup-china:
+	@echo "📱 Setting up Flutter/Dart mirrors for China..."
+	@bash scripts/setup_flutter_mirrors.sh
+	@echo ""
+	@echo "⚠️  Please restart your terminal or run: source ~/.zshrc"
+	@echo "Then run: cd mobile && flutter pub get"
+
+pip-install-china:
+	@echo "🐍 Installing Python dependencies with China mirror..."
+	pip install -r backend/requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+
+uv-install-china:
+	@echo "🐍 Installing Python dependencies with uv (China mirror)..."
+	uv pip install -r backend/requirements.txt --index-url https://mirrors.aliyun.com/pypi/simple/

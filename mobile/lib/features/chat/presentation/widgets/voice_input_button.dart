@@ -12,6 +12,10 @@ import 'package:sparkle/features/chat/data/services/audio_recording_service.dart
 
 /// 语音输入按钮组件
 /// 点击开始/结束录音；长按仍可快速按住说话。
+enum VoiceInputInteractionMode { tapToggle, holdToTalk }
+
+enum VoiceReleaseAction { commit, send, cancel }
+
 class VoiceInputButton extends ConsumerStatefulWidget {
   const VoiceInputButton({
     required this.onTranscription,
@@ -19,11 +23,26 @@ class VoiceInputButton extends ConsumerStatefulWidget {
     super.key,
     this.onRecordingStarted,
     this.onRecordingStopped,
+    this.size = 48,
+    this.interactionMode = VoiceInputInteractionMode.tapToggle,
+    this.onLiveTranscription,
+    this.onRecordingFinished,
+    this.onDraftCancelled,
+    this.autoStart = false,
+    this.showGestureHints = false,
   });
   final void Function(String text) onTranscription;
   final void Function(String error) onError;
   final VoidCallback? onRecordingStarted;
   final VoidCallback? onRecordingStopped;
+  final double size;
+  final VoiceInputInteractionMode interactionMode;
+  final void Function(String text)? onLiveTranscription;
+  final void Function(String text, VoiceReleaseAction action)?
+      onRecordingFinished;
+  final VoidCallback? onDraftCancelled;
+  final bool autoStart;
+  final bool showGestureHints;
 
   @override
   ConsumerState<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -37,6 +56,10 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   int _recordingDuration = 0;
   Timer? _durationTimer;
   AnimationController? _animationController;
+  String _latestTranscript = '';
+  Offset _longPressOffset = Offset.zero;
+  VoiceReleaseAction _releaseAction = VoiceReleaseAction.commit;
+  bool _didFinishRecording = false;
 
   @override
   void initState() {
@@ -45,6 +68,25 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_startRecording());
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant VoiceInputButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autoStart && !oldWidget.autoStart && !_isRecording) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_startRecording());
+        }
+      });
+    }
   }
 
   @override
@@ -90,6 +132,10 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       _isRecording = true;
       _isProcessing = false;
       _recordingDuration = 0;
+      _latestTranscript = '';
+      _releaseAction = VoiceReleaseAction.commit;
+      _longPressOffset = Offset.zero;
+      _didFinishRecording = false;
     });
 
     _animationController?.forward();
@@ -124,11 +170,12 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         wsUrl: wsUrl,
         authToken: authToken,
         onTranscription: (text) {
+          _latestTranscript = text;
           if (mounted) {
             setState(() {
               _isProcessing = false;
             });
-            // 实时更新父组件的文本
+            widget.onLiveTranscription?.call(text);
             widget.onTranscription(text);
           }
         },
@@ -149,7 +196,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
               _isProcessing = false;
             });
             _animationController?.reverse();
-            widget.onRecordingStopped?.call();
+            _notifyRecordingFinished();
           }
         },
         maxDuration: const Duration(seconds: 30), // 智谱 ASR 单次最长 30 秒
@@ -187,7 +234,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         _isProcessing = false;
       });
       _animationController?.reverse();
-      widget.onRecordingStopped?.call();
+      _notifyRecordingFinished();
     }
   }
 
@@ -204,10 +251,42 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       setState(() {
         _isRecording = false;
         _isProcessing = false;
+        _latestTranscript = '';
       });
       _animationController?.reverse();
+      widget.onDraftCancelled?.call();
       widget.onRecordingStopped?.call();
     }
+  }
+
+  void _notifyRecordingFinished() {
+    if (_didFinishRecording) {
+      return;
+    }
+    _didFinishRecording = true;
+    final text = _latestTranscript.trim();
+    if (text.isNotEmpty) {
+      widget.onRecordingFinished?.call(text, _releaseAction);
+    } else if (_releaseAction == VoiceReleaseAction.cancel) {
+      widget.onDraftCancelled?.call();
+    }
+    widget.onRecordingStopped?.call();
+  }
+
+  void _updateReleaseAction(LongPressMoveUpdateDetails details) {
+    final offset = details.offsetFromOrigin;
+    final nextAction = offset.dy < -36
+        ? (offset.dx >= 0
+              ? VoiceReleaseAction.send
+              : VoiceReleaseAction.cancel)
+        : VoiceReleaseAction.commit;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _longPressOffset = offset;
+      _releaseAction = nextAction;
+    });
   }
 
   /// 格式化时长显示
@@ -223,16 +302,31 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () {
-        if (_isRecording) {
-          unawaited(_stopRecording());
-        } else {
-          unawaited(_startRecording());
-        }
-      },
-      onLongPressStart: (_) => _startRecording(),
-      onLongPressEnd: (_) => _stopRecording(),
-      onLongPressCancel: _cancelRecording,
+      onTap: widget.interactionMode == VoiceInputInteractionMode.tapToggle
+          ? () {
+              if (_isRecording) {
+                unawaited(_stopRecording());
+              } else {
+                unawaited(_startRecording());
+              }
+            }
+          : null,
+      onLongPressStart:
+          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+          ? (_) => _startRecording()
+          : null,
+      onLongPressMoveUpdate:
+          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+          ? _updateReleaseAction
+          : null,
+      onLongPressEnd:
+          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+          ? (_) => _stopRecording()
+          : null,
+      onLongPressCancel:
+          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+          ? _cancelRecording
+          : null,
       child: AnimatedBuilder(
         animation: _animationController!,
         builder: (context, child) {
@@ -242,27 +336,55 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
             child: child,
           );
         },
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: _isRecording
-                ? DS.brandPrimary
-                : (isDark ? DS.neutral800 : DS.neutral200),
-            shape: BoxShape.circle,
-            boxShadow: _isRecording
-                ? [
-                    BoxShadow(
-                      color: DS.brandPrimary.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: _buildButtonContent(isDark: isDark),
-          ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            if (_isRecording &&
+                widget.showGestureHints &&
+                widget.interactionMode == VoiceInputInteractionMode.holdToTalk)
+              Positioned(
+                top: -68,
+                child: _VoiceGestureHints(activeAction: _releaseAction),
+              ),
+            Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                color: _isRecording
+                    ? DS.brandPrimary
+                    : (isDark ? DS.neutral800 : DS.neutral200),
+                shape: BoxShape.circle,
+                boxShadow: _isRecording
+                    ? [
+                        BoxShadow(
+                          color: DS.brandPrimary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: _buildButtonContent(isDark: isDark),
+              ),
+            ),
+            if (_isRecording &&
+                widget.interactionMode == VoiceInputInteractionMode.holdToTalk &&
+                _longPressOffset.dy < -8)
+              Positioned(
+                top: -18 + _longPressOffset.dy.clamp(-20.0, 0.0),
+                child: Icon(
+                  _releaseAction == VoiceReleaseAction.cancel
+                      ? Icons.undo_rounded
+                      : _releaseAction == VoiceReleaseAction.send
+                      ? Icons.send_rounded
+                      : Icons.keyboard_arrow_up_rounded,
+                  color: DS.textOnPrimary,
+                  size: 20,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -271,10 +393,15 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   Widget _buildButtonContent({required bool isDark}) {
     final idleIconColor =
         isDark ? DS.textSecondary.withValues(alpha: 0.92) : DS.neutral600;
+    // 根据按钮尺寸动态调整图标大小
+    final iconSize = (widget.size * 0.42).clamp(16.0, 28.0);
+    final progressSize = (widget.size * 0.46).clamp(18.0, 26.0);
+    final fontSize = (widget.size * 0.17).clamp(6.0, 10.0);
+
     if (_isProcessing) {
       return SizedBox(
-        width: 22,
-        height: 22,
+        width: progressSize,
+        height: progressSize,
         child: CircularProgressIndicator(
           strokeWidth: 2,
           color: DS.brandPrimaryConst,
@@ -289,12 +416,12 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           Icon(
             Icons.mic,
             color: DS.textOnPrimary,
-            size: 20,
+            size: iconSize,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
-              fontSize: 8,
+              fontSize: fontSize,
               color: DS.textOnPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -306,7 +433,75 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     return Icon(
       Icons.mic_none,
       color: idleIconColor,
-      size: 20,
+      size: iconSize,
     );
   }
+}
+
+class _VoiceGestureHints extends StatelessWidget {
+  const _VoiceGestureHints({required this.activeAction});
+
+  final VoiceReleaseAction activeAction;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHint(
+            label: '上滑撤回',
+            icon: Icons.undo_rounded,
+            active: activeAction == VoiceReleaseAction.cancel,
+            color: DS.error,
+          ),
+          const SizedBox(width: DS.spacing8),
+          _buildHint(
+            label: '松开发到输入框',
+            icon: Icons.keyboard_arrow_down_rounded,
+            active: activeAction == VoiceReleaseAction.commit,
+            color: DS.info,
+          ),
+          const SizedBox(width: DS.spacing8),
+          _buildHint(
+            label: '上滑发送',
+            icon: Icons.send_rounded,
+            active: activeAction == VoiceReleaseAction.send,
+            color: DS.semanticSuccess,
+          ),
+        ],
+      );
+
+  Widget _buildHint({
+    required String label,
+    required IconData icon,
+    required bool active,
+    required Color color,
+  }) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.16) : DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? color.withValues(alpha: 0.4) : DS.neutral300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: active ? color : DS.textSecondary),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: active ? color : DS.textSecondary,
+                fontWeight: active ? DS.fontWeightBold : DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      );
 }

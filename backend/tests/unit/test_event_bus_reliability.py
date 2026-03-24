@@ -10,7 +10,8 @@ class FakeRedis:
         self.added: list[tuple[str, dict[str, str]]] = []
         self.acked: list[tuple[str, str, str]] = []
 
-    async def xadd(self, stream: str, payload: dict[str, str]):
+    async def xadd(self, stream: str, payload: dict[str, str], maxlen=None, approximate=True):
+        # maxlen parameter added for DLQ size limit feature (C3 fix)
         self.added.append((stream, payload))
         return "1-0"
 

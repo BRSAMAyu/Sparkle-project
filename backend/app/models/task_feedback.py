@@ -1,6 +1,8 @@
 """
 Task Feedback Model
 """
+from __future__ import annotations
+
 import enum
 
 from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String, Text

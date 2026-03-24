@@ -33,6 +33,14 @@ AchievementModel _$AchievementModelFromJson(Map<String, dynamic> json) =>
       rewardConfig: (json['reward_config'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
+      activeFrom: json['active_from'] == null
+          ? null
+          : DateTime.parse(json['active_from'] as String),
+      activeTo: json['active_to'] == null
+          ? null
+          : DateTime.parse(json['active_to'] as String),
+      isLimited: json['is_limited'] as bool? ?? false,
+      eventTag: json['event_tag'] as String?,
       totalUnlocked: (json['total_unlocked'] as num?)?.toInt() ?? 0,
     );
 
@@ -56,6 +64,10 @@ Map<String, dynamic> _$AchievementModelToJson(AchievementModel instance) =>
           _$VisualEffectTypeEnumMap[instance.visualEffectType]!,
       'visual_config': instance.visualConfig,
       'reward_config': instance.rewardConfig,
+      'active_from': instance.activeFrom?.toIso8601String(),
+      'active_to': instance.activeTo?.toIso8601String(),
+      'is_limited': instance.isLimited,
+      'event_tag': instance.eventTag,
       'total_unlocked': instance.totalUnlocked,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
@@ -176,6 +188,42 @@ Map<String, dynamic> _$StreakStatsToJson(StreakStats instance) =>
       'longest_streak_end': instance.longestStreakEnd?.toIso8601String(),
     };
 
+StreakDayRecord _$StreakDayRecordFromJson(Map<String, dynamic> json) =>
+    StreakDayRecord(
+      day: DateTime.parse(json['day'] as String),
+      status: $enumDecode(_$StreakDayStatusEnumMap, json['status']),
+      usedFreeze: json['used_freeze'] as bool? ?? false,
+      sourceEvent: json['source_event'] as String?,
+    );
+
+Map<String, dynamic> _$StreakDayRecordToJson(StreakDayRecord instance) =>
+    <String, dynamic>{
+      'day': instance.day.toIso8601String(),
+      'status': _$StreakDayStatusEnumMap[instance.status]!,
+      'used_freeze': instance.usedFreeze,
+      'source_event': instance.sourceEvent,
+    };
+
+const _$StreakDayStatusEnumMap = {
+  StreakDayStatus.active: 'active',
+  StreakDayStatus.frozen: 'frozen',
+  StreakDayStatus.missed: 'missed',
+};
+
+StreakHistoryResponse _$StreakHistoryResponseFromJson(
+        Map<String, dynamic> json) =>
+    StreakHistoryResponse(
+      days: (json['days'] as List<dynamic>)
+          .map((e) => StreakDayRecord.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$StreakHistoryResponseToJson(
+        StreakHistoryResponse instance) =>
+    <String, dynamic>{
+      'days': instance.days,
+    };
+
 SparkContract _$SparkContractFromJson(Map<String, dynamic> json) =>
     SparkContract(
       userId: json['user_id'] as String,
@@ -188,12 +236,12 @@ SparkContract _$SparkContractFromJson(Map<String, dynamic> json) =>
       currentDays: (json['current_days'] as num).toInt(),
       currentMinutes: (json['current_minutes'] as num).toInt(),
       rewardMultiplier: (json['reward_multiplier'] as num).toDouble(),
-      completedAt: json['completedAt'] == null
+      completedAt: json['completed_at'] == null
           ? null
-          : DateTime.parse(json['completedAt'] as String),
-      failedAt: json['failedAt'] == null
+          : DateTime.parse(json['completed_at'] as String),
+      failedAt: json['failed_at'] == null
           ? null
-          : DateTime.parse(json['failedAt'] as String),
+          : DateTime.parse(json['failed_at'] as String),
       failureReason: json['failure_reason'] as String?,
     );
 
@@ -209,8 +257,8 @@ Map<String, dynamic> _$SparkContractToJson(SparkContract instance) =>
       'current_days': instance.currentDays,
       'current_minutes': instance.currentMinutes,
       'reward_multiplier': instance.rewardMultiplier,
-      'completedAt': instance.completedAt?.toIso8601String(),
-      'failedAt': instance.failedAt?.toIso8601String(),
+      'completed_at': instance.completedAt?.toIso8601String(),
+      'failed_at': instance.failedAt?.toIso8601String(),
       'failure_reason': instance.failureReason,
     };
 
@@ -226,8 +274,12 @@ GalaxySkin _$GalaxySkinFromJson(Map<String, dynamic> json) => GalaxySkin(
       name: json['name'] as String,
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       sortOrder: (json['sort_order'] as num).toInt(),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.parse(json['updated_at'] as String),
       description: json['description'] as String?,
       previewUrl: json['preview_url'] as String?,
       unlockType: json['unlock_type'] as String?,
@@ -254,12 +306,11 @@ Map<String, dynamic> _$GalaxySkinToJson(GalaxySkin instance) =>
       'is_unlocked': instance.isUnlocked,
       'is_equipped': instance.isEquipped,
       'unlocked_at': instance.unlockedAt?.toIso8601String(),
-      'created_at': instance.createdAt.toIso8601String(),
-      'updated_at': instance.updatedAt.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
     };
 
 UserTitle _$UserTitleFromJson(Map<String, dynamic> json) => UserTitle(
-      userId: json['user_id'] as String,
       titleId: json['title_id'] as String,
       titleName: json['title_name'] as String,
       titleDisplay: json['title_display'] as String,
@@ -269,7 +320,6 @@ UserTitle _$UserTitleFromJson(Map<String, dynamic> json) => UserTitle(
     );
 
 Map<String, dynamic> _$UserTitleToJson(UserTitle instance) => <String, dynamic>{
-      'user_id': instance.userId,
       'title_id': instance.titleId,
       'title_name': instance.titleName,
       'title_display': instance.titleDisplay,
@@ -312,6 +362,8 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       category: json['category'] as String,
+      lane: json['lane'] as String? ?? 'prestige_lane',
+      laneLabel: json['lane_label'] as String? ?? '声望进阶线',
       position: (json['position'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
@@ -322,6 +374,16 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       parentId: json['parent_id'] as String?,
+      displayState: json['display_state'] as String? ?? 'blocked',
+      isRecommendedTarget: json['is_recommended_target'] as bool? ?? false,
+      rewardPreview: (json['reward_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      progressPercentage: (json['progress_percentage'] as num?)?.toInt() ?? 0,
+      progressValue: (json['progress_value'] as num?)?.toInt() ?? 0,
+      progressTarget: (json['progress_target'] as num?)?.toInt() ?? 1,
+      unlockHint: json['unlock_hint'] as String?,
     );
 
 Map<String, dynamic> _$AchievementMapNodeToJson(AchievementMapNode instance) =>
@@ -330,11 +392,20 @@ Map<String, dynamic> _$AchievementMapNodeToJson(AchievementMapNode instance) =>
       'name': instance.name,
       'rarity': _$AchievementRarityEnumMap[instance.rarity]!,
       'category': instance.category,
+      'lane': instance.lane,
+      'lane_label': instance.laneLabel,
       'position': instance.position,
       'is_unlocked': instance.isUnlocked,
       'is_hidden': instance.isHidden,
       'prerequisites': instance.prerequisites,
       'parent_id': instance.parentId,
+      'display_state': instance.displayState,
+      'is_recommended_target': instance.isRecommendedTarget,
+      'reward_preview': instance.rewardPreview,
+      'progress_percentage': instance.progressPercentage,
+      'progress_value': instance.progressValue,
+      'progress_target': instance.progressTarget,
+      'unlock_hint': instance.unlockHint,
     };
 
 AchievementMapData _$AchievementMapDataFromJson(Map<String, dynamic> json) =>
@@ -373,6 +444,18 @@ AchievementUnlockEvent _$AchievementUnlockEventFromJson(
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
       isFirst: json['is_first'] as bool? ?? false,
+      rewardPreview: (json['reward_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      surfacePreview: (json['surface_preview'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      gloryLines: (json['glory_lines'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$AchievementUnlockEventToJson(
@@ -387,4 +470,7 @@ Map<String, dynamic> _$AchievementUnlockEventToJson(
           _$VisualEffectTypeEnumMap[instance.visualEffectType],
       'rewards': instance.rewards,
       'is_first': instance.isFirst,
+      'reward_preview': instance.rewardPreview,
+      'surface_preview': instance.surfacePreview,
+      'glory_lines': instance.gloryLines,
     };

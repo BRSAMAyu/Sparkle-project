@@ -17,7 +17,7 @@ class AchievementCardGenerator extends StatelessWidget {
     required String achievementType,
     required Map<String, dynamic> data,
   }) async {
-    // TODO: Implement actual image generation logic
+    // TRACKED(TD-010): Implement actual image generation logic
     // This typically requires wrapping the widget in a RepaintBoundary,
     // rendering it to an image, and converting to byte data.
     // For now, returning null to allow compilation.

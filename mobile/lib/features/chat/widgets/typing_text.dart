@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/utils/grapheme_utils.dart';
 
 /// 打字机效果文本组件
 ///
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 /// 2. 可控速度：支持三档速度（快/中/慢）
 /// 3. 可中断：支持跳过动画直接显示全文
 /// 4. 完成回调：动画结束时通知父组件
+/// 5. Emoji安全：使用grapheme-aware切割，正确处理多码点字符
 class TypingText extends StatefulWidget {
   const TypingText({
     required this.text,
@@ -73,12 +75,14 @@ class TypingText extends StatefulWidget {
 class _TypingTextState extends State<TypingText> {
   String _displayedText = '';
   Timer? _typingTimer;
-  int _currentIndex = 0;
+  int _currentGraphemeIndex = 0; // 使用grapheme索引而非UTF-16索引
+  late int _totalGraphemes; // 缓存grapheme总数
   bool _isCompleted = false;
 
   @override
   void initState() {
     super.initState();
+    _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
     if (widget.animate) {
       _startTyping();
     } else {
@@ -94,9 +98,10 @@ class _TypingTextState extends State<TypingText> {
     // 文本变化时重新开始打字
     if (widget.text != oldWidget.text) {
       _stopTyping();
-      _currentIndex = 0;
+      _currentGraphemeIndex = 0;
       _displayedText = '';
       _isCompleted = false;
+      _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
 
       if (widget.animate) {
         _startTyping();
@@ -119,10 +124,13 @@ class _TypingTextState extends State<TypingText> {
 
   void _startTyping() {
     _typingTimer = Timer.periodic(widget.charDelay, (timer) {
-      if (_currentIndex < widget.text.length) {
+      if (_currentGraphemeIndex < _totalGraphemes) {
         setState(() {
-          _currentIndex++;
-          _displayedText = widget.text.substring(0, _currentIndex);
+          _currentGraphemeIndex++;
+          _displayedText = GraphemeUtils.takeGraphemes(
+            widget.text,
+            _currentGraphemeIndex,
+          );
         });
       } else {
         _completeTyping();
@@ -255,12 +263,14 @@ class _TypingRichTextState extends State<TypingRichText> {
   late String _fullText;
   String _displayedText = '';
   Timer? _typingTimer;
-  int _currentIndex = 0;
+  int _currentGraphemeIndex = 0; // 使用grapheme索引
+  late int _totalGraphemes; // 缓存grapheme总数
 
   @override
   void initState() {
     super.initState();
     _fullText = _extractText(widget.spans);
+    _totalGraphemes = GraphemeUtils.graphemeCount(_fullText);
 
     if (widget.animate) {
       _startTyping();
@@ -279,10 +289,13 @@ class _TypingRichTextState extends State<TypingRichText> {
 
   void _startTyping() {
     _typingTimer = Timer.periodic(widget.charDelay, (timer) {
-      if (_currentIndex < _fullText.length) {
+      if (_currentGraphemeIndex < _totalGraphemes) {
         setState(() {
-          _currentIndex++;
-          _displayedText = _fullText.substring(0, _currentIndex);
+          _currentGraphemeIndex++;
+          _displayedText = GraphemeUtils.takeGraphemes(
+            _fullText,
+            _currentGraphemeIndex,
+          );
         });
       } else {
         _stopTyping();

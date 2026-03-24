@@ -56,6 +56,8 @@ class OpenAICompatibleProvider(LLMProvider):
         """从 base_url 提取提供商名称"""
         url_lower = self.base_url.lower()
         if "bigmodel" in url_lower or "zhipu" in url_lower:
+            if "/api/coding/" in url_lower:
+                return "zhipu_coding"
             return "zhipu"
         elif "deepseek" in url_lower:
             return "deepseek"
@@ -66,6 +68,12 @@ class OpenAICompatibleProvider(LLMProvider):
         elif "siliconflow" in url_lower:
             return "siliconflow"
         return "default"
+
+    @staticmethod
+    def _is_rate_limited_error(error: Exception) -> bool:
+        error_text = str(error).lower()
+        status_code = getattr(error, "status_code", None)
+        return status_code == 429 or "429" in error_text or "rate limit" in error_text or "too many request" in error_text
 
     async def chat(
         self,
@@ -83,14 +91,19 @@ class OpenAICompatibleProvider(LLMProvider):
                     temperature=temperature,
                     **kwargs
                 )
+                await llm_concurrency.report_success(provider)
                 return response.choices[0].message.content or ""
         except asyncio.TimeoutError:
             logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
             raise HTTPException(status_code=503, detail="LLM service is busy, please try again")
         except APIError as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
             logger.error(f"LLM API Error: {e}")
             raise e
         except Exception as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
             logger.error(f"Unexpected LLM Error: {e}")
             raise e
 
@@ -115,13 +128,18 @@ class OpenAICompatibleProvider(LLMProvider):
                     content = chunk.choices[0].delta.content
                     if content:
                         yield content
+                await llm_concurrency.report_success(provider)
         except asyncio.TimeoutError:
             logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
             yield ""
             return
         except APIError as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
             logger.error(f"LLM Stream API Error: {e}")
             raise e
         except Exception as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
             logger.error(f"Unexpected LLM Stream Error: {e}")
             raise e

@@ -1,7 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+
+// ---------------------------------------------------------------------------
+// AchievementCardStyle
+// ---------------------------------------------------------------------------
 
 /// 成就卡片样式
 enum AchievementCardStyle {
@@ -11,13 +20,224 @@ enum AchievementCardStyle {
   /// 标准型 - 用于网格
   standard,
 
+  /// 展示型 - 用于高密度小组件网格
+  showcase,
+
   /// 完整型 - 用于详情
   full,
 }
 
+// ---------------------------------------------------------------------------
+// AnimatedAchievementCard  (entrance animation wrapper)
+// ---------------------------------------------------------------------------
+
+/// Wraps any child with a staggered entrance animation:
+/// fade + scale (0.95 -> 1.0) + slide up (8px).
+///
+/// [index] controls stagger delay (index * 50 ms).
+class AnimatedAchievementCard extends StatefulWidget {
+  const AnimatedAchievementCard({
+    required this.child,
+    super.key,
+    this.index = 0,
+    this.rarity = AchievementRarity.common,
+  });
+
+  final Widget child;
+  final int index;
+  final AchievementRarity rarity;
+
+  @override
+  State<AnimatedAchievementCard> createState() =>
+      _AnimatedAchievementCardState();
+}
+
+class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  int get _rarityDelayMs => switch (widget.rarity) {
+        AchievementRarity.common => 32,
+        AchievementRarity.rare => 44,
+        AchievementRarity.epic => 56,
+        AchievementRarity.legendary => 70,
+      };
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AnimationSystem.scene, // 400 ms
+    );
+
+    const curve = Curves.easeOutCubic;
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: curve,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: curve),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 8),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: curve));
+
+    // Stagger: each card delays by index * 50 ms.
+    unawaited(
+      Future<void>.delayed(
+        Duration(milliseconds: widget.index * _rarityDelayMs),
+        () {
+          if (mounted) _controller.forward();
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) => Transform.translate(
+          offset: _slideAnimation.value,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Opacity(
+              opacity: _fadeAnimation.value,
+              child: child,
+            ),
+          ),
+        ),
+        child: widget.child,
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _AnimatedProgressBar  (fills from 0 -> target on first build)
+// ---------------------------------------------------------------------------
+
+class _AnimatedProgressBar extends StatelessWidget {
+  const _AnimatedProgressBar({
+    required this.progress,
+    required this.rarityColor,
+    required this.isUnlocked,
+    this.height = 6,
+  });
+
+  final double progress;
+  final Color rarityColor;
+  final bool isUnlocked;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) => Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: DS.neutral200,
+            borderRadius: DS.borderRadiusFull,
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: value,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isUnlocked
+                      ? [
+                          DS.semanticSuccess,
+                          DS.semanticSuccess.withValues(alpha: 0.8),
+                        ]
+                      : [
+                          rarityColor,
+                          rarityColor.withValues(alpha: 0.7),
+                        ],
+                ),
+                borderRadius: DS.borderRadiusFull,
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------------
+// _AnimatedCompactProgressBar
+// ---------------------------------------------------------------------------
+
+class _AnimatedCompactProgressBar extends StatelessWidget {
+  const _AnimatedCompactProgressBar({
+    required this.progress,
+    required this.rarityColor,
+    required this.progressPercentage,
+  });
+
+  final double progress;
+  final Color rarityColor;
+  final int progressPercentage;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.neutral200,
+                  borderRadius: DS.borderRadiusFull,
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: value,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: rarityColor,
+                      borderRadius: DS.borderRadiusFull,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: DS.spacing8),
+          Text(
+            '$progressPercentage%',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              fontWeight: DS.fontWeightMedium,
+              color: DS.textSecondary,
+            ),
+          ),
+        ],
+      );
+}
+
+// ---------------------------------------------------------------------------
+// AchievementCard  (core stateless card with 3 layout variants)
+// ---------------------------------------------------------------------------
+
 /// 成就卡片组件
 ///
-/// 显示成就图标、名称、进度，支持点击跳转
+/// 显示成就图标、名称、进度，支持点击跳转。
+/// 动画效果通过内部 stateful 子组件实现，卡片本身保持 StatelessWidget。
 class AchievementCard extends StatelessWidget {
   const AchievementCard({
     required this.achievement,
@@ -34,48 +254,121 @@ class AchievementCard extends StatelessWidget {
   final bool isPinned;
   final bool showProgress;
 
-  @override
-  Widget build(BuildContext context) {
+  // -- helpers ---------------------------------------------------------------
+
+  bool get _isNewlyUnlocked {
+    final unlockedAt = achievement.userProgress?.unlockedAt;
+    if (unlockedAt == null) return false;
+    return DateTime.now().difference(unlockedAt) < newlyUnlockedWindow;
+  }
+
+  bool get _shouldShimmer =>
+      achievement.isUnlocked &&
+      shimmerRarities.contains(achievement.achievement.rarity);
+
+  BorderRadius get _borderRadiusForStyle {
     switch (style) {
       case AchievementCardStyle.compact:
-        return _buildCompact(context);
+        return const BorderRadius.all(Radius.circular(12));
       case AchievementCardStyle.standard:
-        return _buildStandard(context);
+        return const BorderRadius.all(Radius.circular(16));
+      case AchievementCardStyle.showcase:
+        return const BorderRadius.all(Radius.circular(18));
       case AchievementCardStyle.full:
-        return _buildFull(context);
+        return const BorderRadius.all(Radius.circular(20));
     }
   }
+
+  // -- build -----------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    Widget card;
+    switch (style) {
+      case AchievementCardStyle.compact:
+        card = _buildCompact(context);
+      case AchievementCardStyle.standard:
+        card = _buildStandard(context);
+      case AchievementCardStyle.showcase:
+        card = _buildShowcase(context);
+      case AchievementCardStyle.full:
+        card = _buildFull(context);
+    }
+
+    // Use RarityVisualWrapper for consistent rarity-based effects
+    final shouldWrap = _shouldShimmer || _isNewlyUnlocked;
+    if (!shouldWrap) return card;
+
+    return Hero(
+      tag: 'achievement-${achievement.achievement.id}',
+      child: RarityVisualWrapper(
+        rarity: achievement.achievement.rarity,
+        borderRadius: _borderRadiusForStyle,
+        showShimmer: _shouldShimmer,
+        showGlow: _isNewlyUnlocked,
+        isNewlyUnlocked: _isNewlyUnlocked,
+        unlockedAt: achievement.userProgress?.unlockedAt,
+        child: card,
+      ),
+    );
+  }
+
+  // -- compact variant -------------------------------------------------------
 
   Widget _buildCompact(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius12,
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
         decoration: BoxDecoration(
-          color: isUnlocked ? DS.surfacePrimary : DS.surfaceSecondary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              isUnlocked ? DS.surfacePrimary : DS.surfaceSecondary,
+              Color.lerp(
+                    DS.surfaceSecondary,
+                    rarityColor,
+                    isUnlocked ? 0.06 : 0.03,
+                  ) ??
+                  DS.surfaceSecondary,
+            ],
+          ),
           borderRadius: DS.borderRadius12,
           border: Border.all(
-            color: isUnlocked ? rarityColor : DS.border,
+            color: isUnlocked
+                ? rarityColor.withValues(alpha: 0.72)
+                : DS.border.withValues(alpha: 0.72),
             width: isUnlocked ? 1.5 : 1,
           ),
           boxShadow: isUnlocked
               ? [
                   BoxShadow(
-                    color: rarityColor.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: rarityColor.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: DS.textPrimary.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           children: [
-            _buildIcon(size: 40),
-            const SizedBox(width: DS.spacing12),
+            _buildIcon(size: 36),
+            const SizedBox(width: DS.spacing10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,6 +398,11 @@ class AchievementCard extends StatelessWidget {
                             color: DS.semanticWarning,
                           ),
                         ),
+                      if (achievement.achievement.isLimited)
+                        Padding(
+                          padding: const EdgeInsets.only(left: DS.spacing6),
+                          child: _buildLimitedChip(context),
+                        ),
                     ],
                   ),
                   if (achievement.achievement.description != null) ...[
@@ -120,7 +418,7 @@ class AchievementCard extends StatelessWidget {
                     ),
                   ],
                   if (showProgress && !isUnlocked) ...[
-                    const SizedBox(height: DS.spacing6),
+                    const SizedBox(height: DS.spacing4),
                     _buildCompactProgressBar(),
                   ],
                 ],
@@ -134,6 +432,8 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  // -- standard variant ------------------------------------------------------
+
   Widget _buildStandard(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
     final rarityColor =
@@ -141,8 +441,9 @@ class AchievementCard extends StatelessWidget {
     final rarityGradient =
         RarityColorProvider.getGradient(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius16,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
@@ -228,6 +529,10 @@ class AchievementCard extends StatelessWidget {
                                   color: DS.semanticWarning,
                                 ),
                               ],
+                              if (achievement.achievement.isLimited) ...[
+                                const SizedBox(width: DS.spacing6),
+                                _buildLimitedChip(context),
+                              ],
                             ],
                           ),
                         ],
@@ -261,6 +566,226 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  // -- showcase variant ------------------------------------------------------
+
+  Widget _buildShowcase(BuildContext context) {
+    final isUnlocked = achievement.isUnlocked;
+    final rarityColor =
+        RarityColorProvider.getColor(achievement.achievement.rarity);
+    final rarityGradient =
+        RarityColorProvider.getGradient(achievement.achievement.rarity);
+    final rewardPreview = _rewardPreviewLabels();
+    final categoryLabel = _categoryLabel();
+    final progressValue = achievement.userProgress?.progressValue;
+    final progressTarget = achievement.userProgress?.progressTarget;
+
+    return SparkleTappable(
+      onTap: onTap,
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 185 || constraints.maxHeight < 245;
+          final ultraCompact =
+              constraints.maxWidth < 168 || constraints.maxHeight < 232;
+          final rewardLimit = ultraCompact ? 1 : 2;
+
+          return Container(
+            padding: EdgeInsets.all(compact ? DS.spacing12 : DS.spacing16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isUnlocked && rarityGradient != null
+                    ? [
+                        rarityGradient.colors.first.withValues(alpha: 0.18),
+                        rarityGradient.colors.last.withValues(alpha: 0.08),
+                      ]
+                    : [
+                        DS.surfacePrimary,
+                        Color.lerp(DS.surfaceSecondary, rarityColor, 0.06) ??
+                            DS.surfaceSecondary,
+                      ],
+              ),
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              border: Border.all(
+                color: isUnlocked
+                    ? rarityColor.withValues(alpha: 0.9)
+                    : DS.border.withValues(alpha: 0.85),
+                width: isUnlocked ? 1.6 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (isUnlocked ? rarityColor : DS.textPrimary)
+                      .withValues(alpha: isUnlocked ? 0.14 : 0.06),
+                  blurRadius: isUnlocked ? 18 : 12,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: DS.spacing6,
+                        runSpacing: DS.spacing6,
+                        children: [
+                          RarityBadge(
+                            rarity: achievement.achievement.rarity,
+                            isCompact: true,
+                            showLabel: !compact,
+                          ),
+                          _buildToneChip(
+                            label: categoryLabel,
+                            color: rarityColor,
+                            icon: _categoryIcon(),
+                            maxWidth: compact ? 72 : 90,
+                          ),
+                          if ((achievement.userProgress?.isFirstUnlocker ??
+                                  false) &&
+                              !ultraCompact)
+                            _buildToneChip(
+                              label: '首解者',
+                              color: DS.semanticWarning,
+                              icon: Icons.workspace_premium_rounded,
+                              maxWidth: 78,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    _buildStatusIcon(size: compact ? 18 : 20),
+                  ],
+                ),
+                SizedBox(height: compact ? DS.spacing8 : DS.spacing12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildIcon(size: compact ? 40 : 46),
+                    SizedBox(width: compact ? DS.spacing10 : DS.spacing12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            achievement.achievement.name,
+                            style: TextStyle(
+                              fontSize:
+                                  compact ? DS.fontSizeSm : DS.fontSizeBase,
+                              fontWeight: DS.fontWeightBold,
+                              color: isUnlocked
+                                  ? DS.textPrimary
+                                  : DS.textSecondary,
+                              height: 1.2,
+                            ),
+                            maxLines: compact ? 2 : 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (!ultraCompact &&
+                              achievement.achievement.description != null) ...[
+                            const SizedBox(height: DS.spacing4),
+                            Text(
+                              achievement.achievement.description!,
+                              style: TextStyle(
+                                fontSize: DS.fontSizeXs,
+                                color: DS.textSecondary,
+                                height: 1.3,
+                              ),
+                              maxLines: compact ? 1 : 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? DS.spacing8 : DS.spacing10),
+                if (rewardPreview.isNotEmpty) ...[
+                  if (!compact)
+                    Text(
+                      '荣耀奖励',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        fontWeight: DS.fontWeightSemibold,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  if (!compact) const SizedBox(height: DS.spacing6),
+                  Wrap(
+                    spacing: DS.spacing6,
+                    runSpacing: DS.spacing6,
+                    children: rewardPreview
+                        .take(rewardLimit)
+                        .map(
+                          (label) => _buildToneChip(
+                            label: label,
+                            color: rarityColor,
+                            icon: Icons.auto_awesome_rounded,
+                            maxWidth: compact ? 84 : 112,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  SizedBox(height: compact ? DS.spacing8 : DS.spacing10),
+                ],
+                const Spacer(),
+                _buildProgressBar(height: compact ? 6 : 7),
+                const SizedBox(height: DS.spacing8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isUnlocked
+                            ? '已完成并可展示'
+                            : progressValue != null && progressTarget != null
+                                ? '$progressValue / $progressTarget'
+                                : '继续冲刺解锁',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: rarityColor.withValues(alpha: 0.12),
+                        borderRadius: DS.borderRadiusFull,
+                      ),
+                      child: Text(
+                        isUnlocked
+                            ? '已达成'
+                            : '${achievement.progressPercentage}%',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: rarityColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // -- full variant ----------------------------------------------------------
+
   Widget _buildFull(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
     final rarityColor =
@@ -268,8 +793,9 @@ class AchievementCard extends StatelessWidget {
     final rarityGradient =
         RarityColorProvider.getGradient(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius20,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(
@@ -366,7 +892,7 @@ class AchievementCard extends StatelessWidget {
                   const SizedBox(height: DS.spacing16),
                   _buildProgressBar(height: 8),
                   const SizedBox(height: DS.spacing8),
-                  _buildProgressText(),
+                  _buildProgressText(context),
                 ],
               ],
             );
@@ -375,6 +901,8 @@ class AchievementCard extends StatelessWidget {
       ),
     );
   }
+
+  // -- shared sub-widgets ----------------------------------------------------
 
   Widget _buildIcon({double size = 48}) {
     final isUnlocked = achievement.isUnlocked;
@@ -432,37 +960,39 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  Widget _buildLimitedChip(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing6,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: DS.semanticWarning.withValues(alpha: 0.15),
+        borderRadius: DS.borderRadiusFull,
+        border: Border.all(color: DS.semanticWarning.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        l10n.achievementLimitedTime,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: DS.semanticWarning,
+          fontWeight: DS.fontWeightSemibold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildProgressBar({double height = 6}) {
     final progress = achievement.progressPercentage / 100;
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return Container(
+    return _AnimatedProgressBar(
+      progress: progress,
+      rarityColor: rarityColor,
+      isUnlocked: achievement.isUnlocked,
       height: height,
-      decoration: BoxDecoration(
-        color: DS.neutral200,
-        borderRadius: DS.borderRadiusFull,
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: progress.clamp(0.0, 1.0),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: achievement.isUnlocked
-                  ? [
-                      DS.semanticSuccess,
-                      DS.semanticSuccess.withValues(alpha: 0.8),
-                    ]
-                  : [
-                      rarityColor,
-                      rarityColor.withValues(alpha: 0.7),
-                    ],
-            ),
-            borderRadius: DS.borderRadiusFull,
-          ),
-        ),
-      ),
     );
   }
 
@@ -471,42 +1001,14 @@ class AchievementCard extends StatelessWidget {
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(
-          child: Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: DS.neutral200,
-              borderRadius: DS.borderRadiusFull,
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: rarityColor,
-                  borderRadius: DS.borderRadiusFull,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: DS.spacing8),
-        Text(
-          '${achievement.progressPercentage}%',
-          style: TextStyle(
-            fontSize: DS.fontSizeXs,
-            fontWeight: DS.fontWeightMedium,
-            color: DS.textSecondary,
-          ),
-        ),
-      ],
+    return _AnimatedCompactProgressBar(
+      progress: progress,
+      rarityColor: rarityColor,
+      progressPercentage: achievement.progressPercentage,
     );
   }
 
-  Widget _buildProgressText() {
+  Widget _buildProgressText(BuildContext context) {
     final userProgress = achievement.userProgress;
 
     if (userProgress == null) {
@@ -518,7 +1020,7 @@ class AchievementCard extends StatelessWidget {
       runSpacing: DS.spacing4,
       children: [
         Text(
-          '进度',
+          context.l10n.achievementProgress,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
             color: DS.textSecondary,
@@ -534,6 +1036,117 @@ class AchievementCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildToneChip({
+    required String label,
+    required Color color,
+    required IconData icon,
+    double? maxWidth,
+  }) =>
+      Container(
+        constraints: BoxConstraints(maxWidth: maxWidth ?? 120),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: color.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                fontWeight: DS.fontWeightSemibold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  List<String> _rewardPreviewLabels() {
+    final rewards = achievement.achievement.rewardConfig ?? const [];
+    final labels = <String>[];
+
+    for (final reward in rewards) {
+      final type = reward['type']?.toString() ?? '';
+      switch (type) {
+        case 'title':
+          labels.add(reward['display']?.toString() ?? '新称号');
+        case 'visual_element':
+          labels.add('荣耀装扮');
+        case 'galaxy_skin':
+          labels.add('星图皮肤');
+        case 'avatar_border':
+          labels.add('头像边框');
+        case 'profile_badge':
+          labels.add('主页徽章');
+        case 'banner':
+          labels.add('个人横幅');
+      }
+    }
+
+    return labels.toSet().toList();
+  }
+
+  String _categoryLabel() {
+    switch (achievement.achievement.type) {
+      case AchievementType.streak:
+        return '连胜';
+      case AchievementType.mastery:
+        return '精通';
+      case AchievementType.taskComplete:
+        return '任务';
+      case AchievementType.nodeExplore:
+        return '探索';
+      case AchievementType.studyTime:
+        return '时长';
+      case AchievementType.hidden:
+        return '隐藏';
+      case AchievementType.milestone:
+        return '里程碑';
+      case AchievementType.social:
+        return '社交';
+      case AchievementType.contract:
+        return '契约';
+      case AchievementType.sprint:
+        return '冲刺';
+    }
+  }
+
+  IconData _categoryIcon() {
+    switch (achievement.achievement.type) {
+      case AchievementType.streak:
+        return Icons.local_fire_department_rounded;
+      case AchievementType.mastery:
+        return Icons.military_tech_rounded;
+      case AchievementType.taskComplete:
+        return Icons.task_alt_rounded;
+      case AchievementType.nodeExplore:
+        return Icons.explore_rounded;
+      case AchievementType.studyTime:
+        return Icons.schedule_rounded;
+      case AchievementType.hidden:
+        return Icons.visibility_off_rounded;
+      case AchievementType.milestone:
+        return Icons.flag_rounded;
+      case AchievementType.social:
+        return Icons.groups_rounded;
+      case AchievementType.contract:
+        return Icons.description_rounded;
+      case AchievementType.sprint:
+        return Icons.bolt_rounded;
+    }
   }
 
   IconData _getIconForAchievement() {
@@ -563,6 +1176,10 @@ class AchievementCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// AchievementGridCard  (grid layout convenience wrapper)
+// ---------------------------------------------------------------------------
+
 /// 成就网格卡片（用于网格布局）
 class AchievementGridCard extends StatelessWidget {
   const AchievementGridCard({
@@ -570,19 +1187,38 @@ class AchievementGridCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.showProgress = true,
+    this.animationIndex,
   });
 
   final AchievementWithProgress achievement;
   final VoidCallback? onTap;
   final bool showProgress;
 
+  /// When non-null, wraps the card in [AnimatedAchievementCard] with stagger.
+  final int? animationIndex;
+
   @override
-  Widget build(BuildContext context) => AchievementCard(
-        achievement: achievement,
-        onTap: onTap,
-        showProgress: showProgress,
+  Widget build(BuildContext context) {
+    final card = AchievementCard(
+      achievement: achievement,
+      onTap: onTap,
+      showProgress: showProgress,
+    );
+
+    if (animationIndex != null) {
+      return AnimatedAchievementCard(
+        index: animationIndex!,
+        rarity: achievement.achievement.rarity,
+        child: card,
       );
+    }
+    return card;
+  }
 }
+
+// ---------------------------------------------------------------------------
+// AchievementListCard  (list layout convenience wrapper)
+// ---------------------------------------------------------------------------
 
 /// 成就列表卡片（用于列表布局）
 class AchievementListCard extends StatelessWidget {
@@ -591,20 +1227,39 @@ class AchievementListCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.showProgress = true,
+    this.animationIndex,
   });
 
   final AchievementWithProgress achievement;
   final VoidCallback? onTap;
   final bool showProgress;
 
+  /// When non-null, wraps the card in [AnimatedAchievementCard] with stagger.
+  final int? animationIndex;
+
   @override
-  Widget build(BuildContext context) => AchievementCard(
-        achievement: achievement,
-        onTap: onTap,
-        style: AchievementCardStyle.compact,
-        showProgress: showProgress,
+  Widget build(BuildContext context) {
+    final card = AchievementCard(
+      achievement: achievement,
+      onTap: onTap,
+      style: AchievementCardStyle.compact,
+      showProgress: showProgress,
+    );
+
+    if (animationIndex != null) {
+      return AnimatedAchievementCard(
+        index: animationIndex!,
+        rarity: achievement.achievement.rarity,
+        child: card,
       );
+    }
+    return card;
+  }
 }
+
+// ---------------------------------------------------------------------------
+// AchievementDetailCard  (detail page convenience wrapper)
+// ---------------------------------------------------------------------------
 
 /// 成就详情卡片（用于详情页）
 class AchievementDetailCard extends StatelessWidget {

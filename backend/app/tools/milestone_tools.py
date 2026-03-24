@@ -3,11 +3,13 @@ Milestone interaction tools for LLM.
 
 Allows the LLM to confirm or dismiss milestone task proposals.
 """
+from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from app.tools.base import BaseTool, ToolCategory, ToolResult
+from app.tools.entity_cards import build_task_list_entity_card, wrap_widget_payload
 
 # ============ Parameter Schemas ============
 
@@ -67,10 +69,18 @@ class ConfirmMilestoneProposalTool(BaseTool):
                         "task_ids": result.get("task_ids", [])
                     },
                     widget_type="task_list",
-                    widget_data={
-                        "tasks": result.get("tasks", []),
-                        "message": f"已创建 {tasks_created} 个任务"
-                    }
+                    widget_data=wrap_widget_payload(
+                        widget_type="task_list",
+                        widget_data={
+                            "tasks": result.get("tasks", []),
+                            "message": f"已创建 {tasks_created} 个任务",
+                        },
+                        entity_card=build_task_list_entity_card(
+                            result.get("tasks", []),
+                            tool_name=self.name,
+                            tool_result_id=params.proposal_id,
+                        ),
+                    ),
                 )
             else:
                 return ToolResult(

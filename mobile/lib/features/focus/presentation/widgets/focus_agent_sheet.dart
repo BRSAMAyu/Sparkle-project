@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
@@ -28,82 +31,90 @@ class FocusAgentSheet extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: DS.lg),
-            decoration: BoxDecoration(
-              color: DS.neutral300,
-              borderRadius: BorderRadius.circular(2),
+          SparkleStaggerItem(
+            index: 0,
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: DS.lg),
+              decoration: BoxDecoration(
+                color: DS.neutral300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  gradient: DS.secondaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.auto_awesome,
-                  color: DS.brandPrimaryConst,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.focusCoachTitle,
-                      style: const TextStyle(
-                        fontWeight: DS.fontWeightBold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      l10n.focusCoachSummary(task.title, elapsedMinutes),
-                      style: TextStyle(color: DS.neutral500, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.md),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: DS.sm,
-              runSpacing: DS.xs,
+          SparkleStaggerItem(
+            index: 1,
+            child: Row(
               children: [
-                _QuickPromptChip(
-                  label: l10n.focusCoachPromptBreakdown,
-                  onTap: () => _sendPrompt(
-                    ref,
-                    task,
-                    l10n.focusCoachPromptBreakdownMessage(task.title),
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    gradient: DS.secondaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    color: DS.brandPrimaryConst,
+                    size: 18,
                   ),
                 ),
-                _QuickPromptChip(
-                  label: l10n.focusCoachPromptRefocus,
-                  onTap: () => _sendPrompt(
-                    ref,
-                    task,
-                    l10n.focusCoachPromptRefocusMessage,
-                  ),
-                ),
-                _QuickPromptChip(
-                  label: l10n.focusCoachPromptNextAction,
-                  onTap: () => _sendPrompt(
-                    ref,
-                    task,
-                    l10n.focusCoachPromptNextActionMessage,
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.focusCoachTitle,
+                        style: const TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        l10n.focusCoachSummary(task.title, elapsedMinutes),
+                        style: TextStyle(color: DS.neutral500, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: DS.md),
+          SparkleStaggerItem(
+            index: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SparkleStaggerWrap(
+                runSpacing: DS.xs,
+                children: [
+                  _QuickPromptChip(
+                    label: l10n.focusCoachPromptBreakdown,
+                    onTap: () => _sendPrompt(
+                      ref,
+                      task,
+                      l10n.focusCoachPromptBreakdownMessage(task.title),
+                    ),
+                  ),
+                  _QuickPromptChip(
+                    label: l10n.focusCoachPromptRefocus,
+                    onTap: () => _sendPrompt(
+                      ref,
+                      task,
+                      l10n.focusCoachPromptRefocusMessage,
+                    ),
+                  ),
+                  _QuickPromptChip(
+                    label: l10n.focusCoachPromptNextAction,
+                    onTap: () => _sendPrompt(
+                      ref,
+                      task,
+                      l10n.focusCoachPromptNextActionMessage,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: DS.md),
@@ -132,10 +143,13 @@ class FocusAgentSheet extends ConsumerWidget {
                 style: TextStyle(color: DS.error, fontSize: 12),
               ),
             ),
-          ChatInput(
-            enabled: !chatState.isLoading,
-            hintText: l10n.focusCoachHint,
-            onSend: (text, {replyToId}) => _sendPrompt(ref, task, text),
+          SparkleStaggerItem(
+            index: 3,
+            child: ChatInput(
+              enabled: !chatState.isLoading,
+              hintText: l10n.focusCoachHint,
+              onSend: (text, {replyToId}) => _sendPrompt(ref, task, text),
+            ),
           ),
         ],
       ),
@@ -144,6 +158,7 @@ class FocusAgentSheet extends ConsumerWidget {
 
   void _sendPrompt(WidgetRef ref, TaskModel task, String text) {
     if (text.trim().isEmpty) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     ref.read(taskChatProvider(task.id).notifier).sendMessage(text);
   }
 }

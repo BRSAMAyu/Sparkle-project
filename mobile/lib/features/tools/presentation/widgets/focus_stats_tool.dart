@@ -82,13 +82,10 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       ],
       body: state.isLoading
           ? Center(child: CircularProgressIndicator(color: accent))
-          : SingleChildScrollView(
-              child: Column(
+          : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Wrap(
-                    spacing: DS.spacing12,
-                    runSpacing: DS.spacing12,
+                  ToolMetricRow(
                     children: [
                       ToolMetricCard(
                         label: '今日专注',
@@ -141,7 +138,6 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   ),
                 ],
               ),
-            ),
     );
   }
 }

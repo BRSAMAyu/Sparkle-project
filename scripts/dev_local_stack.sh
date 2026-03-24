@@ -20,6 +20,15 @@ init_knowledge_index() {
   echo "knowledge index is ready"
 }
 
+init_age_schema() {
+  (
+    cd "$ROOT_DIR/backend" && \
+    export PATH="$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" && \
+    .venv/bin/python scripts/init_age_extension.py >/dev/null
+  )
+  echo "apache age schema is ready"
+}
+
 service_port() {
   case "$1" in
     api) echo "8000" ;;
@@ -161,6 +170,7 @@ case "${1:-}" in
     wait_for_container_health "sparkle_db"
     wait_for_container_health "sparkle_redis"
     wait_for_container_health "sparkle_minio"
+    init_age_schema
     init_knowledge_index
     start_service "grpc" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec /bin/bash scripts/run_grpc_with_env.sh"
     start_service "api" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '$ROOT_DIR/backend' && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env"

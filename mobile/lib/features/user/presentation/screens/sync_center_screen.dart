@@ -97,7 +97,6 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Flexible(
-                  fit: FlexFit.loose,
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,8 +106,8 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                           surfaceRole: SparkleSurfaceRole.card,
                           child: statsAsync.when(
                             data: (stats) => _StatsView(stats: stats),
-                            loading: () =>
-                                const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(
+                                child: CircularProgressIndicator(),),
                             error: (error, stackTrace) => Text(
                               context.l10n.syncCenterLoadFailed(
                                 error.toString(),
@@ -143,13 +142,13 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                                     if (context.mounted) {
                                       AppFeedback.success(
                                         context,
-                                        context.l10n.syncCenterDiagnosticsCopied,
+                                        context
+                                            .l10n.syncCenterDiagnosticsCopied,
                                       );
                                     }
                                   },
                                   icon: const Icon(Icons.copy),
-                                  label:
-                                      context.l10n.syncCenterCopyDiagnostics,
+                                  label: context.l10n.syncCenterCopyDiagnostics,
                                 ),
                               ),
                             ],
@@ -277,43 +276,62 @@ class _TopicFilter extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.l10n.syncCenterTopicLabel),
-          const SizedBox(width: DS.spacing8),
-          DropdownButton<String>(
-            value: value,
-            onChanged: (next) {
-              if (next != null) {
-                onChanged(next);
-              }
-            },
-            items: [
-              DropdownMenuItem(
-                value: 'all',
-                child: Text(context.l10n.syncCenterTopicAll),
+          Text(
+            context.l10n.syncCenterTopicLabel,
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.borderSubtle),
+              color: DS.surfacePrimaryElevated,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                onChanged: (next) {
+                  if (next != null) {
+                    onChanged(next);
+                  }
+                },
+                items: [
+                  DropdownMenuItem(
+                    value: 'all',
+                    child: Text(context.l10n.syncCenterTopicAll),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cognitive',
+                    child: Text(context.l10n.syncCenterTopicCognitive),
+                  ),
+                  DropdownMenuItem(
+                    value: 'knowledge',
+                    child: Text(context.l10n.syncCenterTopicKnowledge),
+                  ),
+                  DropdownMenuItem(
+                    value: 'crdt',
+                    child: Text(context.l10n.syncCenterTopicCollab),
+                  ),
+                  DropdownMenuItem(
+                    value: 'analytics',
+                    child: Text(context.l10n.syncCenterTopicAnalytics),
+                  ),
+                  DropdownMenuItem(
+                    value: 'legacy',
+                    child: Text(context.l10n.syncCenterTopicLegacy),
+                  ),
+                ],
               ),
-              DropdownMenuItem(
-                value: 'cognitive',
-                child: Text(context.l10n.syncCenterTopicCognitive),
-              ),
-              DropdownMenuItem(
-                value: 'knowledge',
-                child: Text(context.l10n.syncCenterTopicKnowledge),
-              ),
-              DropdownMenuItem(
-                value: 'crdt',
-                child: Text(context.l10n.syncCenterTopicCollab),
-              ),
-              DropdownMenuItem(
-                value: 'analytics',
-                child: Text(context.l10n.syncCenterTopicAnalytics),
-              ),
-              DropdownMenuItem(
-                value: 'legacy',
-                child: Text(context.l10n.syncCenterTopicLegacy),
-              ),
-            ],
+            ),
           ),
         ],
       );
@@ -344,10 +362,9 @@ class _ItemsList extends ConsumerWidget {
               onRetry: () async {
                 await service.retryItem(item.id);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.l10n.syncCenterRetryTriggered),
-                    ),
+                  AppFeedback.success(
+                    context,
+                    context.l10n.syncCenterRetryTriggered,
                   );
                 }
               },
@@ -356,10 +373,9 @@ class _ItemsList extends ConsumerWidget {
                 if (traceId == null || traceId.isEmpty) return;
                 await Clipboard.setData(ClipboardData(text: traceId));
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.l10n.syncCenterTraceCopied),
-                    ),
+                  AppFeedback.info(
+                    context,
+                    context.l10n.syncCenterTraceCopied,
                   );
                 }
               },
@@ -368,10 +384,9 @@ class _ItemsList extends ConsumerWidget {
                 if (entityId == null || entityId.isEmpty) return;
                 await Clipboard.setData(ClipboardData(text: entityId));
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.l10n.syncCenterEntityCopied),
-                    ),
+                  AppFeedback.info(
+                    context,
+                    context.l10n.syncCenterEntityCopied,
                   );
                 }
               },
@@ -408,7 +423,32 @@ class _OutboxItemCard extends StatelessWidget {
     final errorLabel = _errorLabel(item.lastErrorCode);
     final nextAttemptAt = item.nextAttemptAt?.toLocal();
 
-    return Card(
+    final statusColor = switch (item.status) {
+      SyncStatus.failed => DS.error,
+      SyncStatus.waitingAck => DS.warning,
+      SyncStatus.pending => DS.info,
+      SyncStatus.conflict => DS.warning,
+      SyncStatus.synced => DS.success,
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius16,
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.18),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              statusColor.withValues(alpha: 0.08),
+              DS.surfaceSecondary,
+            ),
+            DS.surfacePrimaryElevated,
+          ],
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing12),
         child: Column(
@@ -418,9 +458,9 @@ class _OutboxItemCard extends StatelessWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing4,
               children: [
-                Chip(label: Text(_topicLabel(context, topic))),
-                Chip(label: Text(opType)),
-                Chip(label: Text(statusLabel)),
+                _MetaChip(label: _topicLabel(context, topic)),
+                _MetaChip(label: opType),
+                _MetaChip(label: statusLabel, accent: statusColor),
               ],
             ),
             const SizedBox(height: DS.spacing8),
@@ -432,7 +472,7 @@ class _OutboxItemCard extends StatelessWidget {
                       item.entityType ?? 'entity',
                       item.entityId ?? '-',
                     ),
-                    style: const TextStyle(fontSize: 12),
+                    style: DS.bodySmall.copyWith(color: DS.textPrimary),
                   ),
                 ),
                 SparkleIconButton(
@@ -446,12 +486,12 @@ class _OutboxItemCard extends StatelessWidget {
             const SizedBox(height: DS.spacing4),
             Text(
               context.l10n.syncCenterAttemptValue(item.attemptCount),
-              style: const TextStyle(fontSize: 12),
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing4),
             Text(
               context.l10n.syncCenterLastErrorValue(errorLabel),
-              style: const TextStyle(fontSize: 12),
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing4),
             Text(
@@ -460,7 +500,7 @@ class _OutboxItemCard extends StatelessWidget {
                     ? Formatters.formatDateTime(nextAttemptAt)
                     : '-',
               ),
-              style: const TextStyle(fontSize: 12),
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing4),
             Row(
@@ -468,7 +508,7 @@ class _OutboxItemCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     context.l10n.syncCenterTraceIdValue(item.traceId ?? '-'),
-                    style: const TextStyle(fontSize: 12),
+                    style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   ),
                 ),
                 SparkleIconButton(
@@ -485,6 +525,7 @@ class _OutboxItemCard extends StatelessWidget {
                 SparkleButton(
                   onPressed: onRetry,
                   label: context.l10n.syncCenterRetryThis,
+                  icon: const Icon(Icons.refresh_rounded),
                 ),
               ],
             ),
@@ -534,5 +575,43 @@ class _OutboxItemCard extends StatelessWidget {
       default:
         return code ?? '-';
     }
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.label,
+    this.accent,
+  });
+
+  final String label;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = accent ?? DS.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          color.withValues(alpha: 0.08),
+          DS.surfacePrimary,
+        ),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: color.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Text(
+        label,
+        style: DS.labelSmall.copyWith(
+          color: color,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
   }
 }

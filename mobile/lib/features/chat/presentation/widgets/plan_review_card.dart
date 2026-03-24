@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Plan review decision types
 enum ReviewDecision {
@@ -369,7 +373,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                     colors: [
                                       DS.surfacePrimary.withValues(alpha: 0),
                                       color.withValues(
-                                          alpha: 0.03 + (progress * 0.05),),
+                                        alpha: 0.03 + (progress * 0.05),
+                                      ),
                                       DS.surfacePrimary.withValues(alpha: 0),
                                     ],
                                     stops: const [0.2, 0.5, 0.8],
@@ -432,7 +437,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                     ),
                                     if (widget.review.confidence > 0)
                                       Text(
-                                        '置信度: ${(widget.review.confidence * 100).toInt()}%',
+                                        context.l10n.chatConfidenceLabel(
+                                          (widget.review.confidence * 100)
+                                              .toInt(),
+                                        ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -481,11 +489,13 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                               ),
                             ),
                           ],
-                          if ((widget.review.reasoningSummary ?? '').isNotEmpty) ...[
+                          if ((widget.review.reasoningSummary ?? '')
+                              .isNotEmpty) ...[
                             const SizedBox(height: DS.spacing12),
                             _buildReasoningSummary(color),
                           ],
-                          if ((widget.review.alignmentSummary ?? '').isNotEmpty) ...[
+                          if ((widget.review.alignmentSummary ?? '')
+                              .isNotEmpty) ...[
                             const SizedBox(height: DS.spacing12),
                             _buildAlignmentSummary(),
                           ],
@@ -548,40 +558,52 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   Widget _buildReasoningDetails() => ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: EdgeInsets.zero,
-        title: const Text(
-          '查看规划依据',
-          style: TextStyle(fontWeight: DS.fontWeightSemibold),
+        title: Text(
+          context.l10n.chatViewPlanRationale,
+          style: const TextStyle(fontWeight: DS.fontWeightSemibold),
         ),
-        children: widget.review.reasoningDetails.map((detail) => Container(
-            margin: const EdgeInsets.only(top: DS.spacing8),
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              color: DS.neutral100,
-              borderRadius: DS.borderRadius12,
-              border: Border.all(color: DS.neutral200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail.label,
-                  style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+        children: widget.review.reasoningDetails
+            .map(
+              (detail) => Container(
+                margin: const EdgeInsets.only(top: DS.spacing8),
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
                 ),
-                if (detail.evidence.isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text('依据：${detail.evidence}'),
-                ],
-                if (detail.impact.isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text('影响：${detail.impact}'),
-                ],
-                if ((detail.confidenceTier ?? '').isNotEmpty) ...[
-                  const SizedBox(height: DS.spacing6),
-                  Text('证据层级：${detail.confidenceTier}'),
-                ],
-              ],
-            ),
-          )).toList(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detail.label,
+                      style: const TextStyle(fontWeight: DS.fontWeightSemibold),
+                    ),
+                    if (detail.evidence.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewEvidenceLabel(detail.evidence),
+                      ),
+                    ],
+                    if (detail.impact.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewImpactLabel(detail.impact),
+                      ),
+                    ],
+                    if ((detail.confidenceTier ?? '').isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing6),
+                      Text(
+                        context.l10n.planReviewConfidenceTierLabel(
+                          detail.confidenceTier!,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+            .toList(),
       );
 
   Widget _buildAlignmentSummary() => Container(
@@ -611,7 +633,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                   if (widget.review.alignmentScore != null) ...[
                     const SizedBox(height: DS.spacing6),
                     Text(
-                      '画像对齐度 ${(widget.review.alignmentScore! * 100).toStringAsFixed(0)}%',
+                      context.l10n.chatAlignmentScoreLabel(
+                        (widget.review.alignmentScore! * 100)
+                            .toStringAsFixed(0),
+                      ),
                       style: TextStyle(
                         color: DS.info,
                         fontSize: DS.fontSizeXs,
@@ -633,19 +658,19 @@ class _PlanReviewCardState extends State<PlanReviewCard>
 
     switch (decision) {
       case ReviewDecision.approved:
-        label = '已通过';
+        label = context.l10n.planReviewDecisionApproved;
         bgColor = DS.success.withValues(alpha: 0.1);
         textColor = DS.success;
       case ReviewDecision.rejected:
-        label = '未通过';
+        label = context.l10n.planReviewDecisionRejected;
         bgColor = DS.error.withValues(alpha: 0.1);
         textColor = DS.error;
       case ReviewDecision.needsModification:
-        label = '需修改';
+        label = context.l10n.planReviewDecisionNeedsModification;
         bgColor = DS.warning.withValues(alpha: 0.1);
         textColor = DS.warning;
       case ReviewDecision.requiresConfirmation:
-        label = '待确认';
+        label = context.l10n.planReviewDecisionRequiresConfirmation;
         bgColor = DS.info.withValues(alpha: 0.1);
         textColor = DS.info;
     }
@@ -683,23 +708,38 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (criticalComments.isNotEmpty) ...[
-          _buildCommentGroup('严重问题', criticalComments, DS.error),
+          _buildCommentGroup(
+            context.l10n.contentReviewCriticalIssues,
+            criticalComments,
+            DS.error,
+          ),
           if (warningComments.isNotEmpty || infoComments.isNotEmpty)
             const SizedBox(height: DS.spacing8),
         ],
         if (warningComments.isNotEmpty) ...[
-          _buildCommentGroup('警告', warningComments, DS.warning),
+          _buildCommentGroup(
+            context.l10n.contentReviewWarnings,
+            warningComments,
+            DS.warning,
+          ),
           if (infoComments.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoComments.isNotEmpty &&
             widget.review.decision != ReviewDecision.rejected)
-          _buildCommentGroup('建议', infoComments, DS.info),
+          _buildCommentGroup(
+            context.l10n.contentReviewSuggestions,
+            infoComments,
+            DS.info,
+          ),
       ],
     );
   }
 
   Widget _buildCommentGroup(
-          String title, List<ReviewComment> comments, Color color,) =>
+    String title,
+    List<ReviewComment> comments,
+    Color color,
+  ) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -763,7 +803,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                   const SizedBox(width: DS.spacing6),
                   Expanded(
                     child: Text(
-                      '建议: ${comment.suggestedFix}',
+                      context.l10n.contentReviewSuggestion(
+                        comment.suggestedFix!,
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.neutral600,
                             fontStyle: FontStyle.italic,
@@ -784,7 +826,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '审查置信度',
+                context.l10n.planReviewConfidenceTitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral600,
                     ),
@@ -824,7 +866,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           CustomButton.primary(
-            text: _isSubmitting ? '提交中...' : '拒绝并反馈',
+            text: _isSubmitting
+                ? context.l10n.commonSubmitting
+                : context.l10n.planReviewRejectWithFeedback,
             icon: Icons.refresh_rounded,
             onPressed: _isSubmitting ? null : _handleRejectionFlow,
             size: CustomButtonSize.small,
@@ -840,7 +884,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         children: [
           if (widget.onReject != null || widget.onDecision != null)
             CustomButton.text(
-              text: '取消',
+              text: context.l10n.cancel,
               onPressed: _isSubmitting
                   ? null
                   : () => _handleDecision(ReviewDecision.rejected),
@@ -849,7 +893,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           const SizedBox(width: DS.spacing8),
           if (widget.onModify != null || widget.onDecision != null)
             CustomButton.primary(
-              text: _isSubmitting ? '提交中...' : '修改计划',
+              text: _isSubmitting
+                  ? context.l10n.commonSubmitting
+                  : context.l10n.planReviewModifyPlan,
               icon: Icons.edit_rounded,
               onPressed: _isSubmitting ? null : () => _handleDecision(decision),
               size: CustomButtonSize.small,
@@ -865,7 +911,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       children: [
         if (widget.onReject != null || widget.onDecision != null)
           CustomButton.text(
-            text: '取消',
+            text: context.l10n.cancel,
             onPressed: _isSubmitting
                 ? null
                 : () => _handleDecision(ReviewDecision.rejected),
@@ -874,12 +920,16 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         const SizedBox(width: DS.spacing8),
         if (widget.onApprove != null || widget.onDecision != null)
           CustomButton.primary(
-            text: _isSubmitting ? '提交中...' : '批准执行',
+            text: _isSubmitting
+                ? context.l10n.commonSubmitting
+                : context.l10n.planReviewApproveExecute,
             icon: Icons.check_rounded,
             onPressed: _isSubmitting
                 ? null
                 : () {
-                    HapticFeedback.mediumImpact();
+                    unawaited(
+                      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                    );
                     _handleDecision(ReviewDecision.approved);
                   },
             size: CustomButtonSize.small,
@@ -931,13 +981,13 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   String _getDecisionTitle(ReviewDecision decision) {
     switch (decision) {
       case ReviewDecision.approved:
-        return '计划已通过审查';
+        return context.l10n.planReviewSummaryApproved;
       case ReviewDecision.rejected:
-        return '计划未通过审查';
+        return context.l10n.planReviewSummaryRejected;
       case ReviewDecision.needsModification:
-        return '计划需要修改';
+        return context.l10n.planReviewSummaryNeedsModification;
       case ReviewDecision.requiresConfirmation:
-        return '请确认计划';
+        return context.l10n.planReviewSummaryRequiresConfirmation;
     }
   }
 
@@ -981,20 +1031,42 @@ class _FeedbackOption {
 extension on _PlanReviewCardState {
   Future<_RejectionFeedback?> _showRejectionFeedbackSheet() async {
     final controller = TextEditingController();
-    const options = [
-      _FeedbackOption(value: 'tasks_too_many', label: '任务太多'),
-      _FeedbackOption(value: 'tasks_too_few', label: '任务太少'),
-      _FeedbackOption(value: 'difficulty_too_high', label: '难度太高'),
-      _FeedbackOption(value: 'difficulty_too_low', label: '难度太低'),
-      _FeedbackOption(value: 'schedule_unreasonable', label: '时间安排不合理'),
-      _FeedbackOption(value: 'missing_key_task', label: '缺少关键任务'),
-      _FeedbackOption(value: 'other', label: '其他（自定义）'),
+    final l10n = context.l10n;
+    final options = [
+      _FeedbackOption(
+        value: 'tasks_too_many',
+        label: l10n.planReviewReasonTasksTooMany,
+      ),
+      _FeedbackOption(
+        value: 'tasks_too_few',
+        label: l10n.planReviewReasonTasksTooFew,
+      ),
+      _FeedbackOption(
+        value: 'difficulty_too_high',
+        label: l10n.planReviewReasonDifficultyTooHigh,
+      ),
+      _FeedbackOption(
+        value: 'difficulty_too_low',
+        label: l10n.planReviewReasonDifficultyTooLow,
+      ),
+      _FeedbackOption(
+        value: 'schedule_unreasonable',
+        label: l10n.planReviewReasonScheduleUnreasonable,
+      ),
+      _FeedbackOption(
+        value: 'missing_key_task',
+        label: l10n.planReviewReasonMissingKeyTask,
+      ),
+      _FeedbackOption(
+        value: 'other',
+        label: l10n.planReviewReasonOther,
+      ),
     ];
     String? selected;
     var showError = false;
 
     try {
-      return await showModalBottomSheet<_RejectionFeedback>(
+      return await showSensoryModalBottomSheet<_RejectionFeedback>(
         context: context,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
@@ -1011,7 +1083,9 @@ extension on _PlanReviewCardState {
               }
               Navigator.of(context).pop(
                 _RejectionFeedback(
-                    category: selected!, note: note.isEmpty ? null : note,),
+                  category: selected!,
+                  note: note.isEmpty ? null : note,
+                ),
               );
             }
 
@@ -1042,14 +1116,17 @@ extension on _PlanReviewCardState {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20,),
+                          horizontal: DS.spacing20,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.feedback_outlined,
-                                color: DS.primaryBase,),
+                            Icon(
+                              Icons.feedback_outlined,
+                              color: DS.primaryBase,
+                            ),
                             const SizedBox(width: DS.spacing12),
                             Text(
-                              '告诉我们拒绝原因',
+                              l10n.planReviewRejectReasonTitle,
                               style: TextStyle(
                                 fontSize: DS.fontSizeLg,
                                 fontWeight: DS.fontWeightBold,
@@ -1123,9 +1200,9 @@ extension on _PlanReviewCardState {
                           controller: controller,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            hintText: '补充说明（可选）',
+                            hintText: l10n.planReviewAdditionalNotesHint,
                             errorText: showError && selected == 'other'
-                                ? '请补充说明'
+                                ? l10n.planReviewAdditionalNotesRequired
                                 : null,
                           ),
                         ),
@@ -1140,7 +1217,7 @@ extension on _PlanReviewCardState {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              '请选择一个原因',
+                              l10n.planReviewSelectReasonRequired,
                               style: TextStyle(
                                 color: DS.error,
                                 fontSize: DS.fontSizeSm,
@@ -1151,12 +1228,13 @@ extension on _PlanReviewCardState {
                       const SizedBox(height: DS.spacing16),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing20,),
+                          horizontal: DS.spacing20,
+                        ),
                         child: Row(
                           children: [
                             Expanded(
                               child: CustomButton.text(
-                                text: '取消',
+                                text: l10n.cancel,
                                 onPressed: () => Navigator.of(context).pop(),
                                 size: CustomButtonSize.small,
                               ),
@@ -1164,7 +1242,7 @@ extension on _PlanReviewCardState {
                             const SizedBox(width: DS.spacing12),
                             Expanded(
                               child: CustomButton.primary(
-                                text: '提交反馈',
+                                text: l10n.planReviewSubmitFeedback,
                                 onPressed: submit,
                                 size: CustomButtonSize.small,
                               ),

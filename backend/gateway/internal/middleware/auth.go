@@ -1,20 +1,113 @@
 package middleware
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+// Local token blacklist cache for Fail-Closed fallback
+// When Redis is unavailable and Fail-Closed is enabled, we maintain a local
+// cache of revoked tokens to provide some protection
+type localBlacklistCache struct {
+	mu             sync.RWMutex
+	jtiSet         map[string]time.Time // JTI -> expiry time
+	userRevoked    map[string]int64     // userID -> revoked_before timestamp
+	cleanupRunning bool                 // Prevent goroutine leak
+}
+
+var globalLocalBlacklist = &localBlacklistCache{
+	jtiSet:      make(map[string]time.Time),
+	userRevoked: make(map[string]int64),
+}
+
+// AddJTI adds a JTI to the local blacklist cache
+func (c *localBlacklistCache) AddJTI(jti string, ttl time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.jtiSet[jti] = time.Now().Add(ttl)
+}
+
+// IsJTIBlacklisted checks if JTI is in local cache
+func (c *localBlacklistCache) IsJTIBlacklisted(jti string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if exp, exists := c.jtiSet[jti]; exists {
+		if time.Now().Before(exp) {
+			return true
+		}
+	}
+	return false
+}
+
+// SetUserRevoked sets user-level revocation timestamp
+func (c *localBlacklistCache) SetUserRevoked(userID string, timestamp int64, ttl time.Duration) {
+	c.mu.Lock()
+	c.userRevoked[userID] = timestamp
+	shouldCleanup := !c.cleanupRunning && len(c.jtiSet) > 100
+	if shouldCleanup {
+		c.cleanupRunning = true
+	}
+	c.mu.Unlock()
+
+	// Only spawn cleanup goroutine if needed and not already running
+	if shouldCleanup {
+		go c.cleanupExpired()
+	}
+}
+
+// GetUserRevoked gets user revocation timestamp
+func (c *localBlacklistCache) GetUserRevoked(userID string) (int64, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	ts, exists := c.userRevoked[userID]
+	return ts, exists
+}
+
+// cleanupExpired removes expired entries (called in background)
+func (c *localBlacklistCache) cleanupExpired() {
+	defer func() {
+		c.mu.Lock()
+		c.cleanupRunning = false
+		c.mu.Unlock()
+	}()
+
+	// Do multiple cleanup passes with small batches to avoid long lock times
+	for i := 0; i < 3; i++ {
+		c.mu.Lock()
+		now := time.Now()
+		removed := 0
+		for jti, exp := range c.jtiSet {
+			if now.After(exp) {
+				delete(c.jtiSet, jti)
+				removed++
+				if removed >= 50 { // Limit per-batch removals
+					break
+				}
+			}
+		}
+		c.mu.Unlock()
+
+		if removed == 0 {
+			break // No more expired entries
+		}
+		time.Sleep(10 * time.Millisecond) // Yield between batches
+	}
+}
+
+func AuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get token from Authorization header only.
 		tokenString := ""
@@ -31,7 +124,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		userID, isAdmin, err := validateJWT(cfg, tokenString)
+		userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
 		if err != nil {
 			log.Printf("Auth failed: invalid token (err=%v)", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -114,7 +207,7 @@ func isWebSocketRequest(c *gin.Context) bool {
 	return upgrade == "websocket" && strings.Contains(connection, "upgrade")
 }
 
-func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
+func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (string, bool, error) {
 	const jwtClockSkew = 30 * time.Second
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -140,6 +233,97 @@ func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "access" {
 		return "", false, fmt.Errorf("invalid token type")
+	}
+
+	// Get token timing info for blacklist checks
+	jti, _ := claims["jti"].(string)
+	iatValue, _ := claims["iat"].(float64)
+
+	// Calculate TTL for local cache based on token expiry
+	var tokenTTL time.Duration
+	if rawExp, ok := claims["exp"]; ok {
+		if expTime, err := parseNumericDate(rawExp); err == nil {
+			ttl := time.Until(expTime)
+			if ttl > 0 {
+				tokenTTL = ttl
+			} else {
+				tokenTTL = 5 * time.Minute // Fallback TTL
+			}
+		} else {
+			tokenTTL = 5 * time.Minute // Fallback TTL
+		}
+	} else {
+		tokenTTL = 5 * time.Minute // Fallback TTL
+	}
+
+	// Check token blacklist with Fail-Closed strategy
+	// When cfg.RedisFailClosed is true:
+	// - Redis errors cause token rejection (secure default for production)
+	// - Local cache is used as fallback when available
+	// When cfg.RedisFailClosed is false (development):
+	// - Redis errors are logged but token is allowed (for easier debugging)
+	if rdb != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+
+		redisAvailable := true
+
+		// Check JTI blacklist (specific token revoked)
+		if jti != "" {
+			// First check local cache
+			if globalLocalBlacklist.IsJTIBlacklisted(jti) {
+				return "", false, fmt.Errorf("token revoked")
+			}
+
+			blacklisted, err := rdb.Exists(ctx, "token_blacklist:"+jti).Result()
+			if err != nil {
+				redisAvailable = false
+				if cfg.RedisFailClosed {
+					// Fail-Closed: reject token when Redis is unavailable
+					log.Printf("[SECURITY] Redis unavailable with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					return "", false, fmt.Errorf("token validation unavailable")
+				}
+				// Fail-Open (development): log warning but continue
+				log.Printf("[SECURITY WARNING] Redis blacklist check failed for jti, allowing token (Fail-Open mode): %v", err)
+			} else if blacklisted > 0 {
+				// Update local cache for future requests
+				globalLocalBlacklist.AddJTI(jti, tokenTTL)
+				return "", false, fmt.Errorf("token revoked")
+			}
+		}
+
+		// Check user-level token revocation (all tokens issued before timestamp)
+		if iatValue > 0 {
+			// First check local cache
+			if localTs, exists := globalLocalBlacklist.GetUserRevoked(userID); exists {
+				if int64(iatValue) < localTs {
+					return "", false, fmt.Errorf("token revoked by user")
+				}
+			}
+
+			revokedBefore, err := rdb.Get(ctx, "user_revoked_before:"+userID).Result()
+			if err != nil {
+				if !redisAvailable && cfg.RedisFailClosed {
+					// Already logged above, don't log again
+					return "", false, fmt.Errorf("token validation unavailable")
+				}
+				if err != redis.Nil {
+					if cfg.RedisFailClosed {
+						log.Printf("[SECURITY] Redis user revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						return "", false, fmt.Errorf("token validation unavailable")
+					}
+					log.Printf("[SECURITY WARNING] Redis user revocation check failed, allowing token (Fail-Open mode): %v", err)
+				}
+			} else {
+				if revokedTs, parseErr := strconv.ParseInt(revokedBefore, 10, 64); parseErr == nil {
+					// Update local cache
+					globalLocalBlacklist.SetUserRevoked(userID, revokedTs, tokenTTL)
+					if int64(iatValue) < revokedTs {
+						return "", false, fmt.Errorf("token revoked by user")
+					}
+				}
+			}
+		}
 	}
 
 	expValue, ok := claims["exp"]

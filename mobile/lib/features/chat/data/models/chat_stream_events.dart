@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sparkle/core/models/intervention.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -13,6 +14,7 @@ abstract class ChatStreamEvent {
     this.workflowId,
     this.promptVersion,
     this.metadata,
+    this.sessionId,
   });
 
   final String? responseId;
@@ -20,6 +22,7 @@ abstract class ChatStreamEvent {
   final String? workflowId;
   final String? promptVersion;
   final Map<String, dynamic>? metadata;
+  final String? sessionId;
 }
 
 class SprintModeSwitchEvent extends ChatStreamEvent {
@@ -90,6 +93,8 @@ class DoneEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
+    super.sessionId,
   });
   final String? finishReason;
 }
@@ -102,8 +107,23 @@ class UnknownEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
+    super.sessionId,
   });
   final Map<String, dynamic> data;
+}
+
+class MetaEvent extends ChatStreamEvent {
+  const MetaEvent({
+    required this.meta,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  }) : super(metadata: meta);
+
+  final Map<String, dynamic> meta;
 }
 
 /// 状态更新事件（THINKING, GENERATING 等）
@@ -219,34 +239,35 @@ class DagExecutionSignal {
   }
 
   String? get statusDetails {
+    final l10n = I18nService.instance.l10n;
     switch (event) {
       case 'layer_start':
         final layer = layerNumber ?? 0;
         final total = totalLayers ?? 0;
         final count = toolNames?.length ?? stepIds?.length ?? 0;
-        return 'DAG 第$layer/$total层，$count个步骤并行执行';
+        return l10n.chatDagLayerStart(layer, total, count);
       case 'step_completed':
-        final name = toolName ?? 'step';
+        final name = toolName ?? l10n.chatDagStepFallback;
         if (success == false) {
-          return '$name 执行失败';
+          return l10n.chatDagStepFailed(name);
         }
         if (durationMs != null) {
-          return '$name 执行完成 (${durationMs}ms)';
+          return l10n.chatDagStepCompletedWithDuration(name, durationMs!);
         }
-        return '$name 执行完成';
+        return l10n.chatDagStepCompleted(name);
       case 'layer_end':
         final layer = layerNumber ?? 0;
         if (aborted ?? false) {
-          return '第$layer层已中断';
+          return l10n.chatDagLayerAborted(layer);
         }
-        return '第$layer层执行完成';
+        return l10n.chatDagLayerCompleted(layer);
       case 'execution_aborted':
-        return reason ?? 'DAG 执行中断';
+        return reason ?? l10n.chatDagExecutionAbortedDefault;
       case 'execution_end':
         if (aborted ?? false) {
-          return abortReason ?? 'DAG 执行结束（中断）';
+          return abortReason ?? l10n.chatDagExecutionEndAbortedDefault;
         }
-        return 'DAG 执行完成';
+        return l10n.chatDagExecutionCompleted;
       default:
         return null;
     }
@@ -293,6 +314,48 @@ class ErrorEvent extends ChatStreamEvent {
   final String code;
   final String message;
   final bool retryable;
+}
+
+/// ACK确认事件 - 服务端确认收到消息
+class AckEvent extends ChatStreamEvent {
+  AckEvent({
+    required this.messageId,
+    required this.status,
+    required this.timestamp,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final String messageId;
+  final String status; // received, processing, failed
+  final int timestamp;
+
+  bool get isReceived => status == 'received';
+  bool get isProcessing => status == 'processing';
+  bool get isFailed => status == 'failed';
+}
+
+/// NACK否定确认事件 - 服务端拒绝消息
+class NackEvent extends ChatStreamEvent {
+  NackEvent({
+    required this.messageId,
+    required this.errorCode,
+    required this.errorMessage,
+    this.retryAfterMs,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final String messageId;
+  final String errorCode;
+  final String errorMessage;
+  final int? retryAfterMs;
+
+  bool get canRetry => retryAfterMs != null;
 }
 
 /// Token 使用统计事件
@@ -476,12 +539,13 @@ class StateChangeEvent extends ChatStreamEvent {
   }
 
   List<InterventionAction> _getActions() {
+    final l10n = I18nService.instance.l10n;
     // For plan changes, offer to view the plan
     if (planId != null && changeType.startsWith('plan_')) {
       return [
-        const InterventionAction(
+        InterventionAction(
           id: 'view_plan',
-          label: '查看计划',
+          label: l10n.chatInterventionViewPlan,
           type: 'navigation',
         ),
       ];
@@ -490,9 +554,9 @@ class StateChangeEvent extends ChatStreamEvent {
     // For settings changes, offer to view settings
     if (changeType == 'user_settings_updated') {
       return [
-        const InterventionAction(
+        InterventionAction(
           id: 'view_settings',
-          label: '查看设置',
+          label: l10n.chatInterventionViewSettings,
           type: 'navigation',
         ),
       ];
@@ -500,9 +564,9 @@ class StateChangeEvent extends ChatStreamEvent {
 
     // Default: just acknowledge
     return [
-      const InterventionAction(
+      InterventionAction(
         id: 'acknowledge',
-        label: '知道了',
+        label: l10n.commonOk,
         type: 'secondary',
       ),
     ];
@@ -789,6 +853,24 @@ class AchievementUnlockEvent extends ChatStreamEvent {
   List<Map<String, dynamic>>? get rewards =>
       achievementData['rewards'] as List<Map<String, dynamic>>?;
 
+  List<String> get rewardPreview =>
+      (achievementData['reward_preview'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
+  List<String> get surfacePreview =>
+      (achievementData['surface_preview'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
+  List<String> get gloryLines =>
+      (achievementData['glory_lines'] as List<dynamic>?)
+          ?.map((e) => '$e')
+          .toList() ??
+      const [];
+
   /// 转换为AchievementUnlockEvent模型用于弹窗显示
   AchievementUnlockModel toUnlockModel() => AchievementUnlockModel(
         achievementId: achievementId,
@@ -799,6 +881,9 @@ class AchievementUnlockEvent extends ChatStreamEvent {
         visualEffect: visualEffect,
         visualEffectType: visualEffectType,
         rewards: rewards,
+        rewardPreview: rewardPreview,
+        surfacePreview: surfacePreview,
+        gloryLines: gloryLines,
       );
 }
 
@@ -813,6 +898,9 @@ class AchievementUnlockModel {
     this.visualEffect,
     this.visualEffectType,
     this.rewards,
+    this.rewardPreview = const [],
+    this.surfacePreview = const [],
+    this.gloryLines = const [],
   });
 
   final String achievementId;
@@ -823,6 +911,9 @@ class AchievementUnlockModel {
   final Map<String, dynamic>? visualEffect;
   final VisualEffectType? visualEffectType;
   final List<Map<String, dynamic>>? rewards;
+  final List<String> rewardPreview;
+  final List<String> surfacePreview;
+  final List<String> gloryLines;
 }
 
 /// ============================================
@@ -856,6 +947,92 @@ class AchievementMilestoneEvent extends ChatStreamEvent {
 
   /// 事件类型
   String get type => milestoneData['type'] as String? ?? 'progress_milestone';
+}
+
+/// ============================================
+/// Notification Event (Real-time Push)
+/// ============================================
+
+/// Notification Event - 用于实时推送新通知
+/// 支持系统通知和干预通知的实时推送
+class NotificationEvent extends ChatStreamEvent {
+  NotificationEvent({
+    required this.notificationData,
+    required this.notificationType,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  /// 通知数据
+  final Map<String, dynamic> notificationData;
+
+  /// 通知类型: 'system' | 'intervention'
+  final String notificationType;
+
+  /// 工厂方法：从 JSON 创建
+  factory NotificationEvent.fromJson(Map<String, dynamic> json) {
+    final rawNotification =
+        json['notification'] ?? json['data'] ?? <String, dynamic>{};
+    final notificationData = rawNotification is Map<String, dynamic>
+        ? rawNotification
+        : rawNotification is Map
+            ? Map<String, dynamic>.from(rawNotification)
+            : <String, dynamic>{};
+    return NotificationEvent(
+      notificationData: notificationData,
+      notificationType: json['notification_type'] as String? ?? 'system',
+      responseId: json['response_id'] as String?,
+      traceId: json['trace_id'] as String?,
+      workflowId: json['workflow_id'] as String?,
+      promptVersion: json['prompt_version'] as String?,
+    );
+  }
+
+  /// 通知 ID
+  String get notificationId =>
+      notificationData['id'] as String? ??
+      notificationData['notification_id'] as String? ??
+      '';
+
+  /// 通知标题
+  String get title => notificationData['title'] as String? ?? '';
+
+  /// 通知内容
+  String get content => notificationData['content'] as String? ?? '';
+
+  /// 通知类型字段（task_reminder, achievement, system 等）
+  String get type =>
+      notificationData['type'] as String? ??
+      notificationData['notification_type'] as String? ??
+      'system';
+
+  /// 是否已读
+  bool get isRead => notificationData['is_read'] as bool? ?? false;
+
+  /// 创建时间
+  String get createdAt => notificationData['created_at'] as String? ?? '';
+
+  /// 优先级
+  String get priority => notificationData['priority'] as String? ?? 'normal';
+
+  /// 附加数据
+  Map<String, dynamic> get data =>
+      notificationData['data'] as Map<String, dynamic>? ?? const {};
+
+  /// 获取完整的通知数据（用于传递给通知中心）
+  Map<String, dynamic> get fullNotificationData => {
+        'id': notificationId,
+        'title': title,
+        'content': content,
+        'type': type,
+        'is_read': isRead,
+        'created_at': createdAt,
+        'priority': priority,
+        'data': data,
+        ...notificationData,
+      };
 }
 
 // ============================================
@@ -916,14 +1093,16 @@ class OrchestrationTraceEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> traceData;
 
-  List<OrchestrationTraceStep> get steps => (traceData['steps'] as List<dynamic>?)
+  List<OrchestrationTraceStep> get steps =>
+      (traceData['steps'] as List<dynamic>?)
           ?.whereType<Map<String, dynamic>>()
           .map(OrchestrationTraceStep.fromJson)
           .toList() ??
       [];
 
   String get mode => traceData['mode'] as String? ?? '';
-  List<String> get agents => (traceData['agents'] as List<dynamic>?)
+  List<String> get agents =>
+      (traceData['agents'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList() ??
       [];
@@ -961,6 +1140,125 @@ class OrchestrationTraceStep {
 }
 
 // ============================================
+// Run Ledger Events
+// ============================================
+
+class RunLedgerSnapshotEvent extends ChatStreamEvent {
+  RunLedgerSnapshotEvent({
+    required this.summary,
+    this.latestEvent,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final RunLedgerSummary summary;
+  final RunLedgerEvent? latestEvent;
+}
+
+class RunLedgerSummary {
+  const RunLedgerSummary({
+    required this.traceId,
+    required this.status,
+    required this.route,
+    required this.models,
+    required this.agents,
+    required this.quality,
+    required this.evidence,
+    required this.response,
+    required this.feedback,
+    required this.timeline,
+    required this.eventCount,
+    this.workflowId = '',
+    this.promptVersion = '',
+  });
+
+  factory RunLedgerSummary.fromJson(Map<String, dynamic> json) =>
+      RunLedgerSummary(
+        traceId: json['trace_id'] as String? ?? '',
+        workflowId: json['workflow_id'] as String? ?? '',
+        promptVersion: json['prompt_version'] as String? ?? '',
+        status: json['status'] as String? ?? 'running',
+        route: (json['route'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        models: ((json['models'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        agents: ((json['agents'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        quality: (json['quality'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        evidence: (json['evidence'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        response: (json['response'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        feedback: (json['feedback'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        timeline: ((json['timeline'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        eventCount: json['event_count'] as int? ?? 0,
+      );
+
+  final String traceId;
+  final String workflowId;
+  final String promptVersion;
+  final String status;
+  final Map<String, dynamic> route;
+  final List<Map<String, dynamic>> models;
+  final List<Map<String, dynamic>> agents;
+  final Map<String, dynamic> quality;
+  final Map<String, dynamic> evidence;
+  final Map<String, dynamic> response;
+  final Map<String, dynamic> feedback;
+  final List<Map<String, dynamic>> timeline;
+  final int eventCount;
+
+  String get executionMode => route['execution_mode'] as String? ?? '';
+  String get routeReason => route['reason'] as String? ?? '';
+  double? get reviewScore => (quality['review_score'] as num?)?.toDouble();
+  double get reflectionDelta =>
+      (quality['reflection_delta'] as num?)?.toDouble() ?? 0.0;
+  bool get reflectionCompleted => quality['reflection_completed'] == true;
+  int get totalTokens => response['total_tokens'] as int? ?? 0;
+  double get estimatedCostUsd =>
+      (response['estimated_cost_usd'] as num?)?.toDouble() ?? 0.0;
+}
+
+class RunLedgerEvent {
+  const RunLedgerEvent({
+    required this.eventType,
+    required this.label,
+    required this.workflowStage,
+    required this.status,
+    required this.timestamp,
+    required this.metadata,
+  });
+
+  factory RunLedgerEvent.fromJson(Map<String, dynamic> json) => RunLedgerEvent(
+        eventType: json['event_type'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        workflowStage: json['workflow_stage'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        timestamp: json['timestamp'] as String? ?? '',
+        metadata: (json['metadata'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+      );
+
+  final String eventType;
+  final String label;
+  final String workflowStage;
+  final String status;
+  final String timestamp;
+  final Map<String, dynamic> metadata;
+}
+
+// ============================================
 // Mode Suggestion Events
 // ============================================
 
@@ -977,7 +1275,8 @@ class ModeSuggestionEvent extends ChatStreamEvent {
 
   String get suggestedMode => suggestion['suggested_mode'] as String? ?? '';
   String get reason => suggestion['reason'] as String? ?? '';
-  double get confidence => (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
+  double get confidence =>
+      (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
 }
 
 // ============================================
@@ -994,22 +1293,36 @@ class AgentActivityEvent extends ChatStreamEvent {
     required this.description,
     this.durationMs,
     this.resultSummary,
+    this.collaborationMode,
+    this.phase,
     super.responseId,
     super.traceId,
     super.workflowId,
     super.promptVersion,
   });
 
-  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) => AgentActivityEvent(
+  factory AgentActivityEvent.fromJson(Map<String, dynamic> json) {
+    final rawMeta = json['metadata'];
+    final metadata = rawMeta is Map<String, dynamic>
+        ? rawMeta
+        : rawMeta is Map
+            ? Map<String, dynamic>.from(rawMeta)
+            : const <String, dynamic>{};
+    return AgentActivityEvent(
       agentId: json['agent_id'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
-      displayName: json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
+      displayName:
+          json['display_name'] as String? ?? json['agent_id'] as String? ?? '',
       icon: json['icon'] as String? ?? 'bot',
       color: json['color'] as String? ?? '#636E72',
       description: json['description'] as String? ?? '',
       durationMs: (json['duration_ms'] as num?)?.toDouble(),
       resultSummary: json['result_summary'] as String?,
+      collaborationMode: metadata['collaboration_mode']?.toString() ??
+          json['collaboration_mode'] as String?,
+      phase: metadata['phase']?.toString() ?? json['phase'] as String?,
     );
+  }
 
   final String agentId;
   final String status;
@@ -1019,6 +1332,8 @@ class AgentActivityEvent extends ChatStreamEvent {
   final String description;
   final double? durationMs;
   final String? resultSummary;
+  final String? collaborationMode;
+  final String? phase;
 }
 
 /// 透明度数据模型
@@ -1034,7 +1349,8 @@ class TransparencyData {
       TransparencyData(
         steps: (json['steps'] as List<dynamic>?)
                 ?.map(
-                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>),)
+                  (e) => TransparencyStep.fromJson(e as Map<String, dynamic>),
+                )
                 .toList() ??
             [],
         totalDurationMs: json['totalDurationMs'] as int? ?? 0,
@@ -1095,15 +1411,16 @@ class TransparencyStep {
 
   /// 获取本地化状态标签
   String get statusLabel {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'pending':
-        return '等待中';
+        return l10n.statusPending;
       case 'in_progress':
-        return '进行中';
+        return l10n.statusInProgress;
       case 'completed':
-        return '已完成';
+        return l10n.statusCompleted;
       case 'failed':
-        return '失败';
+        return l10n.statusFailed;
       default:
         return status;
     }
@@ -1266,15 +1583,16 @@ class TimelineStep {
 
   /// 获取本地化状态标签
   String getStatusLabel() {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'completed':
-        return '已完成';
+        return l10n.statusCompleted;
       case 'failed':
-        return '失败';
+        return l10n.statusFailed;
       case 'in_progress':
-        return '进行中';
+        return l10n.statusInProgress;
       case 'pending':
-        return '等待中';
+        return l10n.statusPending;
       default:
         return status;
     }

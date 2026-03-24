@@ -1,40 +1,34 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/blocked_users_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/favorites_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/friend_profile_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_discover_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_list_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/group_moderation_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class CommunityRoutes {
   // Route constants for deep linking and navigation
   static const String home = '/community';
   static const String friends = '/community/friends';
+  static const String friendsRequests = '/community/friends/requests';
   static const String friendsDiscover = '/community/friends/discover';
   static const String userSearch = '/community/users/search';
   static const String groups = '/community/groups';
@@ -46,16 +40,26 @@ class CommunityRoutes {
   static const String groupTasks = '/community/groups/:id/tasks';
   static const String groupMembers = '/community/groups/:id/members';
   static const String groupFiles = '/community/groups/:id/files';
+  static const String groupModeration = '/community/groups/:id/moderation';
+  static const String userProfile = '/community/users/:id';
+  static const String favorites = '/community/favorites';
+  static const String blockedUsers = '/community/blocked';
+  static const String accountability = '/community/accountability';
+  static const String accountabilityDetail = '/community/accountability/:id';
 
   static List<RouteBase> get routes => [
-        // Friends list (detail page, full-screen)
         GoRoute(
-          path: friends,
-          name: 'friends',
+          path: friendsRequests,
+          name: 'friendRequests',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const FriendsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendRequestsScreen(),
+            ),
           ),
         ),
         // Friends discover / recommendations (detail page, full-screen)
@@ -63,9 +67,29 @@ class CommunityRoutes {
           path: friendsDiscover,
           name: 'friendsDiscover',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const FriendsScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendsDiscoverScreen(),
+            ),
+          ),
+        ),
+        // Friends list (detail page, full-screen)
+        GoRoute(
+          path: friends,
+          name: 'friends',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FriendsScreen(),
+            ),
           ),
         ),
         // User search (detail page, full-screen)
@@ -73,19 +97,48 @@ class CommunityRoutes {
           path: userSearch,
           name: 'userSearch',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const UserSearchScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const UserSearchScreen(),
+            ),
           ),
+        ),
+        // User profile (must be AFTER /community/users/search to avoid :id capturing "search")
+        GoRoute(
+          path: userProfile,
+          name: 'userProfile',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final userId = state.pathParameters['id']!;
+            final name = state.uri.queryParameters['name'];
+            return buildSparkleTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: FriendProfileScreen(userId: userId, displayName: name),
+              ),
+            );
+          },
         ),
         // Group list (detail page, full-screen)
         GoRoute(
           path: groups,
           name: 'groups',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const GroupListScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupListScreen(),
+            ),
           ),
         ),
         // Group search (detail page, full-screen)
@@ -93,9 +146,14 @@ class CommunityRoutes {
           path: groupsSearch,
           name: 'groupSearch',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const GroupSearchScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupSearchScreen(),
+            ),
           ),
         ),
         // Group discover (detail page, full-screen)
@@ -103,9 +161,14 @@ class CommunityRoutes {
           path: groupsDiscover,
           name: 'groupDiscover',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const GroupDiscoverScreen(),
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const GroupDiscoverScreen(),
+            ),
           ),
         ),
         // Create group (modal-like, full-screen)
@@ -113,9 +176,15 @@ class CommunityRoutes {
           path: groupsCreate,
           name: 'createGroup',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const CreateGroupScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const CreateGroupScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -123,9 +192,15 @@ class CommunityRoutes {
           path: postsCreate,
           name: 'createPost',
           parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const CreatePostScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const CreatePostScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -137,9 +212,14 @@ class CommunityRoutes {
           pageBuilder: (context, state) {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: GroupDetailScreen(groupId: groupId),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupDetailScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -151,9 +231,14 @@ class CommunityRoutes {
           pageBuilder: (context, state) {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: GroupTasksScreen(groupId: groupId),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupTasksScreen(groupId: groupId),
+              ),
             );
           },
         ),
@@ -166,11 +251,16 @@ class CommunityRoutes {
             // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
             final groupName = state.uri.queryParameters['name'] ?? '';
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: GroupMembersScreen(
-                groupId: groupId,
-                groupName: groupName,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupMembersScreen(
+                  groupId: groupId,
+                  groupName: groupName,
+                ),
               ),
             );
           },
@@ -181,11 +271,96 @@ class CommunityRoutes {
           name: 'groupFiles',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
-            // id is required in path, so it won't be null
             final groupId = state.pathParameters['id']!;
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: GroupFilesScreen(groupId: groupId),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupFilesScreen(groupId: groupId),
+              ),
+            );
+          },
+        ),
+        // Group moderation (admin only)
+        GoRoute(
+          path: groupModeration,
+          name: 'groupModeration',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final groupId = state.pathParameters['id']!;
+            return buildSparkleTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: GroupModerationScreen(groupId: groupId),
+              ),
+            );
+          },
+        ),
+        // Message favorites
+        GoRoute(
+          path: favorites,
+          name: 'favorites',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const FavoritesScreen(),
+            ),
+          ),
+        ),
+        // Blocked users (Phase 4)
+        GoRoute(
+          path: blockedUsers,
+          name: 'blockedUsers',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const BlockedUsersScreen(),
+            ),
+          ),
+        ),
+        // Accountability partner list
+        GoRoute(
+          path: accountability,
+          name: 'accountability',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const AccountabilityScreen(),
+            ),
+          ),
+        ),
+        // Accountability detail
+        GoRoute(
+          path: accountabilityDetail,
+          name: 'accountabilityDetail',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return buildSparkleTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: AccountabilityDetailScreen(partnershipId: id),
+              ),
             );
           },
         ),

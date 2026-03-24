@@ -1,4 +1,10 @@
-platform :ios, '13.0'
+platform :ios, '16.0'
+
+# CocoaPods CDN source (works in China network)
+# If CDN fails, use Tsinghua mirror: source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
+source 'https://cdn.cocoapods.org/'
+
+require 'fileutils'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -30,17 +36,113 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # Pin JCore to an HTTP-based source to avoid GitHub fetch failures during pod install.
+  pod 'JCore', '4.9.0'
+
+  # Prefer a local nanopb checkout when present, but keep fresh builds reproducible
+  # by falling back to the public CocoaPods spec on clean machines.
+  nanopb_local_path = '/tmp/nanopb/nanopb'
+  if File.exist?(File.join(nanopb_local_path, 'nanopb.podspec'))
+    pod 'nanopb', :path => nanopb_local_path
+  else
+    pod 'nanopb', '~> 3.30910.0'
+  end
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
 end
 
 post_install do |installer|
+  pods_root = installer.sandbox.root.to_s
+
+  def xcframework_header_dir(xcframework_path)
+    candidates = [
+      File.join(xcframework_path, 'ios-arm64', 'Headers'),
+      File.join(xcframework_path, 'ios-arm64_x86_64-simulator', 'Headers'),
+    ]
+    candidates.each do |path|
+      return path if File.directory?(path)
+    end
+    Dir[File.join(xcframework_path, '**', 'Headers')].first
+  end
+
+  def write_modulemap(path, module_name, headers)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.open(path, 'w') do |f|
+      f.puts "module #{module_name} {"
+      headers.each do |header|
+        f.puts "  header \"#{header}\""
+      end
+      f.puts "  export *"
+      f.puts "}"
+    end
+  end
+
+  jpush_xcframework = Dir[File.join(pods_root, 'JPush', '*.xcframework')].first
+  jcore_xcframework = Dir[File.join(pods_root, 'JCore', '*.xcframework')].first
+
+  jpush_modulemap = File.join(pods_root, 'Target Support Files', 'JPush', 'JPush.modulemap')
+  jcore_modulemap = File.join(pods_root, 'Target Support Files', 'JCore', 'JCore.modulemap')
+
+  if jpush_xcframework
+    header_dir = xcframework_header_dir(jpush_xcframework)
+    jpush_header = header_dir && File.join(header_dir, 'JPUSHService.h')
+    write_modulemap(jpush_modulemap, 'JPush', [jpush_header]) if jpush_header && File.exist?(jpush_header)
+  end
+
+  if jcore_xcframework
+    header_dir = xcframework_header_dir(jcore_xcframework)
+    headers = []
+    if header_dir
+      headers << File.join(header_dir, 'JGCOREAPI.h')
+      headers << File.join(header_dir, 'JGInforCollectionAuth.h')
+      headers.select! { |path| File.exist?(path) }
+    end
+    write_modulemap(jcore_modulemap, 'JCore', headers) if headers.any?
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+
+      if target.name == 'nanopb'
+        defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+        defs = [defs] unless defs.is_a?(Array)
+        defs << 'PB_ENABLE_MALLOC=1' unless defs.include?('PB_ENABLE_MALLOC=1')
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = defs
+      end
+
+      # JCore/JPush 配置
+      if ['JCore', 'JPush'].include?(target.name)
+        config.build_settings['DEFINES_MODULE'] = 'YES'
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        if target.name == 'JPush' && File.exist?(jpush_modulemap)
+          config.build_settings['MODULEMAP_FILE'] = jpush_modulemap
+        end
+        if target.name == 'JCore' && File.exist?(jcore_modulemap)
+          config.build_settings['MODULEMAP_FILE'] = jcore_modulemap
+        end
+      end
+
+      # 微信 SDK 头文件路径
+      header_paths = [
+        '$(PODS_ROOT)/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64/WechatOpenSDK.framework/Headers',
+        '$(PODS_ROOT)/WechatOpenSDK-XCFramework/WechatOpenSDK.xcframework/ios-arm64_x86_64-simulator/WechatOpenSDK.framework/Headers',
+        '$(PODS_ROOT)/GoogleDataTransport/GoogleDataTransport/GDTCCTLibrary/Protogen',
+        '$(PODS_ROOT)/nanopb',
+      ]
+      header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+      header_search_paths = [header_search_paths] unless header_search_paths.is_a?(Array)
+      header_paths.each do |path|
+        header_search_paths << path unless header_search_paths.include?(path)
+      end
+      config.build_settings['HEADER_SEARCH_PATHS'] = header_search_paths
+
+      # 权限配置
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_CAMERA=1',

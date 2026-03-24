@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,11 +8,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/avatar_selection_dialog.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -84,26 +84,32 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _pickAndUploadAvatar() async {
     final l10n = context.l10n;
     final user = ref.read(currentUserProvider);
-    final source = await showModalBottomSheet<String>(
+    final source = await showSensoryModalBottomSheet<String>(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => GraphiteModalSurface(
+        title: l10n.editProfileChangeAvatar,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.face_retouching_natural_rounded),
-              title: Text(l10n.editProfileChooseFromPresets),
-              onTap: () => Navigator.pop(context, 'preset'),
+            _AvatarSourceTile(
+              icon: Icons.face_retouching_natural_rounded,
+              title: l10n.editProfileChooseFromPresets,
+              subtitle: '从更丰富的风格头像里快速选择。',
+              onTap: () => Navigator.pop(sheetContext, 'preset'),
             ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
-              title: Text(l10n.editProfileTakePhoto),
-              onTap: () => Navigator.pop(context, 'camera'),
+            const SizedBox(height: DS.spacing8),
+            _AvatarSourceTile(
+              icon: Icons.camera_alt_rounded,
+              title: l10n.editProfileTakePhoto,
+              subtitle: '直接拍摄一张新头像用于上传。',
+              onTap: () => Navigator.pop(sheetContext, 'camera'),
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: Text(l10n.editProfileChooseFromGallery),
-              onTap: () => Navigator.pop(context, 'gallery'),
+            const SizedBox(height: DS.spacing8),
+            _AvatarSourceTile(
+              icon: Icons.photo_library_rounded,
+              title: l10n.editProfileChooseFromGallery,
+              subtitle: '从相册里挑选你已经准备好的图片。',
+              onTap: () => Navigator.pop(sheetContext, 'gallery'),
             ),
           ],
         ),
@@ -115,7 +121,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (source == 'preset') {
       if (!mounted) return;
       final parentContext = context;
-      final selectedUrl = await showDialog<String>(
+      final selectedUrl = await showSensoryDialog<String>(
         context: context,
         builder: (dialogContext) => AvatarSelectionDialog(
           currentAvatarUrl: user?.avatarUrl,
@@ -132,7 +138,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       } catch (e) {
         if (parentContext.mounted) {
           AppFeedback.error(
-              parentContext, l10n.editProfileUpdateFailed(e.toString()),);
+            parentContext,
+            l10n.editProfileUpdateFailed(e.toString()),
+          );
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -220,29 +228,73 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _verifyEmailWithCode() async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
-    final token = await showDialog<String>(
+    final token = await showSensoryDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('输入邮箱验证码'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: '请输入邮件中的验证码',
-            border: OutlineInputBorder(),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: GraphiteModalSurface(
+          title: l10n.editProfileVerifyEmailTitle,
+          showHandle: false,
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '输入邮件里的验证码即可完成验证，验证通过后你的安全与通知能力会更完整。',
+                style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: l10n.editProfileVerifyEmailHint,
+                  filled: true,
+                  fillColor: DS.surfaceSecondary,
+                  border: OutlineInputBorder(
+                    borderRadius: DS.borderRadius12,
+                    borderSide: BorderSide(color: DS.borderSubtle),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: DS.borderRadius12,
+                    borderSide: BorderSide(color: DS.borderSubtle),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: DS.borderRadius12,
+                    borderSide: BorderSide(color: DS.primaryBase, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: l10n.cancel,
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      expand: true,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton.primary(
+                      label: l10n.editProfileVerifyEmailConfirm,
+                      onPressed: () => Navigator.of(dialogContext)
+                          .pop(controller.text.trim()),
+                      expand: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('验证'),
-          ),
-        ],
       ),
     );
     controller.dispose();
@@ -298,6 +350,49 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             surfaceRole: SparkleSurfaceRole.card,
             child: Column(
               children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        DS.primaryBase.withValues(alpha: 0.10),
+                        DS.surfaceSecondary,
+                      ],
+                    ),
+                    borderRadius: DS.borderRadius16,
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          _buildMetaChip(
+                            icon: Icons.auto_awesome_outlined,
+                            label: '头像与资料',
+                          ),
+                          _buildMetaChip(
+                            icon: Icons.verified_user_outlined,
+                            label: '安全同步',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.spacing10),
+                      Text(
+                        '把头像、昵称和邮箱整理成一致的个人形象，同时保留安全验证与账号信息的清晰层次。',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: DS.spacing20),
                 // Avatar Section
                 Center(
                   child: GestureDetector(
@@ -420,17 +515,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading: Icon(Icons.lock_reset_rounded,
-                            color: DS.primaryBase,),
+                        leading: Icon(
+                          Icons.lock_reset_rounded,
+                          color: DS.primaryBase,
+                        ),
                         title: Text(
                           _isSocialAccount
-                              ? '设置密码'
+                              ? l10n.editProfileSetPassword
                               : l10n.editProfileResetPassword,
                           style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w500,),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: _isSocialAccount
-                            ? const Text('社交账号首次设置密码后，可使用邮箱密码登录')
+                            ? Text(l10n.editProfileSetPasswordHint)
                             : null,
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
@@ -449,14 +548,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               : DS.warning,
                         ),
                         title: Text(
-                          (user?.emailVerified ?? false) ? '邮箱已验证' : '邮箱未验证',
+                          (user?.emailVerified ?? false)
+                              ? l10n.editProfileEmailVerified
+                              : l10n.editProfileEmailUnverified,
                           style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w500,),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: Text(
                           (user?.emailVerified ?? false)
-                              ? '你的邮箱已完成验证'
-                              : '验证后可修改密码并增强账号安全',
+                              ? l10n.editProfileEmailVerifiedDesc
+                              : l10n.editProfileEmailUnverifiedDesc,
                         ),
                         trailing: (user?.emailVerified ?? false)
                             ? null
@@ -470,20 +573,25 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             DS.spacing16,
                             DS.spacing12,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed:
-                                    _isLoading ? null : _verifyEmailWithCode,
-                                child: const Text('输入验证码'),
-                              ),
-                              TextButton(
-                                onPressed:
-                                    _isLoading ? null : _sendVerificationEmail,
-                                child: const Text('发送邮件'),
-                              ),
-                            ],
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: DS.spacing8,
+                              children: [
+                                TextButton(
+                                  onPressed:
+                                      _isLoading ? null : _verifyEmailWithCode,
+                                  child: Text(l10n.editProfileEnterCode),
+                                ),
+                                TextButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _sendVerificationEmail,
+                                  child: Text(l10n.editProfileSendEmail),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                     ],
@@ -501,8 +609,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoRow(l10n.editProfileFlameLevel,
-                          'Lv.${user?.flameLevel ?? 1}',),
+                      _buildInfoRow(
+                        l10n.editProfileFlameLevel,
+                        'Lv.${user?.flameLevel ?? 1}',
+                      ),
                       _buildInfoRow(
                         l10n.editProfileFlameBrightness,
                         '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
@@ -514,13 +624,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             : l10n.editProfileFullAccount,
                       ),
                       _buildInfoRow(
-                        '注册方式',
+                        l10n.editProfileRegistrationMethod,
                         switch (user?.registrationSource) {
-                          'google' => 'Google',
-                          'apple' => 'Apple',
-                          'wechat' => '微信',
-                          'guest' => '游客',
-                          _ => '邮箱',
+                          'google' => l10n.google,
+                          'apple' => l10n.apple,
+                          'wechat' => l10n.wechat,
+                          'guest' => l10n.editProfileGuestAccount,
+                          _ => l10n.email,
                         },
                       ),
                     ],
@@ -533,6 +643,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ),
     );
   }
+
+  Widget _buildMetaChip({
+    required IconData icon,
+    required String label,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceOverlay,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildSectionHeader(bool isDark, String title) => Align(
         alignment: Alignment.centerLeft,
@@ -652,11 +792,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 color: isDark ? DS.brandPrimary38 : DS.brandPrimary.shade500,
               ),
               const SizedBox(width: DS.md),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
+              Expanded(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -691,16 +835,89 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isDark ? DS.brandPrimary : DS.neutral900,
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _AvatarSourceTile extends StatelessWidget {
+  const _AvatarSourceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: DS.borderRadius16,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing10),
+                decoration: BoxDecoration(
+                  color: DS.primaryBase.withValues(alpha: 0.1),
+                  borderRadius: DS.borderRadius12,
+                ),
+                child: Icon(icon, color: DS.primaryBase, size: 20),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: DS.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      );
 }

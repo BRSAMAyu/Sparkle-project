@@ -2,22 +2,22 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
-from app.models.base import GUID, BaseModel
+from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class LibraryCategory(str, Enum):
@@ -133,6 +133,11 @@ class SeedLibrary(BaseModel):
         back_populates="library",
         cascade="all, delete-orphan"
     )
+    ratings = relationship(
+        "SeedLibraryRating",
+        back_populates="library",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<SeedLibrary(id={self.id}, name={self.name}, category={self.category})>"
@@ -203,10 +208,12 @@ class SeedItem(BaseModel):
     tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
 
     # 向量嵌入 (用于语义搜索)
-    embedding = Column(
-        VectorCompat,
-        nullable=True,
-        doc="内容向量嵌入，用于语义相似度搜索"
+    embedding = deferred(
+        Column(
+            VectorCompat,
+            nullable=True,
+            doc="内容向量嵌入，用于语义相似度搜索"
+        )
     )
 
     # 排序与状态
@@ -306,5 +313,50 @@ class UserLibrarySubscription(BaseModel):
 
     def mark_used(self) -> None:
         """标记为已使用"""
-        from datetime import UTC, datetime
+        from datetime import timezone, datetime
         self.last_used_at = _utcnow()
+
+
+class SeedLibraryRating(HardDeleteBaseModel):
+    """
+    用户对种子库的评分
+    用于计算真实用户质量反馈，并与系统评分做融合
+    """
+
+    __tablename__ = "seed_library_ratings"
+    __table_args__ = (
+        UniqueConstraint("user_id", "library_id", name="uq_seed_library_ratings_user_library"),
+    )
+
+    user_id = Column(
+        GUID(),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="评分用户ID",
+    )
+    library_id = Column(
+        GUID(),
+        ForeignKey("seed_libraries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="种子库ID",
+    )
+    score = Column(
+        Float,
+        nullable=False,
+        doc="用户评分，0-10",
+    )
+    comment = Column(
+        Text,
+        nullable=True,
+        doc="用户评价说明",
+    )
+
+    library = relationship("SeedLibrary", back_populates="ratings")
+
+    def __repr__(self):
+        return (
+            f"<SeedLibraryRating(user_id={self.user_id}, "
+            f"library_id={self.library_id}, score={self.score})>"
+        )

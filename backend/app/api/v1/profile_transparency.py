@@ -1,16 +1,23 @@
+from __future__ import annotations
+import asyncio
 import json
 from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.models.accountability import AccountabilityPartnership, AccountabilitySlotType, AccountabilityStatus
 from app.models.user import User
+from app.api.v1.accountability import _build_relationship_summary
 from app.services.cognitive_service import CognitiveService
+from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.memory_service import MemoryService
 from app.services.personalization import get_personalization_engine
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
@@ -60,6 +67,77 @@ def _field_score(field_type: str) -> float:
         "analysis": 0.2,
     }
     return mapping.get(field_type, 0.5)
+
+
+def _goal_type_label(value: str | None) -> str:
+    mapping = {
+        "exam": "备考目标",
+        "skill": "技能目标",
+        "interest": "兴趣探索",
+    }
+    return mapping.get(str(value or "").strip().lower(), "学习目标")
+
+
+def _build_onboarding_preview_fallback(payload: OnboardingRequest) -> str:
+    goal = (payload.learning_goal or "").strip()
+    goal_label = _goal_type_label(payload.learning_goal_type)
+    minutes = payload.study_time_minutes
+    time_hint = f"、每天大约 {minutes} 分钟" if minutes else ""
+    if not goal:
+        return "先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。"
+    return (
+        f"我理解你现在想围绕「{goal}」推进一个{goal_label}{time_hint}。"
+        "我接下来会先帮你补齐画像，再给你一版可直接开始的学习路径和任务建议。"
+    )
+
+
+async def _generate_onboarding_preview(payload: OnboardingRequest) -> tuple[str, str, bool]:
+    fallback = _build_onboarding_preview_fallback(payload)
+    goal = (payload.learning_goal or "").strip()
+    if not goal:
+        return fallback, "fallback", True
+
+    summary_bits = [
+        f"目标类型：{_goal_type_label(payload.learning_goal_type)}",
+        f"目标：{goal}",
+    ]
+    if payload.learning_style:
+        summary_bits.append(f"偏好风格：{payload.learning_style}")
+    if payload.study_time_minutes is not None:
+        summary_bits.append(f"每日时间：{payload.study_time_minutes} 分钟")
+    if payload.knowledge_level:
+        summary_bits.append(f"当前基础：{payload.knowledge_level}")
+
+    llm = await get_configured_llm_service_for_tier(
+        AgentRole.GENERATION,
+        ModelTier.FAST,
+        task_type=TaskType.QUICK_QUERY,
+        reasoning_mode="fast",
+    )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是 Sparkle onboarding 助手。"
+                "用户刚输入第一个学习目标，请只用中文输出 2 句。"
+                "第 1 句复述你理解到的目标与节奏，第 2 句说明你接下来会如何帮助。"
+                "总字数控制在 70 字内，不要列表，不要寒暄，不要 markdown。"
+            ),
+        },
+        {
+            "role": "user",
+            "content": "\n".join(summary_bits),
+        },
+    ]
+
+    try:
+        preview = await asyncio.wait_for(llm.chat(messages, temperature=0.2), timeout=8.0)
+        preview = " ".join((preview or "").split())
+        if not preview:
+            return fallback, "fallback", True
+        return preview, "llm_fast", False
+    except Exception:
+        return fallback, "fallback", True
 
 
 def _editability_meta(
@@ -142,6 +220,12 @@ class OnboardingRequest(BaseModel):
     knowledge_level: str | None = None
     response_depth: float | None = Field(default=None, ge=0.0, le=1.0)
     curiosity_preference: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class OnboardingPreviewResponse(BaseModel):
+    message: str
+    source: str = "fallback"
+    fallback_used: bool = True
 
 
 class CorrectionRequest(BaseModel):
@@ -441,6 +525,30 @@ async def get_profile_context(
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    partnership_result = await db.execute(
+        select(AccountabilityPartnership).where(
+            and_(
+                AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
+                AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+                or_(
+                    AccountabilityPartnership.initiator_id == current_user.id,
+                    AccountabilityPartnership.partner_id == current_user.id,
+                ),
+            )
+        ).order_by(AccountabilityPartnership.updated_at.desc())
+    )
+    active_partnership = partnership_result.scalars().first()
+    payload["accountability_summary"] = (
+        await _build_relationship_summary(db, active_partnership, current_user)
+        if active_partnership is not None
+        else {
+            "slot_type": AccountabilitySlotType.CORE.value,
+            "status": "inactive",
+            "has_core_partner": False,
+        }
+    )
+    if active_partnership is not None:
+        payload["accountability_summary"]["has_core_partner"] = True
     return payload
 
 
@@ -576,6 +684,20 @@ async def submit_onboarding(
     return {"status": "ok", "updated": updated}
 
 
+@router.post("/onboarding/preview", response_model=OnboardingPreviewResponse)
+async def preview_onboarding(
+    payload: OnboardingRequest,
+    current_user: User = Depends(get_current_user),
+) -> OnboardingPreviewResponse:
+    _ = current_user
+    message, source, fallback_used = await _generate_onboarding_preview(payload)
+    return OnboardingPreviewResponse(
+        message=message,
+        source=source,
+        fallback_used=fallback_used,
+    )
+
+
 @router.put("/preferences")
 async def update_preference(
     payload: PreferenceUpdateRequest,
@@ -583,7 +705,7 @@ async def update_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        return {"status": "error", "message": "pref_key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
@@ -612,12 +734,12 @@ async def override_inferred_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        return {"status": "error", "message": "key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     meta = INFERRED_META.get(payload.key)
     if meta is None:
-        return {"status": "error", "message": "unknown inferred key"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
     if not meta.adjustable:
-        return {"status": "error", "message": "key is not adjustable"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is not adjustable")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
@@ -645,7 +767,7 @@ async def reset_override_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        return {"status": "error", "message": "key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     result = await profile_write_service.reset_override_preference(
         user_id=current_user.id,
@@ -664,13 +786,13 @@ async def rollback_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        return {"status": "error", "message": "pref_key required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     memory_service = MemoryService(db)
     history = await memory_service.list_preference_history(current_user.id)
     candidates = [item for item in history if item.pref_key == payload.pref_key]
     if len(candidates) < 2:
-        return {"status": "error", "message": "no previous version"}
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="no previous version")
 
     current = candidates[0]
     previous = candidates[1]
@@ -711,11 +833,11 @@ async def update_goal(
         updates["target_date"] = payload.target_date
 
     if not updates:
-        return {"status": "error", "message": "no updates"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no updates")
 
     record = await memory_service.update_goal(current_user.id, payload.goal_id, **updates)
     if record is None:
-        return {"status": "error", "message": "goal not found"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
 
     await SystemUpdateService(cache_service.redis).enqueue(
         current_user.id,
@@ -743,7 +865,7 @@ async def submit_correction(
     from app.models.memory import MemoryCorrection
 
     if not payload.target_type:
-        return {"status": "error", "message": "target_type required"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_type required")
 
     correction = MemoryCorrection(
         user_id=current_user.id,

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 PlanFeedbackService - 计划反馈管理服务 (Phase 4)
 
@@ -9,7 +10,6 @@ Responsibilities:
 
 This service provides the feedback loop for the plan review system.
 """
-from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 from uuid import UUID

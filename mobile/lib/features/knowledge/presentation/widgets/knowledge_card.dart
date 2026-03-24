@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 /// 知识卡片组件
 /// 用于在聊天中显示 AI 生成的知识节点
@@ -14,11 +15,17 @@ class KnowledgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nodeId = data['id'] as String?;
-    final title = data['title'] as String;
-    final summary = data['summary'] as String?;
-    final tags = (data['tags'] as List?)?.cast<String>() ?? [];
-    final masteryLevel = data['mastery_level'] as int? ?? 0;
+    final entity = EntityCardPayload.fromRaw(data, fallbackType: 'knowledge_node');
+    final nodeId = entity.entityId ?? data['id'] as String?;
+    final title = entity.title;
+    final summary = entity.summary ?? data['summary'] as String?;
+    final tags = entity.tags.isNotEmpty
+        ? entity.tags
+        : (data['tags'] as List?)?.cast<String>() ?? [];
+    final masteryLevel =
+        (entity.metrics['mastery_level'] as num?)?.toInt() ??
+            data['mastery_level'] as int? ??
+            0;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -26,7 +33,9 @@ class KnowledgeCard extends StatelessWidget {
       child: SparklePressable(
         onTap: () {
           // 导航到知识星图页面，如果有节点ID则聚焦到该节点
-          if (nodeId != null) {
+          if (entity.detailRoute != null && entity.detailRoute!.isNotEmpty) {
+            context.go(entity.detailRoute!);
+          } else if (nodeId != null) {
             context.go('/galaxy?nodeId=$nodeId');
           } else {
             context.go('/galaxy');

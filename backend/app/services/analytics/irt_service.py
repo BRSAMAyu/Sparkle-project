@@ -1,5 +1,6 @@
+from __future__ import annotations
 import math
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from app.models.irt import IRTItemParameter, UserIRTAbility
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class IRTService:

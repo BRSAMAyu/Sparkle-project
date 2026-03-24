@@ -2,7 +2,7 @@
 Task 事件消费者 - 处理任务与计划相关事件，驱动认知闭环。
 """
 import asyncio
-from datetime import UTC, datetime
+import os
 from uuid import UUID
 
 from loguru import logger
@@ -14,11 +14,8 @@ from app.db.session import AsyncSessionLocal
 from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.behavior_signal_collector import BehaviorSignalCollector
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.community_signal_bridge import CommunitySignalBridge
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskEventConsumer:
@@ -30,24 +27,31 @@ class TaskEventConsumer:
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
         self._running = False
+        self._subscribed = False
+        self.consumer_name = f"task-{os.getpid()}"
 
     async def start(self):
         """启动事件消费循环"""
         await self.event_bus.connect()
+        if self._running:
+            return
         self._running = True
 
         logger.info(f"TaskEventConsumer started, listening on {self.STREAM_NAME}")
 
         while self._running:
             try:
-                await self.event_bus.subscribe(
-                    stream=self.STREAM_NAME,
-                    group_name=self.GROUP_NAME,
-                    consumer_name=f"task-{_utcnow().timestamp()}",
-                    callback=self.handle_event
-                )
-                break
+                if not self._subscribed:
+                    await self.event_bus.subscribe(
+                        stream=self.STREAM_NAME,
+                        group_name=self.GROUP_NAME,
+                        consumer_name=self.consumer_name,
+                        callback=self.handle_event
+                    )
+                    self._subscribed = True
+                await asyncio.sleep(1)
             except Exception as e:
+                self._subscribed = False
                 logger.error(f"TaskEventConsumer error: {e}")
                 await asyncio.sleep(1)
 
@@ -78,9 +82,24 @@ class TaskEventConsumer:
 
                 estimated = event.get("estimated_minutes", 0)
                 actual = event.get("actual_minutes", 0)
-                completion_rate = actual / estimated if estimated > 0 else 1.0
+                completion_rate = event.get("completion_rate")
+                if completion_rate is None:
+                    completion_rate = actual / estimated if estimated > 0 else 1.0
                 await collector.handle_task_completed_event(event)
                 await bridge.handle_group_task_completed(event)
+
+                try:
+                    auto_collector = AutoFragmentCollector(db)
+                    await auto_collector.collect_from_task_completion(
+                        user_id=user_id,
+                        task_id=task_id,
+                        estimated_minutes=estimated if estimated else None,
+                        actual_minutes=actual if actual else None,
+                        completion_rate=completion_rate,
+                        difficulty=event.get("difficulty"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Auto fragment collection failed for task {task_id}: {exc}")
 
                 plan_id = event.get("plan_id")
                 if not plan_id or plan_id == "None":

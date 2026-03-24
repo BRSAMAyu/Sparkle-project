@@ -1,6 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -26,7 +29,9 @@ class GalaxySearchPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isDarkMode ? Colors.white : const Color(0xFF111827);
+    final l10n = context.l10n;
+    final colors = context.colorExtensions;
+    final foreground = colors.adaptiveForeground;
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.64)
         : Colors.black.withValues(alpha: 0.56);
@@ -40,9 +45,18 @@ class GalaxySearchPanel extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: isDarkMode
-                ? const Color(0xB3141B2B)
-                : Colors.white.withValues(alpha: 0.82),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                isDarkMode
+                    ? colors.panelDarkOverlayLighter
+                    : Colors.white.withValues(alpha: 0.88),
+                isDarkMode
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : DS.info.withValues(alpha: 0.03),
+              ],
+            ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isDarkMode
@@ -69,7 +83,7 @@ class GalaxySearchPanel extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '搜索知识节点',
+                          l10n.galaxySearchTitle,
                           style: TextStyle(
                             color: foreground,
                             fontSize: 16,
@@ -95,12 +109,25 @@ class GalaxySearchPanel extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                     decoration: InputDecoration(
-                      hintText: '输入名称、标签或扇区',
+                      hintText: l10n.galaxySearchHint,
                       hintStyle: TextStyle(color: secondary),
                       prefixIcon: Icon(Icons.search_rounded, color: secondary),
                       filled: true,
                       fillColor: (isDarkMode ? Colors.white : Colors.black)
-                          .withValues(alpha: isDarkMode ? 0.05 : 0.035),
+                          .withValues(alpha: isDarkMode ? 0.05 : 0.03),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: DS.info.withValues(alpha: 0.35),
+                        ),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -118,7 +145,7 @@ class GalaxySearchPanel extends StatelessWidget {
                         : results.isEmpty
                             ? Center(
                                 child: Text(
-                                  '没有匹配结果',
+                                  l10n.galaxySearchNoResults,
                                   style: TextStyle(
                                     color: secondary,
                                     fontSize: 13,
@@ -139,49 +166,74 @@ class GalaxySearchPanel extends StatelessWidget {
                                   final node = results[index];
                                   final sectorStyle =
                                       SectorConfig.getStyle(node.sector);
+                                  final sectorName =
+                                      SectorConfig.getLocalizedName(
+                                    node.sector,
+                                  );
                                   final color = sectorStyle.primaryColorFor(
                                     isDarkMode: isDarkMode,
                                   );
 
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    dense: true,
-                                    leading: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: color.withValues(alpha: 0.92),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                color.withValues(alpha: 0.22),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    title: Text(
-                                      node.name,
-                                      style: TextStyle(
-                                        color: foreground,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      '${sectorStyle.name} · 掌握 ${node.masteryScore}% · 重要度 ${node.importance}',
-                                      style: TextStyle(
-                                        color: secondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    trailing: Icon(
-                                      Icons.north_east_rounded,
-                                      color: color,
-                                      size: 18,
-                                    ),
+                                  return SparklePressable(
                                     onTap: () => onNodeSelected(node),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: color.withValues(alpha: 0.92),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: color.withValues(
+                                                  alpha: 0.22,
+                                                ),
+                                                blurRadius: 8,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                node.name,
+                                                style: TextStyle(
+                                                  color: foreground,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              Text(
+                                                l10n.galaxySearchResultSubtitle(
+                                                  sectorName,
+                                                  node.masteryScore,
+                                                  node.importance,
+                                                ),
+                                                style: TextStyle(
+                                                  color: secondary,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.north_east_rounded,
+                                          color: color,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
                                   );
                                 },
                               ),
@@ -203,6 +255,7 @@ class _SearchHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final secondary = isDarkMode
         ? Colors.white.withValues(alpha: 0.62)
         : Colors.black.withValues(alpha: 0.56);
@@ -218,7 +271,7 @@ class _SearchHint extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '实时筛选节点并直接飞行定位',
+            l10n.galaxySearchHintDetail,
             style: TextStyle(
               color: secondary,
               fontSize: 13,

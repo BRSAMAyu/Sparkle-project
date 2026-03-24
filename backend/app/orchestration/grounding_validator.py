@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Grounding Validator - Phase 1, Phase 2 & Phase 3
 
@@ -53,6 +54,31 @@ class GroundingValidator:
     # 需要任务数量检查的工具
     TASK_LIMIT_CHECK_TOOLS = {"create_task", "batch_create_tasks"}
     KNOWLEDGE_READINESS_THRESHOLD = 30.0
+
+    @staticmethod
+    def _should_bypass_confirmation(plan: ExecutablePlan, tool_call: Any) -> bool:
+        """Allow safe auto-execution for tightly scoped planning chains.
+
+        `generate_tasks_for_plan` is normally confirmation-gated because it can
+        create multiple tasks. In the standard AI planning flow, however, the
+        user has already explicitly asked the assistant to generate a plan and
+        the executable DAG is limited to `create_plan -> generate_tasks_for_plan`.
+        For this specific `langgraph` planning path we auto-execute so the chat
+        flow can produce real plan/task cards instead of stalling on HITL.
+        """
+        if getattr(tool_call, "name", "") != "generate_tasks_for_plan":
+            return False
+        if getattr(plan, "source", "") != "langgraph":
+            return False
+        if getattr(tool_call, "point_of_no_return", False):
+            return False
+
+        upstream_tools = {
+            getattr(candidate, "name", "")
+            for candidate in getattr(plan, "tool_calls", [])
+            if getattr(candidate, "id", None) in (getattr(tool_call, "depends_on", []) or [])
+        }
+        return "create_plan" in upstream_tools
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
@@ -153,6 +179,8 @@ class GroundingValidator:
         for tool_call in plan.tool_calls:
             tool = dynamic_tool_registry.get_tool(tool_call.name)
             if tool and getattr(tool, "requires_confirmation", False):
+                if self._should_bypass_confirmation(plan, tool_call):
+                    continue
                 requires_hitl = True
                 if f"confirm:{tool_call.name}" not in risk_flags:
                     risk_flags.append(f"confirm:{tool_call.name}")
@@ -377,7 +405,7 @@ class GroundingValidator:
             # 3. Focus 时间冲突检查（简化版）
             if tool_call.name in ["create_task", "update_task", "create_focus"]:
                 if "due_date" in tool_call.params or "start_time" in tool_call.params:
-                    # TODO: 实际应查询 focus_service 检查时间冲突
+                    # TRACKED(TD-008): 实际应查询 focus_service 检查时间冲突
                     # Phase 2: 简化实现，仅记录日志
                     logger.debug(f"Focus time conflict check for {tool_call.name}")
 

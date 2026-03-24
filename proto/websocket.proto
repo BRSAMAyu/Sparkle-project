@@ -59,3 +59,36 @@ message InterventionAction {
   string label = 2;
   string type = 3;
 }
+
+// ============================================
+// Message Acknowledgment (ACK/NACK) Protocol
+// ============================================
+
+// MessageAck - Server acknowledgment of client message
+message MessageAck {
+  string message_id = 1;         // Client message ID being acknowledged
+  string status = 2;             // "received", "processing", "failed"
+  int64 timestamp = 3;           // Server timestamp when ack was sent
+  string error_code = 4;         // Error code if status is "failed"
+  string error_message = 5;      // Human-readable error message if failed
+}
+
+// MessageNack - Server rejection of client message
+message MessageNack {
+  string message_id = 1;         // Client message ID being rejected
+  string error_code = 2;         // Error code (e.g., "rate_limited", "invalid_payload")
+  string error_message = 3;      // Human-readable error message
+  int32 retry_after_ms = 4;      // Suggested retry delay in milliseconds (0 = no retry)
+  bool permanent = 5;            // If true, the message should not be retried
+}
+
+// Heartbeat ping/pong for connection health monitoring
+message HeartbeatPing {
+  int64 timestamp = 1;           // Client timestamp when ping was sent
+  string client_id = 2;          // Optional client identifier
+}
+
+message HeartbeatPong {
+  int64 client_timestamp = 1;    // Echo of client's ping timestamp for RTT calculation
+  int64 server_timestamp = 2;    // Server timestamp when pong was sent
+}

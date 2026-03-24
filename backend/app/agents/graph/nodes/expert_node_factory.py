@@ -7,13 +7,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.graph.llm_factory import LLMFactory
 from app.agents.graph.state import SparkleState
+from app.core.metrics import AGENT_PERFORMANCE_RECORDED_TOTAL
 from app.orchestration.agent_activity import emit_agent_activity, get_stream_callback
+from app.orchestration.agent_scoring import AgentScoringService
 
 
 def create_specialist_node(
     *,
     agent_id: str,
     planning_prompt: str,
+    system_prompt: str | None = None,
     task_prompt_prefix: str | None = None,
     toolset: list | None = None,
 ) -> Callable[[SparkleState, dict | None], dict]:
@@ -21,7 +24,11 @@ def create_specialist_node(
 
     async def _node(state: SparkleState, config: dict | None = None) -> dict:
         stream_cb = get_stream_callback(config)
-        await emit_agent_activity(stream_cb, agent_id=agent_id, status="active")
+        activity_metadata = {
+            "collaboration_mode": str(state.get("collaboration_mode") or ""),
+            "phase": "analysis",
+        }
+        await emit_agent_activity(stream_cb, agent_id=agent_id, status="active", metadata=activity_metadata)
         started_at = time.time()
         messages = state["messages"]
         collaboration_context = state.get("collaboration_context")
@@ -30,9 +37,31 @@ def create_specialist_node(
             task_prefix = task_prompt_prefix or "Collaboration task"
             messages.append(HumanMessage(content=f"[{task_prefix}] {collaboration_context}"))
 
+        def _build_prompt(prompt: str) -> str:
+            prompt = prompt.strip()
+            collaboration_mode = str(state.get("collaboration_mode") or "").strip()
+            collaboration_agents = [
+                str(agent).strip()
+                for agent in (state.get("collaboration_agents") or [])
+                if str(agent).strip()
+            ]
+            other_agents = [agent for agent in collaboration_agents if agent != agent_id]
+            if collaboration_mode and other_agents:
+                prompt += (
+                    "\n\n## 协作须知\n"
+                    f"协作模式：{collaboration_mode}\n"
+                    f"其他参与专家：{', '.join(other_agents)}\n"
+                    "只输出你擅长的部分，避免重复他人内容。\n"
+                    "关键论点可简短标注你的专家身份，便于聚合。"
+                )
+            return prompt
+
         if state.get("planning_mode") or state.get("_planning_mode"):
             messages = list(messages)
-            messages.insert(0, SystemMessage(content=planning_prompt))
+            messages.insert(0, SystemMessage(content=_build_prompt(planning_prompt)))
+        elif system_prompt:
+            messages = list(messages)
+            messages.insert(0, SystemMessage(content=_build_prompt(system_prompt)))
 
         llm = LLMFactory.get_llm(agent_id)
         if toolset:
@@ -40,25 +69,56 @@ def create_specialist_node(
         try:
             response = await llm.ainvoke(messages)
             duration_ms = (time.time() - started_at) * 1000
+            tool_calls_count = len(getattr(response, "tool_calls", []) or [])
             result_summary = None
             content = getattr(response, "content", None)
             if content:
                 result_summary = str(content)[:80]
+            await AgentScoringService(None).record_from_runtime(
+                redis_client=(config or {}).get("configurable", {}).get("redis_client"),
+                state=state,
+                agent_id=agent_id,
+                latency_ms=duration_ms,
+                success=True,
+                tool_calls_count=tool_calls_count,
+                result_used=tool_calls_count > 0,
+                intent_type=((state.get("_planning_constraints") or {}).get("route_intent")),
+            )
+            AGENT_PERFORMANCE_RECORDED_TOTAL.labels(
+                agent_id=agent_id,
+                success="true",
+            ).inc()
             await emit_agent_activity(
                 stream_cb,
                 agent_id=agent_id,
                 status="completed",
                 duration_ms=duration_ms,
                 result_summary=result_summary,
+                metadata=activity_metadata,
             )
         except Exception as exc:
             duration_ms = (time.time() - started_at) * 1000
+            await AgentScoringService(None).record_from_runtime(
+                redis_client=(config or {}).get("configurable", {}).get("redis_client"),
+                state=state,
+                agent_id=agent_id,
+                latency_ms=duration_ms,
+                success=False,
+                tool_calls_count=0,
+                result_used=False,
+                intent_type=((state.get("_planning_constraints") or {}).get("route_intent")),
+            )
+            AGENT_PERFORMANCE_RECORDED_TOTAL.labels(
+                agent_id=agent_id,
+                success="false",
+            ).inc()
             await emit_agent_activity(
                 stream_cb,
                 agent_id=agent_id,
                 status="error",
                 duration_ms=duration_ms,
                 result_summary=str(exc)[:80],
+                metadata=activity_metadata,
             )
             raise
 

@@ -615,6 +615,344 @@ class InterventionAction extends $pb.GeneratedMessage {
   void clearType() => $_clearField(3);
 }
 
+/// MessageAck - Server acknowledgment of client message
+class MessageAck extends $pb.GeneratedMessage {
+  factory MessageAck({
+    $core.String? messageId,
+    $core.String? status,
+    $fixnum.Int64? timestamp,
+    $core.String? errorCode,
+    $core.String? errorMessage,
+  }) {
+    final result = create();
+    if (messageId != null) result.messageId = messageId;
+    if (status != null) result.status = status;
+    if (timestamp != null) result.timestamp = timestamp;
+    if (errorCode != null) result.errorCode = errorCode;
+    if (errorMessage != null) result.errorMessage = errorMessage;
+    return result;
+  }
+
+  MessageAck._();
+
+  factory MessageAck.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory MessageAck.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MessageAck',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'sparkle.ws'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'messageId')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..aInt64(3, _omitFieldNames ? '' : 'timestamp')
+    ..aOS(4, _omitFieldNames ? '' : 'errorCode')
+    ..aOS(5, _omitFieldNames ? '' : 'errorMessage')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessageAck clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessageAck copyWith(void Function(MessageAck) updates) =>
+      super.copyWith((message) => updates(message as MessageAck)) as MessageAck;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static MessageAck create() => MessageAck._();
+  @$core.override
+  MessageAck createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static MessageAck getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<MessageAck>(create);
+  static MessageAck? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get messageId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set messageId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessageId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessageId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get timestamp => $_getI64(2);
+  @$pb.TagNumber(3)
+  set timestamp($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTimestamp() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTimestamp() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get errorCode => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set errorCode($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasErrorCode() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearErrorCode() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get errorMessage => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set errorMessage($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasErrorMessage() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearErrorMessage() => $_clearField(5);
+}
+
+/// MessageNack - Server rejection of client message
+class MessageNack extends $pb.GeneratedMessage {
+  factory MessageNack({
+    $core.String? messageId,
+    $core.String? errorCode,
+    $core.String? errorMessage,
+    $core.int? retryAfterMs,
+    $core.bool? permanent,
+  }) {
+    final result = create();
+    if (messageId != null) result.messageId = messageId;
+    if (errorCode != null) result.errorCode = errorCode;
+    if (errorMessage != null) result.errorMessage = errorMessage;
+    if (retryAfterMs != null) result.retryAfterMs = retryAfterMs;
+    if (permanent != null) result.permanent = permanent;
+    return result;
+  }
+
+  MessageNack._();
+
+  factory MessageNack.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory MessageNack.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MessageNack',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'sparkle.ws'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'messageId')
+    ..aOS(2, _omitFieldNames ? '' : 'errorCode')
+    ..aOS(3, _omitFieldNames ? '' : 'errorMessage')
+    ..aI(4, _omitFieldNames ? '' : 'retryAfterMs')
+    ..aOB(5, _omitFieldNames ? '' : 'permanent')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessageNack clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessageNack copyWith(void Function(MessageNack) updates) =>
+      super.copyWith((message) => updates(message as MessageNack))
+          as MessageNack;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static MessageNack create() => MessageNack._();
+  @$core.override
+  MessageNack createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static MessageNack getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<MessageNack>(create);
+  static MessageNack? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get messageId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set messageId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessageId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessageId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get errorCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set errorCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasErrorCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearErrorCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get errorMessage => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set errorMessage($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasErrorMessage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearErrorMessage() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get retryAfterMs => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set retryAfterMs($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRetryAfterMs() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRetryAfterMs() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get permanent => $_getBF(4);
+  @$pb.TagNumber(5)
+  set permanent($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPermanent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPermanent() => $_clearField(5);
+}
+
+/// Heartbeat ping/pong for connection health monitoring
+class HeartbeatPing extends $pb.GeneratedMessage {
+  factory HeartbeatPing({
+    $fixnum.Int64? timestamp,
+    $core.String? clientId,
+  }) {
+    final result = create();
+    if (timestamp != null) result.timestamp = timestamp;
+    if (clientId != null) result.clientId = clientId;
+    return result;
+  }
+
+  HeartbeatPing._();
+
+  factory HeartbeatPing.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory HeartbeatPing.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'HeartbeatPing',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'sparkle.ws'),
+      createEmptyInstance: create)
+    ..aInt64(1, _omitFieldNames ? '' : 'timestamp')
+    ..aOS(2, _omitFieldNames ? '' : 'clientId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HeartbeatPing clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HeartbeatPing copyWith(void Function(HeartbeatPing) updates) =>
+      super.copyWith((message) => updates(message as HeartbeatPing))
+          as HeartbeatPing;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static HeartbeatPing create() => HeartbeatPing._();
+  @$core.override
+  HeartbeatPing createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static HeartbeatPing getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<HeartbeatPing>(create);
+  static HeartbeatPing? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get timestamp => $_getI64(0);
+  @$pb.TagNumber(1)
+  set timestamp($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTimestamp() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTimestamp() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get clientId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set clientId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasClientId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearClientId() => $_clearField(2);
+}
+
+class HeartbeatPong extends $pb.GeneratedMessage {
+  factory HeartbeatPong({
+    $fixnum.Int64? clientTimestamp,
+    $fixnum.Int64? serverTimestamp,
+  }) {
+    final result = create();
+    if (clientTimestamp != null) result.clientTimestamp = clientTimestamp;
+    if (serverTimestamp != null) result.serverTimestamp = serverTimestamp;
+    return result;
+  }
+
+  HeartbeatPong._();
+
+  factory HeartbeatPong.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory HeartbeatPong.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'HeartbeatPong',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'sparkle.ws'),
+      createEmptyInstance: create)
+    ..aInt64(1, _omitFieldNames ? '' : 'clientTimestamp')
+    ..aInt64(2, _omitFieldNames ? '' : 'serverTimestamp')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HeartbeatPong clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  HeartbeatPong copyWith(void Function(HeartbeatPong) updates) =>
+      super.copyWith((message) => updates(message as HeartbeatPong))
+          as HeartbeatPong;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static HeartbeatPong create() => HeartbeatPong._();
+  @$core.override
+  HeartbeatPong createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static HeartbeatPong getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<HeartbeatPong>(create);
+  static HeartbeatPong? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get clientTimestamp => $_getI64(0);
+  @$pb.TagNumber(1)
+  set clientTimestamp($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasClientTimestamp() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearClientTimestamp() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get serverTimestamp => $_getI64(1);
+  @$pb.TagNumber(2)
+  set serverTimestamp($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasServerTimestamp() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServerTimestamp() => $_clearField(2);
+}
+
 const $core.bool _omitFieldNames =
     $core.bool.fromEnvironment('protobuf.omit_field_names');
 const $core.bool _omitMessageNames =

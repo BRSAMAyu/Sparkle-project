@@ -8,8 +8,9 @@ User Service - 生产级实现
 - 缓存失效: 用户更新时自动失效
 - 容错降级: 缓存/DB 故障时优雅降级
 """
+from __future__ import annotations
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,31 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+async def get_active_users(db: AsyncSession, days: int | None = None) -> list[User]:
+    """
+    Return active users, optionally preferring recently active accounts.
+
+    When ``days`` is provided we use ``last_login_at`` as a soft activity signal,
+    but still fall back to all active users if no recent records exist. This keeps
+    scheduled jobs operational in local/dev environments with sparse data.
+    """
+    stmt = select(User).where(User.is_active.is_(True))
+    if days is None:
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    cutoff = _utcnow() - timedelta(days=days)
+    recent_stmt = stmt.where(User.last_login_at.is_not(None), User.last_login_at >= cutoff)
+    recent_result = await db.execute(recent_stmt)
+    recent_users = list(recent_result.scalars().all())
+    if recent_users:
+        return recent_users
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 class UserService:
@@ -435,7 +460,7 @@ class UserService:
             if not user:
                 return False
 
-            from datetime import UTC, datetime
+            from datetime import timezone, datetime
             user.last_login_at = _utcnow()
             await self.db.commit()
             logger.debug(f"Updated last login for user {user_id}")

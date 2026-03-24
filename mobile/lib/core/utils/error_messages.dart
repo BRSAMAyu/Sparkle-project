@@ -42,6 +42,7 @@ class ErrorMessages {
         return l10n.errorConnectionFailed;
 
       case 'CONNECTION_TIMEOUT':
+      case 'STREAM_TIMEOUT':
         return l10n.errorConnectionTimeout;
 
       case 'MAX_RETRIES_EXCEEDED':
@@ -115,6 +116,7 @@ class ErrorMessages {
       case 'WEBSOCKET_ERROR':
         return '连接中断了，我没法继续拿到后续结果。';
       case 'CONNECTION_TIMEOUT':
+      case 'STREAM_TIMEOUT':
         return '这轮等待超时了，我只拿到部分结果。';
       case 'MAX_RETRIES_EXCEEDED':
         return '重试次数已经用完，这轮链路没有稳定恢复。';
@@ -146,6 +148,7 @@ class ErrorMessages {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
       case 'CONNECTION_TIMEOUT':
+      case 'STREAM_TIMEOUT':
       case 'MAX_RETRIES_EXCEEDED':
       case 'SERVER_ERROR':
       case 'INTERNAL_ERROR':
@@ -167,6 +170,7 @@ class ErrorMessages {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
       case 'CONNECTION_TIMEOUT':
+      case 'STREAM_TIMEOUT':
         return '检查网络后重试，或先看当前已返回的部分结果';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':

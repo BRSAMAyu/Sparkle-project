@@ -1,8 +1,15 @@
 global:
   scrape_interval: 15s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 rule_files:
+  - "celery_alerts.yml"
   - "sparkle_slo_alerts.yml"
+  - "sparkle_production_baseline_alerts.yml"
 
 scrape_configs:
   - job_name: 'prometheus'
@@ -18,4 +25,8 @@ scrape_configs:
 
   - job_name: 'sparkle_backend'
     static_configs:
-      - targets: ['sparkle_backend:8000']
+      - targets: ['sparkle_api:8000']
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']

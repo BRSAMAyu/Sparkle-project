@@ -3,6 +3,7 @@ Capsule Feedback Service
 
 处理胶囊反馈，更新用户推断偏好，重新计算胶囊质量分
 """
+from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
+from app.core.event_types import CAPSULE_FEEDBACK_SUBMITTED, CAPSULE_REGENERATE_REQUESTED
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.services.personalization.preference_service import PreferenceService
@@ -109,6 +112,33 @@ class CapsuleFeedbackService:
         await db.commit()
         await db.refresh(feedback)
 
+        await event_bus.publish(
+            CAPSULE_FEEDBACK_SUBMITTED,
+            {
+                "event_type": CAPSULE_FEEDBACK_SUBMITTED,
+                "user_id": str(user_id),
+                "capsule_id": str(capsule_id),
+                "rating": rating,
+                "helpful": helpful,
+                "category": category,
+                "depth_delta": depth_delta,
+                "curiosity_delta": curiosity_delta,
+            },
+        )
+
+        if abs(depth_delta or 0) > 0.15 or abs(curiosity_delta or 0) > 0.15:
+            await event_bus.publish(
+                CAPSULE_REGENERATE_REQUESTED,
+                {
+                    "event_type": CAPSULE_REGENERATE_REQUESTED,
+                    "user_id": str(user_id),
+                    "capsule_id": str(capsule_id),
+                    "trigger_reason": "significant_feedback",
+                    "depth_delta": depth_delta,
+                    "curiosity_delta": curiosity_delta,
+                },
+            )
+
         return feedback
 
     async def _update_inferred_preferences(
@@ -128,25 +158,24 @@ class CapsuleFeedbackService:
 
         pref_service = PreferenceService(db)
         prefs_center = await pref_service.get_preferences(user_id)
-
-        # 更新推断偏好
         inferred = prefs_center.inferred or {}
+        updates: dict[str, float] = {}
 
         if depth_delta is not None:
             current_depth = inferred.get("depth_preference", 0.5)
             # 平滑更新，避免剧烈波动
             new_depth = max(0.0, min(1.0, current_depth + (depth_delta * 0.1)))
-            inferred["depth_preference"] = new_depth
+            updates["depth_preference"] = new_depth
             logger.debug(f"[Feedback] Updated depth_preference: {current_depth} -> {new_depth}")
 
         if curiosity_delta is not None:
             current_curiosity = inferred.get("curiosity_preference", 0.5)
             new_curiosity = max(0.0, min(1.0, current_curiosity + (curiosity_delta * 0.1)))
-            inferred["curiosity_preference"] = new_curiosity
+            updates["curiosity_preference"] = new_curiosity
             logger.debug(f"[Feedback] Updated curiosity_preference: {current_curiosity} -> {new_curiosity}")
 
-        prefs_center.inferred = inferred
-        await pref_service.save_preferences(user_id, prefs_center)
+        if updates:
+            await pref_service.update_inferred(user_id, updates)
 
     async def _recalculate_capsule_quality(
         self,

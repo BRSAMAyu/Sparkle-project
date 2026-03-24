@@ -3,6 +3,7 @@ Capsule Share Service
 
 处理胶囊分享功能（分享到群组/好友）
 """
+from __future__ import annotations
 from uuid import UUID
 
 from loguru import logger

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 class GroupSearchScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
   void _handleSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
       ref.read(groupSearchProvider.notifier).search(query);
     }
   }
@@ -36,6 +38,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
+        backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
@@ -46,7 +51,15 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           autofocus: true,
           decoration: InputDecoration(
             hintText: 'Search groups...',
-            border: InputBorder.none,
+            filled: true,
+            fillColor: Color.alphaBlend(
+              DS.info.withValues(alpha: 0.03),
+              DS.surfacePrimary,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
             hintStyle: TextStyle(color: DS.textSecondary),
           ),
           style: TextStyle(color: DS.textPrimary),
@@ -79,25 +92,32 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                   const SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final group = groups[index];
-                return GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  padding: EdgeInsets.zero,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-                      child: Icon(
-                        group.type.name == 'sprint' ? Icons.timer : Icons.group,
+                return SparkleStaggerItem(
+                  index: index,
+                  child: GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.card,
+                    padding: EdgeInsets.zero,
+                    borderColor: DS.border.withValues(alpha: 0.42),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                        child: Icon(
+                          group.type.name == 'sprint' ? Icons.timer : Icons.group,
+                        ),
                       ),
+                      title: Text(group.name),
+                      subtitle: Text(
+                        '${group.memberCount} members • ${group.totalFlamePower} flame',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        );
+                        context.push('/community/groups/${group.id}');
+                      },
                     ),
-                    title: Text(group.name),
-                    subtitle: Text(
-                      '${group.memberCount} members • ${group.totalFlamePower} flame',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      context.push('/community/groups/${group.id}');
-                    },
                   ),
                 );
               },

@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 part 'photon_model.g.dart';
 
@@ -115,29 +116,30 @@ class PhotonTransaction {
 
   /// 获取交易类型的显示名称
   String get transactionTypeName {
+    final l10n = I18nService.instance.l10n;
     switch (transactionType) {
       case PhotonTransactionType.grantAchievement:
-        return '成就奖励';
+        return l10n.photonTransactionGrantAchievement;
       case PhotonTransactionType.grantDailyFirst:
-        return '每日首胜';
+        return l10n.photonTransactionGrantDailyFirst;
       case PhotonTransactionType.grantContract:
-        return '契约完成';
+        return l10n.photonTransactionGrantContract;
       case PhotonTransactionType.grantContractBonus:
-        return '契约加成';
+        return l10n.photonTransactionGrantContractBonus;
       case PhotonTransactionType.deductContractStake:
-        return '契约失败';
+        return l10n.photonTransactionDeductContractStake;
       case PhotonTransactionType.purchase:
-        return '商城购买';
+        return l10n.photonTransactionPurchase;
       case PhotonTransactionType.transferOut:
-        return '转账-转出';
+        return l10n.photonTransactionTransferOut;
       case PhotonTransactionType.transferIn:
-        return '转账-转入';
+        return l10n.photonTransactionTransferIn;
       case PhotonTransactionType.refund:
-        return '退款';
+        return l10n.photonTransactionRefund;
       case PhotonTransactionType.penalty:
-        return '惩罚';
+        return l10n.photonTransactionPenalty;
       case PhotonTransactionType.adminAdjustment:
-        return '管理员调整';
+        return l10n.photonTransactionAdminAdjustment;
     }
   }
 

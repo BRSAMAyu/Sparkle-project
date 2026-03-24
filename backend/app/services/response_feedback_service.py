@@ -1,8 +1,10 @@
+from __future__ import annotations
+import json
 import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -11,10 +13,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.metrics import RESPONSE_FEEDBACK_DEDUPE_TOTAL, RESPONSE_FEEDBACK_INGESTED
+from app.core.metrics import (
+    AGENT_FEEDBACK_LINKED_TOTAL,
+    RESPONSE_FEEDBACK_DEDUPE_TOTAL,
+    RESPONSE_FEEDBACK_INGESTED,
+)
 from app.learning.prompt_bandit import PromptBandit
 from app.models.context_pack import ContextPackFeedback, ContextPackRun
 from app.models.response_feedback import ResponseFeedback
+from app.orchestration.run_ledger import RunLedgerStore
+from app.orchestration.agent_memory import AgentMemoryService
+from app.orchestration.agent_scoring import AgentScoringService
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.content_quality_evaluator import ContentQualityEvaluator
 
@@ -42,7 +51,7 @@ class FeedbackResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ResponseFeedbackService:
@@ -107,15 +116,93 @@ class ResponseFeedbackService:
         RESPONSE_FEEDBACK_INGESTED.labels(
             feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
         ).inc()
+        await RunLedgerStore.append_external_event(
+            self.redis,
+            trace_id=trace_id,
+            event_type="feedback_received",
+            label="收到用户反馈",
+            workflow_stage="feedback",
+            metadata={
+                "feedback_type": "up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                "reasons": reasons,
+                "response_id": response_id,
+            },
+        )
 
         await self._record_feedback_ts(user_id, workflow_id, prompt_version)
         await self._update_bandit(workflow_id, prompt_version, feedback_type)
+        if workflow_id and prompt_version:
+            await RunLedgerStore.append_external_event(
+                self.redis,
+                trace_id=trace_id,
+                event_type="strategy_effect_applied",
+                label="Prompt bandit 已更新",
+                workflow_stage="feedback",
+                metadata={
+                    "effect_target": "prompt_bandit",
+                    "status": "applied",
+                    "detail": f"{workflow_id}:{prompt_version}",
+                },
+            )
         await self._handle_context_pack_feedback(
             user_uuid,
             feedback_type,
             reasons,
             meta or {},
+            trace_id=trace_id,
         )
+        if self.redis:
+            linked_agents = await AgentScoringService(self.redis).apply_response_feedback(
+                user_id=user_id,
+                response_id=response_id,
+                feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+            )
+            if linked_agents:
+                AGENT_FEEDBACK_LINKED_TOTAL.labels(
+                    feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+                ).inc()
+                await RunLedgerStore.append_external_event(
+                    self.redis,
+                    trace_id=trace_id,
+                    event_type="strategy_effect_applied",
+                    label="Agent 质量映射已更新",
+                    workflow_stage="feedback",
+                    metadata={
+                        "effect_target": "agent_scoring",
+                        "status": "applied",
+                        "detail": ",".join(linked_agents[:5]),
+                    },
+                )
+                try:
+                    memory_service = AgentMemoryService(self.redis)
+                    safe_ints = []
+                    for r in (reasons or []):
+                        try:
+                            safe_ints.append(int(r))
+                        except (ValueError, TypeError):
+                            pass
+                    normalized_reasons = self.normalize_reasons(safe_ints)
+                    for agent_id in linked_agents:
+                        await memory_service.infer_preferences_from_feedback(
+                            agent_id=agent_id,
+                            user_id=user_id,
+                            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                            reasons=normalized_reasons,
+                        )
+                    await RunLedgerStore.append_external_event(
+                        self.redis,
+                        trace_id=trace_id,
+                        event_type="strategy_effect_applied",
+                        label="Agent 记忆偏好已更新",
+                        workflow_stage="feedback",
+                        metadata={
+                            "effect_target": "agent_memory",
+                            "status": "applied",
+                            "detail": f"agents={len(linked_agents)}",
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug(f"Failed to propagate feedback to agent memory: {exc}")
 
         # Opportunistically evaluate and auto-seed high-quality responses.
         try:
@@ -145,6 +232,7 @@ class ResponseFeedbackService:
         feedback_type: int,
         reasons: list[str],
         meta: dict[str, Any],
+        trace_id: str | None = None,
     ) -> None:
         if not settings.ENABLE_BUDGET_TUNING:
             return
@@ -165,6 +253,18 @@ class ResponseFeedbackService:
 
         tuning = BudgetTuningService(self.db)
         await tuning.apply_feedback(pack_run.intent, reasons, score)
+        await RunLedgerStore.append_external_event(
+            self.redis,
+            trace_id=trace_id or str(pack_run.trace_id or ""),
+            event_type="strategy_effect_applied",
+            label="上下文预算策略已更新",
+            workflow_stage="feedback",
+            metadata={
+                "effect_target": "context_budget_profile",
+                "status": "applied",
+                "detail": str(pack_run.intent),
+            },
+        )
 
         # 推断用户偏好
         try:
@@ -181,6 +281,18 @@ class ResponseFeedbackService:
 
             if result.get("changes"):
                 logger.info(f"Preference inference applied: {result['changes']}")
+                await RunLedgerStore.append_external_event(
+                    self.redis,
+                    trace_id=trace_id or str(pack_run.trace_id or ""),
+                    event_type="strategy_effect_applied",
+                    label="用户偏好推断已更新",
+                    workflow_stage="feedback",
+                    metadata={
+                        "effect_target": "preference_inference",
+                        "status": "applied",
+                        "detail": json.dumps(result.get("changes"), ensure_ascii=False)[:200],
+                    },
+                )
         except Exception as e:
             logger.warning(f"Failed to apply preference inference: {e}")
 

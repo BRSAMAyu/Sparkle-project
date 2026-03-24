@@ -8,6 +8,8 @@ TokenTracker - Token 使用量追踪器
 4. 异步持久化到数据库
 """
 
+from __future__ import annotations
+
 import json
 import time
 from datetime import datetime, timedelta
@@ -15,6 +17,8 @@ from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
+
+from app.core.llm_router import llm_router
 
 
 class TokenTracker:
@@ -46,7 +50,14 @@ class TokenTracker:
         prompt_tokens: int,
         completion_tokens: int,
         model: str = "gpt-4",
-        cost: float | None = None
+        cost: float | None = None,
+        reasoning_mode: str | None = None,
+        model_tier: str | None = None,
+        chat_mode: str | None = None,
+        timing_stats: dict[str, Any] | None = None,
+        success: bool = True,
+        fallback_used: bool = False,
+        outcome_stats: dict[str, Any] | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -76,7 +87,14 @@ class TokenTracker:
             "total_tokens": total_tokens,
             "model": model,
             "cost": cost,
-            "timestamp": timestamp
+            "reasoning_mode": reasoning_mode or "balanced",
+            "model_tier": model_tier or "",
+            "chat_mode": chat_mode or "standard",
+            "timing_stats": timing_stats or {},
+            "success": bool(success),
+            "fallback_used": bool(fallback_used),
+            "outcome_stats": outcome_stats or {},
+            "timestamp": timestamp,
         }
 
         await self.redis.rpush("queue:billing", json.dumps(usage_record))
@@ -96,6 +114,79 @@ class TokenTracker:
         await self.redis.incrby(model_key, total_tokens)
         await self.redis.expire(model_key, 86400)
 
+        mode = self._normalize_mode(reasoning_mode)
+        mode_tokens_key = f"user:daily_ai_mode_tokens:{user_id}:{today}:{mode}"
+        await self.redis.incrby(mode_tokens_key, total_tokens)
+        await self.redis.expire(mode_tokens_key, 86400)
+
+        mode_requests_key = f"user:daily_ai_mode_requests:{user_id}:{today}:{mode}"
+        await self.redis.incr(mode_requests_key)
+        await self.redis.expire(mode_requests_key, 86400)
+
+        if cost is not None:
+            mode_cost_key = f"user:daily_ai_mode_cost_micro_usd:{user_id}:{today}:{mode}"
+            await self.redis.incrby(mode_cost_key, int(round(float(cost) * 1_000_000)))
+            await self.redis.expire(mode_cost_key, 86400)
+
+        if timing_stats:
+            total_duration_ms = self._safe_int(timing_stats.get("total_duration_ms"))
+            first_token_ms = self._safe_int(timing_stats.get("first_token_ms"))
+            stream_duration_ms = self._safe_int(timing_stats.get("stream_duration_ms"))
+
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_total_duration_ms:{user_id}:{today}:{mode}",
+                value=total_duration_ms,
+            )
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_first_token_ms:{user_id}:{today}:{mode}",
+                value=first_token_ms,
+            )
+            await self._record_timing_metric(
+                key=f"user:daily_ai_mode_stream_duration_ms:{user_id}:{today}:{mode}",
+                value=stream_duration_ms,
+            )
+
+            aggregate_key = f"ai:daily_timing:{today}:{mode}:{chat_mode or 'standard'}"
+            await self.redis.hincrby(aggregate_key, "requests", 1)
+            if total_duration_ms > 0:
+                await self.redis.hincrby(aggregate_key, "total_duration_ms_sum", total_duration_ms)
+            if first_token_ms > 0:
+                await self.redis.hincrby(aggregate_key, "first_token_ms_sum", first_token_ms)
+            if stream_duration_ms > 0:
+                await self.redis.hincrby(aggregate_key, "stream_duration_ms_sum", stream_duration_ms)
+            await self.redis.expire(aggregate_key, 86400 * 14)
+
+        ops_key = f"user:ai_ops:{user_id}:{today}:{mode}:{chat_mode or 'standard'}"
+        await self.redis.hincrby(ops_key, "requests_total", 1)
+        await self.redis.hincrby(ops_key, "requests_success", 1 if success else 0)
+        await self.redis.hincrby(ops_key, "requests_failed", 0 if success else 1)
+        if fallback_used:
+            await self.redis.hincrby(ops_key, "fallback_count", 1)
+        await self.redis.hincrby(ops_key, "total_tokens_sum", total_tokens)
+        if cost is not None:
+            await self.redis.hincrby(ops_key, "total_cost_micro_usd", int(round(float(cost) * 1_000_000)))
+        if timing_stats:
+            if total_duration_ms > 0:
+                await self.redis.hincrby(ops_key, "total_duration_ms_sum", total_duration_ms)
+            if first_token_ms > 0:
+                await self.redis.hincrby(ops_key, "first_token_ms_sum", first_token_ms)
+            if stream_duration_ms > 0:
+                await self.redis.hincrby(ops_key, "stream_duration_ms_sum", stream_duration_ms)
+        outcome_stats = outcome_stats or {}
+        task_count = self._safe_int(outcome_stats.get("task_count"))
+        plan_count = self._safe_int(outcome_stats.get("plan_count"))
+        execution_count = self._safe_int(outcome_stats.get("execution_count"))
+        if task_count > 0:
+            await self.redis.hincrby(ops_key, "task_count_sum", task_count)
+            await self.redis.hincrby(ops_key, "task_request_count", 1)
+        if plan_count > 0:
+            await self.redis.hincrby(ops_key, "plan_count_sum", plan_count)
+            await self.redis.hincrby(ops_key, "plan_request_count", 1)
+        if execution_count > 0:
+            await self.redis.hincrby(ops_key, "execution_count_sum", execution_count)
+            await self.redis.hincrby(ops_key, "execution_request_count", 1)
+        await self.redis.expire(ops_key, 86400 * 30)
+
         # 5. 记录到历史明细（可选，用于详细分析）
         detail_key = f"user:details:{user_id}:{today}"
         detail = {
@@ -105,17 +196,43 @@ class TokenTracker:
             "completion": completion_tokens,
             "total": total_tokens,
             "model": model,
-            "timestamp": timestamp
+            "model_tier": model_tier,
+            "reasoning_mode": mode,
+            "chat_mode": chat_mode or "standard",
+            "timing_stats": timing_stats or {},
+            "success": bool(success),
+            "fallback_used": bool(fallback_used),
+            "outcome_stats": outcome_stats or {},
+            "timestamp": timestamp,
         }
         await self.redis.rpush(detail_key, json.dumps(detail))
         await self.redis.expire(detail_key, 86400)  # 保留24小时
 
         logger.debug(
-            f"Recorded usage for user {user_id}: "
-            f"{prompt_tokens} + {completion_tokens} = {total_tokens} tokens"
+            f"Recorded usage for user {user_id}: " f"{prompt_tokens} + {completion_tokens} = {total_tokens} tokens"
         )
 
         return total_tokens
+
+    @staticmethod
+    def _safe_int(value: Any) -> int:
+        try:
+            return max(0, int(float(value)))
+        except (TypeError, ValueError):
+            return 0
+
+    async def _record_timing_metric(self, *, key: str, value: int) -> None:
+        if value <= 0:
+            return
+        await self.redis.incrby(key, value)
+        await self.redis.expire(key, 86400 * 14)
+
+    @staticmethod
+    def _normalize_mode(value: str | None) -> str:
+        normalized = str(value or "balanced").strip().lower()
+        if normalized in {"fast", "balanced", "deep"}:
+            return normalized
+        return "balanced"
 
     async def get_daily_usage(self, user_id: str, date: str | None = None) -> int:
         """
@@ -140,12 +257,7 @@ class TokenTracker:
         except (TypeError, ValueError):
             return 0
 
-    async def check_quota(
-        self,
-        user_id: str,
-        daily_limit: int = 100000,
-        date: str | None = None
-    ) -> dict[str, Any]:
+    async def check_quota(self, user_id: str, daily_limit: int = 100000, date: str | None = None) -> dict[str, Any]:
         """
         检查用户配额
 
@@ -173,14 +285,10 @@ class TokenTracker:
             "limit": daily_limit,
             "remaining": max(0, remaining),
             "usage_rate": usage_rate,
-            "percentage": f"{usage_rate * 100:.1f}%"
+            "percentage": f"{usage_rate * 100:.1f}%",
         }
 
-    async def get_usage_breakdown(
-        self,
-        user_id: str,
-        days: int = 7
-    ) -> dict[str, int]:
+    async def get_usage_breakdown(self, user_id: str, days: int = 7) -> dict[str, int]:
         """
         获取用户最近 N 天的使用明细
 
@@ -213,11 +321,7 @@ class TokenTracker:
         result = await self.redis.get(key)
         return int(result) if result else 0
 
-    async def get_model_stats(
-        self,
-        model: str,
-        days: int = 7
-    ) -> dict[str, Any]:
+    async def get_model_stats(self, model: str, days: int = 7) -> dict[str, Any]:
         """
         获取模型使用统计
 
@@ -243,14 +347,10 @@ class TokenTracker:
             "model": model,
             "total_tokens": total,
             "daily_average": total / days if days > 0 else 0,
-            "breakdown": breakdown
+            "breakdown": breakdown,
         }
 
-    async def get_top_users(
-        self,
-        days: int = 7,
-        limit: int = 10
-    ) -> list[dict[str, Any]]:
+    async def get_top_users(self, days: int = 7, limit: int = 10) -> list[dict[str, Any]]:
         """
         获取 Token 使用量最高的用户
 
@@ -281,27 +381,15 @@ class TokenTracker:
                         usage = await self.redis.get(key)
                         if usage:
                             user_totals[user_id] = user_totals.get(user_id, 0) + int(usage)
-                except:
+                except (TypeError, ValueError):
                     continue
 
         # 排序并返回 Top N
-        sorted_users = sorted(
-            user_totals.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:limit]
+        sorted_users = sorted(user_totals.items(), key=lambda x: x[1], reverse=True)[:limit]
 
-        return [
-            {"user_id": uid, "total_tokens": tokens}
-            for uid, tokens in sorted_users
-        ]
+        return [{"user_id": uid, "total_tokens": tokens} for uid, tokens in sorted_users]
 
-    async def get_user_details(
-        self,
-        user_id: str,
-        date: str | None = None,
-        limit: int = 50
-    ) -> list[dict[str, Any]]:
+    async def get_user_details(self, user_id: str, date: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """
         获取用户详细使用记录
 
@@ -324,7 +412,7 @@ class TokenTracker:
             try:
                 detail = json.loads(msg)
                 details.append(detail)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 continue
 
         return details
@@ -357,19 +445,11 @@ class TokenTracker:
         return {
             "date": today,
             "total_tokens": int(total),
-            "model_distribution": {
-                "gpt-4": int(gpt4),
-                "gpt-3.5-turbo": int(gpt35)
-            },
-            "active_users": active_users
+            "model_distribution": {"gpt-4": int(gpt4), "gpt-3.5-turbo": int(gpt35)},
+            "active_users": active_users,
         }
 
-    async def estimate_cost(
-        self,
-        prompt_tokens: int,
-        completion_tokens: int,
-        model: str = "gpt-4"
-    ) -> float:
+    async def estimate_cost(self, prompt_tokens: int, completion_tokens: int, model: str = "gpt-4") -> float:
         """
         估算成本（基于 OpenAI 定价）
 
@@ -381,11 +461,17 @@ class TokenTracker:
         Returns:
             估算成本（美元）
         """
-        # OpenAI 定价（2024年）
+        router_models = getattr(llm_router, "_available_models", {})
+        if model in router_models:
+            config = router_models[model]
+            cost = (prompt_tokens + completion_tokens) * float(getattr(config, "cost_per_1k_tokens", 0.0)) / 1000.0
+            return round(cost, 6)
+
+        # Legacy OpenAI 定价兜底
         pricing = {
             "gpt-4": {"input": 0.03, "output": 0.06},  # per 1k tokens
             "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002}
+            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
         }
 
         if model not in pricing:
@@ -395,6 +481,366 @@ class TokenTracker:
         cost = (prompt_tokens * p["input"] + completion_tokens * p["output"]) / 1000
 
         return round(cost, 6)
+
+    async def get_mode_usage_summary(
+        self,
+        user_id: str,
+        mode: str,
+        *,
+        date: str | None = None,
+        request_limit: int = 0,
+    ) -> dict[str, Any]:
+        if date is None:
+            date = datetime.now().strftime("%Y-%m-%d")
+        normalized_mode = self._normalize_mode(mode)
+
+        (
+            requests_raw,
+            tokens_raw,
+            cost_raw,
+            total_duration_raw,
+            first_token_raw,
+            stream_duration_raw,
+        ) = await self.redis.mget(
+            f"user:daily_ai_mode_requests:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_tokens:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_cost_micro_usd:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_total_duration_ms:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_first_token_ms:{user_id}:{date}:{normalized_mode}",
+            f"user:daily_ai_mode_stream_duration_ms:{user_id}:{date}:{normalized_mode}",
+        )
+        requests_used = int(requests_raw or 0)
+        total_tokens = int(tokens_raw or 0)
+        total_cost_usd = round(int(cost_raw or 0) / 1_000_000.0, 6)
+        total_duration_ms = int(total_duration_raw or 0)
+        total_first_token_ms = int(first_token_raw or 0)
+        total_stream_duration_ms = int(stream_duration_raw or 0)
+        remaining = max(0, request_limit - requests_used) if request_limit > 0 else 0
+        avg_total_duration_ms = round(total_duration_ms / requests_used, 2) if requests_used > 0 else 0.0
+        avg_first_token_ms = round(total_first_token_ms / requests_used, 2) if requests_used > 0 else 0.0
+        avg_stream_duration_ms = round(total_stream_duration_ms / requests_used, 2) if requests_used > 0 else 0.0
+
+        return {
+            "mode": normalized_mode,
+            "label": {"fast": "敏捷", "balanced": "均衡", "deep": "深思"}[normalized_mode],
+            "requests_used": requests_used,
+            "requests_limit": request_limit,
+            "requests_remaining": remaining,
+            "total_tokens": total_tokens,
+            "total_cost_usd": total_cost_usd,
+            "total_duration_ms": total_duration_ms,
+            "avg_total_duration_ms": avg_total_duration_ms,
+            "avg_first_token_ms": avg_first_token_ms,
+            "avg_stream_duration_ms": avg_stream_duration_ms,
+        }
+
+    async def get_ai_usage_summary(
+        self,
+        user_id: str,
+        *,
+        mode_limits: dict[str, int],
+        date: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return [
+            await self.get_mode_usage_summary(
+                user_id,
+                mode,
+                date=date,
+                request_limit=int(limit),
+            )
+            for mode, limit in mode_limits.items()
+        ]
+
+    async def get_chat_mode_timing_summary(
+        self,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"ai:daily_timing:{date}:*"
+            async for key in self.redis.scan_iter(pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 5:
+                    continue
+                _, _, key_date, mode, chat_mode = parts[:5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                requests = int(raw.get("requests") or 0)
+                total_duration = int(raw.get("total_duration_ms_sum") or 0)
+                first_token = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration = int(raw.get("stream_duration_ms_sum") or 0)
+                summaries.append(
+                    {
+                        "date": key_date,
+                        "mode": mode,
+                        "chat_mode": chat_mode,
+                        "requests": requests,
+                        "avg_total_duration_ms": round(total_duration / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                        "avg_first_token_ms": round(first_token / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                        "avg_stream_duration_ms": round(stream_duration / requests, 2)
+                        if requests > 0
+                        else 0.0,
+                    }
+                )
+        summaries.sort(
+            key=lambda item: (
+                item["date"],
+                item["mode"],
+                item["chat_mode"],
+            ),
+            reverse=True,
+        )
+        return summaries
+
+    async def get_ai_ops_summary(
+        self,
+        user_id: str,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        buckets: dict[str, dict[str, Any]] = {}
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"user:ai_ops:{user_id}:{date}:*"
+            async for key in self.redis.scan_iter(match=pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 6:
+                    continue
+                reasoning_mode = parts[4]
+                chat_mode = parts[5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                bucket = buckets.setdefault(
+                    chat_mode,
+                    {
+                        "chat_mode": chat_mode,
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "requests_failed": 0,
+                        "fallback_count": 0,
+                        "total_tokens": 0,
+                        "total_cost_usd": 0.0,
+                        "total_duration_ms": 0,
+                        "first_token_ms_sum": 0,
+                        "stream_duration_ms_sum": 0,
+                        "task_count": 0,
+                        "plan_count": 0,
+                        "execution_count": 0,
+                        "task_request_count": 0,
+                        "plan_request_count": 0,
+                        "execution_request_count": 0,
+                        "reasoning_mode_breakdown": {},
+                    },
+                )
+                requests_total = int(raw.get("requests_total") or 0)
+                requests_success = int(raw.get("requests_success") or 0)
+                requests_failed = int(raw.get("requests_failed") or 0)
+                fallback_count = int(raw.get("fallback_count") or 0)
+                total_tokens = int(raw.get("total_tokens_sum") or 0)
+                total_cost_micro = int(raw.get("total_cost_micro_usd") or 0)
+                total_duration_ms = int(raw.get("total_duration_ms_sum") or 0)
+                first_token_ms = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration_ms = int(raw.get("stream_duration_ms_sum") or 0)
+                task_count = int(raw.get("task_count_sum") or 0)
+                plan_count = int(raw.get("plan_count_sum") or 0)
+                execution_count = int(raw.get("execution_count_sum") or 0)
+                task_request_count = int(raw.get("task_request_count") or 0)
+                plan_request_count = int(raw.get("plan_request_count") or 0)
+                execution_request_count = int(raw.get("execution_request_count") or 0)
+                bucket["requests_total"] += requests_total
+                bucket["requests_success"] += requests_success
+                bucket["requests_failed"] += requests_failed
+                bucket["fallback_count"] += fallback_count
+                bucket["total_tokens"] += total_tokens
+                bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+                bucket["total_duration_ms"] += total_duration_ms
+                bucket["first_token_ms_sum"] += first_token_ms
+                bucket["stream_duration_ms_sum"] += stream_duration_ms
+                bucket["task_count"] += task_count
+                bucket["plan_count"] += plan_count
+                bucket["execution_count"] += execution_count
+                bucket["task_request_count"] += task_request_count
+                bucket["plan_request_count"] += plan_request_count
+                bucket["execution_request_count"] += execution_request_count
+                reasoning_bucket = bucket["reasoning_mode_breakdown"].setdefault(
+                    reasoning_mode,
+                    {
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "fallback_count": 0,
+                        "total_cost_usd": 0.0,
+                    },
+                )
+                reasoning_bucket["requests_total"] += requests_total
+                reasoning_bucket["requests_success"] += requests_success
+                reasoning_bucket["fallback_count"] += fallback_count
+                reasoning_bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+
+        summaries: list[dict[str, Any]] = []
+        for chat_mode, bucket in buckets.items():
+            requests_total = int(bucket["requests_total"])
+            requests_success = int(bucket["requests_success"])
+            fallback_count = int(bucket["fallback_count"])
+            task_request_count = int(bucket["task_request_count"])
+            plan_request_count = int(bucket["plan_request_count"])
+            execution_request_count = int(bucket["execution_request_count"])
+            summaries.append(
+                {
+                    "chat_mode": chat_mode,
+                    "requests_total": requests_total,
+                    "requests_success": requests_success,
+                    "requests_failed": int(bucket["requests_failed"]),
+                    "success_rate_percent": round((requests_success / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "fallback_rate_percent": round((fallback_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "total_tokens": int(bucket["total_tokens"]),
+                    "total_cost_usd": round(float(bucket["total_cost_usd"]), 6),
+                    "avg_total_duration_ms": round(int(bucket["total_duration_ms"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_first_token_ms": round(int(bucket["first_token_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_stream_duration_ms": round(int(bucket["stream_duration_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "task_count": int(bucket["task_count"]),
+                    "plan_count": int(bucket["plan_count"]),
+                    "execution_count": int(bucket["execution_count"]),
+                    "task_conversion_rate_percent": round((task_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "plan_conversion_rate_percent": round((plan_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "execution_conversion_rate_percent": round((execution_request_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "reasoning_mode_breakdown": [
+                        {
+                            "mode": mode,
+                            "requests_total": int(mode_bucket["requests_total"]),
+                            "requests_success": int(mode_bucket["requests_success"]),
+                            "fallback_count": int(mode_bucket["fallback_count"]),
+                            "total_cost_usd": round(float(mode_bucket["total_cost_usd"]), 6),
+                        }
+                        for mode, mode_bucket in sorted(bucket["reasoning_mode_breakdown"].items())
+                    ],
+                }
+            )
+        summaries.sort(key=lambda item: item["requests_total"], reverse=True)
+        return summaries
+
+    async def get_ai_ops_trend_summary(
+        self,
+        user_id: str,
+        *,
+        days: int = 7,
+    ) -> list[dict[str, Any]]:
+        buckets: dict[tuple[str, str], dict[str, Any]] = {}
+        for day_offset in range(days):
+            date = (datetime.now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+            pattern = f"user:ai_ops:{user_id}:{date}:*"
+            async for key in self.redis.scan_iter(match=pattern):
+                decoded_key = key.decode() if isinstance(key, bytes) else str(key)
+                parts = decoded_key.split(":")
+                if len(parts) < 6:
+                    continue
+                reasoning_mode = parts[4]
+                chat_mode = parts[5]
+                raw = await self.redis.hgetall(decoded_key)
+                if not raw:
+                    continue
+                bucket = buckets.setdefault(
+                    (date, chat_mode),
+                    {
+                        "date": date,
+                        "chat_mode": chat_mode,
+                        "requests_total": 0,
+                        "requests_success": 0,
+                        "requests_failed": 0,
+                        "fallback_count": 0,
+                        "total_cost_usd": 0.0,
+                        "total_duration_ms": 0,
+                        "first_token_ms_sum": 0,
+                        "stream_duration_ms_sum": 0,
+                        "execution_request_count": 0,
+                        "reasoning_modes": set(),
+                    },
+                )
+                requests_total = int(raw.get("requests_total") or 0)
+                requests_success = int(raw.get("requests_success") or 0)
+                requests_failed = int(raw.get("requests_failed") or 0)
+                fallback_count = int(raw.get("fallback_count") or 0)
+                total_cost_micro = int(raw.get("total_cost_micro_usd") or 0)
+                total_duration_ms = int(raw.get("total_duration_ms_sum") or 0)
+                first_token_ms = int(raw.get("first_token_ms_sum") or 0)
+                stream_duration_ms = int(raw.get("stream_duration_ms_sum") or 0)
+                execution_request_count = int(raw.get("execution_request_count") or 0)
+                bucket["requests_total"] += requests_total
+                bucket["requests_success"] += requests_success
+                bucket["requests_failed"] += requests_failed
+                bucket["fallback_count"] += fallback_count
+                bucket["total_cost_usd"] += total_cost_micro / 1_000_000.0
+                bucket["total_duration_ms"] += total_duration_ms
+                bucket["first_token_ms_sum"] += first_token_ms
+                bucket["stream_duration_ms_sum"] += stream_duration_ms
+                bucket["execution_request_count"] += execution_request_count
+                bucket["reasoning_modes"].add(reasoning_mode)
+
+        summaries: list[dict[str, Any]] = []
+        for (_date, _chat_mode), bucket in buckets.items():
+            requests_total = int(bucket["requests_total"])
+            requests_success = int(bucket["requests_success"])
+            fallback_count = int(bucket["fallback_count"])
+            execution_request_count = int(bucket["execution_request_count"])
+            summaries.append(
+                {
+                    "date": bucket["date"],
+                    "chat_mode": bucket["chat_mode"],
+                    "requests_total": requests_total,
+                    "requests_success": requests_success,
+                    "requests_failed": int(bucket["requests_failed"]),
+                    "success_rate_percent": round((requests_success / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "fallback_rate_percent": round((fallback_count / requests_total) * 100, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "total_cost_usd": round(float(bucket["total_cost_usd"]), 6),
+                    "avg_total_duration_ms": round(int(bucket["total_duration_ms"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_first_token_ms": round(int(bucket["first_token_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "avg_stream_duration_ms": round(int(bucket["stream_duration_ms_sum"]) / requests_total, 2)
+                    if requests_total > 0
+                    else 0.0,
+                    "execution_conversion_rate_percent": round(
+                        (execution_request_count / requests_total) * 100,
+                        2,
+                    )
+                    if requests_total > 0
+                    else 0.0,
+                    "reasoning_modes": sorted(bucket["reasoning_modes"]),
+                }
+            )
+        summaries.sort(key=lambda item: (item["chat_mode"], item["date"]))
+        return summaries
 
 
 # 单例实例

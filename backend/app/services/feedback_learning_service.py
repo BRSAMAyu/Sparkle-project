@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Feedback Learning Service - Phase 2c
 
@@ -13,7 +14,7 @@ Feedback Learning Service - Phase 2c
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -31,7 +32,7 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 @dataclass
 class ThresholdAdjustment:

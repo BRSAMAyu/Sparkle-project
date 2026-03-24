@@ -9,6 +9,12 @@ import 'package:sparkle/core/services/user_preferences_service.dart';
 
 part 'transparency_settings_screen.g.dart';
 
+enum TransparencyDisplayMode {
+  collapsedFloating,
+  bottomSheet,
+  detailOnly,
+}
+
 /// Transparency Settings Screen
 /// 透明模式设置屏幕
 class TransparencySettingsScreen extends ConsumerWidget {
@@ -16,7 +22,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preferences = ref.watch(transparencyPreferencesProvider);
+    final preferences = ref.watch(transparencyPreferencesNotifierProvider);
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
@@ -64,6 +70,80 @@ class TransparencySettingsScreen extends ConsumerWidget {
                   surfaceRole: SparkleSurfaceRole.card,
                   child: Column(
                     children: [
+                      ListTile(
+                        title: Text(context.l10n.transparencyDisplayOptions),
+                        subtitle: Text(
+                          '选择主对话里的透明模式展示方式',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        trailing: DropdownButton<TransparencyDisplayMode>(
+                          value: prefs.displayMode,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            unawaited(
+                              ref
+                                  .read(
+                                    transparencyPreferencesNotifierProvider
+                                        .notifier,
+                                  )
+                                  .setDisplayMode(value),
+                            );
+                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: TransparencyDisplayMode.collapsedFloating,
+                              child: Text('折叠悬浮胶囊'),
+                            ),
+                            DropdownMenuItem(
+                              value: TransparencyDisplayMode.bottomSheet,
+                              child: Text('底部抽屉'),
+                            ),
+                            DropdownMenuItem(
+                              value: TransparencyDisplayMode.detailOnly,
+                              child: Text('仅详情页'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: const Text('完成后自动折叠'),
+                        subtitle: Text(
+                          '回答完成后，将透明模式收起成轻量摘要',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.autoCollapseOnComplete,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setAutoCollapseOnComplete(value),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: const Text('允许单轮关闭'),
+                        subtitle: Text(
+                          '本轮生成时可手动关闭透明模式，不影响回答继续生成',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.allowPerTurnDismiss,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setAllowPerTurnDismiss(value),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
                       SwitchListTile(
                         title: Text(context.l10n.transparencyTokenUsage),
                         subtitle: Text(
@@ -188,6 +268,9 @@ class TransparencyPreferences {
     required this.showTokenUsage,
     required this.showAgentSwitching,
     required this.showReasoningSteps,
+    required this.displayMode,
+    required this.autoCollapseOnComplete,
+    required this.allowPerTurnDismiss,
   });
 
   factory TransparencyPreferences.fromJson(Map<String, dynamic> json) =>
@@ -196,18 +279,30 @@ class TransparencyPreferences {
         showTokenUsage: json['showTokenUsage'] as bool? ?? true,
         showAgentSwitching: json['showAgentSwitching'] as bool? ?? true,
         showReasoningSteps: json['showReasoningSteps'] as bool? ?? true,
+        displayMode: TransparencyDisplayMode.values.byName(
+          json['displayMode'] as String? ?? 'collapsedFloating',
+        ),
+        autoCollapseOnComplete:
+            json['autoCollapseOnComplete'] as bool? ?? true,
+        allowPerTurnDismiss: json['allowPerTurnDismiss'] as bool? ?? true,
       );
 
   final bool enabled;
   final bool showTokenUsage;
   final bool showAgentSwitching;
   final bool showReasoningSteps;
+  final TransparencyDisplayMode displayMode;
+  final bool autoCollapseOnComplete;
+  final bool allowPerTurnDismiss;
 
   Map<String, dynamic> toJson() => {
         'enabled': enabled,
         'showTokenUsage': showTokenUsage,
         'showAgentSwitching': showAgentSwitching,
         'showReasoningSteps': showReasoningSteps,
+        'displayMode': displayMode.name,
+        'autoCollapseOnComplete': autoCollapseOnComplete,
+        'allowPerTurnDismiss': allowPerTurnDismiss,
       };
 
   TransparencyPreferences copyWith({
@@ -215,12 +310,19 @@ class TransparencyPreferences {
     bool? showTokenUsage,
     bool? showAgentSwitching,
     bool? showReasoningSteps,
+    TransparencyDisplayMode? displayMode,
+    bool? autoCollapseOnComplete,
+    bool? allowPerTurnDismiss,
   }) =>
       TransparencyPreferences(
         enabled: enabled ?? this.enabled,
         showTokenUsage: showTokenUsage ?? this.showTokenUsage,
         showAgentSwitching: showAgentSwitching ?? this.showAgentSwitching,
         showReasoningSteps: showReasoningSteps ?? this.showReasoningSteps,
+        displayMode: displayMode ?? this.displayMode,
+        autoCollapseOnComplete:
+            autoCollapseOnComplete ?? this.autoCollapseOnComplete,
+        allowPerTurnDismiss: allowPerTurnDismiss ?? this.allowPerTurnDismiss,
       );
 }
 
@@ -238,10 +340,13 @@ Future<TransparencyPreferences> transparencyPreferences(Ref ref) async {
 
   // Default preferences
   return const TransparencyPreferences(
-    enabled: false,
+    enabled: true,
     showTokenUsage: true,
     showAgentSwitching: true,
     showReasoningSteps: true,
+    displayMode: TransparencyDisplayMode.collapsedFloating,
+    autoCollapseOnComplete: true,
+    allowPerTurnDismiss: true,
   );
 }
 
@@ -261,10 +366,13 @@ class TransparencyPreferencesNotifier
   Future<void> setEnabled(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
         );
     await _updatePreferences(current.copyWith(enabled: value));
   }
@@ -272,10 +380,13 @@ class TransparencyPreferencesNotifier
   Future<void> setShowTokenUsage(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
         );
     await _updatePreferences(current.copyWith(showTokenUsage: value));
   }
@@ -283,10 +394,13 @@ class TransparencyPreferencesNotifier
   Future<void> setShowAgentSwitching(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
         );
     await _updatePreferences(current.copyWith(showAgentSwitching: value));
   }
@@ -294,12 +408,57 @@ class TransparencyPreferencesNotifier
   Future<void> setShowReasoningSteps(bool value) async {
     final current = state.valueOrNull ??
         const TransparencyPreferences(
-          enabled: false,
+          enabled: true,
           showTokenUsage: true,
           showAgentSwitching: true,
           showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
         );
     await _updatePreferences(current.copyWith(showReasoningSteps: value));
+  }
+
+  Future<void> setDisplayMode(TransparencyDisplayMode value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(current.copyWith(displayMode: value));
+  }
+
+  Future<void> setAutoCollapseOnComplete(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(current.copyWith(autoCollapseOnComplete: value));
+  }
+
+  Future<void> setAllowPerTurnDismiss(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(current.copyWith(allowPerTurnDismiss: value));
   }
 
   @override
@@ -314,10 +473,13 @@ class TransparencyPreferencesNotifier
     }
 
     return const TransparencyPreferences(
-      enabled: false,
+      enabled: true,
       showTokenUsage: true,
       showAgentSwitching: true,
       showReasoningSteps: true,
+      displayMode: TransparencyDisplayMode.collapsedFloating,
+      autoCollapseOnComplete: true,
+      allowPerTurnDismiss: true,
     );
   }
 }

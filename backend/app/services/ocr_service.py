@@ -9,22 +9,62 @@ from typing import Any
 
 import httpx
 from loguru import logger
+from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 
 class OCRService:
-    """OCR服务 - 使用 GLM OCR 模型。"""
+    """OCR服务 - 支持 GLM 与 SiliconFlow 双供应商自动故障切换。"""
 
     def __init__(self):
+        self.primary_provider = self._normalize_provider(settings.OCR_PROVIDER)
+        self.backup_provider = self._normalize_provider(settings.OCR_BACKUP_PROVIDER)
         self.api_key = settings.ZHIPU_API_KEY
         self.base_url = settings.ZHIPU_OCR_BASE_URL.rstrip("/")
         self.model = settings.ZHIPU_OCR_MODEL
         self.timeout = httpx.Timeout(settings.ZHIPU_OCR_TIMEOUT_SECONDS)
+        self.siliconflow_api_key = settings.SILICONFLOW_API_KEY
+        self.siliconflow_base_url = settings.SILICONFLOW_BASE_URL.rstrip("/")
+        self.siliconflow_model = settings.SILICONFLOW_OCR_MODEL
+        self.siliconflow_timeout = httpx.Timeout(settings.SILICONFLOW_OCR_TIMEOUT_SECONDS)
+
+    @staticmethod
+    def _normalize_provider(provider_name: str | None) -> str:
+        normalized = (provider_name or "").strip().lower()
+        aliases = {
+            "glm": "zhipu",
+            "deepseek": "siliconflow",
+        }
+        return aliases.get(normalized, normalized or "zhipu")
+
+    def _provider_order(self, preferred_provider: str | None = None) -> list[str]:
+        ordered: list[str] = []
+        for provider in (
+            self._normalize_provider(preferred_provider) if preferred_provider else "",
+            self.primary_provider,
+            self.backup_provider,
+            "zhipu",
+            "siliconflow",
+        ):
+            if provider and provider not in ordered:
+                ordered.append(provider)
+        return ordered
+
+    def _provider_configured(self, provider: str) -> bool:
+        if provider == "zhipu":
+            return bool(self.api_key)
+        if provider == "siliconflow":
+            return bool(self.siliconflow_api_key)
+        return False
+
+    def _circuit_key(self, provider: str) -> str:
+        return f"ocr:{provider}"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def ocr_from_url(self, image_url: str, prompt: str = "") -> str:
+    async def ocr_from_url(self, image_url: str, prompt: str = "", preferred_provider: str | None = None) -> str:
         """
         从 URL 或 data URI 进行 OCR 识别。
 
@@ -35,34 +75,40 @@ class OCRService:
         Returns:
             识别出的 Markdown 文本
         """
-        del prompt
-        if not self.api_key:
-            logger.warning("ZHIPU_API_KEY not set, returning empty OCR result")
-            return ""
-
-        try:
-            payload = self._build_payload(image_url)
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    f"{self.base_url}/layout_parsing",
-                    headers=self._build_headers(),
-                    json=payload,
-                )
-                response.raise_for_status()
-                data = response.json()
-                text = self._extract_text(data)
-                logger.info(f"OCR completed, text length: {len(text)}")
+        last_error: Exception | None = None
+        for provider in self._provider_order(preferred_provider):
+            if not self._provider_configured(provider):
+                continue
+            try:
+                await circuit_breaker_service.check(self._circuit_key(provider))
+                if provider == "zhipu":
+                    text = await self._zhipu_ocr_from_url(image_url)
+                else:
+                    text = await self._siliconflow_ocr_from_url(image_url, prompt=prompt)
+                if not text.strip():
+                    raise RuntimeError(f"{provider} returned empty OCR result")
+                await circuit_breaker_service.record_success(self._circuit_key(provider))
+                logger.info(f"OCR completed via {provider}, text length: {len(text)}")
                 return text
+            except CircuitBreakerOpenException as exc:
+                logger.warning(f"OCR provider {provider} skipped because circuit breaker is open: {exc}")
+                last_error = exc
+            except Exception as exc:
+                logger.warning(f"OCR provider {provider} failed: {exc}")
+                await circuit_breaker_service.record_failure(self._circuit_key(provider))
+                last_error = exc
 
-        except httpx.HTTPError as e:
-            logger.error(f"OCR HTTP error: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"OCR failed: {e}")
-            raise
+        if last_error:
+            logger.error(f"OCR failed after all providers exhausted: {last_error}")
+        return ""
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def ocr_from_base64(self, image_b64: str, prompt: str = "") -> str:
+    async def ocr_from_base64(
+        self,
+        image_b64: str,
+        prompt: str = "",
+        preferred_provider: str | None = None,
+    ) -> str:
         """
         从 base64 编码内容进行 OCR 识别。
 
@@ -73,35 +119,44 @@ class OCRService:
         Returns:
             识别出的 Markdown 文本
         """
-        del prompt
-        return await self.ocr_from_url(image_b64)
+        return await self.ocr_from_url(image_b64, prompt=prompt, preferred_provider=preferred_provider)
 
-    def ocr_from_base64_sync(self, image_b64: str, prompt: str = "") -> str:
+    def ocr_from_base64_sync(
+        self,
+        image_b64: str,
+        prompt: str = "",
+        preferred_provider: str | None = None,
+    ) -> str:
         """同步版 base64 OCR，供线程内文档清洗调用。"""
-        del prompt
-        if not self.api_key:
-            logger.warning("ZHIPU_API_KEY not set, returning empty OCR result")
-            return ""
+        last_error: Exception | None = None
+        for provider in self._provider_order(preferred_provider):
+            if not self._provider_configured(provider):
+                continue
+            try:
+                if provider == "zhipu":
+                    text = self._zhipu_ocr_from_base64_sync(image_b64)
+                else:
+                    text = self._siliconflow_ocr_from_base64_sync(image_b64, prompt=prompt)
+                if text.strip():
+                    logger.info(f"OCR sync completed via {provider}, text length: {len(text)}")
+                    return text
+                raise RuntimeError(f"{provider} returned empty OCR result")
+            except Exception as exc:
+                logger.warning(f"OCR sync provider {provider} failed: {exc}")
+                last_error = exc
 
-        try:
-            payload = self._build_payload(image_b64)
-            with httpx.Client(timeout=self.timeout) as client:
-                response = client.post(
-                    f"{self.base_url}/layout_parsing",
-                    headers=self._build_headers(),
-                    json=payload,
-                )
-                response.raise_for_status()
-                return self._extract_text(response.json())
-        except httpx.HTTPError as e:
-            logger.error(f"OCR HTTP error: {e}")
-            return ""
-        except Exception as e:
-            logger.error(f"OCR failed: {e}")
-            return ""
+        if last_error:
+            logger.error(f"OCR sync failed after all providers exhausted: {last_error}")
+        return ""
 
     async def layout_parse(self, file_ref: str, **kwargs: Any) -> dict[str, Any]:
         """获取 GLM OCR 完整版面解析结果。"""
+        raw_preferred_provider = kwargs.pop("preferred_provider", None)
+        preferred_provider = self._normalize_provider(raw_preferred_provider) if raw_preferred_provider else ""
+        if preferred_provider == "siliconflow":
+            text = await self._siliconflow_ocr_from_url(file_ref, prompt=kwargs.get("prompt", ""))
+            return {"md_results": text}
+
         payload = self._build_payload(file_ref, **kwargs)
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
@@ -123,6 +178,12 @@ class OCRService:
     def _build_headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _build_siliconflow_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.siliconflow_api_key}",
             "Content-Type": "application/json",
         }
 
@@ -194,6 +255,100 @@ class OCRService:
                 return "\n\n".join(pages)
 
         return json.dumps(data, ensure_ascii=False)
+
+    async def _zhipu_ocr_from_url(self, image_url: str) -> str:
+        payload = self._build_payload(image_url)
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/layout_parsing",
+                headers=self._build_headers(),
+                json=payload,
+            )
+            response.raise_for_status()
+            return self._extract_text(response.json())
+
+    def _zhipu_ocr_from_base64_sync(self, image_b64: str) -> str:
+        payload = self._build_payload(image_b64)
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/layout_parsing",
+                headers=self._build_headers(),
+                json=payload,
+            )
+            response.raise_for_status()
+            return self._extract_text(response.json())
+
+    def _build_siliconflow_payload(self, file_ref: str, prompt: str = "") -> dict[str, Any]:
+        normalized_ref = self._normalize_file_ref(file_ref)
+        instruction = prompt.strip() or (
+            "Extract all readable text from this document. Preserve structure with concise Markdown. "
+            "Return only OCR text."
+        )
+        return {
+            "model": self.siliconflow_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an OCR engine. Return only the recognized text.",
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": instruction},
+                        {"type": "image_url", "image_url": {"url": normalized_ref}},
+                    ],
+                },
+            ],
+            "temperature": 0.0,
+        }
+
+    async def _siliconflow_ocr_from_url(self, image_url: str, prompt: str = "") -> str:
+        base_url = self.siliconflow_base_url
+        client = AsyncOpenAI(
+            api_key=self.siliconflow_api_key,
+            base_url=base_url,
+            timeout=self.siliconflow_timeout.read or settings.SILICONFLOW_OCR_TIMEOUT_SECONDS,
+        )
+        response = await client.chat.completions.create(**self._build_siliconflow_payload(image_url, prompt=prompt))
+        return self._extract_chat_text(response)
+
+    def _siliconflow_ocr_from_base64_sync(self, image_b64: str, prompt: str = "") -> str:
+        url = f"{self.siliconflow_base_url}/chat/completions"
+        with httpx.Client(timeout=self.siliconflow_timeout) as client:
+            response = client.post(
+                url,
+                headers=self._build_siliconflow_headers(),
+                json=self._build_siliconflow_payload(image_b64, prompt=prompt),
+            )
+            response.raise_for_status()
+            data = response.json()
+        return self._extract_chat_json_text(data)
+
+    def _extract_chat_text(self, response: Any) -> str:
+        content = response.choices[0].message.content
+        return self._normalize_chat_content(content)
+
+    def _extract_chat_json_text(self, data: dict[str, Any]) -> str:
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            return json.dumps(data, ensure_ascii=False)
+        return self._normalize_chat_content(content)
+
+    def _normalize_chat_content(self, content: Any) -> str:
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, dict):
+                    text = item.get("text") or item.get("content")
+                    if isinstance(text, str) and text.strip():
+                        parts.append(text.strip())
+                elif isinstance(item, str) and item.strip():
+                    parts.append(item.strip())
+            return "\n".join(parts).strip()
+        return str(content).strip()
 
 
 # 全局单例

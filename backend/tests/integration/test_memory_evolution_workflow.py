@@ -11,7 +11,7 @@ Tests the complete memory evolution tracking workflow:
 """
 import os
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.memory_service import MemoryService
@@ -27,7 +27,7 @@ from app.models.memory_evolution import MemoryEvolution, EvolutionPrediction
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio

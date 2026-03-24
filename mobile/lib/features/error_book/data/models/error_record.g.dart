@@ -9,10 +9,10 @@ part of 'error_record.dart';
 _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
     _$ErrorRecordImpl(
       id: json['id'] as String,
-      questionText: json['question_text'] as String,
-      userAnswer: json['user_answer'] as String,
-      correctAnswer: json['correct_answer'] as String,
-      subject: json['subject_code'] as String,
+      questionText: _stringFromJson(json['question_text']),
+      userAnswer: _stringFromJson(json['user_answer']),
+      correctAnswer: _stringFromJson(json['correct_answer']),
+      subject: _stringFromJson(json['subject_code']),
       masteryLevel: (json['mastery_level'] as num).toDouble(),
       reviewCount: (json['review_count'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),

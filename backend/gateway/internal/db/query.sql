@@ -7,9 +7,9 @@ SELECT * FROM users WHERE apple_id = $1 LIMIT 1;
 -- name: CreateSocialUser :one
 INSERT INTO users (
     id, username, email, hashed_password, nickname,
-    email_verified, registration_source, is_active, apple_id, updated_at, created_at
+    registration_source, is_active, apple_id, updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 RETURNING *;
 
 -- name: UpdateUserLastLogin :exec
@@ -18,7 +18,6 @@ UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1;
 -- name: LinkAppleUser :one
 UPDATE users
 SET apple_id = COALESCE(apple_id, $2),
-    email_verified = TRUE,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -61,6 +60,44 @@ LIMIT $2 OFFSET $3;
 
 -- name: IsGroupMember :one
 SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2);
+
+-- =====================
+-- Chat History Persistence Queries (Phase 1.3)
+-- =====================
+
+-- name: GetRecentSessionsFromDB :many
+SELECT cs.id, cs.title, cs.last_message_at, cm.content as preview
+FROM chat_sessions cs
+LEFT JOIN LATERAL (
+  SELECT content FROM chat_messages
+  WHERE session_id = cs.id
+  ORDER BY created_at DESC
+  LIMIT 1
+) cm ON true
+WHERE cs.user_id = $1 AND cs.is_active = true
+ORDER BY cs.last_message_at DESC
+LIMIT $2;
+
+-- name: GetSessionMessagesFromDB :many
+SELECT * FROM chat_messages
+WHERE session_id = $1 AND user_id = $2
+ORDER BY created_at ASC
+LIMIT $3 OFFSET $4;
+
+-- name: UpsertChatSession :one
+INSERT INTO chat_sessions (id, user_id, title, last_message_at, is_active, created_at, updated_at)
+VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+  last_message_at = EXCLUDED.last_message_at,
+  title = COALESCE(EXCLUDED.title, chat_sessions.title),
+  updated_at = NOW()
+RETURNING *;
+
+-- name: GetChatSessionMeta :one
+SELECT id, user_id, title, last_message_at, is_active, created_at, updated_at
+FROM chat_sessions
+WHERE id = $1 AND user_id = $2
+LIMIT 1;
 
 -- name: CreatePost :one
 INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)

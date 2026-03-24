@@ -29,7 +29,10 @@ class DashboardCardGrid extends StatelessWidget {
               itemCount: cards.length,
               itemBuilder: (context, index) => SizedBox(
                 height: DashboardCardGrid.gridCardHeight,
-                child: cards[index],
+                child: SparkleStaggerItem(
+                  index: index,
+                  child: cards[index],
+                ),
               ),
             );
           },

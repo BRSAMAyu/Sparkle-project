@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Feedback-Driven Adjustment Service - 用户反馈闭环系统
 
@@ -19,10 +20,9 @@ FeedbackDrivenAdjustmentService
     ↓
 AdjustmentAction[] (实际执行)
 """
-from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -36,7 +36,7 @@ from app.services.plan_state_service import PlanStateService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FeedbackType(str, Enum):

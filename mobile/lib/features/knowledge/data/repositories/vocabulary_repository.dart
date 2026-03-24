@@ -1,16 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/features/vocabulary/data/services/offline_dictionary_service.dart';
 
 class VocabularyRepository {
-  VocabularyRepository(this._apiClient);
+  VocabularyRepository(this._apiClient, this._offlineDictionaryService);
   final ApiClient _apiClient;
+  final OfflineDictionaryService _offlineDictionaryService;
 
   Future<Map<String, dynamic>> lookup(String word) async {
+    final normalized = word.trim().toLowerCase();
+    final localMatch = await _offlineDictionaryService.lookup(normalized);
+    if (localMatch != null) {
+      return localMatch;
+    }
+
     final response = await _apiClient.get<dynamic>(
-      '/vocabulary/lookup',
-      queryParameters: {'word': word},
+      ApiEndpoints.vocabularyLookup,
+      queryParameters: {'word': normalized},
     );
-    return response.data as Map<String, dynamic>;
+    final payload = response.data as Map<String, dynamic>;
+    await _offlineDictionaryService.cacheLookupResult(payload);
+    return payload;
   }
 
   Future<void> addToWordbook({
@@ -24,7 +35,7 @@ class VocabularyRepository {
     String? sourceTranslationId,
   }) async {
     await _apiClient.post<dynamic>(
-      '/vocabulary/wordbook',
+      ApiEndpoints.vocabularyWordbook,
       data: {
         'word': word,
         'definition': definition,
@@ -41,7 +52,7 @@ class VocabularyRepository {
 
   /// 新增：添加生词到生词本（使用 Map 参数，向后兼容）
   Future<void> addToWordbookLegacy(Map<String, dynamic> data) async {
-    await _apiClient.post<dynamic>('/vocabulary/wordbook', data: data);
+    await _apiClient.post<dynamic>(ApiEndpoints.vocabularyWordbook, data: data);
   }
 
   Future<List<dynamic>> getWordbook({String? search}) async {
@@ -114,8 +125,26 @@ class VocabularyRepository {
     final data = response.data as Map<String, dynamic>;
     return data['sentence'] as String;
   }
+
+  Future<List<DictionaryPackageInfo>> getDictionaryPackages() =>
+      _offlineDictionaryService.listPackages();
+
+  Future<List<String>> getInstalledDictionaryPackages() =>
+      _offlineDictionaryService.getInstalledPackageIds();
+
+  Future<List<InstalledDictionaryPackage>> getInstalledDictionaryPackageDetails() =>
+      _offlineDictionaryService.getInstalledPackages();
+
+  Future<void> downloadDictionaryPackage(String packageId) =>
+      _offlineDictionaryService.downloadPackage(packageId);
+
+  Future<void> removeDictionaryPackage(String packageId) =>
+      _offlineDictionaryService.removePackage(packageId);
 }
 
 final vocabularyRepositoryProvider = Provider<VocabularyRepository>(
-  (ref) => VocabularyRepository(ref.watch(apiClientProvider)),
+  (ref) => VocabularyRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(offlineDictionaryServiceProvider),
+  ),
 );

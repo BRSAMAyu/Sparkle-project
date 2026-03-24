@@ -169,6 +169,11 @@ class _SmartPushSettingsScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(l10n.smartPushPersonaSection),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    '调整提醒语气与频率，让推送更像陪伴而不是打扰。',
+                    style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                  ),
                   const SizedBox(height: DS.sm),
                   _buildPersonaSelector(l10n),
                   const SizedBox(height: DS.xl),
@@ -185,10 +190,7 @@ class _SmartPushSettingsScreenState
                   _buildSectionTitle(l10n.smartPushActiveSlotsSection),
                   Text(
                     l10n.smartPushActiveSlotsHint,
-                    style: TextStyle(
-                      color: DS.brandPrimaryConst,
-                      fontSize: 12,
-                    ),
+                    style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   ),
                   const SizedBox(height: DS.sm),
                   _buildActiveSlotsList(l10n),
@@ -276,12 +278,32 @@ class _SmartPushSettingsScreenState
       child: Container(
         padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHighest,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              isSelected
+                  ? Color.alphaBlend(
+                      colorScheme.primary.withValues(alpha: 0.12),
+                      DS.surfaceSecondary,
+                    )
+                  : DS.surfaceSecondary,
+              isSelected ? DS.surfacePrimaryElevated : DS.surfacePrimary,
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: isSelected
-              ? Border.all(color: colorScheme.primary, width: 2)
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : DS.borderSubtle,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
               : null,
         ),
         child: Column(
@@ -345,34 +367,40 @@ class _SmartPushSettingsScreenState
     return Column(
       children: List.generate(_activeSlots.length, (index) {
         final slot = _activeSlots[index];
-        return Card(
+        return Container(
           margin: const EdgeInsets.only(bottom: DS.spacing8),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.sm),
-            child: Row(
-              children: [
-                const Icon(Icons.access_time, size: 20),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _buildTimeButton(slot['start'] ?? '00:00', index, true),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: DS.spacing8),
-                        child: Text('-'),
-                      ),
-                      _buildTimeButton(slot['end'] ?? '00:00', index, false),
-                    ],
-                  ),
+          padding: const EdgeInsets.all(DS.sm),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.access_time, size: 20),
+              const SizedBox(width: DS.md),
+              Expanded(
+                child: Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _buildTimeButton(slot['start'] ?? '00:00', index, true),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: DS.spacing4),
+                      child: Text('-'),
+                    ),
+                    _buildTimeButton(slot['end'] ?? '00:00', index, false),
+                  ],
                 ),
-                SparkleIconButton(
-                  variant: ButtonVariant.ghost,
-                  size: DS.spacing32,
-                  icon: Icon(Icons.delete, color: DS.errorAccent),
-                  onPressed: () => _removeSlot(index),
-                ),
-              ],
-            ),
+              ),
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                size: DS.spacing32,
+                icon: Icon(Icons.delete, color: DS.errorAccent),
+                onPressed: () => _removeSlot(index),
+              ),
+            ],
           ),
         );
       }),
@@ -388,8 +416,9 @@ class _SmartPushSettingsScreenState
             vertical: DS.spacing6,
           ),
           decoration: BoxDecoration(
-            border: Border.all(color: DS.brandPrimary.shade400),
-            borderRadius: BorderRadius.circular(4),
+            color: DS.surfacePrimaryElevated,
+            border: Border.all(color: DS.borderSubtle),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             time,

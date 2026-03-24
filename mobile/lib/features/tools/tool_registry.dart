@@ -147,7 +147,10 @@ class ToolRegistry {
         ToolLaunchContext.taskExecution,
         ToolLaunchContext.toolLibrary,
       },
-      embeddedBuilder: (request) => NotesTool(surface: request.surface),
+      embeddedBuilder: (request) => NotesTool(
+        taskId: request.taskId,
+        surface: request.surface,
+      ),
     ),
     ToolDefinition(
       id: 'breathing',
@@ -322,6 +325,20 @@ class ToolRegistry {
         ToolLaunchContext.toolLibrary,
       },
       routeBuilder: (_) => '/curiosity-capsule',
+    ),
+    ToolDefinition(
+      id: 'seed_library',
+      title: '种子库',
+      description: '浏览官方与社区知识库',
+      icon: Icons.auto_stories_rounded,
+      category: ToolCategory.study,
+      defaultOrder: 190,
+      searchTerms: const ['种子', '知识库', 'library', 'seed'],
+      supportedContexts: const {
+        ToolLaunchContext.home,
+        ToolLaunchContext.toolLibrary,
+      },
+      routeBuilder: (_) => '/seed-libraries',
     ),
   ];
 

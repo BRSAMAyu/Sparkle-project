@@ -10,7 +10,7 @@ from uuid import UUID
 from loguru import logger
 
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
-from app.services.llm_service import llm_service
+from app.services.llm_fallback_utils import search_llm
 
 from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
 
@@ -77,11 +77,12 @@ Evidence:
 {citations}
 
 Return a concise summary with 2-4 bullet points and mention the most relevant items."""
-            summary_text = await llm_service.chat(
+            summary_text = await search_llm.call(
                 messages=[
                     {"role": "system", "content": "You summarize evidence succinctly."},
                     {"role": "user", "content": prompt}
                 ],
+                fallback="暂无可用的知识星图检索结果，我将基于通用知识进行回答。",
                 temperature=0.3
             )
         else:

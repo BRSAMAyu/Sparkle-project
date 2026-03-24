@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.cache import cache_service
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.models.nightly_review import NightlyReview
@@ -44,7 +45,12 @@ async def ingest_events(
     result = await service.ingest_events(current_user.id, items)
 
     estimator = StateEstimatorService(db)
-    await estimator.update_state(current_user.id, current_user.timezone)
+    timezone_name = (
+        getattr(getattr(current_user, "push_preference", None), "timezone", None)
+        or "Asia/Shanghai"
+    )
+    await estimator.update_state(current_user.id, timezone_name)
+    await cache_service.delete(f"predictive:next_intent:{current_user.id}")
 
     return EventIngestResponse(**result)
 

@@ -2,6 +2,7 @@
 专注模式 API
 Focus API - 番茄钟、统计、LLM辅助
 """
+from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
@@ -64,13 +65,13 @@ async def log_focus_session(
             FocusStatus(data.status)
         )
 
-        session = result["session"]
         rewards = result["rewards"]
 
         return {
             "success": True,
-            "id": str(session.id),
-            "rewards": rewards # {flame_earned, leveled_up, new_level}
+            "id": result["session_id"],
+            "rewards": rewards, # {flame_earned, leveled_up, new_level}
+            "unlocked_achievements": result.get("unlocked_achievements", []),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -152,3 +153,16 @@ async def get_focus_heatmap(
 ):
     """Get heatmap data for the last N days"""
     return await focus_service.get_heatmap_data(db, current_user.id, days)
+
+
+@router.get("/sessions", summary="获取专注会话列表")
+async def get_focus_sessions(
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get paginated list of focus sessions (alias for /sessions/history)"""
+    return await focus_service.get_session_history(
+        db, current_user.id, limit, offset
+    )

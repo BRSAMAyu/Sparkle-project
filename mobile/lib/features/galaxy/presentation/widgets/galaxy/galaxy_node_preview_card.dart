@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -16,13 +17,21 @@ class GalaxyNodePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final sectorStyle = SectorConfig.getStyle(node.sector);
+    final sectorName = SectorConfig.getLocalizedName(node.sector);
     final sectorColor = sectorStyle.primaryColorFor(isDarkMode: isDarkMode);
     final glowColor = sectorStyle.glowColorFor(isDarkMode: isDarkMode);
     final backgroundColor = isDarkMode
-        ? const Color(0xE6151D30)
-        : Colors.white.withValues(alpha: 0.92);
+        ? Color.alphaBlend(
+            sectorColor.withValues(alpha: 0.08),
+            const Color(0xE6151D30),
+          )
+        : Color.alphaBlend(
+            sectorColor.withValues(alpha: 0.05),
+            Colors.white.withValues(alpha: 0.94),
+          );
     final borderColor = isDarkMode
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
@@ -35,12 +44,23 @@ class GalaxyNodePreviewCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 220),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                backgroundColor,
+                Color.alphaBlend(
+                  glowColor.withValues(alpha: isDarkMode ? 0.08 : 0.04),
+                  backgroundColor,
+                ),
+              ],
+            ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
+                color: (isDarkMode ? Colors.black : glowColor)
+                    .withValues(alpha: isDarkMode ? 0.22 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -80,7 +100,10 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${sectorStyle.name} · 重要度 ${node.importance}',
+                            l10n.galaxyNodePreviewSubtitle(
+                              sectorName,
+                              node.importance,
+                            ),
                             style: TextStyle(
                               color: secondaryColor,
                               fontSize: 12,
@@ -117,7 +140,9 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  node.isUnlocked ? '已解锁' : '待探索',
+                  node.isUnlocked
+                      ? l10n.galaxyNodeUnlocked
+                      : l10n.galaxyNodeLocked,
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,
@@ -142,12 +167,12 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                       ? Colors.white.withValues(alpha: 0.1)
                       : Colors.black.withValues(alpha: 0.08),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
                       child: _CardActionButton(
-                        label: '聚焦查看',
+                        label: l10n.galaxyNodeFocus,
                         icon: Icons.center_focus_strong_rounded,
                         color: sectorColor,
                         onPressed: onFocus,
@@ -156,7 +181,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _CardActionButton(
-                        label: '查看关联',
+                        label: l10n.galaxyNodeInspectConnections,
                         icon: Icons.hub_rounded,
                         color: glowColor,
                         onPressed: onInspectConnections,
@@ -203,9 +228,10 @@ class _CardActionButton extends StatelessWidget {
   Widget build(BuildContext context) => FilledButton.tonal(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: color.withValues(alpha: 0.12),
+          backgroundColor: color.withValues(alpha: 0.1),
           foregroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          side: BorderSide(color: color.withValues(alpha: 0.18)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

@@ -225,29 +225,34 @@ class _SprintHeader extends ConsumerWidget {
               ],
             ),
             const SizedBox(width: DS.spacing4),
-            // Progress indicator
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    value: sprint.progress,
-                    strokeWidth: 3,
-                    backgroundColor: DS.surfaceSecondary,
-                    valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+            // Progress indicator — constrained to prevent overflow
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      value: sprint.progress,
+                      strokeWidth: 3,
+                      backgroundColor: DS.surfaceSecondary,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                    ),
                   ),
-                ),
-                Text(
-                  '${(sprint.progress * 100).toInt()}%',
-                  style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
+                  Text(
+                    '${(sprint.progress * 100).toInt()}%',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 9,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

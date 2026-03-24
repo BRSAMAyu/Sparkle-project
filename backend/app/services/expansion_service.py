@@ -2,9 +2,10 @@
 知识拓展服务 (Expansion Service)
 使用 LLM 自动拓展知识星图
 """
+from __future__ import annotations
 import asyncio
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalPr
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ExpansionService:
@@ -310,7 +311,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 description=item.get('description'),
                 importance_level=item.get('importance_level', 3),
                 is_seed=False,
-                source_type='llm_generated',
+                source_type='llm_expanded',
                 keywords=item.get('keywords', [])
             )
 
@@ -334,6 +335,10 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
             new_nodes.append(node)
 
         await self.db.commit()
+
+        from app.services.graph_reasoning_service import GraphReasoningService
+
+        await GraphReasoningService(self.db).invalidate_cache()
         return new_nodes
 
     async def _find_semantic_duplicate(self, item: dict) -> KnowledgeNode | None:

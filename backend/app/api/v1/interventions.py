@@ -1,10 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.intervention import InterventionRequest
+from app.models.intervention_adaptive import BehavioralOutcome
 from app.models.user import User
 from app.schemas.intervention import (
     BehavioralOutcomeRequest,
@@ -30,7 +32,9 @@ async def get_settings(
     current_user: User = Depends(get_current_user),
 ):
     service = InterventionService(db)
-    settings_row = await service.get_or_create_settings(current_user.id, current_user.timezone)
+    # Get timezone from push_preference or use default
+    timezone = getattr(current_user.push_preference, 'timezone', 'Asia/Shanghai') if current_user.push_preference else 'Asia/Shanghai'
+    settings_row = await service.get_or_create_settings(current_user.id, timezone)
     return settings_row
 
 
@@ -41,7 +45,9 @@ async def update_settings(
     current_user: User = Depends(get_current_user),
 ):
     service = InterventionService(db)
-    settings_row = await service.get_or_create_settings(current_user.id, current_user.timezone)
+    # Get timezone from push_preference or use default
+    timezone = getattr(current_user.push_preference, 'timezone', 'Asia/Shanghai') if current_user.push_preference else 'Asia/Shanghai'
+    settings_row = await service.get_or_create_settings(current_user.id, timezone)
     updated = await service.update_settings(settings_row, payload.model_dump())
     return updated
 
@@ -53,12 +59,14 @@ async def create_request(
     current_user: User = Depends(get_current_user),
 ):
     service = InterventionService(db)
+    # Get timezone from push_preference or use default
+    timezone = getattr(current_user.push_preference, 'timezone', 'Asia/Shanghai') if current_user.push_preference else 'Asia/Shanghai'
     try:
         request = await service.create_request(
             actor_id=current_user.id,
             actor_is_admin=current_user.is_superuser,
             payload=payload,
-            default_timezone=current_user.timezone,
+            default_timezone=timezone,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
@@ -147,3 +155,34 @@ async def record_outcome(
         context=payload.context,
     )
     return {"id": str(outcome.id), "status": "ok"}
+
+
+@router.get("/outcomes")
+async def list_outcomes(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取用户的行为结果记录列表"""
+    stmt = (
+        select(BehavioralOutcome)
+        .where(BehavioralOutcome.user_id == current_user.id)
+        .order_by(BehavioralOutcome.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(stmt)
+    outcomes = result.scalars().all()
+
+    return [
+        {
+            "id": str(o.id),
+            "intervention_id": str(o.intervention_id) if o.intervention_id else None,
+            "outcome_type": o.outcome_type,
+            "time_to_outcome": o.time_to_outcome,
+            "success": o.success,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
+        }
+        for o in outcomes
+    ]

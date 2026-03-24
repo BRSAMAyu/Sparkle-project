@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Arbitration Service - Phase 2g
 
@@ -13,7 +14,7 @@ Arbitration Service - Phase 2g
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 
@@ -39,7 +40,7 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class ArbitratorRole(str, Enum):
     """仲裁员角色"""
@@ -554,7 +555,7 @@ class ArbitrationService:
             f"[ArbitrationService] Recording model feedback for case {case.case_id}: "
             f"{decision.feedback_for_model}"
         )
-        # TODO: 集成到 FeedbackDrivenGenerationService 或其他学习服务
+        # TRACKED(TD-008): 集成到 FeedbackDrivenGenerationService 或其他学习服务
 
     async def get_case(self, case_id: str) -> ArbitrationCase | None:
         """获取案件详情"""

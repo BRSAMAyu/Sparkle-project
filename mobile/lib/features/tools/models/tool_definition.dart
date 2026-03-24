@@ -130,7 +130,7 @@ class ToolDefinition {
   String _toCamelCase(String input) => input
         .split(RegExp(r'[_\-]'))
         .map((part) =>
-            part.isEmpty ? '' : '${part[0].toUpperCase()}${part.substring(1)}')
+            part.isEmpty ? '' : '${part[0].toUpperCase()}${part.substring(1)}',)
         .join();
 
   /// Helper to get localized string from AppLocalizations via dynamic key

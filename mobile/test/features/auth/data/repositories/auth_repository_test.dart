@@ -120,6 +120,20 @@ class InMemorySecureStorage implements FlutterSecureStorage {
       _values[key];
 
   @override
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+    MacOsOptions? macOsOptions,
+  }) async {
+    _values.remove(key);
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

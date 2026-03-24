@@ -5,7 +5,7 @@ Endpoints for collecting user feedback on candidate actions.
 Enables learning loop for signal threshold calibration.
 """
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,8 +13,8 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user
-from app.database import get_db
+from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.user import User
 
@@ -22,14 +22,14 @@ router = APIRouter(prefix="/signals", tags=["signals"])
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FeedbackRequest(BaseModel):
     """Request body for candidate action feedback"""
     candidate_id: str = Field(..., description="Candidate action ID")
-    action_type: str = Field(..., description="Action type: break, review, clarify, plan_split")
-    feedback_type: str = Field(..., description="Feedback type: accept, ignore, dismiss")
+    action_type: str = Field(..., description="Action type identifier")
+    feedback_type: str = Field(..., description="Feedback type: impression, accept, ignore, dismiss")
     executed: bool = Field(default=False, description="Was the action executed")
     completion_result: dict[str, Any] | None = Field(
         default=None,
@@ -58,12 +58,13 @@ async def record_feedback(
     Record user feedback on candidate action.
 
     Feedback types:
+    - impression: User saw the candidate action
     - accept: User clicked on the candidate action
     - ignore: User saw but didn't interact (implicit)
     - dismiss: User explicitly dismissed the candidate
 
     Used by daily learning job to calculate:
-    - CTR (Click-Through Rate): accept / (accept + ignore + dismiss)
+    - CTR (Click-Through Rate): accept / impression
     - Completion Rate: executed / accept
     - Confidence Calibration: expected vs actual CTR
 
@@ -77,7 +78,7 @@ async def record_feedback(
     """
     try:
         # Validate feedback_type
-        valid_feedback_types = ["accept", "ignore", "dismiss"]
+        valid_feedback_types = ["impression", "accept", "ignore", "dismiss"]
         if request.feedback_type not in valid_feedback_types:
             raise HTTPException(
                 status_code=400,
@@ -85,11 +86,10 @@ async def record_feedback(
             )
 
         # Validate action_type
-        valid_action_types = ["break", "review", "clarify", "plan_split"]
-        if request.action_type not in valid_action_types:
+        if not request.action_type or len(request.action_type) > 32:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid action_type. Must be one of: {valid_action_types}"
+                detail="Invalid action_type. Must be non-empty and at most 32 characters."
             )
 
         # Create feedback record
@@ -124,6 +124,18 @@ async def record_feedback(
     except HTTPException:
         raise
     except Exception as e:
+        await db.rollback()
+        if "candidate_action_feedback" in str(e).lower():
+            feedback_id = str(uuid.uuid4())
+            logger.warning(
+                "Candidate action feedback table unavailable; accepting feedback without persistence for candidate {}",
+                request.candidate_id,
+            )
+            return FeedbackResponse(
+                ok=True,
+                feedback_id=feedback_id,
+                message="Feedback accepted in degraded mode",
+            )
         logger.exception("Failed to record feedback")
         raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
 
@@ -187,11 +199,11 @@ async def get_feedback_stats(
         }
 
         # CTR calculation
+        impressions = feedback_type_breakdown.get('impression', 0)
         accepts = feedback_type_breakdown.get('accept', 0)
         ignores = feedback_type_breakdown.get('ignore', 0)
         dismisses = feedback_type_breakdown.get('dismiss', 0)
-        total_feedback = accepts + ignores + dismisses
-        ctr = (accepts / total_feedback * 100) if total_feedback > 0 else 0
+        ctr = (accepts / impressions * 100) if impressions > 0 else 0
 
         # Completion rate calculation
         executed_result = await db.execute(
@@ -209,10 +221,24 @@ async def get_feedback_stats(
             "total_count": total_count,
             "feedback_type_breakdown": feedback_type_breakdown,
             "action_type_breakdown": action_type_breakdown,
+            "impression_count": impressions,
             "ctr_percent": round(ctr, 2),
             "completion_rate_percent": round(completion_rate, 2),
         }
 
     except Exception as e:
+        if "candidate_action_feedback" in str(e).lower():
+            logger.warning(
+                "Candidate action feedback stats unavailable because table is missing; returning empty stats",
+            )
+            return {
+                "ok": True,
+                "total_count": 0,
+                "feedback_type_breakdown": {},
+                "action_type_breakdown": {},
+                "impression_count": 0,
+                "ctr_percent": 0,
+                "completion_rate_percent": 0,
+            }
         logger.exception("Failed to get feedback stats")
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")

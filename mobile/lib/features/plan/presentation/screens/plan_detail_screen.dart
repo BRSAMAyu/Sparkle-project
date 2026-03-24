@@ -1,14 +1,23 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class PlanDetailScreen extends ConsumerWidget {
@@ -17,6 +26,7 @@ class PlanDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final planAsync = ref.watch(planDetailProvider(planId));
 
     return DefaultTabController(
@@ -29,30 +39,24 @@ class PlanDetailScreen extends ConsumerWidget {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('计划详情'),
+          title: Text(l10n.planDetailTitle),
           actions: [
             planAsync.maybeWhen(
               data: (plan) => Tooltip(
-                message: '分享计划',
+                message: l10n.planShare,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.share_outlined),
-                  onPressed: () => showShareResourceSheet(
-                    context,
-                    resourceType: 'plan',
-                    resourceId: plan.id,
-                    title: plan.name,
-                    subtitle: plan.description ?? plan.subject ?? '',
-                  ),
+                  onPressed: () => unawaited(_showShareSheet(context, plan)),
                 ),
               ),
               orElse: () => const SizedBox.shrink(),
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: '概览'),
-              Tab(text: '进度'),
+              Tab(text: l10n.planTabOverview),
+              Tab(text: l10n.planTabProgress),
             ],
           ),
         ),
@@ -66,11 +70,37 @@ class PlanDetailScreen extends ConsumerWidget {
           loading: () => const Center(child: LoadingIndicator()),
           error: (err, _) => CustomErrorWidget.page(
             context: context,
-            message: '计划加载失败：$err',
+            message: l10n.planLoadFailed(err.toString()),
             onRetry: () => ref.refresh(planDetailProvider(planId)),
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showShareSheet(BuildContext context, PlanModel plan) async {
+    final tasks = plan.tasks ?? const <TaskModel>[];
+    final completedTasks =
+        tasks.where((task) => task.status == TaskStatus.completed).length;
+
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.planProgress,
+        resourceId: plan.id,
+        title: plan.name,
+        subtitle: plan.description ?? plan.subject ?? '',
+        description: plan.description,
+        metadata: {
+          'progress': plan.progress,
+          'completed_tasks': completedTasks,
+          'total_tasks': tasks.length,
+          'deadline': plan.targetDate?.toIso8601String(),
+          'subject': plan.subject,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
     );
   }
 }
@@ -81,19 +111,56 @@ class _PlanOverviewTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final targetDate = plan.targetDate != null
-        ? DateFormat.yMMMd().format(plan.targetDate!)
+        ? Formatters.formatDateMedium(plan.targetDate!)
         : null;
 
     return ContentConstraint(
       child: ListView(
         padding: const EdgeInsets.all(DS.lg),
         children: [
+          if (plan.source == 'learning_path') ...[
+            Consumer(
+              builder: (context, ref, child) {
+                final progressAsync = ref.watch(
+                  learningPathProgressProvider(plan.id),
+                );
+                return progressAsync.when(
+                  data: (progress) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.lg),
+                    child: LearningPathProgressBar(progress: progress),
+                  ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(bottom: DS.lg),
+                    child: Center(child: LoadingIndicator()),
+                  ),
+                  error: (err, _) => const SizedBox.shrink(),
+                );
+              },
+            ),
+          ],
           GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _PlanMetaChip(
+                      icon: Icons.flag_outlined,
+                      label: plan.subject ?? l10n.planTabOverview,
+                    ),
+                    _PlanMetaChip(
+                      icon: Icons.task_alt_rounded,
+                      label:
+                          '${plan.tasks?.where((task) => task.status == TaskStatus.completed).length ?? 0}/${plan.tasks?.length ?? 0} 任务',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing12),
                 Text(
                   plan.name,
                   style: Theme.of(context).textTheme.headlineSmall,
@@ -113,14 +180,18 @@ class _PlanOverviewTab extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 const SizedBox(height: DS.sm),
-                Text('${(plan.progress * 100).toStringAsFixed(0)}% 进度'),
+                Text(
+                  l10n.planProgressPercent(
+                    (plan.progress * 100).toStringAsFixed(0),
+                  ),
+                ),
                 if (targetDate != null) ...[
                   const SizedBox(height: DS.md),
                   Row(
                     children: [
                       Icon(Icons.event, size: 16, color: DS.textSecondary),
                       const SizedBox(width: DS.xs),
-                      Text('目标日期: $targetDate'),
+                      Text(l10n.planTargetDate(targetDate)),
                     ],
                   ),
                 ],
@@ -128,10 +199,13 @@ class _PlanOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: DS.lg),
-          Text('相关任务', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.planRelatedTasks,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: DS.sm),
           if (plan.tasks == null || plan.tasks!.isEmpty)
-            Text('暂无任务', style: TextStyle(color: DS.textSecondary))
+            Text(l10n.planNoTasks, style: TextStyle(color: DS.textSecondary))
           else
             ...plan.tasks!.map(
               (task) => ListTile(
@@ -154,7 +228,7 @@ class _PlanOverviewTab extends ConsumerWidget {
       return SparkleButton.destructive(
         onPressed: () => _confirmArchive(context, ref),
         icon: const Icon(Icons.archive_outlined),
-        label: '归档计划',
+        label: context.l10n.planArchive,
       );
     }
 
@@ -163,30 +237,58 @@ class _PlanOverviewTab extends ConsumerWidget {
         await ref.read(planListProvider.notifier).restorePlan(plan.id);
         ref.invalidate(planDetailProvider(plan.id));
         if (context.mounted) {
-          AppFeedback.success(context, '计划已恢复');
+          AppFeedback.success(context, context.l10n.planRestoredSuccess);
         }
       },
       icon: const Icon(Icons.restore_rounded),
-      label: '恢复计划',
+      label: context.l10n.planRestore,
     );
   }
 
   Future<void> _confirmArchive(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('归档计划'),
-        content: const Text('归档后将从活跃列表移除，可在历史计划中恢复。'),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () => Navigator.of(context).pop(false),
-            label: '取消',
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: GraphiteModalSurface(
+          title: context.l10n.planArchiveTitle,
+          showHandle: false,
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.planArchiveMessage,
+                style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      label: context.l10n.cancel,
+                      expand: true,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      label: context.l10n.planArchiveConfirm,
+                      expand: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          SparkleButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            label: '确认归档',
-          ),
-        ],
+        ),
       ),
     );
 
@@ -195,9 +297,43 @@ class _PlanOverviewTab extends ConsumerWidget {
     await ref.read(planListProvider.notifier).archivePlan(plan.id);
     ref.invalidate(planDetailProvider(plan.id));
     if (context.mounted) {
-      AppFeedback.success(context, '计划已归档');
+      AppFeedback.success(context, context.l10n.planArchivedSuccess);
     }
   }
+}
+
+class _PlanMetaChip extends StatelessWidget {
+  const _PlanMetaChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _PlanProgressTab extends StatelessWidget {
@@ -207,9 +343,10 @@ class _PlanProgressTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final tasks = plan.tasks ?? [];
     if (tasks.isEmpty) {
-      return const Center(child: Text('暂无可视化数据'));
+      return Center(child: Text(l10n.planNoVisualizationData));
     }
 
     final completed =
@@ -228,7 +365,7 @@ class _PlanProgressTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(DS.lg),
         children: [
-          const _SectionHeader(title: '完成率'),
+          _SectionHeader(title: l10n.planSectionCompletionRate),
           const SizedBox(height: DS.spacing12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -264,7 +401,7 @@ class _PlanProgressTab extends StatelessWidget {
             },
           ),
           const SizedBox(height: DS.spacing24),
-          const _SectionHeader(title: '任务类型分布'),
+          _SectionHeader(title: l10n.planSectionTaskTypeDistribution),
           const SizedBox(height: DS.spacing12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -298,7 +435,7 @@ class _PlanProgressTab extends StatelessWidget {
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
                             final label =
-                                _taskTypeLabel(_taskTypes[value.toInt()]);
+                                _taskTypeLabel(l10n, _taskTypes[value.toInt()]);
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
@@ -345,7 +482,7 @@ class _PlanProgressTab extends StatelessWidget {
             },
           ),
           const SizedBox(height: DS.spacing24),
-          const _SectionHeader(title: '每日完成趋势'),
+          _SectionHeader(title: l10n.planSectionDailyCompletion),
           const SizedBox(height: DS.spacing12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -433,7 +570,7 @@ class _PlanProgressTab extends StatelessWidget {
     final buckets = List.generate(7, (index) {
       final day = DateTime(now.year, now.month, now.day)
           .subtract(Duration(days: 6 - index));
-      return _DayBucket(label: DateFormat.Md().format(day), date: day);
+      return _DayBucket(label: Formatters.formatDateMonthDay(day), date: day);
     });
 
     for (final task in tasks) {
@@ -463,22 +600,22 @@ class _PlanProgressTab extends StatelessWidget {
     TaskType.planning,
   ];
 
-  String _taskTypeLabel(TaskType type) {
+  String _taskTypeLabel(AppLocalizations l10n, TaskType type) {
     switch (type) {
       case TaskType.learning:
-        return '学习';
+        return l10n.taskTypeLearning;
       case TaskType.training:
-        return '训练';
+        return l10n.taskTypeTraining;
       case TaskType.errorFix:
-        return '纠错';
+        return l10n.taskTypeFix;
       case TaskType.reflection:
-        return '复盘';
+        return l10n.taskTypeReflection;
       case TaskType.social:
-        return '社交';
+        return l10n.taskTypeSocial;
       case TaskType.planning:
-        return '规划';
+        return l10n.taskTypePlanning;
       case TaskType.ocr:
-        return 'OCR';
+        return l10n.taskTypeOcr;
     }
   }
 }

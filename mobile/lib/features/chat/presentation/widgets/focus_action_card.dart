@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -14,7 +17,8 @@ class FocusActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = data['title'] as String? ?? '专注冲刺';
+    final l10n = context.l10n;
+    final title = data['title'] as String? ?? l10n.chatFocusSprintDefaultTitle;
     final reason = data['reason'] as String?;
     final duration = (data['duration_minutes'] as int?) ?? 25;
     final taskModel = _buildTaskModel(title, duration);
@@ -63,11 +67,13 @@ class FocusActionCard extends StatelessWidget {
             const SizedBox(height: DS.md),
             Consumer(
               builder: (context, ref, child) => CustomButton.primary(
-                text: '开始专注',
+                text: l10n.chatFocusStart,
                 icon: Icons.play_arrow_rounded,
                 customGradient: DS.secondaryGradient,
                 onPressed: () {
-                  HapticFeedback.selectionClick();
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                  );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = taskModel;
                   context.push('/tasks/${taskModel.id}/execute');
@@ -90,7 +96,7 @@ class FocusActionCard extends StatelessWidget {
           border: Border.all(color: DS.secondaryBase.withValues(alpha: 0.2)),
         ),
         child: Text(
-          '${minutes}m',
+          context.l10n.durationMinutes(minutes),
           style: TextStyle(
             color: DS.secondaryBase,
             fontSize: DS.fontSizeXs,

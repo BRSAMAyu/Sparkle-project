@@ -1,13 +1,15 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/sparkle/gateway/internal/config"
+	"go.uber.org/zap"
 )
 
 // WebSocketProxy 专门处理 WebSocket 连接代理
@@ -16,22 +18,34 @@ type WebSocketProxy struct {
 	pythonBackendURL string
 	upgrader         *websocket.Upgrader
 	logger           *zap.Logger
+	config           *config.Config
 }
 
 // NewWebSocketProxy 创建新的 WebSocket 代理
-func NewWebSocketProxy(backendURL string, logger *zap.Logger) *WebSocketProxy {
+func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config) *WebSocketProxy {
 	return &WebSocketProxy{
 		pythonBackendURL: backendURL,
 		upgrader: &websocket.Upgrader{
 			HandshakeTimeout: 10 * time.Second,
 			ReadBufferSize:   4096,
 			WriteBufferSize:  4096,
-			// 生产环境需要验证 Origin
+			// Use secure origin checking based on config
 			CheckOrigin: func(r *http.Request) bool {
-				return true
+				origin := r.Header.Get("Origin")
+				// Allow connections without origin header (same-origin requests)
+				if origin == "" {
+					return true
+				}
+				allowed := cfg.IsOriginAllowed(origin)
+				if !allowed {
+					logger.Warn("WebSocket proxy rejected connection from unauthorized origin",
+						zap.String("origin", origin))
+				}
+				return allowed
 			},
 		},
 		logger: logger,
+		config: cfg,
 	}
 }
 
@@ -41,6 +55,12 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 	groupID := c.Param("group_id")
 	userID := c.GetString("user_id")
 
+	// Security: Require authenticated user from middleware
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	p.logger.Info("Group WS connection request",
 		zap.String("user_id", userID),
 		zap.String("group_id", groupID))
@@ -48,12 +68,17 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 	// 构造后端 WebSocket URL
 	backendURL := p.pythonBackendURL + "/api/v1/community/groups/" + groupID + "/ws"
 
-	// 从原始请求获取 token
-	token := c.Query("token")
-	if token == "" {
-		authHeader := c.GetHeader("Authorization")
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			token = authHeader[7:]
+	// Get token - prefer Authorization header over query parameter for security
+	token := c.GetHeader("Authorization")
+	if token != "" && len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	} else {
+		// Fallback to query token (less secure, logged as warning)
+		token = c.Query("token")
+		if token != "" {
+			p.logger.Warn("Group WS using query token (deprecated, use Authorization header)",
+				zap.String("user_id", userID),
+				zap.String("group_id", groupID))
 		}
 	}
 
@@ -73,14 +98,25 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 	userID := c.GetString("user_id")
 
+	// Security: Require authenticated user from middleware
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	p.logger.Info("Personal WS connection request",
 		zap.String("user_id", userID))
 
-	token := c.Query("token")
-	if token == "" {
-		authHeader := c.GetHeader("Authorization")
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			token = authHeader[7:]
+	// Get token - prefer Authorization header over query parameter for security
+	token := c.GetHeader("Authorization")
+	if token != "" && len(token) > 7 && token[:7] == "Bearer " {
+		token = token[7:]
+	} else {
+		// Fallback to query token (less secure, logged as warning)
+		token = c.Query("token")
+		if token != "" {
+			p.logger.Warn("Personal WS using query token (deprecated, use Authorization header)",
+				zap.String("user_id", userID))
 		}
 	}
 

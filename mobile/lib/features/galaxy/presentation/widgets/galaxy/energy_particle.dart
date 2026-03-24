@@ -170,16 +170,18 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: _controller,
-        builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _EnergyParticlePainter(
-            currentPosition: _getCurrentPosition(),
-            progress: _progressAnimation.value,
-            glowScale: _glowAnimation.value,
-            targetColor: widget.targetColor,
-            trailParticles: List.from(_trailParticles),
-            currentTime: _controller.value,
-            renderConfig: PerformanceService.instance.renderConfig,
+        builder: (context, child) => RepaintBoundary(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _EnergyParticlePainter(
+              currentPosition: _getCurrentPosition(),
+              progress: _progressAnimation.value,
+              glowScale: _glowAnimation.value,
+              targetColor: widget.targetColor,
+              trailParticles: List.from(_trailParticles),
+              currentTime: _controller.value,
+              renderConfig: PerformanceService.instance.renderConfig,
+            ),
           ),
         ),
       );

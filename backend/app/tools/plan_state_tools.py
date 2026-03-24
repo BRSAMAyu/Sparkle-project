@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 PlanState Tools - LLM tools for accessing plan state and tasks
 
@@ -18,6 +19,8 @@ from pydantic import BaseModel, Field
 from app.services.plan_state_service import PlanStateService
 from app.services.task_state_sync import TaskStateSyncService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
+from app.tools.entity_cards import build_task_list_entity_card, wrap_widget_payload
+from app.tools.plan_resolution import PlanResolutionError, resolve_user_plan_reference
 
 # ============================================
 # Parameter Schemas
@@ -27,7 +30,7 @@ class GetPlanStateParams(BaseModel):
     """Parameters for get_plan_state tool"""
     plan_id: str = Field(
         ...,
-        description="计划ID (UUID格式)"
+        description="计划ID、计划名称，或当前想查询的计划引用"
     )
 
 
@@ -35,7 +38,7 @@ class GetTaskSummaryParams(BaseModel):
     """Parameters for get_task_summary tool"""
     plan_id: str = Field(
         ...,
-        description="计划ID (UUID格式)"
+        description="计划ID、计划名称，或当前想查询的计划引用"
     )
     limit: int = Field(
         default=10,
@@ -81,29 +84,46 @@ class GetPlanStateTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            plan_id = UUID(params.plan_id)
             user_uuid = UUID(user_id)
+            resolved = await resolve_user_plan_reference(
+                db_session,
+                user_id=user_uuid,
+                plan_ref=params.plan_id,
+            )
+        except PlanResolutionError as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion=e.suggestion,
+                data={
+                    "available_plans": e.available_plan_names,
+                } if e.available_plan_names else None,
+            )
         except ValueError as e:
             return ToolResult(
                 success=False,
                 tool_name=self.name,
-                error_message=f"无效的ID格式: {e}",
+                error_message=f"无效的用户ID格式: {e}",
             )
 
         try:
             service = PlanStateService(db_session)
-            state = await service.get_plan_state(user_uuid, plan_id)
+            state = await service.get_plan_state(user_uuid, resolved.plan_id)
 
             if state is None:
                 return ToolResult(
                     success=False,
                     tool_name=self.name,
-                    error_message=f"未找到计划状态: plan_id={params.plan_id}",
+                    error_message=f"未找到计划状态: plan={resolved.plan_name}",
+                    suggestion="请确认该计划仍然有效，或切换到其他计划后重试",
                 )
 
             # Build lightweight response (format matches frontend PlanContextData)
             data = {
                 "plan_id": str(state.plan_id),
+                "plan_name": resolved.plan_name,
+                "resolved_via": resolved.resolution,
                 "status": state.status,
                 "version": state.version,
                 "facts": state.facts or {},
@@ -161,20 +181,34 @@ class GetTaskSummaryTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            plan_id = UUID(params.plan_id)
             user_uuid = UUID(user_id)
+            resolved = await resolve_user_plan_reference(
+                db_session,
+                user_id=user_uuid,
+                plan_ref=params.plan_id,
+            )
+        except PlanResolutionError as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion=e.suggestion,
+                data={
+                    "available_plans": e.available_plan_names,
+                } if e.available_plan_names else None,
+            )
         except ValueError as e:
             return ToolResult(
                 success=False,
                 tool_name=self.name,
-                error_message=f"无效的ID格式: {e}",
+                error_message=f"无效的用户ID格式: {e}",
             )
 
         try:
             sync_service = TaskStateSyncService(db_session)
             summaries = await sync_service.get_task_summaries(
                 user_id=user_uuid,
-                plan_id=plan_id,
+                plan_id=resolved.plan_id,
                 limit=params.limit,
             )
 
@@ -182,12 +216,27 @@ class GetTaskSummaryTool(BaseTool):
                 success=True,
                 tool_name=self.name,
                 data={
-                    "plan_id": str(plan_id),
+                    "plan_id": str(resolved.plan_id),
+                    "plan_name": resolved.plan_name,
+                    "resolved_via": resolved.resolution,
                     "task_count": len(summaries),
                     "tasks": summaries,
                 },
                 widget_type="task_list",
-                widget_data={"tasks": summaries},
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": summaries,
+                        "plan_id": str(resolved.plan_id),
+                        "plan_name": resolved.plan_name,
+                    },
+                    entity_card=build_task_list_entity_card(
+                        summaries,
+                        tool_name=self.name,
+                        plan_id=str(resolved.plan_id),
+                        plan_title=resolved.plan_name,
+                    ),
+                ),
             )
 
         except Exception as e:

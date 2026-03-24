@@ -1,5 +1,6 @@
 
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -13,12 +14,48 @@ from app.models.user import User
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def generate_daily_report(self) -> dict[str, Any]:
+        """
+        Build a lightweight system-wide daily report for Celery beat.
+
+        This report is used as an operational heartbeat, so it should stay fast
+        and deterministic even when no user-facing dashboard context is present.
+        """
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        active_users_result = await self.db.execute(
+            select(func.count(User.id)).where(User.is_active.is_(True))
+        )
+        completed_tasks_result = await self.db.execute(
+            select(func.count(Task.id)).where(
+                and_(
+                    Task.status == TaskStatus.COMPLETED,
+                    Task.completed_at >= today_start,
+                )
+            )
+        )
+        created_tasks_result = await self.db.execute(
+            select(func.count(Task.id)).where(Task.created_at >= today_start)
+        )
+        active_plans_result = await self.db.execute(
+            select(func.count(Plan.id)).where(Plan.is_active.is_(True))
+        )
+
+        return {
+            "date": today_start.date().isoformat(),
+            "active_users": active_users_result.scalar() or 0,
+            "tasks_created_today": created_tasks_result.scalar() or 0,
+            "tasks_completed_today": completed_tasks_result.scalar() or 0,
+            "active_plans": active_plans_result.scalar() or 0,
+            "generated_at": _utcnow().isoformat(),
+        }
 
     async def get_dashboard_status(self, user_id: UUID) -> dict[str, Any]:
         """
@@ -28,6 +65,9 @@ class DashboardService:
 
         # Get active sprint
         sprint = await self._get_active_sprint(user_id)
+
+        # Get active growth plan
+        growth = await self._get_active_growth(user_id)
 
         # Get weather (now includes cognitive data check)
         weather = await self._calculate_weather(user_id, user, sprint)
@@ -49,6 +89,7 @@ class DashboardService:
                 "today_focus_minutes": today_focus_minutes
             },
             "sprint": sprint,
+            "growth": growth,
             "next_actions": next_actions,
             "cognitive": cognitive
         }
@@ -103,6 +144,30 @@ class DashboardService:
             }
         return None
 
+    async def _get_active_growth(self, user_id: UUID) -> dict | None:
+        """Get first active growth plan"""
+        query = (
+            select(Plan)
+            .where(and_(
+                Plan.user_id == user_id,
+                Plan.is_active,
+                Plan.type == PlanType.GROWTH
+            ))
+            .order_by(Plan.created_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        plan = result.scalar_one_or_none()
+
+        if plan:
+            return {
+                "id": str(plan.id),
+                "name": plan.name,
+                "progress": plan.progress,
+                "mastery_level": plan.mastery_level,
+            }
+        return None
+
     async def _get_today_focus_minutes(self, user_id: UUID) -> int:
         """Calculate today's focus time from completed tasks"""
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -125,7 +190,7 @@ class DashboardService:
             .where(
                 and_(
                     BehaviorPattern.user_id == user_id,
-                    not BehaviorPattern.is_archived
+                    BehaviorPattern.is_archived.is_(False),
                 )
             )
             .order_by(desc(BehaviorPattern.created_at))
@@ -139,7 +204,8 @@ class DashboardService:
         new_pattern_query = select(func.count(BehaviorPattern.id)).where(
             and_(
                 BehaviorPattern.user_id == user_id,
-                BehaviorPattern.created_at >= yesterday
+                BehaviorPattern.created_at >= yesterday,
+                BehaviorPattern.is_archived.is_(False),
             )
         )
         new_count_result = await self.db.execute(new_pattern_query)

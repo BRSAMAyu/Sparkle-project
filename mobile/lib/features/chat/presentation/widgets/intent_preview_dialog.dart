@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 
@@ -41,7 +42,17 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: DS.surfacePrimary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfacePrimary,
+              Color.alphaBlend(
+                DS.info.withValues(alpha: 0.03),
+                DS.surfaceSecondary,
+              ),
+            ],
+          ),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -130,7 +141,12 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               const SizedBox(height: DS.md),
               SparkleButton.outline(
                 label: context.l10n.retry,
-                onPressed: _analyzeIntents,
+                onPressed: () {
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  );
+                  _analyzeIntents();
+                },
               ),
             ],
           ),
@@ -198,7 +214,17 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         margin: const EdgeInsets.only(bottom: DS.spacing12),
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: DS.surfaceTertiary.withValues(alpha: 0.6),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfaceTertiary.withValues(alpha: 0.6),
+              Color.alphaBlend(
+                _getIntentColor(intent.type).withValues(alpha: 0.04),
+                DS.surfacePrimary,
+              ),
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _getIntentColor(intent.type).withValues(alpha: 0.3),

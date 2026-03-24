@@ -3,6 +3,9 @@ Database Session Management
 使用 SQLAlchemy 2.0 异步接口
 支持 PostgreSQL 连接池配置和 SQLite 开发模式
 """
+from __future__ import annotations
+
+
 import ssl
 
 from sqlalchemy.engine import make_url
@@ -30,6 +33,14 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
     """
     根据数据库类型返回适当的引擎配置
     PostgreSQL 使用连接池，SQLite 使用 NullPool
+
+    NOTE: asyncpg 0.31+ compatibility
+    - asyncpg does NOT accept 'sslmode' string parameter in connect_args
+    - asyncpg requires 'ssl' parameter (bool or SSLContext), NOT 'sslmode'
+    - We map sslmode values to asyncpg's ssl parameter:
+      - 'disable' -> ssl=False
+      - 'require', 'verify-ca', 'verify-full' -> ssl=True
+      - sslrootcert -> ssl=SSLContext with certificate verification
     """
     is_sqlite = db_url.startswith("sqlite")
 
@@ -42,16 +53,24 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
         }
     else:
         # PostgreSQL 使用连接池配置
+        # asyncpg requires 'ssl' parameter (bool or SSLContext), NOT 'sslmode'
         connect_args = {}
+
         if sslrootcert:
+            # With certificate, create SSL context for verification
             connect_args["ssl"] = ssl.create_default_context(cafile=sslrootcert)
-        elif sslmode:
-            if sslmode == "disable":
-                connect_args["ssl"] = False
-            elif sslmode in ("require", "verify-ca", "verify-full"):
-                connect_args["ssl"] = True
-        elif not settings.DEBUG:
+        elif sslmode == "disable":
+            # Explicitly disable SSL
+            connect_args["ssl"] = False
+        elif sslmode in ("require", "verify-ca", "verify-full"):
+            # Enable SSL without certificate verification
             connect_args["ssl"] = True
+        elif not settings.DEBUG:
+            # Production default: require SSL
+            connect_args["ssl"] = True
+        else:
+            # Development: disable SSL for local connections
+            connect_args["ssl"] = False
 
         return {
             "pool_size": settings.DB_POOL_SIZE,
@@ -118,3 +137,52 @@ async def get_db_no_commit() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def get_db_context():
+    """
+    同步上下文管理器，用于Celery任务中获取数据库会话
+
+    用法:
+        with get_db_context() as db:
+            asyncio.run(async_function(db))
+
+    事务管理：
+    - 成功时自动提交
+    - 异常时自动回滚
+    """
+    session = AsyncSessionLocal()
+    try:
+        yield session
+        import asyncio
+
+        # Run async commit
+        asyncio.run(_commit_session(session))
+    except Exception:
+        import asyncio
+
+        asyncio.run(_rollback_session(session))
+        raise
+    finally:
+        import asyncio
+
+        asyncio.run(_close_session(session))
+
+
+async def _commit_session(session: AsyncSession):
+    """异步提交会话"""
+    await session.commit()
+
+
+async def _rollback_session(session: AsyncSession):
+    """异步回滚会话"""
+    await session.rollback()
+
+
+async def _close_session(session: AsyncSession):
+    """异步关闭会话"""
+    await session.close()

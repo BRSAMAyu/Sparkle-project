@@ -1,6 +1,7 @@
 """
 API 中间件
 """
+from __future__ import annotations
 import hashlib
 from uuid import uuid4
 
@@ -112,6 +113,20 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         idempotency_key = request.headers.get("X-Idempotency-Key")
         if not idempotency_key:
             return await call_next(request)  # 无幂等键，正常处理
+
+        # M1 Security Fix: 限制幂等键大小（防止 Redis OOM）
+        MAX_IDEMPOTENCY_KEY_SIZE = 256
+        if len(idempotency_key.encode('utf-8')) > MAX_IDEMPOTENCY_KEY_SIZE:
+            import json
+            return Response(
+                content=json.dumps({
+                    "error": "Idempotency key too large",
+                    "max_size": MAX_IDEMPOTENCY_KEY_SIZE,
+                    "actual_size": len(idempotency_key.encode('utf-8'))
+                }),
+                status_code=400,
+                media_type="application/json"
+            )
 
         body_bytes = await request.body()
         request._body = body_bytes

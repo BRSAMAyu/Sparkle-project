@@ -2,7 +2,8 @@
 用户设备服务
 User Device Service - 管理用户设备和推送令牌
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import datetime
 
 import redis.asyncio as redis
 from sqlalchemy import select
@@ -10,6 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.websocket import manager
 from app.models.user import UserDevice
+
+
+def _utcnow_naive() -> datetime:
+    """Return a naive UTC timestamp for legacy DateTime columns."""
+    return datetime.utcnow()
 
 
 class DeviceService:
@@ -46,7 +52,7 @@ class DeviceService:
         )
         device = result.scalar_one_or_none()
 
-        now = datetime.now(UTC)
+        now = _utcnow_naive()
 
         if device:
             # 更新现有设备
@@ -62,7 +68,7 @@ class DeviceService:
             if os_version:
                 device.os_version = os_version
             if device_metadata:
-                device.metadata = device_metadata
+                device.device_metadata = device_metadata
         else:
             # 创建新设备
             device = UserDevice(
@@ -154,7 +160,7 @@ class DeviceService:
                 import json
                 try:
                     return json.loads(cached)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass  # 缓存损坏，继续查询数据库
 
         # 查询数据库
@@ -201,7 +207,7 @@ class DeviceService:
         """
         from datetime import timedelta
 
-        threshold_date = datetime.now(UTC) - timedelta(days=days_threshold)
+        threshold_date = _utcnow_naive() - timedelta(days=days_threshold)
 
         result = await db.execute(
             select(UserDevice).where(

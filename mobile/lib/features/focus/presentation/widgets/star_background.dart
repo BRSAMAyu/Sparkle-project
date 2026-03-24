@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -27,9 +28,11 @@ class StarBackground extends StatefulWidget {
     super.key,
     this.starCount = 100,
     this.enableTwinkle = true,
+    this.intensity = 1,
   });
   final int starCount;
   final bool enableTwinkle;
+  final double intensity;
 
   @override
   State<StarBackground> createState() => _StarBackgroundState();
@@ -51,7 +54,7 @@ class _StarBackgroundState extends State<StarBackground>
     );
 
     if (widget.enableTwinkle) {
-      _controller.repeat();
+      unawaited(_controller.repeat());
     }
 
     _generateStars();
@@ -84,6 +87,7 @@ class _StarBackgroundState extends State<StarBackground>
             stars: _stars,
             animationValue: _controller.value,
             enableTwinkle: widget.enableTwinkle,
+            intensity: widget.intensity,
             backgroundStart: DS.deepSpaceStart,
             backgroundEnd: DS.deepSpaceEnd,
             starColor: DS.brandPrimary,
@@ -99,6 +103,7 @@ class _StarPainter extends CustomPainter {
     required this.stars,
     required this.animationValue,
     required this.enableTwinkle,
+    required this.intensity,
     required this.backgroundStart,
     required this.backgroundEnd,
     required this.starColor,
@@ -106,6 +111,7 @@ class _StarPainter extends CustomPainter {
   final List<_Star> stars;
   final double animationValue;
   final bool enableTwinkle;
+  final double intensity;
   final Color backgroundStart;
   final Color backgroundEnd;
   final Color starColor;
@@ -134,10 +140,11 @@ class _StarPainter extends CustomPainter {
         final twinkle = sin(
           animationValue * 2 * pi * star.twinkleSpeed + star.twinkleOffset,
         );
-        opacity = 0.3 + (twinkle + 1) / 2 * 0.7; // 0.3 - 1.0
+        opacity = (0.3 + (twinkle + 1) / 2 * 0.7) * intensity.clamp(0.2, 1.4);
       } else {
-        opacity = 0.8;
+        opacity = 0.8 * intensity.clamp(0.2, 1.4);
       }
+      opacity = opacity.clamp(0.0, 1.0);
 
       final starPaint = Paint()..color = starColor.withValues(alpha: opacity);
 
@@ -167,6 +174,7 @@ class _StarPainter extends CustomPainter {
   bool shouldRepaint(covariant _StarPainter oldDelegate) =>
       oldDelegate.animationValue != animationValue ||
       oldDelegate.enableTwinkle != enableTwinkle ||
+      oldDelegate.intensity != intensity ||
       oldDelegate.backgroundStart != backgroundStart ||
       oldDelegate.backgroundEnd != backgroundEnd ||
       oldDelegate.starColor != starColor;
@@ -179,10 +187,12 @@ class AnimatedStarBackground extends StatefulWidget {
     this.fadeInDuration = const Duration(milliseconds: 500),
     this.starCount = 100,
     this.enableTwinkle = true,
+    this.intensity = 1,
   });
   final Duration fadeInDuration;
   final int starCount;
   final bool enableTwinkle;
+  final double intensity;
 
   @override
   State<AnimatedStarBackground> createState() => _AnimatedStarBackgroundState();
@@ -204,7 +214,7 @@ class _AnimatedStarBackgroundState extends State<AnimatedStarBackground>
       parent: _fadeController,
       curve: Curves.easeIn,
     );
-    _fadeController.forward();
+    unawaited(_fadeController.forward());
   }
 
   @override
@@ -219,6 +229,7 @@ class _AnimatedStarBackgroundState extends State<AnimatedStarBackground>
         child: StarBackground(
           starCount: widget.starCount,
           enableTwinkle: widget.enableTwinkle,
+          intensity: widget.intensity,
         ),
       );
 }

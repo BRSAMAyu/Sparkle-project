@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import inspect
 import json
@@ -12,8 +13,8 @@ from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.agent_profiles import AgentRole, TaskType
-from app.core.llm_router import LLMSelection, llm_router
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
@@ -119,10 +120,14 @@ class LLMResponse:
     content: str
     tool_calls: list[dict] | None = None
     finish_reason: str = "stop"
+    # MIMO 特有字段
+    reasoning_content: str | None = None   # 思考链内容
+    annotations: list[dict] | None = None  # 联网搜索引用
+    web_search_usage: dict | None = None   # 联网搜索用量
 
 @dataclass
 class StreamChunk:
-    type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage"
+    type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage" | "reasoning" | "annotation"
     content: str | None = None
     tool_call_id: str | None = None
     tool_name: str | None = None
@@ -132,6 +137,9 @@ class StreamChunk:
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     total_tokens: int | None = None
+    # MIMO 特有字段
+    reasoning_content: str | None = None
+    annotations: list[dict] | None = None
 
 tracer = trace.get_tracer(__name__)
 
@@ -171,6 +179,7 @@ class LLMService:
         # 当前选中的模型配置
         self._current_selection: LLMSelection | None = None
         self._provider: LLMProvider | None = None
+        self._explicit_model_override = False
 
         # 向后兼容：保留原有的模型名称
         self.chat_model: str = ""
@@ -186,9 +195,9 @@ class LLMService:
             # 使用原有的 LLM_PROVIDER 逻辑
             self._init_legacy()
 
-    def _init_with_router(self):
+    def _init_with_router(self, selection: LLMSelection | None = None):
         """使用 LLMRouter 初始化（推荐方式）"""
-        selection = llm_router.select_model(self.agent_role)
+        selection = selection or llm_router.select_model(self.agent_role)
         self._current_selection = selection
 
         kwargs = llm_router.get_openai_client_kwargs(selection)
@@ -200,6 +209,7 @@ class LLMService:
         self.chat_model = kwargs["model"]
         self.reason_model = kwargs["model"]  # 默认用同一个，可按需切换
         self._extra_body = kwargs.get("extra_body")  # 保存 GLM 特有参数
+        self._explicit_model_override = False
         if not kwargs.get("api_key"):
             self.demo_mode = True
 
@@ -226,7 +236,7 @@ class LLMService:
             self.reason_model = settings.DEEPSEEK_REASON_MODEL
         elif provider_type == "zhipu":
             api_key = settings.ZHIPU_API_KEY
-            base_url = settings.ZHIPU_BASE_URL
+            base_url = settings.ZHIPU_CODING_BASE_URL
             self.chat_model = settings.ZHIPU_CHAT_MODEL
             self.reason_model = settings.ZHIPU_TOOLS_MODEL
         else:
@@ -272,7 +282,24 @@ class LLMService:
         """获取默认模型（向后兼容）"""
         return self.chat_model
 
-    async def switch_model_for_task(self, task_type: TaskType):
+    @property
+    def model_key(self) -> str:
+        """获取当前选中的注册模型 key。"""
+        return self._current_selection.model_key if self._current_selection else ""
+
+    @property
+    def provider_name(self) -> str:
+        """获取当前选中模型的 provider 名称。"""
+        if self._current_selection is not None:
+            return self._current_selection.config.provider.value
+        return self._get_provider_name_from_url()
+
+    async def switch_model_for_task(
+        self,
+        task_type: TaskType,
+        avoid_providers: list[ModelProvider] | None = None,
+        reasoning_mode: str | None = None,
+    ):
         """
         根据任务类型动态切换模型（线程安全）
 
@@ -285,7 +312,12 @@ class LLMService:
 
         # 保护状态变更
         async with self._state_lock:
-            selection = llm_router.select_model(self.agent_role, task_type)
+            selection = llm_router.select_model(
+                self.agent_role,
+                task_type,
+                avoid_providers=avoid_providers,
+                reasoning_mode=reasoning_mode,
+            )
             kwargs = llm_router.get_openai_client_kwargs(selection)
 
             self._provider = OpenAICompatibleProvider(
@@ -296,10 +328,33 @@ class LLMService:
             self.reason_model = kwargs["model"]
             self._current_selection = selection
             self._extra_body = kwargs.get("extra_body")
+            self._explicit_model_override = False
 
             logger.info(
                 f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
             )
+
+    async def switch_to_specific_model(self, model_key: str):
+        """切换到指定模型 key。用于 batch / specialist 等显式路由场景。"""
+        if not self.enable_dynamic_routing:
+            logger.warning("Dynamic routing is disabled, cannot switch to a specific model")
+            return
+
+        async with self._state_lock:
+            selection = llm_router.select_specific_model(model_key, agent_role=self.agent_role)
+            kwargs = llm_router.get_openai_client_kwargs(selection)
+
+            self._provider = OpenAICompatibleProvider(
+                api_key=kwargs["api_key"],
+                base_url=kwargs["base_url"]
+            )
+            self.chat_model = kwargs["model"]
+            self.reason_model = kwargs["model"]
+            self._current_selection = selection
+            self._extra_body = kwargs.get("extra_body")
+            self._explicit_model_override = True
+
+            logger.info(f"[LLMRouter] Switched to specific model {model_key} -> {kwargs['model']}")
 
     def get_current_selection(self) -> LLMSelection | None:
         """获取当前的模型选择（用于观测）"""
@@ -413,18 +468,7 @@ class LLMService:
 
             # 使用回退管理器执行请求
             async def _call_with_selection(selection: LLMSelection) -> str:
-                # 获取 provider 名称用于并发控制
-                provider_name = selection.config.provider.value
-
-                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
-                # 否则回退到 DeepSeek 时会继续使用 Zhipu 的 base_url
-                current_provider = self.provider
-                if selection != self._current_selection:
-                    kwargs = llm_router.get_openai_client_kwargs(selection)
-                    current_provider = OpenAICompatibleProvider(
-                        api_key=kwargs["api_key"],
-                        base_url=kwargs["base_url"]
-                    )
+                provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
 
                 try:
                     async with llm_concurrency.acquire(provider_name):
@@ -432,7 +476,7 @@ class LLMService:
                             messages,
                             model=selection.config.model_name,
                             temperature=selection.config.temperature,
-                            **kwargs if 'kwargs' in locals() else {}
+                            **request_kwargs
                         )
                         return response
                 except Exception as e:
@@ -493,6 +537,128 @@ class LLMService:
                 return "dashscope"
         return "default"
 
+    def _selection_matches_current(self, selection: LLMSelection) -> bool:
+        current = self._current_selection
+        if current is None:
+            return False
+        return (
+            current.model_key == selection.model_key
+            and current.config.provider == selection.config.provider
+            and current.config.base_url == selection.config.base_url
+            and current.config.model_name == selection.config.model_name
+            and current.config.clear_thinking == selection.config.clear_thinking
+        )
+
+    def _build_provider_for_selection(
+        self,
+        selection: LLMSelection,
+    ) -> tuple[str, OpenAICompatibleProvider | LLMProvider, dict[str, Any]]:
+        provider_name = selection.config.provider.value
+        client_kwargs = llm_router.get_openai_client_kwargs(selection)
+        request_kwargs = {
+            key: value
+            for key, value in client_kwargs.items()
+            if key not in {"api_key", "base_url", "model", "temperature"}
+        }
+
+        if self._selection_matches_current(selection):
+            current_provider = self.provider
+        else:
+            current_provider = OpenAICompatibleProvider(
+                api_key=client_kwargs["api_key"],
+                base_url=client_kwargs["base_url"]
+            )
+
+        return provider_name, current_provider, request_kwargs
+
+    async def _create_raw_completion(
+        self,
+        selection: LLMSelection,
+        request_params: dict[str, Any],
+    ) -> Any:
+        provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
+        params = dict(request_params)
+        params["model"] = selection.config.model_name
+        params.setdefault("temperature", selection.config.temperature)
+        for key, value in request_kwargs.items():
+            params.setdefault(key, value)
+
+        # 添加 MIMO 特有参数：联网搜索和思考模式
+        if selection.config.enable_web_search:
+            params.setdefault("tools", [])
+            params["tools"].append({"type": "web_search"})
+        if selection.config.thinking_mode:
+            extra_body = dict(params.get("extra_body") or {})
+            extra_body["thinking"] = {"type": selection.config.thinking_mode}
+            params["extra_body"] = extra_body
+
+        if not hasattr(current_provider, "client"):
+            raise NotImplementedError("Current LLM provider does not expose raw chat completions.")
+
+        async with llm_concurrency.acquire(provider_name):
+            return await current_provider.client.chat.completions.create(**params)
+
+    async def _create_raw_completion_with_fallback(
+        self,
+        selection: LLMSelection,
+        request_params: dict[str, Any],
+        operation_type: str,
+    ) -> Any:
+        async def _call(current_selection: LLMSelection) -> Any:
+            return await self._create_raw_completion(current_selection, request_params)
+
+        return await llm_fallback_manager.execute_with_fallback(
+            selection,
+            _call,
+            operation_type=operation_type,
+        )
+
+    async def _create_raw_stream(
+        self,
+        selection: LLMSelection,
+        request_params: dict[str, Any],
+    ) -> AsyncGenerator[Any, None]:
+        provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
+        params = dict(request_params)
+        params["model"] = selection.config.model_name
+        params.setdefault("temperature", selection.config.temperature)
+        for key, value in request_kwargs.items():
+            params.setdefault(key, value)
+
+        # 添加 MIMO 特有参数：联网搜索和思考模式
+        if selection.config.enable_web_search:
+            params.setdefault("tools", [])
+            params["tools"].append({"type": "web_search"})
+        if selection.config.thinking_mode:
+            extra_body = dict(params.get("extra_body") or {})
+            extra_body["thinking"] = {"type": selection.config.thinking_mode}
+            params["extra_body"] = extra_body
+
+        if not hasattr(current_provider, "client"):
+            raise NotImplementedError("Current LLM provider does not expose raw chat completions.")
+
+        async with llm_concurrency.acquire(provider_name):
+            stream = await current_provider.client.chat.completions.create(**params)
+            async for chunk in stream:
+                yield chunk
+
+    async def _create_raw_stream_with_fallback(
+        self,
+        selection: LLMSelection,
+        request_params: dict[str, Any],
+        operation_type: str,
+    ) -> AsyncGenerator[Any, None]:
+        async def _stream(current_selection: LLMSelection) -> AsyncGenerator[Any, None]:
+            async for chunk in self._create_raw_stream(current_selection, request_params):
+                yield chunk
+
+        async for chunk in llm_fallback_manager.execute_stream_with_fallback(
+            selection,
+            _stream,
+            operation_type=operation_type,
+        ):
+            yield chunk
+
     async def reason(
         self,
         messages: list[dict[str, str]],
@@ -503,9 +669,10 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
-        model = model or self.reason_model
+        requested_model = model
+        resolved_model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
-            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.model", resolved_model)
             span.set_attribute("llm.temperature", temperature)
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -521,7 +688,37 @@ class LLMService:
 
             try:
                 await circuit_breaker_service.check("primary_llm")
-                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                if self.enable_dynamic_routing and requested_model is None:
+                    if self._explicit_model_override and self._current_selection is not None:
+                        selection = self._current_selection
+                    else:
+                        selection = llm_router.select_model(self.agent_role, TaskType.DEEP_REASONING)
+
+                    async def _call_with_selection(current_selection: LLMSelection) -> str:
+                        provider_name, current_provider, request_kwargs = self._build_provider_for_selection(current_selection)
+                        merged_kwargs = dict(kwargs)
+                        for key, value in request_kwargs.items():
+                            merged_kwargs.setdefault(key, value)
+                        async with llm_concurrency.acquire(provider_name):
+                            return await current_provider.chat(
+                                messages,
+                                model=current_selection.config.model_name,
+                                temperature=current_selection.config.temperature,
+                                **merged_kwargs,
+                            )
+
+                    response = await llm_fallback_manager.execute_with_fallback(
+                        selection,
+                        _call_with_selection,
+                        operation_type="reason",
+                    )
+                else:
+                    response = await self.provider.chat(
+                        messages,
+                        model=resolved_model,
+                        temperature=temperature,
+                        **kwargs,
+                    )
                 await circuit_breaker_service.record_success("primary_llm")
                 return response
             except CircuitBreakerOpenException:
@@ -642,17 +839,7 @@ class LLMService:
 
             # 定义流式调用函数
             async def _stream_with_selection(selection: LLMSelection) -> AsyncGenerator[str, None]:
-                # 获取 provider 名称用于并发控制
-                provider_name = selection.config.provider.value
-
-                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
-                current_provider = self.provider
-                if selection != self._current_selection:
-                    kwargs = llm_router.get_openai_client_kwargs(selection)
-                    current_provider = OpenAICompatibleProvider(
-                        api_key=kwargs["api_key"],
-                        base_url=kwargs["base_url"]
-                    )
+                provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
 
                 try:
                     async with llm_concurrency.acquire(provider_name):
@@ -660,7 +847,7 @@ class LLMService:
                             messages,
                             model=selection.config.model_name,
                             temperature=selection.config.temperature,
-                            **kwargs if 'kwargs' in locals() else {}
+                            **request_kwargs
                         ):
                             yield chunk
                 except Exception as e:
@@ -672,68 +859,19 @@ class LLMService:
 
                 # 流式回退处理（只在首次连接前）
                 if self._current_selection:
-                    # 使用回退管理器的流式方法
-                    last_error = None
-                    tried_models = set()
-
-                    # 尝试原始模型
-                    for attempt in range(llm_fallback_manager.max_fallback_attempts):
-                        selection = self._current_selection
-
-                        # 如果不是第一次尝试，获取回退候选
-                        if attempt > 0:
-                            candidates = llm_fallback_manager._get_fallback_candidates(
-                                self._current_selection,
-                                tried_models,
-                            )
-                            if not candidates:
-                                break
-                            selection = candidates[0]
-                            tried_models.add(selection.config.model_name)
-                            logger.info(f"[LLM] Fallback attempt {attempt}: trying {selection.config.model_name}")
-
-                        try:
-                            async for chunk in _stream_with_selection(selection):
-                                chunk_count += 1
-                                if first_chunk_time is None:
-                                    first_chunk_time = _time.perf_counter()
-                                    ttfc = (first_chunk_time - start_time) * 1000
-                                    logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={selection.config.model_name}, ttfc={ttfc:.0f}ms")
-                                yield chunk
-
-                            # 成功完成流式传输
-                            await circuit_breaker_service.record_success("primary_llm")
-
-                            # 记录回退成功
-                            if attempt > 0:
-                                logger.success(
-                                    f"[LLM] Stream fallback SUCCESS: "
-                                    f"final_model={selection.config.model_name}"
-                                )
-                            return  # 退出函数
-
-                        except Exception as e:
-                            last_error = e
-                            reason = llm_fallback_manager._detect_fallback_reason(e)
-                            if reason:
-                                logger.warning(
-                                    f"[LLM] Stream attempt {attempt + 1} failed: "
-                                    f"model={selection.config.model_name}, reason={reason.value}"
-                                )
-                                model_key = llm_fallback_manager._get_model_key_from_selection(selection)
-                                await llm_fallback_manager.health_tracker.record_failure(model_key, reason)
-                                tried_models.add(model_key)
-                                # 短暂延迟后重试
-                                await asyncio.sleep(llm_fallback_manager._calculate_backoff_delay(attempt))
-                            else:
-                                # 非回退类型错误，直接抛出
-                                raise e
-
-                    # 所有尝试都失败
-                    await circuit_breaker_service.record_failure("primary_llm")
-                    if last_error:
-                        raise last_error
-                    raise HTTPException(status_code=503, detail="All LLM models unavailable")
+                    async for chunk in llm_fallback_manager.execute_stream_with_fallback(
+                        self._current_selection,
+                        _stream_with_selection,
+                        operation_type="stream_chat",
+                    ):
+                        chunk_count += 1
+                        if first_chunk_time is None:
+                            first_chunk_time = _time.perf_counter()
+                            ttfc = (first_chunk_time - start_time) * 1000
+                            logger.info(f"[LLM] stream_chat FIRST_CHUNK: ttfc={ttfc:.0f}ms")
+                        yield chunk
+                    await circuit_breaker_service.record_success("primary_llm")
+                    return
 
                 else:
                     # 没有当前选择，直接调用
@@ -797,7 +935,15 @@ class LLMService:
                 if self._extra_body:
                     request_params["extra_body"] = self._extra_body
 
-                response = await self.provider.client.chat.completions.create(**request_params)
+                selection = self._current_selection
+                if selection:
+                    response = await self._create_raw_completion_with_fallback(
+                        selection,
+                        request_params,
+                        operation_type="chat_with_tools",
+                    )
+                else:
+                    response = await self.provider.client.chat.completions.create(**request_params)
 
                 choice = response.choices[0]
                 message = choice.message
@@ -883,7 +1029,15 @@ class LLMService:
                 if self._extra_body:
                     request_params["extra_body"] = self._extra_body
 
-                response = await self.provider.client.chat.completions.create(**request_params)
+                selection = self._current_selection
+                if selection:
+                    response = await self._create_raw_completion_with_fallback(
+                        selection,
+                        request_params,
+                        operation_type="continue_with_tool_results",
+                    )
+                else:
+                    response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
 
@@ -943,12 +1097,24 @@ class LLMService:
                 if self._extra_body:
                     request_params["extra_body"] = self._extra_body
 
-                stream = await self.provider.client.chat.completions.create(**request_params)
-
                 collected_tool_call_chunks = {}
                 usage_data = None
 
-                async for chunk in stream:
+                selection = self._current_selection
+                if selection:
+                    chunk_stream = self._create_raw_stream_with_fallback(
+                        selection,
+                        request_params,
+                        operation_type="chat_stream_with_tools",
+                    )
+                else:
+                    async def _direct_stream() -> AsyncGenerator[Any, None]:
+                        stream = await self.provider.client.chat.completions.create(**request_params)
+                        async for item in stream:
+                            yield item
+                    chunk_stream = _direct_stream()
+
+                async for chunk in chunk_stream:
                     if hasattr(chunk, 'usage') and chunk.usage:
                         usage_data = chunk.usage
 
@@ -956,6 +1122,14 @@ class LLMService:
                         delta = chunk.choices[0].delta
                         if delta.content:
                             yield StreamChunk(type="text", content=delta.content)
+
+                        # MIMO 特有：处理思考链内容 (reasoning_content)
+                        if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                            yield StreamChunk(type="reasoning", reasoning_content=delta.reasoning_content)
+
+                        # MIMO 特有：处理联网搜索引用 (annotations)
+                        if hasattr(delta, 'annotations') and delta.annotations:
+                            yield StreamChunk(type="annotation", annotations=list(delta.annotations))
 
                         if delta.tool_calls:
                             for tc_chunk in delta.tool_calls:
@@ -1104,6 +1278,8 @@ def get_llm_service(agent_role: AgentRole | str) -> LLMService:
 async def get_configured_llm_service(
     agent_role: AgentRole | str,
     task_type: TaskType | None = None,
+    avoid_providers: list[ModelProvider] | None = None,
+    reasoning_mode: str | None = None,
 ) -> LLMService:
     """
     获取已按角色/任务完成模型路由的 LLM 服务实例。
@@ -1113,11 +1289,37 @@ async def get_configured_llm_service(
     """
     service = get_llm_service(agent_role)
     if task_type is not None:
-        await service.switch_model_for_task(task_type)
+        await service.switch_model_for_task(
+            task_type,
+            avoid_providers=avoid_providers,
+            reasoning_mode=reasoning_mode,
+        )
     return service
 
 
-def get_llm_service_for_task(task_type: TaskType) -> LLMService:
+async def get_configured_llm_service_for_tier(
+    agent_role: AgentRole | str,
+    force_tier: ModelTier,
+    task_type: TaskType | None = None,
+    reasoning_mode: str | None = None,
+) -> LLMService:
+    """获取按指定 tier 强制路由后的 LLM 服务实例。"""
+    service = get_llm_service(agent_role)
+    selection = llm_router.select_model(
+        agent_role,
+        task_type=task_type,
+        force_tier=force_tier,
+        reasoning_mode=reasoning_mode,
+        allow_max=force_tier == ModelTier.MAX,
+    )
+    service._init_with_router(selection)
+    return service
+
+
+def get_llm_service_for_task(
+    task_type: TaskType,
+    avoid_providers: list[ModelProvider] | None = None,
+) -> LLMService:
     """
     获取适合特定任务的LLM服务实例
 
@@ -1129,9 +1331,27 @@ def get_llm_service_for_task(task_type: TaskType) -> LLMService:
         reason_llm = get_llm_service_for_task(TaskType.DEEP_REASONING)
         response = await reason_llm.chat(messages)
     """
-    from app.core.llm_router import select_model_for_task
-    selection = select_model_for_task(task_type)
-    return LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+    from app.core.agent_profiles import agent_profile_registry
+
+    role = agent_profile_registry.get_profile_for_task(task_type).role
+    selection = llm_router.select_model(
+        agent_role=role,
+        task_type=task_type,
+        avoid_providers=avoid_providers,
+    )
+    service = LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+    service._init_with_router(selection)
+    return service
+
+
+async def get_llm_service_for_specific_model(
+    model_key: str,
+    agent_role: AgentRole | str = AgentRole.GENERATION,
+) -> LLMService:
+    """获取并切换到指定 model_key 的 LLM 服务实例。"""
+    service = get_llm_service(agent_role)
+    await service.switch_to_specific_model(model_key)
+    return service
 
 
 # ==========================================

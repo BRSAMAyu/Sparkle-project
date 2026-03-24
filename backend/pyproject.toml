@@ -55,10 +55,15 @@ dependencies = [
     "tiktoken>=0.5.2",
     "pypdf>=3.0.0",
     "pdfplumber>=0.10.0",
+    "readmdict>=0.1.1",
+    "python-lzo>=1.15",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
 
     # Additional Dependencies
     "sse-starlette",
     "loguru",
+    "structlog>=24.1.0",
     "json-repair",
     "typing-extensions",
     "email-validator>=2.0.0",
@@ -125,6 +130,8 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [tool.uv]
+# Use Aliyun mirror for China network (comment out if overseas)
+index-url = "https://mirrors.aliyun.com/pypi/simple/"
 dev-dependencies = [
     "pytest>=7.4.4",
     "pytest-asyncio>=0.23.3",

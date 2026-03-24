@@ -8,6 +8,7 @@ Production-grade features:
 - Offline push notification hooks
 - Message deduplication via message IDs
 """
+from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
@@ -67,6 +68,9 @@ class ConnectionManager:
         self.redis: redis.Redis | None = None
         self.pubsub: redis.client.PubSub | None = None
         self.listener_task: asyncio.Task | None = None
+
+        # ACK tracking: user_id -> {message_id: asyncio.Event}
+        self._ack_events: dict[str, dict[str, asyncio.Event]] = {}
 
     async def init_redis(self):
         """Initialize Redis connection for Pub/Sub"""
@@ -266,7 +270,8 @@ class ConnectionManager:
                     try:
                         await ws.send_json({"type": "error", "message": f"Kicked: {reason}"})
                         await ws.close(code=4001)
-                    except: pass
+                    except RuntimeError:
+                        pass
 
     async def broadcast(self, message: dict, group_id: str):
         """Broadcast to group (Distributed)"""
@@ -371,56 +376,98 @@ class ConnectionManager:
 
     # ========== Production-grade Features ==========
 
-    async def send_with_ack(self, message: dict, user_id: str, timeout: float = 5.0) -> bool:
+    async def send_with_ack(
+        self,
+        message: dict,
+        user_id: str,
+        timeout: float = 5.0,
+        max_retries: int = 3
+    ) -> bool:
         """
-        Send message and wait for ACK, return whether delivery was successful.
+        Send message and wait for ACK, with retry mechanism.
 
-        This is used for critical messages where delivery confirmation is required.
+        Args:
+            message: The message to send
+            user_id: Target user ID
+            timeout: Timeout for each ACK wait (seconds)
+            max_retries: Maximum number of retry attempts
+
+        Returns:
+            True if ACK received, False otherwise
         """
-        message_id = message.get("id") or str(uuid.uuid4())
+        message_id = message.get("id") or message.get("msg_id") or str(uuid.uuid4())
         message["msg_id"] = message_id
 
+        # Create Event for this ACK
+        if user_id not in self._ack_events:
+            self._ack_events[user_id] = {}
+        ack_event = asyncio.Event()
+        self._ack_events[user_id][message_id] = ack_event
+
+        try:
+            for attempt in range(max_retries):
+                # Send message
+                await self.send_personal_message(message, user_id)
+
+                # Wait for ACK using Event (no polling)
+                try:
+                    await asyncio.wait_for(ack_event.wait(), timeout=timeout)
+                    logger.debug(f"ACK received for message {message_id} from user {user_id} (attempt {attempt + 1})")
+                    return True
+                except asyncio.TimeoutError:
+                    if attempt < max_retries - 1:
+                        # Exponential backoff
+                        backoff = min(2 ** attempt, 5)
+                        logger.warning(f"ACK timeout for message {message_id}, retrying in {backoff}s (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(backoff)
+                    else:
+                        logger.warning(f"ACK failed for message {message_id} to user {user_id} after {max_retries} attempts")
+                        # Store to offline queue for later delivery
+                        await self._store_to_offline_queue(user_id, message, message_id)
+                        return False
+        finally:
+            # Cleanup
+            if user_id in self._ack_events and message_id in self._ack_events[user_id]:
+                del self._ack_events[user_id][message_id]
+                if not self._ack_events[user_id]:
+                    del self._ack_events[user_id]
+
+    async def _store_to_offline_queue(self, user_id: str, message: dict, message_id: str):
+        """Store failed message to offline queue for later delivery."""
         if not self.redis:
-            # Fallback for single-instance: just send without ACK tracking
-            await self.send_personal_message(message, user_id)
-            return True
+            return
 
-        # Store pending ACK
-        await self.redis.setex(
-            f"ws:pending_ack:{user_id}:{message_id}",
-            int(timeout),
-            json.dumps({"timestamp": time.time()})
+        queue_item = {
+            "user_id": user_id,
+            "message_id": message_id,
+            "message": message,
+            "queued_at": time.time(),
+            "retry_count": 0
+        }
+        await self.redis.rpush(
+            f"ws:offline_queue:{user_id}",
+            json.dumps(queue_item)
         )
-
-        await self.send_personal_message(message, user_id)
-
-        # Wait for ACK (simplified polling implementation)
-        start = time.time()
-        while time.time() - start < timeout:
-            exists = await self.redis.exists(f"ws:ack:{user_id}:{message_id}")
-            if exists:
-                await self.redis.delete(f"ws:ack:{user_id}:{message_id}")
-                logger.debug(f"ACK received for message {message_id} from user {user_id}")
-                return True
-            await asyncio.sleep(0.05)
-
-        logger.warning(f"ACK timeout for message {message_id} to user {user_id}")
-        return False  # Timeout - user offline or connection issue
+        logger.info(f"Stored message {message_id} to offline queue for user {user_id}")
 
     async def record_ack(self, user_id: str, message_id: str):
         """
         Record client ACK for a message.
 
         Called when client sends back an ACK message.
+        Uses Event for immediate notification instead of Redis polling.
         """
-        if not self.redis:
-            return
+        # Set the Event if waiting
+        if user_id in self._ack_events and message_id in self._ack_events[user_id]:
+            self._ack_events[user_id][message_id].set()
 
-        await self.redis.setex(
-            f"ws:ack:{user_id}:{message_id}",
-            60,  # Keep for 1 minute
-            "1"
-        )
+        # Also store in Redis for distributed tracking
+        if self.redis:
+            await self.redis.setex(
+                f"ws:ack:{user_id}:{message_id}",
+                60,  # Keep for 1 minute
+                "1"
+            )
         logger.debug(f"Recorded ACK for message {message_id} from user {user_id}")
 
     async def is_user_online(self, user_id: str) -> bool:
@@ -467,7 +514,7 @@ class ConnectionManager:
         """
         Trigger offline push notification for user.
 
-        Integrates with FCM/APNs or other push services.
+        Integrates with FCM/APNs via PushSenderService for actual delivery.
         """
         msg_type = message.get("type")
 
@@ -485,6 +532,7 @@ class ConnectionManager:
             if not locked:
                 return
 
+        # 1. Persist notification to database
         try:
             async with AsyncSessionLocal() as db:
                 await NotificationService.create(
@@ -500,6 +548,7 @@ class ConnectionManager:
         except Exception as exc:
             logger.warning(f"Failed to persist offline notification for user {user_id}: {exc}")
 
+        # 2. Enqueue to system update queue (for notification center sync)
         try:
             await SystemUpdateService(self.redis).enqueue(
                 user_id,
@@ -519,36 +568,48 @@ class ConnectionManager:
         except Exception as exc:
             logger.warning(f"Failed to enqueue offline system update for user {user_id}: {exc}")
 
-        # Get user device tokens
-        device_tokens = await self._get_user_device_tokens(user_id)
-        if not device_tokens:
-            logger.debug(f"No device tokens for user {user_id}")
-            return
+        # 3. Send via FCM/APNs using PushSenderService
+        try:
+            from app.services.push_sender_service import PushSenderService, PushPayload
 
-        # Construct push payload
-        push_data = {
-            "title": title,
-            "body": body,
-            "data": {
-                "type": msg_type,
-                "message_id": message.get("id") or message.get("msg_id"),
-                "group_id": message.get("group_id"),
-                "sender_id": message.get("sender", {}).get("id") if isinstance(message.get("sender"), dict) else None,
-            }
-        }
+            async with AsyncSessionLocal() as db:
+                push_service = PushSenderService(db)
 
-        # Store to push queue (to be processed by push service)
-        for token in device_tokens:
-            await self.redis.rpush(
-                "push:queue",
-                json.dumps({
-                    "token": token,
-                    "payload": push_data,
-                    "user_id": user_id
-                })
-            )
+                # Build deep link based on message type
+                deep_link = self._build_deep_link(message)
 
-        logger.info(f"Queued push notification for user {user_id}, type={msg_type}")
+                payload = PushPayload(
+                    title=title,
+                    body=body,
+                    notification_type=notification_type,
+                    deep_link=deep_link,
+                    data={
+                        "type": msg_type or "message",
+                        "message_id": message.get("id") or message.get("msg_id"),
+                        "group_id": message.get("group_id"),
+                        "sender_id": (
+                            message.get("sender", {}).get("id")
+                            if isinstance(message.get("sender"), dict)
+                            else None
+                        ),
+                        "deep_link": deep_link,
+                    },
+                )
+
+                result = await push_service.send_to_user(user_id, payload)
+
+                if result.success:
+                    logger.info(
+                        f"FCM push sent to user {user_id}: "
+                        f"{result.success_count} devices, type={msg_type}"
+                    )
+                else:
+                    logger.warning(
+                        f"FCM push failed for user {user_id}: {result.error}"
+                    )
+
+        except Exception as exc:
+            logger.warning(f"Failed to send FCM push for user {user_id}: {exc}")
 
     async def _get_user_device_tokens(self, user_id: str) -> list[str]:
         """
@@ -564,7 +625,7 @@ class ConnectionManager:
                 if cached:
                     try:
                         return json.loads(cached)
-                    except:
+                    except (json.JSONDecodeError, TypeError):
                         pass  # 缓存损坏，继续查询
 
             # 如果缓存未命中，需要从数据库查询
@@ -633,6 +694,47 @@ class ConnectionManager:
             duration = message.get("duration", 0)
             return f"{nickname} 打卡了 {duration} 分钟"
         return "您有一条新消息"
+
+    @staticmethod
+    def _build_deep_link(message: dict) -> str | None:
+        """
+        Build deep link URL based on message type for notification tap navigation.
+
+        Returns:
+            Deep link URL like sparkle://task/uuid or None
+        """
+        msg_type = message.get("type")
+
+        # Map message types to deep link patterns
+        if msg_type == "task_reminder":
+            task_id = message.get("data", {}).get("task_id") or message.get("task_id")
+            if task_id:
+                return f"sparkle://task/{task_id}"
+
+        elif msg_type == "achievement":
+            achievement_id = message.get("data", {}).get("achievement_id") or message.get("achievement_id")
+            if achievement_id:
+                return f"sparkle://achievement/{achievement_id}"
+
+        elif msg_type in ["chat_message", "message"]:
+            session_id = message.get("session_id") or message.get("chat_id")
+            if session_id:
+                return f"sparkle://chat/{session_id}"
+
+        elif msg_type == "plan_review":
+            plan_id = message.get("data", {}).get("plan_id") or message.get("plan_id")
+            if plan_id:
+                return f"sparkle://plan/{plan_id}/review"
+
+        elif msg_type == "notification":
+            # Generic notification with entity reference
+            data = message.get("data", {})
+            entity_type = data.get("entity_type")
+            entity_id = data.get("entity_id")
+            if entity_type and entity_id:
+                return f"sparkle://{entity_type}/{entity_id}"
+
+        return None
 
 manager = ConnectionManager()
 

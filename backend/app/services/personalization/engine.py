@@ -1,6 +1,7 @@
 """
 Personalization Engine - 偏好到策略的映射中心
 """
+from __future__ import annotations
 from uuid import UUID
 
 from app.core.profile_context import ProfileContext
@@ -197,10 +198,22 @@ class PersonalizationEngine:
         base_interval = 120
         min_interval = min(base_interval * (1 + consecutive_ignores * 0.5), 360)
 
+        # 优先从 schedule_preferences 读取周日程表（168格格式）
         active_hours = []
-        slots = explicit.get("active_slots", [])
-        if isinstance(slots, dict):
-            slots = slots.get("slots", [])
+        slots = []
+        schedule_prefs = explicit.get("schedule_preferences")
+        if schedule_prefs and isinstance(schedule_prefs, dict) and "grid" in schedule_prefs:
+            from app.utils.schedule_converter import weekly_grid_to_weekly_active_hours
+
+            grid = schedule_prefs.get("grid")
+            if grid and isinstance(grid, list) and len(grid) == 168:
+                active_hours = weekly_grid_to_weekly_active_hours(grid, timezone)
+
+        # 如果没有 schedule_preferences 或解析失败，回退到 active_slots
+        if not active_hours:
+            slots = explicit.get("active_slots", [])
+            if isinstance(slots, dict):
+                slots = slots.get("slots", [])
         current_dow = ctx.get("current_local_dow")
         for slot in slots:
             slot_dow = slot.get("dow")

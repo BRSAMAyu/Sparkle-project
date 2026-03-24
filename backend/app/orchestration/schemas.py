@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Phase 1, Phase 2 & Phase 3 Schemas for Full-Loop Closed System
 
@@ -28,12 +29,12 @@ REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
 REPLAN_MAX_PER_WINDOW = 3  # max replans per window
 
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any, Literal
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(UTC).replace(tzinfo=None).isoformat()
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
 @dataclass
@@ -127,7 +128,7 @@ class ExecutablePlan:
 
     # Phase 3: Multi-Agent Collaboration metadata
     agents_involved: list[str] = field(default_factory=list)  # NEW
-    collaboration_mode: Literal["single", "sequential", "parallel"] = "single"  # NEW
+    collaboration_mode: Literal["single", "sequential", "parallel", "debate", "delegation"] = "single"  # NEW
     collaboration_order: list[dict[str, str]] = field(default_factory=list)  # NEW
     collaboration_narrative: str | None = None  # Phase 3: Collaboration narrative
 

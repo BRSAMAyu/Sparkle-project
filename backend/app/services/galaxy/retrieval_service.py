@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.core.metrics import RAG_RETRIEVAL_LATENCY, RETRIEVAL_ERROR_TOTAL, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
+from app.db.extensions import is_vector_extension_available
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -26,9 +28,62 @@ except ImportError:
     # Handle circular import or missing dependency during tests
     semantic_cache_service = None
 
+_PGVECTOR_RUNTIME_ENABLED = True
+
 class KnowledgeRetrievalService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _is_vector_runtime_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        markers = (
+            "vector.so",
+            "pgvector",
+            'type "vector" does not exist',
+            "could not load library",
+            "operator does not exist: vector",
+        )
+        return any(marker in lowered for marker in markers)
+
+    @staticmethod
+    def _disable_vector_runtime(reason: str) -> None:
+        global _PGVECTOR_RUNTIME_ENABLED
+        if _PGVECTOR_RUNTIME_ENABLED:
+            logger.warning(f"Disabling retrieval pgvector runtime fallback: {reason}")
+        _PGVECTOR_RUNTIME_ENABLED = False
+
+    async def _vector_runtime_available(self) -> bool:
+        if not _PGVECTOR_RUNTIME_ENABLED:
+            return False
+        available = await is_vector_extension_available(self.db)
+        if not available:
+            self._disable_vector_runtime("pgvector extension unavailable")
+        return available
+
+    async def _keyword_fallback(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        subject_id: int | None,
+        limit: int,
+    ) -> list[SearchResultItem]:
+        try:
+            keyword_nodes = await self.keyword_search(
+                user_id=user_id_uuid,
+                query=query_str,
+                subject_id=subject_id,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning(f"Keyword fallback search failed: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="keyword_fallback", stage="retrieve").inc()
+            return []
+
+        if not keyword_nodes:
+            return []
+
+        return await self._build_results_from_nodes(keyword_nodes[:limit], user_id_uuid)
 
     async def _get_knowledge_version(self) -> str | None:
         if not cache_service.redis:
@@ -115,7 +170,12 @@ class KnowledgeRetrievalService:
         # 2. Prepare Queries
         start_time = time.time()
         actual_vector_text = vector_query if vector_query else query_str
-        query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        try:
+            query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        except Exception as e:
+            logger.warning(f"Embedding generation failed for hybrid search: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
         # 3. Parallel Retrieval
         vector_limit = limit * 10
@@ -264,6 +324,10 @@ class KnowledgeRetrievalService:
         threshold: float,
         use_reranker: bool,
     ) -> list[SearchResultItem]:
+        if not await self._vector_runtime_available():
+            logger.info("Skipping pgvector fallback because vector runtime is unavailable")
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+
         fallback_start = time.time()
         candidate_limit = max(limit * 5, limit)
 
@@ -275,6 +339,9 @@ class KnowledgeRetrievalService:
                 threshold=threshold,
             )
         except Exception as e:
+            if self._is_vector_runtime_error(e):
+                self._disable_vector_runtime(str(e))
+                return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
             logger.warning(f"pgvector fallback search failed: {e}")
             RETRIEVAL_ERROR_TOTAL.labels(source="pgvector_fallback", stage="retrieve").inc()
             return []
@@ -284,7 +351,8 @@ class KnowledgeRetrievalService:
         )
 
         if not candidates:
-            return []
+            logger.info("pgvector fallback returned no candidates, trying keyword fallback")
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
         rerank_start = time.time()
         if use_reranker:
@@ -308,7 +376,12 @@ class KnowledgeRetrievalService:
             time.time() - rerank_start
         )
 
-        return await self._build_results_from_nodes(reranked, user_id_uuid)
+        results = await self._build_results_from_nodes(reranked, user_id_uuid)
+        if results:
+            return results
+
+        logger.info("pgvector fallback produced no assembled results, trying keyword fallback")
+        return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
     async def document_vector_search(
         self,
@@ -323,6 +396,8 @@ class KnowledgeRetrievalService:
         Vector search over document chunks with forced file scope.
         """
         if not query or not file_ids:
+            return []
+        if not await self._vector_runtime_available():
             return []
 
         actual_vector_text = vector_query if vector_query else query
@@ -342,7 +417,13 @@ class KnowledgeRetrievalService:
             .limit(limit * 5)
         )
 
-        result = await self.db.execute(stmt)
+        try:
+            result = await self.db.execute(stmt)
+        except Exception as exc:
+            if not self._is_vector_runtime_error(exc):
+                raise
+            self._disable_vector_runtime(str(exc))
+            return []
         rows = result.all()
 
         results: list[DocumentChunkResult] = []
@@ -363,6 +444,9 @@ class KnowledgeRetrievalService:
         threshold: float = 0.3
     ) -> list[KnowledgeNode]:
         """Internal semantic search that returns KnowledgeNode models"""
+        if not await self._vector_runtime_available():
+            return []
+
         query_embedding = await embedding_service.get_embedding(query, text_type="query")
 
         search_query = (
@@ -386,7 +470,13 @@ class KnowledgeRetrievalService:
             .limit(limit)
         )
 
-        result = await self.db.execute(search_query)
+        try:
+            result = await self.db.execute(search_query)
+        except Exception as exc:
+            if not self._is_vector_runtime_error(exc):
+                raise
+            self._disable_vector_runtime(str(exc))
+            return []
         matches = result.all()
 
         return [node for node, distance in matches if distance <= threshold]
@@ -433,12 +523,6 @@ class KnowledgeRetrievalService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-
-@dataclass
-class DocumentChunkResult:
-    chunk: DocumentChunk
-    file_name: str
-    score: float
 
     # --- Helpers ---
     async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
@@ -501,3 +585,10 @@ class DocumentChunkResult:
             similarity=score,
             user_status=user_status_info
         )
+
+
+@dataclass
+class DocumentChunkResult:
+    chunk: DocumentChunk
+    file_name: str
+    score: float

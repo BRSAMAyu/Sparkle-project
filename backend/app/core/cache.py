@@ -2,6 +2,8 @@
 Redis Caching Module
 负责缓存管理，提供装饰器和工具函数
 """
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json

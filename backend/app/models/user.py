@@ -2,7 +2,19 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
+from __future__ import annotations
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
@@ -11,18 +23,29 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class UserStatus(enum.StrEnum):
+# 导出 SearchVisibility 供其他模块使用
+__all__ = ['UserStatus', 'AvatarStatus', 'SearchVisibility', 'User', 'PushPreference', 'UserDevice', 'LoginAttempt']
+
+
+class UserStatus(StrEnum):
     """用户在线状态"""
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(enum.StrEnum):
+class AvatarStatus(StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核
     REJECTED = "rejected"   # 审核驳回
+
+
+class SearchVisibility(StrEnum):
+    """用户搜索可见性设置"""
+    EVERYONE = "everyone"   # 所有人可搜索
+    FRIENDS = "friends"     # 仅好友可搜索
+    NOBODY = "nobody"       # 不可搜索
 
 
 class User(BaseModel):
@@ -31,6 +54,7 @@ class User(BaseModel):
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    password_login_enabled = Column(Boolean, default=True, nullable=False)
     email_verified = Column(Boolean, default=False, nullable=False)
     full_name = Column(String(100), nullable=True)
     nickname = Column(String(100), nullable=True)
@@ -68,6 +92,11 @@ class User(BaseModel):
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
     last_login_at = Column(DateTime, nullable=True)
     token_revoked_before = Column(DateTime, nullable=True)
+    agreed_to_tos_at = Column(DateTime, nullable=True)
+    agreed_to_privacy_at = Column(DateTime, nullable=True)
+    tos_version = Column(String(50), nullable=True)
+    privacy_version = Column(String(50), nullable=True)
+    agreed_locale = Column(String(20), nullable=True)
 
     # 🆕 年龄校验 (V3.1)
     is_minor = Column(Boolean, nullable=True)  # None = unknown, True/False = verified
@@ -84,6 +113,17 @@ class User(BaseModel):
     equipped_skin_source = Column(String(20), nullable=True, index=True)  # achievement | shop
     equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
     equipped_title_source = Column(String(20), nullable=True, index=True)  # achievement | shop
+
+    # 🆕 社群隐私设置 (V3.3)
+    searchable_by = Column(
+        Enum(
+            SearchVisibility,
+            name="searchvisibility",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=SearchVisibility.EVERYONE,
+        nullable=False,
+    )
 
     # 关系定义
     push_preference = relationship(
@@ -256,6 +296,13 @@ class User(BaseModel):
         cascade="all, delete-orphan",
         lazy="dynamic",
         order_by="desc(PhotonTransactionHistory.created_at)"
+    )
+
+    candidate_feedbacks = relationship(
+        "CandidateActionFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
     )
 
     def __repr__(self):

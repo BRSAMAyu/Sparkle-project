@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 
 // Notification message model
@@ -224,8 +225,8 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                     child: Text(
                                       widget.notification.type ==
                                               NotificationType.mention
-                                          ? '提及'
-                                          : '群消息',
+                                          ? context.l10n.chatNotificationMention
+                                          : context.l10n.chatNotificationGroupMessage,
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: DS.brandPrimaryConst,

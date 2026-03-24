@@ -28,9 +28,9 @@ class ErrorBookRepository {
   /// }
   Future<ErrorRecord> createError({
     required String questionText,
-    required String userAnswer,
-    required String correctAnswer,
     required String subject,
+    String? userAnswer,
+    String? correctAnswer,
     String? chapter,
     String? questionImageUrl,
   }) async {
@@ -39,9 +39,11 @@ class ErrorBookRepository {
         _basePath,
         data: {
           'question_text': questionText,
-          'user_answer': userAnswer,
-          'correct_answer': correctAnswer,
           'subject': subject,
+          if (userAnswer != null && userAnswer.isNotEmpty)
+            'user_answer': userAnswer,
+          if (correctAnswer != null && correctAnswer.isNotEmpty)
+            'correct_answer': correctAnswer,
           if (chapter != null) 'chapter': chapter,
           if (questionImageUrl != null) 'question_image_url': questionImageUrl,
         },
@@ -104,7 +106,8 @@ class ErrorBookRepository {
   /// 返回包含 AI 分析和关联知识点的完整信息
   Future<ErrorRecord> getError(String errorId) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
+      final response =
+          await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleError(e, '获取错题详情失败');
@@ -124,12 +127,12 @@ class ErrorBookRepository {
     String? chapter,
   }) async {
     try {
-        final data = <String, dynamic>{
-          if (questionText != null) 'question_text': questionText,
-          if (userAnswer != null) 'user_answer': userAnswer,
-          if (correctAnswer != null) 'correct_answer': correctAnswer,
-          if (subject != null) 'subject': subject,
-          if (chapter != null) 'chapter': chapter,
+      final data = <String, dynamic>{
+        if (questionText != null) 'question_text': questionText,
+        if (userAnswer != null) 'user_answer': userAnswer,
+        if (correctAnswer != null) 'correct_answer': correctAnswer,
+        if (subject != null) 'subject': subject,
+        if (chapter != null) 'chapter': chapter,
       };
 
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -248,7 +251,8 @@ class ErrorBookRepository {
       final response =
           await _dio.get<Map<String, dynamic>>('$_basePath/$errorId/semantic');
       return ErrorSemanticSummary.fromJson(
-          response.data ?? <String, dynamic>{},);
+        response.data ?? <String, dynamic>{},
+      );
     } on DioException catch (e) {
       throw _handleError(e, '获取语义摘要失败');
     }

@@ -1,8 +1,9 @@
+from __future__ import annotations
 import asyncio
 import hashlib
 import json
 import os
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -23,7 +24,7 @@ from app.services.compliance.crypto_erase import CryptoEraseManager
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ShadowKafkaWriter:

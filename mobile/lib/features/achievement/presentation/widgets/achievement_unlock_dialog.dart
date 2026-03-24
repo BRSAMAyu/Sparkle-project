@@ -1,11 +1,17 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就解锁弹窗
@@ -16,6 +22,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     required this.event,
     super.key,
     this.onShare,
+    this.onViewRewards,
     this.onClose,
     this.comboCount,
     this.milestoneInfo,
@@ -24,6 +31,7 @@ class AchievementUnlockDialog extends StatefulWidget {
   /// 接受AchievementUnlockEvent (来自achievement_model.dart)
   final AchievementUnlockEvent event;
   final VoidCallback? onShare;
+  final VoidCallback? onViewRewards;
   final VoidCallback? onClose;
 
   /// 成就连击数量 (P1功能)
@@ -37,6 +45,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     BuildContext context,
     chat.AchievementUnlockEvent wsEvent, {
     VoidCallback? onShare,
+    VoidCallback? onViewRewards,
     bool barrierDismissible = true,
     int? comboCount,
     MilestoneInfo? milestoneInfo,
@@ -53,8 +62,12 @@ class AchievementUnlockDialog extends StatefulWidget {
         visualEffect: event.visualEffect,
         visualEffectType: event.visualEffectType,
         rewards: event.rewards,
+        rewardPreview: event.rewardPreview,
+        surfacePreview: event.surfacePreview,
+        gloryLines: event.gloryLines,
       ),
       onShare: onShare,
+      onViewRewards: onViewRewards,
       barrierDismissible: barrierDismissible,
       comboCount: comboCount,
       milestoneInfo: milestoneInfo,
@@ -70,11 +83,12 @@ class AchievementUnlockDialog extends StatefulWidget {
     BuildContext context,
     AchievementUnlockEvent event, {
     VoidCallback? onShare,
+    VoidCallback? onViewRewards,
     bool barrierDismissible = true,
     int? comboCount,
     MilestoneInfo? milestoneInfo,
   }) =>
-      showGeneralDialog(
+      showSensoryGeneralDialog(
         context: context,
         barrierDismissible: barrierDismissible,
         barrierLabel: 'Achievement Unlock',
@@ -84,6 +98,7 @@ class AchievementUnlockDialog extends StatefulWidget {
             AchievementUnlockDialog(
           event: event,
           onShare: onShare,
+          onViewRewards: onViewRewards,
           comboCount: comboCount,
           milestoneInfo: milestoneInfo,
         ),
@@ -105,6 +120,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotateAnimation;
   late Animation<double> _glowAnimation;
+  bool _showLegendaryAura = false;
 
   @override
   void initState() {
@@ -124,7 +140,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         curve: Curves.elasticOut,
       ),
     );
-    _scaleController.forward();
+    unawaited(_scaleController.forward());
 
     // 旋转动画
     _rotateController = AnimationController(
@@ -158,50 +174,55 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }
 
   void _startRarityAnimations() {
+    unawaited(BgmService.boostTemporarily());
     switch (widget.event.rarity) {
       case AchievementRarity.common:
-        // 简单淡入，无特殊效果
-        break;
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
+        );
       case AchievementRarity.rare:
-        // 金色光晕 + 缓慢旋转
-        _glowController.repeat(reverse: true);
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
+        );
+        unawaited(_glowController.repeat(reverse: true));
       case AchievementRarity.epic:
-        // 紫色脉动光圈 + 扩散波纹
-        _glowController.repeat(reverse: true);
-        _particleController.repeat();
+        unawaited(
+          SensoryFeedbackService.emitSeries(
+            const [
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementRare,
+              SensoryFeedbackEvent.achievementEpic,
+            ],
+            gap: const Duration(milliseconds: 150),
+          ),
+        );
+        unawaited(_glowController.repeat(reverse: true));
+        unawaited(_particleController.repeat());
       case AchievementRarity.legendary:
-        // 彩虹粒子爆炸 + 屏幕震动效果
-        _rotateController.repeat();
-        _particleController.repeat();
-        _glowController.repeat(reverse: true);
-
-        // 屏幕震动
-        if (mounted) {
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted) {
-              _triggerScreenShake();
-            }
-          });
-        }
-    }
-  }
-
-  void _triggerScreenShake() {
-    // 震动反馈
-    switch (widget.event.rarity) {
-      case AchievementRarity.common:
-        // 普通成就无需震动，或仅使用极轻微震动
-        break;
-      case AchievementRarity.rare:
-        HapticFeedback.lightImpact();
-      case AchievementRarity.epic:
-        HapticFeedback.mediumImpact();
-      case AchievementRarity.legendary:
-        HapticFeedback.heavyImpact();
-        // 传说级额外震动
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) HapticFeedback.heavyImpact();
-        });
+        unawaited(
+          SensoryFeedbackService.emitSeries(
+            const [
+              SensoryFeedbackEvent.achievementLegendary,
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementRare,
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementLegendary,
+            ],
+            gap: const Duration(milliseconds: 120),
+          ),
+        );
+        _showLegendaryAura = true;
+        unawaited(
+          Future<void>.delayed(const Duration(seconds: 3), () {
+            if (!mounted) return;
+            setState(() {
+              _showLegendaryAura = false;
+            });
+          }),
+        );
+        unawaited(_rotateController.repeat());
+        unawaited(_particleController.repeat());
+        unawaited(_glowController.repeat(reverse: true));
     }
   }
 
@@ -218,31 +239,70 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   Widget build(BuildContext context) {
     final rarity = widget.event.rarity;
 
-    return Dialog(
-      backgroundColor: DS.overlay30.withValues(alpha: 0),
-      elevation: 0,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // 背景特效
-          if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
+    return BgmScope(
+      track: BgmTrack.celebration,
+      priority: BgmPriority.stage,
+      child: Dialog(
+        backgroundColor: DS.overlay30.withValues(alpha: 0),
+        elevation: 0,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 背景特效
+            if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
+            if (_showLegendaryAura) _buildLegendaryAura(),
 
-          // 连击横幅 (P1功能 - 成就连击反馈)
-          if (widget.comboCount != null && widget.comboCount! > 1)
-            _buildComboBanner(),
+            // 连击横幅 (P1功能 - 成就连击反馈)
+            if (widget.comboCount != null && widget.comboCount! > 1)
+              _buildComboBanner(),
 
-          // 主内容
-          _buildContent(),
+            // 主内容
+            _buildContent(),
 
-          // 粒子效果
-          if (rarity == AchievementRarity.rare ||
-              rarity == AchievementRarity.epic ||
-              rarity == AchievementRarity.legendary)
-            _buildParticleOverlay(),
-        ],
+            // 粒子效果
+            if (rarity == AchievementRarity.rare ||
+                rarity == AchievementRarity.epic ||
+                rarity == AchievementRarity.legendary)
+              _buildParticleOverlay(),
+            if (rarity != AchievementRarity.common)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: SparkleConfetti(
+                    play: true,
+                    enableSensory: false,
+                    alignment: Alignment.center,
+                    intensity: rarity == AchievementRarity.rare
+                        ? SparkleCelebrationIntensity.medium
+                        : SparkleCelebrationIntensity.large,
+                    particleCount: _confettiParticleCount(rarity),
+                    colors: _confettiColors(rarity),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  int _confettiParticleCount(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.common => 0,
+        AchievementRarity.rare => 25,
+        AchievementRarity.epic => 60,
+        AchievementRarity.legendary => 120,
+      };
+
+  List<Color> _confettiColors(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.common => [DS.neutral400],
+        AchievementRarity.rare => [DS.rarityRare, DS.info, DS.warning],
+        AchievementRarity.epic => [DS.rarityEpic, DS.warning, DS.info],
+        AchievementRarity.legendary => [
+            const Color(0xFFFFE082),
+            const Color(0xFFFFC107),
+            const Color(0xFFFFF8E1),
+            DS.warning,
+          ],
+      };
 
   Widget _buildContent() {
     final rarity = widget.event.rarity;
@@ -367,6 +427,28 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   if (widget.milestoneInfo != null)
                     _buildMilestoneSection(widget.milestoneInfo!),
 
+                  if (widget.event.rewardPreview.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildRewardPreviewSection(),
+                  ],
+
+                  if (widget.event.gloryLines.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildGloryLinesSection(),
+                  ],
+
+                  if (widget.event.surfacePreview.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildSurfacePreviewSection(),
+                  ],
+
+                  // 视觉元素奖励预览
+                  if (_hasVisualElementRewards())
+                    _VisualElementPreviewSection(
+                      rewards: widget.event.rewards!,
+                      glowAnimation: _glowAnimation,
+                    ),
+
                   const SizedBox(height: DS.spacing20),
 
                   // 操作按钮
@@ -374,6 +456,15 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (widget.onViewRewards != null) ...[
+                          _buildActionButton(
+                            icon: Icons.workspace_premium_outlined,
+                            label: '查看奖励',
+                            isPrimary: true,
+                            onPressed: widget.onViewRewards!,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                        ],
                         _buildActionButton(
                           icon: Icons.close,
                           label: '关闭',
@@ -397,6 +488,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   else
                     Row(
                       children: [
+                        if (widget.onViewRewards != null) ...[
+                          Expanded(
+                            child: _buildActionButton(
+                              icon: Icons.workspace_premium_outlined,
+                              label: '查看奖励',
+                              isPrimary: true,
+                              onPressed: widget.onViewRewards!,
+                            ),
+                          ),
+                          const SizedBox(width: DS.spacing12),
+                        ],
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.close,
@@ -555,6 +657,27 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         ),
       );
 
+  Widget _buildLegendaryAura() => Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _glowController,
+            builder: (context, child) => DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD54F)
+                        .withValues(alpha: 0.18 * _glowAnimation.value),
+                    blurRadius: 36,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
   Widget _buildActionButton({
     required IconData icon,
     required String label,
@@ -599,6 +722,138 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRewardPreviewSection() {
+    final colors = _getRarityColors();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.background.withValues(alpha: 0.72),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: colors.border.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '荣耀收获',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightBold,
+              color: colors.text,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...widget.event.rewardPreview.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: colors.border),
+                  const SizedBox(width: DS.spacing6),
+                  Expanded(
+                    child: Text(
+                      line,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: colors.text.withValues(alpha: 0.88),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGloryLinesSection() {
+    final colors = _getRarityColors();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.18),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
+      ),
+      child: Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: widget.event.gloryLines
+            .map(
+              (line) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing6,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.background.withValues(alpha: 0.8),
+                  borderRadius: DS.borderRadius12,
+                ),
+                child: Text(
+                  line,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightMedium,
+                    color: colors.text,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildSurfacePreviewSection() {
+    final colors = _getRarityColors();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '身份变化会出现在',
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightBold,
+            color: colors.text,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: widget.event.surfacePreview
+              .map(
+                (surface) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.background.withValues(alpha: 0.82),
+                    borderRadius: DS.borderRadius12,
+                    border:
+                        Border.all(color: colors.border.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    surface,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: colors.text,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 
@@ -841,6 +1096,95 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     if (count >= 5) return '太棒了！';
     if (count >= 3) return '继续！';
     return '不错！';
+  }
+
+  bool _hasVisualElementRewards() {
+    final rewards = widget.event.rewards;
+    if (rewards == null || rewards.isEmpty) return false;
+    return rewards.any((reward) => reward['type'] == 'visual_element');
+  }
+}
+
+class _VisualElementPreviewSection extends StatelessWidget {
+  const _VisualElementPreviewSection({
+    required this.rewards,
+    required this.glowAnimation,
+  });
+
+  final List<Map<String, dynamic>> rewards;
+  final Animation<double> glowAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final visualRewards =
+        rewards.where((reward) => reward['type'] == 'visual_element').toList();
+    if (visualRewards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.achievementRewardVisualElement,
+          style: TextStyle(
+            color: DS.textPrimary,
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: visualRewards.take(3).map((reward) {
+            final name = reward['name'] ??
+                reward['display'] ??
+                reward['title'] ??
+                l10n.achievementRewardVisualElement;
+            return AnimatedBuilder(
+              animation: glowAnimation,
+              builder: (context, child) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing6,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.surfaceHigh.withValues(alpha: 0.9),
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(
+                    color:
+                        DS.warning.withValues(alpha: 0.4 * glowAnimation.value),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: DS.warning,
+                    ),
+                    const SizedBox(width: DS.spacing4),
+                    Flexible(
+                      child: Text(
+                        name.toString(),
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 }
 

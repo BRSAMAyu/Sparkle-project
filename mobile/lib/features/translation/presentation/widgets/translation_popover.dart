@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
+import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -45,7 +48,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
   @override
   void initState() {
     super.initState();
-    _loadTranslation();
+    unawaited(_loadTranslation());
   }
 
   Future<void> _loadTranslation() async {
@@ -69,6 +72,14 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           _result = result;
           _isLoading = false;
         });
+      }
+      if (result.success && result.translation.isNotEmpty) {
+        await ref.read(translationHistoryProvider.notifier).saveTranslation(
+              originalText: widget.sourceText,
+              translatedText: result.translation,
+              sourceLanguage: widget.sourceLang,
+              targetLanguage: widget.targetLang,
+            );
       }
     } catch (e) {
       if (mounted) {
@@ -333,21 +344,23 @@ void showTranslationPopover(
   String? sourceDocumentId,
   VoidCallback? onSaved,
 }) {
-  showDialog<void>(
-    context: context,
-    barrierColor: DS.textPrimary.withValues(alpha: 0.26),
-    builder: (context) => Dialog(
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      elevation: 0,
-      child: TranslationPopover(
-        sourceText: sourceText,
-        sourceLang: sourceLang,
-        targetLang: targetLang,
-        domain: domain,
-        readingContext: readingContext,
-        sourceUrl: sourceUrl,
-        sourceDocumentId: sourceDocumentId,
-        onSaved: onSaved,
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierColor: DS.textPrimary.withValues(alpha: 0.26),
+      builder: (context) => Dialog(
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        elevation: 0,
+        child: TranslationPopover(
+          sourceText: sourceText,
+          sourceLang: sourceLang,
+          targetLang: targetLang,
+          domain: domain,
+          readingContext: readingContext,
+          sourceUrl: sourceUrl,
+          sourceDocumentId: sourceDocumentId,
+          onSaved: onSaved,
+        ),
       ),
     ),
   );

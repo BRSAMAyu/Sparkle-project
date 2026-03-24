@@ -53,6 +53,7 @@ const _$ShopItemTypeEnumMap = {
   ShopItemType.title: 'title',
   ShopItemType.consumable: 'consumable',
   ShopItemType.boost: 'boost',
+  ShopItemType.visualElement: 'visual_element',
 };
 
 const _$ItemRarityEnumMap = {

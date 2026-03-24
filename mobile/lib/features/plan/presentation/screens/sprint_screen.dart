@@ -151,7 +151,7 @@ class _ActiveSprintView extends ConsumerWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final task = fullPlan.tasks![index];
-                  // return TaskCard(task: task); // TODO: Uncomment when TaskCard is available and integrated
+                  // return TaskCard(task: task); // TRACKED(TD-002): Uncomment when TaskCard is available and integrated
                   return ListTile(
                     title: Text(task.title),
                     subtitle: Text(task.status.name),
@@ -360,6 +360,14 @@ class _CloseToUnlockBanner extends StatelessWidget {
     final progressValue = closest.userProgress?.progressValue ?? 0;
     final remaining = progressTarget - progressValue;
     final progress = closest.progressPercentage / 100.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final rarityColor = _getRarityColor(closest.achievement.rarity);
+    final surfaceBase = isDark ? DS.surfaceSecondary : DS.surfacePrimary;
+    final accentWash = Color.lerp(
+      surfaceBase,
+      rarityColor,
+      isDark ? 0.18 : 0.12,
+    )!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(DS.lg, 0, DS.lg, DS.sm),
@@ -367,13 +375,13 @@ class _CloseToUnlockBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            DS.brandPrimary.withValues(alpha: 0.1),
-            DS.brandPrimary.withValues(alpha: 0.05),
+            accentWash,
+            Color.lerp(surfaceBase, accentWash, 0.45)!,
           ],
         ),
         borderRadius: DS.borderRadius12,
         border: Border.all(
-          color: DS.brandPrimary.withValues(alpha: 0.3),
+          color: rarityColor.withValues(alpha: isDark ? 0.3 : 0.18),
         ),
       ),
       child: Row(
@@ -405,7 +413,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
                   '即将解锁！',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                       ),
                 ),
                 Text(
@@ -422,7 +430,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
                     minHeight: 4,
                     backgroundColor: DS.neutral100,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _getRarityColor(closest.achievement.rarity),
+                      rarityColor,
                     ),
                   ),
                 ),

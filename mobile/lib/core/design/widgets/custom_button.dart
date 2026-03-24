@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 按钮变体类型
 enum ButtonVariant {
@@ -176,16 +179,22 @@ class _CustomButtonState extends State<CustomButton>
 
   void _handleTapDown(TapDownDetails details) {
     if (widget.onPressed != null && !widget.isLoading) {
-      _animationController.forward();
+      unawaited(_animationController.forward());
     }
   }
 
   void _handleTapUp(TapUpDetails details) {
-    _animationController.reverse();
+    unawaited(_animationController.reverse());
   }
 
   void _handleTapCancel() {
-    _animationController.reverse();
+    unawaited(_animationController.reverse());
+  }
+
+  void _handlePressed() {
+    if (widget.onPressed == null || widget.isLoading) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+    widget.onPressed?.call();
   }
 
   @override
@@ -270,7 +279,7 @@ class _CustomButtonState extends State<CustomButton>
       child: Material(
         color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
-          onTap: isDisabled ? null : widget.onPressed,
+          onTap: isDisabled ? null : _handlePressed,
           borderRadius: DS.borderRadius12,
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -302,7 +311,7 @@ class _CustomButtonState extends State<CustomButton>
         child: Material(
           color: DS.neutral0.withValues(alpha: 0),
           child: InkWell(
-            onTap: isDisabled ? null : widget.onPressed,
+            onTap: isDisabled ? null : _handlePressed,
             borderRadius: DS.borderRadius12,
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -323,7 +332,7 @@ class _CustomButtonState extends State<CustomButton>
   Widget _buildTextButton(BuildContext context, bool isDisabled) => Material(
         color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
-          onTap: isDisabled ? null : widget.onPressed,
+          onTap: isDisabled ? null : _handlePressed,
           borderRadius: DS.borderRadius8,
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -354,7 +363,7 @@ class _CustomButtonState extends State<CustomButton>
       child: Material(
         color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
-          onTap: isDisabled ? null : widget.onPressed,
+          onTap: isDisabled ? null : _handlePressed,
           borderRadius:
               widget.isCircular ? DS.borderRadiusFull : DS.borderRadius12,
           child: Center(
@@ -419,12 +428,17 @@ class _CustomButtonState extends State<CustomButton>
 
     if (widget.text != null) {
       children.add(
-        Text(
-          widget.text!,
-          style: TextStyle(
-            fontSize: _getFontSize(),
-            fontWeight: DS.fontWeightMedium,
-            color: textColor,
+        Flexible(
+          child: Text(
+            widget.text!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: TextStyle(
+              fontSize: _getFontSize(),
+              fontWeight: DS.fontWeightMedium,
+              color: textColor,
+            ),
           ),
         ),
       );

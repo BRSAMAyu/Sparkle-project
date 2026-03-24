@@ -14,7 +14,7 @@ async def test_ocr_from_base64_delegates_to_ocr_from_url():
     result = await service.ocr_from_base64("YWJjMTIz")
 
     assert result == "recognized text"
-    service.ocr_from_url.assert_awaited_once_with("YWJjMTIz")
+    service.ocr_from_url.assert_awaited_once_with("YWJjMTIz", prompt="", preferred_provider=None)
 
 
 def test_build_payload_preserves_data_uri():
@@ -73,3 +73,20 @@ def test_extract_text_falls_back_to_layout_details():
     )
 
     assert text == "First\nSecond\n\nPage two"
+
+
+@pytest.mark.asyncio
+async def test_ocr_falls_back_to_backup_provider_on_primary_failure():
+    service = OCRService()
+    service.primary_provider = "zhipu"
+    service.backup_provider = "siliconflow"
+    service.api_key = "zhipu-key"
+    service.siliconflow_api_key = "sf-key"
+    service._zhipu_ocr_from_url = AsyncMock(side_effect=RuntimeError("primary down"))
+    service._siliconflow_ocr_from_url = AsyncMock(return_value="backup text")
+
+    result = await service.ocr_from_url("data:image/png;base64,YWJj")
+
+    assert result == "backup text"
+    service._zhipu_ocr_from_url.assert_awaited_once()
+    service._siliconflow_ocr_from_url.assert_awaited_once()
