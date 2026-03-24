@@ -9,11 +9,11 @@ class SparkleStaggerItem extends StatefulWidget {
     required this.child,
     super.key,
     this.axis = Axis.vertical,
-    this.initialDelay = const Duration(milliseconds: 20),
-    this.stepDelay = const Duration(milliseconds: 50),
-    this.offset = 0.06,
-    this.beginScale = 0.985,
-    this.motionToken = SparkleMotionToken.standard,
+    this.initialDelay = const Duration(milliseconds: 30),
+    this.stepDelay = const Duration(milliseconds: 40),
+    this.offset = 0.04,
+    this.beginScale = 0.978,
+    this.motionToken = SparkleMotionToken.scene,
   });
 
   final int index;
@@ -85,8 +85,12 @@ class _SparkleStaggerItemState extends State<SparkleStaggerItem> {
     if (context.reduceMotion) {
       return widget.child;
     }
-    final duration = DS.motionDuration(widget.motionToken);
-    final curve = DS.motionCurve(widget.motionToken);
+    final duration = widget.motionToken == SparkleMotionToken.scene
+        ? const Duration(milliseconds: 400)
+        : DS.motionDuration(widget.motionToken);
+    final curve = widget.motionToken == SparkleMotionToken.scene
+        ? Curves.easeOutQuart
+        : DS.motionCurve(widget.motionToken);
     final offset = widget.axis == Axis.vertical
         ? Offset(0, _visible ? 0 : widget.offset)
         : Offset(_visible ? 0 : widget.offset, 0);
@@ -195,7 +199,7 @@ class SparkleStaggerWrap extends StatelessWidget {
     this.alignment = WrapAlignment.start,
     this.crossAxisAlignment = WrapCrossAlignment.start,
     this.axis = Axis.horizontal,
-    this.motionToken = SparkleMotionToken.standard,
+    this.motionToken = SparkleMotionToken.scene,
   });
 
   final List<Widget> children;
@@ -247,6 +251,45 @@ class SparkleAttentionPulse extends StatefulWidget {
 
   @override
   State<SparkleAttentionPulse> createState() => _SparkleAttentionPulseState();
+}
+
+class SparkleCountUp extends StatelessWidget {
+  const SparkleCountUp({
+    required this.end,
+    required this.style,
+    super.key,
+    this.begin = 0,
+    this.duration = const Duration(milliseconds: 600),
+    this.prefix = '',
+    this.suffix = '',
+    this.animate = true,
+  });
+
+  final int begin;
+  final int end;
+  final Duration duration;
+  final TextStyle? style;
+  final String prefix;
+  final String suffix;
+  final bool animate;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = context.reduceMotion;
+    final shouldAnimate = animate && !reduceMotion;
+
+    if (!shouldAnimate) {
+      return Text('$prefix$end$suffix', style: style);
+    }
+
+    return TweenAnimationBuilder<int>(
+      tween: IntTween(begin: begin, end: end),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) =>
+          Text('$prefix$value$suffix', style: style),
+    );
+  }
 }
 
 class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>

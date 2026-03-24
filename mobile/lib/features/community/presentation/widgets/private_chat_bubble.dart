@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -158,6 +159,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
 
     return _buildRichCardWrapper(
       isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
       child: ShareCardFactory.fromPayload(
         payload,
         onTap: () => _handleSharedResourceTap(payload),
@@ -198,26 +200,31 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   Widget _buildRichCardWrapper({
     required bool isMe,
     required Widget child,
+    VoidCallback? onTap,
   }) =>
-      Container(
-        constraints: const BoxConstraints(maxWidth: 260),
-        decoration: BoxDecoration(
-          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isMe
-              ? [
-                  BoxShadow(
-                    color: DS.chatBubbleUser.withValues(alpha: 0.24),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : DS.shadowSm,
-          border: isMe ? null : Border.all(color: DS.borderSubtle),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: child,
+      SparkleTappable(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          decoration: BoxDecoration(
+            color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isMe
+                ? [
+                    BoxShadow(
+                      color: DS.chatBubbleUser.withValues(alpha: 0.24),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : DS.shadowSm,
+            border: isMe ? null : Border.all(color: DS.borderSubtle),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: child,
+          ),
         ),
       );
 
@@ -303,7 +310,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
           codeBackgroundColor:
               isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
           linkColor: isMe ? Colors.white : DS.brandPrimary,
-          lineHeight: 1.4,
+          contentRole: SparkleMarkdownRole.chatBubble,
         ),
       );
 

@@ -46,9 +46,6 @@ void main() async {
       return true;
     };
 
-    // Initialize Performance Monitoring
-    PerformanceService.instance.startMonitoring();
-
     // Initialize Hive for local storage
     await Hive.initFlutter();
 
@@ -64,6 +61,8 @@ void main() async {
 
     // Initialize SharedPrefs
     final prefs = await SharedPreferences.getInstance();
+    await PerformanceService.instance.hydratePreferences(prefs);
+    PerformanceService.instance.startMonitoring();
 
     // Initialize critical services required before the first meaningful frame.
     const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');

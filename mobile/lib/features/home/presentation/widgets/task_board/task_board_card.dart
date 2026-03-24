@@ -34,7 +34,12 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
     final isDualColumn = context.isTablet || context.isDesktop;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing16,
+        0,
+        DS.spacing16,
+        DS.spacing12,
+      ),
       child: DashboardEntrance(
         index: 8,
         child: MaterialStyler(

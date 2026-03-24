@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -117,19 +120,12 @@ class FeedPostCard extends StatelessWidget {
             if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: ClipRRect(
+                child: SparkleNetworkImage(
+                  imageUrl: post.imageUrls!.first,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: 200,
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    post.imageUrls!.first,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 200,
-                    errorBuilder: (ctx, err, stack) => Container(
-                      height: 200,
-                      color: DS.surfaceSecondary,
-                      child: const Center(child: Icon(Icons.broken_image)),
-                    ),
-                  ),
                 ),
               ),
             const SizedBox(height: DS.lg),
@@ -179,8 +175,10 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => SparklePressable(
         onTap: onTap,
+        feedbackEvent: SensoryFeedbackEvent.selection,
+        padding: EdgeInsets.zero,
         child: Row(
           children: [
             Icon(icon, color: DS.textSecondary, size: 20),

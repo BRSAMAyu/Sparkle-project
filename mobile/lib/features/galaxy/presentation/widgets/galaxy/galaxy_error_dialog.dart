@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -23,7 +24,7 @@ class GalaxyErrorDialog extends StatelessWidget {
     VoidCallback? onRetry,
     VoidCallback? onDismiss,
   }) =>
-      showDialog(
+      showSensoryDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => GalaxyErrorDialog(

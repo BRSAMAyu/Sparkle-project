@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Sparkle pressable surface that reads semantic tokens from ThemeExtension.
@@ -19,6 +18,7 @@ class SparklePressable extends StatefulWidget {
     this.backgroundColor,
     this.border,
     this.semanticLabel,
+    this.feedbackEvent = SensoryFeedbackEvent.tap,
   });
 
   final Widget child;
@@ -31,6 +31,7 @@ class SparklePressable extends StatefulWidget {
   final Color? backgroundColor;
   final BorderSide? border;
   final String? semanticLabel;
+  final SensoryFeedbackEvent feedbackEvent;
 
   @override
   State<SparklePressable> createState() => _SparklePressableState();
@@ -41,7 +42,7 @@ class _SparklePressableState extends State<SparklePressable> {
 
   @override
   Widget build(BuildContext context) {
-    final radius = widget.borderRadius ?? context.radius.smRadius;
+    final radius = widget.borderRadius ?? DS.borderRadius12;
     final background =
         widget.backgroundColor ?? DS.neutral0.withValues(alpha: 0);
     final side = widget.border ?? BorderSide.none;
@@ -53,9 +54,9 @@ class _SparklePressableState extends State<SparklePressable> {
       child: Container(
         margin: widget.margin,
         child: AnimatedScale(
-          scale: _pressed ? 0.985 : 1,
-          duration: DS.durationFast,
-          curve: Curves.easeOutCubic,
+          scale: _pressed ? 0.97 : 1,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
           child: Material(
             color: background,
             shape: RoundedRectangleBorder(borderRadius: radius, side: side),
@@ -63,7 +64,7 @@ class _SparklePressableState extends State<SparklePressable> {
               onTap: widget.enabled && widget.onTap != null
                   ? () {
                       unawaited(
-                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                        SensoryFeedbackService.emit(widget.feedbackEvent),
                       );
                       widget.onTap?.call();
                     }
@@ -87,9 +88,9 @@ class _SparklePressableState extends State<SparklePressable> {
               highlightColor: DS.brandPrimary.withValues(alpha: 0.06),
               child: Padding(
                 padding: widget.padding ??
-                    context.space.edge(
-                      horizontal: context.space.sm,
-                      vertical: context.space.xs,
+                    const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing8,
                     ),
                 child: widget.child,
               ),

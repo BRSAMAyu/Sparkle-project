@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -555,7 +556,7 @@ class _SeedLibraryDetailScreenState
   ) async {
     final commentController = TextEditingController();
     var score = state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
@@ -640,7 +641,7 @@ class _SeedLibraryDetailScreenState
   }
 
   Future<void> _showItemDetailSheet(BuildContext context, SeedItem item) async {
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => SafeArea(
@@ -679,6 +680,7 @@ class _SeedLibraryDetailScreenState
                       codeBackgroundColor: DS.surfaceSecondary,
                       linkColor: DS.info,
                       selectable: true,
+                      contentRole: SparkleMarkdownRole.seedBody,
                     ),
                   ),
                 ],
@@ -755,7 +757,7 @@ class _SeedLibraryDetailScreenState
     var itemType = ItemType.example;
     DifficultyLevel? difficultyLevel = DifficultyLevel.beginner;
 
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(

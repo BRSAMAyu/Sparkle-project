@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
@@ -42,7 +43,12 @@ class _AchievementProgressCardState
 
     return ContentConstraint(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
             backgroundGradient: LinearGradient(
@@ -106,8 +112,10 @@ class _Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          GestureDetector(
+          SparklePressable(
             onTap: () => context.push(AchievementRoutes.basePath),
+            padding: EdgeInsets.zero,
+            feedbackEvent: SensoryFeedbackEvent.selection,
             child: Row(
               children: [
                 Text(
@@ -148,9 +156,10 @@ class _AchievementRow extends StatelessWidget {
     final target = item.userProgress?.progressTarget ?? 1;
     final visualRewards = _extractVisualElementRewards(achievement);
 
-    return GestureDetector(
+    return SparklePressable(
       onTap: () => context.push('/achievements/${achievement.id}'),
-      behavior: HitTestBehavior.opaque,
+      padding: EdgeInsets.zero,
+      feedbackEvent: SensoryFeedbackEvent.selection,
       child: Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing8),
         child: Container(

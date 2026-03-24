@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -34,7 +33,6 @@ class _VisualElementCardState extends State<VisualElementCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _breathingController;
   late Animation<double> _breathingAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
@@ -76,20 +74,6 @@ class _VisualElementCardState extends State<VisualElementCard>
     super.dispose();
   }
 
-  void _handleTapDown(TapDownDetails details) {
-    if (!widget.element.isUnlocked) return;
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-    setState(() => _isPressed = true);
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    setState(() => _isPressed = false);
-  }
-
-  void _handleTapCancel() {
-    setState(() => _isPressed = false);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -102,143 +86,124 @@ class _VisualElementCardState extends State<VisualElementCard>
         _shouldShimmerForRarity(widget.element.rarity);
     final isNewlyUnlocked = _isElementNewlyUnlocked;
 
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
+    return SparkleTappable(
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        transform: Matrix4.identity()
-          ..scaleByDouble(
-              _isPressed ? 0.96 : 1.0, _isPressed ? 0.96 : 1.0, 1, 1,),
-        child: RarityVisualWrapper(
-          rarity: widget.element.rarity,
-          borderRadius: borderRadius,
-          showShimmer: shouldShimmer,
-          showGlow: isNewlyUnlocked,
-          isNewlyUnlocked: isNewlyUnlocked,
-          unlockedAt: widget.element.unlockedAt,
-          child: Stack(
-            children: [
-              // 主卡片
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      DS.surfaceSecondary,
-                      DS.surfaceTertiary.withValues(alpha: 0.5),
-                    ],
-                  ),
-                  borderRadius: borderRadius,
-                  border: Border.all(
-                    color: widget.element.isEquipped
-                        ? colors.border
-                        : DS.border.withValues(alpha: 0.5),
-                    width: widget.element.isEquipped ? 2 : 1,
-                  ),
-                  boxShadow: widget.element.isEquipped
-                      ? [
-                          BoxShadow(
-                            color: colors.border.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
+      enableHaptic: widget.element.isUnlocked,
+      borderRadius: borderRadius,
+      child: RarityVisualWrapper(
+        rarity: widget.element.rarity,
+        borderRadius: borderRadius,
+        showShimmer: shouldShimmer,
+        showGlow: isNewlyUnlocked,
+        isNewlyUnlocked: isNewlyUnlocked,
+        unlockedAt: widget.element.unlockedAt,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    DS.surfaceSecondary,
+                    DS.surfaceTertiary.withValues(alpha: 0.5),
+                  ],
                 ),
-                child: ClipRRect(
-                  borderRadius: borderRadius,
-                  child: Stack(
-                    children: [
-                      // 背景预览
-                      _buildPreviewBackground(colors),
-
-                      // 内容
-                      Padding(
-                        padding: EdgeInsets.all(
-                            widget.isCompact ? DS.spacing8 : DS.spacing12,),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 顶部：类型图标和稀有度徽章
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildTypeIcon(),
-                                _buildRarityBadge(colors, l10n),
-                              ],
-                            ),
-
-                            const Spacer(),
-
-                            // 底部：名称和状态
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: widget.element.isEquipped
+                      ? colors.border
+                      : DS.border.withValues(alpha: 0.5),
+                  width: widget.element.isEquipped ? 2 : 1,
+                ),
+                boxShadow: widget.element.isEquipped
+                    ? [
+                        BoxShadow(
+                          color: colors.border.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadius,
+                child: Stack(
+                  children: [
+                    _buildPreviewBackground(colors),
+                    Padding(
+                      padding: EdgeInsets.all(
+                        widget.isCompact ? DS.spacing8 : DS.spacing12,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildTypeIcon(),
+                              _buildRarityBadge(colors, l10n),
+                            ],
+                          ),
+                          const Spacer(),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.element.name,
+                                style: TextStyle(
+                                  fontSize: widget.isCompact
+                                      ? DS.fontSizeSm
+                                      : DS.fontSizeBase,
+                                  fontWeight: DS.fontWeightSemibold,
+                                  color: DS.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (widget.element.description != null &&
+                                  !widget.isCompact) ...[
+                                const SizedBox(height: DS.spacing4),
                                 Text(
-                                  widget.element.name,
+                                  widget.element.description!,
                                   style: TextStyle(
-                                    fontSize: widget.isCompact
-                                        ? DS.fontSizeSm
-                                        : DS.fontSizeBase,
-                                    fontWeight: DS.fontWeightSemibold,
-                                    color: DS.textPrimary,
+                                    fontSize: DS.fontSizeXs,
+                                    color: DS.textSecondary,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (widget.element.description != null &&
-                                    !widget.isCompact) ...[
-                                  const SizedBox(height: DS.spacing4),
-                                  Text(
-                                    widget.element.description!,
-                                    style: TextStyle(
-                                      fontSize: DS.fontSizeXs,
-                                      color: DS.textSecondary,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                                if (widget.showStatus) ...[
-                                  const SizedBox(height: DS.spacing8),
-                                  _buildStatusRow(l10n),
-                                ],
                               ],
-                            ),
-                          ],
-                        ),
+                              if (widget.showStatus) ...[
+                                const SizedBox(height: DS.spacing8),
+                                _buildStatusRow(l10n),
+                              ],
+                            ],
+                          ),
+                        ],
                       ),
-
-                      // 锁定遮罩（磨砂玻璃效果）
-                      if (!widget.element.isUnlocked)
-                        _buildLockedOverlay(l10n, colors),
-                    ],
-                  ),
+                    ),
+                    if (!widget.element.isUnlocked)
+                      _buildLockedOverlay(l10n, colors),
+                  ],
                 ),
               ),
-
-              // 已装备呼吸边框
-              if (widget.element.isEquipped)
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _breathingAnimation,
-                    builder: (context, child) => CustomPaint(
-                      painter: _BreathingBorderPainter(
-                        animation: _breathingAnimation,
-                        color: colors.border,
-                        borderRadius: borderRadius,
-                      ),
+            ),
+            if (widget.element.isEquipped)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _breathingAnimation,
+                  builder: (context, child) => CustomPaint(
+                    painter: _BreathingBorderPainter(
+                      animation: _breathingAnimation,
+                      color: colors.border,
+                      borderRadius: borderRadius,
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

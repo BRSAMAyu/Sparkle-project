@@ -24,7 +24,12 @@ class MetricsRow extends ConsumerWidget {
 
     return ContentConstraint(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
             backgroundGradient: LinearGradient(

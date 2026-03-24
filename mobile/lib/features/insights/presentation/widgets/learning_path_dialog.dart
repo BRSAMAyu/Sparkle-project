@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
@@ -69,7 +70,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     final maxListHeight = (mediaQuery.size.height -
             mediaQuery.viewPadding.top -
             mediaQuery.viewPadding.bottom) *
-        0.55;
+        0.5;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -141,7 +142,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
             ),
           ),
         ),
-        const SizedBox(height: DS.lg),
+        const SizedBox(height: DS.spacing16),
         GraphiteCardSurface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,33 +161,55 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                 ).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
               ),
               const SizedBox(height: DS.md),
-              SparkleButton(
-                label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
-                icon: _isGeneratingTaskPath
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.bolt),
-                expand: true,
-                onPressed: _isBusy ? null : () => _handleCreateTaskPath(context),
-                loading: _isGeneratingTaskPath,
-              ),
-              const SizedBox(height: DS.sm),
-              SparkleButton(
-                label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
-                icon: _isGeneratingFullPlan
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome),
-                expand: true,
-                variant: ButtonVariant.secondary,
-                onPressed: _isBusy ? null : () => _handleCreateFullPlan(context),
-                loading: _isGeneratingFullPlan,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 420;
+                  final taskButton = SparkleButton(
+                    label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                    icon: _isGeneratingTaskPath
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.bolt),
+                    expand: true,
+                    onPressed:
+                        _isBusy ? null : () => _handleCreateTaskPath(context),
+                    loading: _isGeneratingTaskPath,
+                  );
+                  final planButton = SparkleButton(
+                    label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                    icon: _isGeneratingFullPlan
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    expand: true,
+                    variant: ButtonVariant.secondary,
+                    onPressed:
+                        _isBusy ? null : () => _handleCreateFullPlan(context),
+                    loading: _isGeneratingFullPlan,
+                  );
+                  if (compact) {
+                    return Column(
+                      children: [
+                        taskButton,
+                        const SizedBox(height: DS.sm),
+                        planButton,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: taskButton),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(child: planButton),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -342,7 +365,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     LearningPathNode node,
   ) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: parentContext,
         useRootNavigator: true,
         isScrollControlled: true,

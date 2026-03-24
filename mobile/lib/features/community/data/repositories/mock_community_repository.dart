@@ -62,6 +62,18 @@ class MockCommunityRepository implements CommunityRepository {
         status: FriendshipStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(days: 30)),
         updatedAt: DateTime.now(),
+        accountability: AccountabilityFriendSummary(
+          partnershipId: 'demo_core_partner',
+          slotType: 'core',
+          status: 'active',
+          myRole: 'initiator',
+          myCheckedInToday: false,
+          partnerCheckedInToday: true,
+          myStreakDays: 7,
+          partnerStreakDays: 5,
+          lastCheckinAt: DateTime.now().subtract(const Duration(hours: 2)),
+          goalPreview: '每天完成 45 分钟深度学习并同步进展',
+        ),
       ),
       FriendshipInfo(
         id: const Uuid().v4(),
@@ -69,6 +81,17 @@ class MockCommunityRepository implements CommunityRepository {
         status: FriendshipStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(days: 15)),
         updatedAt: DateTime.now(),
+        accountability: AccountabilityFriendSummary(
+          partnershipId: 'demo_pending_partner',
+          slotType: 'core',
+          status: 'pending',
+          myRole: 'partner',
+          myCheckedInToday: false,
+          partnerCheckedInToday: false,
+          myStreakDays: 0,
+          partnerStreakDays: 0,
+          goalPreview: '一起复盘算法错题',
+        ),
       ),
       FriendshipInfo(
         id: const Uuid().v4(),
@@ -76,6 +99,15 @@ class MockCommunityRepository implements CommunityRepository {
         status: FriendshipStatus.accepted,
         createdAt: DateTime.now().subtract(const Duration(days: 7)),
         updatedAt: DateTime.now(),
+      ),
+    ];
+    _mockPendingRequests = [
+      FriendshipInfo(
+        id: 'friend_request_user_eva',
+        friend: eva,
+        status: FriendshipStatus.pending,
+        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+        updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
       ),
     ];
 
@@ -480,6 +512,7 @@ class MockCommunityRepository implements CommunityRepository {
 
   late final List<UserBrief> _mockUsers;
   late final List<FriendshipInfo> _mockFriends;
+  late final List<FriendshipInfo> _mockPendingRequests;
   late final List<GroupInfo> _mockGroups;
   late final Map<String, List<MessageInfo>> _mockGroupMessages;
   late final Map<String, List<PrivateMessageInfo>> _mockPrivateMessages;
@@ -940,9 +973,26 @@ class MockCommunityRepository implements CommunityRepository {
     String? message,
   }) async {}
   @override
-  Future<void> respondToRequest(String friendshipId, bool accept) async {}
+  Future<void> respondToRequest(String friendshipId, bool accept) async {
+    final index = _mockPendingRequests.indexWhere((item) => item.id == friendshipId);
+    if (index < 0) return;
+    final request = _mockPendingRequests.removeAt(index);
+    if (accept) {
+      _mockFriends = [
+        FriendshipInfo(
+          id: request.id,
+          friend: request.friend,
+          status: FriendshipStatus.accepted,
+          createdAt: request.createdAt,
+          updatedAt: DateTime.now(),
+          initiatedByMe: request.initiatedByMe,
+        ),
+        ..._mockFriends,
+      ];
+    }
+  }
   @override
-  Future<List<FriendshipInfo>> getPendingRequests() async => [];
+  Future<List<FriendshipInfo>> getPendingRequests() async => _mockPendingRequests;
   @override
   Future<List<FriendRecommendation>> getFriendRecommendations({
     int limit = 10,
@@ -1554,10 +1604,21 @@ class MockCommunityRepository implements CommunityRepository {
         'initiated_by_me': false,
         'created_at': DateTime.now().toIso8601String(),
       },
-      accountability: const {
-        'status': 'active',
-        'slot_type': 'core',
-      },
+      accountability: userId == 'user_alice'
+          ? const {
+              'id': 'demo_core_partner',
+              'partnership_id': 'demo_core_partner',
+              'status': 'active',
+              'slot_type': 'core',
+            }
+          : userId == 'user_charlie'
+              ? const {
+                  'id': 'demo_pending_partner',
+                  'partnership_id': 'demo_pending_partner',
+                  'status': 'pending',
+                  'slot_type': 'core',
+                }
+              : const {},
       relationshipSummary: {
         'partner_name': 'Mock Partner',
         'days_together': 12,
@@ -1569,9 +1630,9 @@ class MockCommunityRepository implements CommunityRepository {
         'partner_total_unlocked': 1,
       },
       leaderboardSummary: const {},
-      quickActions: const {
+      quickActions: {
         'can_invite_accountability': false,
-        'can_open_dashboard': true,
+        'can_open_dashboard': userId == 'user_alice',
         'can_chat': true,
         'can_share': true,
       },

@@ -268,24 +268,68 @@ class EmptyState extends StatelessWidget {
         ),
       );
 
-  Widget _buildIcon() => Container(
-        width: 120.0,
-        height: 120.0,
-        decoration: BoxDecoration(
-          gradient: _getIconGradient(),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: _getIconColor().withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+  Widget _buildIcon() => SizedBox(
+        width: 128.0,
+        height: 128.0,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: 8,
+              right: 10,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: _getIconColor().withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 10,
+              left: 6,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: _getIconColor().withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Container(
+              width: 108,
+              height: 108,
+              decoration: BoxDecoration(
+                gradient: _getIconGradient(),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _getIconColor().withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.22),
+                ),
+              ),
+              child: Icon(
+                icon ?? _getDefaultIcon(),
+                size: DS.iconSize3xl,
+                color: DS.brandPrimaryConst,
+              ),
             ),
           ],
-        ),
-        child: Icon(
-          icon ?? _getDefaultIcon(),
-          size: DS.iconSize3xl,
-          color: DS.brandPrimaryConst,
         ),
       );
 

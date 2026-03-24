@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
@@ -41,8 +42,10 @@ class TaskShareCard extends StatelessWidget {
     return _buildFullCard(context);
   }
 
-  Widget _buildCompactCard(BuildContext context) => GestureDetector(
+  Widget _buildCompactCard(BuildContext context) => SparklePressable(
         onTap: onTap,
+        padding: EdgeInsets.zero,
+        borderRadius: DS.borderRadius8,
         child: Container(
           padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
@@ -98,8 +101,10 @@ class TaskShareCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildFullCard(BuildContext context) => GestureDetector(
+  Widget _buildFullCard(BuildContext context) => SparklePressable(
         onTap: onTap,
+        padding: EdgeInsets.zero,
+        borderRadius: DS.borderRadius12,
         child: Container(
           width: 260,
           decoration: BoxDecoration(

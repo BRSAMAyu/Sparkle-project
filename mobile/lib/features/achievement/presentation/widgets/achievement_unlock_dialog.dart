@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
@@ -86,7 +88,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     int? comboCount,
     MilestoneInfo? milestoneInfo,
   }) =>
-      showGeneralDialog(
+      showSensoryGeneralDialog(
         context: context,
         barrierDismissible: barrierDismissible,
         barrierLabel: 'Achievement Unlock',
@@ -118,6 +120,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotateAnimation;
   late Animation<double> _glowAnimation;
+  bool _showLegendaryAura = false;
 
   @override
   void initState() {
@@ -137,7 +140,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         curve: Curves.elasticOut,
       ),
     );
-    _scaleController.forward();
+    unawaited(_scaleController.forward());
 
     // 旋转动画
     _rotateController = AnimationController(
@@ -171,54 +174,55 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }
 
   void _startRarityAnimations() {
-    _emitRarityFeedback();
-
-    switch (widget.event.rarity) {
-      case AchievementRarity.common:
-        // 简单淡入，无特殊效果
-        break;
-      case AchievementRarity.rare:
-        // 柔和光晕，轻量反馈
-        _glowController.repeat(reverse: true);
-        break;
-      case AchievementRarity.epic:
-        // 更明显的脉动和粒子
-        _glowController.repeat(reverse: true);
-        _particleController.repeat();
-        break;
-      case AchievementRarity.legendary:
-        // 最强烈的旋转、粒子与光晕
-        _rotateController.repeat();
-        _particleController.repeat();
-        _glowController.repeat(reverse: true);
-        break;
-    }
-  }
-
-  void _emitRarityFeedback() {
+    unawaited(BgmService.boostTemporarily());
     switch (widget.event.rarity) {
       case AchievementRarity.common:
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon),
         );
-        break;
       case AchievementRarity.rare:
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
         );
-        break;
+        unawaited(_glowController.repeat(reverse: true));
       case AchievementRarity.epic:
         unawaited(
-          SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementEpic),
-        );
-        break;
-      case AchievementRarity.legendary:
-        unawaited(
-          SensoryFeedbackService.emit(
-            SensoryFeedbackEvent.achievementLegendary,
+          SensoryFeedbackService.emitSeries(
+            const [
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementRare,
+              SensoryFeedbackEvent.achievementEpic,
+            ],
+            gap: const Duration(milliseconds: 150),
           ),
         );
-        break;
+        unawaited(_glowController.repeat(reverse: true));
+        unawaited(_particleController.repeat());
+      case AchievementRarity.legendary:
+        unawaited(
+          SensoryFeedbackService.emitSeries(
+            const [
+              SensoryFeedbackEvent.achievementLegendary,
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementRare,
+              SensoryFeedbackEvent.achievementEpic,
+              SensoryFeedbackEvent.achievementLegendary,
+            ],
+            gap: const Duration(milliseconds: 120),
+          ),
+        );
+        _showLegendaryAura = true;
+        unawaited(
+          Future<void>.delayed(const Duration(seconds: 3), () {
+            if (!mounted) return;
+            setState(() {
+              _showLegendaryAura = false;
+            });
+          }),
+        );
+        unawaited(_rotateController.repeat());
+        unawaited(_particleController.repeat());
+        unawaited(_glowController.repeat(reverse: true));
     }
   }
 
@@ -246,6 +250,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           children: [
             // 背景特效
             if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
+            if (_showLegendaryAura) _buildLegendaryAura(),
 
             // 连击横幅 (P1功能 - 成就连击反馈)
             if (widget.comboCount != null && widget.comboCount! > 1)
@@ -259,11 +264,45 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 rarity == AchievementRarity.epic ||
                 rarity == AchievementRarity.legendary)
               _buildParticleOverlay(),
+            if (rarity != AchievementRarity.common)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: SparkleConfetti(
+                    play: true,
+                    enableSensory: false,
+                    alignment: Alignment.center,
+                    intensity: rarity == AchievementRarity.rare
+                        ? SparkleCelebrationIntensity.medium
+                        : SparkleCelebrationIntensity.large,
+                    particleCount: _confettiParticleCount(rarity),
+                    colors: _confettiColors(rarity),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+
+  int _confettiParticleCount(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.common => 0,
+        AchievementRarity.rare => 25,
+        AchievementRarity.epic => 60,
+        AchievementRarity.legendary => 120,
+      };
+
+  List<Color> _confettiColors(AchievementRarity rarity) => switch (rarity) {
+        AchievementRarity.common => [DS.neutral400],
+        AchievementRarity.rare => [DS.rarityRare, DS.info, DS.warning],
+        AchievementRarity.epic => [DS.rarityEpic, DS.warning, DS.info],
+        AchievementRarity.legendary => [
+            const Color(0xFFFFE082),
+            const Color(0xFFFFC107),
+            const Color(0xFFFFF8E1),
+            DS.warning,
+          ],
+      };
 
   Widget _buildContent() {
     final rarity = widget.event.rarity;
@@ -614,6 +653,27 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           painter: _ParticlePainter(
             rarity: widget.event.rarity,
             animation: _particleController,
+          ),
+        ),
+      );
+
+  Widget _buildLegendaryAura() => Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _glowController,
+            builder: (context, child) => DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD54F)
+                        .withValues(alpha: 0.18 * _glowAnimation.value),
+                    blurRadius: 36,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );

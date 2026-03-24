@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_history_detail.dart';
@@ -46,7 +49,10 @@ class SprintHistoryScreen extends ConsumerWidget {
   Widget _buildBody(
       BuildContext context, SprintHistoryState state, AppLocalizations l10n,) {
     if (state.isLoading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return LoadingIndicator.circular(
+        showText: true,
+        loadingText: 'Loading sprint history...',
+      );
     }
 
     if (state.error != null && state.items.isEmpty) {
@@ -58,41 +64,32 @@ class SprintHistoryScreen extends ConsumerWidget {
     }
 
     return ContentConstraint(
-      child: ListView.separated(
-        padding: const EdgeInsets.all(DS.spacing16),
-        itemCount: state.items.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(height: DS.spacing12),
-        itemBuilder: (context, index) {
-          final item = state.items[index];
-          return SparkleStaggerItem(
-            index: index,
-            child: _SprintHistoryCard(item: item),
-          );
-        },
+      child: ScrollEdgeHaptics(
+        child: ListView.separated(
+          padding: const EdgeInsets.all(DS.spacing16),
+          itemCount: state.items.length,
+          separatorBuilder: (context, index) =>
+              const SizedBox(height: DS.spacing12),
+          itemBuilder: (context, index) {
+            final item = state.items[index];
+            return SparkleStaggerItem(
+              index: index,
+              child: _SprintHistoryCard(item: item),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) =>
-      Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.history,
-              size: 48,
-              color: DS.textSecondary.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: DS.spacing12),
-            Text(
-              l10n.noSprintHistory,
-              style: context.sparkleTypography.bodyMedium.copyWith(
-                color: DS.textSecondary,
-              ),
-            ),
-          ],
-        ),
+      EmptyState(
+        title: 'No sprint history yet',
+        description:
+            'Closed sprints will gather here with their rhythm, notes, and wins.',
+        icon: Icons.history,
+        actionText: 'Start a sprint',
+        onAction: () => context.push('/plans/sprint'),
       );
 
   Widget _buildErrorState(

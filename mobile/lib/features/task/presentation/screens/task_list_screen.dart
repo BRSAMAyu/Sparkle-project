@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -118,12 +119,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       ),
                     ),
                     const SizedBox(width: DS.spacing12),
-                    Text(
-                      context.l10n.taskListTitle,
-                      style: TextStyle(
-                        color: DS.textPrimary,
-                        fontWeight: DS.fontWeightBold,
-                        fontSize: DS.fontSizeBase,
+                    Expanded(
+                      child: Text(
+                        context.l10n.taskListTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                          fontSize: DS.fontSizeBase,
+                        ),
                       ),
                     ),
                   ],
@@ -286,12 +291,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     required bool canReorder,
   }) {
     if (state.isLoading && tasks.isEmpty) {
-      return Center(
-        child: LoadingIndicator.circular(
-          showText: true,
-          loadingText: context.l10n.taskListLoading,
-        ),
-      );
+      return const SparkleListSkeleton(count: 5);
     }
 
     if (state.error != null && state.tasks.isEmpty) {
@@ -308,8 +308,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           searchQuery: _searchController.text,
         );
       } else {
-        return EmptyState.noTasks(
-          onCreateTask: () {
+        return EmptyState(
+          type: EmptyStateType.noTasks,
+          title: '今天还没有待办事项',
+          description: '先放进一件最想推进的小事，系统会帮你把今天逐步铺开。',
+          actionText: '创建第一项任务',
+          onAction: () {
             context.push('/tasks/new');
           },
         );
@@ -317,11 +321,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     }
 
     if (_isReorderMode && canReorder) {
-      return ReorderableListView.builder(
+      return ScrollEdgeHaptics(
+        child: ReorderableListView.builder(
         padding: const EdgeInsets.fromLTRB(
-          DS.spacing12,
+          DS.spacing16,
           DS.spacing6,
-          DS.spacing12,
+          DS.spacing16,
           80,
         ),
         onReorder: (oldIndex, newIndex) async {
@@ -375,6 +380,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             ),
           );
         },
+        ),
       );
     }
 
@@ -383,14 +389,15 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         ref.read(taskFilterProvider) == TaskFilterOptions.all &&
         tasks.length > 2;
 
-    return ListView.separated(
+    return ScrollEdgeHaptics(
+      child: ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
       padding: const EdgeInsets.fromLTRB(
-        DS.spacing12,
+        DS.spacing16,
         DS.spacing6,
-        DS.spacing12,
+        DS.spacing16,
         72,
       ),
       itemCount: tasks.length + (showSummary ? 1 : 0),
@@ -431,6 +438,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -502,13 +510,13 @@ class _FilterChips extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        DS.spacing12,
+        DS.spacing16,
         DS.spacing8,
-        DS.spacing12,
+        DS.spacing16,
         0,
       ),
       padding: const EdgeInsets.symmetric(
-        vertical: DS.spacing6,
+        vertical: DS.spacing4,
         horizontal: DS.spacing6,
       ),
       decoration: BoxDecoration(
@@ -517,7 +525,7 @@ class _FilterChips extends ConsumerWidget {
         border: Border.all(color: DS.neutral300.withValues(alpha: 0.4)),
       ),
       child: SizedBox(
-        height: 36,
+        height: 34,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: TaskFilterOptions.values.map((filter) {
@@ -535,7 +543,7 @@ class _FilterChips extends ConsumerWidget {
                   duration: DS.durationFast,
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing12,
-                    vertical: DS.spacing8,
+                    vertical: DS.spacing6,
                   ),
                   decoration: BoxDecoration(
                     gradient: isSelected ? DS.primaryGradient : null,

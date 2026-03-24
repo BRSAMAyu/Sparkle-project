@@ -225,32 +225,46 @@ class FocusMainScreen extends ConsumerWidget {
 
   Widget _buildQuickFocusButton(BuildContext context, WidgetRef ref) => Padding(
         padding: EdgeInsets.zero,
-        child: SparkleButton(
-          expand: true,
-          label: context.l10n.focusQuickStart,
-          onPressed: () {
-            unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-            );
-            // Create a dummy task for quick focus if needed, or just push a generic task
-            final dummyTask = TaskModel(
-              id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
-              userId: '',
-              title: context.l10n.focusQuickStart,
-              type: TaskType.learning,
-              estimatedMinutes: 25,
-              difficulty: 1,
-              energyCost: 1,
-              priority: 1,
-              tags: [],
-              status: TaskStatus.pending,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            );
-            // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
-            ref.read(activeTaskProvider.notifier).state = dummyTask;
-            context.push('/tasks/${dummyTask.id}/execute?origin=focus');
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SparkleButton(
+              expand: true,
+              label: context.l10n.focusQuickStart,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                final dummyTask = TaskModel(
+                  id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
+                  userId: '',
+                  title: context.l10n.focusQuickStart,
+                  type: TaskType.learning,
+                  estimatedMinutes: 25,
+                  difficulty: 1,
+                  energyCost: 1,
+                  priority: 1,
+                  tags: [],
+                  status: TaskStatus.pending,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                ref.read(activeTaskProvider.notifier).state = dummyTask;
+                context.push('/tasks/${dummyTask.id}/execute?origin=focus');
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              Localizations.localeOf(context).languageCode == 'zh'
+                  ? '完成后会生成专注结算与今日累计'
+                  : 'Completion reveals a focus summary and today total',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
         ),
       );
 }

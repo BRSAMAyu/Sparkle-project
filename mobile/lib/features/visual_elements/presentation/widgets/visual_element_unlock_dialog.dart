@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -45,7 +46,7 @@ class VisualElementUnlockDialog extends StatefulWidget {
     VoidCallback? onView,
     bool barrierDismissible = true,
   }) =>
-      showGeneralDialog(
+      showSensoryGeneralDialog(
         context: context,
         barrierDismissible: barrierDismissible,
         barrierLabel: 'Visual Element Unlock',

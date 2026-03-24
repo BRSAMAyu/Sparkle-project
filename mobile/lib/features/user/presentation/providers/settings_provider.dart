@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig;
 import 'package:sparkle/features/auth/auth.dart';
@@ -19,6 +21,10 @@ const String kSystemUpdateLevelKey = 'settings_system_update_level';
 const String kAiReasoningModeKey = 'settings_ai_reasoning_mode';
 const String kShowChatContextToggleKey = 'settings_show_chat_context_toggle';
 const String kShowChatPredictionDockKey = 'settings_show_chat_prediction_dock';
+const String kShowChatTransparencyCapsuleKey =
+    'settings_show_chat_transparency_capsule';
+const String kMotionIntensityLevelPreferenceKey =
+    'settings_motion_intensity_level';
 
 /// Learning preferences model
 class LearningPreferences {
@@ -328,6 +334,19 @@ final showChatPredictionDockProvider =
   ),
 );
 
+final showChatTransparencyCapsuleProvider =
+    StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
+  (ref) => SimpleBoolPreferenceNotifier(
+    storageKey: kShowChatTransparencyCapsuleKey,
+    defaultValue: true,
+  ),
+);
+
+final motionIntensityLevelProvider = StateNotifierProvider<
+    MotionIntensityLevelNotifier, MotionIntensityLevel>(
+  (ref) => MotionIntensityLevelNotifier(),
+);
+
 final aiUsageSummaryProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(authProvider).user;
@@ -514,6 +533,36 @@ class SimpleBoolPreferenceNotifier extends StateNotifier<bool> {
     } catch (_) {
       // Silent fail for persistence
     }
+  }
+}
+
+class MotionIntensityLevelNotifier extends StateNotifier<MotionIntensityLevel> {
+  MotionIntensityLevelNotifier() : super(MotionIntensityLevel.high) {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(kMotionIntensityLevelPreferenceKey);
+      final level = MotionIntensityLevel.values.firstWhere(
+        (candidate) => candidate.storageValue == stored,
+        orElse: () => MotionIntensityLevel.high,
+      );
+      state = level;
+      await PerformanceService.instance.setMotionIntensityLevel(
+        level,
+        persist: false,
+      );
+    } catch (_) {
+      state = MotionIntensityLevel.high;
+    }
+  }
+
+  Future<void> setLevel(MotionIntensityLevel level) async {
+    if (state == level) return;
+    state = level;
+    await PerformanceService.instance.setMotionIntensityLevel(level);
   }
 }
 

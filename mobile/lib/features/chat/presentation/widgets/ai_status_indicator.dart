@@ -15,10 +15,12 @@ class AiStatusIndicator extends StatefulWidget {
     this.status,
     this.details,
     this.startedAtEpochMs,
+    this.enableStatusTrack = true,
   });
   final String? status;
   final String? details;
   final int? startedAtEpochMs;
+  final bool enableStatusTrack;
 
   @override
   State<AiStatusIndicator> createState() => _AiStatusIndicatorState();
@@ -201,6 +203,9 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
       ),
     );
 
+    if (!widget.enableStatusTrack) {
+      return indicator;
+    }
     final thinkingTrack = _bgmTrackForStatus(status);
     if (thinkingTrack == null) {
       return indicator;

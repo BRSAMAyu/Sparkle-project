@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
@@ -616,6 +617,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       sawTerminalEvent = true;
       _streamDebouncer.cancel();
+      unawaited(BgmService.setPersistentDuckFactor(1.0));
       _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
 
       final hasRenderableMessage = accumulatedContent.trim().isNotEmpty ||
@@ -776,6 +778,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
 
         if (event is TextEvent) {
+          unawaited(BgmService.setPersistentDuckFactor(0.72));
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
@@ -855,6 +858,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
+          if (event.state == 'THINKING' || event.state == 'GENERATING') {
+            unawaited(BgmService.setPersistentDuckFactor(0.72));
+          } else {
+            unawaited(BgmService.setPersistentDuckFactor(1.0));
+          }
           final uxProgress = event.metadata?['ux_progress'];
           lastAiStatus = event.state;
           pendingAiStatus = event.state;

@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
@@ -46,7 +47,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
     VoidCallback? onUnequip,
     bool isEquipped = false,
     bool isUnlocked = false,
-  }) => showModalBottomSheet<void>(
+  }) => showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -167,33 +168,59 @@ class _VisualElementPreviewDialogState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // 名称和稀有度
-                            Wrap(
-                              spacing: DS.spacing8,
-                              runSpacing: DS.spacing8,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 360,
-                                  ),
-                                  child: Text(
-                                    widget.element.name,
-                                    style: TextStyle(
-                                      fontSize: DS.fontSizeLg,
-                                      fontWeight: DS.fontWeightBold,
-                                      color: DS.textPrimary,
-                                      height: 1.15,
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final compact = constraints.maxWidth < 360;
+                                if (compact) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.element.name,
+                                        style: TextStyle(
+                                          fontSize: DS.fontSizeLg,
+                                          fontWeight: DS.fontWeightBold,
+                                          color: DS.textPrimary,
+                                          height: 1.15,
+                                        ),
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: DS.spacing8),
+                                      _RarityBadge(
+                                        rarity: widget.element.rarity,
+                                        colors: colors,
+                                        l10n: l10n,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        widget.element.name,
+                                        style: TextStyle(
+                                          fontSize: DS.fontSizeLg,
+                                          fontWeight: DS.fontWeightBold,
+                                          color: DS.textPrimary,
+                                          height: 1.15,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    maxLines: 4,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                _RarityBadge(
-                                  rarity: widget.element.rarity,
-                                  colors: colors,
-                                  l10n: l10n,
-                                ),
-                              ],
+                                    const SizedBox(width: DS.spacing8),
+                                    _RarityBadge(
+                                      rarity: widget.element.rarity,
+                                      colors: colors,
+                                      l10n: l10n,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
 
                             if (widget.element.description != null) ...[
@@ -328,8 +355,8 @@ class _VisualElementPreviewDialogState
 
   Widget _buildShareButton(AppLocalizations l10n) => SizedBox(
       height: 48,
-      child: OutlinedButton.icon(
-        onPressed: _isSharing ? null : _sharePreview,
+                      child: OutlinedButton.icon(
+                        onPressed: _isSharing ? null : _sharePreview,
         icon: _isSharing
             ? SizedBox(
                 width: DS.iconSizeSm,
@@ -340,14 +367,12 @@ class _VisualElementPreviewDialogState
                 ),
               )
             : const Icon(Icons.share_outlined),
-        label: Flexible(
-          child: Text(
-            l10n.visualElementShare,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
+                        label: Text(
+                          l10n.visualElementShare,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: OutlinedButton.styleFrom(
           foregroundColor: DS.textSecondary,
           side: BorderSide(color: DS.border),
           shape: const RoundedRectangleBorder(

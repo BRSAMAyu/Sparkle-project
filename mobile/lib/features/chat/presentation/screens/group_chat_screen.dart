@@ -434,6 +434,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             child: AiStatusIndicator(
                               status: 'THINKING',
                               details: context.l10n.communityAgentThinking,
+                              enableStatusTrack: false,
                             ),
                           );
                         }

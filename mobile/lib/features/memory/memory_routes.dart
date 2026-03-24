@@ -1,24 +1,12 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/memory/memory.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class MemoryRoutes {
   static const String panel = '/memory';
@@ -38,18 +26,32 @@ class MemoryRoutes {
         GoRoute(
           path: panel,
           name: 'memoryPanel',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const MemoryPanelScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.insights,
+                atmosphere: ExperienceAtmosphere.insightsMist,
+              ),
+              child: MemoryPanelScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
         GoRoute(
           path: settings,
           name: 'memorySettings',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const MemorySettingsScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.insights,
+                atmosphere: ExperienceAtmosphere.insightsMist,
+              ),
+              child: MemorySettingsScreen(),
+            ),
           ),
         ),
         GoRoute(
@@ -58,16 +60,24 @@ class MemoryRoutes {
           pageBuilder: (context, state) {
             final args = state.extra;
             if (args is! MemoryDetailArgs) {
-              return _buildTransitionPage(
+              return buildSparkleTransitionPage(
                 state: state,
+                motionToken: SparkleMotionToken.scene,
                 child: const Scaffold(
                   body: Center(child: Text('记忆详情参数缺失')),
                 ),
               );
             }
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
-              child: MemoryDetailScreen(args: args),
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(
+                  track: BgmTrack.insights,
+                  atmosphere: ExperienceAtmosphere.insightsMist,
+                ),
+                child: MemoryDetailScreen(args: args),
+              ),
             );
           },
         ),

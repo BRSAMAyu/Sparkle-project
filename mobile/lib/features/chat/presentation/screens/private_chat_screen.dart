@@ -149,6 +149,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           child: AiStatusIndicator(
                             status: 'THINKING',
                             details: '思考中...',
+                            enableStatusTrack: false,
                           ),
                         );
                       }

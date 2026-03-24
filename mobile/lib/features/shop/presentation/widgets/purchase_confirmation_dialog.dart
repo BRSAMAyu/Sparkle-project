@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
@@ -57,10 +58,10 @@ class _PurchaseConfirmationDialogState
                   child: widget.item.iconUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: Image.network(
-                            widget.item.iconUrl!,
+                          child: SparkleNetworkImage(
+                            imageUrl: widget.item.iconUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
+                            errorWidget: Icon(
                               _getItemTypeIcon(widget.item.itemType),
                               size: 64,
                               color: rarityColor,

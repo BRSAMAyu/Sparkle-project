@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
@@ -36,14 +37,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _weeklyAgendaExpanded = false;
   bool _bgmEnabled = true;
   bool _bgmReady = false;
-  double _bgmVolume = 0.68;
+  double _bgmVolume = 0.85;
   BgmPalette _bgmPalette = BgmPalette.adaptive;
   BgmMode _bgmMode = BgmMode.adaptive;
+  bool _localBgmOverridesEnabled = false;
+  int _localBgmOverrideCount = 0;
+  BgmPalette? _previewingPalette;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _sensoryReady = false;
   AmbientScene _ambientScene = AmbientScene.none;
-  double _ambientVolume = 0.35;
+  double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
 
   @override
@@ -64,6 +68,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final volume = await BgmService.getVolume();
     final palette = await BgmService.getPalette();
     final mode = await BgmService.getMode();
+    final localOverrideCount = await BgmService.localAdaptiveOverrideCount();
     if (!mounted) {
       return;
     }
@@ -72,6 +77,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _bgmVolume = volume;
       _bgmPalette = palette;
       _bgmMode = mode;
+      _localBgmOverrideCount = localOverrideCount;
+      _localBgmOverridesEnabled = localOverrideCount > 0;
       _bgmReady = true;
     });
   }
@@ -117,6 +124,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         SensoryFeedbackEvent.selection,
         enableHaptic: false,
       );
+    }
+  }
+
+  Future<void> _previewBgmPalette(BgmPalette palette) async {
+    setState(() => _previewingPalette = palette);
+    try {
+      await BgmService.previewPalette(palette);
+    } finally {
+      if (mounted) {
+        setState(() => _previewingPalette = null);
+      }
     }
   }
 
@@ -186,6 +204,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final aiReasoningMode = ref.watch(aiReasoningModeProvider);
     final showChatContextToggle = ref.watch(showChatContextToggleProvider);
     final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
+    final showChatTransparencyCapsule =
+        ref.watch(showChatTransparencyCapsuleProvider);
+    final motionIntensityLevel = ref.watch(motionIntensityLevelProvider);
     final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
     final aiOpsDashboard = ref.watch(aiOpsDashboardProvider);
     final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
@@ -217,7 +238,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 14 : DS.spacing16,
-            vertical: DS.spacing16,
+            vertical: DS.spacing12,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,20 +323,20 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: DS.spacing20),
+              const SizedBox(height: DS.spacing16),
               GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader(Icons.psychology, l10n.learningMode),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     Text(
                       l10n.dragToAdjust,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     LearningModeControl(
                       depth: learningPrefs.depth,
                       curiosity: learningPrefs.curiosity,
@@ -326,17 +347,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: DS.spacing32),
+                    const SizedBox(height: DS.spacing24),
                     _buildSectionHeader(
                       Icons.auto_awesome,
                       l10n.capsuleGeneration,
                     ),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     CapsuleGenerationPreview(
                       depthPreference: learningPrefs.depth,
                       curiosityPreference: learningPrefs.curiosity,
                     ),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     SparkleButton(
                       expand: true,
                       label: _isGenerating ? l10n.generating : l10n.generateNow,
@@ -351,9 +372,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             },
                       loading: _isGenerating,
                     ),
-                    const SizedBox(height: DS.spacing32),
+                    const SizedBox(height: DS.spacing24),
                     _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     _buildWeeklyAgendaSection(
                       context,
                       l10n,
@@ -362,7 +383,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: DS.spacing20),
+              const SizedBox(height: DS.spacing16),
               GraphiteCardSurface(
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -373,7 +394,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   onTap: () => context.push(VisualElementsRoutes.basePath),
                 ),
               ),
-              const SizedBox(height: DS.spacing20),
+              const SizedBox(height: DS.spacing16),
               GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,6 +441,48 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           .toList(),
                     ),
                     const SizedBox(height: DS.spacing10),
+                    if (_localBgmOverridesEnabled)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: DS.spacing10),
+                        padding: const EdgeInsets.all(DS.spacing12),
+                        decoration: BoxDecoration(
+                          borderRadius: DS.borderRadius12,
+                          color: Color.alphaBlend(
+                            DS.brandPrimary.withValues(alpha: 0.08),
+                            DS.surfaceSecondary,
+                          ),
+                          border: Border.all(
+                            color: DS.brandPrimary.withValues(alpha: 0.16),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Icon(
+                                Icons.library_music_rounded,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing10),
+                            Expanded(
+                              child: Text(
+                                _bgmPalette == BgmPalette.adaptive
+                                    ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于自适应模式时，系统会优先播放你本机准备的场景音乐。'
+                                    : _bgmPalette == BgmPalette.classical
+                                    ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于精选古典模式时，系统会优先播放你本机准备的调音曲目。'
+                                    : '检测到 $_localBgmOverrideCount 首本地乐曲覆盖。切回“自适应”或“精选古典”后，系统会优先播放本机版场景音乐。',
+                                style: DS.bodySmall.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(DS.spacing12),
@@ -472,12 +535,48 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       runSpacing: DS.spacing8,
                       children: BgmPalette.values
                           .map(
-                            (palette) => ChoiceChip(
-                              label: Text(_bgmPaletteLabel(palette)),
-                              selected: _bgmPalette == palette,
-                              onSelected: _bgmReady
-                                  ? (_) => unawaited(_setBgmPalette(palette))
-                                  : null,
+                            (palette) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing6,
+                                vertical: DS.spacing4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                borderRadius: DS.borderRadius16,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ChoiceChip(
+                                    label: Text(_bgmPaletteLabel(palette)),
+                                    selected: _bgmPalette == palette,
+                                    onSelected: _bgmReady
+                                        ? (_) => unawaited(
+                                            _setBgmPalette(palette),
+                                          )
+                                        : null,
+                                  ),
+                                  IconButton(
+                                    tooltip: '试听 ${_bgmPaletteLabel(palette)}',
+                                    iconSize: 18,
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _bgmEnabled && _bgmReady
+                                        ? () => unawaited(
+                                            _previewBgmPalette(palette),
+                                          )
+                                        : null,
+                                    icon: _previewingPalette == palette
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.play_arrow_rounded),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                           .toList(),
@@ -605,6 +704,61 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           .read(showChatPredictionDockProvider.notifier)
                           .setEnabled(value),
                       activeThumbColor: DS.primaryBase,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('显示 AI 透明胶囊'),
+                      subtitle: const Text('控制聊天页底部的 AI 系统完成情况与透明化浮层'),
+                      value: showChatTransparencyCapsule,
+                      onChanged: (value) => ref
+                          .read(showChatTransparencyCapsuleProvider.notifier)
+                          .setEnabled(value),
+                      activeThumbColor: DS.primaryBase,
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '动效强度',
+                        style: DS.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: MotionIntensityLevel.values
+                          .map(
+                            (level) => ChoiceChip(
+                              label: Text(_motionIntensityLabel(level)),
+                              selected: motionIntensityLevel == level,
+                              onSelected: (_) => ref
+                                  .read(motionIntensityLevelProvider.notifier)
+                                  .setLevel(level),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: DS.spacing10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(DS.spacing12),
+                      decoration: BoxDecoration(
+                        borderRadius: DS.borderRadius12,
+                        color: Color.alphaBlend(
+                          DS.primaryBase.withValues(alpha: 0.05),
+                          DS.surfaceSecondary,
+                        ),
+                      ),
+                      child: Text(
+                        _motionIntensityDescription(motionIntensityLevel),
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     aiUsageSummary.when(
@@ -817,7 +971,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               Center(
                 child: GestureDetector(
                   onLongPress: () {
-                    showDialog<void>(
+                    showSensoryDialog<void>(
                       context: context,
                       builder: (context) => const ChaosControlDialog(),
                     );
@@ -854,7 +1008,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
       if (mounted) {
         AppFeedback.success(context, '新的好奇心胶囊已生成');
-        await showModalBottomSheet<void>(
+        await showSensoryModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
           builder: (sheetContext) => SafeArea(
@@ -1175,6 +1329,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   String _bgmPaletteLabel(BgmPalette palette) => switch (palette) {
         BgmPalette.adaptive => '自适应',
+        BgmPalette.classical => '精选古典',
         BgmPalette.piano => '钢琴优先',
         BgmPalette.airy => '空灵氛围',
         BgmPalette.warm => '温暖轻快',
@@ -1182,9 +1337,25 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   String _bgmPaletteDescription(BgmPalette palette) => switch (palette) {
         BgmPalette.adaptive => '系统会按页面功能自动挑选最合适的背景音乐。',
+        BgmPalette.classical => '精选古典钢琴与弦乐，会优先使用你本机准备的古典乐库做场景切换。',
         BgmPalette.piano => '整体更偏轻钢琴与安静旋律，适合长时间陪伴。',
         BgmPalette.airy => '整体更偏空灵、梦幻和空间感更强的氛围。',
         BgmPalette.warm => '整体更偏温暖、柔和、有人味的轻快底色。',
+      };
+
+  String _motionIntensityLabel(MotionIntensityLevel level) => switch (level) {
+        MotionIntensityLevel.ultra => '超强',
+        MotionIntensityLevel.high => '高',
+        MotionIntensityLevel.medium => '中',
+        MotionIntensityLevel.off => '关闭',
+      };
+
+  String _motionIntensityDescription(MotionIntensityLevel level) =>
+      switch (level) {
+        MotionIntensityLevel.ultra => '保留完整粒子、辉光与复杂动效，适合高性能设备。',
+        MotionIntensityLevel.high => '维持大部分视觉层，同时允许系统按帧率自动降级。',
+        MotionIntensityLevel.medium => '收敛粒子与辉光，优先稳定和省电，仍保留基础层次感。',
+        MotionIntensityLevel.off => '尽量关闭强动效与粒子层，适合偏静态、低刺激或低性能场景。',
       };
 
   String _bgmModeLabel(BgmMode mode) => switch (mode) {

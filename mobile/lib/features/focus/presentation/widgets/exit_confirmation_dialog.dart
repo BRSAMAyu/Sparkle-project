@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -172,7 +173,7 @@ Future<bool> showExitConfirmation(
   BuildContext context, {
   required int elapsedMinutes,
 }) async {
-  final result = await showDialog<bool>(
+  final result = await showSensoryDialog<bool>(
     context: context,
     barrierDismissible: false,
     barrierColor: DS.brandPrimary.withValues(alpha: 0.7),

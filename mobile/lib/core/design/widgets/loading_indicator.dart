@@ -274,10 +274,11 @@ class _ShimmerWrapper extends StatelessWidget {
     if (context.reduceMotion) {
       return child;
     }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: DS.neutral200,
-      highlightColor: DS.neutral100,
-      period: DS.motionDuration(SparkleMotionToken.scene),
+      baseColor: isDark ? DS.neutral700 : DS.neutral100,
+      highlightColor: isDark ? DS.neutral600 : DS.neutral0,
+      period: const Duration(milliseconds: 1200),
       child: child,
     );
   }
@@ -299,7 +300,9 @@ class _SkeletonBox extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: DS.neutral300,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? DS.neutral700
+              : DS.neutral300,
           borderRadius: borderRadius ?? DS.borderRadius8,
         ),
       );

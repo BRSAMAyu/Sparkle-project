@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -417,13 +419,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       color: DS.neutral200,
                     ),
                     child: ClipOval(
-                      child: Image.network(
-                        _readAvatarUrl(
+                      child: SparkleNetworkImage(
+                        imageUrl: _readAvatarUrl(
                           readerId: readBy[i],
                           readByUsers: readByUsers,
                         ),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(
+                        width: 18,
+                        height: 18,
+                        errorWidget: Center(
                           child: Text(
                             '?',
                             style: TextStyle(fontSize: 8, color: DS.neutral500),
@@ -539,7 +543,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       codeBackgroundColor:
           isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
       linkColor: isMe ? Colors.white : DS.brandPrimary,
-      height: 1.4,
+      contentRole: SparkleMarkdownRole.chatBubble,
     );
   }
 
@@ -770,6 +774,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     return _buildRichCardWrapper(
       isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
       child: TaskShareCardFactory.fromPayload(
         payload,
         onTap: () => _handleSharedResourceTap(payload),
@@ -802,6 +807,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     return _buildRichCardWrapper(
       isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
       child: PlanShareCardFactory.fromPayload(
         payload,
         onTap: () => _handleSharedResourceTap(payload),
@@ -834,6 +840,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
       return _buildRichCardWrapper(
         isMe: isMe,
+        onTap: () => _handleSharedResourceTap(payload),
         child: NodeShareCardFactory.fromPayload(
           payload,
           onTap: () => _handleSharedResourceTap(payload),
@@ -869,6 +876,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     return _buildRichCardWrapper(
       isMe: isMe,
+      onTap: () => _handleSharedResourceTap(payload),
       child: CapsuleShareCardFactory.fromPayload(
         payload,
         onTap: () => _handleSharedResourceTap(payload),
@@ -1013,26 +1021,31 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Widget _buildRichCardWrapper({
     required bool isMe,
     required Widget child,
+    VoidCallback? onTap,
   }) =>
-      Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isMe
-              ? [
-                  BoxShadow(
-                    color: DS.chatBubbleUser.withValues(alpha: 0.24),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : DS.shadowSm,
-          border: isMe ? null : Border.all(color: DS.borderSubtle),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: child,
+      SparkleTappable(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          decoration: BoxDecoration(
+            color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isMe
+                ? [
+                    BoxShadow(
+                      color: DS.chatBubbleUser.withValues(alpha: 0.24),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : DS.shadowSm,
+            border: isMe ? null : Border.all(color: DS.borderSubtle),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: child,
+          ),
         ),
       );
 

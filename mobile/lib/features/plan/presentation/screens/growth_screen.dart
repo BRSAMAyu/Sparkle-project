@@ -5,6 +5,10 @@ import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -63,21 +67,29 @@ class GrowthScreen extends ConsumerWidget {
     List<PlanModel> plans,
   ) {
     if (state.isLoading && plans.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SparkleListSkeleton(count: 3);
     }
 
     if (plans.isEmpty) {
-      return const Center(
-        child: Text('No growth plans created yet.'),
+      return EmptyState(
+        type: EmptyStateType.noPlans,
+        title: 'No active growth plans yet',
+        description:
+            'Turn a long-term direction into one living plan you can refine as you grow.',
+        icon: Icons.trending_up_rounded,
+        actionText: 'Create growth plan',
+        onAction: () => context.push('/plans/new?type=growth'),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(DS.sm),
-      itemCount: plans.length,
-      itemBuilder: (context, index) => SparkleStaggerItem(
-        index: index,
-        child: _GrowthPlanCard(plan: plans[index]),
+    return ScrollEdgeHaptics(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(DS.sm),
+        itemCount: plans.length,
+        itemBuilder: (context, index) => SparkleStaggerItem(
+          index: index,
+          child: _GrowthPlanCard(plan: plans[index]),
+        ),
       ),
     );
   }
@@ -92,7 +104,7 @@ class _GrowthPlanCard extends StatelessWidget {
         surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
         padding: EdgeInsets.zero,
-        child: InkWell(
+        child: SparkleTappable(
           onTap: () {
             unawaited(
               SensoryFeedbackService.emit(
@@ -101,6 +113,8 @@ class _GrowthPlanCard extends StatelessWidget {
             );
             context.push('/plans/${plan.id}');
           },
+          hapticEvent: SensoryFeedbackEvent.selection,
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
             child: Column(

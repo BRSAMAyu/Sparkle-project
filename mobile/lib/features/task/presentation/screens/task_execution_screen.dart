@@ -5,12 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/widgets/scene_atmosphere_layer.dart';
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
+    as focus_stats;
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -56,9 +63,17 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
 class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
   bool _showCelebration = false;
+  bool _showCompletionPanel = false;
+  bool _showCompletionStats = false;
+  bool _playCompletionConfetti = false;
   TaskCompletionResult? _completionResult;
   bool _completionFlowFinished = false;
   Timer? _celebrationDismissTimer;
+  Timer? _completionPanelTimer;
+  Timer? _completionStatsTimer;
+  Timer? _completionAudioTimer;
+  int _completionMinutesSnapshot = 0;
+  int? _todayFocusMinutesSnapshot;
 
   // Timer Enhancement State
   TimerMode _timerMode = TimerMode.countUp;
@@ -75,6 +90,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     super.initState();
     _pageEnterTime = DateTime.now(); // Record page entry time
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    unawaited(
+      BgmService.setPersistentDuckFactor(
+        0.80,
+        duration: const Duration(milliseconds: 600),
+      ),
+    );
     final task = ref.read(activeTaskProvider);
     _currentTimerDuration =
         task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
@@ -111,7 +132,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   @override
   void dispose() {
+    unawaited(
+      BgmService.setPersistentDuckFactor(
+        1.0,
+        duration: const Duration(milliseconds: 320),
+      ),
+    );
     _celebrationDismissTimer?.cancel();
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
     super.dispose();
   }
 
@@ -147,18 +177,18 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   Future<void> _handleCompletion(int minutes, String? note) async {
     if (_completionFlowFinished) return;
 
-    // 1. Stop Timer
     setState(() {
       _showCelebration = true;
+      _showCompletionPanel = false;
+      _showCompletionStats = false;
+      _playCompletionConfetti = true;
       _completionFlowFinished = false;
+      _completionMinutesSnapshot = minutes;
+      _todayFocusMinutesSnapshot = null;
     });
 
-    // 2. Haptic Feedback
-    unawaited(
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete),
-    );
+    _scheduleFocusCompletionSequence();
 
-    // 3. API Call
     final task = ref.read(activeTaskProvider);
     if (task != null) {
       if (isLocalOnlyTaskId(task.id)) {
@@ -169,17 +199,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               feedback: '本次自由专注已完成。',
             );
           });
+          unawaited(_loadFocusCompletionSummary(minutes));
           final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
               MediaQuery.maybeOf(context)?.accessibleNavigation ??
               false;
           if (reduceMotion) {
             _finishCompletionFlow();
           } else {
-            _celebrationDismissTimer?.cancel();
-            _celebrationDismissTimer = Timer(
-              const Duration(milliseconds: 1100),
-              _finishCompletionFlow,
-            );
+            _scheduleCelebrationAutoDismiss();
           }
         }
         return;
@@ -193,6 +220,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         setState(() {
           _completionResult = result;
         });
+        unawaited(_loadFocusCompletionSummary(minutes));
         if (result == null) {
           _finishCompletionFlow(showFeedbackDialog: false);
           AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
@@ -204,28 +232,106 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         if (reduceMotion) {
           _finishCompletionFlow();
         } else {
-          _celebrationDismissTimer?.cancel();
-          _celebrationDismissTimer = Timer(
-            const Duration(milliseconds: 1100),
-            _finishCompletionFlow,
-          );
+          _scheduleCelebrationAutoDismiss();
         }
       }
     }
   }
 
-  void _onCelebrationComplete() {
-    _finishCompletionFlow();
+  void _scheduleFocusCompletionSequence() {
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
+
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete),
+    );
+
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
+        MediaQuery.maybeOf(context)?.accessibleNavigation ??
+        false;
+
+    if (reduceMotion) {
+      setState(() {
+        _showCompletionPanel = true;
+        _showCompletionStats = true;
+      });
+      unawaited(BgmService.duckTemporarily(factor: 0.3));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+      return;
+    }
+
+    _completionPanelTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      setState(() {
+        _showCompletionPanel = true;
+      });
+    });
+
+    _completionStatsTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        _showCompletionStats = true;
+      });
+    });
+
+    _completionAudioTimer = Timer(const Duration(milliseconds: 400), () {
+      unawaited(BgmService.duckTemporarily(factor: 0.3));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+    });
+  }
+
+  void _scheduleCelebrationAutoDismiss() {
+    _celebrationDismissTimer?.cancel();
+    _celebrationDismissTimer = Timer(
+      const Duration(milliseconds: 1650),
+      _finishCompletionFlow,
+    );
+  }
+
+  Future<void> _loadFocusCompletionSummary(int minutes) async {
+    final focusStatsState = ref.read(focus_stats.focusStatisticsProvider);
+    final fallbackToday = (focusStatsState.todayMinutes > 0
+            ? focusStatsState.todayMinutes
+            : 0) +
+        minutes;
+    if (mounted) {
+      setState(() {
+        _todayFocusMinutesSnapshot = fallbackToday;
+      });
+    }
+
+    try {
+      final stats = await ref.read(focusRepositoryProvider).getFocusStats();
+      if (!mounted) return;
+      setState(() {
+        _todayFocusMinutesSnapshot = stats.totalMinutes;
+      });
+      unawaited(
+        ref.read(focus_stats.focusStatisticsProvider.notifier).loadTodayStats(),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _todayFocusMinutesSnapshot ??= fallbackToday;
+      });
+    }
   }
 
   void _finishCompletionFlow({bool showFeedbackDialog = true}) {
     if (!mounted || _completionFlowFinished) return;
     _completionFlowFinished = true;
     _celebrationDismissTimer?.cancel();
+    _completionPanelTimer?.cancel();
+    _completionStatsTimer?.cancel();
+    _completionAudioTimer?.cancel();
 
     final result = _completionResult;
     setState(() {
       _showCelebration = false;
+      _showCompletionPanel = false;
+      _showCompletionStats = false;
+      _playCompletionConfetti = false;
     });
 
     if (!showFeedbackDialog || result == null) {
@@ -543,7 +649,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         textColor: DS.textPrimary,
                                         codeBackgroundColor: DS.neutral100,
                                         linkColor: DS.primaryBase,
-                                        lineHeight: 1.6,
+                                        contentRole:
+                                            SparkleMarkdownRole.taskGuide,
                                       ),
                                     ),
                                   ],
@@ -652,84 +759,68 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           // Celebration Overlay
           if (_showCelebration)
             Positioned.fill(
-              child: GestureDetector(
-                onTap: _skipCelebration,
-                behavior: HitTestBehavior.opaque,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: DS.overlay50.withValues(alpha: 0.84),
-                  ),
-                  child: SuccessAnimation(
-                    playAnimation: true,
-                    onAnimationComplete: _onCelebrationComplete,
-                    child: Center(
-                      child: GraphiteCardSurface(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(DS.xl),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceSecondary,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Icon(
-                                Icons.check_circle,
-                                color: DS.success,
-                                size: 72,
-                              ),
-                            ),
-                            const SizedBox(height: DS.spacing24),
-                            Text(
-                              l10n.taskExecutionCompletedTitle,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(
-                                    color: DS.textPrimary,
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                            ),
-                            const SizedBox(height: DS.spacing12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.spacing18,
-                                vertical: DS.spacing8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceSecondary,
-                                borderRadius: DS.borderRadius20,
-                                border: Border.all(color: DS.borderSubtle),
-                              ),
-                              child: Text(
-                                l10n.taskExecutionExpGained(
-                                  activeTask.difficulty * 10,
-                                ),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightBold,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(height: DS.spacing16),
-                            Text(
-                              l10n.taskExecutionTapToContinue,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: DS.textSecondary),
-                            ),
-                            const SizedBox(height: DS.spacing16),
-                            SparkleButton.ghost(
-                              label: l10n.taskExecutionSkipAnimation,
-                              onPressed: _skipCelebration,
-                            ),
+              child: BgmScope(
+                track: BgmTrack.achievement,
+                priority: BgmPriority.stage,
+                child: GestureDetector(
+                  onTap: _skipCelebration,
+                  behavior: HitTestBehavior.opaque,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 620),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, warmth, child) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color.lerp(
+                                  const Color(0xFF0D1B2A),
+                                  const Color(0xFF53321F),
+                                  warmth,
+                                ) ??
+                                const Color(0xFF0D1B2A),
+                            Color.lerp(
+                                  DS.overlay50.withValues(alpha: 0.90),
+                                  const Color(0xFFF0B77A).withValues(alpha: 0.78),
+                                  warmth,
+                                ) ??
+                                DS.overlay50.withValues(alpha: 0.84),
                           ],
                         ),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Opacity(
+                            opacity: 0.9,
+                            child: SceneAtmosphereLayer(
+                              atmosphere: ExperienceAtmosphere.focusBreath,
+                            ),
+                          ),
+                          SparkleConfetti(
+                            play: _playCompletionConfetti,
+                            intensity: SparkleCelebrationIntensity.large,
+                            alignment: Alignment.topCenter,
+                            enableSensory: false,
+                          ),
+                          child!,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: _FocusCompletionPanel(
+                        visible: _showCompletionPanel,
+                        animateStats: _showCompletionStats,
+                        sessionMinutes: _completionMinutesSnapshot,
+                        todayMinutes:
+                            _todayFocusMinutesSnapshot ??
+                            _completionMinutesSnapshot,
+                        expGained: activeTask.difficulty * 10,
+                        onSkip: _skipCelebration,
+                        continueLabel: l10n.taskExecutionTapToContinue,
+                        skipLabel: l10n.taskExecutionSkipAnimation,
                       ),
                     ),
                   ),
@@ -815,6 +906,251 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               onPressed: () {
                 context.push('/focus/mindfulness/${task.id}');
               },
+            ),
+          ],
+        ),
+      );
+}
+
+class _FocusCompletionPanel extends StatelessWidget {
+  const _FocusCompletionPanel({
+    required this.visible,
+    required this.animateStats,
+    required this.sessionMinutes,
+    required this.todayMinutes,
+    required this.expGained,
+    required this.onSkip,
+    required this.continueLabel,
+    required this.skipLabel,
+  });
+
+  final bool visible;
+  final bool animateStats;
+  final int sessionMinutes;
+  final int todayMinutes;
+  final int expGained;
+  final VoidCallback onSkip;
+  final String continueLabel;
+  final String skipLabel;
+
+  String _labelForLocale(BuildContext context, String zh, String en) {
+    return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
+  }
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<Offset>(
+        tween: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: visible ? Offset.zero : const Offset(0, 0.08),
+        ),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, slideOffset, child) => Transform.translate(
+          offset: Offset(0, slideOffset.dy * 120),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            opacity: visible ? 1 : 0,
+            child: child,
+          ),
+        ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.96, end: 1),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: GraphiteCardSurface(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                    Container(
+                      padding: const EdgeInsets.all(DS.xl),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFFD79A).withValues(alpha: 0.92),
+                            const Color(0xFFFFB86B).withValues(alpha: 0.88),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFFFFC06B).withValues(alpha: 0.38),
+                            blurRadius: 36,
+                            spreadRadius: 6,
+                          ),
+                        ],
+                        border: Border.all(
+                          color: const Color(0xFFFFF1D7).withValues(alpha: 0.7),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.self_improvement_rounded,
+                        color: const Color(0xFF7E4A12),
+                        size: 72,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing20),
+                    Text(
+                      _labelForLocale(context, '专注完成', 'Focus Complete'),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      _labelForLocale(
+                        context,
+                        '状态已回暖，来看看这次沉浸带来的积累。',
+                        'You are back from deep focus. Here is what you gained.',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FocusMetricCard(
+                            icon: Icons.timer_outlined,
+                            label:
+                                _labelForLocale(context, '本次专注', 'This Session'),
+                            value: sessionMinutes,
+                            suffix: _labelForLocale(context, '分钟', ' min'),
+                            animate: animateStats,
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: _FocusMetricCard(
+                            icon: Icons.today_rounded,
+                            label: _labelForLocale(
+                              context,
+                              '今日累计',
+                              'Today Total',
+                            ),
+                            value: todayMinutes,
+                            suffix: _labelForLocale(context, '分钟', ' min'),
+                            animate: animateStats,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing18,
+                        vertical: DS.spacing10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(color: DS.borderSubtle),
+                      ),
+                      child: SparkleCountUp(
+                        end: expGained,
+                        animate: animateStats,
+                        prefix: _labelForLocale(context, '专注经验 +', 'Focus XP +'),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    Text(
+                      continueLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    SparkleButton.ghost(
+                      label: skipLabel,
+                      onPressed: onSkip,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _FocusMetricCard extends StatelessWidget {
+  const _FocusMetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.suffix,
+    required this.animate,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final String suffix;
+  final bool animate;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary.withValues(alpha: 0.92),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: DS.primaryBase, size: 18),
+                const SizedBox(width: DS.spacing6),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            RichText(
+              text: TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: SparkleCountUp(
+                      end: value,
+                      animate: animate,
+                      duration: const Duration(milliseconds: 600),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                    ),
+                  ),
+                  TextSpan(
+                    text: suffix,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -982,11 +1318,6 @@ class _BottomControls extends ConsumerWidget {
                       icon: Icons.check_rounded,
                       customGradient: _taskWarmActionGradient(context),
                       onPressed: () {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.focusComplete,
-                          ),
-                        );
                         Navigator.of(ctx).pop();
                         onComplete(
                           minutes,

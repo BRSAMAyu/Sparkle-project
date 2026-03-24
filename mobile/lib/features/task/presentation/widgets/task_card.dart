@@ -1,16 +1,14 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/utils/theme_utils.dart';
-import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -35,10 +33,8 @@ class TaskCard extends ConsumerStatefulWidget {
   ConsumerState<TaskCard> createState() => _TaskCardState();
 }
 
-class _TaskCardState extends ConsumerState<TaskCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+class _TaskCardState extends ConsumerState<TaskCard> {
+  bool _hasEmittedDragStart = false;
 
   SparkleThemeExtension? _sparkleTheme(BuildContext context) =>
       Theme.of(context).extension<SparkleThemeExtension>();
@@ -64,24 +60,6 @@ class _TaskCardState extends ConsumerState<TaskCard>
   Color _success(BuildContext context) =>
       _sparkleTheme(context)?.colors.semanticSuccess ?? Colors.green;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   LinearGradient _getTypeGradient(BuildContext context, TaskType type) =>
       context.sparkleColors.getTaskGradient(type.name);
 
@@ -99,408 +77,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
 
   @override
   Widget build(BuildContext context) {
-    final card = Semantics(
-        label: 'Task card for ${widget.task.title}',
-        hint: 'Double tap to view details',
-        button: true,
-        enabled: true,
-        child: Hero(
-          tag: 'task-${widget.task.id}',
-          child: Material(
-            type: MaterialType.transparency,
-            child: GestureDetector(
-              onTapDown: (_) {
-                unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),);
-                if (mounted) unawaited(_controller.forward());
-              },
-              onTapUp: (_) {
-                if (mounted) unawaited(_controller.reverse());
-              },
-              onTapCancel: () {
-                if (mounted) unawaited(_controller.reverse());
-              },
-              onTap: widget.onTap,
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _scaleAnimation,
-                  builder: (context, child) => Transform.scale(
-                    scale: _scaleAnimation.value,
-                    child: child,
-                  ),
-                  child: Container(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient:
-                          _getBackgroundGradient(context, widget.task.type),
-                      borderRadius: _radius(context),
-                      border: Border.all(
-                        color: context.sparkleColors
-                            .getTaskColor(
-                              widget.task.type.name,
-                            )
-                            .withValues(alpha: 0.12),
-                      ),
-                      boxShadow: [
-                        for (final shadow in _shadows(context))
-                          BoxShadow(
-                            color: shadow.color.withValues(alpha: 0.08),
-                            blurRadius: shadow.blurRadius + 4,
-                            offset: const Offset(0, 8),
-                          ),
-                      ],
-                    ),
-                    foregroundDecoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0),
-                          Colors.white.withValues(alpha: 0.05),
-                          context.sparkleColors.brandPrimary
-                              .withValues(alpha: 0),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: _radius(context),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: _radius(context),
-                      child: Stack(
-                        children: [
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Colored stripe
-                                Container(
-                                  width: 4,
-                                  decoration: BoxDecoration(
-                                    gradient: _getTypeGradient(
-                                      context,
-                                      widget.task.type,
-                                    ),
-                                  ),
-                                ),
-                                // Content
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        EdgeInsets.all(_spacingMd(context)),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                widget.task.title,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      decoration:
-                                                          widget.task.status ==
-                                                                  TaskStatus
-                                                                      .completed
-                                                              ? TextDecoration
-                                                                  .lineThrough
-                                                              : null,
-                                                      color:
-                                                          widget.task.status ==
-                                                                  TaskStatus
-                                                                      .completed
-                                                              ? _textDisabled(
-                                                                  context,
-                                                                )
-                                                              : _textPrimary(
-                                                                  context,
-                                                                ),
-                                                    ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            if (!widget.compact) ...[
-                                              const SizedBox(width: 8),
-                                              TaskPill(
-                                                type: widget.task.type,
-                                                label: _typeLabel(
-                                                  widget.task.type,
-                                                ),
-                                                tone:
-                                                    _typeTone(widget.task.type),
-                                              ),
-                                              if (widget.task.status ==
-                                                  TaskStatus.completed) ...[
-                                                const SizedBox(width: 4),
-                                                Icon(
-                                                  Icons.check_circle,
-                                                  color: _success(context),
-                                                  size: 16,
-                                                ),
-                                              ] else if (widget.task.status !=
-                                                  TaskStatus.pending) ...[
-                                                const SizedBox(width: 4),
-                                                TaskPill(
-                                                  type: widget.task.type,
-                                                  label:
-                                                      toBeginningOfSentenceCase(
-                                                    widget.task.status.name,
-                                                  )!,
-                                                  tone: _statusTone(
-                                                    widget.task.status,
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            if (widget.task.dueDate !=
-                                                null) ...[
-                                              Icon(
-                                                Icons.calendar_today,
-                                                size: 14,
-                                                color: context.sparkleColors
-                                                    .textSecondary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                DateFormat.yMd().format(
-                                                  widget.task.dueDate!,
-                                                ),
-                                                style: TextStyle(
-                                                  color: context.sparkleColors
-                                                      .textSecondary,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                            ],
-                                            Icon(
-                                              Icons.timer_outlined,
-                                              size: 14,
-                                              color: context
-                                                  .sparkleColors.textSecondary,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${widget.task.estimatedMinutes} min',
-                                              style: TextStyle(
-                                                color: context.sparkleColors
-                                                    .textSecondary,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        // Subtask progress indicator
-                                        if (widget.task.subtasksTotal > 0) ...[
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.checklist,
-                                                size: 14,
-                                                color: context.sparkleColors
-                                                    .textSecondary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Expanded(
-                                                child: SubtaskProgressIndicator(
-                                                  completed: widget
-                                                      .task.subtasksCompleted,
-                                                  total:
-                                                      widget.task.subtasksTotal,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                        if (!widget.compact) ...[
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              _DifficultyStars(
-                                                difficulty:
-                                                    widget.task.difficulty,
-                                              ),
-                                              const Spacer(),
-                                              if (widget.onStart != null &&
-                                                  widget.task.status !=
-                                                      TaskStatus.completed)
-                                                _ActionButton(
-                                                  icon:
-                                                      Icons.play_arrow_rounded,
-                                                  color: context.sparkleColors
-                                                      .brandPrimary,
-                                                  onPressed: () {
-                                                    unawaited(
-                                                      SensoryFeedbackService
-                                                          .emit(
-                                                        SensoryFeedbackEvent
-                                                            .confirm,
-                                                      ),
-                                                    );
-                                                    widget.onStart!();
-                                                  },
-                                                ),
-                                              if (widget.onComplete != null &&
-                                                  widget.task.status !=
-                                                      TaskStatus.completed) ...[
-                                                const SizedBox(width: 8),
-                                                _ActionButton(
-                                                  icon: Icons.check_rounded,
-                                                  color: context.sparkleColors
-                                                      .semanticSuccess,
-                                                  onPressed: () {
-                                                    unawaited(
-                                                      SensoryFeedbackService
-                                                          .emit(
-                                                        SensoryFeedbackEvent
-                                                            .success,
-                                                      ),
-                                                    );
-                                                    widget.onComplete!();
-                                                  },
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Sync Error Overlay
-                          if (widget.task.syncStatus == TaskSyncStatus.failed)
-                            Positioned.fill(
-                              child: ClipRect(
-                                child: BackdropFilter(
-                                  filter:
-                                      ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                                  child: ColoredBox(
-                                    color: context.sparkleColors.semanticError
-                                        .withValues(alpha: 0.8),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.cloud_off,
-                                            color:
-                                                ThemeUtils.getContrastSafeText(
-                                              context
-                                                  .sparkleColors.semanticError,
-                                              darkText: context
-                                                  .sparkleColors.textPrimary,
-                                            ),
-                                            size: 32,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            widget.task.syncError ??
-                                                'Sync Failed',
-                                            style: TextStyle(
-                                              color: ThemeUtils
-                                                  .getContrastSafeText(
-                                                context.sparkleColors
-                                                    .semanticError,
-                                                darkText: context
-                                                    .sparkleColors.textPrimary,
-                                              ),
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              SparkleButton(
-                                                label: 'Discard',
-                                                variant: ButtonVariant.ghost,
-                                                onPressed: () {
-                                                  ref
-                                                      .read(
-                                                        taskListProvider
-                                                            .notifier,
-                                                      )
-                                                      .discardChange(
-                                                        widget.task.id,
-                                                      );
-                                                },
-                                              ),
-                                              const SizedBox(width: 8),
-                                              SparkleButton(
-                                                label: 'Retry',
-                                                onPressed: () {
-                                                  unawaited(
-                                                    ref
-                                                        .read(
-                                                          taskListProvider
-                                                              .notifier,
-                                                        )
-                                                        .retryCompleteTask(
-                                                          widget.task.id,
-                                                          widget.task
-                                                                  .actualMinutes ??
-                                                              widget.task
-                                                                  .estimatedMinutes,
-                                                          widget.task.userNote,
-                                                        ),
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                          // Syncing Indicator
-                          if (widget.task.syncStatus == TaskSyncStatus.pending)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    context.sparkleColors.brandPrimary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+    final card = _buildCardContent(context);
     if (!widget.enableSwipeComplete ||
         widget.onComplete == null ||
         widget.task.status == TaskStatus.completed) {
@@ -509,13 +86,30 @@ class _TaskCardState extends ConsumerState<TaskCard>
     return Dismissible(
       key: ValueKey('task-card-${widget.task.id}'),
       direction: DismissDirection.endToStart,
+      onUpdate: (details) {
+        if (details.progress <= 0.01) {
+          _hasEmittedDragStart = false;
+          return;
+        }
+        if (_hasEmittedDragStart || details.progress <= 0.04) {
+          return;
+        }
+        _hasEmittedDragStart = true;
+        unawaited(
+          SensoryFeedbackService.emit(SensoryFeedbackEvent.dragStart),
+        );
+      },
       confirmDismiss: (_) async {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
         );
         return true;
       },
+      onResize: () {
+        _hasEmittedDragStart = false;
+      },
       onDismissed: (_) {
+        _hasEmittedDragStart = false;
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
         );
@@ -560,6 +154,297 @@ class _TaskCardState extends ConsumerState<TaskCard>
       child: card,
     );
   }
+
+  Widget _buildCardContent(BuildContext context) => Semantics(
+        label: 'Task card for ${widget.task.title}',
+        hint: 'Double tap to view details',
+        button: true,
+        enabled: true,
+        child: Hero(
+          tag: 'task-${widget.task.id}',
+          child: Material(
+            type: MaterialType.transparency,
+            child: SparkleTappable(
+              onTap: widget.onTap,
+              borderRadius: _radius(context),
+              child: RepaintBoundary(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: _getBackgroundGradient(context, widget.task.type),
+                    borderRadius: _radius(context),
+                    border: Border.all(
+                      color: context.sparkleColors
+                          .getTaskColor(widget.task.type.name)
+                          .withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      for (final shadow in _shadows(context))
+                        BoxShadow(
+                          color: shadow.color.withValues(alpha: 0.08),
+                          blurRadius: shadow.blurRadius + 4,
+                          offset: const Offset(0, 8),
+                        ),
+                    ],
+                  ),
+                  foregroundDecoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0),
+                        Colors.white.withValues(alpha: 0.05),
+                        context.sparkleColors.brandPrimary.withValues(alpha: 0),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: _radius(context),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _radius(context),
+                    child: Stack(
+                      children: [
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                width: 4,
+                                decoration: BoxDecoration(
+                                  gradient: _getTypeGradient(
+                                    context,
+                                    widget.task.type,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.all(_spacingMd(context)),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text(
+                                                        widget.task.title,
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight.w700,
+                                                              color: _textPrimary(
+                                                                context,
+                                                              ),
+                                                            ),
+                                                        maxLines: widget.compact
+                                                            ? 2
+                                                            : 3,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                    if (widget.task.status ==
+                                                        TaskStatus.completed)
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.only(
+                                                          left: 8,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.check_circle,
+                                                          size: 18,
+                                                          color:
+                                                              _success(context),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    _TaskTypePill(
+                                                      type: widget.task.type,
+                                                    ),
+                                                    if (widget.task.status !=
+                                                        TaskStatus.pending) ...[
+                                                      const SizedBox(width: 8),
+                                                      TaskPill(
+                                                        type: widget.task.type,
+                                                        label: _statusLabel(
+                                                          widget.task.status,
+                                                        ),
+                                                        tone: _statusTone(
+                                                          widget.task.status,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                    if (!widget.compact) ...[
+                                                      const SizedBox(width: 8),
+                                                      _DifficultyStars(
+                                                        difficulty:
+                                                            widget.task.difficulty,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (widget.onStart != null ||
+                                              widget.onComplete != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                left: 12,
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  if (widget.onStart != null &&
+                                                      widget.task.status ==
+                                                          TaskStatus.pending)
+                                                    _ActionButton(
+                                                      icon: Icons.play_arrow,
+                                                      color: context
+                                                          .sparkleColors
+                                                          .brandPrimary,
+                                                      onPressed:
+                                                          widget.onStart!,
+                                                    ),
+                                                  if (widget.onComplete != null &&
+                                                      widget.task.status !=
+                                                          TaskStatus.completed)
+                                                    _ActionButton(
+                                                      icon: Icons.check,
+                                                      color: _success(context),
+                                                      onPressed:
+                                                          widget.onComplete!,
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            size: 14,
+                                            color: _textDisabled(context),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${widget.task.estimatedMinutes} 分钟',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      _textDisabled(context),
+                                                ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(
+                                            Icons.flash_on_rounded,
+                                            size: 14,
+                                            color: _textDisabled(context),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${widget.task.energyCost}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      _textDisabled(context),
+                                                ),
+                                          ),
+                                          const Spacer(),
+                                          if (widget.task.dueDate != null)
+                                            Text(
+                                              DateFormat('MM/dd').format(
+                                                widget.task.dueDate!,
+                                              ),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                    _textDisabled(context),
+                                                  ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (widget.task.subtasksTotal > 0) ...[
+                                        const SizedBox(height: 10),
+                                        SubtaskProgressIndicator(
+                                          completed:
+                                              widget.task.subtasksCompleted,
+                                          total: widget.task.subtasksTotal,
+                                        ),
+                                      ],
+                                      if ((widget.task.userNote ??
+                                                  widget.task.guideContent ??
+                                                  '')
+                                          .isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          widget.task.userNote ??
+                                              widget.task.guideContent!,
+                                          maxLines: widget.compact ? 2 : 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: DS.textSecondary,
+                                                height: 1.35,
+                                              ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (widget.task.syncStatus == TaskSyncStatus.pending)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  context.sparkleColors.brandPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _ActionButton extends StatelessWidget {
@@ -573,7 +458,7 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) => SparkleTappable(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(20),
         child: Container(
@@ -584,6 +469,19 @@ class _ActionButton extends StatelessWidget {
           ),
           child: Icon(icon, size: 20, color: color),
         ),
+      );
+}
+
+class _TaskTypePill extends StatelessWidget {
+  const _TaskTypePill({required this.type});
+
+  final TaskType type;
+
+  @override
+  Widget build(BuildContext context) => TaskPill(
+        type: type,
+        label: _typeLabel(type),
+        tone: _typeTone(type),
       );
 }
 
@@ -660,5 +558,18 @@ String _typeLabel(TaskType type) {
       return 'Plan';
     case TaskType.ocr:
       return 'OCR';
+  }
+}
+
+String _statusLabel(TaskStatus status) {
+  switch (status) {
+    case TaskStatus.pending:
+      return '待开始';
+    case TaskStatus.inProgress:
+      return '进行中';
+    case TaskStatus.completed:
+      return '已完成';
+    case TaskStatus.abandoned:
+      return '已放弃';
   }
 }

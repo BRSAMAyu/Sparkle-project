@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -319,8 +320,9 @@ class AchievementCard extends StatelessWidget {
     final rarityColor =
         RarityColorProvider.getColor(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius12,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing12,
@@ -439,8 +441,9 @@ class AchievementCard extends StatelessWidget {
     final rarityGradient =
         RarityColorProvider.getGradient(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius16,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
@@ -576,8 +579,9 @@ class AchievementCard extends StatelessWidget {
     final progressValue = achievement.userProgress?.progressValue;
     final progressTarget = achievement.userProgress?.progressTarget;
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact =
@@ -789,8 +793,9 @@ class AchievementCard extends StatelessWidget {
     final rarityGradient =
         RarityColorProvider.getGradient(achievement.achievement.rarity);
 
-    return GestureDetector(
+    return SparkleTappable(
       onTap: onTap,
+      borderRadius: DS.borderRadius20,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(

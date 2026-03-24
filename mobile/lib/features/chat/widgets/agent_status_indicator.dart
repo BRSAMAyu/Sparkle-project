@@ -326,15 +326,17 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
         animation: _controller,
         builder: (context, child) {
           if (!_shouldAnimate) {
-            return Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.6),
-                shape: BoxShape.circle,
+            return RepaintBoundary(
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                ),
               ),
             );
           }
@@ -343,16 +345,18 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
           final scale =
               0.6 + (1 - (value - 0.5).abs() * 2).clamp(0.0, 1.0) * 0.4;
 
-          return Transform.scale(
-            scale: scale,
-            child: Opacity(
-              opacity: opacity,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
+          return RepaintBoundary(
+            child: Transform.scale(
+              scale: scale,
+              child: Opacity(
+                opacity: opacity,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),

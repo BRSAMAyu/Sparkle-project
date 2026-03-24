@@ -11,14 +11,27 @@ Page<dynamic> buildSparkleTransitionPage({
 }) {
   final reduceMotion = WidgetsBinding
       .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-  final duration = reduceMotion
+  final forwardDuration = reduceMotion
       ? const Duration(milliseconds: 140)
-      : DS.motionDuration(motionToken);
+      : switch (motionToken) {
+          SparkleMotionToken.micro => const Duration(milliseconds: 220),
+          SparkleMotionToken.standard => const Duration(milliseconds: 320),
+          SparkleMotionToken.scene => const Duration(milliseconds: 500),
+          SparkleMotionToken.hero => const Duration(milliseconds: 560),
+        };
+  final reverseDuration = reduceMotion
+      ? const Duration(milliseconds: 120)
+      : switch (motionToken) {
+          SparkleMotionToken.micro => const Duration(milliseconds: 180),
+          SparkleMotionToken.standard => const Duration(milliseconds: 260),
+          SparkleMotionToken.scene => const Duration(milliseconds: 420),
+          SparkleMotionToken.hero => const Duration(milliseconds: 460),
+        };
 
   return CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: duration,
-    reverseTransitionDuration: duration,
+    transitionDuration: forwardDuration,
+    reverseTransitionDuration: reverseDuration,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       if (reduceMotion) {
@@ -34,7 +47,9 @@ Page<dynamic> buildSparkleTransitionPage({
         );
       }
 
-      final curve = DS.motionCurve(motionToken);
+      final curve = motionToken == SparkleMotionToken.scene
+          ? Curves.easeOutQuart
+          : DS.motionCurve(motionToken);
       final fadeBegin = switch (motionToken) {
         SparkleMotionToken.micro => 0.9,
         SparkleMotionToken.standard => 0.84,
@@ -44,7 +59,7 @@ Page<dynamic> buildSparkleTransitionPage({
       final curvedAnimation = CurvedAnimation(
         parent: animation,
         curve: curve,
-        reverseCurve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
       );
 
       return FadeTransition(

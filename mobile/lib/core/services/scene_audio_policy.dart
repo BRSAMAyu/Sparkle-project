@@ -1,12 +1,24 @@
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
+enum ExperienceAtmosphere {
+  none,
+  dashboardGlow,
+  galaxyDrift,
+  achievementGlow,
+  focusBreath,
+  socialWarm,
+  seedsOrganic,
+  insightsMist,
+}
+
 class SceneAudioPolicy {
   const SceneAudioPolicy({
     this.track,
     this.priority = BgmPriority.route,
     this.useSavedAmbient = false,
     this.ambientScene,
+    this.atmosphere = ExperienceAtmosphere.none,
     this.stopAmbientOnDispose = false,
     this.suppressBgm = false,
   });
@@ -15,6 +27,7 @@ class SceneAudioPolicy {
   final BgmPriority priority;
   final bool useSavedAmbient;
   final AmbientScene? ambientScene;
+  final ExperienceAtmosphere atmosphere;
   final bool stopAmbientOnDispose;
   final bool suppressBgm;
 
@@ -27,6 +40,7 @@ class SceneAudioPolicy {
     BgmPriority? priority,
     bool? useSavedAmbient,
     Object? ambientScene = _unset,
+    ExperienceAtmosphere? atmosphere,
     bool? stopAmbientOnDispose,
     bool? suppressBgm,
   }) =>
@@ -37,6 +51,7 @@ class SceneAudioPolicy {
         ambientScene: identical(ambientScene, _unset)
             ? this.ambientScene
             : ambientScene as AmbientScene?,
+        atmosphere: atmosphere ?? this.atmosphere,
         stopAmbientOnDispose: stopAmbientOnDispose ?? this.stopAmbientOnDispose,
         suppressBgm: suppressBgm ?? this.suppressBgm,
       );

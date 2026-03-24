@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -338,6 +339,7 @@ class _FriendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final friend = friendship.friend;
     final accountability = friendship.accountability;
+    final isDemoMode = DemoDataService.isDemoMode;
     final isCorePartner = accountability?.status == 'active' &&
         accountability?.partnershipId ==
             overview?.activePartnership?.id;
@@ -419,7 +421,11 @@ class _FriendCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        friend.status == UserStatus.online ? '在线' : '离线',
+                        isDemoMode
+                            ? (friend.status == UserStatus.online
+                                ? '演示在线'
+                                : '演示离线')
+                            : (friend.status == UserStatus.online ? '在线' : '离线'),
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
                       const SizedBox(width: 10),

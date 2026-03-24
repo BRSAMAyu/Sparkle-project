@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
@@ -16,7 +17,7 @@ Future<SprintActionType?> showSprintActionsDialog(
   required String planId,
   required String planName,
 }) =>
-    showModalBottomSheet<SprintActionType>(
+    showSensoryModalBottomSheet<SprintActionType>(
       context: context,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => _SprintActionsSheet(
@@ -30,7 +31,7 @@ Future<bool> showConfirmCompleteDialog(
   BuildContext context, {
   required String planName,
 }) async {
-  final result = await showDialog<bool>(
+  final result = await showSensoryDialog<bool>(
     context: context,
     builder: (context) => _ConfirmCompleteDialog(planName: planName),
   );
@@ -42,7 +43,7 @@ Future<int?> showExtendSprintDialog(
   BuildContext context, {
   required String planName,
 }) async =>
-    showDialog<int>(
+    showSensoryDialog<int>(
       context: context,
       builder: (context) => _ExtendSprintDialog(planName: planName),
     );
@@ -52,7 +53,7 @@ Future<bool> showConfirmAbandonDialog(
   BuildContext context, {
   required String planName,
 }) async {
-  final result = await showDialog<bool>(
+  final result = await showSensoryDialog<bool>(
     context: context,
     builder: (context) => _ConfirmAbandonDialog(planName: planName),
   );
@@ -202,7 +203,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
 
   Future<void> _handleComplete(BuildContext context) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => _ConfirmCompleteDialog(planName: widget.planName),
     );
@@ -219,7 +220,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
 
   Future<void> _handleExtend(BuildContext context) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
-    final days = await showDialog<int>(
+    final days = await showSensoryDialog<int>(
       context: context,
       builder: (context) => _ExtendSprintDialog(planName: widget.planName),
     );
@@ -235,7 +236,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleAbandon(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => _ConfirmAbandonDialog(planName: widget.planName),
     );

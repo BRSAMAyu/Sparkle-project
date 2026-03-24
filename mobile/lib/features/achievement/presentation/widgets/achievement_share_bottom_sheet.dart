@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
@@ -627,6 +628,7 @@ class _AchievementShareBottomSheetState
 
   Future<void> _shareToCommunity() async {
     await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.of(context).pop();
 
     if (widget.onCommunityShare != null) {
@@ -636,7 +638,7 @@ class _AchievementShareBottomSheetState
 
     // Default: show community share sheet
     await showShareResourceSheet(
-      context,
+      rootContext,
       resourceType: 'achievement',
       resourceId: widget.achievementId,
       title: widget.achievementName,
@@ -727,7 +729,7 @@ Future<void> showAchievementShareSheet(
   String? defaultDisplayName,
   VoidCallback? onCommunityShare,
 }) async {
-  await showModalBottomSheet<void>(
+  await showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: DS.surfacePrimary.withValues(alpha: 0),

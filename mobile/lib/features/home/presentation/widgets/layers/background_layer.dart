@@ -128,7 +128,8 @@ class BackgroundLayer extends StatelessWidget {
     );
   }
 
-  Widget _buildAuroraEffect(List<dynamic> colors) => AnimatedBuilder(
+  Widget _buildAuroraEffect(List<dynamic> colors) => RepaintBoundary(
+      child: AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) => CustomPaint(
           size: Size.infinite,
@@ -137,9 +138,10 @@ class BackgroundLayer extends StatelessWidget {
             animationValue: mainAnimation.value,
           ),
         ),
-    );
+    ),);
 
-  Widget _buildNebulaEffect(List<dynamic> colors) => AnimatedBuilder(
+  Widget _buildNebulaEffect(List<dynamic> colors) => RepaintBoundary(
+      child: AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) => CustomPaint(
           size: Size.infinite,
@@ -148,9 +150,10 @@ class BackgroundLayer extends StatelessWidget {
             animationValue: mainAnimation.value,
           ),
         ),
-    );
+    ),);
 
-  Widget _buildNeonEffect(List<dynamic> colors) => AnimatedBuilder(
+  Widget _buildNeonEffect(List<dynamic> colors) => RepaintBoundary(
+      child: AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) => CustomPaint(
           size: Size.infinite,
@@ -159,12 +162,14 @@ class BackgroundLayer extends StatelessWidget {
             animationValue: mainAnimation.value,
           ),
         ),
-    );
+    ),);
 
   Widget _buildTextureOverlay(String texture) => IgnorePointer(
-      child: CustomPaint(
-        size: Size.infinite,
-        painter: _TexturePainter(texture: texture),
+      child: RepaintBoundary(
+        child: CustomPaint(
+          size: Size.infinite,
+          painter: _TexturePainter(texture: texture),
+        ),
       ),
     );
 

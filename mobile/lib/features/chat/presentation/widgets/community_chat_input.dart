@@ -227,7 +227,6 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         builder: (context) => QuickSharePickerSheet(
           onShare: (payload) {
-            Navigator.pop(context);
             widget.onQuickShare?.call(payload);
           },
         ),

@@ -17,6 +17,8 @@ class SparkleConfetti extends StatefulWidget {
     this.intensity = SparkleCelebrationIntensity.medium,
     this.alignment = Alignment.topCenter,
     this.enableSensory = true,
+    this.particleCount,
+    this.colors,
   });
 
   final bool play;
@@ -25,6 +27,8 @@ class SparkleConfetti extends StatefulWidget {
   final SparkleCelebrationIntensity intensity;
   final Alignment alignment;
   final bool enableSensory;
+  final int? particleCount;
+  final List<Color>? colors;
 
   @override
   State<SparkleConfetti> createState() => _SparkleConfettiState();
@@ -43,7 +47,7 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
           const Duration(milliseconds: 1800),
       };
 
-  int get _particleCount => switch (widget.intensity) {
+  int get _particleCount => widget.particleCount ?? switch (widget.intensity) {
         SparkleCelebrationIntensity.small => 12,
         SparkleCelebrationIntensity.medium => 20,
         SparkleCelebrationIntensity.large => 34,
@@ -127,13 +131,14 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
               child: ConfettiWidget(
                 confettiController: _controller,
                 blastDirectionality: BlastDirectionality.explosive,
-                colors: [
-                  DS.primaryBase,
-                  DS.accent,
-                  DS.success,
-                  DS.info,
-                  DS.warning,
-                ],
+                colors: widget.colors ??
+                    [
+                      DS.primaryBase,
+                      DS.accent,
+                      DS.success,
+                      DS.info,
+                      DS.warning,
+                    ],
                 gravity: widget.intensity == SparkleCelebrationIntensity.small
                     ? 0.34
                     : 0.28,

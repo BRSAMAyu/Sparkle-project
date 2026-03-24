@@ -117,12 +117,13 @@ class _ParticleLayerState extends State<ParticleLayer>
     final drift = config['drift'] as bool? ?? true;
     final speed = (config['speed'] as num?)?.toDouble() ?? 1.0;
 
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        widget.particleAnimation,
-        widget.mainAnimation,
-      ]),
-      builder: (context, child) => CustomPaint(
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          widget.particleAnimation,
+          widget.mainAnimation,
+        ]),
+        builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _ParticlePainter(
             particles: _particles,
@@ -136,6 +137,7 @@ class _ParticleLayerState extends State<ParticleLayer>
             mainValue: widget.mainAnimation.value,
           ),
         ),
+      ),
     );
   }
 

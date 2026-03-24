@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -46,8 +47,10 @@ class _FocusCardState extends ConsumerState<FocusCard>
     final flameLevel = dashboardState.flame.level;
     final tasksCompleted = dashboardState.flame.tasksCompleted;
     final nudgeMessage = dashboardState.flame.nudgeMessage;
-    return GestureDetector(
+    return SparklePressable(
       onTap: widget.onTap,
+      padding: EdgeInsets.zero,
+      borderRadius: DS.borderRadius20,
       child: MaterialStyler(
         material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(

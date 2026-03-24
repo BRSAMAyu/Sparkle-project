@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/scene_atmosphere_layer.dart';
 
 class SceneAudioScope extends StatefulWidget {
   const SceneAudioScope({
@@ -96,5 +97,16 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) => Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          if (widget.policy.atmosphere != ExperienceAtmosphere.none)
+            Positioned.fill(
+              child: SceneAtmosphereLayer(
+                atmosphere: widget.policy.atmosphere,
+              ),
+            ),
+        ],
+      );
 }

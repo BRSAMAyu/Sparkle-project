@@ -218,6 +218,7 @@ postgres_data/
 redis_data/
 minio_data/
 # Quality generated artifacts
+mobile/local_audio_overrides/
 quality/flutter_analyze_report.json
 quality/openapi_snapshot.generated.json
 # Keep dictionaries directory (MDX files for vocabulary lookup)

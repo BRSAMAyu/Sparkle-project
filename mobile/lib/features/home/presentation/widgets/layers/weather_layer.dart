@@ -153,12 +153,13 @@ class _WeatherLayerState extends State<WeatherLayer> {
     // 天气层使用半透明叠加
     return Opacity(
       opacity: _layerOpacity,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([
-          widget.mainAnimation,
-          widget.particleAnimation,
-        ]),
-        builder: (context, child) => CustomPaint(
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            widget.mainAnimation,
+            widget.particleAnimation,
+          ]),
+          builder: (context, child) => CustomPaint(
             size: Size.infinite,
             painter: _WeatherPainter(
               weatherType: widget.weatherType,
@@ -170,6 +171,7 @@ class _WeatherLayerState extends State<WeatherLayer> {
               opacityScale: _opacityScale,
             ),
           ),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/insights/insights.dart';
 
@@ -19,6 +20,7 @@ class InsightsRoutes {
             child: SceneAudioScope(
               policy: ExperienceProfiles.dashboardProductive.audioPolicy(
                 trackOverride: BgmTrack.insights,
+                atmosphereOverride: ExperienceAtmosphere.insightsMist,
               ),
               child: const LearningForecastScreen(),
             ),

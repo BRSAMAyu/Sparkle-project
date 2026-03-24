@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
@@ -34,22 +37,24 @@ class CommunityScreen extends ConsumerWidget {
             child: feedState.when(
               data: (posts) {
                 if (posts.isEmpty) {
-                  return _buildEmptyState(context);
+                  return _buildEmptyState(context, ref);
                 }
-                return ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 80), // Space for FAB
-                  itemCount: posts.length + 1, // +1 for Header
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildHeader(context);
-                    }
-                    final post = posts[index - 1];
-                    return SparkleStaggerItem(
-                      index: index - 1,
-                      child: FeedPostCard(post: post),
-                    );
-                  },
+                return ScrollEdgeHaptics(
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: posts.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _buildHeader(context);
+                      }
+                      final post = posts[index - 1];
+                      return SparkleStaggerItem(
+                        index: index - 1,
+                        child: FeedPostCard(post: post),
+                      );
+                    },
+                  ),
                 );
               },
               error: (err, stack) => Center(
@@ -120,28 +125,35 @@ class CommunityScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _buildEmptyState(BuildContext context) => ListView(
-        children: [
-          _buildHeader(context),
-          const SizedBox(height: 100),
-          Center(
-            child: Column(
-              children: [
-                Icon(Icons.forum_outlined, size: 64, color: DS.brandPrimary24),
-                const SizedBox(height: DS.lg),
-                Text(
-                  'No posts yet',
-                  style: TextStyle(color: DS.brandPrimary54, fontSize: 18),
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) => ScrollEdgeHaptics(
+        child: ListView(
+          children: [
+            _buildHeader(context),
+            const SizedBox(height: DS.spacing64),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+              child: EmptyState(
+                title: 'No community spark yet',
+                description:
+                    'Share a plan, insight, or small win to start the first conversation here.',
+                icon: Icons.forum_outlined,
+                actionText: 'Share a post',
+                onAction: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.confirm,
+                    ),
+                  );
+                  context.push(CommunityRoutes.postsCreate);
+                },
+                customAction: SparkleButton.ghost(
+                  label: 'Refresh feed',
+                  onPressed: () => ref.read(feedProvider.notifier).refresh(),
                 ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  'Be the first to share something!',
-                  style: TextStyle(color: DS.brandPrimary24),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
 }
 
@@ -151,10 +163,11 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-        },
+  Widget build(BuildContext context) => SparklePressable(
+        onTap: () {},
+        feedbackEvent: SensoryFeedbackEvent.selection,
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(

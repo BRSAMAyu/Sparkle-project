@@ -7,9 +7,12 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -138,10 +141,12 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Future<List<QuickShareItem>> _loadAchievements() async {
     final state = ref.read(achievementProvider);
+    final response = state.achievements.isNotEmpty
+        ? null
+        : await ref.read(achievementRepositoryProvider).getAchievements();
 
-    if (state.isLoading || state.error != null) return [];
-
-    final unlockedAchievements = state.achievements
+    final achievements = response?.achievements ?? state.achievements;
+    final unlockedAchievements = achievements
         .where((a) => a.isUnlocked)
         .toList()
       ..sort((a, b) => (b.userProgress?.unlockedAt ?? DateTime(1970))
@@ -181,11 +186,13 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Future<List<QuickShareItem>> _loadPlans() async {
     final state = ref.read(planListProvider);
-    final activePlans = state.activePlans.toList()
+    final loadedPlans = state.plans.isNotEmpty
+        ? state.plans
+        : await ref.read(planRepositoryProvider).getPlans();
+    final activePlans = loadedPlans
+        .where((plan) => plan.isActive)
+        .toList()
       ..sort((a, b) => b.progress.compareTo(a.progress));
-    if (activePlans.isEmpty && (state.isLoading || state.error != null)) {
-      return [];
-    }
 
     return activePlans.take(10).map((plan) => QuickShareItem(
         id: plan.id,
@@ -203,19 +210,24 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Future<List<QuickShareItem>> _loadRecentTasks() async {
     final state = ref.read(taskListProvider);
-    final completedTasks = state.tasks
-        .where((t) => t.status == TaskStatus.completed)
+    final loadedTasks = state.tasks.isNotEmpty
+        ? state.tasks
+        : (await ref.read(taskRepositoryProvider).getTasks(pageSize: 30)).items;
+    final tasks = loadedTasks
+        .where((t) =>
+            t.status == TaskStatus.completed ||
+            t.status == TaskStatus.inProgress ||
+            t.status == TaskStatus.pending)
         .toList()
-      ..sort((a, b) => (b.completedAt ?? DateTime(1970))
-          .compareTo(a.completedAt ?? DateTime(1970)),);
-    if (completedTasks.isEmpty && (state.isLoading || state.error != null)) {
-      return [];
-    }
+      ..sort(
+        (a, b) => (b.completedAt ?? b.updatedAt)
+            .compareTo(a.completedAt ?? a.updatedAt),
+      );
 
-    return completedTasks.take(10).map((task) => QuickShareItem(
+    return tasks.take(10).map((task) => QuickShareItem(
         id: task.id,
         title: task.title,
-        subtitle: '已完成 · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
+        subtitle: '${_taskStatusLabel(task.status)} · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
         contentType: ShareableContentType.taskCompletion,
         icon: Icons.task_alt,
         iconColor: DS.success,
@@ -228,13 +240,13 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Future<List<QuickShareItem>> _loadKnowledgeNodes() async {
     final state = ref.read(galaxyProvider);
-    final nodesWithMastery = state.nodes
+    final loadedNodes = state.nodes.isNotEmpty
+        ? state.nodes
+        : (await ref.read(galaxyRepositoryProvider).getGraph()).nodes;
+    final nodesWithMastery = loadedNodes
         .where((n) => n.masteryScore > 0)
         .toList()
       ..sort((a, b) => b.masteryScore.compareTo(a.masteryScore));
-    if (nodesWithMastery.isEmpty && (state.isLoading || state.lastError != null)) {
-      return [];
-    }
 
     return nodesWithMastery.take(10).map((node) {
       final sectorStyle = SectorConfig.getStyle(node.sector);
@@ -252,6 +264,13 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
       );
     }).toList();
   }
+
+  String _taskStatusLabel(TaskStatus status) => switch (status) {
+        TaskStatus.completed => '已完成',
+        TaskStatus.inProgress => '进行中',
+        TaskStatus.pending => '待开始',
+        TaskStatus.abandoned => '已放弃',
+      };
 
   void _onItemTap(QuickShareItem item) {
     final payload = item.toPayload();

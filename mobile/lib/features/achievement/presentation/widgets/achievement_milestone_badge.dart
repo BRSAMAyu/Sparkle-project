@@ -227,10 +227,12 @@ class _AchievementMilestoneBadgeState extends State<AchievementMilestoneBadge>
             ),
           if (milestone == MilestoneLevel.platinum && _particlesEnabled)
             Positioned.fill(
-              child: CustomPaint(
-                painter: _MilestoneParticlePainter(
-                  animationValue: _controller.value,
-                  color: glow,
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _MilestoneParticlePainter(
+                    animationValue: _controller.value,
+                    color: glow,
+                  ),
                 ),
               ),
             ),

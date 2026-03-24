@@ -11,6 +11,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -320,33 +321,102 @@ class _PendingRequestsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsState = ref.watch(pendingRequestsProvider);
+    final overviewAsync = ref.watch(accountabilityOverviewProvider);
 
     return requestsState.when(
       data: (requests) {
-        if (requests.isEmpty) {
-          return const Center(child: Text('当前没有待处理的好友请求'));
+        final pendingPartnerships =
+            overviewAsync.valueOrNull?.pendingPartnerships ?? const <AccountabilityPartnershipInfo>[];
+        if (requests.isEmpty && pendingPartnerships.isEmpty) {
+          return const Center(child: Text('当前没有待处理的好友请求或伙伴邀请'));
         }
         return RefreshIndicator(
-          onRefresh: () => ref.read(pendingRequestsProvider.notifier).refresh(),
+          onRefresh: () async {
+            await ref.read(pendingRequestsProvider.notifier).refresh();
+            await ref.read(myPartnershipsProvider.notifier).load();
+            ref.invalidate(accountabilityOverviewProvider);
+          },
           child: ListView.builder(
-            itemCount: requests.length,
+            itemCount: requests.length + pendingPartnerships.length + 2,
             padding: const EdgeInsets.all(DS.lg),
             itemBuilder: (context, index) {
-              final request = requests[index];
-              final user = request.friend;
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: DS.md),
+                  child: Text(
+                    '好友请求',
+                    style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                );
+              }
+              if (index <= requests.length) {
+                final request = requests[index - 1];
+                final user = request.friend;
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: user.avatarUrl != null
+                          ? NetworkImage(user.avatarUrl!)
+                          : null,
+                      child: user.avatarUrl == null
+                          ? Text(user.displayName[0])
+                          : null,
+                    ),
+                    title: Text(user.displayName),
+                    subtitle: const Text('希望先和你建立好友关系'),
+                    onTap: () {},
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 36,
+                          icon: Icon(Icons.check, color: DS.success),
+                          onPressed: () {
+                            ref
+                                .read(pendingRequestsProvider.notifier)
+                                .respondToRequest(request.id, true);
+                            ref.read(friendsProvider.notifier).refresh();
+                          },
+                        ),
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 36,
+                          icon: Icon(Icons.close, color: DS.error),
+                          onPressed: () {
+                            ref
+                                .read(pendingRequestsProvider.notifier)
+                                .respondToRequest(request.id, false);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (index == requests.length + 1) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: DS.lg, bottom: DS.md),
+                  child: Text(
+                    '责任伙伴邀请',
+                    style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                );
+              }
+              final partnership = pendingPartnerships[index - requests.length - 2];
+              final partner = partnership.initiator ?? partnership.partner;
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: user.avatarUrl != null
-                        ? NetworkImage(user.avatarUrl!)
+                    backgroundImage: partner?.avatarUrl != null
+                        ? NetworkImage(partner!.avatarUrl!)
                         : null,
-                    child: user.avatarUrl == null
-                        ? Text(user.displayName[0])
+                    child: partner?.avatarUrl == null
+                        ? Text((partner?.displayName ?? '伙')[0])
                         : null,
                   ),
-                  title: Text(user.displayName),
-                  subtitle: const Text('希望先和你建立好友关系'),
-                  onTap: () {},
+                  title: Text(partner?.displayName ?? '责任伙伴邀请'),
+                  subtitle: Text(partnership.initiatorGoal),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -354,21 +424,24 @@ class _PendingRequestsTab extends ConsumerWidget {
                         variant: ButtonVariant.ghost,
                         size: 36,
                         icon: Icon(Icons.check, color: DS.success),
-                        onPressed: () {
-                          ref
-                              .read(pendingRequestsProvider.notifier)
-                              .respondToRequest(request.id, true);
-                          ref.read(friendsProvider.notifier).refresh();
+                        onPressed: () async {
+                          await ref
+                              .read(accountabilityRepositoryProvider)
+                              .respondToPartnership(partnership.id, accept: true);
+                          await ref.read(myPartnershipsProvider.notifier).load();
+                          ref.invalidate(accountabilityOverviewProvider);
                         },
                       ),
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
                         size: 36,
                         icon: Icon(Icons.close, color: DS.error),
-                        onPressed: () {
-                          ref
-                              .read(pendingRequestsProvider.notifier)
-                              .respondToRequest(request.id, false);
+                        onPressed: () async {
+                          await ref
+                              .read(accountabilityRepositoryProvider)
+                              .respondToPartnership(partnership.id, accept: false);
+                          await ref.read(myPartnershipsProvider.notifier).load();
+                          ref.invalidate(accountabilityOverviewProvider);
                         },
                       ),
                     ],

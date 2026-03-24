@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -69,6 +70,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     '/community',
     '/profile',
   };
+  static const double _chatBottomSurfaceHorizontalInset = DS.spacing16;
 
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
@@ -103,6 +105,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
         }
       })
+      ..listenManual(
+        chatProvider.select(_shouldDuckForReasoning),
+        (previous, next) {
+          unawaited(
+            BgmService.setPersistentDuckFactor(
+              next ? 0.3 : 1.0,
+            ),
+          );
+        },
+      )
       // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
       ..listenManual(chatProvider.select((state) => state.error),
           (previous, next) {
@@ -228,6 +240,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    unawaited(BgmService.setPersistentDuckFactor(1.0));
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const experience = ExperienceProfiles.assistantFlow;
     final chatState = ref.watch(chatProvider);
@@ -290,26 +309,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             const SizedBox(width: DS.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.chatTitle,
-                  style: TextStyle(
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightBold,
-                    fontSize: DS.fontSizeBase,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.chatTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
+                      fontSize: DS.fontSizeBase,
+                    ),
                   ),
-                ),
-                Text(
-                  l10n.chatSubtitle,
-                  style: TextStyle(
-                    color: DS.textSecondary,
-                    fontSize: DS.fontSizeXs,
+                  Text(
+                    l10n.chatSubtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -348,6 +373,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: Stack(
           children: [
+            if (_shouldShowReasoningAtmosphere(chatState))
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: _ReasoningBreathOverlay(),
+                ),
+              ),
             Positioned.fill(
               child: IgnorePointer(
                 child: DecoratedBox(
@@ -389,11 +420,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               padding: EdgeInsets.only(
                                 left: DS.spacing16,
                                 right: DS.spacing16,
-                                top: DS.spacing20,
+                                top: DS.spacing16,
                                 bottom: _calculateBottomPadding(
                                   context,
                                   chatState,
                                   aiSystemPreferences,
+                                  ref.watch(
+                                    showChatTransparencyCapsuleProvider,
+                                  ),
                                 ),
                               ),
                               cacheExtent: 600,
@@ -416,6 +450,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       details: chatState.aiStatusDetails,
                                       startedAtEpochMs: chatState
                                           .activeRunSummary?.startedAtEpochMs,
+                                      enableStatusTrack: false,
                                     ),
                                   );
                                 }
@@ -898,6 +933,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     BuildContext context,
     ChatState chatState,
     TransparencyPreferences aiSystemPreferences,
+    bool showChatTransparencyCapsule,
   ) {
     final isCompactMobile = _isCompactMobileContext(context);
 
@@ -941,7 +977,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       padding += isSmallScreen ? 108.0 : 124.0;
     }
 
-    if (aiSystemPreferences.enabled &&
+    if (showChatTransparencyCapsule &&
+        aiSystemPreferences.enabled &&
         aiSystemPreferences.displayMode != TransparencyDisplayMode.detailOnly &&
         !chatState.transparencyPresentationState.isDismissed) {
       padding += isSmallScreen ? 56.0 : DS.spacing64;
@@ -979,6 +1016,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final reasoningMode = ref.watch(aiReasoningModeProvider);
     final showChatContextToggle = ref.watch(showChatContextToggleProvider);
     final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
+    final showChatTransparencyCapsule =
+        ref.watch(showChatTransparencyCapsuleProvider);
     final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
@@ -994,10 +1033,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (isCompactMobile && showChatContextToggle)
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                DS.spacing12,
+                _chatBottomSurfaceHorizontalInset,
                 0,
-                DS.spacing12,
-                DS.spacing4,
+                _chatBottomSurfaceHorizontalInset,
+                0,
               ),
               child: _ChatContextToggle(
                 isExpanded: _showContextControls,
@@ -1014,10 +1053,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           if (showAiSystemPanel &&
+              showChatTransparencyCapsule &&
               aiSystemPreferences.displayMode !=
                   TransparencyDisplayMode.detailOnly)
             Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              padding: const EdgeInsets.fromLTRB(
+                _chatBottomSurfaceHorizontalInset,
+                0,
+                _chatBottomSurfaceHorizontalInset,
+                DS.spacing4,
+              ),
               child: TransparencyFloatingCapsule(
                 preferences: aiSystemPreferences,
                 runPhase: chatState.runPhase,
@@ -1051,17 +1096,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               index: 0,
               child: PlanSelectorPill(),
             ),
-            const SizedBox(height: DS.spacing10),
+            const SizedBox(height: DS.spacing8),
             const SparkleStaggerItem(
               index: 1,
               child: AiReasoningModePill(),
             ),
-            const SizedBox(height: DS.spacing10),
+            const SizedBox(height: DS.spacing8),
             const SparkleStaggerItem(
               index: 2,
               child: ChatModeSelectorPill(),
             ),
-            const SizedBox(height: DS.spacing4),
+            const SizedBox(height: DS.spacing2),
           ],
           SparkleExitTransition(
             visible: !chatState.hasActiveRun && showChatPredictionDock,
@@ -1069,10 +1114,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: !chatState.hasActiveRun && showChatPredictionDock
                 ? Padding(
                     padding: const EdgeInsets.only(
-                      left: DS.spacing16,
-                      right: DS.spacing16,
-                      top: DS.spacing2,
-                      bottom: DS.spacing8,
+                      left: _chatBottomSurfaceHorizontalInset,
+                      right: _chatBottomSurfaceHorizontalInset,
+                      bottom: DS.spacing6,
                     ),
                     child: SparkleStaggerItem(
                       index: 3,
@@ -1135,6 +1179,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return '均衡';
     }
   }
+
+  static bool _shouldDuckForReasoning(ChatState state) {
+    if (state.isReasoningActive) {
+      return true;
+    }
+    final status = state.aiStatus;
+    return status == 'THINKING' ||
+        status == 'ANALYZING' ||
+        status == 'PLANNING' ||
+        status == 'REVIEWING' ||
+        status == 'SEARCHING';
+  }
+
+  bool _shouldShowReasoningAtmosphere(ChatState state) =>
+      _shouldDuckForReasoning(state) &&
+      state.runPhase.isActive &&
+      state.streamingContent.isEmpty;
 
   String _attachmentChipLabel(StoredFile file) {
     final statusText = _attachmentStatusText(file.status);
@@ -1205,6 +1266,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     _defaultAiSystemPreferences;
             final notifier =
                 ref.read(transparencyPreferencesNotifierProvider.notifier);
+            final showChatContextToggle =
+                ref.watch(showChatContextToggleProvider);
+            final showChatPredictionDock =
+                ref.watch(showChatPredictionDockProvider);
+            final showChatTransparencyCapsule =
+                ref.watch(showChatTransparencyCapsuleProvider);
 
             return GraphiteModalSurface(
               padding: EdgeInsets.zero,
@@ -1278,6 +1345,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
                         value: preferences.enabled,
                         onChanged: notifier.setEnabled,
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _buildAiSettingTile(
+                        title: '显示顶部选择条',
+                        subtitle: '控制聊天页收起/展开的计划、模式和档位入口。',
+                        value: showChatContextToggle,
+                        onChanged: (value) => ref
+                            .read(showChatContextToggleProvider.notifier)
+                            .setEnabled(value),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _buildAiSettingTile(
+                        title: '显示预测组件',
+                        subtitle: '控制输入框上方的行为预测与快捷建议。',
+                        value: showChatPredictionDock,
+                        onChanged: (value) => ref
+                            .read(showChatPredictionDockProvider.notifier)
+                            .setEnabled(value),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _buildAiSettingTile(
+                        title: '显示透明胶囊',
+                        subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
+                        value: showChatTransparencyCapsule,
+                        onChanged: (value) => ref
+                            .read(
+                              showChatTransparencyCapsuleProvider.notifier,
+                            )
+                            .setEnabled(value),
                       ),
                       if (preferences.enabled) ...[
                         const SizedBox(height: DS.spacing12),
@@ -1753,7 +1849,7 @@ class _ChatContextToggle extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,
-              vertical: DS.spacing10,
+              vertical: DS.spacing8,
             ),
             child: Row(
               children: [
@@ -1867,9 +1963,28 @@ class _TypingIndicator extends StatefulWidget {
 }
 
 /// 流式输出气泡 - 显示正在流式输出的 AI 响应
-class _StreamingBubble extends StatelessWidget {
+class _StreamingBubble extends StatefulWidget {
   const _StreamingBubble({required this.content});
   final String content;
+
+  @override
+  State<_StreamingBubble> createState() => _StreamingBubbleState();
+}
+
+class _StreamingBubbleState extends State<_StreamingBubble> {
+  bool _entered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _entered = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1877,45 +1992,70 @@ class _StreamingBubble extends StatelessWidget {
     final bubbleColor = DS.chatBubbleOther;
     final textColor = DS.chatBubbleOtherText;
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: _bubbleMaxWidth(context),
+    return TweenAnimationBuilder<Offset>(
+      tween: Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: _entered ? Offset.zero : const Offset(0, 0.08),
+      ),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      builder: (context, offset, child) => Transform.translate(
+        offset: Offset(0, offset.dy * 32),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          opacity: _entered ? 1 : 0,
+          child: child,
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
-        ),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(DS.spacing20),
-            topRight: Radius.circular(DS.spacing20),
-            bottomRight: Radius.circular(DS.spacing20),
-            bottomLeft: Radius.circular(DS.spacing4),
-          ),
-          boxShadow: DS.shadowSm,
-          border: Border.all(color: isDark ? DS.neutral700 : DS.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Flexible(
-              child: SparkleMarkdown(
-                content: content,
-                isStreaming: true,
-                textColor: textColor,
-                codeBackgroundColor: isDark
-                    ? DS.neutral700
-                    : DS.chatBubbleOtherText.withValues(alpha: 0.06),
-                linkColor: DS.brandPrimary,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutQuint,
+          alignment: Alignment.topLeft,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: _bubbleMaxWidth(context),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing12,
+            ),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(DS.spacing20),
+                topRight: Radius.circular(DS.spacing20),
+                bottomRight: Radius.circular(DS.spacing20),
+                bottomLeft: Radius.circular(DS.spacing4),
+              ),
+              boxShadow: DS.shadowSm,
+              border: Border.all(
+                color: isDark ? DS.neutral700 : DS.borderSubtle,
               ),
             ),
-            const SizedBox(width: DS.xs),
-            _BlinkingCursor(color: textColor),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: SparkleMarkdown(
+                    content: widget.content,
+                    isStreaming: true,
+                    textColor: textColor,
+                    codeBackgroundColor: isDark
+                        ? DS.neutral700
+                        : DS.chatBubbleOtherText.withValues(alpha: 0.06),
+                    linkColor: DS.brandPrimary,
+                    contentRole: SparkleMarkdownRole.chatBubble,
+                  ),
+                ),
+                const SizedBox(width: DS.xs),
+                _BlinkingCursor(color: textColor),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1962,12 +2102,14 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   }
 
   @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: _animation,
-        child: Container(
-          width: DS.spacing4 / 2,
-          height: DS.spacing16,
-          color: widget.color,
+  Widget build(BuildContext context) => RepaintBoundary(
+        child: FadeTransition(
+          opacity: _animation,
+          child: Container(
+            width: DS.spacing4 / 2,
+            height: DS.spacing16,
+            color: widget.color,
+          ),
         ),
       );
 }
@@ -1996,52 +2138,121 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   Widget build(BuildContext context) {
     final bubbleColor = DS.chatBubbleOther;
     final dotColor = DS.chatBubbleOtherText.withValues(alpha: 0.7);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing16,
-        vertical: DS.spacing12,
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 8, end: 0),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      builder: (context, translateY, child) => Transform.translate(
+        offset: Offset(0, translateY),
+        child: child,
       ),
-      decoration: BoxDecoration(
-        color: bubbleColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(DS.spacing20),
-          topRight: Radius.circular(DS.spacing20),
-          bottomRight: Radius.circular(DS.spacing20),
-          bottomLeft: Radius.circular(DS.spacing4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
         ),
-        boxShadow: DS.shadowSm,
-        border: Border.all(color: DS.borderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(
-          3,
-          (index) => AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final delay = index * 0.2;
-              final progress =
-                  ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
-              final offset = sin(progress * pi) * 6;
+        decoration: BoxDecoration(
+          color: bubbleColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(DS.spacing20),
+            topRight: Radius.circular(DS.spacing20),
+            bottomRight: Radius.circular(DS.spacing20),
+            bottomLeft: Radius.circular(DS.spacing4),
+          ),
+          boxShadow: DS.shadowSm,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(
+            3,
+            (index) => AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final delay = index * (1 / 3);
+                final progress =
+                    ((_controller.value - delay + 1) % 1.0).clamp(0.0, 1.0);
+                final opacity = 0.25 + (sin(progress * pi) * 0.75);
+                final scale = 0.72 + (sin(progress * pi) * 0.28);
 
-              return Transform.translate(
-                offset: Offset(0, -offset),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing4 / 2,
+                return Opacity(
+                  opacity: opacity.clamp(0.2, 1.0),
+                  child: Transform.scale(
+                    scale: scale.clamp(0.72, 1.0),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing4 / 2,
+                      ),
+                      width: DS.spacing8,
+                      height: DS.spacing8,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                  width: DS.spacing8,
-                  height: DS.spacing8,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ReasoningBreathOverlay extends StatefulWidget {
+  const _ReasoningBreathOverlay();
+
+  @override
+  State<_ReasoningBreathOverlay> createState() => _ReasoningBreathOverlayState();
+}
+
+class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+    unawaited(_controller.repeat(reverse: true));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = context.reduceMotion;
+    if (reduceMotion) {
+      return const SizedBox.shrink();
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final opacity = lerpDouble(0.03, 0.08, _controller.value) ?? 0.05;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0.1, -0.2),
+              radius: 1.0,
+              colors: [
+                DS.info.withValues(alpha: opacity),
+                DS.brandPrimary.withValues(alpha: opacity * 0.78),
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.42, 1.0],
+            ),
+          ),
+        );
+      },
     );
   }
 }

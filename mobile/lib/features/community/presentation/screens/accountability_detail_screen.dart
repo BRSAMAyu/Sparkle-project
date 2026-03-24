@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
@@ -1225,6 +1226,7 @@ class _AccountabilityCheckinSheetState
             mood: _mood,
             minutes: _minutes,
           );
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.checkin));
       widget.onDone();
       if (mounted) {
         Navigator.pop(context);

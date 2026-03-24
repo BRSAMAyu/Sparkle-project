@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final visualState = ref.watch(visualElementProvider);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerHeight = screenHeight < 720 ? 174.0 : 220.0;
+    final headerHeight = screenHeight < 720 ? 164.0 : 198.0;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -41,17 +41,16 @@ class ProfileScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                 child: Column(
                   children: [
-                    const SizedBox(height: DS.spacing2),
                     const StatisticsCard(),
-                    const SizedBox(height: DS.spacing16),
+                    const SizedBox(height: DS.spacing12),
                     _buildPrestigeShowcase(
                       context,
                       achievementState,
                       visualState,
                     ),
-                    const SizedBox(height: DS.spacing18),
+                    const SizedBox(height: DS.spacing16),
                     _buildSettingsSection(context, ref, l10n, user),
-                    const SizedBox(height: 72),
+                    const SizedBox(height: 56),
                   ],
                 ),
               ),
@@ -92,7 +91,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing18),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -233,6 +232,7 @@ class ProfileScreen extends ConsumerWidget {
     required String label,
     required Color color,
   }) => Container(
+      constraints: const BoxConstraints(maxWidth: 188),
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -243,6 +243,8 @@ class ProfileScreen extends ConsumerWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: DS.labelSmall.copyWith(
           color: color,
           fontWeight: DS.fontWeightMedium,
@@ -324,9 +326,9 @@ class ProfileScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing20,
-                DS.spacing18,
+                DS.spacing12,
                 DS.spacing20,
-                DS.spacing16,
+                DS.spacing12,
               ),
               child: Column(
                 children: [

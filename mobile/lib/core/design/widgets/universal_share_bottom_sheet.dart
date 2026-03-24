@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
@@ -869,6 +870,7 @@ class _UniversalShareBottomSheetState
   }
 
   Future<void> _shareToCommunity() async {
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.of(context).pop();
 
     if (widget.onCommunityShare != null) {
@@ -877,10 +879,7 @@ class _UniversalShareBottomSheetState
     }
 
     // Check if content type is supported for community sharing
-    final unsupportedTypes = [
-      ShareableContentType.achievement,
-      ShareableContentType.learningReport,
-    ];
+    final unsupportedTypes = [ShareableContentType.learningReport];
     if (unsupportedTypes.contains(widget.payload.contentType)) {
       if (mounted) {
         AppFeedback.warning(
@@ -893,7 +892,7 @@ class _UniversalShareBottomSheetState
 
     // Default: show community share sheet
     await showShareResourceSheet(
-      context,
+      rootContext,
       resourceType: widget.payload.contentType.stringValue,
       resourceId: widget.payload.resourceId,
       title: widget.payload.title,
@@ -956,7 +955,7 @@ Future<void> showUniversalShareSheet(
   VoidCallback? onCommunityShare,
   List<ShareTemplate> templates = DefaultShareTemplates.all,
 }) async {
-  await showModalBottomSheet<void>(
+  await showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: DS.surfacePrimary.withValues(alpha: 0),

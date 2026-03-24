@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Font fallback list for CJK and emoji rendering.
@@ -18,6 +22,22 @@ const sparkleFontFallback = <String>[
   'Noto Color Emoji',
   'Segoe UI Emoji',
 ];
+
+enum SparkleMarkdownRole {
+  standard,
+  chatBubble,
+  taskGuide,
+  seedBody,
+  knowledgeSummary,
+}
+
+double _defaultLineHeightForRole(SparkleMarkdownRole role) => switch (role) {
+      SparkleMarkdownRole.chatBubble => 1.45,
+      SparkleMarkdownRole.taskGuide => 1.65,
+      SparkleMarkdownRole.seedBody => 1.7,
+      SparkleMarkdownRole.knowledgeSummary => 1.55,
+      SparkleMarkdownRole.standard => 1.5,
+    };
 
 /// Unified markdown rendering widget for the entire Sparkle app.
 ///
@@ -40,11 +60,12 @@ class SparkleMarkdown extends StatelessWidget {
     required this.linkColor,
     super.key,
     this.fontSize = 16,
-    this.lineHeight = 1.5,
+    this.lineHeight,
     this.isStreaming = false,
     this.selectable = false,
     this.onLinkTap,
     this.shrinkWrap = true,
+    this.contentRole = SparkleMarkdownRole.standard,
   });
 
   /// The markdown / plain text content to render.
@@ -63,7 +84,7 @@ class SparkleMarkdown extends StatelessWidget {
   final double fontSize;
 
   /// Line height multiplier.
-  final double lineHeight;
+  final double? lineHeight;
 
   /// Whether content is actively being streamed (enables partial-markdown
   /// completion so incomplete syntax renders correctly).
@@ -78,6 +99,9 @@ class SparkleMarkdown extends StatelessWidget {
   /// Whether the markdown body should shrink-wrap its content.
   final bool shrinkWrap;
 
+  /// Scene-specific reading preset.
+  final SparkleMarkdownRole contentRole;
+
   @override
   Widget build(BuildContext context) {
     if (content.isEmpty) {
@@ -85,6 +109,8 @@ class SparkleMarkdown extends StatelessWidget {
     }
 
     final prepared = _prepareContent(content, isStreaming: isStreaming);
+    final resolvedLineHeight =
+        lineHeight ?? _defaultLineHeightForRole(contentRole);
 
     // Build the MarkdownBody — always attempt markdown rendering.
     // The normalization + completion pipeline ensures even plain text
@@ -103,7 +129,7 @@ class SparkleMarkdown extends StatelessWidget {
             style: TextStyle(
               color: textColor,
               fontSize: fontSize,
-              height: lineHeight,
+              height: resolvedLineHeight,
               fontFamilyFallback: sparkleFontFallback,
             ),
           ),
@@ -112,6 +138,17 @@ class SparkleMarkdown extends StatelessWidget {
       softLineBreak: true,
       shrinkWrap: shrinkWrap,
       onTapLink: onLinkTap ?? _defaultLinkHandler,
+      imageBuilder: (uri, title, alt) => _MarkdownNetworkImage(
+        uri: uri,
+        alt: alt,
+      ),
+      builders: {
+        'pre': _CodeBlockBuilder(
+          textColor: textColor,
+          codeBackgroundColor: codeBackgroundColor,
+          accentColor: linkColor,
+        ),
+      },
       styleSheet: _buildStyleSheet(),
     );
 
@@ -123,10 +160,12 @@ class SparkleMarkdown extends StatelessWidget {
   }
 
   MarkdownStyleSheet _buildStyleSheet() {
+    final resolvedLineHeight =
+        lineHeight ?? _defaultLineHeightForRole(contentRole);
     final base = TextStyle(
       color: textColor,
       fontSize: fontSize,
-      height: lineHeight,
+      height: resolvedLineHeight,
       fontFamilyFallback: sparkleFontFallback,
     );
 
@@ -190,6 +229,216 @@ class SparkleMarkdown extends StatelessWidget {
       }
     } catch (_) {}
   }
+}
+
+class _CodeBlockBuilder extends MarkdownElementBuilder {
+  _CodeBlockBuilder({
+    required this.textColor,
+    required this.codeBackgroundColor,
+    required this.accentColor,
+  });
+
+  final Color textColor;
+  final Color codeBackgroundColor;
+  final Color accentColor;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final codeElement = element.children
+        ?.whereType<md.Element>()
+        .cast<md.Element?>()
+        .firstWhere(
+          (child) => child?.tag == 'code',
+          orElse: () => null,
+        );
+    final className = codeElement?.attributes['class'] ?? '';
+    final language = className.startsWith('language-')
+        ? className.substring('language-'.length)
+        : null;
+    final code = codeElement?.textContent.trimRight() ?? element.textContent;
+    return _CodeBlockCard(
+      content: code,
+      language: language,
+      textColor: textColor,
+      codeBackgroundColor: codeBackgroundColor,
+      accentColor: accentColor,
+    );
+  }
+}
+
+class _CodeBlockCard extends StatefulWidget {
+  const _CodeBlockCard({
+    required this.content,
+    required this.textColor,
+    required this.codeBackgroundColor,
+    required this.accentColor,
+    this.language,
+  });
+
+  final String content;
+  final String? language;
+  final Color textColor;
+  final Color codeBackgroundColor;
+  final Color accentColor;
+
+  @override
+  State<_CodeBlockCard> createState() => _CodeBlockCardState();
+}
+
+class _CodeBlockCardState extends State<_CodeBlockCard> {
+  bool _copied = false;
+
+  Future<void> _handleCopy() async {
+    await Clipboard.setData(ClipboardData(text: widget.content));
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
+    if (!mounted) return;
+    setState(() => _copied = true);
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() => _copied = false);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final languageLabel = _formatLanguage(widget.language);
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: widget.codeBackgroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: widget.textColor.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 8, 6),
+              child: Row(
+                children: [
+                  if (languageLabel != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: widget.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        languageLabel,
+                        style: TextStyle(
+                          color: widget.accentColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: _handleCopy,
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: Icon(
+                        _copied ? Icons.check_rounded : Icons.copy_all_rounded,
+                        key: ValueKey<bool>(_copied),
+                        size: 18,
+                      ),
+                    ),
+                    tooltip: '复制代码',
+                    visualDensity: VisualDensity.compact,
+                    color: _copied
+                        ? DS.success
+                        : widget.textColor.withValues(alpha: 0.78),
+                  ),
+                ],
+              ),
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: SelectableText(
+                widget.content,
+                style: TextStyle(
+                  color: widget.textColor,
+                  fontSize: 13,
+                  height: 1.5,
+                  fontFamily: 'monospace',
+                  fontFamilyFallback: sparkleFontFallback,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _formatLanguage(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final normalized = raw.trim().toLowerCase();
+    switch (normalized) {
+      case 'dart':
+        return 'Dart';
+      case 'python':
+      case 'py':
+        return 'Python';
+      case 'javascript':
+      case 'js':
+        return 'JavaScript';
+      case 'typescript':
+      case 'ts':
+        return 'TypeScript';
+      case 'json':
+        return 'JSON';
+      case 'bash':
+      case 'shell':
+      case 'sh':
+        return 'Shell';
+      case 'yaml':
+      case 'yml':
+        return 'YAML';
+      default:
+        return normalized[0].toUpperCase() + normalized.substring(1);
+    }
+  }
+}
+
+class _MarkdownNetworkImage extends StatelessWidget {
+  const _MarkdownNetworkImage({
+    required this.uri,
+    this.alt,
+  });
+
+  final Uri uri;
+  final String? alt;
+
+  @override
+  Widget build(BuildContext context) => SparkleNetworkImage(
+        imageUrl: uri.toString(),
+        borderRadius: BorderRadius.circular(14),
+        aspectRatio: 16 / 9,
+        errorWidget: Container(
+          padding: const EdgeInsets.all(12),
+          color: DS.surfaceSecondary,
+          alignment: Alignment.center,
+          child: Text(
+            alt?.trim().isNotEmpty ?? false ? alt! : '图片加载失败',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+      );
 }
 
 // ---------------------------------------------------------------------------

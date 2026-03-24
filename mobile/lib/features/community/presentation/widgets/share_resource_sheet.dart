@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -82,6 +83,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
     final overviewAsync = ref.watch(accountabilityOverviewProvider);
     final l10n = context.l10n;
     final activePartnershipId = overviewAsync.valueOrNull?.activePartnership?.id;
+    final selectorHeight = MediaQuery.sizeOf(context).height < 760 ? 196.0 : 220.0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -122,13 +124,15 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               TabBar(
                 controller: _tabController,
                 labelColor: DS.brandPrimary,
+                labelPadding:
+                    const EdgeInsets.symmetric(horizontal: DS.spacing12),
                 tabs: [
                   Tab(text: l10n.shareResourceTabFriends),
                   Tab(text: l10n.shareResourceTabGroups),
                 ],
               ),
               SizedBox(
-                height: 220,
+                height: selectorHeight,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
@@ -146,7 +150,10 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                 maxLines: 2,
                 decoration: InputDecoration(
                   hintText: l10n.shareResourceCommentHint,
-                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  border: const OutlineInputBorder(
+                    borderRadius: DS.borderRadius12,
+                  ),
                 ),
               ),
               const SizedBox(height: DS.md),
@@ -179,13 +186,15 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
           children: [
             Text(
               widget.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             if (widget.subtitle != null && widget.subtitle!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
                 widget.subtitle!,
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.textSecondary, fontSize: 12),
               ),
@@ -369,15 +378,44 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
     setState(() => _isSharing = true);
     try {
-      await ref.read(communityShareRepositoryProvider).shareResource(
-            resourceType: widget.resourceType,
-            resourceId: widget.resourceId,
-            targetGroupId: _selectedGroupId,
-            targetUserId: _selectedUserId,
-            comment: _commentController.text.trim().isEmpty
-                ? null
-                : _commentController.text.trim(),
-          );
+      final comment = _commentController.text.trim().isEmpty
+          ? null
+          : _commentController.text.trim();
+      if (widget.resourceType == 'achievement') {
+        if (_selectedGroupId != null) {
+          await ref.read(communityRepositoryProvider).sendMessage(
+                _selectedGroupId!,
+                type: MessageType.achievement,
+                content: comment ?? widget.title,
+                contentData: {
+                  'achievement_id': widget.resourceId,
+                  'name': widget.title,
+                  'description': widget.subtitle,
+                },
+              );
+        } else if (_selectedUserId != null) {
+          await ref.read(communityRepositoryProvider).sendPrivateMessage(
+                PrivateMessageSend(
+                  targetUserId: _selectedUserId!,
+                  messageType: MessageType.achievement,
+                  content: comment ?? widget.title,
+                  contentData: {
+                    'achievement_id': widget.resourceId,
+                    'name': widget.title,
+                    'description': widget.subtitle,
+                  },
+                ),
+              );
+        }
+      } else {
+        await ref.read(communityShareRepositoryProvider).shareResource(
+              resourceType: widget.resourceType,
+              resourceId: widget.resourceId,
+              targetGroupId: _selectedGroupId,
+              targetUserId: _selectedUserId,
+              comment: comment,
+            );
+      }
 
       if (!mounted) return;
       final messengerContext = widget.feedbackContext ?? context;

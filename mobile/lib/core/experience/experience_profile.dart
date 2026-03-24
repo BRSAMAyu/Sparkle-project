@@ -22,6 +22,7 @@ class ExperienceProfile {
     required this.surfaceGlowOpacity,
     required this.infoDensity,
     required this.primaryFeedback,
+    this.atmosphere = ExperienceAtmosphere.none,
     this.preferSavedAmbient = false,
   });
 
@@ -34,16 +35,19 @@ class ExperienceProfile {
   final double surfaceGlowOpacity;
   final ExperienceInfoDensity infoDensity;
   final SensoryFeedbackEvent primaryFeedback;
+  final ExperienceAtmosphere atmosphere;
   final bool preferSavedAmbient;
 
   SceneAudioPolicy audioPolicy({
     BgmTrack? trackOverride,
     BgmPriority priority = BgmPriority.route,
+    ExperienceAtmosphere? atmosphereOverride,
     bool? useSavedAmbient,
   }) =>
       SceneAudioPolicy(
         track: trackOverride ?? defaultTrack,
         priority: priority,
+        atmosphere: atmosphereOverride ?? atmosphere,
         useSavedAmbient: useSavedAmbient ?? preferSavedAmbient,
         stopAmbientOnDispose: useSavedAmbient ?? preferSavedAmbient,
       );
@@ -98,6 +102,7 @@ class ExperienceProfiles {
     surfaceGlowOpacity: 0.12,
     infoDensity: ExperienceInfoDensity.immersive,
     primaryFeedback: SensoryFeedbackEvent.confirm,
+    atmosphere: ExperienceAtmosphere.focusBreath,
     preferSavedAmbient: true,
   );
 
@@ -111,6 +116,7 @@ class ExperienceProfiles {
     surfaceGlowOpacity: 0.08,
     infoDensity: ExperienceInfoDensity.balanced,
     primaryFeedback: SensoryFeedbackEvent.messageSend,
+    atmosphere: ExperienceAtmosphere.insightsMist,
   );
 
   static const dashboardProductive = ExperienceProfile(
@@ -123,6 +129,7 @@ class ExperienceProfiles {
     surfaceGlowOpacity: 0.08,
     infoDensity: ExperienceInfoDensity.compact,
     primaryFeedback: SensoryFeedbackEvent.navigation,
+    atmosphere: ExperienceAtmosphere.dashboardGlow,
   );
 
   static const socialWarm = ExperienceProfile(
@@ -135,6 +142,7 @@ class ExperienceProfiles {
     surfaceGlowOpacity: 0.09,
     infoDensity: ExperienceInfoDensity.balanced,
     primaryFeedback: SensoryFeedbackEvent.selection,
+    atmosphere: ExperienceAtmosphere.socialWarm,
   );
 
   static const celebrationRare = ExperienceProfile(
@@ -147,5 +155,6 @@ class ExperienceProfiles {
     surfaceGlowOpacity: 0.14,
     infoDensity: ExperienceInfoDensity.immersive,
     primaryFeedback: SensoryFeedbackEvent.achievementRare,
+    atmosphere: ExperienceAtmosphere.achievementGlow,
   );
 }

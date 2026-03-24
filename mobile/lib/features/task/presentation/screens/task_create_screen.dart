@@ -304,7 +304,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               : Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing16,
+                DS.spacing16,
+                DS.spacing16,
+                DS.spacing24,
+              ),
               children: [
                 if (_isEditMode) ...[
                   Container(
@@ -559,6 +564,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
                 // Due Date
                 ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing4,
+                  ),
                   title: Text(l10n.taskDeadlineLabel),
                   subtitle: Text(
                     _dueDate == null
@@ -569,7 +578,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   shape: RoundedRectangleBorder(
                     side: BorderSide(
                         color: DS.brandPrimary.withValues(alpha: 0.4),),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   onTap: () async {
                     final now = DateTime.now();
@@ -647,30 +656,65 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            nudge.title,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        if (nudge.suggestedValue != null)
-                                          Flexible(
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: SparkleButton(
-                                                label: l10n.taskNudgeApply,
-                                                variant: ButtonVariant.ghost,
-                                                onPressed: () =>
-                                                    _applyNudge(nudge),
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final compact =
+                                            constraints.maxWidth < 340;
+                                        final actionButton =
+                                            nudge.suggestedValue != null
+                                                ? SparkleButton(
+                                                    label: l10n.taskNudgeApply,
+                                                    variant:
+                                                        ButtonVariant.ghost,
+                                                    onPressed: () =>
+                                                        _applyNudge(nudge),
+                                                  )
+                                                : null;
+                                        if (compact) {
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                nudge.title,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              if (actionButton != null) ...[
+                                                const SizedBox(height: 6),
+                                                Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: actionButton,
+                                                ),
+                                              ],
+                                            ],
+                                          );
+                                        }
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                nudge.title,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                      ],
+                                            if (actionButton != null)
+                                              Flexible(
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerRight,
+                                                  child: actionButton,
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
                                     ),
                                     const SizedBox(height: 4),
                                     Text(

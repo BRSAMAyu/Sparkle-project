@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
@@ -241,12 +242,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 ),
                 if (error.questionImageUrl != null) ...[
                   const SizedBox(height: DS.spacing16),
-                  ClipRRect(
+                  SparkleNetworkImage(
+                    imageUrl: error.questionImageUrl!,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      error.questionImageUrl!,
-                      fit: BoxFit.cover,
-                    ),
                   ),
                 ],
               ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
@@ -66,11 +67,10 @@ class ShopItemCard extends StatelessWidget {
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(14),
                                   ),
-                                  child: Image.network(
-                                    item.iconUrl!,
+                                  child: SparkleNetworkImage(
+                                    imageUrl: item.iconUrl!,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Icon(
+                                    errorWidget: Icon(
                                       _getItemTypeIcon(item.itemType),
                                       size: 64,
                                       color: _getRarityColor(item.rarity),

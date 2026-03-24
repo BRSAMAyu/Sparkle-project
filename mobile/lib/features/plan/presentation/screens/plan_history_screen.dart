@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -43,12 +46,20 @@ class PlanHistoryScreen extends ConsumerWidget {
     bool isLoading,
   ) {
     if (isLoading && plans.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return LoadingIndicator.circular(
+        showText: true,
+        loadingText: 'Loading archived plans...',
+      );
     }
 
     if (plans.isEmpty) {
-      return Center(
-        child: Text(context.l10n.planHistoryEmpty),
+      return EmptyState(
+        title: 'No archived plans yet',
+        description:
+            'Finished or paused plans will rest here for later review and revival.',
+        icon: Icons.archive_outlined,
+        actionText: 'Back to active plans',
+        onAction: () => context.pop(),
       );
     }
 
@@ -57,18 +68,20 @@ class PlanHistoryScreen extends ConsumerWidget {
       grouped.putIfAbsent(plan.type, () => []).add(plan);
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: grouped.entries
-          .map(
-            (entry) => _PlanHistorySection(
-              title: entry.key == PlanType.sprint
-                  ? context.l10n.planTypeSprint
-                  : context.l10n.planTypeGrowth,
-              plans: entry.value,
-            ),
-          )
-          .toList(),
+    return ScrollEdgeHaptics(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: grouped.entries
+            .map(
+              (entry) => _PlanHistorySection(
+                title: entry.key == PlanType.sprint
+                    ? context.l10n.planTypeSprint
+                    : context.l10n.planTypeGrowth,
+                plans: entry.value,
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }

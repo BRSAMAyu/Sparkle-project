@@ -225,6 +225,7 @@ class MessageDetailView extends StatelessWidget {
       codeBackgroundColor: DS.surfaceTertiary.withValues(alpha: 0.35),
       linkColor: DS.primaryBase,
       selectable: true,
+      contentRole: SparkleMarkdownRole.chatBubble,
     );
   }
 

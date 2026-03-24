@@ -117,11 +117,11 @@ extension AmbientSceneLabel on AmbientScene {
 
   String? get assetPath => switch (this) {
         AmbientScene.none => null,
-        AmbientScene.rain => 'assets/audio/ambient/rain.ogg',
-        AmbientScene.ocean => 'assets/audio/ambient/ocean_waves.ogg',
-        AmbientScene.whiteNoise => 'assets/audio/ambient/white_noise.ogg',
-        AmbientScene.cafe => 'assets/audio/ambient/cafe.ogg',
-        AmbientScene.piano => 'assets/audio/ambient/piano.ogg',
+        AmbientScene.rain => 'audio/ambient/rain.ogg',
+        AmbientScene.ocean => 'audio/ambient/ocean_waves.ogg',
+        AmbientScene.whiteNoise => 'audio/ambient/white_noise.ogg',
+        AmbientScene.cafe => 'audio/ambient/cafe.ogg',
+        AmbientScene.piano => 'audio/ambient/piano.ogg',
       };
 }
 
@@ -242,7 +242,7 @@ class SensoryFeedbackService {
   }
 
   static Future<double> getAmbientVolume() async =>
-      (await _getPrefs()).getDouble(_ambientVolumeKey) ?? 0.35;
+      (await _getPrefs()).getDouble(_ambientVolumeKey) ?? 0.5;
 
   static Future<void> setAmbientVolume(double volume) async {
     await (await _getPrefs()).setDouble(_ambientVolumeKey, volume);
@@ -296,6 +296,24 @@ class SensoryFeedbackService {
     }
     if (hapticAllowed && _consumeBudget(_recentHapticEvents, _hapticBudgetWindow, _hapticBudgetLimit)) {
       unawaited(_playHaptic(event));
+    }
+  }
+
+  static Future<void> emitSeries(
+    List<SensoryFeedbackEvent> events, {
+    Duration gap = const Duration(milliseconds: 140),
+    bool enableSound = true,
+    bool enableHaptic = true,
+  }) async {
+    for (var i = 0; i < events.length; i++) {
+      await emit(
+        events[i],
+        enableSound: enableSound,
+        enableHaptic: enableHaptic,
+      );
+      if (i < events.length - 1) {
+        await Future<void>.delayed(gap);
+      }
     }
   }
 
@@ -386,7 +404,7 @@ class SensoryFeedbackService {
   // Internal: sound spec table
   // ---------------------------------------------------------------------------
 
-  static const String _ui = 'assets/audio/ui/';
+  static const String _ui = 'audio/ui/';
 
   static _SoundSpec _spec(SensoryFeedbackEvent event) {
     switch (event) {

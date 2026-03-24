@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -59,9 +61,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildFirstGoalEmptyState() => Padding(
         padding: const EdgeInsets.fromLTRB(
           DS.spacing16,
-          DS.spacing8,
+          DS.spacing6,
           DS.spacing16,
-          DS.spacing12,
+          DS.spacing10,
         ),
         child: Container(
           padding: const EdgeInsets.all(DS.spacing20),
@@ -119,7 +121,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: DS.spacing16),
               Wrap(
                 spacing: DS.spacing12,
-                runSpacing: DS.spacing12,
+                runSpacing: DS.spacing10,
                 children: [
                   SparkleButton.primary(
                     label: _isChinese ? '和 AI 定目标' : 'Start with AI',
@@ -135,6 +137,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       );
+
+  List<Widget> _buildDashboardSkeletonSections() => const [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing8,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: SparkleCardSkeleton(),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+          child: SparkleCardSkeleton(),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing12,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: SparkleCardSkeleton(),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+          child: SparkleChatBubbleSkeleton(),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing8,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: SparkleCardSkeleton(),
+        ),
+      ];
 
   void _handleUnifiedOmniBarHeightChanged(double height) {
     if ((height - _bottomOverlayHeight).abs() < 0.5) {
@@ -212,74 +252,87 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 await ref.read(dashboardProvider.notifier).refresh();
                 await ref.read(taskListProvider.notifier).refreshTasks();
               },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  _staggeredSection(
-                    index: 0,
-                    child: CompactStatusBar(
-                      user: user,
-                      dashboardState: dashboardState,
+              child: ScrollEdgeHaptics(
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                  if (dashboardState.isLoading) ...[
+                    _staggeredSection(
+                      index: 0,
+                      child: CompactStatusBar(
+                        user: user,
+                        dashboardState: dashboardState,
+                      ),
                     ),
-                  ),
-                  _staggeredSection(
-                    index: 1,
-                    child: MetricsRow(dashboardState: dashboardState),
-                  ),
-                  if (showFirstGoalEmptyState)
+                    ..._buildDashboardSkeletonSections()
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => _staggeredSection(
+                            index: entry.key + 1,
+                            child: entry.value,
+                          ),
+                        ),
+                  ] else ...[
                     _staggeredSection(
-                      index: 2,
-                      child: _buildFirstGoalEmptyState(),
-                    )
-                  else ...[
-                    _staggeredSection(
-                      index: 2,
-                      child: NextActionsCard(
-                        compact: true,
-                        onViewAll: () => context.push('/tasks'),
+                      index: 0,
+                      child: CompactStatusBar(
+                        user: user,
+                        dashboardState: dashboardState,
                       ),
                     ),
                     _staggeredSection(
-                      index: 3,
-                      child: const PredictedIntentCard(),
+                      index: 1,
+                      child: MetricsRow(dashboardState: dashboardState),
                     ),
-                    _staggeredSection(
-                      index: 4,
-                      child: const HomeNotificationCard(),
-                    ),
-                    _staggeredSection(
-                      index: 5,
-                      child: const NightlyReviewPanel(),
-                    ),
-                    _staggeredSection(
-                      index: 6,
-                      child: const DashboardCardSection(),
-                    ),
-                    _staggeredSection(
-                      index: 7,
-                      child: const SizedBox(height: DS.spacing12),
-                    ),
-                    _staggeredSection(
-                      index: 8,
-                      child: const AchievementProgressCard(),
-                    ),
-                    _staggeredSection(
-                      index: 9,
-                      child: const SizedBox(height: DS.spacing12),
-                    ),
-                    _staggeredSection(
-                      index: 10,
-                      child: const TaskBoardCard(),
-                    ),
+                    if (showFirstGoalEmptyState)
+                      _staggeredSection(
+                        index: 2,
+                        child: _buildFirstGoalEmptyState(),
+                      )
+                    else ...[
+                      _staggeredSection(
+                        index: 2,
+                        child: NextActionsCard(
+                          compact: true,
+                          onViewAll: () => context.push('/tasks'),
+                        ),
+                      ),
+                      _staggeredSection(
+                        index: 3,
+                        child: const PredictedIntentCard(),
+                      ),
+                      _staggeredSection(
+                        index: 4,
+                        child: const HomeNotificationCard(),
+                      ),
+                      _staggeredSection(
+                        index: 5,
+                        child: const NightlyReviewPanel(),
+                      ),
+                      _staggeredSection(
+                        index: 6,
+                        child: const DashboardCardSection(),
+                      ),
+                      _staggeredSection(
+                        index: 7,
+                        child: const AchievementProgressCard(),
+                      ),
+                      _staggeredSection(
+                        index: 8,
+                        child: const TaskBoardCard(),
+                      ),
+                    ],
                   ],
 
                   // Dynamic bottom spacing for floating components
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: totalBottomHeight,
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: totalBottomHeight,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

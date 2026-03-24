@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
@@ -30,46 +31,105 @@ class DashboardCardSection extends ConsumerWidget {
 
     return ContentConstraint(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compactHeader = constraints.maxWidth < 430;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '驾驶舱组件',
-                  style: context.sparkleTypography.labelLarge.copyWith(
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.textPrimary,
+                if (compactHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '驾驶舱组件',
+                        style: context.sparkleTypography.labelLarge.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        '把常用入口和摘要信息固定在这里。',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _openEditSheet(context),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing10,
+                              vertical: DS.spacing8,
+                            ),
+                          ),
+                          icon: const Icon(Icons.tune_rounded, size: 18),
+                          label: Text(
+                            AppLocalizations.of(context)!
+                                .dashboardCustomizeCards,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Text(
+                        '驾驶舱组件',
+                        style: context.sparkleTypography.labelLarge.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          '把常用入口和摘要信息固定在这里。',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.sparkleTypography.labelSmall.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _openEditSheet(context),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing10,
+                            vertical: DS.spacing8,
+                          ),
+                        ),
+                        icon: const Icon(Icons.tune_rounded, size: 18),
+                        label: Text(
+                          AppLocalizations.of(context)!.dashboardCustomizeCards,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    '把常用入口和摘要信息固定在这里。',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () => _openEditSheet(context),
-                  icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: Text(
-                      AppLocalizations.of(context)!.dashboardCustomizeCards,),
-                ),
+                const SizedBox(height: DS.spacing10),
+                if (cards.isEmpty)
+                  const _EmptyDashboardCardSection()
+                else if (config.layoutMode == DashboardCardLayoutMode.swipe)
+                  DashboardCardCarousel(cards: cards)
+                else
+                  DashboardCardGrid(cards: cards),
               ],
-            ),
-            const SizedBox(height: DS.spacing10),
-            if (cards.isEmpty)
-              const _EmptyDashboardCardSection()
-            else if (config.layoutMode == DashboardCardLayoutMode.swipe)
-              DashboardCardCarousel(cards: cards)
-            else
-              DashboardCardGrid(cards: cards),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -122,8 +182,10 @@ class _DashboardStreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return GestureDetector(
+    return SparklePressable(
       onTap: () => context.push('/achievements'),
+      padding: EdgeInsets.zero,
+      borderRadius: DS.borderRadius20,
       child: MaterialStyler(
         material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(

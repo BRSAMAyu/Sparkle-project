@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -37,13 +40,85 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   final _feedbackController = TextEditingController();
   bool _hasRecordedSkip = false;
   bool _isSubmitting = false;
+  Timer? _typewriterTimer;
+  String _visibleFeedback = '';
+  bool _showStreakCelebration = false;
+  bool _typewriterCompleted = false;
+
+  bool get _hasStreakMilestone {
+    final streakDays = (widget.result.statsUpdate?['streak_days'] as num?)?.toInt();
+    return streakDays == 7 || streakDays == 14 || streakDays == 30;
+  }
+
+  int? get _streakDays => (widget.result.statsUpdate?['streak_days'] as num?)?.toInt();
+
+  @override
+  void initState() {
+    super.initState();
+    _startCelebrationFlow();
+  }
 
   @override
   void dispose() {
+    _typewriterTimer?.cancel();
     _feedbackController.dispose();
     // Track skip if user hasn't interacted with any next action
     _recordSkipIfNeeded();
     super.dispose();
+  }
+
+  void _startCelebrationFlow() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+    if (_hasStreakMilestone) {
+      _showStreakCelebration = true;
+      unawaited(
+        SensoryFeedbackService.emitSeries(
+          const [
+            SensoryFeedbackEvent.selection,
+            SensoryFeedbackEvent.success,
+            SensoryFeedbackEvent.streak,
+          ],
+          gap: Duration(milliseconds: 150),
+          enableSound: false,
+        ),
+      );
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 1800), () {
+          if (!mounted) return;
+          setState(() {
+            _showStreakCelebration = false;
+          });
+        }),
+      );
+    }
+    _startTypewriter();
+  }
+
+  void _startTypewriter() {
+    final feedback = widget.result.feedback;
+    if (feedback == null || feedback.isEmpty) {
+      _visibleFeedback = '';
+      _typewriterCompleted = true;
+      return;
+    }
+    _typewriterTimer?.cancel();
+    var length = 0;
+    _visibleFeedback = '';
+    _typewriterCompleted = false;
+    _typewriterTimer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      length = (length + 2).clamp(0, feedback.length);
+      setState(() {
+        _visibleFeedback = feedback.substring(0, length);
+      });
+      if (length >= feedback.length) {
+        _typewriterCompleted = true;
+        timer.cancel();
+      }
+    });
   }
 
   void _recordSkipIfNeeded() {
@@ -64,7 +139,14 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     TaskFeedbackResponse? response;
     if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
-      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.confirm,
+        enableHaptic: false,
+      );
+      await SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.selection,
+        enableSound: false,
+      );
       response = await ref
           .read(taskListProvider.notifier)
           .submitTaskFeedbackWithResponse(
@@ -230,16 +312,48 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     final theme = Theme.of(context);
     final l10n = context.l10n;
 
-    return Dialog(
-      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
-        child: GraphiteModalSurface(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Padding(
-            padding: const EdgeInsets.only(top: DS.spacing4),
-            child: Column(
+    return BgmScope(
+      track: BgmTrack.achievement,
+      priority: BgmPriority.stage,
+      child: Dialog(
+        shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+          child: Stack(
+            children: [
+              if (_showStreakCelebration)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: RepaintBoundary(
+                      child: SparkleConfetti(
+                        play: true,
+                        enableSensory: false,
+                        alignment: Alignment.topCenter,
+                        intensity: SparkleCelebrationIntensity.large,
+                        particleCount: 36,
+                        colors: const [
+                          Color(0xFFFFA726),
+                          Color(0xFFFF7043),
+                          Color(0xFFFFD54F),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.92, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, scale, child) => Transform.scale(
+                  scale: scale,
+                  child: child,
+                ),
+                child: GraphiteModalSurface(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: DS.spacing4),
+                    child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -292,7 +406,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             constraints: const BoxConstraints(maxHeight: 200),
                             child: SingleChildScrollView(
                               child: SparkleMarkdown(
-                                content: widget.result.feedback!,
+                                content: _typewriterCompleted
+                                    ? widget.result.feedback!
+                                    : _visibleFeedback,
                                 textColor: DS.textPrimary,
                                 codeBackgroundColor: DS.neutral100,
                                 linkColor: DS.primaryBase,
@@ -304,6 +420,45 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             l10n.taskFeedbackCompletedSubtitle,
                             style: theme.textTheme.bodyMedium,
                           ),
+
+                        if (_hasStreakMilestone) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFFFF3E0),
+                                  const Color(0xFFFFE0B2),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: DS.borderRadius12,
+                              border: Border.all(
+                                color: const Color(0xFFFFB74D),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.local_fire_department_rounded,
+                                  color: const Color(0xFFFF7043),
+                                ),
+                                const SizedBox(width: DS.spacing8),
+                                Expanded(
+                                  child: Text(
+                                    '已坚持 ${_streakDays ?? 0} 天，你真的很厉害',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: DS.fontWeightBold,
+                                      color: const Color(0xFF8D4E1D),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
 
                         if (widget.result.unlockedAchievements.isNotEmpty) ...[
                           const SizedBox(height: DS.spacing16),
@@ -371,19 +526,27 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                   _StatItem(
                                     icon: Icons.local_fire_department,
                                     color: DS.brandPrimaryConst,
-                                    value:
-                                        "+${widget.result.flameUpdate!['brightness_change'] ?? widget.result.flameUpdate!['level']}%",
+                                    value: ((widget.result.flameUpdate!['brightness_change'] ??
+                                                    widget.result.flameUpdate!['level']) as num?)
+                                                ?.toDouble() ??
+                                            0,
+                                    suffix: '%',
                                     label: l10n.taskFeedbackBrightness,
+                                  ),
+                                if (widget.result.statsUpdate?['total_minutes'] != null)
+                                  _StatItem(
+                                    icon: Icons.schedule_rounded,
+                                    color: DS.info,
+                                    value: ((widget.result.statsUpdate!['total_minutes'] as num?)?.toDouble() ?? 0),
+                                    suffix: 'm',
+                                    label: '今日累计',
                                   ),
                                 if (widget.result.statsUpdate != null)
                                   _StatItem(
                                     icon: Icons.emoji_events,
                                     color: DS.rarityRare,
-                                    value: l10n.taskFeedbackStreakDays(
-                                      (widget.result.statsUpdate!['streak_days']
-                                              as num)
-                                          .toInt(),
-                                    ),
+                                    value: ((widget.result.statsUpdate!['streak_days'] as num?)?.toDouble() ?? 0),
+                                    suffix: '天',
                                     label: l10n.taskFeedbackStreak,
                                   ),
                               ],
@@ -402,8 +565,15 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                         const SizedBox(height: DS.xs),
                         _StarRating(
                           rating: _rating,
-                          onRatingChanged: (rating) =>
-                              setState(() => _rating = rating),
+                          onRatingChanged: (rating) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                                enableSound: false,
+                              ),
+                            );
+                            setState(() => _rating = rating);
+                          },
                         ),
 
                         const SizedBox(height: DS.spacing16),
@@ -527,6 +697,10 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
             ),
           ),
         ),
+      ),
+    ],
+  ),
+),
       ),
     );
   }
@@ -780,21 +954,28 @@ class _StatItem extends StatelessWidget {
     required this.color,
     required this.value,
     required this.label,
+    this.suffix = '',
   });
 
   final IconData icon;
   final Color color;
-  final String value;
+  final double value;
   final String label;
+  final String suffix;
 
   @override
   Widget build(BuildContext context) => Column(
         children: [
           Icon(icon, color: color),
           const SizedBox(height: DS.xs),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: value),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedValue, child) => Text(
+              '${animatedValue.toStringAsFixed(animatedValue >= 10 ? 0 : 1)}$suffix',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ),
           Text(
             label,

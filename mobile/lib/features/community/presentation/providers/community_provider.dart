@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
@@ -680,6 +681,7 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
         todayDurationMinutes: minutes,
         message: message,
       );
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.checkin));
       _ref.invalidate(groupMembersProvider(_groupId));
       await loadDetail();
       return response;

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
@@ -27,25 +27,7 @@ class PlanCard extends StatefulWidget {
   State<PlanCard> createState() => _PlanCardState();
 }
 
-class _PlanCardState extends State<PlanCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: SparkleMotion.fast,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _PlanCardState extends State<PlanCard> {
   void _handleTap() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     if (widget.onTap != null) {
@@ -88,135 +70,136 @@ class _PlanCardState extends State<PlanCard>
             payload.taskCount != null ||
             (payload.subject?.isNotEmpty ?? false));
 
-    return SparkleMotion.pressScale(
-      animation: _controller,
-      child: GestureDetector(
-        onTapDown: (_) => _controller.forward(),
-        onTapUp: (_) => _controller.reverse(),
-        onTapCancel: () => _controller.reverse(),
-        onTap: _handleTap,
-        child: GraphiteCardSurface(
-          padding: EdgeInsets.all(widget.compact ? DS.md : DS.lg),
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          borderColor: _chipColor(context, payload.type).withValues(alpha: 0.24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTypeIcon(payload.type),
-                  const SizedBox(width: DS.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+    return SparkleTappable(
+      onTap: _handleTap,
+      hapticEvent: SensoryFeedbackEvent.selection,
+      borderRadius: BorderRadius.circular(16),
+      child: GraphiteCardSurface(
+        padding: EdgeInsets.all(widget.compact ? DS.md : DS.lg),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        borderColor: _chipColor(context, payload.type).withValues(alpha: 0.24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTypeIcon(payload.type),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        payload.title,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                        maxLines: widget.compact ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if ((payload.description?.isNotEmpty ?? false) &&
+                          !widget.compact) ...[
+                        const SizedBox(height: DS.xs),
                         Text(
-                          payload.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                          maxLines: widget.compact ? 2 : 1,
+                          payload.description!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if ((payload.description?.isNotEmpty ?? false) &&
-                            !widget.compact) ...[
-                          const SizedBox(height: DS.xs),
-                          Text(
-                            payload.description!,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: DS.sm),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildPlanTypeChip(context, payload.type),
-                      if ((payload.planStage?.isNotEmpty ?? false) &&
-                          !widget.compact) ...[
-                        const SizedBox(height: DS.spacing6),
-                        _buildPlanStageChip(payload.planStage!),
                       ],
                     ],
                   ),
-                ],
-              ),
-              if (hasProgress) ...[
-                const SizedBox(height: DS.md),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: progressValue,
-                    minHeight: widget.compact ? 6 : 8,
-                    backgroundColor: DS.neutral200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _chipColor(context, payload.type),
-                    ),
+                ),
+                const SizedBox(width: DS.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildPlanTypeChip(context, payload.type),
+                    if ((payload.planStage?.isNotEmpty ?? false) &&
+                        !widget.compact) ...[
+                      const SizedBox(height: DS.spacing6),
+                      _buildPlanStageChip(payload.planStage!),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+            if (hasProgress) ...[
+              const SizedBox(height: DS.md),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: progressValue,
+                  minHeight: widget.compact ? 6 : 8,
+                  backgroundColor: DS.neutral200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _chipColor(context, payload.type),
                   ),
                 ),
-                const SizedBox(height: DS.spacing6),
-                Text(
-                  l10n.planProgressPercent((progressValue * 100).round().toString()),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textSecondary,
-                      ),
+              ),
+              const SizedBox(height: DS.spacing6),
+              Text(
+                l10n.planProgressPercent(
+                  (progressValue * 100).round().toString(),
                 ),
-              ],
-              if (showMeta) ...[
-                const SizedBox(height: DS.md),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: [
-                    if (payload.subject?.isNotEmpty ?? false)
-                      _buildInfoPill(Icons.auto_stories_outlined, payload.subject!),
-                    if (targetDateLabel != null)
-                      _buildInfoPill(Icons.event_outlined, targetDateLabel),
-                    if (masteryPercent != null)
-                      _buildInfoPill(
-                        Icons.track_changes_outlined,
-                        l10n.planTargetMastery(masteryPercent),
-                      ),
-                    if (payload.taskCount != null)
-                      _buildInfoPill(
-                        Icons.task_alt_outlined,
-                        '${payload.taskCount} 个任务',
-                      ),
-                  ],
-                ),
-              ],
-              if ((widget.onShare != null || payload.entity.share != null) &&
-                  !widget.compact) ...[
-                const SizedBox(height: DS.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SparkleButton.ghost(
-                        label: '分享卡片',
-                        icon: const Icon(Icons.share_outlined),
-                        onPressed: () => widget.onShare?.call(),
-                      ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
                     ),
-                    const SizedBox(width: DS.spacing8),
-                    Expanded(
-                      child: SparkleButton(
-                        label: '查看详情',
-                        icon: const Icon(Icons.arrow_forward_rounded),
-                        onPressed: _handleTap,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ],
-          ),
+            if (showMeta) ...[
+              const SizedBox(height: DS.md),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  if (payload.subject?.isNotEmpty ?? false)
+                    _buildInfoPill(
+                      Icons.auto_stories_outlined,
+                      payload.subject!,
+                    ),
+                  if (targetDateLabel != null)
+                    _buildInfoPill(Icons.event_outlined, targetDateLabel),
+                  if (masteryPercent != null)
+                    _buildInfoPill(
+                      Icons.track_changes_outlined,
+                      l10n.planTargetMastery(masteryPercent),
+                    ),
+                  if (payload.taskCount != null)
+                    _buildInfoPill(
+                      Icons.task_alt_outlined,
+                      '${payload.taskCount} 个任务',
+                    ),
+                ],
+              ),
+            ],
+            if ((widget.onShare != null || payload.entity.share != null) &&
+                !widget.compact) ...[
+              const SizedBox(height: DS.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: '分享卡片',
+                      icon: const Icon(Icons.share_outlined),
+                      onPressed: () => widget.onShare?.call(),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton(
+                      label: '查看详情',
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                      onPressed: _handleTap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
@@ -79,7 +80,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
         icon: const Icon(Icons.timeline),
         onPressed: () {
           unawaited(
-            showModalBottomSheet<void>(
+            showSensoryModalBottomSheet<void>(
               context: context,
               useRootNavigator: true,
               isScrollControlled: true,
@@ -321,7 +322,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         codeBackgroundColor: DS.surfacePanel,
                         linkColor: DS.brandPrimary,
                         fontSize: theme.textTheme.bodyMedium?.fontSize ?? 14,
-                        lineHeight: 1.6,
+                        contentRole: SparkleMarkdownRole.knowledgeSummary,
                       ),
                       if (detail.learningPathSnapshot!.tasks.isNotEmpty) ...[
                         const SizedBox(height: DS.md),
@@ -333,15 +334,29 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: DS.xs),
                         ...detail.learningPathSnapshot!.tasks.map(
-                          (task) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.task_alt),
-                            title: Text(task.title),
-                            subtitle: Text('约 ${task.estimatedMinutes} 分钟'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () =>
-                                unawaited(context.push('/tasks/${task.id}')),
+                          (task) => Container(
+                            margin: const EdgeInsets.only(bottom: DS.spacing8),
+                            decoration: BoxDecoration(
+                              color: DS.surfacePanel,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing12,
+                                vertical: DS.spacing4,
+                              ),
+                              leading: const Icon(Icons.task_alt),
+                              title: Text(
+                                task.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text('约 ${task.estimatedMinutes} 分钟'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () =>
+                                  unawaited(context.push('/tasks/${task.id}')),
+                            ),
                           ),
                         ),
                       ],
@@ -651,16 +666,16 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Padding(
-          padding: const EdgeInsets.all(DS.md),
+          padding: const EdgeInsets.all(DS.spacing12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GraphiteSectionTitle(
                 title: title,
               ),
-              const SizedBox(height: DS.md),
+              const SizedBox(height: DS.spacing12),
               child,
             ],
           ),

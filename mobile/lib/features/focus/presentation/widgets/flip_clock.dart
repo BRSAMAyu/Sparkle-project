@@ -22,20 +22,22 @@ class FlipClock extends StatelessWidget {
     final minutes = duration.inMinutes % 60;
     final secs = duration.inSeconds % 60;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (showHours || hours > 0) ...[
-          _FlipDigit(digit: hours ~/ 10),
-          _FlipDigit(digit: hours % 10),
+    return RepaintBoundary(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (showHours || hours > 0) ...[
+            _FlipDigit(digit: hours ~/ 10),
+            _FlipDigit(digit: hours % 10),
+            const _Colon(),
+          ],
+          _FlipDigit(digit: minutes ~/ 10),
+          _FlipDigit(digit: minutes % 10),
           const _Colon(),
+          _FlipDigit(digit: secs ~/ 10),
+          _FlipDigit(digit: secs % 10),
         ],
-        _FlipDigit(digit: minutes ~/ 10),
-        _FlipDigit(digit: minutes % 10),
-        const _Colon(),
-        _FlipDigit(digit: secs ~/ 10),
-        _FlipDigit(digit: secs % 10),
-      ],
+      ),
     );
   }
 }
@@ -116,9 +118,10 @@ class _FlipDigitState extends State<_FlipDigit>
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        child: Stack(
+  Widget build(BuildContext context) => RepaintBoundary(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          child: Stack(
           children: [
             // 静态下半部分（当前数字）
             _buildHalf(
@@ -166,6 +169,7 @@ class _FlipDigitState extends State<_FlipDigit>
               ),
             ),
           ],
+          ),
         ),
       );
 
@@ -250,9 +254,10 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _opacityAnimation,
-        builder: (context, _) => Padding(
+  Widget build(BuildContext context) => RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _opacityAnimation,
+          builder: (context, _) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -261,6 +266,7 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
               const SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
+          ),
           ),
         ),
       );

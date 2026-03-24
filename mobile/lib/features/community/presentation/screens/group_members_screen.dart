@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -332,13 +333,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               backgroundColor: _getFlameColor(member.flameContribution),
               child: member.user.avatarUrl != null
                   ? ClipOval(
-                      child: Image.network(
-                        member.user.avatarUrl!,
+                      child: SparkleNetworkImage(
+                        imageUrl: member.user.avatarUrl!,
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) =>
-                            _buildDefaultAvatar(member.user),
+                        errorWidget: _buildDefaultAvatar(member.user),
                       ),
                     )
                   : _buildDefaultAvatar(member.user),

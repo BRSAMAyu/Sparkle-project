@@ -106,6 +106,87 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
     );
   }
 
+  void _toggleFocusMode() {
+    final focusMode = ref.read(focusModeProvider);
+    ref.read(focusModeProvider.notifier).toggle();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          focusMode
+              ? context.l10n.communityFocusModeDisabled
+              : context.l10n.communityFocusModeEnabled,
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showMoreOptions() {
+    showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(1000, 88, 16, 0),
+      items: [
+        PopupMenuItem(
+          value: 'focus',
+          child: Row(
+            children: [
+              Icon(
+                ref.read(focusModeProvider)
+                    ? Icons.do_not_disturb_on
+                    : Icons.do_not_disturb_off_outlined,
+                size: 18,
+                color: ref.read(focusModeProvider)
+                    ? DS.warning
+                    : DS.textSecondary,
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Text(
+                  ref.read(focusModeProvider)
+                      ? context.l10n.communityFocusModeOff
+                      : context.l10n.communityFocusModeOn,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'favorites',
+          child: Row(
+            children: const [
+              Icon(Icons.bookmark_outline, size: 18),
+              SizedBox(width: DS.spacing10),
+              Expanded(child: Text('我的收藏')),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'add',
+          child: Row(
+            children: [
+              const Icon(Icons.person_add_outlined, size: 18),
+              const SizedBox(width: DS.spacing10),
+              Expanded(child: Text(context.l10n.commonAdd)),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == null || !mounted) return;
+      switch (value) {
+        case 'focus':
+          _toggleFocusMode();
+          break;
+        case 'favorites':
+          context.pushNamed('favorites');
+          break;
+        case 'add':
+          _showAddOptions();
+          break;
+      }
+    });
+  }
+
   void _handleFabPressed() {
     final currentTabIndex = _tabController.index;
 
@@ -177,40 +258,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         ),
         centerTitle: false,
         actions: [
-          // Focus mode indicator and toggle
-          Tooltip(
-            message: focusMode
-                ? context.l10n.communityFocusModeOn
-                : context.l10n.communityFocusModeOff,
-            child: SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              icon: Icon(
-                focusMode
-                    ? Icons.do_not_disturb_on
-                    : Icons.do_not_disturb_off_outlined,
-                color: focusMode ? DS.warning : null,
-              ),
-              onPressed: () {
-                ref.read(focusModeProvider.notifier).toggle();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(focusMode
-                        ? context.l10n.communityFocusModeDisabled
-                        : context.l10n.communityFocusModeEnabled,),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-          ),
-          Tooltip(
-            message: '我的收藏',
-            child: SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              icon: const Icon(Icons.bookmark_outline),
-              onPressed: () => context.pushNamed('favorites'),
-            ),
-          ),
           Tooltip(
             message: context.l10n.communitySearch,
             child: SparkleIconButton(
@@ -220,16 +267,21 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: context.l10n.commonAdd,
+            message: '更多',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              icon: const Icon(Icons.person_add_outlined),
-              onPressed: _showAddOptions,
+              icon: Icon(
+                Icons.more_horiz_rounded,
+                color: focusMode ? DS.warning : DS.textSecondary,
+              ),
+              onPressed: _showMoreOptions,
             ),
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
+          tabAlignment: TabAlignment.fill,
+          labelPadding: const EdgeInsets.symmetric(vertical: DS.spacing4),
           tabs: [
             Tab(text: context.l10n.communityTabFriends),
             Tab(text: context.l10n.communityTabGroups),
@@ -276,13 +328,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 class _FriendsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
     );
 }
 
 class _GroupsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => const GroupsHubView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 28),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
     );
 }

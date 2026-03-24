@@ -1,26 +1,13 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_list_screen.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
-        animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
-        child: child,
-      ),
-    );
 
 class SeedLibraryRoutes {
   static const String libraries = '/seed-libraries';
@@ -32,27 +19,48 @@ class SeedLibraryRoutes {
         GoRoute(
           path: libraries,
           name: 'seedLibraries',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const SeedLibraryListScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.seeds,
+                atmosphere: ExperienceAtmosphere.seedsOrganic,
+              ),
+              child: SeedLibraryListScreen(),
+            ),
           ),
         ),
         GoRoute(
           path: createLibrary,
           name: 'createSeedLibrary',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const CreateLibraryScreen(),
+            motionToken: SparkleMotionToken.scene,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.seeds,
+                atmosphere: ExperienceAtmosphere.seedsOrganic,
+              ),
+              child: CreateLibraryScreen(),
+            ),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
         GoRoute(
           path: '/seed-libraries/:id',
           name: 'seedLibraryDetail',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: SeedLibraryDetailScreen(
-              libraryId: state.pathParameters['id']!,
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: const SceneAudioPolicy(
+                track: BgmTrack.seeds,
+                atmosphere: ExperienceAtmosphere.seedsOrganic,
+              ),
+              child: SeedLibraryDetailScreen(
+                libraryId: state.pathParameters['id']!,
+              ),
             ),
           ),
         ),

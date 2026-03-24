@@ -42,7 +42,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   StreamSubscription<dynamic>? _communityEventsSub;
 
   void _handleDestinationSelected(int index) {
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation));
+    if (index == widget.navigationShell.currentIndex) {
+      return;
+    }
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     widget.navigationShell.goBranch(index);
   }
 

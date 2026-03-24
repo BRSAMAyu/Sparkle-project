@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -468,27 +469,25 @@ class ErrorDetailScreen extends ConsumerWidget {
           ),
           if (error.questionImageUrl != null) ...[
             const SizedBox(height: DS.spacing12),
-            ClipRRect(
+            SparkleNetworkImage(
+              imageUrl: error.questionImageUrl!,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                error.questionImageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => Container(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  color: theme.colorScheme.errorContainer,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.broken_image_outlined,
-                        color: theme.colorScheme.error,
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      Text(
-                        context.l10n.errorBookImageLoadFailed,
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
-                    ],
-                  ),
+              errorWidget: Container(
+                padding: const EdgeInsets.all(DS.spacing16),
+                color: theme.colorScheme.errorContainer,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Text(
+                      context.l10n.errorBookImageLoadFailed,
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ],
                 ),
               ),
             ),

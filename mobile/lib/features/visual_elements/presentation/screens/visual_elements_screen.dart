@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
@@ -119,7 +120,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     return SliverToBoxAdapter(
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -171,13 +172,13 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 ],
               ),
 
-              const SizedBox(height: DS.spacing16),
+              const SizedBox(height: DS.spacing12),
 
               // 统计面板
               _buildStatsPanel(state.stats, l10n),
 
               if (eventElements.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing12),
                 _buildEventSection(eventElements, state, l10n),
               ],
             ],
@@ -188,7 +189,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -247,9 +248,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ),
           ),
           Container(
-            width: 104,
+            width: 96,
             padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16,
+              horizontal: DS.spacing12,
               vertical: DS.spacing12,
             ),
             decoration: BoxDecoration(
@@ -507,6 +508,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorSize: TabBarIndicatorSize.label,
           indicator: BoxDecoration(
             color: DS.brandPrimary,
@@ -519,6 +521,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             fontSize: DS.fontSizeSm,
             fontWeight: DS.fontWeightMedium,
           ),
+          labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
           tabs: [
             Tab(
               icon: const Icon(Icons.auto_awesome),
@@ -841,7 +844,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   void _showFilterSheet(BuildContext context, AppLocalizations l10n) {
-    showModalBottomSheet<void>(
+    showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
+import AVFAudio
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -9,6 +10,17 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    do {
+      try AVAudioSession.sharedInstance().setCategory(
+        .playback,
+        mode: .default,
+        options: [.mixWithOthers],
+      )
+      try AVAudioSession.sharedInstance().setActive(true)
+    } catch {
+      print("Failed to configure AVAudioSession: \\(error)")
+    }
+
     // Initialize Firebase only if GoogleService-Info.plist exists
     if let googleServicePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") {
       if FirebaseApp.app() == nil {

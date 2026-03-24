@@ -31,22 +31,18 @@ class AccountabilityRepository {
       id: 'user_alice',
       username: 'Alice',
       nickname: 'Alice',
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=alice_seed',
       flameLevel: 8,
     );
     final charlie = UserBrief(
       id: 'user_charlie',
       username: 'Charlie',
       nickname: 'Charlie',
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=charlie_seed',
       flameLevel: 12,
     );
     final me = UserBrief(
       id: _demoCurrentUserId,
       username: 'AI_Learner_02',
       nickname: 'AI_Learner_02',
-      avatarUrl:
-          'https://api.dicebear.com/9.x/avataaars/png?seed=AI_Learner_02',
       flameLevel: 15,
     );
 

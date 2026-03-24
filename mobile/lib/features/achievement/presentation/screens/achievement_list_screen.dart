@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -158,8 +159,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
 
             // 内容区域
             if (state.isLoading)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+              const SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 520,
+                  child: SparkleListSkeleton(count: 4),
+                ),
               )
             else if (state.error != null)
               SliverFillRemaining(
@@ -284,7 +288,10 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) => LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 420;
-        final cardWidth = compact
+        final singleColumn = constraints.maxWidth < 350;
+        final cardWidth = singleColumn
+            ? constraints.maxWidth
+            : compact
             ? (constraints.maxWidth - DS.spacing12) / 2
             : (constraints.maxWidth - DS.spacing16) / 2;
 
@@ -346,7 +353,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
       Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
-          vertical: DS.spacing12,
+          vertical: DS.spacing10,
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -407,7 +414,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               return Column(
                 children: [
                   search,
-                  const SizedBox(height: DS.spacing12),
+                  const SizedBox(height: DS.spacing10),
                   SizedBox(
                     width: double.infinity,
                     child: _buildFilterButton(l10n),
@@ -436,7 +443,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
-          vertical: DS.spacing12,
+          vertical: DS.spacing10,
         ),
         decoration: BoxDecoration(
           color: hasFilters
@@ -491,7 +498,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             : l10n.achievementAll;
 
     return Container(
-      height: 48,
+      height: 44,
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// Seed Library Dashboard Card
@@ -20,8 +21,10 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
     final padding = compact ? (dense ? DS.spacing10 : DS.spacing12) : DS.lg;
     final iconSize = dense ? 16.0 : (compact ? 18.0 : 20.0);
 
-    return GestureDetector(
+    return SparklePressable(
       onTap: () => context.push('/seed-libraries'),
+      padding: EdgeInsets.zero,
+      borderRadius: DS.borderRadius20,
       child: MaterialStyler(
         material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(

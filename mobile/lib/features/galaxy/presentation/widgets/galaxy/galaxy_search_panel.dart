@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -173,49 +174,66 @@ class GalaxySearchPanel extends StatelessWidget {
                                     isDarkMode: isDarkMode,
                                   );
 
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    dense: true,
-                                    leading: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: color.withValues(alpha: 0.92),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                color.withValues(alpha: 0.22),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    title: Text(
-                                      node.name,
-                                      style: TextStyle(
-                                        color: foreground,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      l10n.galaxySearchResultSubtitle(
-                                        sectorName,
-                                        node.masteryScore,
-                                        node.importance,
-                                      ),
-                                      style: TextStyle(
-                                        color: secondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    trailing: Icon(
-                                      Icons.north_east_rounded,
-                                      color: color,
-                                      size: 18,
-                                    ),
+                                  return SparklePressable(
                                     onTap: () => onNodeSelected(node),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: color.withValues(alpha: 0.92),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: color.withValues(
+                                                  alpha: 0.22,
+                                                ),
+                                                blurRadius: 8,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                node.name,
+                                                style: TextStyle(
+                                                  color: foreground,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              Text(
+                                                l10n.galaxySearchResultSubtitle(
+                                                  sectorName,
+                                                  node.masteryScore,
+                                                  node.importance,
+                                                ),
+                                                style: TextStyle(
+                                                  color: secondary,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.north_east_rounded,
+                                          color: color,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
                                   );
                                 },
                               ),

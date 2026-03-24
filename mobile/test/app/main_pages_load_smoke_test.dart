@@ -94,7 +94,7 @@ void main() {
       expect(find.byType(CommunityMainScreen), findsOneWidget);
       expect(find.byType(TabBar), findsOneWidget);
       expect(find.byIcon(Icons.search), findsOneWidget);
-      expect(find.byIcon(Icons.person_add_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

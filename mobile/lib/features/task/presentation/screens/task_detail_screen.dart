@@ -530,7 +530,7 @@ class _TaskDetailView extends ConsumerWidget {
           textColor: DS.textPrimary,
           codeBackgroundColor: DS.neutral100,
           linkColor: DS.primaryBase,
-          lineHeight: 1.6,
+          contentRole: SparkleMarkdownRole.taskGuide,
         ),
       );
 

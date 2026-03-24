@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -74,23 +75,87 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   bool _showHeart = false;
   bool _isPressed = false;
 
+  bool get _isFreshUserBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.user) {
+      return false;
+    }
+    return message.id.startsWith('temp_user_') ||
+        DateTime.now().difference(message.createdAt).inSeconds <= 2;
+  }
+
+  bool get _isFreshAssistantBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.assistant) {
+      return false;
+    }
+    return widget.isLatestAssistantMessage &&
+        DateTime.now().difference(message.createdAt).inSeconds <= 3;
+  }
+
+  bool get _isStreamingAssistantBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.assistant) {
+      return false;
+    }
+    final status = message.aiStatus?.toUpperCase();
+    return widget.isLatestAssistantMessage &&
+        (status == 'GENERATING' || status == 'THINKING');
+  }
+
   @override
   void initState() {
     super.initState();
+    final isFreshUserBubble = _isFreshUserBubble;
+    final isFreshAssistantBubble = _isFreshAssistantBubble;
     _entryController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: isFreshUserBubble
+          ? const Duration(milliseconds: 200)
+          : isFreshAssistantBubble
+              ? const Duration(milliseconds: 220)
+              : const Duration(milliseconds: 320),
       vsync: this,
     );
 
-    _scale = Tween<double>(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.elasticOut),
+    _scale = Tween<double>(
+      begin: isFreshUserBubble
+          ? 0.8
+          : isFreshAssistantBubble
+              ? 0.96
+              : 0.92,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: isFreshUserBubble || isFreshAssistantBubble
+            ? Curves.easeOutBack
+            : Curves.easeOutQuart,
+      ),
     );
 
     _position = Tween<Offset>(
-      begin: const Offset(0, 0.5),
+      begin: isFreshUserBubble
+          ? const Offset(0.16, 0.18)
+          : isFreshAssistantBubble
+              ? const Offset(0, 0.08)
+              : const Offset(0, 0.14),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),
+      CurvedAnimation(
+        parent: _entryController,
+        curve: isFreshUserBubble || isFreshAssistantBubble
+            ? Curves.easeOutBack
+            : Curves.easeOutQuart,
+      ),
     );
 
     unawaited(_entryController.forward());
@@ -514,6 +579,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             linkColor: isUser
                                                 ? DS.chatBubbleUserText
                                                 : DS.brandPrimary,
+                                            isStreaming:
+                                                _isStreamingAssistantBubble,
+                                            contentRole:
+                                                SparkleMarkdownRole.chatBubble,
                                           );
 
                                           // Try to estimate content height and decide if scrolling is needed
@@ -521,18 +590,32 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                           final shouldConstrain =
                                               _content.length > 500;
 
+                                          final animatedContent = AnimatedSize(
+                                            duration: context.reduceMotion
+                                                ? Duration.zero
+                                                : DS.motionDuration(
+                                                    SparkleMotionToken.micro,
+                                                  ),
+                                            curve: Curves.easeOutCubic,
+                                            alignment: Alignment.topLeft,
+                                            child: shouldConstrain
+                                                ? SizedBox(
+                                                    height: maxHeight,
+                                                    child:
+                                                        SingleChildScrollView(
+                                                      physics:
+                                                          const ClampingScrollPhysics(),
+                                                      child: contentWidget,
+                                                    ),
+                                                  )
+                                                : contentWidget,
+                                          );
+
                                           if (!shouldConstrain) {
-                                            return contentWidget;
+                                            return animatedContent;
                                           }
 
-                                          return SizedBox(
-                                            height: maxHeight,
-                                            child: SingleChildScrollView(
-                                              physics:
-                                                  const ClampingScrollPhysics(),
-                                              child: contentWidget,
-                                            ),
-                                          );
+                                          return animatedContent;
                                         },
                                       ),
                                   ],
@@ -726,14 +809,22 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     );
 
     if (reduceMotion) {
-      return bubble;
+      return RepaintBoundary(child: bubble);
     }
 
-    return SlideTransition(
-      position: _position,
-      child: ScaleTransition(
-        scale: _scale,
-        child: bubble,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: _entryController,
+          curve: Curves.easeOutCubic,
+        ),
+        child: SlideTransition(
+          position: _position,
+          child: ScaleTransition(
+            scale: _scale,
+            child: bubble,
+          ),
+        ),
       ),
     );
   }
@@ -1105,10 +1196,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           ),
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null
-              ? Image.network(
-                  avatarUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Center(child: Text(initial)),
+              ? SparkleNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: 32,
+                  height: 32,
+                  errorWidget: Center(child: Text(initial)),
                 )
               : Center(
                   child: Text(
@@ -1254,25 +1346,33 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   }
 
   /// Get shareable content type from message type
-  ShareableContentType? _getShareContentType(MessageType messageType) =>
-      switch (messageType) {
-        MessageType.taskShare => ShareableContentType.taskCompletion,
-        MessageType.planShare => ShareableContentType.planProgress,
-        MessageType.capsuleShare => ShareableContentType.capsule,
-        MessageType.prismShare => ShareableContentType.cognitivePrism,
-        MessageType.achievement => ShareableContentType.achievement,
-        _ => null,
-      };
+  ShareableContentType? _getShareContentType(
+    MessageType messageType,
+    Map<String, dynamic> data,
+  ) {
+    if (messageType == MessageType.capsuleShare &&
+        data['resource_type']?.toString() == 'knowledge_node') {
+      return ShareableContentType.knowledgeNode;
+    }
+    return switch (messageType) {
+      MessageType.taskShare => ShareableContentType.taskCompletion,
+      MessageType.planShare => ShareableContentType.planProgress,
+      MessageType.capsuleShare => ShareableContentType.capsule,
+      MessageType.prismShare => ShareableContentType.cognitivePrism,
+      MessageType.achievement => ShareableContentType.achievement,
+      _ => null,
+    };
+  }
 
   /// Build share card for private message
   Widget? _buildPrivateShareCard() {
     if (widget.message is! PrivateMessageInfo) return null;
     final msg = widget.message as PrivateMessageInfo;
+    final data = msg.contentData ?? {};
 
-    final contentType = _getShareContentType(msg.messageType);
+    final contentType = _getShareContentType(msg.messageType, data);
     if (contentType == null) return null;
 
-    final data = msg.contentData ?? {};
     final sharedResourceId = data['shared_resource_id']?.toString();
     // resource_meta contains task/plan specific fields (progress, estimated_minutes, etc.)
     // Fall back to data itself for non-task/plan types (capsule, prism, achievement)
@@ -1352,10 +1452,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       return value.toString();
     }
 
+    String preferFirstNonEmpty(dynamic primary, dynamic fallback) {
+      final primaryValue = safeGetString(primary);
+      if (primaryValue.isNotEmpty) return primaryValue;
+      return safeGetString(fallback);
+    }
+
     return switch (type) {
       MessageType.taskShare => safeGetString(data['resource_id']),
       MessageType.planShare => safeGetString(data['resource_id']),
-      MessageType.capsuleShare => safeGetString(data['capsule_id']),
+      MessageType.capsuleShare =>
+        preferFirstNonEmpty(data['resource_id'], data['capsule_id']),
       MessageType.prismShare => safeGetString(data['prism_id']),
       MessageType.achievement => safeGetString(data['achievement_id']),
       _ => '',

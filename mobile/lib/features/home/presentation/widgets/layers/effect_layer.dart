@@ -27,26 +27,29 @@ class EffectLayer extends StatelessWidget {
       animation: mainAnimation,
       builder: (context, child) {
         final color = _parseColor(config['color'] as String? ?? '#FFFFFF');
-        return Stack(
-          children: [
-            CustomPaint(
-              size: Size.infinite,
-              painter: _getEffectPainter(effectType, config),
-            ),
-            CustomPaint(
-              size: Size.infinite,
-              painter: _AmbientVignettePainter(
-                animationValue: mainAnimation.value,
-                color: color.withValues(alpha: 0.16),
+        return RepaintBoundary(
+          child: Stack(
+            children: [
+              CustomPaint(
+                size: Size.infinite,
+                painter: _getEffectPainter(effectType, config),
               ),
-            ),
-          ],
+              CustomPaint(
+                size: Size.infinite,
+                painter: _AmbientVignettePainter(
+                  animationValue: mainAnimation.value,
+                  color: color.withValues(alpha: 0.16),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildDefaultEffect() => AnimatedBuilder(
+  Widget _buildDefaultEffect() => RepaintBoundary(
+      child: AnimatedBuilder(
       animation: mainAnimation,
       builder: (context, child) => Stack(
           children: [
@@ -68,7 +71,7 @@ class EffectLayer extends StatelessWidget {
             ),
           ],
         ),
-    );
+    ),);
 
   CustomPainter _getEffectPainter(String effectType, Map<String, dynamic> config) {
     final intensity = (config['intensity'] as num?)?.toDouble() ?? 0.5;

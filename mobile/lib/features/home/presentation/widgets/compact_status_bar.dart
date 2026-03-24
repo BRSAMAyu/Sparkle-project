@@ -27,7 +27,7 @@ class CompactStatusBar extends StatelessWidget {
           DS.spacing16,
           DS.spacing8,
           DS.spacing16,
-          DS.spacing8,
+          DS.spacing10,
         ),
         child: DashboardEntrance(
           slideOffset: const Offset(0, -0.05),

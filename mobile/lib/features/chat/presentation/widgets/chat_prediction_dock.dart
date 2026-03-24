@@ -327,13 +327,13 @@ class _CollapsedDock extends StatelessWidget {
           backgroundColor: DS.surfacePanel.withValues(alpha: 0.72),
           borderColor: DS.borderSubtle.withValues(alpha: 0.78),
         ),
-        borderRadius: DS.borderRadiusFull,
+        borderRadius: DS.borderRadius16,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? DS.spacing10 : 12,
           vertical: compact ? DS.spacing6 : DS.spacing8,
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadius16,
           onTap: onExpand,
           child: Row(
             children: [
