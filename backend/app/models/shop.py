@@ -3,7 +3,7 @@ Shop System Models
 商城系统数据模型 - 包含商城物品、购买记录、光子交易历史、用户消耗品
 """
 import enum
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -12,7 +12,7 @@ from app.models.base import GUID, BaseModel
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PhotonTransactionType(str, enum.Enum):
@@ -36,6 +36,7 @@ class ShopItemType(str, enum.Enum):
     TITLE = "title"         # 称号
     CONSUMABLE = "consumable" # 消耗品
     BOOST = "boost"         # 加成道具
+    VISUAL_ELEMENT = "visual_element"  # 视觉元素（背景、粒子、特效）
 
 
 class ItemRarity(str, enum.Enum):

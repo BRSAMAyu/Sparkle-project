@@ -43,10 +43,10 @@ class EnhancedConflictResolver:
 
     def _is_simple_update(self, local: Y.YDoc, remote: Y.YDoc) -> bool:
         """检查是否为简单更新"""
-        # TODO: Implement complex analysis
+        # TRACKED(TD-008): Implement complex analysis
         return True
 
     def _is_semantic_mergeable(self, local: Y.YDoc, remote: Y.YDoc) -> bool:
         """检查是否可语义合并"""
-        # TODO: Implement semantic analysis
+        # TRACKED(TD-008): Implement semantic analysis
         return True

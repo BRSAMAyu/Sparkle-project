@@ -76,25 +76,29 @@ class Formatters {
   /// Format duration in human-readable form
   /// e.g., "1h 30m" or "1小时30分钟"
   static String formatDuration(Duration duration) {
+    final l10n = I18nService.instance.l10n;
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
+    String joinParts(String first, String second) =>
+        I18nService.instance.isChinese ? '$first$second' : '$first $second';
 
     if (hours > 0) {
-      if (I18nService.instance.isChinese) {
-        return '$hours小时${minutes > 0 ? '$minutes分钟' : ''}';
+      final hourPart = l10n.durationHours(hours);
+      if (minutes > 0) {
+        final minutePart = l10n.durationMinutes(minutes);
+        return joinParts(hourPart, minutePart);
       }
-      return '${hours}h ${minutes}m';
+      return hourPart;
     } else if (minutes > 0) {
-      if (I18nService.instance.isChinese) {
-        return '$minutes分钟${seconds > 0 ? '$seconds秒' : ''}';
+      final minutePart = l10n.durationMinutes(minutes);
+      if (seconds > 0) {
+        final secondPart = l10n.durationSeconds(seconds);
+        return joinParts(minutePart, secondPart);
       }
-      return '${minutes}m ${seconds}s';
+      return minutePart;
     } else {
-      if (I18nService.instance.isChinese) {
-        return '$seconds秒';
-      }
-      return '${seconds}s';
+      return l10n.durationSeconds(seconds);
     }
   }
 
@@ -112,19 +116,27 @@ class Formatters {
 
   /// Format duration in compact form for focus timer
   static String formatFocusDuration(Duration duration) {
+    final l10n = I18nService.instance.l10n;
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
+    String joinParts(String first, String second) =>
+        I18nService.instance.isChinese ? '$first$second' : '$first $second';
 
-    if (I18nService.instance.isChinese) {
-      if (hours > 0) {
-        return '$hours小时$minutes分钟';
-      }
-      return '$minutes分钟';
-    }
     if (hours > 0) {
-      return '${hours}h ${minutes}m';
+      final hourPart = l10n.durationHours(hours);
+      if (minutes > 0) {
+        final minutePart = l10n.durationMinutes(minutes);
+        return joinParts(hourPart, minutePart);
+      }
+      return hourPart;
     }
-    return '${minutes}m';
+    return l10n.durationMinutes(minutes);
+  }
+
+  /// Format date as month/day (e.g., "Mar 10" in EN, "3月10日" in ZH)
+  static String formatDateMonthDay(DateTime date) {
+    final locale = I18nService.instance.currentLocale.languageCode;
+    return DateFormat.MMMd(locale).format(date);
   }
 
   // ============== Number Formatters ==============

@@ -7,6 +7,7 @@ Responsibilities:
 3. Calculate prediction accuracy
 4. No modification to user state or strategy
 """
+from __future__ import annotations
 import json
 import math
 import os

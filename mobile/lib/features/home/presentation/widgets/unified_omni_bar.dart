@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,6 +8,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
@@ -450,21 +450,48 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
 
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
+    final data = result['data'] is Map
+        ? Map<String, dynamic>.from(result['data'] as Map)
+        : const <String, dynamic>{};
+    Future<void> goToChat() async {
+      if (!mounted) {
+        return;
+      }
+      final prompt =
+          (data['initial_message']?.toString() ?? _controller.text).trim();
+      final currentMode = ref.read(chatModeProvider);
+      final target = Uri(
+        path: '/chat',
+        queryParameters: <String, String>{
+          if (prompt.isNotEmpty) 'prompt': prompt,
+          'chat_mode': currentMode.apiValue,
+          'source': 'omnibar',
+        },
+      ).toString();
+      final router = GoRouter.of(context);
+      final currentPath = GoRouterState.of(context).uri.path;
+      if (currentPath == '/chat') {
+        router.go(target);
+      } else {
+        await router.push(target);
+      }
+    }
     switch (type) {
       case 'CHAT':
-        if (mounted) {
-          context.go('/chat');
-        }
+        await goToChat();
         return;
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
+        await goToChat();
         return;
       case 'CAPSULE':
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
+        await goToChat();
         return;
       default:
+        await goToChat();
         return;
     }
   }
@@ -569,7 +596,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   }
 
   void _toggleAgentPanel() {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _agentPanelExpanded = !_agentPanelExpanded;
     });
@@ -581,7 +608,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   }
 
   Future<void> _selectMode(ChatMode mode) async {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).setMode(mode);
 

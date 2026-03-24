@@ -7,9 +7,14 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
     CHAT_MODE_ERROR_DIAGNOSIS,
     CHAT_MODE_EXPERT_AUTO,
+    CHAT_MODE_EXPERT_PREFIX,
     CHAT_MODE_STANDARD,
     CHAT_MODE_STUDY_PLAN,
+    CHAT_MODE_TEAM_PREFIX,
+    extract_expert_id,
+    parse_team_spec,
 )
+from app.services.custom_expert_service import is_custom_expert_id
 
 
 @dataclass
@@ -25,13 +30,15 @@ class ModeStrategyOverride:
     min_confidence_for_direct: float | None = 0.92
     preferred_agents: list[str] = field(default_factory=list)
     required_agents: list[str] = field(default_factory=list)
-    collaboration_mode: Literal["auto", "single", "sequential", "parallel"] = "auto"
+    answer_agents: list[str] = field(default_factory=list)
+    collaboration_mode: Literal["auto", "single", "sequential", "parallel", "debate", "delegation"] = "auto"
     review_strictness: float = 1.0
     require_alignment_check: bool = True
     synthesis_instruction: str = ""
     output_structure: list[str] = field(default_factory=list)
     tool_policy: dict[str, Any] = field(default_factory=dict)
     fallback_policy: dict[str, Any] = field(default_factory=dict)
+    excluded_agents: list[str] = field(default_factory=list)
 
     @property
     def collaboration_agents(self) -> list[str]:
@@ -125,10 +132,73 @@ MODE_STRATEGIES: dict[str, ModeStrategyOverride] = {
 
 
 def get_mode_strategy(chat_mode: str | None) -> ModeStrategyOverride | None:
-    return MODE_STRATEGIES.get(str(chat_mode or "").strip().lower())
+    mode = str(chat_mode or "").strip()
+    if mode.startswith(CHAT_MODE_TEAM_PREFIX):
+        team_spec = parse_team_spec(mode)
+        if team_spec:
+            return build_team_strategy(team_spec)
+    if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
+        expert_id = extract_expert_id(mode)
+        if expert_id:
+            return ModeStrategyOverride(
+                chat_mode=mode,
+                force_execution_mode="direct",
+                min_confidence_for_direct=1.0,
+                required_agents=[expert_id],
+                answer_agents=[expert_id],
+                collaboration_mode="single",
+                review_strictness=1.0,
+                require_alignment_check=False,
+                synthesis_instruction="当前模式为显式专家模式，回答必须保留该专家视角的一致性。",
+            )
+    return MODE_STRATEGIES.get(mode.lower())
 
 
 def get_workflow_config(chat_mode: str | None) -> ModeStrategyOverride | None:
     """Backward-compatible alias for callers not yet migrated."""
     return get_mode_strategy(chat_mode)
 
+
+def build_team_strategy(team_spec: dict) -> ModeStrategyOverride:
+    """Build a ModeStrategyOverride from user-configured team spec."""
+    agents = [str(a).strip() for a in (team_spec.get("agents") or []) if str(a).strip()]
+    excluded = {str(a).strip() for a in (team_spec.get("excluded") or []) if str(a).strip()}
+    mode = str(team_spec.get("mode") or "auto").strip().lower()
+
+    agents = [agent for agent in agents if agent not in excluded]
+
+    from app.agents.graph.expert_registry import resolve_node_name
+
+    resolved_agents = []
+    for agent in agents:
+        if is_custom_expert_id(agent):
+            if agent not in resolved_agents:
+                resolved_agents.append(agent)
+            continue
+        resolved = resolve_node_name(agent)
+        if resolved and resolved not in resolved_agents:
+            resolved_agents.append(resolved)
+
+    if not resolved_agents:
+        return MODE_STRATEGIES[CHAT_MODE_STANDARD]
+
+    collaboration_mode = mode if mode in {"sequential", "parallel", "debate", "delegation"} else "auto"
+    answer_agents = [
+        str(agent).strip()
+        for agent in (team_spec.get("final_agents") or team_spec.get("answer_agents") or [])
+        if str(agent).strip()
+    ]
+    answer_agents = [agent for agent in answer_agents if agent in resolved_agents]
+
+    return ModeStrategyOverride(
+        chat_mode=f"team_custom_{len(resolved_agents)}",
+        force_execution_mode="direct",
+        min_confidence_for_direct=1.0,
+        required_agents=resolved_agents,
+        answer_agents=answer_agents,
+        collaboration_mode=collaboration_mode,
+        review_strictness=1.0,
+        require_alignment_check=False,
+        synthesis_instruction="保留各参与专家的贡献痕迹，明确综合结论由哪些专家支撑。",
+        excluded_agents=sorted(excluded),
+    )

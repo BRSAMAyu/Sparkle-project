@@ -34,7 +34,12 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
     final isDualColumn = context.isTablet || context.isDesktop;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing16,
+        0,
+        DS.spacing16,
+        DS.spacing12,
+      ),
       child: DashboardEntrance(
         index: 8,
         child: MaterialStyler(
@@ -171,7 +176,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '提示',
+              _panelTitle(mode),
               style: context.sparkleTypography.labelLarge.copyWith(
                 color: DS.textSecondary,
                 fontWeight: FontWeight.w600,
@@ -182,6 +187,11 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
           ],
         ),
       );
+
+  String _panelTitle(TaskViewMode mode) => switch (mode) {
+        TaskViewMode.plan => '计划管理',
+        _ => '提示',
+      };
 
   Widget _buildPanelContent(TaskViewMode mode) => switch (mode) {
         TaskViewMode.schedule => Column(
@@ -217,22 +227,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               ),
             ],
           ),
-        TaskViewMode.plan => const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PanelItem(
-                icon: Icons.folder_rounded,
-                title: '按方案分组',
-                description: '任务按所属方案分组显示',
-              ),
-              SizedBox(height: DS.spacing12),
-              _PanelItem(
-                icon: Icons.add_circle_outline_rounded,
-                title: '创建方案',
-                description: '将任务组织到学习方案中',
-              ),
-            ],
-          ),
+        TaskViewMode.plan => const DashboardPlanManager(compact: true),
         TaskViewMode.sprint => const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

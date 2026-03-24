@@ -7,6 +7,7 @@ library;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
@@ -38,8 +39,8 @@ void main() {
       final stopwatch = Stopwatch()..start();
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapApp(
+          Scaffold(
             body: PlanReviewCard(
               review: _mockReview(overallScore: 85),
               onApprove: () {},
@@ -146,8 +147,8 @@ void main() {
   group('Widget Rebuild Performance', () {
     testWidgets('PlanReviewCard rebuilds in under 5ms', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapApp(
+          Scaffold(
             body: PlanReviewCard(
               review: _mockReview(overallScore: 85),
               onApprove: () {},
@@ -164,8 +165,8 @@ void main() {
 
       // Trigger rebuild
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapApp(
+          Scaffold(
             body: PlanReviewCard(
               review: _mockReview(overallScore: 90), // Changed score
               onApprove: () {},
@@ -189,8 +190,8 @@ void main() {
   group('Animation Performance', () {
     testWidgets('PlanReviewCard animation maintains 60fps', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapApp(
+          Scaffold(
             body: PlanReviewCard(
               review: _mockReview(overallScore: 85),
               onApprove: () {},
@@ -265,8 +266,8 @@ void main() {
       final initialMemory = _getCurrentMemoryUsage();
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapApp(
+          Scaffold(
             body: PlanReviewCard(
               review: _mockReview(overallScore: 85),
               onApprove: () {},
@@ -320,6 +321,12 @@ int _getCurrentMemoryUsage() {
   // Flutter's memory profiling tools
   return 0; // Placeholder
 }
+
+Widget _wrapApp(Widget child) => MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    );
 
 List<GalaxyNode> _generateMockNodes(int count) => List.generate(
       count,

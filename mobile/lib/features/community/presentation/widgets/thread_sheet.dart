@@ -62,18 +62,24 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
           padding: const EdgeInsets.only(top: DS.lg),
           child: Column(
             children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DS.neutral300,
-                  borderRadius: BorderRadius.circular(4),
+              SparkleStaggerItem(
+                index: 0,
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: DS.neutral300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
               const SizedBox(height: DS.sm),
-              Text(
-                context.l10n.threadDiscussion,
-                style: Theme.of(context).textTheme.titleMedium,
+              SparkleStaggerItem(
+                index: 1,
+                child: Text(
+                  context.l10n.threadDiscussion,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               const SizedBox(height: DS.md),
               Expanded(
@@ -84,31 +90,37 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
-                          return GroupChatBubble(
-                            message: message,
-                            groupId: widget.groupId,
-                            onRevoke: (msg) => ref
-                                .read(
-                                  groupChatProvider(widget.groupId).notifier,
-                                )
-                                .revokeMessage(msg.id),
-                            onEdit: (msg, content) => ref
-                                .read(
-                                  groupChatProvider(widget.groupId).notifier,
-                                )
-                                .editMessage(msg.id, content),
-                            onReaction: (msg, emoji) => ref
-                                .read(
-                                  groupChatProvider(widget.groupId).notifier,
-                                )
-                                .toggleReaction(msg.id, emoji),
+                          return SparkleStaggerItem(
+                            index: index,
+                            child: GroupChatBubble(
+                              message: message,
+                              groupId: widget.groupId,
+                              onRevoke: (msg) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .revokeMessage(msg.id),
+                              onEdit: (msg, content) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .editMessage(msg.id, content),
+                              onReaction: (msg, emoji) => ref
+                                  .read(
+                                    groupChatProvider(widget.groupId).notifier,
+                                  )
+                                  .toggleReaction(msg.id, emoji),
+                            ),
                           );
                         },
                       ),
               ),
-              ChatInput(
-                hintText: context.l10n.threadReplyHint,
-                onSend: (text, {replyToId}) => _sendReply(text),
+              SparkleStaggerItem(
+                index: 2,
+                child: ChatInput(
+                  hintText: context.l10n.threadReplyHint,
+                  onSend: (text, {replyToId}) => _sendReply(text),
+                ),
               ),
             ],
           ),

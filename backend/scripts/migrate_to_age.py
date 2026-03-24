@@ -16,8 +16,9 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.age_client import get_age_client, init_age
-from app.models.galaxy import KnowledgeNode as PGKnowledgeNode, NodeRelation as PGNodeRelation
+from app.models.galaxy import KnowledgeNode as PGKnowledgeNode, NodeRelation as PGNodeRelation, UserNodeStatus
 from app.models.user import User as PGUser
 from app.models.graph_models import KnowledgeVertex, UserVertex, RelationEdge
 from app.config import settings
@@ -26,6 +27,17 @@ from loguru import logger
 
 class AgeMigrator:
     """AGE 数据迁移器"""
+
+    RELATION_TYPE_MAP = {
+        "prerequisite": "PREREQUISITE",
+        "related": "RELATED",
+        "application": "APPLIES_TO",
+        "applies_to": "APPLIES_TO",
+        "composed_of": "COMPOSED_OF",
+        "composition": "COMPOSED_OF",
+        "evolves_to": "EVOLVES_TO",
+        "evolution": "EVOLVES_TO",
+    }
 
     def __init__(self):
         self.age_client = None
@@ -113,6 +125,7 @@ class AgeMigrator:
             # 分页查询
             result = await self.pg_session.execute(
                 select(PGKnowledgeNode)
+                .options(selectinload(PGKnowledgeNode.subject))
                 .limit(batch_size)
                 .offset(offset)
             )
@@ -129,7 +142,7 @@ class AgeMigrator:
                         name=node.name,
                         description=node.description or "",
                         importance=node.importance_level or 1,
-                        sector=node.sector_code or "VOID",
+                        sector=(node.subject.sector_code if node.subject else "VOID"),
                         keywords=node.keywords or [],
                         source_type=node.source_type or "seed",
                         created_at=node.created_at
@@ -188,12 +201,13 @@ class AgeMigrator:
                         continue
 
                     # 创建边
+                    edge_label = self.RELATION_TYPE_MAP.get(rel.relation_type.lower(), rel.relation_type.upper())
                     await self.age_client.add_edge(
                         from_label="KnowledgeNode",
                         from_props={"id": str(rel.source_node_id)},
                         to_label="KnowledgeNode",
                         to_props={"id": str(rel.target_node_id)},
-                        edge_label=rel.relation_type.upper(),
+                        edge_label=edge_label,
                         edge_props={
                             "strength": str(rel.strength),
                             "created_by": rel.created_by or "seed"
@@ -214,8 +228,6 @@ class AgeMigrator:
     async def migrate_user_node_status(self, batch_size: int = 100):
         """迁移用户节点状态（生成用户兴趣和学习记录边）"""
         print("\n👤 迁移用户节点状态...")
-
-        from app.models.user import UserNodeStatus
 
         offset = 0
         total = 0
@@ -289,7 +301,9 @@ class AgeMigrator:
 
         # 统计顶点
         vertex_count = await self.age_client.execute_cypher("""
-        MATCH (n) RETURN labels(n) as label, COUNT(n) as count
+        MATCH (n)
+        WITH labels(n) AS vertex_labels, COUNT(n) AS vertex_count
+        RETURN {label: vertex_labels, count: vertex_count} as result
         """)
 
         print("\n顶点统计:")
@@ -298,7 +312,9 @@ class AgeMigrator:
 
         # 统计边
         edge_count = await self.age_client.execute_cypher("""
-        MATCH ()-[r]->() RETURN type(r) as type, COUNT(r) as count
+        MATCH ()-[r]->()
+        WITH type(r) AS edge_type, COUNT(r) AS edge_count
+        RETURN {type: edge_type, count: edge_count} as result
         """)
 
         print("\n边统计:")
@@ -309,7 +325,7 @@ class AgeMigrator:
         print("\n示例查询:")
         sample = await self.age_client.execute_cypher("""
         MATCH (u:User)-[:INTERESTED_IN]->(k:KnowledgeNode)
-        RETURN u.nickname as user, k.name as knowledge
+        RETURN {user: u.nickname, knowledge: k.name} as result
         LIMIT 3
         """)
         for s in sample:

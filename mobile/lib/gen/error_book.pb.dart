@@ -37,6 +37,8 @@ class ErrorRecord extends $pb.GeneratedMessage {
     $core.Iterable<KnowledgeLinkBrief>? knowledgeLinks,
     $1.Timestamp? createdAt,
     $1.Timestamp? updatedAt,
+    $core.Iterable<$core.String>? cognitiveTags,
+    $core.String? aiAnalysisSummary,
   }) {
     final result = create();
     if (id != null) result.id = id;
@@ -55,6 +57,8 @@ class ErrorRecord extends $pb.GeneratedMessage {
     if (knowledgeLinks != null) result.knowledgeLinks.addAll(knowledgeLinks);
     if (createdAt != null) result.createdAt = createdAt;
     if (updatedAt != null) result.updatedAt = updatedAt;
+    if (cognitiveTags != null) result.cognitiveTags.addAll(cognitiveTags);
+    if (aiAnalysisSummary != null) result.aiAnalysisSummary = aiAnalysisSummary;
     return result;
   }
 
@@ -93,6 +97,8 @@ class ErrorRecord extends $pb.GeneratedMessage {
         subBuilder: $1.Timestamp.create)
     ..aOM<$1.Timestamp>(16, _omitFieldNames ? '' : 'updatedAt',
         subBuilder: $1.Timestamp.create)
+    ..pPS(17, _omitFieldNames ? '' : 'cognitiveTags')
+    ..aOS(18, _omitFieldNames ? '' : 'aiAnalysisSummary')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -263,6 +269,18 @@ class ErrorRecord extends $pb.GeneratedMessage {
   void clearUpdatedAt() => $_clearField(16);
   @$pb.TagNumber(16)
   $1.Timestamp ensureUpdatedAt() => $_ensure(15);
+
+  @$pb.TagNumber(17)
+  $pb.PbList<$core.String> get cognitiveTags => $_getList(16);
+
+  @$pb.TagNumber(18)
+  $core.String get aiAnalysisSummary => $_getSZ(17);
+  @$pb.TagNumber(18)
+  set aiAnalysisSummary($core.String value) => $_setString(17, value);
+  @$pb.TagNumber(18)
+  $core.bool hasAiAnalysisSummary() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearAiAnalysisSummary() => $_clearField(18);
 }
 
 class ErrorAnalysisResult extends $pb.GeneratedMessage {
@@ -482,6 +500,375 @@ class KnowledgeLinkBrief extends $pb.GeneratedMessage {
   void clearIsPrimary() => $_clearField(4);
 }
 
+class SemanticConceptBrief extends $pb.GeneratedMessage {
+  factory SemanticConceptBrief({
+    $core.String? id,
+    $core.String? name,
+    $core.String? description,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (description != null) result.description = description;
+    return result;
+  }
+
+  SemanticConceptBrief._();
+
+  factory SemanticConceptBrief.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SemanticConceptBrief.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SemanticConceptBrief',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'error_book'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'description')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SemanticConceptBrief clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SemanticConceptBrief copyWith(void Function(SemanticConceptBrief) updates) =>
+      super.copyWith((message) => updates(message as SemanticConceptBrief))
+          as SemanticConceptBrief;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SemanticConceptBrief create() => SemanticConceptBrief._();
+  @$core.override
+  SemanticConceptBrief createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SemanticConceptBrief getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SemanticConceptBrief>(create);
+  static SemanticConceptBrief? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get description => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set description($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDescription() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDescription() => $_clearField(3);
+}
+
+class StrategyNodeSummary extends $pb.GeneratedMessage {
+  factory StrategyNodeSummary({
+    $core.String? id,
+    $core.String? title,
+    $core.String? description,
+    $core.String? subjectCode,
+    $core.Iterable<$core.String>? tags,
+    $1.Timestamp? createdAt,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (title != null) result.title = title;
+    if (description != null) result.description = description;
+    if (subjectCode != null) result.subjectCode = subjectCode;
+    if (tags != null) result.tags.addAll(tags);
+    if (createdAt != null) result.createdAt = createdAt;
+    return result;
+  }
+
+  StrategyNodeSummary._();
+
+  factory StrategyNodeSummary.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory StrategyNodeSummary.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StrategyNodeSummary',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'error_book'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'description')
+    ..aOS(4, _omitFieldNames ? '' : 'subjectCode')
+    ..pPS(5, _omitFieldNames ? '' : 'tags')
+    ..aOM<$1.Timestamp>(6, _omitFieldNames ? '' : 'createdAt',
+        subBuilder: $1.Timestamp.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StrategyNodeSummary clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StrategyNodeSummary copyWith(void Function(StrategyNodeSummary) updates) =>
+      super.copyWith((message) => updates(message as StrategyNodeSummary))
+          as StrategyNodeSummary;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static StrategyNodeSummary create() => StrategyNodeSummary._();
+  @$core.override
+  StrategyNodeSummary createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static StrategyNodeSummary getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StrategyNodeSummary>(create);
+  static StrategyNodeSummary? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get description => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set description($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDescription() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDescription() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get subjectCode => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set subjectCode($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSubjectCode() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSubjectCode() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get tags => $_getList(4);
+
+  @$pb.TagNumber(6)
+  $1.Timestamp get createdAt => $_getN(5);
+  @$pb.TagNumber(6)
+  set createdAt($1.Timestamp value) => $_setField(6, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCreatedAt() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCreatedAt() => $_clearField(6);
+  @$pb.TagNumber(6)
+  $1.Timestamp ensureCreatedAt() => $_ensure(5);
+}
+
+class SimilarErrorSummary extends $pb.GeneratedMessage {
+  factory SimilarErrorSummary({
+    $core.String? id,
+    $core.String? subjectCode,
+    $core.String? rootCause,
+    $1.Timestamp? createdAt,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (subjectCode != null) result.subjectCode = subjectCode;
+    if (rootCause != null) result.rootCause = rootCause;
+    if (createdAt != null) result.createdAt = createdAt;
+    return result;
+  }
+
+  SimilarErrorSummary._();
+
+  factory SimilarErrorSummary.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SimilarErrorSummary.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SimilarErrorSummary',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'error_book'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'subjectCode')
+    ..aOS(3, _omitFieldNames ? '' : 'rootCause')
+    ..aOM<$1.Timestamp>(4, _omitFieldNames ? '' : 'createdAt',
+        subBuilder: $1.Timestamp.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SimilarErrorSummary clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SimilarErrorSummary copyWith(void Function(SimilarErrorSummary) updates) =>
+      super.copyWith((message) => updates(message as SimilarErrorSummary))
+          as SimilarErrorSummary;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SimilarErrorSummary create() => SimilarErrorSummary._();
+  @$core.override
+  SimilarErrorSummary createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SimilarErrorSummary getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SimilarErrorSummary>(create);
+  static SimilarErrorSummary? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get subjectCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set subjectCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSubjectCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSubjectCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get rootCause => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set rootCause($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRootCause() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRootCause() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $1.Timestamp get createdAt => $_getN(3);
+  @$pb.TagNumber(4)
+  set createdAt($1.Timestamp value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCreatedAt() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCreatedAt() => $_clearField(4);
+  @$pb.TagNumber(4)
+  $1.Timestamp ensureCreatedAt() => $_ensure(3);
+}
+
+class ErrorSemanticSummary extends $pb.GeneratedMessage {
+  factory ErrorSemanticSummary({
+    $core.String? errorId,
+    $core.String? rootCause,
+    $core.Iterable<SemanticConceptBrief>? linkedConcepts,
+    $core.Iterable<StrategyNodeSummary>? strategies,
+    $core.Iterable<SimilarErrorSummary>? similarErrors,
+  }) {
+    final result = create();
+    if (errorId != null) result.errorId = errorId;
+    if (rootCause != null) result.rootCause = rootCause;
+    if (linkedConcepts != null) result.linkedConcepts.addAll(linkedConcepts);
+    if (strategies != null) result.strategies.addAll(strategies);
+    if (similarErrors != null) result.similarErrors.addAll(similarErrors);
+    return result;
+  }
+
+  ErrorSemanticSummary._();
+
+  factory ErrorSemanticSummary.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ErrorSemanticSummary.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ErrorSemanticSummary',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'error_book'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'errorId')
+    ..aOS(2, _omitFieldNames ? '' : 'rootCause')
+    ..pPM<SemanticConceptBrief>(3, _omitFieldNames ? '' : 'linkedConcepts',
+        subBuilder: SemanticConceptBrief.create)
+    ..pPM<StrategyNodeSummary>(4, _omitFieldNames ? '' : 'strategies',
+        subBuilder: StrategyNodeSummary.create)
+    ..pPM<SimilarErrorSummary>(5, _omitFieldNames ? '' : 'similarErrors',
+        subBuilder: SimilarErrorSummary.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ErrorSemanticSummary clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ErrorSemanticSummary copyWith(void Function(ErrorSemanticSummary) updates) =>
+      super.copyWith((message) => updates(message as ErrorSemanticSummary))
+          as ErrorSemanticSummary;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ErrorSemanticSummary create() => ErrorSemanticSummary._();
+  @$core.override
+  ErrorSemanticSummary createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ErrorSemanticSummary getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ErrorSemanticSummary>(create);
+  static ErrorSemanticSummary? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get errorId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set errorId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasErrorId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearErrorId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get rootCause => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set rootCause($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRootCause() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRootCause() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<SemanticConceptBrief> get linkedConcepts => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<StrategyNodeSummary> get strategies => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<SimilarErrorSummary> get similarErrors => $_getList(4);
+}
+
 class CreateErrorRequest extends $pb.GeneratedMessage {
   factory CreateErrorRequest({
     $core.String? userId,
@@ -491,6 +878,8 @@ class CreateErrorRequest extends $pb.GeneratedMessage {
     $core.String? correctAnswer,
     $core.String? subjectCode,
     $core.String? chapter,
+    $core.Iterable<$core.String>? cognitiveTags,
+    $core.String? aiAnalysisSummary,
   }) {
     final result = create();
     if (userId != null) result.userId = userId;
@@ -500,6 +889,8 @@ class CreateErrorRequest extends $pb.GeneratedMessage {
     if (correctAnswer != null) result.correctAnswer = correctAnswer;
     if (subjectCode != null) result.subjectCode = subjectCode;
     if (chapter != null) result.chapter = chapter;
+    if (cognitiveTags != null) result.cognitiveTags.addAll(cognitiveTags);
+    if (aiAnalysisSummary != null) result.aiAnalysisSummary = aiAnalysisSummary;
     return result;
   }
 
@@ -523,6 +914,8 @@ class CreateErrorRequest extends $pb.GeneratedMessage {
     ..aOS(5, _omitFieldNames ? '' : 'correctAnswer')
     ..aOS(6, _omitFieldNames ? '' : 'subjectCode')
     ..aOS(7, _omitFieldNames ? '' : 'chapter')
+    ..pPS(8, _omitFieldNames ? '' : 'cognitiveTags')
+    ..aOS(9, _omitFieldNames ? '' : 'aiAnalysisSummary')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -606,6 +999,18 @@ class CreateErrorRequest extends $pb.GeneratedMessage {
   $core.bool hasChapter() => $_has(6);
   @$pb.TagNumber(7)
   void clearChapter() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $pb.PbList<$core.String> get cognitiveTags => $_getList(7);
+
+  @$pb.TagNumber(9)
+  $core.String get aiAnalysisSummary => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set aiAnalysisSummary($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasAiAnalysisSummary() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearAiAnalysisSummary() => $_clearField(9);
 }
 
 class ListErrorsRequest extends $pb.GeneratedMessage {
@@ -620,6 +1025,7 @@ class ListErrorsRequest extends $pb.GeneratedMessage {
     $core.String? keyword,
     $core.int? page,
     $core.int? pageSize,
+    $core.String? cognitiveDimension,
   }) {
     final result = create();
     if (userId != null) result.userId = userId;
@@ -632,6 +1038,8 @@ class ListErrorsRequest extends $pb.GeneratedMessage {
     if (keyword != null) result.keyword = keyword;
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
+    if (cognitiveDimension != null)
+      result.cognitiveDimension = cognitiveDimension;
     return result;
   }
 
@@ -658,6 +1066,7 @@ class ListErrorsRequest extends $pb.GeneratedMessage {
     ..aOS(8, _omitFieldNames ? '' : 'keyword')
     ..aI(9, _omitFieldNames ? '' : 'page')
     ..aI(10, _omitFieldNames ? '' : 'pageSize')
+    ..aOS(11, _omitFieldNames ? '' : 'cognitiveDimension')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -768,6 +1177,15 @@ class ListErrorsRequest extends $pb.GeneratedMessage {
   $core.bool hasPageSize() => $_has(9);
   @$pb.TagNumber(10)
   void clearPageSize() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get cognitiveDimension => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set cognitiveDimension($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasCognitiveDimension() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearCognitiveDimension() => $_clearField(11);
 }
 
 class ListErrorsResponse extends $pb.GeneratedMessage {
@@ -943,6 +1361,8 @@ class UpdateErrorRequest extends $pb.GeneratedMessage {
     $core.String? subjectCode,
     $core.String? chapter,
     $core.String? questionImageUrl,
+    $core.Iterable<$core.String>? cognitiveTags,
+    $core.String? aiAnalysisSummary,
   }) {
     final result = create();
     if (errorId != null) result.errorId = errorId;
@@ -953,6 +1373,8 @@ class UpdateErrorRequest extends $pb.GeneratedMessage {
     if (subjectCode != null) result.subjectCode = subjectCode;
     if (chapter != null) result.chapter = chapter;
     if (questionImageUrl != null) result.questionImageUrl = questionImageUrl;
+    if (cognitiveTags != null) result.cognitiveTags.addAll(cognitiveTags);
+    if (aiAnalysisSummary != null) result.aiAnalysisSummary = aiAnalysisSummary;
     return result;
   }
 
@@ -977,6 +1399,8 @@ class UpdateErrorRequest extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'subjectCode')
     ..aOS(7, _omitFieldNames ? '' : 'chapter')
     ..aOS(8, _omitFieldNames ? '' : 'questionImageUrl')
+    ..pPS(9, _omitFieldNames ? '' : 'cognitiveTags')
+    ..aOS(10, _omitFieldNames ? '' : 'aiAnalysisSummary')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1069,6 +1493,18 @@ class UpdateErrorRequest extends $pb.GeneratedMessage {
   $core.bool hasQuestionImageUrl() => $_has(7);
   @$pb.TagNumber(8)
   void clearQuestionImageUrl() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $pb.PbList<$core.String> get cognitiveTags => $_getList(8);
+
+  @$pb.TagNumber(10)
+  $core.String get aiAnalysisSummary => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set aiAnalysisSummary($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasAiAnalysisSummary() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearAiAnalysisSummary() => $_clearField(10);
 }
 
 class DeleteErrorRequest extends $pb.GeneratedMessage {

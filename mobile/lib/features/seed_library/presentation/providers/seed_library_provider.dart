@@ -112,6 +112,8 @@ class SeedLibraryDetailState {
     this.isLoadingItems = false,
     this.error,
     this.isSubscribed = false,
+    this.subscription,
+    this.activeSubscriptions = const [],
     this.itemsPage = 1,
     this.hasMoreItems = true,
   });
@@ -121,6 +123,8 @@ class SeedLibraryDetailState {
   final bool isLoadingItems;
   final String? error;
   final bool isSubscribed;
+  final UserLibrarySubscription? subscription;
+  final List<UserLibrarySubscription> activeSubscriptions;
   final int itemsPage;
   final bool hasMoreItems;
 
@@ -131,6 +135,8 @@ class SeedLibraryDetailState {
     bool? isLoadingItems,
     String? error,
     bool? isSubscribed,
+    UserLibrarySubscription? subscription,
+    List<UserLibrarySubscription>? activeSubscriptions,
     int? itemsPage,
     bool? hasMoreItems,
   }) => SeedLibraryDetailState(
@@ -140,6 +146,8 @@ class SeedLibraryDetailState {
       isLoadingItems: isLoadingItems ?? this.isLoadingItems,
       error: error,
       isSubscribed: isSubscribed ?? this.isSubscribed,
+      subscription: subscription ?? this.subscription,
+      activeSubscriptions: activeSubscriptions ?? this.activeSubscriptions,
       itemsPage: itemsPage ?? this.itemsPage,
       hasMoreItems: hasMoreItems ?? this.hasMoreItems,
     );
@@ -161,10 +169,21 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
 
     try {
       final library = await _repository.getLibrary(libraryId);
+      final subscriptions = await _repository.getMySubscriptions();
+      final matchedSubscription = subscriptions.items.cast<UserLibrarySubscription?>().firstWhere(
+            (sub) => sub?.libraryId == libraryId,
+            orElse: () => null,
+          );
+      final activeSubscriptions = subscriptions.items
+          .where((sub) => sub.isEnabled)
+          .toList()
+        ..sort((a, b) => b.priority.compareTo(a.priority));
       state = state.copyWith(
         library: library,
         isLoadingLibrary: false,
-        isSubscribed: library.isSubscribed ?? false,
+        isSubscribed: matchedSubscription != null,
+        subscription: matchedSubscription,
+        activeSubscriptions: activeSubscriptions,
       );
     } catch (e) {
       state = state.copyWith(
@@ -217,10 +236,82 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       } else {
         await _repository.unsubscribeFromLibrary(libraryId);
       }
+      await loadLibrary();
     } catch (e) {
       // Revert on error
       state = state.copyWith(isSubscribed: wasSubscribed);
       state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> toggleApplied() async {
+    try {
+      if (!state.isSubscribed) {
+        final maxPriority = state.activeSubscriptions.isEmpty
+            ? 100
+            : state.activeSubscriptions.first.priority + 10;
+        await _repository.subscribeToLibrary(
+          libraryId,
+          priority: maxPriority,
+          notes: 'applied',
+        );
+      } else {
+        await _repository.updateSubscription(
+          libraryId,
+          UpdateSubscriptionRequest(
+            isEnabled: !(state.subscription?.isEnabled ?? false),
+          ),
+        );
+      }
+      await loadLibrary();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> setAsPrimaryLibrary() async {
+    try {
+      final maxPriority = state.activeSubscriptions.isEmpty
+          ? 100
+          : state.activeSubscriptions.first.priority + 10;
+      if (!state.isSubscribed) {
+        await _repository.subscribeToLibrary(
+          libraryId,
+          priority: maxPriority,
+          notes: 'primary',
+        );
+      } else {
+        await _repository.updateSubscription(
+          libraryId,
+          UpdateSubscriptionRequest(
+            isEnabled: true,
+            priority: maxPriority,
+            notes: 'primary',
+          ),
+        );
+      }
+      await loadLibrary();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> submitRating({
+    required double score,
+    String? comment,
+  }) async {
+    try {
+      final updatedLibrary = await _repository.rateLibrary(
+        libraryId,
+        RateLibraryRequest(score: score, comment: comment),
+      );
+      state = state.copyWith(library: updatedLibrary);
+      await loadLibrary();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
     }
   }
 
@@ -269,6 +360,25 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       }
 
       return item;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> importItems(
+    List<Map<String, dynamic>> items, {
+    bool continueOnError = true,
+  }) async {
+    try {
+      final result = await _repository.importItems(
+        libraryId,
+        items: items,
+        continueOnError: continueOnError,
+      );
+      await loadLibrary();
+      await loadItems(refresh: true);
+      return result;
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;

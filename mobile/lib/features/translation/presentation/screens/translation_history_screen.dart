@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/data/repositories/local_translation_repository.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 
@@ -47,11 +51,11 @@ class _TranslationHistoryScreenState
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('评分'),
+          title: Text(context.l10n.translationRating),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('选择重要程度'),
+              Text(context.l10n.translationSelectImportance),
               const SizedBox(height: DS.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -59,6 +63,11 @@ class _TranslationHistoryScreenState
                   final starValue = index + 1;
                   return SparkleIconButton(
                     onPressed: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
                       setDialogState(() {
                         _selectedRatings[id] = starValue;
                       });
@@ -79,7 +88,7 @@ class _TranslationHistoryScreenState
           ),
           actions: [
             SparkleButton.ghost(
-              label: '取消',
+              label: context.l10n.commonCancel,
               onPressed: () => Navigator.pop(context),
             ),
             FilledButton(
@@ -91,7 +100,7 @@ class _TranslationHistoryScreenState
                 _selectedRatings.remove(id);
                 if (mounted) Navigator.pop(context);
               },
-              child: const Text('确定'),
+              child: Text(context.l10n.commonOk),
             ),
           ],
         ),
@@ -103,17 +112,17 @@ class _TranslationHistoryScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除翻译'),
-        content: Text('确定要删除这条翻译记录吗？\n\n${item.originalText}'),
+        title: Text(context.l10n.translationDelete),
+        content: Text('${context.l10n.translationDeleteConfirm}\n\n${item.originalText}'),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.commonCancel,
             onPressed: () => Navigator.pop(context, false),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: DS.error),
-            child: const Text('删除'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -131,7 +140,7 @@ class _TranslationHistoryScreenState
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('翻译历史'),
+        title: Text(context.l10n.translationHistoryTitle),
         elevation: 0,
         actions: [
           if (state.records.isNotEmpty)
@@ -141,18 +150,18 @@ class _TranslationHistoryScreenState
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('清空历史'),
-                      content: const Text('确定要清空所有翻译历史吗？'),
+                      title: Text(context.l10n.translationClearAll),
+                      content: Text(context.l10n.translationClearConfirm),
                       actions: [
                         SparkleButton.ghost(
-                          label: '取消',
+                          label: context.l10n.commonCancel,
                           onPressed: () => Navigator.pop(context, false),
                         ),
                         FilledButton(
                           onPressed: () => Navigator.pop(context, true),
                           style:
                               FilledButton.styleFrom(backgroundColor: DS.error),
-                          child: const Text('清空'),
+                          child: Text(context.l10n.translationClearAll),
                         ),
                       ],
                     ),
@@ -171,7 +180,7 @@ class _TranslationHistoryScreenState
                     children: [
                       Icon(Icons.delete_forever, color: DS.error),
                       const SizedBox(width: DS.sm),
-                      const Text('清空历史'),
+                      Text(context.l10n.translationClearAll),
                     ],
                   ),
                 ),
@@ -191,7 +200,7 @@ class _TranslationHistoryScreenState
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: '搜索翻译记录...',
+                    hintText: context.l10n.translationSearchHint,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? SparkleIconButton(
@@ -222,27 +231,33 @@ class _TranslationHistoryScreenState
               padding: const EdgeInsets.symmetric(horizontal: DS.md),
               child: Row(
                 children: [
-                  _FilterChip(
-                    label: '全部',
-                    isSelected: state.filter == TranslationFilter.all,
-                    count: state.statistics['total'] ?? 0,
-                    onTap: () => ref
-                        .read(translationHistoryProvider.notifier)
-                        .setFilter(TranslationFilter.all),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: _FilterChip(
+                      label: context.l10n.translationFilterAll,
+                      isSelected: state.filter == TranslationFilter.all,
+                      count: state.statistics['total'] ?? 0,
+                      onTap: () => ref
+                          .read(translationHistoryProvider.notifier)
+                          .setFilter(TranslationFilter.all),
+                    ),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: _FilterChip(
+                      label: context.l10n.translationFilterFavorites,
+                      isSelected: state.filter == TranslationFilter.favorites,
+                      count: state.statistics['favorites'] ?? 0,
+                      icon: Icons.star,
+                      onTap: () => ref
+                          .read(translationHistoryProvider.notifier)
+                          .setFilter(TranslationFilter.favorites),
+                    ),
                   ),
                   const SizedBox(width: DS.sm),
                   _FilterChip(
-                    label: '收藏',
-                    isSelected: state.filter == TranslationFilter.favorites,
-                    count: state.statistics['favorites'] ?? 0,
-                    icon: Icons.star,
-                    onTap: () => ref
-                        .read(translationHistoryProvider.notifier)
-                        .setFilter(TranslationFilter.favorites),
-                  ),
-                  const SizedBox(width: DS.sm),
-                  _FilterChip(
-                    label: '重要',
+                    label: context.l10n.translationFilterImportant,
                     isSelected: state.filter == TranslationFilter.highRating,
                     count: state.statistics['highRated'] ?? 0,
                     icon: Icons.grade,
@@ -252,7 +267,7 @@ class _TranslationHistoryScreenState
                   ),
                   const SizedBox(width: DS.sm),
                   _FilterChip(
-                    label: '最近',
+                    label: context.l10n.translationFilterRecent,
                     isSelected: state.filter == TranslationFilter.recent,
                     onTap: () => ref
                         .read(translationHistoryProvider.notifier)
@@ -276,15 +291,19 @@ class _TranslationHistoryScreenState
                           itemCount: state.records.length,
                           itemBuilder: (context, index) {
                             final item = state.records[index];
-                            return _TranslationCard(
-                              item: item,
-                              languageCodeToFlag: _languageCodeToFlag,
-                              onRatingTap: () =>
-                                  _showRatingDialog(item.id, item.rating),
-                              onFavoriteToggle: () => ref
-                                  .read(translationHistoryProvider.notifier)
-                                  .toggleFavorite(item.id),
-                              onDelete: () => _showDeleteConfirmation(item),
+                            return SparkleStaggerItem(
+                              index: index,
+                              child: _TranslationCard(
+                                item: item,
+                                languageCodeToFlag: _languageCodeToFlag,
+                                context: context,
+                                onRatingTap: () =>
+                                    _showRatingDialog(item.id, item.rating),
+                                onFavoriteToggle: () => ref
+                                    .read(translationHistoryProvider.notifier)
+                                    .toggleFavorite(item.id),
+                                onDelete: () => _showDeleteConfirmation(item),
+                              ),
                             );
                           },
                         ),
@@ -302,20 +321,20 @@ class _TranslationHistoryScreenState
 
     if (state.searchQuery.isNotEmpty) {
       icon = Icons.search_off;
-      title = '未找到结果';
-      subtitle = '尝试其他关键词';
+      title = context.l10n.translationNoSearchResults;
+      subtitle = context.l10n.translationTryOtherKeywords;
     } else if (state.filter == TranslationFilter.favorites) {
       icon = Icons.star_border;
-      title = '暂无收藏';
-      subtitle = '给翻译打星标收藏起来';
+      title = context.l10n.translationNoFavorites;
+      subtitle = context.l10n.translationNoFavoritesHint;
     } else if (state.filter == TranslationFilter.highRating) {
       icon = Icons.grade;
-      title = '暂无重要翻译';
-      subtitle = '给4星及以上的翻译会显示在这里';
+      title = context.l10n.translationNoImportant;
+      subtitle = context.l10n.translationNoImportantHint;
     } else {
       icon = Icons.translate;
-      title = '暂无翻译记录';
-      subtitle = '使用翻译功能后会自动保存';
+      title = context.l10n.translationNoHistory;
+      subtitle = context.l10n.translationNoRecordsHint;
     }
 
     return Center(
@@ -419,6 +438,7 @@ class _TranslationCard extends StatelessWidget {
   const _TranslationCard({
     required this.item,
     required this.languageCodeToFlag,
+    required this.context,
     required this.onRatingTap,
     required this.onFavoriteToggle,
     required this.onDelete,
@@ -426,6 +446,7 @@ class _TranslationCard extends StatelessWidget {
 
   final TranslationHistoryItem item;
   final String Function(String) languageCodeToFlag;
+  final BuildContext context;
   final VoidCallback onRatingTap;
   final VoidCallback onFavoriteToggle;
   final VoidCallback onDelete;
@@ -515,7 +536,7 @@ class _TranslationCard extends StatelessWidget {
 
                     // Date
                     Text(
-                      _formatDate(item.createdAt),
+                      _formatDate(context, item.createdAt),
                       style: TextStyle(
                         fontSize: 12,
                         color: DS.neutral500,
@@ -541,16 +562,16 @@ class _TranslationCard extends StatelessWidget {
         ),
       );
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
 
     if (diff.inDays == 0) {
-      return '今天';
+      return context.l10n.translationToday;
     } else if (diff.inDays == 1) {
-      return '昨天';
+      return context.l10n.translationYesterday;
     } else if (diff.inDays < 7) {
-      return '${diff.inDays}天前';
+      return context.l10n.translationDaysAgo(diff.inDays);
     } else {
       return '${date.month}/${date.day}';
     }

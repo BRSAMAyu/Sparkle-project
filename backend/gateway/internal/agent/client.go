@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log"
 	"time"
 
@@ -13,13 +14,23 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 )
+
+// ErrCircuitOpen is returned when the circuit breaker is open
+var ErrCircuitOpen = errors.New("circuit breaker is open")
+
+// ErrServiceUnavailable is returned when the agent service is unavailable
+var ErrServiceUnavailable = errors.New("agent service unavailable")
 
 type Client struct {
 	conn   *grpc.ClientConn
 	api    agentv1.AgentServiceClient
 	config *config.Config
+
+	// Health checker (optional)
+	healthChecker *AgentHealthChecker
 }
 
 type traceIDKey struct{}
@@ -86,6 +97,11 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		grpc.WithBlock(),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithDefaultServiceConfig(retryPolicy),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                20 * time.Second,
+			Timeout:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
 	)
 	if err != nil {
 		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
@@ -96,10 +112,74 @@ func NewClient(cfg *config.Config) (*Client, error) {
 	return &Client{conn: conn, api: client, config: cfg}, nil
 }
 
+// NewClientWithHealthCheck creates a client with health checking enabled
+func NewClientWithHealthCheck(cfg *config.Config, healthCheckInterval, healthCheckTimeout time.Duration) (*Client, error) {
+	c, err := NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup health checker with circuit breaker
+	cbConfig := DefaultCircuitBreakerConfig()
+	if cfg.CircuitBreakerThreshold > 0 {
+		cbConfig.FailureThreshold = cfg.CircuitBreakerThreshold
+	}
+
+	c.healthChecker = NewAgentHealthChecker(c, healthCheckInterval, healthCheckTimeout, cbConfig)
+	c.healthChecker.Start()
+
+	log.Printf("[AgentClient] Health checker started (interval: %v, timeout: %v)", healthCheckInterval, healthCheckTimeout)
+
+	return c, nil
+}
+
 func (c *Client) Close() {
+	if c.healthChecker != nil {
+		c.healthChecker.Stop()
+	}
 	if c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+// GetHealthChecker returns the health checker (may be nil if not configured)
+func (c *Client) GetHealthChecker() *AgentHealthChecker {
+	return c.healthChecker
+}
+
+// IsHealthy returns true if the agent service is healthy
+func (c *Client) IsHealthy() bool {
+	if c.healthChecker != nil {
+		return c.healthChecker.IsHealthy()
+	}
+	// Without health checker, assume healthy
+	return true
+}
+
+// GetCircuitState returns the current circuit breaker state
+func (c *Client) GetCircuitState() CircuitState {
+	if c.healthChecker != nil {
+		return c.healthChecker.GetCircuitState()
+	}
+	return CircuitClosed
+}
+
+// StreamChatWithFallback executes StreamChat with circuit breaker protection
+// Returns ErrCircuitOpen if the circuit is open
+func (c *Client) StreamChatWithFallback(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
+	// Check circuit breaker
+	if c.healthChecker != nil && !c.healthChecker.AllowRequest() {
+		return nil, ErrCircuitOpen
+	}
+
+	stream, err := c.StreamChat(ctx, req)
+
+	// Record result for circuit breaker tracking
+	if c.healthChecker != nil {
+		c.healthChecker.RecordRequestResult(err)
+	}
+
+	return stream, err
 }
 
 func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {

@@ -3,6 +3,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Achievement Repository
@@ -28,6 +29,7 @@ class AchievementRepository {
     String? category,
     AchievementRarity? rarity,
     bool includeHidden = false,
+    bool includeInactive = false,
   }) async {
     if (DemoDataService.isDemoMode) {
       // Return demo achievements
@@ -35,10 +37,13 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final queryParams = <String, dynamic>{
+        'locale': locale,
         if (category != null) 'category': category,
         if (rarity != null) 'rarity': rarity.name,
         'include_hidden': includeHidden,
+        'include_inactive': includeInactive,
       };
 
       final response = await _apiClient.get<Map<String, dynamic>>(
@@ -124,8 +129,10 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.achievementsMap,
+        queryParameters: {'locale': locale},
       );
 
       final payload = ApiResponseParser.unwrapMap(
@@ -164,6 +171,30 @@ class AchievementRepository {
       return StreakStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getStreakStats');
+    }
+  }
+
+  /// Get streak history for calendar (default 90 days)
+  Future<List<StreakDayRecord>> getStreakHistory({int days = 90}) async {
+    if (DemoDataService.isDemoMode) {
+      return _getDemoStreakHistory(days);
+    }
+
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementsStreakHistory,
+        queryParameters: {'days': days},
+      );
+
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('getStreakHistory response is empty');
+      }
+
+      final history = StreakHistoryResponse.fromJson(payload);
+      return history.days;
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getStreakHistory');
     }
   }
 
@@ -211,14 +242,11 @@ class AchievementRepository {
         },
       );
 
+      // Backend returns {"success": true, "data": {...}}
+      // unwrapMap extracts the "data" dict directly, so parse it directly
       final payload =
           ApiResponseParser.unwrapMap(response.data, action: 'createContract');
-      final contractData = payload['data'] as Map<String, dynamic>?;
-      if (contractData == null) {
-        throw Exception('createContract: data is null');
-      }
-
-      return SparkContract.fromJson(contractData);
+      return SparkContract.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createContract');
     }
@@ -296,15 +324,11 @@ class AchievementRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
       final dataList = payload['data'] as List<dynamic>?;
 
-      return dataList?.map(
-            (json) {
-              final item = Map<String, dynamic>.from(
-                json as Map<String, dynamic>,
-              );
-              item.putIfAbsent('user_id', () => '');
-              return UserTitle.fromJson(item);
-            },
-          ).toList() ??
+      return dataList
+              ?.map(
+                (json) => UserTitle.fromJson(json as Map<String, dynamic>),
+              )
+              .toList() ??
           [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getTitles');
@@ -337,7 +361,11 @@ class AchievementRepository {
   }
 
   /// Generate achievement share card
-  Future<AchievementShareCard> shareAchievement(String achievementId) async {
+  Future<AchievementShareCard> shareAchievement(
+    String achievementId, {
+    String templateId = 'cosmic',
+    ShareCardPrivacySettings? privacySettings,
+  }) async {
     if (DemoDataService.isDemoMode) {
       final achievement = _getDemoAchievements()
           .achievements
@@ -345,17 +373,24 @@ class AchievementRepository {
           .achievement;
       return AchievementShareCard(
         cardUrl: '',
-        mimeType: 'image/png',
         width: 1080,
         height: 1440,
         generatedAt: DateTime.now(),
+        templateId: templateId,
+        privacySettings: privacySettings,
         achievement: achievement,
       );
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.achievementShare(achievementId),
+        queryParameters: {'locale': locale},
+        data: {
+          'template_id': templateId,
+          'privacy': privacySettings?.toJson(),
+        },
       );
 
       final payload = ApiResponseParser.unwrapMap(
@@ -365,6 +400,42 @@ class AchievementRepository {
       return AchievementShareCard.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'shareAchievement');
+    }
+  }
+
+  /// Get available share card templates
+  Future<List<ShareTemplateInfo>> getShareTemplates() async {
+    if (DemoDataService.isDemoMode) {
+      return [
+        ShareTemplateInfo(id: 'cosmic', name: '星空'),
+        ShareTemplateInfo(id: 'minimal', name: '简约'),
+        ShareTemplateInfo(id: 'neon', name: '霓虹'),
+        ShareTemplateInfo(id: 'elegant', name: '典雅'),
+      ];
+    }
+
+    try {
+      final locale = I18nService.instance.currentLocale.languageCode;
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementShareTemplates,
+        queryParameters: {'locale': locale},
+      );
+
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getShareTemplates',
+      );
+      final templates = payload['templates'] as List<dynamic>?;
+      return templates
+              ?.map(
+                (json) => ShareTemplateInfo.fromJson(
+                  json as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          [];
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getShareTemplates');
     }
   }
 
@@ -409,8 +480,10 @@ class AchievementRepository {
     }
 
     try {
+      final locale = I18nService.instance.currentLocale.languageCode;
       final queryParams = <String, dynamic>{
         'threshold': threshold,
+        'locale': locale,
         if (category != null) 'category': category,
       };
 
@@ -523,46 +596,202 @@ class AchievementRepository {
         },
       );
 
-  AchievementMapData _getDemoAchievementMap() => AchievementMapData(
-        nodes: [
-          AchievementMapNode(
-            id: 'streak_7',
-            name: '一周坚持',
-            rarity: AchievementRarity.common,
-            category: 'streak',
-            position: {'x': 100, 'y': 100},
-            isUnlocked: true,
-            prerequisites: [],
-          ),
-          AchievementMapNode(
-            id: 'streak_30',
-            name: '月度冠军',
-            rarity: AchievementRarity.rare,
-            category: 'streak',
-            position: {'x': 100, 'y': 200},
-            isUnlocked: false,
-            prerequisites: ['streak_7'],
-            parentId: 'streak_7',
-          ),
-          AchievementMapNode(
-            id: 'night_owl',
-            name: '深夜学者',
-            rarity: AchievementRarity.epic,
-            category: 'hidden',
-            position: {'x': 300, 'y': 100},
-            isUnlocked: false,
-            isHidden: true,
-            prerequisites: [],
-          ),
-        ],
-        connections: [
-          {'from': 'streak_7', 'to': 'streak_30', 'type': 'parent'},
-        ],
-        categories: [
-          {'id': 'streak', 'name': 'streak', 'count': 5},
-          {'id': 'hidden', 'name': 'hidden', 'count': 3},
-        ],
-      );
+  AchievementMapData _getDemoAchievementMap() {
+    // 使用更大的画布尺寸和更分散的节点布局
+    // 模拟一个真实的成就地图，多个类别分布在不同的区域
+    final nodes = <AchievementMapNode>[
+      // === Streak Achievements (左上区域) ===
+      AchievementMapNode(
+        id: 'streak_3',
+        name: '起步启航',
+        rarity: AchievementRarity.common,
+        category: 'streak',
+        position: {'x': 80, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'streak_7',
+        name: '一周坚持',
+        rarity: AchievementRarity.common,
+        category: 'streak',
+        position: {'x': 80, 'y': 280},
+        isUnlocked: true,
+        prerequisites: ['streak_3'],
+        parentId: 'streak_3',
+      ),
+      AchievementMapNode(
+        id: 'streak_14',
+        name: '双周达人',
+        rarity: AchievementRarity.rare,
+        category: 'streak',
+        position: {'x': 80, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['streak_7'],
+        parentId: 'streak_7',
+      ),
+      AchievementMapNode(
+        id: 'streak_30',
+        name: '月度冠军',
+        rarity: AchievementRarity.rare,
+        category: 'streak',
+        position: {'x': 80, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['streak_14'],
+        parentId: 'streak_14',
+      ),
+      AchievementMapNode(
+        id: 'streak_100',
+        name: '百日传奇',
+        rarity: AchievementRarity.epic,
+        category: 'streak',
+        position: {'x': 80, 'y': 670},
+        isUnlocked: false,
+        prerequisites: ['streak_30'],
+        parentId: 'streak_30',
+      ),
+
+      // === Mastery Achievements (中间区域) ===
+      AchievementMapNode(
+        id: 'mastery_first',
+        name: '初窥门径',
+        rarity: AchievementRarity.common,
+        category: 'mastery',
+        position: {'x': 280, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'mastery_10',
+        name: '小有所成',
+        rarity: AchievementRarity.rare,
+        category: 'mastery',
+        position: {'x': 280, 'y': 280},
+        isUnlocked: false,
+        prerequisites: ['mastery_first'],
+        parentId: 'mastery_first',
+      ),
+      AchievementMapNode(
+        id: 'mastery_50',
+        name: '炉火纯青',
+        rarity: AchievementRarity.epic,
+        category: 'mastery',
+        position: {'x': 280, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['mastery_10'],
+        parentId: 'mastery_10',
+      ),
+      AchievementMapNode(
+        id: 'mastery_100',
+        name: '登峰造极',
+        rarity: AchievementRarity.legendary,
+        category: 'mastery',
+        position: {'x': 280, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['mastery_50'],
+        parentId: 'mastery_50',
+      ),
+
+      // === Exploration Achievements (右侧区域) ===
+      AchievementMapNode(
+        id: 'explore_10',
+        name: '初探星海',
+        rarity: AchievementRarity.common,
+        category: 'exploration',
+        position: {'x': 480, 'y': 150},
+        isUnlocked: true,
+        prerequisites: [],
+      ),
+      AchievementMapNode(
+        id: 'explore_50',
+        name: '星图漫游',
+        rarity: AchievementRarity.rare,
+        category: 'exploration',
+        position: {'x': 480, 'y': 280},
+        isUnlocked: false,
+        prerequisites: ['explore_10'],
+        parentId: 'explore_10',
+      ),
+      AchievementMapNode(
+        id: 'explore_100',
+        name: '星图探索者',
+        rarity: AchievementRarity.epic,
+        category: 'exploration',
+        position: {'x': 480, 'y': 410},
+        isUnlocked: false,
+        prerequisites: ['explore_50'],
+        parentId: 'explore_50',
+      ),
+      AchievementMapNode(
+        id: 'explore_500',
+        name: '宇宙开拓者',
+        rarity: AchievementRarity.legendary,
+        category: 'exploration',
+        position: {'x': 480, 'y': 540},
+        isUnlocked: false,
+        prerequisites: ['explore_100'],
+        parentId: 'explore_100',
+      ),
+
+      // === Hidden/Special Achievements (底部隐藏区域) ===
+      AchievementMapNode(
+        id: 'night_owl',
+        name: '深夜学者',
+        rarity: AchievementRarity.epic,
+        category: 'hidden',
+        position: {'x': 180, 'y': 700},
+        isUnlocked: false,
+        isHidden: true,
+        prerequisites: ['streak_30', 'mastery_10'],
+      ),
+      AchievementMapNode(
+        id: 'early_bird',
+        name: '早起鸟儿',
+        rarity: AchievementRarity.rare,
+        category: 'hidden',
+        position: {'x': 380, 'y': 700},
+        isUnlocked: false,
+        isHidden: true,
+        prerequisites: ['streak_14'],
+      ),
+    ];
+
+    final connections = <Map<String, dynamic>>[
+      // Streak chain
+      {'from': 'streak_3', 'to': 'streak_7', 'type': 'parent'},
+      {'from': 'streak_7', 'to': 'streak_14', 'type': 'parent'},
+      {'from': 'streak_14', 'to': 'streak_30', 'type': 'parent'},
+      {'from': 'streak_30', 'to': 'streak_100', 'type': 'parent'},
+
+      // Mastery chain
+      {'from': 'mastery_first', 'to': 'mastery_10', 'type': 'parent'},
+      {'from': 'mastery_10', 'to': 'mastery_50', 'type': 'parent'},
+      {'from': 'mastery_50', 'to': 'mastery_100', 'type': 'parent'},
+
+      // Exploration chain
+      {'from': 'explore_10', 'to': 'explore_50', 'type': 'parent'},
+      {'from': 'explore_50', 'to': 'explore_100', 'type': 'parent'},
+      {'from': 'explore_100', 'to': 'explore_500', 'type': 'parent'},
+
+      // Hidden prerequisites (cross-category)
+      {'from': 'streak_30', 'to': 'night_owl', 'type': 'prerequisite'},
+      {'from': 'mastery_10', 'to': 'night_owl', 'type': 'prerequisite'},
+      {'from': 'streak_14', 'to': 'early_bird', 'type': 'prerequisite'},
+    ];
+
+    final categories = <Map<String, dynamic>>[
+      {'id': 'streak', 'name': '连胜', 'count': 5},
+      {'id': 'mastery', 'name': '精通', 'count': 4},
+      {'id': 'exploration', 'name': '探索', 'count': 4},
+      {'id': 'hidden', 'name': '隐藏', 'count': 2},
+    ];
+
+    return AchievementMapData(
+      nodes: nodes,
+      connections: connections,
+      categories: categories,
+    );
+  }
 
   GalaxySkinListResponse _getDemoGalaxySkins() => GalaxySkinListResponse(
         skins: [
@@ -601,7 +830,6 @@ class AchievementRepository {
 
   List<UserTitle> _getDemoTitles() => [
         UserTitle(
-          userId: 'demo_user',
           titleId: 'early_explorer',
           titleName: '星际探索者',
           titleDisplay: '星际探索者',
@@ -609,13 +837,36 @@ class AchievementRepository {
           isEquipped: true,
         ),
         UserTitle(
-          userId: 'demo_user',
           titleId: 'week_warrior',
           titleName: '周常战士',
           titleDisplay: '周常战士',
           unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ];
+
+  List<StreakDayRecord> _getDemoStreakHistory(int days) {
+    final today = DateTime.now();
+    final start = today.subtract(Duration(days: days - 1));
+    final history = <StreakDayRecord>[];
+
+    for (var i = 0; i < days; i++) {
+      final day = DateTime(start.year, start.month, start.day)
+          .add(Duration(days: i));
+      final status = i % 10 == 0
+          ? StreakDayStatus.frozen
+          : i % 7 == 0
+              ? StreakDayStatus.missed
+              : StreakDayStatus.active;
+      history.add(
+        StreakDayRecord(
+          day: day,
+          status: status,
+          usedFreeze: status == StreakDayStatus.frozen,
+        ),
+      );
+    }
+    return history;
+  }
 
   List<AchievementWithProgress> _getDemoCloseToUnlockAchievements() => [
         AchievementWithProgress(

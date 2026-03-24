@@ -47,7 +47,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                     user_answer=request.user_answer if request.user_answer else None,
                     correct_answer=request.correct_answer if request.correct_answer else None,
                     subject=SubjectEnum(request.subject_code),
-                    chapter=request.chapter if request.chapter else None
+                    chapter=request.chapter if request.chapter else None,
+                    cognitive_tags=list(request.cognitive_tags or []),
+                    ai_analysis_summary=request.ai_analysis_summary if request.ai_analysis_summary else None,
                 )
 
                 error = await service.create_error(UUID(request.user_id), data)
@@ -89,6 +91,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 mastery_max=request.mastery_max if request.HasField('mastery_max') else None,
                 need_review=request.need_review if request.HasField('need_review') else None,
                 keyword=request.keyword if request.keyword else None,
+                cognitive_dimension=request.cognitive_dimension if request.cognitive_dimension else None,
                 page=request.page if request.page > 0 else 1,
                 page_size=request.page_size if request.page_size > 0 else 20
             )
@@ -114,6 +117,17 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
 
             return self._map_to_proto(error)
 
+    async def GetErrorSemanticSummary(self, request, context):
+        async with self.db_session_factory() as db:
+            service = ErrorBookService(db)
+            summary = await service.get_semantic_summary(UUID(request.error_id), UUID(request.user_id))
+            if not summary:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Error semantic summary not found")
+                return error_book_pb2.ErrorSemanticSummary()
+
+            return self._map_semantic_summary(summary)
+
     async def UpdateError(self, request, context):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
@@ -124,7 +138,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 correct_answer=request.correct_answer if request.HasField('correct_answer') else None,
                 subject=SubjectEnum(request.subject_code) if request.HasField('subject_code') else None,
                 chapter=request.chapter if request.HasField('chapter') else None,
-                question_image_url=request.question_image_url if request.HasField('question_image_url') else None
+                question_image_url=request.question_image_url if request.HasField('question_image_url') else None,
+                cognitive_tags=list(request.cognitive_tags) if request.cognitive_tags else None,
+                ai_analysis_summary=request.ai_analysis_summary if request.HasField('ai_analysis_summary') else None,
             )
 
             error = await service.update_error(UUID(request.error_id), UUID(request.user_id), data)
@@ -235,6 +251,8 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             correct_answer=error.correct_answer or "",
             mastery_level=error.mastery_level or 0.0,
             review_count=error.review_count or 0,
+            cognitive_tags=error.cognitive_tags or [],
+            ai_analysis_summary=error.ai_analysis_summary or "",
         )
 
         if error.next_review_at:
@@ -270,4 +288,44 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 l.relevance = link.relevance
                 l.is_primary = link.is_primary
 
+        return proto
+
+    @staticmethod
+    def _map_semantic_summary(summary) -> error_book_pb2.ErrorSemanticSummary:
+        proto = error_book_pb2.ErrorSemanticSummary(
+            error_id=str(summary.error_id),
+            root_cause=summary.root_cause or "",
+            linked_concepts=[
+                error_book_pb2.SemanticConceptBrief(
+                    id=str(concept.id),
+                    name=concept.name,
+                    description=concept.description or "",
+                )
+                for concept in summary.linked_concepts
+            ],
+            strategies=[
+                error_book_pb2.StrategyNodeSummary(
+                    id=str(strategy.id),
+                    title=strategy.title,
+                    description=strategy.description or "",
+                    subject_code=strategy.subject_code or "",
+                    tags=strategy.tags or [],
+                )
+                for strategy in summary.strategies
+            ],
+            similar_errors=[
+                error_book_pb2.SimilarErrorSummary(
+                    id=str(item.id),
+                    subject_code=item.subject_code,
+                    root_cause=item.root_cause or "",
+                )
+                for item in summary.similar_errors
+            ],
+        )
+        for index, strategy in enumerate(summary.strategies):
+            if strategy.created_at:
+                proto.strategies[index].created_at.FromDatetime(strategy.created_at)
+        for index, item in enumerate(summary.similar_errors):
+            if item.created_at:
+                proto.similar_errors[index].created_at.FromDatetime(item.created_at)
         return proto

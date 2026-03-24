@@ -6,6 +6,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class _FakeMemoryApiService implements MemoryApiService {
   @override
@@ -138,7 +139,12 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: const MaterialApp(
+          home: MemoryPanelScreen(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('zh'),
+        ),
       ),
     );
 

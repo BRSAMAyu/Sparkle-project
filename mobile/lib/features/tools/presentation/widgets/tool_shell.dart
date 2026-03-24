@@ -51,10 +51,16 @@ class ToolShell extends StatefulWidget {
 class _ToolShellState extends State<ToolShell> {
   static const _headerPrefPrefix = 'tool_shell.header_hidden.';
 
-  bool _headerCollapsed = false;
+  bool _headerCollapsed = true;
 
   bool get _isSheet => widget.surface == ToolSurface.sheet;
-  bool get _effectiveCompactHeader => widget.compactHeader || _headerCollapsed;
+  bool get _effectiveCompactHeader => true;
+
+  void _dismissSheet() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   void initState() {
@@ -65,7 +71,7 @@ class _ToolShellState extends State<ToolShell> {
   Future<void> _loadHeaderPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final nextValue =
-        prefs.getBool('$_headerPrefPrefix${widget.title}') ?? false;
+        prefs.getBool('$_headerPrefPrefix${widget.title}') ?? true;
     if (!mounted) {
       return;
     }
@@ -148,6 +154,11 @@ class _ToolShellState extends State<ToolShell> {
                 blurRadius: isDark ? 28 : 24,
                 offset: const Offset(0, 16),
               ),
+              BoxShadow(
+                color: DS.textPrimary.withValues(alpha: isDark ? 0.08 : 0.04),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: Padding(
@@ -188,36 +199,26 @@ class _ToolShellState extends State<ToolShell> {
                         children: [
                           Text(
                             widget.title,
-                            maxLines: _effectiveCompactHeader ? 1 : 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: (_effectiveCompactHeader
-                                    ? Theme.of(context).textTheme.titleLarge
-                                    : Theme.of(context).textTheme.headlineSmall)
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightBold,
                               height: 1.05,
                             ),
                           ),
-                          if (!_headerCollapsed) ...[
-                            SizedBox(
-                              height: _effectiveCompactHeader
-                                  ? DS.spacing6
-                                  : DS.spacing8,
-                            ),
-                            Text(
-                              widget.subtitle,
-                              maxLines: _effectiveCompactHeader ? 2 : 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: DS.textSecondary,
-                                    height: _effectiveCompactHeader ? 1.4 : 1.5,
-                                  ),
-                            ),
-                          ],
+                          const SizedBox(height: DS.spacing4),
+                          Text(
+                            '先直接使用核心功能，说明已收在下方。',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.4,
+                                ),
+                          ),
                         ],
                       ),
                     ),
@@ -225,41 +226,45 @@ class _ToolShellState extends State<ToolShell> {
                       const SizedBox(width: DS.spacing12),
                       widget.headerAction!,
                     ],
+                    if (_isSheet) ...[
+                      const SizedBox(width: DS.spacing8),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 32,
+                        onPressed: _dismissSheet,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                        ),
+                      ),
+                    ],
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 32,
                       onPressed: _toggleHeaderCollapsed,
                       icon: Icon(
                         _headerCollapsed
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
+                            ? Icons.expand_more_rounded
+                            : Icons.expand_less_rounded,
                         size: 18,
                       ),
                     ),
                   ],
                 ),
-                if (!_headerCollapsed && widget.heroChips.isNotEmpty) ...[
-                  SizedBox(
-                    height:
-                        _effectiveCompactHeader ? DS.spacing10 : DS.spacing16,
-                  ),
-                  Wrap(
-                    spacing:
-                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
-                    runSpacing:
-                        _effectiveCompactHeader ? DS.spacing8 : DS.spacing10,
-                    children: widget.heroChips,
-                  ),
-                ],
               ],
             ),
           ),
         ),
-        SizedBox(height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20),
+        SizedBox(height: _effectiveCompactHeader ? DS.spacing8 : DS.spacing20),
         if (widget.fillHeight)
           Expanded(child: widget.body)
         else if (_isSheet)
-          Flexible(child: widget.body)
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: widget.body,
+            ),
+          )
         else
           widget.body,
         if (widget.footer != null) ...[
@@ -267,6 +272,16 @@ class _ToolShellState extends State<ToolShell> {
             height: _effectiveCompactHeader ? DS.spacing12 : DS.spacing20,
           ),
           widget.footer!,
+        ],
+        if (widget.subtitle.isNotEmpty || widget.heroChips.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          _ToolIntroSection(
+            expanded: !_headerCollapsed,
+            accentColor: widget.accentColor,
+            description: widget.subtitle,
+            chips: widget.heroChips,
+            onToggle: _toggleHeaderCollapsed,
+          ),
         ],
       ],
     );
@@ -280,14 +295,26 @@ class _ToolShellState extends State<ToolShell> {
 
     final root = DecoratedBox(
       decoration: BoxDecoration(
-        color: panelColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            panelColor,
+            _mix(panelColor, DS.surfacePrimary, isDark ? 0.18 : 0.3),
+          ],
+        ),
         borderRadius: BorderRadius.circular(_isSheet ? 32 : 32),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: borderColor.withValues(alpha: 0.82)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
             blurRadius: isDark ? 40 : 28,
             offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: DS.textPrimary.withValues(alpha: isDark ? 0.05 : 0.03),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -303,12 +330,15 @@ class _ToolShellState extends State<ToolShell> {
     );
 
     return Align(
-      alignment: Alignment.topCenter,
+      alignment: _isSheet ? Alignment.bottomCenter : Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: widget.maxWidth,
+          minHeight: _isSheet
+              ? math.min(MediaQuery.sizeOf(context).height * 0.84, 820)
+              : 0,
           maxHeight: _isSheet
-              ? math.min(MediaQuery.sizeOf(context).height * 0.88, 940)
+              ? math.min(MediaQuery.sizeOf(context).height * 0.92, 980)
               : double.infinity,
         ),
         child: root,
@@ -412,6 +442,121 @@ class ToolSectionCard extends StatelessWidget {
   }
 }
 
+class _ToolIntroSection extends StatelessWidget {
+  const _ToolIntroSection({
+    required this.expanded,
+    required this.accentColor,
+    required this.description,
+    required this.chips,
+    required this.onToggle,
+  });
+
+  final bool expanded;
+  final Color accentColor;
+  final String description;
+  final List<Widget> chips;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = _mix(
+      DS.surfacePrimary,
+      accentColor,
+      isDark ? 0.10 : 0.04,
+    );
+    final border = _mix(
+      DS.borderSubtle,
+      accentColor,
+      isDark ? 0.18 : 0.10,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing4,
+                  vertical: DS.spacing2,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        expanded ? '收起工具说明' : '展开工具说明',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemiBold,
+                            ),
+                      ),
+                    ),
+                    Icon(
+                      expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: DS.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: DS.spacing10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (description.isNotEmpty)
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.5,
+                            ),
+                      ),
+                    if (chips.isNotEmpty) ...[
+                      if (description.isNotEmpty)
+                        const SizedBox(height: DS.spacing10),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: chips,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: DS.durationFast,
+              sizeCurve: Curves.easeOutCubic,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class ToolMetricCard extends StatelessWidget {
   const ToolMetricCard({
     required this.label,
@@ -463,12 +608,16 @@ class ToolMetricCard extends StatelessWidget {
                   Icon(icon, size: 16, color: accentColor),
                   const SizedBox(width: DS.spacing6),
                 ],
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: DS.textSecondary,
-                        fontWeight: DS.fontWeightMedium,
-                      ),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                  ),
                 ),
               ],
             ),
@@ -627,6 +776,50 @@ class ToolHeroChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class ToolMetricRow extends StatelessWidget {
+  const ToolMetricRow({
+    required this.children,
+    super.key,
+  });
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final useWrap = maxWidth < 420 || children.length > 2;
+
+          if (useWrap) {
+            final cardWidth = ((maxWidth - DS.spacing12) / 2).clamp(
+              140.0,
+              maxWidth,
+            );
+            return Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                for (final child in children)
+                  SizedBox(width: cardWidth, child: child),
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: DS.spacing12),
+                Expanded(child: children[i]),
+              ],
+            ],
+          );
+        },
+      );
 }
 
 class ToolEmptyState extends StatelessWidget {

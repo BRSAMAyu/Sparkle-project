@@ -14,8 +14,16 @@ class ApiEndpoints {
   static const String sendVerification = '/auth/send-verification';
   static const String verifyEmail = '/auth/verify-email';
   static const String logout = '/auth/logout';
+  static const String upgradeGuest = '/auth/upgrade-guest';
+  static const String upgradeGuestSocial = '/auth/upgrade-guest/social';
   static const String me = '/users/me';
   static const String setPassword = '/users/me/set-password';
+  static const String deleteAccount = '/users/me/delete-account';
+  static const String socialAccounts = '/users/me/social-accounts';
+  static const String linkSocial = '/users/me/link-social';
+  static const String unlinkSocial = '/users/me/unlink-social';
+  static const String userSessions = '/users/me/sessions';
+  static const String securityLog = '/users/me/security-log';
 
   // Files
   static const String filesPrepareUpload = '/files/upload/prepare';
@@ -26,17 +34,26 @@ class ApiEndpoints {
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
 
+  // Vocabulary / Dictionary
+  static const String vocabularyLookup = '/vocabulary/lookup';
+  static const String vocabularyWordbook = '/vocabulary/wordbook';
+  static const String dictionaryPackages = '/vocabulary/dictionary/packages';
+  static String dictionaryPackageDownload(String packageId) =>
+      '/vocabulary/dictionary/packages/$packageId/download';
+
   // Users
   static String user(String id) => '/users/$id';
 
   // Tasks
   static const String tasks = '/tasks';
+  static const String tasksReorder = '/tasks/reorder';
   static String task(String id) => '/tasks/$id';
   static const String todayTasks = '/tasks/today';
   static const String recommendedTasks = '/tasks/recommended';
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static String taskGenerateGuide(String id) => '/tasks/$id/generate-guide';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
   static String taskFeedbackReflection(String feedbackId) =>
       '/tasks/feedback/$feedbackId/reflection';
@@ -55,22 +72,40 @@ class ApiEndpoints {
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
   static String planArchive(String id) => '/plans/$id/archive';
   static String planRestore(String id) => '/plans/$id/restore';
+  static const String planPrimary = '/plans/primary';
 
   // Chat
   static const String chat = '/chat';
   static const String chatStream = '/chat/stream'; // SSE 流式聊天端点
+  static const String chatConfirm = '/chat/confirm'; // 确认聊天结果
   static const String chatSessions = '/chat/sessions';
+  static String chatHistory(String sessionId) => '/chat/history/$sessionId';
   static String sessionMessages(String id) => '/chat/sessions/$id/messages';
+  static const String clientTelemetryEvents = '/client-telemetry/events';
+  static const String clientTelemetryEventsBatch =
+      '/client-telemetry/events/batch';
+  static const String clientTelemetrySummary = '/client-telemetry/summary';
+  static const String eventsIngest = '/events/ingest';
+  static const String healthCapacity = '/health/capacity';
+  static const String healthPrometheusAlerts = '/health/prometheus/alerts';
+
+  // Notification Center
+  static const String notificationCenterNotifications = '/notification-center/notifications';
+  static const String notificationCenterMarkAllRead = '/notification-center/notifications/mark-all-read';
+  static const String notificationCenterAnalytics = '/notification-center/analytics';
+  static const String notificationCenterHistory = '/notification-center/history';
 
   // Statistics
-  static const String statsOverview = '/statistics/overview';
-  static const String statsWeekly = '/statistics/weekly';
-  static const String statsFlame = '/statistics/flame';
+  static const String statsOverview = '/stats/overview';
+  static const String statsWeekly = '/stats/weekly';
+  static const String statsFlame = '/stats/flame';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
+  static String galaxyUpdateMastery(String id) =>
+      '/galaxy/nodes/$id/update-mastery';
   static const String galaxyPredictNext = '/galaxy/predict-next';
   static const String galaxySearch = '/galaxy/search';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
@@ -83,6 +118,16 @@ class ApiEndpoints {
   // Learning Paths
   static String learningPath(String targetNodeId) =>
       '/learning-paths/$targetNodeId';
+  static String learningPathPlan(String targetNodeId) =>
+      '/learning-paths/$targetNodeId/plan';
+  static String learningPathTaskPath(String targetNodeId) =>
+      '/learning-paths/$targetNodeId/task-path';
+
+  static String learningPathFullPlan(String targetNodeId) =>
+      '/learning-paths/$targetNodeId/full-plan';
+
+  static String learningPathProgress(String planId) =>
+      '/plans/$planId/learning-path-progress';
 
   // Community - Friends
   static const String communityFeed = '/community/feed';
@@ -94,6 +139,12 @@ class ApiEndpoints {
   static const String friendsPending = '/community/friends/pending';
   static const String friendsRecommendations =
       '/community/friends/recommendations';
+  static const String friendsRecommendationsFeedback =
+      '/community/friends/recommendations/feedback';
+  static const String recommendationsFeedbackPrompts =
+      '/community/recommendations/feedback/prompts';
+  static const String recommendationsFeedbackInsights =
+      '/community/recommendations/feedback/insights';
   static String privateMessages(String friendId) =>
       '/community/friends/$friendId/messages';
   static String revokePrivateMessage(String messageId) =>
@@ -106,6 +157,8 @@ class ApiEndpoints {
       '/community/friends/$friendId/messages/search';
   static const String sendPrivateMessage = '/community/messages';
   static const String communityShare = '/community/share';
+  static String adoptSharedResource(String id) =>
+      '/community/shared-resources/$id/adopt';
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';
 
@@ -115,6 +168,7 @@ class ApiEndpoints {
       '/community/groups/recommendations';
   static const String groupsRecommendationsFeedback =
       '/community/groups/recommendations/feedback';
+  static const String groupsDirectory = '/community/groups/directory';
   static const String groupsSearch = '/community/groups/search';
   static String group(String id) => '/community/groups/$id';
   static String groupJoin(String id) => '/community/groups/$id/join';
@@ -176,6 +230,8 @@ class ApiEndpoints {
       '/community/groups/$groupId/members/$userId/unmute';
   static String groupMemberWarn(String groupId, String userId) =>
       '/community/groups/$groupId/members/$userId/warn';
+  static String groupReports(String groupId) =>
+      '/community/groups/$groupId/reports';
 
   // Community - Message Reports
   static const String messageReports = '/community/reports';
@@ -191,6 +247,20 @@ class ApiEndpoints {
 
   // Community - Message Forwarding
   static const String messageForward = '/community/messages/forward';
+
+  // Community - Friend Management (Phase 4)
+  static const String friendsBlocked = '/community/users/blocked';
+  static String friendDelete(String friendshipId) =>
+      '/community/friends/$friendshipId';
+  static const String userBlock = '/community/users/block';
+  static String userUnblock(String userId) => '/community/users/block/$userId';
+
+  // Community - Privacy Settings
+  static const String userPrivacy = '/community/users/privacy';
+
+  // Community - Shared Resources
+  static String groupResources(String groupId) =>
+      '/community/groups/$groupId/resources';
 
   // Community - Broadcast
   static const String broadcast = '/community/broadcast';
@@ -212,6 +282,11 @@ class ApiEndpoints {
 
   // Dashboard
   static const String dashboardStatus = '/dashboard/status';
+  static const String predictiveDashboard = '/predictive/dashboard';
+  static const String predictiveNextIntent = '/predictive/next-intent';
+  static const String predictiveRealtimeNextStep =
+      '/predictive/realtime-next-step';
+  static const String predictiveAnalytics = '/predictive/analytics';
 
   // Nightly Reviews
   static const String nightlyReviewLatest = '/reviews/nightly/latest';
@@ -248,9 +323,13 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
+  static const String achievementsStreakHistory =
+      '/achievements/streak/history';
   static String achievementDetail(String id) => '/achievements/$id';
   static String achievementShare(String id) => '/achievements/$id/share';
   static String achievementPin(String id) => '/achievements/$id/pin';
+  static const String achievementShareTemplates =
+      '/achievements/share-templates';
 
   // Contracts
   static const String contracts = '/achievements/contracts';
@@ -305,13 +384,18 @@ class ApiEndpoints {
   static String seedLibraryItems(String id) => '/seed-libraries/$id/items';
   static String seedLibraryItem(String libraryId, String itemId) =>
       '/seed-libraries/$libraryId/items/$itemId';
+  static String seedLibraryImportItems(String id) =>
+      '/seed-libraries/$id/items/import';
   static String seedLibrarySubscribe(String id) =>
-      '/seed-libraries/$id/subscribe';
+      '/seed-libraries/subscribe/$id';
   static String seedLibraryUnsubscribe(String id) =>
-      '/seed-libraries/$id/unsubscribe';
-  static String seedLibrarySubscriptions = '/seed-libraries/my-subscriptions';
+      '/seed-libraries/subscribe/$id';
+  static String seedLibrarySubscription(String id) =>
+      '/seed-libraries/$id/subscription';
+  static String seedLibraryRating(String id) => '/seed-libraries/$id/rating';
+  static String seedLibrarySubscriptions = '/seed-libraries/subscriptions/me';
   static String seedLibraryCrossQuery = '/seed-libraries/query';
-  static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
+  static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';
   static String seedLibraryReplyTemplate =
       '/seed-libraries/query/reply-template';
 
@@ -330,4 +414,54 @@ class ApiEndpoints {
   static const String inventoryEquip = '/inventory/equip';
   static String inventoryConsumablesUse(String consumableId) =>
       '/inventory/consumables/$consumableId/use';
+
+  // Visual Elements
+  static const String visualElements = '/visual-elements';
+  static const String visualElementsUnlocked = '/visual-elements/unlocked';
+  static const String visualElementsConfig = '/visual-elements/config';
+  static const String visualElementsDefaults = '/visual-elements/defaults';
+  static String visualElementEquip(String id) => '/visual-elements/$id/equip';
+  static String visualElementUnequip(String type) =>
+      '/visual-elements/$type/unequip';
+  static const String visualElementsUnlockByAchievement =
+      '/visual-elements/unlock-by-achievement';
+
+  // Device Registration (Push Notifications)
+  static const String registerDevice = '/devices/register';
+  static const String unregisterDevice = '/devices/unregister';
+
+  // Accountability Partners (Phase 3)
+  static const String accountabilityMine = '/accountability/mine';
+  static const String accountabilityOverview = '/accountability/overview';
+  static const String accountabilityRequest = '/accountability/request';
+  static String accountabilityRespond(String id) =>
+      '/accountability/$id/respond';
+  static String accountabilityEnd(String id) => '/accountability/$id';
+  static String accountabilityCheckin(String id) =>
+      '/accountability/$id/checkin';
+  static String accountabilityNudge(String id) => '/accountability/$id/nudge';
+  static String accountabilityDashboard(String id) =>
+      '/accountability/$id/dashboard';
+  static String accountabilityStats(String id) => '/accountability/$id/stats';
+  static String accountabilityTimeline(String id) =>
+      '/accountability/$id/timeline';
+  static String accountabilityHeatmap(String id) =>
+      '/accountability/$id/heatmap';
+  static String accountabilityCheckinLike(String id) =>
+      '/accountability/checkin/$id/like';
+  static String accountabilityCheckinEncourage(String id) =>
+      '/accountability/checkin/$id/encourage';
+  static const String accountabilityAchievements =
+      '/accountability/achievements';
+  static String accountabilityPartnershipAchievements(String id) =>
+      '/accountability/$id/achievements';
+  static String friendProfile(String id) => '/community/friends/$id/profile';
+
+  // Calendar Events
+  static const String calendarEvents = '/calendar';
+  static String calendarEvent(String id) => '/calendar/$id';
+  static const String calendarEventsSummary = '/calendar/summary';
+  static const String calendarEventsBatch = '/calendar/batch';
+  static String calendarEventRestore(String id) => '/calendar/$id/restore';
+  static const String calendarSuggestTime = '/calendar/suggest-time';
 }

@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/session_refresh_service.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
+import 'package:sparkle/features/user/data/models/account_security_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 const _demoGuestModePreferenceKey = 'demo_guest_mode_enabled';
@@ -44,22 +49,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
   final AuthRepository _authRepository;
 
+  Future<void> _clearUserScopedLocalData() async {
+    await _ref.read(guestServiceProvider).clearGuestData();
+    await ChatCacheService().clearAllCache();
+    await ViewStorageService.instance.clearAllViewState();
+    await LocalDatabase().clearUserScopedData();
+  }
+
   Future<void> checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
     try {
       final prefs = _ref.read(sharedPreferencesProvider);
-      DemoDataService.isDemoMode = prefs.getBool(_demoGuestModePreferenceKey) ??
-          DemoDataService.isDemoMode;
+      // 只有 loginAsDemoAccount 会存 true；访客模式现在存 false
+      final savedDemoMode = prefs.getBool(_demoGuestModePreferenceKey) ?? false;
+      DemoDataService.isDemoMode = savedDemoMode;
 
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (isLoggedIn) {
         try {
-          final user = await _authRepository.getCurrentUser();
+          // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
+          DemoDataService.isDemoMode = false;
+          var user = await _authRepository.getCurrentUser();
+          if (user.registrationSource == 'guest') {
+            try {
+              final guestId = await _ref.read(guestServiceProvider).getGuestId();
+              if (guestId == user.username) {
+                user = await _authRepository.guestLogin(guestId);
+              }
+            } catch (e) {
+              debugPrint('⚠️ Guest reseed refresh skipped: $e');
+            }
+          } else {
+            await _ref.read(guestServiceProvider).clearGuestData();
+          }
           state = state.copyWith(
             isLoading: false,
             isAuthenticated: true,
             user: user,
           );
+          SessionRefreshService.refreshSessionBoundProviders(_ref);
         } catch (e) {
           debugPrint('⚠️ Stored auth state invalid, clearing tokens: $e');
           await _authRepository.logout();
@@ -89,8 +117,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.login(usernameOrEmail, password);
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -112,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.socialLogin(
         provider: provider,
         token: token,
@@ -121,6 +152,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatarUrl: avatarUrl,
       );
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -128,15 +160,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> register(String username, String email, String password) async {
+  Future<void> register(
+    String username,
+    String email,
+    String password, {
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
     state = state.copyWith(isLoading: true);
     try {
       DemoDataService.isDemoMode = false;
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
-      final user = await _authRepository.register(username, email, password);
+      await _ref.read(guestServiceProvider).clearGuestData();
+      final user = await _authRepository.register(
+        username,
+        email,
+        password,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
       state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
     } finally {
@@ -147,12 +199,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 恢复原有访客体验：预设演示数据 + 真实 token。
-      DemoDataService.isDemoMode = true;
+      // 访客模式：使用真实后端 token + 后端预置演示数据，不走本地假数据
+      DemoDataService.isDemoMode = false;
       await _ref
           .read(sharedPreferencesProvider)
-          .setBool(_demoGuestModePreferenceKey, true);
-      debugPrint('🎭 Guest login using demo content with live backend token');
+          .setBool(_demoGuestModePreferenceKey, false);
+      debugPrint('🎭 Guest login using real backend token + seeded data');
 
       final guestService = _ref.read(guestServiceProvider);
       final guestId = await guestService.getGuestId();
@@ -166,9 +218,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         user: user,
       );
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       debugPrint('⚠️ Guest login failed: $e');
-      DemoDataService.isDemoMode = true;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
@@ -177,35 +229,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> loginAsDemoAccount() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      // ✅ 演示账号登录：使用真实账户chat_test + 预设数据库数据
-      // 必须关闭DemoMode以确保从后端API读取真实数据
-      DemoDataService.isDemoMode = false;
-      await _ref
-          .read(sharedPreferencesProvider)
-          .setBool(_demoGuestModePreferenceKey, false);
-      debugPrint('🎬 Demo account login (real data from backend)');
-
-      final user = await _authRepository.login('chat_test', 'Chat123456');
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: true,
-        user: user,
-      );
-      debugPrint(
-        '✅ Demo account login successful, fetching real data from API',
-      );
-    } catch (e) {
-      debugPrint('⚠️ Demo account login failed: $e');
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: false,
-        error: e.toString(),
-      );
-    }
-  }
 
   Future<void> refreshUser() async {
     if (state.isAuthenticated) {
@@ -224,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateProfile(data);
       state = state.copyWith(user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -237,6 +261,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _authRepository.updateAvatar(filePath);
       state = state.copyWith(user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
@@ -283,7 +308,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<String> resetPasswordWithToken(
-      String token, String newPassword,) async {
+    String token,
+    String newPassword,
+  ) async {
     state = state.copyWith(isLoading: true);
     try {
       return await _authRepository.resetPasswordWithToken(token, newPassword);
@@ -321,13 +348,180 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<List<SocialAccountStatusModel>> getSocialAccounts() =>
+      _authRepository.getSocialAccounts();
+
+  Future<String> linkSocial({
+    required String provider,
+    required String token,
+    String? openid,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final message = await _authRepository.linkSocial(
+        provider: provider,
+        token: token,
+        openid: openid,
+      );
+      await refreshUser();
+      return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> unlinkSocial(String provider) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final message = await _authRepository.unlinkSocial(provider);
+      await refreshUser();
+      return message;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<List<UserSessionModel>> getSessions() => _authRepository.getSessions();
+
+  Future<String> revokeSession(String sessionId) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.revokeSession(sessionId);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<String> revokeOtherSessions() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      return await _authRepository.revokeOtherSessions();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<List<AuthAuditLogModel>> getSecurityLog() =>
+      _authRepository.getSecurityLog();
+
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? password,
+    String? provider,
+    String? providerToken,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _authRepository.deleteAccount(
+        confirmation: confirmation,
+        password: password,
+        provider: provider,
+        providerToken: providerToken,
+      );
+      await logout();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> upgradeGuest({
+    required String username,
+    required String email,
+    required String password,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _authRepository.upgradeGuest(
+        username: username,
+        email: email,
+        password: password,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
+      state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> upgradeGuestWithSocial({
+    required String provider,
+    required String token,
+    required bool acceptedTos,
+    required bool acceptedPrivacy,
+    String tosVersion = 'v1',
+    String privacyVersion = 'v1',
+    String? agreedLocale,
+    String? openid,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _authRepository.upgradeGuestWithSocial(
+        provider: provider,
+        token: token,
+        openid: openid,
+        acceptedTos: acceptedTos,
+        acceptedPrivacy: acceptedPrivacy,
+        tosVersion: tosVersion,
+        privacyVersion: privacyVersion,
+        agreedLocale: agreedLocale,
+      );
+      DemoDataService.isDemoMode = false;
+      await _ref
+          .read(sharedPreferencesProvider)
+          .setBool(_demoGuestModePreferenceKey, false);
+      await _ref.read(guestServiceProvider).clearGuestData();
+      state = state.copyWith(isAuthenticated: true, user: user);
+      SessionRefreshService.refreshSessionBoundProviders(_ref);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
+    await _clearUserScopedLocalData();
     await _ref
         .read(sharedPreferencesProvider)
         .setBool(_demoGuestModePreferenceKey, false);
     DemoDataService.isDemoMode = false;
     state = AuthState(); // Reset to initial state
+    SessionRefreshService.refreshSessionBoundProviders(_ref);
   }
 }
 

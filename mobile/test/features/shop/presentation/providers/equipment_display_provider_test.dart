@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
@@ -96,7 +96,6 @@ class _FakeAchievementRepository extends AchievementRepository {
   @override
   Future<List<UserTitle>> getTitles() async => <UserTitle>[
         UserTitle(
-          userId: 'user-1',
           titleId: 'night_owl',
           titleName: '夜航者',
           titleDisplay: '夜航者',
@@ -107,7 +106,7 @@ class _FakeAchievementRepository extends AchievementRepository {
 }
 
 class _SourceAwareAuthNotifier extends AuthNotifier {
-  _SourceAwareAuthNotifier() : super(_UnusedAuthRepository()) {
+  _SourceAwareAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
     state = AuthState(
       isAuthenticated: true,
     );
@@ -121,6 +120,11 @@ class _SourceAwareAuthNotifier extends AuthNotifier {
   }
 }
 
+class _UnusedRef implements Ref<Object?> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 UserModel _achievementTitleUser() => UserModel(
       id: '00000000-0000-0000-0000-000000000002',
       username: 'title_user',
@@ -131,8 +135,8 @@ UserModel _achievementTitleUser() => UserModel(
       curiosityPreference: 0.5,
       isActive: true,
       status: UserStatus.online,
-      createdAt: DateTime(2026, 1),
-      updatedAt: DateTime(2026, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
       equippedTitle: 'night_owl',
       equippedTitleSource: 'achievement',
     );

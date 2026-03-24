@@ -68,6 +68,16 @@ enum ContractStatus {
   expired,
 }
 
+/// 连胜日历状态
+enum StreakDayStatus {
+  @JsonValue('active')
+  active,
+  @JsonValue('frozen')
+  frozen,
+  @JsonValue('missed')
+  missed,
+}
+
 // ========== 成就实体 ==========
 
 @JsonSerializable()
@@ -92,6 +102,10 @@ class AchievementModel {
     this.visualEffectType = VisualEffectType.none,
     this.visualConfig,
     this.rewardConfig,
+    this.activeFrom,
+    this.activeTo,
+    this.isLimited = false,
+    this.eventTag,
     this.totalUnlocked = 0,
   });
 
@@ -124,6 +138,14 @@ class AchievementModel {
   final Map<String, dynamic>? visualConfig;
   @JsonKey(name: 'reward_config')
   final List<Map<String, dynamic>>? rewardConfig;
+  @JsonKey(name: 'active_from')
+  final DateTime? activeFrom;
+  @JsonKey(name: 'active_to')
+  final DateTime? activeTo;
+  @JsonKey(name: 'is_limited')
+  final bool isLimited;
+  @JsonKey(name: 'event_tag')
+  final String? eventTag;
   @JsonKey(name: 'total_unlocked')
   final int totalUnlocked;
   @JsonKey(name: 'created_at')
@@ -151,6 +173,10 @@ class AchievementModel {
     VisualEffectType? visualEffectType,
     Map<String, dynamic>? visualConfig,
     List<Map<String, dynamic>>? rewardConfig,
+    DateTime? activeFrom,
+    DateTime? activeTo,
+    bool? isLimited,
+    String? eventTag,
     int? totalUnlocked,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -173,6 +199,10 @@ class AchievementModel {
         visualEffectType: visualEffectType ?? this.visualEffectType,
         visualConfig: visualConfig ?? this.visualConfig,
         rewardConfig: rewardConfig ?? this.rewardConfig,
+        activeFrom: activeFrom ?? this.activeFrom,
+        activeTo: activeTo ?? this.activeTo,
+        isLimited: isLimited ?? this.isLimited,
+        eventTag: eventTag ?? this.eventTag,
         totalUnlocked: totalUnlocked ?? this.totalUnlocked,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -319,6 +349,42 @@ class StreakStats {
   }
 }
 
+// ========== 连胜日历历史 ==========
+
+@JsonSerializable()
+class StreakDayRecord {
+  StreakDayRecord({
+    required this.day,
+    required this.status,
+    this.usedFreeze = false,
+    this.sourceEvent,
+  });
+
+  factory StreakDayRecord.fromJson(Map<String, dynamic> json) =>
+      _$StreakDayRecordFromJson(json);
+
+  final DateTime day;
+  final StreakDayStatus status;
+  @JsonKey(name: 'used_freeze')
+  final bool usedFreeze;
+  @JsonKey(name: 'source_event')
+  final String? sourceEvent;
+
+  Map<String, dynamic> toJson() => _$StreakDayRecordToJson(this);
+}
+
+@JsonSerializable()
+class StreakHistoryResponse {
+  StreakHistoryResponse({required this.days});
+
+  factory StreakHistoryResponse.fromJson(Map<String, dynamic> json) =>
+      _$StreakHistoryResponseFromJson(json);
+
+  final List<StreakDayRecord> days;
+
+  Map<String, dynamic> toJson() => _$StreakHistoryResponseToJson(this);
+}
+
 // ========== 契约 ==========
 
 @JsonSerializable()
@@ -361,7 +427,9 @@ class SparkContract {
   final int currentMinutes;
   @JsonKey(name: 'reward_multiplier')
   final double rewardMultiplier;
+  @JsonKey(name: 'completed_at')
   final DateTime? completedAt;
+  @JsonKey(name: 'failed_at')
   final DateTime? failedAt;
   @JsonKey(name: 'failure_reason')
   final String? failureReason;
@@ -385,8 +453,8 @@ class GalaxySkin {
     required this.name,
     required this.rarity,
     required this.sortOrder,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.description,
     this.previewUrl,
     this.unlockType,
@@ -421,9 +489,9 @@ class GalaxySkin {
   @JsonKey(name: 'unlocked_at')
   final DateTime? unlockedAt;
   @JsonKey(name: 'created_at')
-  final DateTime createdAt;
+  final DateTime? createdAt;
   @JsonKey(name: 'updated_at')
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => _$GalaxySkinToJson(this);
 }
@@ -433,7 +501,6 @@ class GalaxySkin {
 @JsonSerializable()
 class UserTitle {
   UserTitle({
-    required this.userId,
     required this.titleId,
     required this.titleName,
     required this.titleDisplay,
@@ -445,8 +512,6 @@ class UserTitle {
   factory UserTitle.fromJson(Map<String, dynamic> json) =>
       _$UserTitleFromJson(json);
 
-  @JsonKey(name: 'user_id')
-  final String userId;
   @JsonKey(name: 'title_id')
   final String titleId;
   @JsonKey(name: 'title_name')
@@ -516,11 +581,20 @@ class AchievementMapNode {
     required this.name,
     required this.rarity,
     required this.category,
+    this.lane = 'prestige_lane',
+    this.laneLabel = '声望进阶线',
     required this.position,
     required this.isUnlocked,
     this.isHidden = false,
     this.prerequisites = const [],
     this.parentId,
+    this.displayState = 'blocked',
+    this.isRecommendedTarget = false,
+    this.rewardPreview = const [],
+    this.progressPercentage = 0,
+    this.progressValue = 0,
+    this.progressTarget = 1,
+    this.unlockHint,
   });
 
   factory AchievementMapNode.fromJson(Map<String, dynamic> json) =>
@@ -530,6 +604,9 @@ class AchievementMapNode {
   final String name;
   final AchievementRarity rarity;
   final String category;
+  final String lane;
+  @JsonKey(name: 'lane_label')
+  final String laneLabel;
   final Map<String, double> position;
   @JsonKey(name: 'is_unlocked')
   final bool isUnlocked;
@@ -538,6 +615,20 @@ class AchievementMapNode {
   final List<String> prerequisites;
   @JsonKey(name: 'parent_id')
   final String? parentId;
+  @JsonKey(name: 'display_state')
+  final String displayState;
+  @JsonKey(name: 'is_recommended_target')
+  final bool isRecommendedTarget;
+  @JsonKey(name: 'reward_preview')
+  final List<String> rewardPreview;
+  @JsonKey(name: 'progress_percentage')
+  final int progressPercentage;
+  @JsonKey(name: 'progress_value')
+  final int progressValue;
+  @JsonKey(name: 'progress_target')
+  final int progressTarget;
+  @JsonKey(name: 'unlock_hint')
+  final String? unlockHint;
 
   Map<String, dynamic> toJson() => _$AchievementMapNodeToJson(this);
 }
@@ -575,6 +666,9 @@ class AchievementUnlockEvent {
     this.visualEffectType,
     this.rewards,
     this.isFirst = false,
+    this.rewardPreview = const [],
+    this.surfacePreview = const [],
+    this.gloryLines = const [],
   });
 
   factory AchievementUnlockEvent.fromJson(Map<String, dynamic> json) =>
@@ -593,19 +687,132 @@ class AchievementUnlockEvent {
   final List<Map<String, dynamic>>? rewards;
   @JsonKey(name: 'is_first')
   final bool isFirst;
+  @JsonKey(name: 'reward_preview')
+  final List<String> rewardPreview;
+  @JsonKey(name: 'surface_preview')
+  final List<String> surfacePreview;
+  @JsonKey(name: 'glory_lines')
+  final List<String> gloryLines;
 
   Map<String, dynamic> toJson() => _$AchievementUnlockEventToJson(this);
 }
 
 // ========== 成就分享卡 ==========
 
+/// Privacy settings for share card generation
+class ShareCardPrivacySettings {
+  ShareCardPrivacySettings({
+    this.displayName,
+    this.showAvatar = false,
+    this.showUnlockDate = true,
+    this.showProgressStats = true,
+    this.showFirstUnlockerBadge = true,
+  });
+
+  factory ShareCardPrivacySettings.fromJson(Map<String, dynamic> json) =>
+      ShareCardPrivacySettings(
+        displayName: json['display_name'] as String?,
+        showAvatar: json['show_avatar'] as bool? ?? false,
+        showUnlockDate: json['show_unlock_date'] as bool? ?? true,
+        showProgressStats: json['show_progress_stats'] as bool? ?? true,
+        showFirstUnlockerBadge:
+            json['show_first_unlocker_badge'] as bool? ?? true,
+      );
+
+  /// Custom display name, null means use default nickname
+  final String? displayName;
+
+  /// Whether to show user avatar on card
+  final bool showAvatar;
+
+  /// Whether to show unlock date on card
+  final bool showUnlockDate;
+
+  /// Whether to show progress statistics on card
+  final bool showProgressStats;
+
+  /// Whether to show first unlocker badge if applicable
+  final bool showFirstUnlockerBadge;
+
+  String getEffectiveDisplayName(String defaultName) =>
+      displayName ?? defaultName;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'display_name': displayName,
+        'show_avatar': showAvatar,
+        'show_unlock_date': showUnlockDate,
+        'show_progress_stats': showProgressStats,
+        'show_first_unlocker_badge': showFirstUnlockerBadge,
+      };
+
+  ShareCardPrivacySettings copyWith({
+    String? displayName,
+    bool? showAvatar,
+    bool? showUnlockDate,
+    bool? showProgressStats,
+    bool? showFirstUnlockerBadge,
+  }) =>
+      ShareCardPrivacySettings(
+        displayName: displayName ?? this.displayName,
+        showAvatar: showAvatar ?? this.showAvatar,
+        showUnlockDate: showUnlockDate ?? this.showUnlockDate,
+        showProgressStats: showProgressStats ?? this.showProgressStats,
+        showFirstUnlockerBadge:
+            showFirstUnlockerBadge ?? this.showFirstUnlockerBadge,
+      );
+
+  /// Generate a hash for cache key purposes
+  String settingsHash() {
+    final parts = [
+      displayName ?? '',
+      showAvatar.toString(),
+      showUnlockDate.toString(),
+      showProgressStats.toString(),
+      showFirstUnlockerBadge.toString(),
+    ];
+    return parts.join('_').hashCode.toRadixString(16);
+  }
+}
+
+/// Share card template information
+class ShareTemplateInfo {
+  ShareTemplateInfo({
+    required this.id,
+    required this.name,
+    this.description,
+    this.previewUrl,
+  });
+
+  factory ShareTemplateInfo.fromJson(Map<String, dynamic> json) =>
+      ShareTemplateInfo(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String?,
+        previewUrl: json['preview_url'] as String?,
+      );
+
+  final String id;
+  final String name;
+  final String? description;
+  final String? previewUrl;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'description': description,
+        'preview_url': previewUrl,
+      };
+}
+
 class AchievementShareCard {
   AchievementShareCard({
     required this.cardUrl,
-    required this.mimeType,
-    required this.width,
-    required this.height,
+    this.mimeType = 'image/png',
+    this.width = 0,
+    this.height = 0,
     required this.generatedAt,
+    this.templateId = 'cosmic',
+    this.privacySettings,
     required this.achievement,
   });
 
@@ -618,6 +825,12 @@ class AchievementShareCard {
         generatedAt: DateTime.parse(
           json['generated_at'] as String? ?? DateTime.now().toIso8601String(),
         ),
+        templateId: json['template_id'] as String? ?? 'cosmic',
+        privacySettings: json['privacy_settings'] != null
+            ? ShareCardPrivacySettings.fromJson(
+                json['privacy_settings'] as Map<String, dynamic>,
+              )
+            : null,
         achievement: AchievementModel.fromJson(
           json['achievement'] as Map<String, dynamic>? ?? <String, dynamic>{},
         ),
@@ -628,6 +841,8 @@ class AchievementShareCard {
   final int width;
   final int height;
   final DateTime generatedAt;
+  final String templateId;
+  final ShareCardPrivacySettings? privacySettings;
   final AchievementModel achievement;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -636,6 +851,8 @@ class AchievementShareCard {
         'width': width,
         'height': height,
         'generated_at': generatedAt.toIso8601String(),
+        'template_id': templateId,
+        'privacy_settings': privacySettings?.toJson(),
         'achievement': achievement.toJson(),
       };
 }

@@ -24,6 +24,15 @@ enum GroupRole {
   member,
 }
 
+enum GroupDirectorySort {
+  @JsonValue('hot')
+  hot,
+  @JsonValue('latest')
+  latest,
+  @JsonValue('random')
+  random,
+}
+
 @HiveType(typeId: 11)
 enum MessageType {
   @JsonValue('text')
@@ -68,6 +77,36 @@ enum FriendshipStatus {
   accepted,
   @JsonValue('blocked')
   blocked,
+}
+
+enum FriendMatchStrategy {
+  @JsonValue('compatibility')
+  compatibility,
+  @JsonValue('complementary')
+  complementary,
+}
+
+enum FriendRecommendationTarget {
+  @JsonValue('friend')
+  friend,
+  @JsonValue('accountability')
+  accountability,
+}
+
+enum RecommendationItemType {
+  @JsonValue('friend')
+  friend,
+  @JsonValue('group')
+  group,
+}
+
+enum RecommendationFeedbackStage {
+  @JsonValue('immediate')
+  immediate,
+  @JsonValue('follow_up')
+  followUp,
+  @JsonValue('outcome')
+  outcome,
 }
 
 // ============ 举报相关枚举 ============
@@ -125,6 +164,50 @@ enum OfflineMessageStatus {
 // ============ 好友系统 ============
 
 @JsonSerializable()
+class AccountabilityFriendSummary {
+  AccountabilityFriendSummary({
+    required this.partnershipId,
+    required this.slotType,
+    required this.status,
+    this.myRole,
+    this.myCheckedInToday,
+    this.partnerCheckedInToday,
+    this.myStreakDays,
+    this.partnerStreakDays,
+    this.lastCheckinAt,
+    this.goalPreview,
+  });
+
+  factory AccountabilityFriendSummary.fromJson(Map<String, dynamic> json) =>
+      _$AccountabilityFriendSummaryFromJson(json);
+
+  @JsonKey(name: 'partnership_id')
+  final String partnershipId;
+  @JsonKey(name: 'slot_type')
+  final String slotType;
+  final String status;
+  @JsonKey(name: 'my_role')
+  final String? myRole;
+  @JsonKey(name: 'my_checked_in_today')
+  final bool? myCheckedInToday;
+  @JsonKey(name: 'partner_checked_in_today')
+  final bool? partnerCheckedInToday;
+  @JsonKey(name: 'my_streak_days')
+  final int? myStreakDays;
+  @JsonKey(name: 'partner_streak_days')
+  final int? partnerStreakDays;
+  @JsonKey(name: 'last_checkin_at')
+  final DateTime? lastCheckinAt;
+  @JsonKey(name: 'goal_preview')
+  final String? goalPreview;
+
+  Map<String, dynamic> toJson() => _$AccountabilityFriendSummaryToJson(this);
+
+  bool get isActive => status == 'active';
+  bool get isPending => status == 'pending';
+}
+
+@JsonSerializable()
 class FriendshipInfo {
   FriendshipInfo({
     required this.id,
@@ -134,6 +217,7 @@ class FriendshipInfo {
     required this.updatedAt,
     this.matchReason,
     this.initiatedByMe = false,
+    this.accountability,
   });
 
   factory FriendshipInfo.fromJson(Map<String, dynamic> json) =>
@@ -145,6 +229,7 @@ class FriendshipInfo {
   final Map<String, dynamic>? matchReason;
   @JsonKey(name: 'initiated_by_me')
   final bool initiatedByMe;
+  final AccountabilityFriendSummary? accountability;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -153,11 +238,52 @@ class FriendshipInfo {
 }
 
 @JsonSerializable()
+class FriendProfileDetail {
+  FriendProfileDetail({
+    required this.user,
+    required this.friendship,
+    this.accountability,
+    this.relationshipSummary,
+    this.achievementsSummary,
+    this.leaderboardSummary,
+    this.recentShares = const [],
+    this.quickActions = const {},
+  });
+
+  factory FriendProfileDetail.fromJson(Map<String, dynamic> json) =>
+      _$FriendProfileDetailFromJson(json);
+
+  final UserBrief user;
+  final Map<String, dynamic> friendship;
+  final Map<String, dynamic>? accountability;
+  @JsonKey(name: 'relationship_summary')
+  final Map<String, dynamic>? relationshipSummary;
+  @JsonKey(name: 'achievements_summary')
+  final Map<String, dynamic>? achievementsSummary;
+  @JsonKey(name: 'leaderboard_summary')
+  final Map<String, dynamic>? leaderboardSummary;
+  @JsonKey(name: 'recent_shares')
+  final List<Map<String, dynamic>> recentShares;
+  @JsonKey(name: 'quick_actions')
+  final Map<String, dynamic> quickActions;
+
+  Map<String, dynamic> toJson() => _$FriendProfileDetailToJson(this);
+}
+
+@JsonSerializable()
 class FriendRecommendation {
   FriendRecommendation({
     required this.user,
     required this.matchScore,
     required this.matchReasons,
+    this.strategy = 'compatibility',
+    this.target = 'accountability',
+    this.summary,
+    this.relationshipStatus = 'none',
+    this.isExistingFriend = false,
+    this.canInviteAccountability = false,
+    this.recommendedAction = 'send_friend_request',
+    this.scoreBreakdown = const {},
   });
 
   factory FriendRecommendation.fromJson(Map<String, dynamic> json) =>
@@ -167,7 +293,100 @@ class FriendRecommendation {
   final double matchScore;
   @JsonKey(name: 'match_reasons')
   final List<String> matchReasons;
+  final String strategy;
+  final String target;
+  final String? summary;
+  @JsonKey(name: 'relationship_status')
+  final String relationshipStatus;
+  @JsonKey(name: 'is_existing_friend')
+  final bool isExistingFriend;
+  @JsonKey(name: 'can_invite_accountability')
+  final bool canInviteAccountability;
+  @JsonKey(name: 'recommended_action')
+  final String recommendedAction;
+  @JsonKey(name: 'score_breakdown')
+  final Map<String, double> scoreBreakdown;
   Map<String, dynamic> toJson() => _$FriendRecommendationToJson(this);
+}
+
+@JsonSerializable()
+class RecommendationFeedbackPrompt {
+  RecommendationFeedbackPrompt({
+    required this.promptId,
+    required this.itemType,
+    required this.itemId,
+    required this.stage,
+    required this.triggerAction,
+    required this.title,
+    required this.dueAt,
+    this.subtitle,
+    this.strategy,
+    this.target,
+    this.user,
+    this.group,
+    this.reasonTags = const [],
+  });
+
+  factory RecommendationFeedbackPrompt.fromJson(Map<String, dynamic> json) =>
+      _$RecommendationFeedbackPromptFromJson(json);
+
+  @JsonKey(name: 'prompt_id')
+  final String promptId;
+  @JsonKey(name: 'item_type')
+  final RecommendationItemType itemType;
+  @JsonKey(name: 'item_id')
+  final String itemId;
+  final RecommendationFeedbackStage stage;
+  @JsonKey(name: 'trigger_action')
+  final String triggerAction;
+  final String title;
+  final String? subtitle;
+  @JsonKey(name: 'due_at')
+  final DateTime dueAt;
+  final String? strategy;
+  final String? target;
+  final UserBrief? user;
+  final GroupListItem? group;
+  @JsonKey(name: 'reason_tags')
+  final List<String> reasonTags;
+
+  Map<String, dynamic> toJson() => _$RecommendationFeedbackPromptToJson(this);
+
+  bool get isFriend => itemType == RecommendationItemType.friend;
+  bool get isGroup => itemType == RecommendationItemType.group;
+}
+
+@JsonSerializable()
+class RecommendationFeedbackInsight {
+  RecommendationFeedbackInsight({
+    required this.itemType,
+    required this.recentFeedbackCount,
+    this.averageScores = const {},
+    this.topPositiveSignals = const [],
+    this.topNegativeSignals = const [],
+    this.userTuning = const {},
+    this.globalAdjustments = const {},
+  });
+
+  factory RecommendationFeedbackInsight.fromJson(Map<String, dynamic> json) =>
+      _$RecommendationFeedbackInsightFromJson(json);
+
+  @JsonKey(name: 'item_type')
+  final RecommendationItemType itemType;
+  @JsonKey(name: 'recent_feedback_count')
+  final int recentFeedbackCount;
+  @JsonKey(name: 'average_scores')
+  final Map<String, double> averageScores;
+  @JsonKey(name: 'top_positive_signals')
+  final List<String> topPositiveSignals;
+  @JsonKey(name: 'top_negative_signals')
+  final List<String> topNegativeSignals;
+  @JsonKey(name: 'user_tuning')
+  final Map<String, dynamic> userTuning;
+  @JsonKey(name: 'global_adjustments')
+  final Map<String, double> globalAdjustments;
+
+  Map<String, dynamic> toJson() => _$RecommendationFeedbackInsightToJson(this);
 }
 
 // ============ 群组 ============
@@ -194,6 +413,7 @@ class GroupInfo {
     this.sprintGoal,
     this.daysRemaining,
     this.myRole,
+    this.announcement,
   });
 
   factory GroupInfo.fromJson(Map<String, dynamic> json) =>
@@ -227,6 +447,7 @@ class GroupInfo {
   final bool joinRequiresApproval;
   @JsonKey(name: 'my_role')
   final GroupRole? myRole;
+  final String? announcement;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -247,8 +468,13 @@ class GroupListItem {
     required this.memberCount,
     required this.totalFlamePower,
     required this.focusTags,
+    this.description,
+    this.todayCheckinCount = 0,
     this.deadline,
     this.daysRemaining,
+    this.isPublic = true,
+    this.joinRequiresApproval = false,
+    this.activityScore,
     this.myRole,
   });
 
@@ -256,21 +482,31 @@ class GroupListItem {
       _$GroupListItemFromJson(json);
   final String id;
   final String name;
+  final String? description;
   final GroupType type;
   @JsonKey(name: 'member_count')
   final int memberCount;
   @JsonKey(name: 'total_flame_power')
   final int totalFlamePower;
+  @JsonKey(name: 'today_checkin_count')
+  final int todayCheckinCount;
   final DateTime? deadline;
   @JsonKey(name: 'days_remaining')
   final int? daysRemaining;
   @JsonKey(name: 'focus_tags')
   final List<String> focusTags;
+  @JsonKey(name: 'is_public')
+  final bool isPublic;
+  @JsonKey(name: 'join_requires_approval')
+  final bool joinRequiresApproval;
+  @JsonKey(name: 'activity_score')
+  final double? activityScore;
   @JsonKey(name: 'my_role')
   final GroupRole? myRole;
   Map<String, dynamic> toJson() => _$GroupListItemToJson(this);
 
   bool get isSprint => type == GroupType.sprint;
+  bool get isJoined => myRole != null;
 }
 
 @JsonSerializable()
@@ -304,6 +540,36 @@ class GroupRecommendationItem {
   @JsonKey(name: 'requires_approval')
   final bool requiresApproval;
   Map<String, dynamic> toJson() => _$GroupRecommendationItemToJson(this);
+}
+
+@JsonSerializable()
+class GroupDirectoryInfo {
+  GroupDirectoryInfo({
+    required this.sortBy,
+    required this.availableTags,
+    required this.totalCount,
+    required this.recommendations,
+    required this.groups,
+    this.keyword,
+    this.appliedTags = const [],
+  });
+
+  factory GroupDirectoryInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupDirectoryInfoFromJson(json);
+
+  @JsonKey(name: 'sort_by')
+  final GroupDirectorySort sortBy;
+  final String? keyword;
+  @JsonKey(name: 'applied_tags')
+  final List<String> appliedTags;
+  @JsonKey(name: 'available_tags')
+  final List<String> availableTags;
+  @JsonKey(name: 'total_count')
+  final int totalCount;
+  final List<GroupRecommendationItem> recommendations;
+  final List<GroupListItem> groups;
+
+  Map<String, dynamic> toJson() => _$GroupDirectoryInfoToJson(this);
 }
 
 @JsonSerializable()
@@ -1098,7 +1364,7 @@ class BroadcastMessageCreate {
 
 @JsonSerializable()
 class GroupModerationSettings {
-  GroupModerationSettings({
+  const GroupModerationSettings({
     this.keywordFilters,
     this.muteAll,
     this.slowModeSeconds,
@@ -1275,4 +1541,373 @@ class OfflineMessageRetryRequest {
   @JsonKey(name: 'message_ids')
   final List<String> messageIds;
   Map<String, dynamic> toJson() => _$OfflineMessageRetryRequestToJson(this);
+}
+
+// ============ 黑名单管理 ============
+
+@JsonSerializable()
+class BlockUserInfo {
+  BlockUserInfo({
+    required this.blockedUser,
+    this.reason,
+  });
+
+  factory BlockUserInfo.fromJson(Map<String, dynamic> json) =>
+      _$BlockUserInfoFromJson(json);
+  @JsonKey(name: 'blocked_user')
+  final UserBrief blockedUser;
+  final String? reason;
+  Map<String, dynamic> toJson() => _$BlockUserInfoToJson(this);
+}
+
+// ============ 隐私设置 ============
+
+enum SearchVisibility {
+  @JsonValue('everyone')
+  everyone,
+  @JsonValue('friends')
+  friends,
+  @JsonValue('nobody')
+  nobody,
+}
+
+@JsonSerializable()
+class UserPrivacySettings {
+  UserPrivacySettings({
+    required this.searchableBy,
+  });
+
+  factory UserPrivacySettings.fromJson(Map<String, dynamic> json) =>
+      _$UserPrivacySettingsFromJson(json);
+  @JsonKey(name: 'searchable_by')
+  final SearchVisibility searchableBy;
+  Map<String, dynamic> toJson() => _$UserPrivacySettingsToJson(this);
+}
+
+// ============ 群文件 ============
+
+@JsonSerializable()
+class GroupFileInfo {
+  GroupFileInfo({
+    required this.id,
+    required this.groupId,
+    required this.uploaderId,
+    required this.fileName,
+    required this.fileSize,
+    required this.mimeType,
+    required this.fileUrl,
+    required this.permissions,
+    required this.createdAt,
+    this.description,
+    this.category,
+    this.tags,
+    this.uploader,
+  });
+
+  factory GroupFileInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'group_id')
+  final String groupId;
+  @JsonKey(name: 'uploader_id')
+  final String uploaderId;
+  @JsonKey(name: 'file_name')
+  final String fileName;
+  @JsonKey(name: 'file_size')
+  final int fileSize;
+  @JsonKey(name: 'mime_type')
+  final String mimeType;
+  @JsonKey(name: 'file_url')
+  final String fileUrl;
+  final String? description;
+  final String? category;
+  final List<String>? tags;
+  final GroupFilePermissions permissions;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  final UserBrief? uploader;
+  Map<String, dynamic> toJson() => _$GroupFileInfoToJson(this);
+}
+
+@JsonSerializable()
+class GroupFilePermissions {
+  GroupFilePermissions({
+    this.canView = const [],
+    this.canDownload = const [],
+    this.canDelete = const [],
+  });
+
+  factory GroupFilePermissions.fromJson(Map<String, dynamic> json) =>
+      _$GroupFilePermissionsFromJson(json);
+  @JsonKey(name: 'can_view')
+  final List<String> canView;
+  @JsonKey(name: 'can_download')
+  final List<String> canDownload;
+  @JsonKey(name: 'can_delete')
+  final List<String> canDelete;
+  Map<String, dynamic> toJson() => _$GroupFilePermissionsToJson(this);
+}
+
+@JsonSerializable()
+class GroupFilePermissionUpdate {
+  GroupFilePermissionUpdate({
+    this.canView,
+    this.canDownload,
+    this.canDelete,
+  });
+
+  factory GroupFilePermissionUpdate.fromJson(Map<String, dynamic> json) =>
+      _$GroupFilePermissionUpdateFromJson(json);
+  @JsonKey(name: 'can_view')
+  final List<String>? canView;
+  @JsonKey(name: 'can_download')
+  final List<String>? canDownload;
+  @JsonKey(name: 'can_delete')
+  final List<String>? canDelete;
+  Map<String, dynamic> toJson() => _$GroupFilePermissionUpdateToJson(this);
+}
+
+@JsonSerializable()
+class GroupFileCategoryStat {
+  GroupFileCategoryStat({
+    required this.category,
+    required this.count,
+    required this.totalSize,
+  });
+
+  factory GroupFileCategoryStat.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileCategoryStatFromJson(json);
+  final String category;
+  final int count;
+  @JsonKey(name: 'total_size')
+  final int totalSize;
+  Map<String, dynamic> toJson() => _$GroupFileCategoryStatToJson(this);
+}
+
+@JsonSerializable()
+class GroupFileShareRequest {
+  GroupFileShareRequest({
+    required this.fileId,
+    this.description,
+    this.category,
+    this.tags,
+  });
+
+  factory GroupFileShareRequest.fromJson(Map<String, dynamic> json) =>
+      _$GroupFileShareRequestFromJson(json);
+  @JsonKey(name: 'file_id')
+  final String fileId;
+  final String? description;
+  final String? category;
+  final List<String>? tags;
+  Map<String, dynamic> toJson() => _$GroupFileShareRequestToJson(this);
+}
+
+// ============ 共享资源 ============
+
+enum SharedResourceType {
+  @JsonValue('task')
+  task,
+  @JsonValue('plan')
+  plan,
+  @JsonValue('knowledge_node')
+  knowledgeNode,
+  @JsonValue('seed_library')
+  seedLibrary,
+  @JsonValue('seed_item')
+  seedItem,
+  @JsonValue('cognitive_fragment')
+  cognitiveFragment,
+  @JsonValue('curiosity_capsule')
+  curiosityCapsule,
+  @JsonValue('cognitive_prism_pattern')
+  cognitivePrismPattern,
+  @JsonValue('fragment')
+  fragment,
+  @JsonValue('capsule')
+  capsule,
+  @JsonValue('achievement')
+  achievement,
+  @JsonValue('file')
+  file,
+}
+
+class SharedResourceInfo {
+  SharedResourceInfo({
+    required this.id,
+    required this.resourceType,
+    required this.createdAt,
+    this.updatedAt,
+    this.planId,
+    this.taskId,
+    this.knowledgeNodeId,
+    this.seedLibraryId,
+    this.seedItemId,
+    this.cognitiveFragmentId,
+    this.curiosityCapsuleId,
+    this.behaviorPatternId,
+    this.permission,
+    this.comment,
+    this.viewCount,
+    this.saveCount,
+    this.sharer,
+    this.resourceTitle,
+    this.resourceSummary,
+    this.entityCard,
+  });
+
+  factory SharedResourceInfo.fromJson(Map<String, dynamic> json) {
+    SharedResourceType parseResourceType(dynamic raw) {
+      final key = raw?.toString();
+      return SharedResourceType.values.firstWhere(
+        (value) => value.name == key,
+        orElse: () => SharedResourceType.task,
+      );
+    }
+
+    DateTime? parseDate(dynamic raw) {
+      final value = raw?.toString();
+      if (value == null || value.isEmpty) {
+        return null;
+      }
+      return DateTime.tryParse(value);
+    }
+
+    return SharedResourceInfo(
+      id: json['id'] as String,
+      resourceType: parseResourceType(json['resource_type']),
+      createdAt: parseDate(json['created_at']) ?? DateTime.now(),
+      updatedAt: parseDate(json['updated_at']),
+      planId: json['plan_id'] as String?,
+      taskId: json['task_id'] as String?,
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
+      seedLibraryId: json['seed_library_id'] as String?,
+      seedItemId: json['seed_item_id'] as String?,
+      cognitiveFragmentId: json['cognitive_fragment_id'] as String?,
+      curiosityCapsuleId: json['curiosity_capsule_id'] as String?,
+      behaviorPatternId: json['behavior_pattern_id'] as String?,
+      permission: json['permission'] as String?,
+      comment: json['comment'] as String?,
+      viewCount: (json['view_count'] as num?)?.toInt(),
+      saveCount: (json['save_count'] as num?)?.toInt(),
+      sharer: json['sharer'] is Map<String, dynamic>
+          ? UserBrief.fromJson(json['sharer'] as Map<String, dynamic>)
+          : json['sharer'] is Map
+              ? UserBrief.fromJson(
+                  Map<String, dynamic>.from(
+                    json['sharer'] as Map<Object?, Object?>,
+                  ),
+                )
+              : null,
+      resourceTitle: json['resource_title'] as String?,
+      resourceSummary: json['resource_summary'] as String?,
+      entityCard: json['entity_card'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['entity_card'] as Map<String, dynamic>)
+          : json['entity_card'] is Map
+              ? Map<String, dynamic>.from(
+                  json['entity_card'] as Map<Object?, Object?>,
+                )
+              : null,
+    );
+  }
+  final String id;
+  @JsonKey(name: 'resource_type')
+  final SharedResourceType resourceType;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
+  @JsonKey(name: 'plan_id')
+  final String? planId;
+  @JsonKey(name: 'task_id')
+  final String? taskId;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
+  @JsonKey(name: 'seed_library_id')
+  final String? seedLibraryId;
+  @JsonKey(name: 'seed_item_id')
+  final String? seedItemId;
+  @JsonKey(name: 'cognitive_fragment_id')
+  final String? cognitiveFragmentId;
+  @JsonKey(name: 'curiosity_capsule_id')
+  final String? curiosityCapsuleId;
+  @JsonKey(name: 'behavior_pattern_id')
+  final String? behaviorPatternId;
+  final String? permission;
+  final String? comment;
+  @JsonKey(name: 'view_count')
+  final int? viewCount;
+  @JsonKey(name: 'save_count')
+  final int? saveCount;
+  final UserBrief? sharer;
+  @JsonKey(name: 'resource_title')
+  final String? resourceTitle;
+  @JsonKey(name: 'resource_summary')
+  final String? resourceSummary;
+  @JsonKey(name: 'entity_card')
+  final Map<String, dynamic>? entityCard;
+
+  String? get resourceId =>
+      planId ??
+      taskId ??
+      knowledgeNodeId ??
+      seedLibraryId ??
+      seedItemId ??
+      cognitiveFragmentId ??
+      curiosityCapsuleId ??
+      behaviorPatternId;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'resource_type': resourceType.name,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt?.toIso8601String(),
+        'plan_id': planId,
+        'task_id': taskId,
+        'knowledge_node_id': knowledgeNodeId,
+        'seed_library_id': seedLibraryId,
+        'seed_item_id': seedItemId,
+        'cognitive_fragment_id': cognitiveFragmentId,
+        'curiosity_capsule_id': curiosityCapsuleId,
+        'behavior_pattern_id': behaviorPatternId,
+        'permission': permission,
+        'comment': comment,
+        'view_count': viewCount,
+        'save_count': saveCount,
+        'sharer': sharer?.toJson(),
+        'resource_title': resourceTitle,
+        'resource_summary': resourceSummary,
+        'entity_card': entityCard,
+      };
+}
+
+@JsonSerializable()
+class SharedResourceCreate {
+  SharedResourceCreate({
+    required this.resourceType,
+    required this.resourceId,
+    required this.groupIds,
+  });
+
+  factory SharedResourceCreate.fromJson(Map<String, dynamic> json) =>
+      _$SharedResourceCreateFromJson(json);
+  @JsonKey(name: 'resource_type')
+  final SharedResourceType resourceType;
+  @JsonKey(name: 'resource_id')
+  final String resourceId;
+  @JsonKey(name: 'group_ids')
+  final List<String> groupIds;
+  Map<String, dynamic> toJson() => _$SharedResourceCreateToJson(this);
+}
+
+@JsonSerializable()
+class UserStatusUpdate {
+  UserStatusUpdate({
+    required this.status,
+  });
+
+  factory UserStatusUpdate.fromJson(Map<String, dynamic> json) =>
+      _$UserStatusUpdateFromJson(json);
+  final String status;
+  Map<String, dynamic> toJson() => _$UserStatusUpdateToJson(this);
 }

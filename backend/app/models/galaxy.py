@@ -19,7 +19,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
@@ -141,7 +141,7 @@ class KnowledgeNode(BaseModel):
 
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
-    embedding = Column(VectorCompat, nullable=True)
+    embedding = deferred(Column(VectorCompat, nullable=True))
 
     # Layout Coordinates (for Viewport Query)
     position_x = Column(Float, nullable=True, index=True)
@@ -220,6 +220,7 @@ class UserNodeStatus(Base):
 
     # 元数据
     first_unlock_at = Column(DateTime, nullable=True)
+    learning_path_snapshot = Column(JSONBCompat, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,

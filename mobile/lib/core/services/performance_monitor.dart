@@ -17,6 +17,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 
 /// 忽略Future结果的扩展方法
 extension FutureIgnore<T> on Future<T> {
@@ -156,6 +157,7 @@ class PerformanceMonitor {
         timestamp: now,
       ),
     );
+    ClientObservabilityService.instance.trackScreenView(pageName).ignore();
   }
 
   /// 跟踪用户操作
@@ -171,6 +173,11 @@ class PerformanceMonitor {
     );
 
     _interactionRecords[key] = record;
+    ClientObservabilityService.instance.trackInteraction(
+      interactionName,
+      status: 'started',
+      metadata: <String, dynamic>{'details': details},
+    ).ignore();
 
     // 设置定时器检查操作完成
     Timer(const Duration(seconds: 5), () {
@@ -205,6 +212,12 @@ class PerformanceMonitor {
         if (record.duration!.inMilliseconds > 1000) {
           _reportSlowInteraction(record);
         }
+        ClientObservabilityService.instance.trackInteraction(
+          interactionName,
+          status: 'completed',
+          durationMs: record.duration!.inMilliseconds,
+          metadata: <String, dynamic>{'details': record.details},
+        ).ignore();
       }
     }
   }
@@ -238,8 +251,10 @@ class PerformanceMonitor {
       bindToScope: true,
     );
 
-    final span = transaction.startChild('sync_operation',
-        description: '同步$itemCount个项目',);
+    final span = transaction.startChild(
+      'sync_operation',
+      description: '同步$itemCount个项目',
+    );
 
     if (!success && error != null) {
       span.status = const SpanStatus.internalError();
@@ -251,12 +266,27 @@ class PerformanceMonitor {
 
     span.finish();
     transaction.finish();
+    ClientObservabilityService.instance.recordEvent(
+      eventType: 'offline_sync',
+      category: 'sync',
+      status: success ? 'ok' : 'error',
+      severity: success ? 'info' : 'warning',
+      durationMs: durationMs,
+      metadata: <String, dynamic>{
+        'sync_type': syncType,
+        'item_count': itemCount,
+        'error': error,
+      },
+    ).ignore();
   }
 
   /// 报告应用崩溃
   void reportCrash(dynamic error, StackTrace stackTrace, {String? context}) {
+    final crashObject = error is Object
+        ? error
+        : Exception(error?.toString() ?? 'Unknown crash');
     Sentry.captureException(
-      error,
+      crashObject,
       stackTrace: stackTrace,
       hint: Hint.withMap({
         'context': context ?? '未指定上下文',
@@ -267,6 +297,9 @@ class PerformanceMonitor {
         },
       }),
     );
+    ClientObservabilityService.instance
+        .trackCrash(crashObject, stackTrace, context: context)
+        .ignore();
   }
 
   /// 报告性能异常
@@ -295,6 +328,16 @@ class PerformanceMonitor {
           timestamp: DateTime.now(),
         ),
       );
+      ClientObservabilityService.instance.recordEvent(
+        eventType: 'performance_warning',
+        category: 'performance',
+        status: 'warning',
+        severity: 'warning',
+        metadata: <String, dynamic>{
+          'warning_type': 'low_fps',
+          'fps': metric.fps,
+        },
+      ).ignore();
     }
 
     // 内存使用过高警告
@@ -309,6 +352,16 @@ class PerformanceMonitor {
           timestamp: DateTime.now(),
         ),
       );
+      ClientObservabilityService.instance.recordEvent(
+        eventType: 'performance_warning',
+        category: 'performance',
+        status: 'warning',
+        severity: 'warning',
+        metadata: <String, dynamic>{
+          'warning_type': 'high_memory',
+          'memory_mb': metric.memoryMB,
+        },
+      ).ignore();
     }
   }
 

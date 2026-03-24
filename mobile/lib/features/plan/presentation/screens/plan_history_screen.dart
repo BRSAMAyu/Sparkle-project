@@ -1,7 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
@@ -21,12 +28,12 @@ class PlanHistoryScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('历史计划'),
+        title: Text(context.l10n.planHistoryTitle),
       ),
       child: ContentConstraint(
         child: RefreshIndicator(
           onRefresh: () => ref.read(planListProvider.notifier).refresh(),
-          child: _buildBody(context, archivedPlans, planState.isLoading),
+          child: _buildBody(context, ref, archivedPlans, planState.isLoading),
         ),
       ),
     );
@@ -34,16 +41,25 @@ class PlanHistoryScreen extends ConsumerWidget {
 
   Widget _buildBody(
     BuildContext context,
+    WidgetRef ref,
     List<PlanModel> plans,
     bool isLoading,
   ) {
     if (isLoading && plans.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return LoadingIndicator.circular(
+        showText: true,
+        loadingText: 'Loading archived plans...',
+      );
     }
 
     if (plans.isEmpty) {
-      return const Center(
-        child: Text('暂无历史计划'),
+      return EmptyState(
+        title: 'No archived plans yet',
+        description:
+            'Finished or paused plans will rest here for later review and revival.',
+        icon: Icons.archive_outlined,
+        actionText: 'Back to active plans',
+        onAction: () => context.pop(),
       );
     }
 
@@ -52,16 +68,20 @@ class PlanHistoryScreen extends ConsumerWidget {
       grouped.putIfAbsent(plan.type, () => []).add(plan);
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: grouped.entries
-          .map(
-            (entry) => _PlanHistorySection(
-              title: entry.key == PlanType.sprint ? '冲刺计划' : '成长计划',
-              plans: entry.value,
-            ),
-          )
-          .toList(),
+    return ScrollEdgeHaptics(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: grouped.entries
+            .map(
+              (entry) => _PlanHistorySection(
+                title: entry.key == PlanType.sprint
+                    ? context.l10n.planTypeSprint
+                    : context.l10n.planTypeGrowth,
+                plans: entry.value,
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }
@@ -81,37 +101,65 @@ class _PlanHistorySection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
+            SparkleStaggerItem(
+              index: 0,
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             const SizedBox(height: DS.spacing12),
-            ...plans.map(
-              (plan) => GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.card,
-                margin: const EdgeInsets.only(bottom: DS.spacing12),
-                padding: EdgeInsets.zero,
-                child: ListTile(
-                  title: Text(plan.name),
-                  subtitle: Text(
-                    '${(plan.progress * 100).toStringAsFixed(0)}% 完成',
-                  ),
-                  trailing: Tooltip(
-                    message: '恢复计划',
-                    child: SparkleIconButton(
-                      variant: ButtonVariant.ghost,
-                      icon: const Icon(Icons.restore_rounded),
-                      onPressed: () async {
-                        await ref
-                            .read(planListProvider.notifier)
-                            .restorePlan(plan.id);
-                        if (context.mounted) {
-                          AppFeedback.success(context, '计划已恢复');
-                        }
-                      },
+            ...plans.asMap().entries.map(
+              (entry) => SparkleStaggerItem(
+                index: entry.key + 1,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  margin: const EdgeInsets.only(bottom: DS.spacing12),
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    title: Text(entry.value.name),
+                    subtitle: Text(
+                      context.l10n.planProgressPercent(
+                        (entry.value.progress * 100).toStringAsFixed(0),
+                      ),
                     ),
+                    trailing: Tooltip(
+                      message: context.l10n.planHistoryRestore,
+                      child: SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        icon: const Icon(Icons.restore_rounded),
+                        onPressed: () async {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.confirm,
+                            ),
+                          );
+                          await ref
+                              .read(planListProvider.notifier)
+                              .restorePlan(entry.value.id);
+                          if (context.mounted) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.success,
+                              ),
+                            );
+                            AppFeedback.success(
+                              context,
+                              context.l10n.planHistoryRestoreSuccess,
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    onTap: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      context.push('/plans/${entry.value.id}');
+                    },
                   ),
-                  onTap: () => context.push('/plans/${plan.id}'),
                 ),
               ),
             ),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,7 +14,7 @@ from app.scaffolding.capability_tracker import CapabilityTracker
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ScaffoldingFSM:

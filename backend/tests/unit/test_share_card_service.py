@@ -6,6 +6,7 @@ from PIL import Image
 from app.config import settings
 from app.core.cache import cache_service
 from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement, VisualEffectType
+from app.schemas.achievement import ShareCardPrivacySettings
 from app.services.share_card_service import ShareCardService
 
 
@@ -56,8 +57,9 @@ async def test_generate_share_card_creates_png_and_increments_share_count(
     service = ShareCardService(db_session)
     result, _, user_achievement = await service.generate_achievement_share_card(test_user.id, achievement.id)
 
-    card_path = tmp_path / "achievement-cards" / str(test_user.id) / "share_test_v1.png"
-    assert result.card_url == f"/uploads/achievement-cards/{test_user.id}/share_test_v1.png"
+    privacy = ShareCardPrivacySettings()
+    card_path = service._card_file_path(test_user.id, achievement.id, "cosmic", privacy.settings_hash())
+    assert result.card_url == service._public_card_url(test_user.id, achievement.id, "cosmic", privacy.settings_hash())
     assert result.mime_type == "image/png"
     assert card_path.exists()
     assert user_achievement.share_count == 1

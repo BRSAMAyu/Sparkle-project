@@ -3,17 +3,32 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
-import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
+/// Decode a value that may be a Map or a JSON-encoded string into a Map.
+/// Backend sometimes sends review_data as a JSON string.
+Map<String, dynamic>? _decodeMapOrString(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is String && value.isNotEmpty) {
+    try {
+      final decoded = json.decode(value);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+  }
+  return null;
+}
 
 bool _isTrue(dynamic value) {
   if (value is bool) {
@@ -68,6 +83,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final traceId = data['trace_id'] as String?;
     final workflowId = data['workflow_id'] as String?;
     final promptVersion = data['prompt_version'] as String?;
+    final sessionId = data['session_id'] as String?;
 
     switch (type) {
       case 'delta':
@@ -125,7 +141,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
 
         // Check for orchestration trace events
-        if (metadata != null && metadata['event_type'] == 'orchestration_trace') {
+        if (metadata != null &&
+            metadata['event_type'] == 'orchestration_trace') {
           final tracePayload = metadata['trace'] as String?;
           if (tracePayload != null && tracePayload.isNotEmpty) {
             try {
@@ -140,6 +157,33 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
               );
             } catch (e) {
               debugPrint('Failed to parse orchestration trace: $e');
+            }
+          }
+        }
+
+        if (metadata != null && metadata['event_type'] == 'run_ledger') {
+          final ledgerPayload = metadata['payload'] as String?;
+          if (ledgerPayload != null && ledgerPayload.isNotEmpty) {
+            try {
+              final decoded =
+                  json.decode(ledgerPayload) as Map<String, dynamic>;
+              final summaryJson = decoded['summary'] as Map<String, dynamic>?;
+              final latestEventJson =
+                  decoded['latest_event'] as Map<String, dynamic>?;
+              if (summaryJson != null) {
+                return RunLedgerSnapshotEvent(
+                  summary: RunLedgerSummary.fromJson(summaryJson),
+                  latestEvent: latestEventJson != null
+                      ? RunLedgerEvent.fromJson(latestEventJson)
+                      : null,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              }
+            } catch (e) {
+              debugPrint('Failed to parse run ledger event: $e');
             }
           }
         }
@@ -203,7 +247,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Phase 2b: Check if this delta contains content review data
         if (metadata != null && _isTrue(metadata['has_review_result'])) {
-          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          final reviewData = _decodeMapOrString(metadata['review_data']);
           return ContentReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
             responseId: responseId,
@@ -255,7 +299,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
-          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          final reviewData = _decodeMapOrString(metadata['review_data']);
           return PlanReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
             responseId: responseId,
@@ -344,6 +388,15 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'tool_result':
         final toolResult = data['tool_result'] as Map<String, dynamic>?;
         if (toolResult != null) {
+          final widgetData = toolResult['widget_data'];
+          final toolCallId = toolResult['tool_call_id'] as String?;
+          if (widgetData is Map<String, dynamic> &&
+              toolCallId != null &&
+              (widgetData['tool_result_id'] == null ||
+                  widgetData['tool_result_id'].toString().isEmpty)) {
+            widgetData['tool_result_id'] = toolCallId;
+            toolResult['widget_data'] = widgetData;
+          }
           return ToolResultEvent(
             result: ToolResultModel.fromJson(toolResult),
             responseId: responseId,
@@ -497,15 +550,69 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
-      case 'meta':
-      case 'metadata':
-        // Gateway telemetry (latency_ms, is_cache_hit, etc.) — no UI action needed
+      case 'message_ack':
+      case 'ack':
+        final messageId = data['message_id'] as String?;
+        final status = data['status'] as String? ?? 'received';
+        final timestamp =
+            data['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
+        if (messageId != null) {
+          return AckEvent(
+            messageId: messageId,
+            status: status,
+            timestamp: timestamp,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
         return UnknownEvent(
           data: data,
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+        );
+
+      case 'message_nack':
+      case 'nack':
+        final messageId = data['message_id'] as String?;
+        final errorCode = data['error_code'] as String? ?? 'unknown';
+        final errorMessage =
+            data['error_message'] as String? ?? 'Unknown error';
+        final retryAfterMs = data['retry_after_ms'] as int?;
+        if (messageId != null) {
+          return NackEvent(
+            messageId: messageId,
+            errorCode: errorCode,
+            errorMessage: errorMessage,
+            retryAfterMs: retryAfterMs,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'meta':
+      case 'metadata':
+        return MetaEvent(
+          meta: Map<String, dynamic>.from(
+            (data['meta'] as Map?)?.cast<String, dynamic>() ?? data,
+          ),
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
         );
 
       case 'reasoning_step':
@@ -576,7 +683,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'plan_review_widget':
-        final reviewData = data['review_data'] as Map<String, dynamic>?;
+        final reviewData = _decodeMapOrString(data['review_data']);
         if (reviewData != null) {
           return PlanReviewWidgetEvent(
             reviewData: reviewData,
@@ -740,11 +847,17 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
-      default:
-        final finishReason = data['finish_reason'] as String?;
-        if (finishReason != null && finishReason != 'NULL') {
-          return DoneEvent(
-            finishReason: finishReason,
+      case 'run_ledger':
+        final ledgerData = data['payload'] as Map<String, dynamic>?;
+        final summaryJson = ledgerData?['summary'] as Map<String, dynamic>?;
+        final latestEventJson =
+            ledgerData?['latest_event'] as Map<String, dynamic>?;
+        if (summaryJson != null) {
+          return RunLedgerSnapshotEvent(
+            summary: RunLedgerSummary.fromJson(summaryJson),
+            latestEvent: latestEventJson != null
+                ? RunLedgerEvent.fromJson(latestEventJson)
+                : null,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -757,6 +870,31 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+        );
+
+      case 'notification':
+        // 实时通知推送事件
+        return NotificationEvent.fromJson(data);
+
+      default:
+        final finishReason = data['finish_reason'] as String?;
+        if (finishReason != null && finishReason != 'NULL') {
+          return DoneEvent(
+            finishReason: finishReason,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            sessionId: sessionId,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
         );
     }
   } catch (e) {
@@ -777,6 +915,27 @@ enum WsConnectionState {
   failed,
 }
 
+/// 心跳指标
+class HeartbeatMetrics {
+  const HeartbeatMetrics({
+    required this.rtt,
+    required this.sentAt,
+    this.receivedAt,
+    this.consecutiveFailures = 0,
+  });
+
+  final Duration rtt;
+  final DateTime sentAt;
+  final DateTime? receivedAt;
+  final int consecutiveFailures;
+
+  bool get isTimeout => receivedAt == null;
+
+  @override
+  String toString() =>
+      'HeartbeatMetrics(rtt: ${rtt.inMilliseconds}ms, failures: $consecutiveFailures)';
+}
+
 /// Factory for creating WebSocket channels (facilitates testing)
 typedef WebSocketChannelFactory = WebSocketChannel Function(
   Uri uri, {
@@ -784,23 +943,38 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
 });
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
-class WebSocketChatServiceV2 {
+class WebSocketChatServiceV2 with WidgetsBindingObserver {
+  static const List<Duration> _reconnectSchedule = <Duration>[
+    Duration(milliseconds: 800),
+    Duration(milliseconds: 1200),
+    Duration(milliseconds: 2200),
+    Duration(milliseconds: 4200),
+    Duration(milliseconds: 8200),
+    Duration(milliseconds: 12200),
+  ];
+  static const int _maxReconnectAttempts = 6;
+
   WebSocketChatServiceV2({
     required ProviderContainer container,
     String? baseUrl,
     WebSocketChannelFactory? channelFactory,
     bool enableReconnect = true,
     bool autoConnect = true,
+    Duration terminalDoneFallbackDelay = const Duration(seconds: 2),
   })  : _container = container,
         baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
-        _autoConnect = autoConnect;
+        _autoConnect = autoConnect,
+        _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   // Factory for creating channels
   final WebSocketChannelFactory? _channelFactory;
   final bool _enableReconnect;
   final bool _autoConnect;
+  final Duration _terminalDoneFallbackDelay;
   final ProviderContainer _container;
 
   // WebSocket 连接
@@ -809,8 +983,9 @@ class WebSocketChatServiceV2 {
   bool _disposed = false;
   int _connGen = 0;
 
-  // 消息流（广播模式，支持多个监听者）
-  StreamController<ChatStreamEvent>? _messageStreamController;
+  // 每个请求独立的消息流，避免不同 run 之间事件串流
+  final Map<String, StreamController<ChatStreamEvent>> _requestControllers = {};
+  final Map<String, Timer> _terminalFallbackTimers = {};
 
   // 连接状态流
   final StreamController<WsConnectionState> _connectionStateController =
@@ -828,12 +1003,28 @@ class WebSocketChatServiceV2 {
 
   // 重连机制
   int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 5;
   Timer? _reconnectTimer;
 
   // 心跳保活
   Timer? _heartbeatTimer;
+  Timer? _heartbeatTimeoutTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
+  static const Duration _heartbeatTimeout =
+      Duration(seconds: 60); // 从 90s 降低到 60s
+  int _consecutiveHeartbeatFailures = 0;
+  static const int _maxConsecutiveHeartbeatFailures = 3;
+  DateTime? _lastPongReceivedTime;
+  DateTime? _lastPingSentTime;
+
+  // 流式消息活跃标记 — 活跃时抑制心跳超时触发的重连
+  bool _isStreamActive = false;
+  DateTime? _lastStreamDataTime;
+
+  // 心跳指标
+  final _heartbeatMetricsController =
+      StreamController<HeartbeatMetrics>.broadcast();
+  Stream<HeartbeatMetrics> get heartbeatMetrics =>
+      _heartbeatMetricsController.stream;
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
@@ -874,11 +1065,26 @@ class WebSocketChatServiceV2 {
     bool includeReferences = false,
     String? chatMode,
   }) {
+    // ✅ Fix H1: Reset connection state for new user session
+    if (_currentUserId != null && _currentUserId != userId) {
+      _resetConnectionState();
+    }
+
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
 
-    // 创建消息流（如果不存在）
-    _messageStreamController ??= StreamController<ChatStreamEvent>.broadcast();
+    final resolvedRequestId = requestId ?? _generateRequestId();
+    late final StreamController<ChatStreamEvent> controller;
+    controller = StreamController<ChatStreamEvent>(
+      onCancel: () {
+        final existing = _requestControllers[resolvedRequestId];
+        if (identical(existing, controller)) {
+          _requestControllers.remove(resolvedRequestId);
+        }
+        _cancelTerminalFallback(resolvedRequestId);
+      },
+    );
+    _requestControllers[resolvedRequestId] = controller;
 
     // 检查是否需要建立连接
     if (_autoConnect && _shouldConnect(userId, token)) {
@@ -889,7 +1095,7 @@ class WebSocketChatServiceV2 {
     final messagePayload = {
       'message': message,
       'session_id': _currentSessionId,
-      'request_id': requestId ?? _generateRequestId(),
+      'request_id': resolvedRequestId,
       if (nickname != null) 'nickname': nickname,
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
@@ -902,14 +1108,14 @@ class WebSocketChatServiceV2 {
       _sendMessage(messagePayload);
     } else {
       _log('⏳ Message queued (not connected yet)');
-      // TODO-A7: Pending Limit
+      // TRACKED(TD-001): Pending limit
       if (_pendingMessages.length >= 50) {
         _pendingMessages.removeAt(0); // Drop oldest
       }
       _pendingMessages.add(messagePayload);
     }
 
-    return _messageStreamController!.stream;
+    return controller.stream;
   }
 
   /// 发送行动反馈（确认/拒绝）
@@ -1146,6 +1352,94 @@ class WebSocketChatServiceV2 {
     controller.add(event);
   }
 
+  void _safeClose<T>(StreamController<T> controller) {
+    if (_disposed || controller.isClosed) return;
+    unawaited(controller.close());
+  }
+
+  void _cancelTerminalFallback(String requestId) {
+    final timer = _terminalFallbackTimers.remove(requestId);
+    timer?.cancel();
+  }
+
+  void _scheduleTerminalFallback(String requestId) {
+    if (_terminalDoneFallbackDelay <= Duration.zero) {
+      return;
+    }
+    _cancelTerminalFallback(requestId);
+    _terminalFallbackTimers[requestId] = Timer(
+      _terminalDoneFallbackDelay,
+      () {
+        final controller = _requestControllers[requestId];
+        if (controller == null || controller.isClosed || _disposed) {
+          _terminalFallbackTimers.remove(requestId);
+          return;
+        }
+        _safeAdd(
+          controller,
+          DoneEvent(
+            finishReason: 'full_text_idle_fallback',
+          ),
+        );
+        _requestControllers.remove(requestId);
+        _terminalFallbackTimers.remove(requestId);
+        _safeClose(controller);
+        _isStreamActive = false;
+      },
+    );
+  }
+
+  String? _extractRequestIdFromRawMessage(String data) {
+    try {
+      final jsonData = json.decode(data) as Map<String, dynamic>;
+      final requestId = jsonData['request_id'] as String?;
+      if (requestId != null && requestId.isNotEmpty) {
+        return requestId;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _routeEventToRequest(String? requestId, ChatStreamEvent event) {
+    var targetRequestId = requestId;
+    if ((targetRequestId == null || targetRequestId.isEmpty) &&
+        _requestControllers.length == 1) {
+      targetRequestId = _requestControllers.keys.first;
+    }
+    if (targetRequestId == null || targetRequestId.isEmpty) {
+      return;
+    }
+    final controller = _requestControllers[targetRequestId];
+    if (controller == null) {
+      return;
+    }
+    _safeAdd(controller, event);
+    if (event is FullTextEvent) {
+      _scheduleTerminalFallback(targetRequestId);
+      return;
+    }
+    if (_terminalFallbackTimers.containsKey(targetRequestId) &&
+        event is! DoneEvent &&
+        event is! ErrorEvent) {
+      _scheduleTerminalFallback(targetRequestId);
+    }
+    if (event is DoneEvent || event is ErrorEvent) {
+      _cancelTerminalFallback(targetRequestId);
+      _requestControllers.remove(targetRequestId);
+      _safeClose(controller);
+    }
+  }
+
+  void _broadcastErrorToActiveRequests(ErrorEvent event) {
+    final activeEntries = _requestControllers.entries.toList();
+    for (final entry in activeEntries) {
+      _cancelTerminalFallback(entry.key);
+      _safeAdd(entry.value, event);
+      _safeClose(entry.value);
+      _requestControllers.remove(entry.key);
+    }
+  }
+
   /// 处理接收到的消息
   Future<void> _handleIncomingMessage(dynamic data) async {
     if (_disposed) return;
@@ -1156,37 +1450,33 @@ class WebSocketChatServiceV2 {
         return;
       }
 
+      // 快速检查是否是pong消息（心跳响应）
+      try {
+        final jsonData = json.decode(data) as Map<String, dynamic>;
+        final type = jsonData['type'] as String?;
+        if (type == 'pong') {
+          _onPongReceived();
+          _log('💓 Pong received');
+          return; // 心跳响应，静默处理
+        }
+      } catch (_) {
+        // 解析失败，继续正常处理
+      }
+
       // Parse event in isolate to avoid blocking main thread
       final event = await compute(_parseChatEvent, data);
+      final requestId = _extractRequestIdFromRawMessage(data);
 
-      if (_messageStreamController != null) {
-        _safeAdd(_messageStreamController!, event);
+      // 🔧 P0修复：标记流活跃状态，抑制心跳超时触发的假性重连
+      _lastStreamDataTime = DateTime.now();
+      if (event is! DoneEvent) {
+        _isStreamActive = true;
+      }
+      _routeEventToRequest(requestId, event);
 
-        // 🔧 修复：检查原始消息中的 finish_reason，如果存在则额外发送 DoneEvent
-        // 这是因为某些消息类型（如delta）在解析时会忽略 finish_reason
-        try {
-          final jsonData = json.decode(data) as Map<String, dynamic>;
-          final finishReason = jsonData['finish_reason'] as String?;
-          if (finishReason != null &&
-              finishReason != 'NULL' &&
-              finishReason.isNotEmpty) {
-            _log(
-                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent',);
-            _safeAdd(
-              _messageStreamController!,
-              DoneEvent(
-                finishReason: finishReason,
-                responseId: jsonData['response_id'] as String?,
-                traceId: jsonData['trace_id'] as String?,
-                workflowId: jsonData['workflow_id'] as String?,
-                promptVersion: jsonData['prompt_version'] as String?,
-              ),
-            );
-          }
-        } catch (e) {
-          // 忽略解析错误，因为这是额外的检查
-          _log('⚠️ Failed to check finish_reason: $e');
-        }
+      // DoneEvent 到达时清除流活跃标记
+      if (event is DoneEvent) {
+        _isStreamActive = false;
       }
     } catch (e) {
       _log('❌ Parse error: $e');
@@ -1205,6 +1495,7 @@ class WebSocketChatServiceV2 {
 
   /// 处理401错误：自动刷新Token并重连
   Future<void> _handle401Error() async {
+    final l10n = I18nService.instance.l10n;
     if (_disposed) return;
 
     // 防止并发刷新
@@ -1218,16 +1509,13 @@ class WebSocketChatServiceV2 {
       _log('❌ Max 401 retry attempts exceeded, logging out...');
 
       // 发送友好错误提示
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'AUTH_FAILED',
-            message: '登录已过期，请重新登录',
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'AUTH_FAILED',
+          message: l10n.chatAuthExpired,
+          retryable: false,
+        ),
+      );
 
       // 执行登出
       try {
@@ -1245,17 +1533,17 @@ class WebSocketChatServiceV2 {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',);
-        if (_messageStreamController != null) {
-          _safeAdd(
-            _messageStreamController!,
-            ErrorEvent(
-              code: 'MESSAGES_LOST',
-              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
-              retryable: false,
+          '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',
+        );
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'MESSAGES_LOST',
+            message: l10n.chatPendingMessagesFailed(
+              _pendingMessages.length,
             ),
-          );
-        }
+            retryable: false,
+          ),
+        );
       }
       _pendingMessages.clear();
       return;
@@ -1265,20 +1553,18 @@ class WebSocketChatServiceV2 {
     _401ErrorCount++;
 
     _log(
-        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',);
+      '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',
+    );
 
     try {
       // 发送刷新中的提示
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'TOKEN_REFRESHING',
-            message: '正在刷新登录状态...',
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'TOKEN_REFRESHING',
+          message: l10n.chatAuthRefreshing,
+          retryable: false,
+        ),
+      );
 
       // 刷新Token
       final authRepo = _container.read(authRepositoryProvider);
@@ -1286,30 +1572,19 @@ class WebSocketChatServiceV2 {
 
       _log('✅ Token refreshed successfully');
 
-      // 更新当前Token
-      _currentToken = newTokenResponse.accessToken;
-      _reconnectAttempts = 0; // 重置普通重连计数器
-
-      // 用新Token重连
-      if (_currentUserId != null) {
-        _closeConnection();
-        _updateConnectionState(WsConnectionState.disconnected);
-        _establishConnection(_currentUserId!, _currentToken);
-      }
+      // ✅ Fix H1: Restore connection state after successful token refresh
+      _onTokenRefreshSuccess(newTokenResponse.accessToken);
     } catch (e) {
       _log('❌ Token refresh failed: $e');
 
       // Token刷新失败，发送友好错误并登出
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'AUTH_FAILED',
-            message: '登录已过期，请重新登录',
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'AUTH_FAILED',
+          message: l10n.chatAuthExpired,
+          retryable: false,
+        ),
+      );
 
       // 执行登出
       try {
@@ -1327,21 +1602,46 @@ class WebSocketChatServiceV2 {
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         _log(
-            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',);
-        if (_messageStreamController != null) {
-          _safeAdd(
-            _messageStreamController!,
-            ErrorEvent(
-              code: 'MESSAGES_LOST',
-              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
-              retryable: false,
+          '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',
+        );
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'MESSAGES_LOST',
+            message: l10n.chatPendingMessagesFailed(
+              _pendingMessages.length,
             ),
-          );
-        }
+            retryable: false,
+          ),
+        );
       }
       _pendingMessages.clear();
     } finally {
       _isRefreshingToken = false;
+    }
+  }
+
+  /// ✅ Fix H1: Reset connection state to allow reconnection
+  void _resetConnectionState() {
+    if (_disposed) return;
+    _log('🔄 Resetting connection state');
+    _enableReconnectLocal = true;
+    _reconnectAttempts = 0;
+    _401ErrorCount = 0;
+    _isRefreshingToken = false;
+  }
+
+  /// ✅ Fix H1: Handle successful token refresh and restore connection state
+  void _onTokenRefreshSuccess(String newToken) {
+    if (_disposed) return;
+    _log('✅ Token refresh successful, restoring connection state');
+    _currentToken = newToken;
+    _resetConnectionState();
+
+    // 立即尝试重连
+    if (_currentUserId != null) {
+      _closeConnection();
+      _updateConnectionState(WsConnectionState.disconnected);
+      _establishConnection(_currentUserId!, _currentToken);
     }
   }
 
@@ -1363,16 +1663,13 @@ class WebSocketChatServiceV2 {
     }
 
     // 普通连接错误，发送错误事件给消息流
-    if (_messageStreamController != null) {
-      _safeAdd(
-        _messageStreamController!,
-        ErrorEvent(
-          code: 'CONNECTION_ERROR',
-          message: 'Network connection failed',
-          retryable: true,
-        ),
-      );
-    }
+    _broadcastErrorToActiveRequests(
+      ErrorEvent(
+        code: 'CONNECTION_ERROR',
+        message: 'Network connection failed',
+        retryable: true,
+      ),
+    );
 
     _triggerReconnect();
   }
@@ -1382,15 +1679,25 @@ class WebSocketChatServiceV2 {
     _log('🔌 Connection closed');
     _stopHeartbeat();
 
+    if (_requestControllers.isNotEmpty) {
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'CONNECTION_CLOSED',
+          message: 'Connection closed while generating response',
+          retryable: true,
+        ),
+      );
+    }
+
     // 非主动关闭时尝试重连
     if (_connectionState != WsConnectionState.disconnected) {
       _triggerReconnect();
     }
   }
 
-  /// 触发重连（指数退避）(TODO-A7)
+  /// 触发重连（指数退避）(TRACKED(TD-001))
   void _triggerReconnect() {
-    if (_disposed) return; // TODO-A7: Check disposed
+    if (_disposed) return; // TRACKED(TD-001): Check disposed
     if (!_enableReconnect || !_enableReconnectLocal) {
       _log('⛔ Reconnect disabled');
       _updateConnectionState(WsConnectionState.failed);
@@ -1401,32 +1708,27 @@ class WebSocketChatServiceV2 {
       _log('❌ Max reconnect attempts reached');
       _updateConnectionState(WsConnectionState.failed);
 
-      // TODO-A7: Clear pending
+      // TRACKED(TD-001): Clear pending
       _pendingMessages.clear();
 
-      if (_messageStreamController != null) {
-        _safeAdd(
-          _messageStreamController!,
-          ErrorEvent(
-            code: 'MAX_RETRIES_EXCEEDED',
-            message: 'Unable to connect after $_maxReconnectAttempts attempts',
-            retryable: false,
-          ),
-        );
-      }
+      _broadcastErrorToActiveRequests(
+        ErrorEvent(
+          code: 'MAX_RETRIES_EXCEEDED',
+          message: 'Unable to connect after $_maxReconnectAttempts attempts',
+          retryable: false,
+        ),
+      );
       return;
     }
 
     _reconnectAttempts++;
     _updateConnectionState(WsConnectionState.reconnecting);
 
-    // TODO-A7: Jitter
-    final backoff = math.min(
-      math.pow(2, _reconnectAttempts).toInt(),
-      32,
-    );
-    final jitter = math.Random().nextInt(1000);
-    final delayMs = (backoff * 1000) + jitter;
+    final baseDelay =
+        _reconnectSchedule[_reconnectAttempts.clamp(1, _maxReconnectAttempts) -
+            1];
+    final jitterMs = math.Random().nextInt(250);
+    final delayMs = baseDelay.inMilliseconds + jitterMs;
 
     _log(
       '🔄 Reconnecting in ${delayMs}ms '
@@ -1435,7 +1737,7 @@ class WebSocketChatServiceV2 {
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
-      if (_disposed) return; // TODO-A7: Check disposed inside timer
+      if (_disposed) return; // TRACKED(TD-001): Check disposed inside timer
       if (_currentUserId != null) {
         _establishConnection(_currentUserId!, _currentToken);
       }
@@ -1444,36 +1746,113 @@ class WebSocketChatServiceV2 {
 
   /// 启动心跳
   void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
+    _stopHeartbeat();
+    _consecutiveHeartbeatFailures = 0;
+    _lastPongReceivedTime = DateTime.now();
+
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (timer) {
       if (isConnected) {
-        try {
-          _channel?.sink.add(json.encode({'type': 'ping'}));
-          _log('💓 Heartbeat sent');
-        } catch (e) {
-          _log('❌ Heartbeat failed: $e');
-          timer.cancel();
-          _handleConnectionClosed();
-        }
+        _sendPing();
       } else {
         timer.cancel();
       }
     });
   }
 
+  /// 发送Ping并启动超时计时器
+  void _sendPing() {
+    try {
+      _lastPingSentTime = DateTime.now();
+      _channel?.sink.add(json.encode({'type': 'ping'}));
+      _log('💓 Heartbeat sent');
+      _startHeartbeatTimeout();
+    } catch (e) {
+      _log('❌ Heartbeat failed: $e');
+      _handleHeartbeatFailure();
+    }
+  }
+
+  /// 启动心跳超时计时器
+  void _startHeartbeatTimeout() {
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () {
+      _log(
+          '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s',);
+      _handleHeartbeatFailure();
+    });
+  }
+
+  /// 处理收到Pong
+  void _onPongReceived() {
+    _heartbeatTimeoutTimer?.cancel();
+    _consecutiveHeartbeatFailures = 0;
+    _lastPongReceivedTime = DateTime.now();
+
+    // 计算RTT
+    if (_lastPingSentTime != null) {
+      final rtt = _lastPongReceivedTime!.difference(_lastPingSentTime!);
+      final metrics = HeartbeatMetrics(
+        rtt: rtt,
+        sentAt: _lastPingSentTime!,
+        receivedAt: _lastPongReceivedTime,
+      );
+      _heartbeatMetricsController.add(metrics);
+      _log('💓 Heartbeat OK (RTT: ${rtt.inMilliseconds}ms)');
+    }
+  }
+
+  /// 处理心跳失败
+  void _handleHeartbeatFailure() {
+    _heartbeatTimeoutTimer?.cancel();
+    _consecutiveHeartbeatFailures++;
+
+    // 发送失败指标
+    if (_lastPingSentTime != null) {
+      final metrics = HeartbeatMetrics(
+        rtt: Duration.zero,
+        sentAt: _lastPingSentTime!,
+        consecutiveFailures: _consecutiveHeartbeatFailures,
+      );
+      _heartbeatMetricsController.add(metrics);
+    }
+
+    _log(
+        '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures',);
+
+    if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
+      // 🔧 P0修复：流式消息活跃期间，如果最近收到过数据则跳过重连
+      // 避免心跳pong丢失导致正在接收的AI回复被中断
+      if (_isStreamActive && _lastStreamDataTime != null) {
+        final sinceLastData = DateTime.now().difference(_lastStreamDataTime!);
+        if (sinceLastData.inSeconds < 120) {
+          _log(
+              '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago',);
+          _consecutiveHeartbeatFailures =
+              0; // Reset to avoid immediate re-trigger
+          return;
+        }
+      }
+      _log('🔌 Too many heartbeat failures, triggering reconnect');
+      _handleConnectionClosed();
+    }
+  }
+
   /// 停止心跳
   void _stopHeartbeat() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimeoutTimer = null;
   }
 
-  /// 发送消息 (TODO-A7)
+  /// 发送消息 (TRACKED(TD-001))
   void _sendMessage(Map<String, dynamic> payload) {
     _log(
-        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',);
+      '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}',
+    );
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
-      // TODO-A7: Pending Limit
+      // TRACKED(TD-001): Pending limit
       if (_pendingMessages.length >= 50) {
         _pendingMessages.removeAt(0); // Drop oldest
       }
@@ -1615,11 +1994,41 @@ class WebSocketChatServiceV2 {
     _updateConnectionState(WsConnectionState.disconnected);
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_disposed) return;
+    if (state == AppLifecycleState.inactive) {
+      _log('📱 App inactive — keeping socket warm');
+      _stopHeartbeat();
+      return;
+    }
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _log('📱 App backgrounded — disconnecting WebSocket');
+      _stopHeartbeat();
+      _closeConnection();
+      _updateConnectionState(WsConnectionState.disconnected);
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _log('📱 App resumed — checking WebSocket');
+      if (_connectionState == WsConnectionState.disconnected &&
+          _currentUserId != null) {
+        _reconnectAttempts = 0;
+        _establishConnection(_currentUserId!, _currentToken);
+      }
+    }
+  }
+
   /// 释放资源
   void dispose() {
     if (_disposed) return;
     _log('🗑️  Disposing WebSocketChatServiceV2');
     _disposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _connGen++; // Invalidate any pending connection attempts
 
     unawaited(_socketSubscription?.cancel());
@@ -1632,17 +2041,25 @@ class WebSocketChatServiceV2 {
 
     _closeConnection();
 
-    if (_messageStreamController != null &&
-        !_messageStreamController!.isClosed) {
-      unawaited(_messageStreamController!.close());
+    for (final timer in _terminalFallbackTimers.values) {
+      timer.cancel();
     }
+    _terminalFallbackTimers.clear();
+    for (final controller in _requestControllers.values) {
+      _safeClose(controller);
+    }
+    _requestControllers.clear();
     if (!_connectionStateController.isClosed) {
       unawaited(_connectionStateController.close());
+    }
+    // ✅ Fix C1: Close heartbeat metrics controller to prevent memory leak
+    if (!_heartbeatMetricsController.isClosed) {
+      unawaited(_heartbeatMetricsController.close());
     }
     _pendingMessages.clear();
   }
 
-  // Helper for TODO-A10
+  // Helper for TRACKED(TD-001)
   void _log(String message) {
     if (kDebugMode) {
       var masked = message;

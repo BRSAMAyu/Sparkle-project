@@ -1,8 +1,8 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from uuid import uuid4
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 import pytest

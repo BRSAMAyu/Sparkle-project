@@ -34,16 +34,31 @@ class FocusStatsHeatmap extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: _buildLegend(context),
-        ),
-        const SizedBox(height: DS.md),
-        _buildHeatmapGrid(context),
-      ],
+    return SparkleStaggerItem(
+      index: 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: _buildLegend(context),
+          ),
+          const SizedBox(height: DS.md),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: DS.motionDuration(SparkleMotionToken.scene),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 10 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: _buildHeatmapGrid(context),
+          ),
+        ],
+      ),
     );
   }
 

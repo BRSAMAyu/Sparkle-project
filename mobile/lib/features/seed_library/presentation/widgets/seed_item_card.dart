@@ -9,12 +9,14 @@ class SeedItemCard extends StatelessWidget {
     required this.item,
     super.key,
     this.onTap,
+    this.onShare,
     this.onEdit,
     this.onDelete,
   });
 
   final SeedItem item;
   final VoidCallback? onTap;
+  final VoidCallback? onShare;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -152,11 +154,13 @@ class SeedItemCard extends StatelessWidget {
                 ),
 
                 // Action buttons
-                if (onEdit != null || onDelete != null)
+                if (onShare != null || onEdit != null || onDelete != null)
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert),
                     onSelected: (value) {
                       switch (value) {
+                        case 'share':
+                          onShare?.call();
                         case 'edit':
                           onEdit?.call();
                         case 'delete':
@@ -164,6 +168,17 @@ class SeedItemCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (context) => [
+                      if (onShare != null)
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share_outlined, size: 18),
+                              SizedBox(width: DS.spacing12),
+                              Text('分享'),
+                            ],
+                          ),
+                        ),
                       if (onEdit != null)
                         const PopupMenuItem(
                           value: 'edit',

@@ -8,10 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 import 'package:sparkle/features/translation/translation_routes.dart';
 
@@ -62,6 +62,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
   Id? _currentTranslationId;
   int _currentRating = 3;
   bool _isFavorited = false;
+  bool _isAddingToWordbook = false;
 
   Language _sourceLanguage = supportedLanguages[0];
   Language _targetLanguage = supportedLanguages[2];
@@ -85,39 +86,22 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     });
 
     try {
-      final apiClient = ref.read(apiClientProvider);
-      final response = await apiClient.post<Map<String, dynamic>>(
-        ApiEndpoints.translationTranslate,
-        data: {
-          'text': _inputController.text,
-          'source_language': _sourceLanguage.code,
-          'target_language': _targetLanguage.code,
-        },
+      final result = await ref.read(translationServiceProvider).translate(
+        text: _inputController.text,
+        sourceLang: _sourceLanguage.code,
+        targetLang: _targetLanguage.code,
       );
-
-      if (response.statusCode == 200) {
-        final data = response.data as Map<String, dynamic>;
-        final success = data['success'] as bool? ?? false;
-
-        if (success) {
-          final translatedText =
-              (data['translation'] ?? data['translated_text']) as String? ?? '';
-          setState(() {
-            _output = translatedText;
-            _currentRating = 3;
-            _isFavorited = false;
-          });
-          await _saveTranslation(translatedText);
-        } else {
-          final meta = data['meta'] as Map<String, dynamic>?;
-          setState(() {
-            _errorMessage =
-                (meta?['error'] ?? data['error_message']) as String? ?? '翻译失败';
-          });
-        }
+      if (result.success) {
+        final translatedText = result.translation;
+        setState(() {
+          _output = translatedText;
+          _currentRating = 3;
+          _isFavorited = false;
+        });
+        await _saveTranslation(translatedText);
       } else {
         setState(() {
-          _errorMessage = '网络错误: ${response.statusCode}';
+          _errorMessage = result.meta['error'] as String? ?? '翻译失败';
         });
       }
     } catch (e) {
@@ -220,6 +204,60 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     AppFeedback.info(context, '已复制到剪贴板');
   }
 
+  bool get _canAddToWordbook {
+    final text = _inputController.text.trim();
+    return RegExp(r"^[A-Za-z][A-Za-z'-]{0,48}$").hasMatch(text) &&
+        _output.trim().isNotEmpty;
+  }
+
+  Future<void> _addToWordbook() async {
+    if (!_canAddToWordbook || _isAddingToWordbook) {
+      return;
+    }
+
+    setState(() {
+      _isAddingToWordbook = true;
+    });
+    try {
+      final repository = ref.read(vocabularyRepositoryProvider);
+      final word = _inputController.text.trim().toLowerCase();
+      var definition = _output.trim();
+      String? phonetic;
+      String? partOfSpeech;
+
+      try {
+        final lookup = await repository.lookup(word);
+        final definitions = lookup['definitions'];
+        if (definitions is List && definitions.isNotEmpty) {
+          definition = definitions.join('; ');
+        }
+        phonetic = lookup['phonetic'] as String?;
+        partOfSpeech = lookup['pos'] as String?;
+      } catch (_) {}
+
+      await repository.addToWordbook(
+        word: word,
+        definition: definition,
+        phonetic: phonetic,
+        contextSentence: _output.trim(),
+        partOfSpeech: partOfSpeech,
+      );
+      if (mounted) {
+        AppFeedback.success(context, '已加入单词本');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '加入单词本失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToWordbook = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = DS.prismPurple;
@@ -252,9 +290,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       ],
       body: Column(
         children: [
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '输入长度',
@@ -338,7 +374,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   icon: const Icon(Icons.close_rounded),
                 ),
                 child: SizedBox(
-                  height: compact ? 220 : 250,
+                  height: (MediaQuery.sizeOf(context).height * 0.2).clamp(140.0, 250.0),
                   child: TextField(
                     controller: _inputController,
                     maxLines: null,
@@ -387,8 +423,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SizedBox(
-                                    height: 160,
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxHeight: 200),
                                     child: SingleChildScrollView(
                                       child: SelectableText(
                                         _output,
@@ -426,21 +462,53 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   children: [
                     inputCard,
                     const SizedBox(height: DS.spacing16),
-                    SizedBox(height: 360, child: outputCard),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 200),
+                      child: outputCard,
+                    ),
                   ],
                 );
               }
 
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: SizedBox(height: 410, child: inputCard)),
-                  const SizedBox(width: DS.spacing16),
-                  Expanded(child: SizedBox(height: 410, child: outputCard)),
-                ],
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 300),
+                        child: inputCard,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing16),
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 300),
+                        child: outputCard,
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
+          if (_canAddToWordbook) ...[
+            const SizedBox(height: DS.spacing16),
+            ToolSectionCard(
+              accentColor: accent,
+              title: '单词本联动',
+              subtitle: '单词翻译结果可以直接加入单词本，并进入后续复习链路。',
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SparkleButton(
+                  label: '加入单词本',
+                  onPressed: _isAddingToWordbook ? null : _addToWordbook,
+                  icon: const Icon(Icons.bookmark_add_rounded),
+                  loading: _isAddingToWordbook,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
       footer: LayoutBuilder(

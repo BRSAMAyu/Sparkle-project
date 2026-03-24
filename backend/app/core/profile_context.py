@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Profile Context - Sparkle 用户画像域统一读模型
 
@@ -15,7 +16,6 @@ ProfileContextService.get_profile_context() 获取此对象，
 写入路径：所有偏好变更通过 ProfileWriteService (不通过此类)
 """
 
-from __future__ import annotations
 
 from datetime import datetime
 from typing import Any

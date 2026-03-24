@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Review Appeal Service - Phase 2e
 
@@ -13,7 +14,7 @@ Review Appeal Service - Phase 2e
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -36,7 +37,7 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class AppealPriority(str, Enum):
     """申诉优先级"""

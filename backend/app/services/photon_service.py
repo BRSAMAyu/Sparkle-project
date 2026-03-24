@@ -2,7 +2,8 @@
 光子积分服务
 Photon Service - 处理光子积分的发放、扣除和余额查询
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -20,7 +21,7 @@ from app.models.user import User
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PhotonTransactionType:
@@ -29,8 +30,9 @@ class PhotonTransactionType:
     GRANT_DAILY_FIRST = "grant_daily_first"      # 每日首胜
     GRANT_CONTRACT = "grant_contract"            # 契约完成
     GRANT_BONUS = "grant_bonus"                  # 额外奖励
-    DEDUCT_CONTRACT = "deduct_contract"          # 契约失败扣除
-    DEDUCT_PENALTY = "deduct_penalty"            # 惩罚扣除
+    DEDUCT_CONTRACT = "deduct_contract_stake"    # 契约失败扣除
+    DEDUCT_CONTRACT_STAKE = "deduct_contract_stake"
+    DEDUCT_PENALTY = "penalty"                   # 惩罚扣除
     REFUND = "refund"                            # 退款
 
 
@@ -103,7 +105,10 @@ class PhotonService:
         amount: int,
         source: str,
         transaction_type: str = PhotonTransactionType.GRANT_ACHIEVEMENT,
-        extra_data: dict[str, Any] | None = None
+        extra_data: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+        related_item_id: str | None = None,
+        record_history: bool = False,
     ) -> dict[str, Any]:
         """
         发放光子积分
@@ -121,8 +126,22 @@ class PhotonService:
         if amount <= 0:
             raise ValueError(f"Amount must be positive, got {amount}")
 
+        transaction_metadata = extra_data if extra_data is not None else metadata
+
         # 使用内部方法更新余额（自动删除缓存）
         old_balance, new_balance, user = await self._update_balance(user_id, amount)
+
+        if record_history:
+            await self.record_transaction(
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount=amount,
+                balance_before=old_balance,
+                balance_after=new_balance,
+                source=source,
+                related_item_id=related_item_id,
+                extra_data=transaction_metadata,
+            )
 
         # 提交事务
         await self.db.commit()
@@ -141,7 +160,8 @@ class PhotonService:
             "new_balance": new_balance,
             "source": source,
             "transaction_type": transaction_type,
-            "timestamp": _utcnow()
+            "timestamp": _utcnow(),
+            "extra_data": transaction_metadata,
         }
 
     async def deduct_photons(
@@ -151,7 +171,10 @@ class PhotonService:
         reason: str,
         transaction_type: str = PhotonTransactionType.DEDUCT_CONTRACT,
         extra_data: dict[str, Any] | None = None,
-        allow_negative: bool = False
+        metadata: dict[str, Any] | None = None,
+        related_item_id: str | None = None,
+        allow_negative: bool = False,
+        record_history: bool = False,
     ) -> dict[str, Any]:
         """
         扣除光子积分
@@ -170,6 +193,8 @@ class PhotonService:
         if amount <= 0:
             raise ValueError(f"Amount must be positive, got {amount}")
 
+        transaction_metadata = extra_data if extra_data is not None else metadata
+
         # 先检查余额
         old_balance = await self.get_balance(user_id)
         if not allow_negative and old_balance < amount:
@@ -179,6 +204,18 @@ class PhotonService:
 
         # 使用内部方法更新余额（负数表示扣除，自动删除缓存）
         old_balance, new_balance, user = await self._update_balance(user_id, -amount)
+
+        if record_history:
+            await self.record_transaction(
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount=-amount,
+                balance_before=old_balance,
+                balance_after=new_balance,
+                source=reason,
+                related_item_id=related_item_id,
+                extra_data=transaction_metadata,
+            )
 
         # 提交事务
         await self.db.commit()
@@ -197,7 +234,8 @@ class PhotonService:
             "new_balance": new_balance,
             "reason": reason,
             "transaction_type": transaction_type,
-            "timestamp": _utcnow()
+            "timestamp": _utcnow(),
+            "extra_data": transaction_metadata,
         }
 
     async def get_balance(self, user_id: str) -> int:
@@ -271,15 +309,18 @@ class PhotonService:
 
         # 使用数据库事务确保原子性
         try:
-            # 先检查转出用户余额
-            from_balance = await self.get_balance(from_user_id)
-            if from_balance < amount:
-                raise ValueError(
-                    f"Insufficient photon balance: {from_balance} < {amount}"
-                )
+            owns_transaction = not self.db.in_transaction()
+            tx_context = self.db.begin() if owns_transaction else self.db.begin_nested()
 
             # 在单一事务中执行转账
-            async with self.db.begin():
+            async with tx_context:
+                # 先检查转出用户余额
+                from_balance = await self.get_balance(from_user_id)
+                if from_balance < amount:
+                    raise ValueError(
+                        f"Insufficient photon balance: {from_balance} < {amount}"
+                    )
+
                 # 扣除转出用户（使用内部方法，不提交）
                 old_from, new_from, _ = await self._update_balance(
                     from_user_id, -amount, delete_cache=False

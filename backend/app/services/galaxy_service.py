@@ -4,9 +4,10 @@ Refactored to delegate to specialized services:
 - KnowledgeRetrievalService: Search, Embedding
 - GalaxyStatsService: Spark, Stats, Prediction
 """
+from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -32,7 +33,7 @@ from app.services.galaxy.structure_service import GraphStructureService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GalaxyService:
@@ -47,6 +48,73 @@ class GalaxyService:
         # to avoid re-subscribing on every request if GalaxyService is transient.
         # Assuming GalaxyService is scoped or we rely on external worker.
         # For this task, we'll implement the handler method that can be registered.
+
+    async def _write_mastery_outbox_event(
+        self,
+        *,
+        aggregate_id: UUID,
+        event_type: str,
+        payload: dict[str, object],
+    ) -> None:
+        """Write mastery updates into the active CQRS outbox schema.
+
+        Prefer the current `event_outbox` table used by gateway/CQRS. Fall back to
+        the legacy `outbox_events` table only if that older schema is what's available.
+        """
+        event_outbox_exists = (
+            await self.db.execute(text("SELECT to_regclass('event_outbox')"))
+        ).scalar_one_or_none()
+        if event_outbox_exists:
+            seq_result = await self.db.execute(
+                text("""
+                    INSERT INTO event_sequence_counters (aggregate_type, aggregate_id, next_sequence)
+                    VALUES (:aggregate_type, :aggregate_id, 1)
+                    ON CONFLICT (aggregate_type, aggregate_id)
+                    DO UPDATE SET next_sequence = event_sequence_counters.next_sequence + 1
+                    RETURNING next_sequence
+                """),
+                {
+                    "aggregate_type": "galaxy_node_mastery",
+                    "aggregate_id": aggregate_id,
+                },
+            )
+            sequence_number = seq_result.scalar_one()
+
+            await self.db.execute(
+                text("""
+                    INSERT INTO event_outbox
+                    (aggregate_type, aggregate_id, event_type, event_version, sequence_number, payload, metadata)
+                    VALUES (:aggregate_type, :aggregate_id, :event_type, 1, :sequence_number, :payload, :metadata)
+                """),
+                {
+                    "aggregate_type": "galaxy_node_mastery",
+                    "aggregate_id": aggregate_id,
+                    "event_type": event_type,
+                    "sequence_number": sequence_number,
+                    "payload": json.dumps(payload),
+                    "metadata": json.dumps({"service": "galaxy_service"}),
+                },
+            )
+            return
+
+        legacy_outbox_exists = (
+            await self.db.execute(text("SELECT to_regclass('outbox_events')"))
+        ).scalar_one_or_none()
+        if legacy_outbox_exists:
+            await self.db.execute(
+                text("""
+                    INSERT INTO outbox_events (topic, payload, status, created_at, updated_at)
+                    VALUES (:topic, :payload, 'pending', :created_at, :created_at)
+                """),
+                {
+                    "topic": event_type,
+                    "payload": json.dumps(payload),
+                    "created_at": _utcnow(),
+                },
+            )
+            return
+
+        logger.warning("No compatible outbox table found; skipping mastery outbox event write")
 
     async def handle_error_created(self, event_data: dict):
         """
@@ -162,19 +230,29 @@ class GalaxyService:
         # 2. Get Stats (Parallelizable if needed, but fast enough)
         user_stats = await self.stats.calculate_user_stats(user_id)
 
-        # 3. Assemble
+        # 3. Build edge list (Flutter expects 'edges' field)
+        edge_list = [
+            NodeRelationInfo(
+                source_node_id=rel.source_node_id,
+                target_node_id=rel.target_node_id,
+                relation_type=rel.relation_type,
+                strength=rel.strength,
+            )
+            for rel in relations
+        ]
+
+        # 4. Calculate user flame intensity from stats
+        user_flame_intensity = 0.0
+        if user_stats.total_nodes > 0:
+            user_flame_intensity = min(1.0, user_stats.unlocked_count / max(1, user_stats.total_nodes))
+
+        # 5. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
             nodes=[NodeWithStatus.from_models(node, status) for node, status in nodes_with_status],
-            relations=[
-                NodeRelationInfo(
-                    source_node_id=rel.source_node_id,
-                    target_node_id=rel.target_node_id,
-                    relation_type=rel.relation_type,
-                    strength=rel.strength,
-                )
-                for rel in relations
-            ],
+            relations=edge_list,
+            edges=edge_list,  # Flutter expects this field name
             user_stats=user_stats,
+            user_flame_intensity=user_flame_intensity,  # Flutter expects 0.0-1.0
         )
 
     async def get_galaxy_graph_viewport(
@@ -403,65 +481,164 @@ class GalaxyService:
         revision: int | None = None,
     ):
         """
-        Update node mastery with Outbox pattern and version checking to prevent race conditions
+        Update node mastery with Outbox pattern and atomic revision checking to prevent race conditions.
+
+        Race condition fix (C1): Uses atomic UPDATE with WHERE revision = expected_revision
+        and RETURNING clause to detect conflicts in a single database operation.
         """
 
         def _to_utc_naive(dt: datetime | None) -> datetime | None:
             if dt is None:
                 return None
             if dt.tzinfo is not None:
-                return dt.astimezone(UTC).replace(tzinfo=None)
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
             return dt
 
-        # 1. Get current state from user_node_status
-        query_current = text("""
-            SELECT mastery_score, updated_at, revision
-            FROM user_node_status
-            WHERE user_id = :user_id AND node_id = :node_id
-        """)
-        result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
-        current = result.fetchone()
+        update_time = _to_utc_naive(version) or _utcnow()
 
-        current_revision = 0
-        if not current:
-            # If status doesn't exist, create one (initial unlock)
-            old_mastery = 0
-            # We skip version check for new entries or use a very old one
-        else:
-            old_mastery = current[0]
-            current_updated_at = _to_utc_naive(current[1])
-            current_revision = current[2] or 0
-
-            # 2. Conflict Resolution (Logical Clock Priority)
-            if revision is not None:
-                # Client provided a revision, ensure we are not overwriting a newer one (or equal, if not idempotent)
-                # Ideally, client revision should be base_revision + 1.
-                # If client revision < current_revision, it's a stale update.
-                if revision <= current_revision:
-                    logger.warning(
-                        f"Ignoring stale update (Revision) for node {node_id}. Client {revision} <= Server {current_revision}"
-                    )
-                    return {"success": False, "reason": "stale_revision", "current_revision": current_revision}
-
-            # Fallback to Physical Clock if revision not provided (Legacy)
-            elif version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
-                logger.warning(
-                    f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
-                )
-                return {"success": False, "reason": "stale_update", "current_revision": current_revision}
-
-        # Calculate new revision
-        new_revision = current_revision + 1
-        if revision is not None and revision > current_revision:
-            # Adopt client revision if it's logically ahead (or simply increment server's)
-            # To maintain strict monotonicity, usually server authoritative revision = max(client, server) + 1
-            # But here we just want to increment.
-            new_revision = current_revision + 1
-
-        # 3. Transactional Update
         try:
+            # === ATOMIC UPDATE WITH OPTIMISTIC LOCKING ===
+            # If revision is provided, use atomic conditional UPDATE to prevent race conditions
+            if revision is not None:
+                # Atomic update: WHERE revision = expected_revision, returns row only if matched
+                atomic_update = text("""
+                    UPDATE user_node_status
+                    SET mastery_score = :mastery,
+                        updated_at = :updated_at,
+                        last_study_at = :updated_at,
+                        is_unlocked = true,
+                        revision = revision + 1
+                    WHERE user_id = :user_id
+                      AND node_id = :node_id
+                      AND revision = :expected_revision
+                    RETURNING mastery_score, revision
+                """)
+                result = await self.db.execute(atomic_update, {
+                    "user_id": user_id,
+                    "node_id": node_id,
+                    "mastery": new_mastery,
+                    "expected_revision": revision,
+                    "updated_at": update_time,
+                })
+                row = result.fetchone()
+
+                if not row:
+                    # Revision mismatch - concurrent update occurred
+                    # Fetch current revision for conflict response
+                    current_query = text("""
+                        SELECT revision FROM user_node_status
+                        WHERE user_id = :user_id AND node_id = :node_id
+                    """)
+                    current_result = await self.db.execute(current_query, {"user_id": user_id, "node_id": node_id})
+                    current_row = current_result.fetchone()
+                    current_revision = current_row[0] if current_row else 0
+
+                    logger.warning(
+                        f"Atomic update conflict for node {node_id}. Expected revision {revision}, current is {current_revision}"
+                    )
+                    return {"success": False, "reason": "conflict", "current_revision": current_revision}
+
+                # Get old mastery for audit log
+                old_mastery_query = text("""
+                    SELECT mastery_score FROM user_node_status
+                    WHERE user_id = :user_id AND node_id = :node_id
+                """)
+                old_result = await self.db.execute(old_mastery_query, {"user_id": user_id, "node_id": node_id})
+                old_row = old_result.fetchone()
+                old_mastery = old_row[0] if old_row else 0
+                new_revision = row[1]
+
+            else:
+                # === FALLBACK: UPSERT WITHOUT OPTIMISTIC LOCKING (legacy path) ===
+                # Get current state first (for audit log and conflict detection via timestamp)
+                query_current = text("""
+                    SELECT mastery_score, updated_at, revision
+                    FROM user_node_status
+                    WHERE user_id = :user_id AND node_id = :node_id
+                """)
+                result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
+                current = result.fetchone()
+
+                if current:
+                    old_mastery = current[0]
+                    current_updated_at = _to_utc_naive(current[1])
+                    current_revision = current[2] or 0
+
+                    # Fallback to Physical Clock conflict detection (Legacy)
+                    if version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
+                        logger.warning(
+                            f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}"
+                        )
+                        return {"success": False, "reason": "stale_update", "current_revision": current_revision}
+                else:
+                    old_mastery = 0
+                    current_revision = 0
+
+                new_revision = current_revision + 1
+                bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
+
+                # UPSERT pattern for non-revision cases
+                upsert_query = text("""
+                    INSERT INTO user_node_status (
+                        user_id,
+                        node_id,
+                        mastery_score,
+                        bkt_mastery_prob,
+                        bkt_last_updated_at,
+                        updated_at,
+                        last_study_at,
+                        is_unlocked,
+                        revision,
+                        total_minutes,
+                        total_study_minutes,
+                        last_interacted_at,
+                        created_at,
+                        study_count,
+                        is_collapsed,
+                        is_favorite,
+                        decay_paused
+                    )
+                    VALUES (
+                        :user_id,
+                        :node_id,
+                        :mastery,
+                        :bkt_mastery_prob,
+                        :updated_at,
+                        :updated_at,
+                        :updated_at,
+                        true,
+                        :revision,
+                        0,
+                        0,
+                        :updated_at,
+                        :updated_at,
+                        0,
+                        false,
+                        false,
+                        false
+                    )
+                    ON CONFLICT (user_id, node_id) DO UPDATE SET
+                        mastery_score = EXCLUDED.mastery_score,
+                        updated_at = EXCLUDED.updated_at,
+                        last_study_at = EXCLUDED.updated_at,
+                        is_unlocked = true,
+                        revision = EXCLUDED.revision
+                """)
+
+                await self.db.execute(
+                    upsert_query,
+                    {
+                        "user_id": user_id,
+                        "node_id": node_id,
+                        "mastery": new_mastery,
+                        "bkt_mastery_prob": bkt_mastery_prob,
+                        "updated_at": update_time,
+                        "revision": new_revision,
+                    },
+                )
+
+            # === COMMON: Update Global Stats, Audit Log, Outbox ===
             # A. Update Global Stats (Collaborative Sparking)
-            # Increment global count if this is the first time the user unlocks it
             is_new_spark = old_mastery == 0 and new_mastery > 0
             if is_new_spark:
                 global_update = text("""
@@ -471,33 +648,7 @@ class GalaxyService:
                 """)
                 await self.db.execute(global_update, {"node_id": node_id})
 
-            # B. Update Individual Data (UPSERT pattern)
-            # Added revision column update
-            upsert_query = text("""
-                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision, total_minutes, total_study_minutes, last_interacted_at, created_at, study_count, is_collapsed, is_favorite, decay_paused)
-                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision, 0, 0, :updated_at, :updated_at, 0, false, false, false)
-                ON CONFLICT (user_id, node_id) DO UPDATE SET
-                    mastery_score = EXCLUDED.mastery_score,
-                    updated_at = EXCLUDED.updated_at,
-                    last_study_at = EXCLUDED.updated_at,
-                    is_unlocked = true,
-                    revision = EXCLUDED.revision
-            """)
-
-            update_time = _to_utc_naive(version) or _utcnow()
-
-            await self.db.execute(
-                upsert_query,
-                {
-                    "user_id": user_id,
-                    "node_id": node_id,
-                    "mastery": new_mastery,
-                    "updated_at": update_time,
-                    "revision": new_revision,
-                },
-            )
-
-            # C. Audit Log
+            # B. Audit Log
             audit_query = text("""
                 INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
                 VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)
@@ -528,25 +679,15 @@ class GalaxyService:
                 # Since status is re-fetched in hybrid_search, we might not need to invalidate nodes cache!
 
             # 5. Add to Outbox
-            outbox_query = text("""
-                INSERT INTO outbox_events (aggregate_id, event_type, payload, status, created_at)
-                VALUES (:aggregate_id, :event_type, :payload, 'pending', :created_at)
-            """)
-            await self.db.execute(
-                outbox_query,
-                {
-                    "aggregate_id": user_id,
-                    "event_type": "galaxy.node.mastery_updated",
-                    "payload": json.dumps(
-                        {
-                            "user_id": str(user_id),
-                            "node_id": str(node_id),
-                            "mastery_score": new_mastery,
-                            "revision": new_revision,
-                            "timestamp": _utcnow().isoformat(),
-                        }
-                    ),
-                    "created_at": _utcnow(),
+            await self._write_mastery_outbox_event(
+                aggregate_id=user_id,
+                event_type="galaxy.node.mastery_updated",
+                payload={
+                    "user_id": str(user_id),
+                    "node_id": str(node_id),
+                    "mastery_score": new_mastery,
+                    "revision": new_revision,
+                    "timestamp": _utcnow().isoformat(),
                 },
             )
 
@@ -617,7 +758,7 @@ class GalaxyService:
                     for sim in similar:
                         if sim.id != node_id:
                             logger.warning(f"Potential duplicate found for {node_id}: {sim.id} ({sim.name})")
-                            # TODO: Create Notification for user to merge
+                            # TRACKED(TD-006): Create Notification for user to merge
                             # notification_service.create_system_notification(...)
                             break
 

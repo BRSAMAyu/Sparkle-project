@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import uuid4
 
 from app.models.event import TrackingEvent
@@ -6,7 +6,7 @@ from app.services.state_estimator_service import StateEstimatorService, StateWin
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _event(event_type, payload=None, received_at=None):

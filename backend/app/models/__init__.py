@@ -9,20 +9,24 @@ from app.models.achievement import (
     ContractStatus,
     GalaxySkin,
     SparkContract,
+    StreakDayStatus,
     StudyBuddy,
     UserAchievement,
     UserGalaxySkin,
+    UserStreakDay,
     UserStreakStats,
     UserTitle,
     VisualEffectType,
 )
 from app.models.analytics import UserDailyMetric
+from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.base import GUID, BaseModel
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.capsule_generation_job import CapsuleGenerationJob, GenerationType
 from app.models.capsule_generation_job import JobStatus as CapsuleJobStatus
+from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
@@ -51,6 +55,7 @@ from app.models.compliance import (
 )
 from app.models.context_pack import ContextBudgetProfile, ContextPackFeedback, ContextPackRun
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
+from app.models.custom_expert import CustomExpertProfile, CustomExpertSource, CustomExpertTeam
 from app.models.decision_record import DecisionRecord
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
@@ -132,6 +137,7 @@ from app.models.seed_content import (
 from app.models.semantic_memory import SemanticLink, StrategyNode
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.subject import Subject
+from app.models.calendar_event import CalendarEvent, EventSource
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
@@ -141,11 +147,22 @@ from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.user_state import UserStateSnapshot
 from app.models.vocabulary import DictionaryEntry, WordBook
+from app.models.visual_element import (
+    UserVisualConfig,
+    UserVisualElement,
+    VisualElement,
+    VisualElementRarity,
+    VisualElementType,
+    VisualElementUnlockSource,
+)
 
 __all__ = [
     "BaseModel",
     "GUID",
     "User",
+    "UserSession",
+    "AuthAuditLog",
+    "AuthAuditAction",
     "PushPreference",
     "UserDevice",
     "Task",
@@ -199,12 +216,16 @@ __all__ = [
     "PersonaSnapshot",
     "CuriosityCapsule",
     "DepthLevel",
+    "CustomExpertProfile",
+    "CustomExpertTeam",
+    "CustomExpertSource",
     "CapsuleFeedback",
     "FeedbackCategory",
     "CapsuleFavorite",
     "CapsuleGenerationJob",
     "CapsuleJobStatus",
     "GenerationType",
+    "CandidateActionFeedback",
     # Focus
     "FocusSession",
     "FocusType",
@@ -273,6 +294,8 @@ __all__ = [
     "AchievementRarity",
     "AchievementType",
     "VisualEffectType",
+    "StreakDayStatus",
+    "UserStreakDay",
     "UserStreakStats",
     "SparkContract",
     "ContractStatus",
@@ -307,4 +330,14 @@ __all__ = [
     "ShopPurchase",
     "UserConsumable",
     "PhotonTransactionHistory",
+    # Visual Element System
+    "VisualElement",
+    "VisualElementType",
+    "VisualElementRarity",
+    "VisualElementUnlockSource",
+    "UserVisualElement",
+    "UserVisualConfig",
+    # Calendar Events
+    "CalendarEvent",
+    "EventSource",
 ]

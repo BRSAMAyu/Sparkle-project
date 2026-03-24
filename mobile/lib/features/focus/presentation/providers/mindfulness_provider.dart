@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/context_service.dart';
@@ -57,7 +59,8 @@ class MindfulnessState {
   final bool isPaused;
   final int translationRequestCount; // Translation requests in this session
   final String lastTranslationGranularity; // 'word', 'sentence', 'page'
-  final List<CandidateActionModel> candidateActions; // Predicted actions from signals pipeline
+  final List<CandidateActionModel>
+      candidateActions; // Predicted actions from signals pipeline
 
   MindfulnessState copyWith({
     bool? isActive,
@@ -85,8 +88,10 @@ class MindfulnessState {
         currentTask: clearTask ? null : (currentTask ?? this.currentTask),
         exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
         isPaused: isPaused ?? this.isPaused,
-        translationRequestCount: translationRequestCount ?? this.translationRequestCount,
-        lastTranslationGranularity: lastTranslationGranularity ?? this.lastTranslationGranularity,
+        translationRequestCount:
+            translationRequestCount ?? this.translationRequestCount,
+        lastTranslationGranularity:
+            lastTranslationGranularity ?? this.lastTranslationGranularity,
         candidateActions: candidateActions ?? this.candidateActions,
       );
 }
@@ -97,11 +102,15 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     this._focusRepository,
     this._predictionService,
     this._taskRepository,
+    this._eventStream,
+    this._predictionAttribution,
   ) : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
   final PredictionService _predictionService;
   final TaskRepository _taskRepository;
+  final AppEventStreamService _eventStream;
+  final PredictionAttributionService _predictionAttribution;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -112,12 +121,14 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
     // Call backend to start task if it's pending
     if (task.status == TaskStatus.pending) {
-      _taskRepository.startTask(task.id).then((_) {
-        debugPrint('✅ Task started in backend: ${task.id}');
-      }).catchError((e) {
-        debugPrint('❌ Failed to start task in backend: $e');
-        // We don't block the UI here, assuming optimistic success or retries
-      });
+      unawaited(
+        _taskRepository.startTask(task.id).then((_) {
+          debugPrint('✅ Task started in backend: ${task.id}');
+        }).catchError((Object error) {
+          debugPrint('❌ Failed to start task in backend: $error');
+          // We don't block the UI here, assuming optimistic success or retries
+        }),
+      );
     }
 
     state = MindfulnessState(
@@ -185,7 +196,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
   /// 确认退出（完成三重确认后）
   void confirmExit() {
-    stop();
+    unawaited(stop());
   }
 
   /// 停止正念模式
@@ -199,7 +210,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
             state.interruptionCount > 3 ? 'interrupted' : 'completed';
 
         debugPrint(
-            '📤 Logging focus session: ${durationMinutes}min, status=$status',);
+          '📤 Logging focus session: ${durationMinutes}min, status=$status',
+        );
 
         final response = await _focusRepository.logFocusSession(
           startTime: state.startTime!,
@@ -210,9 +222,36 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
         );
 
         debugPrint(
-            '✅ Focus session logged: ${response.rewards.flameEarned} flames earned',);
+          '✅ Focus session logged: ${response.response.rewards.flameEarned} flames earned',
+        );
 
-        // TODO: Show reward feedback to user
+        final linkedPrediction =
+            await _predictionAttribution.consumeForExecution(
+          executionType: 'focus',
+              entityType: 'focus_session',
+              entityId: response.response.id,
+        );
+        await _eventStream.recordEntityExecution(
+          entityType: 'focus_session',
+          entityId: response.response.id,
+          actionType: 'complete_focus_session',
+          source: 'mindfulness',
+          payload: {
+            'duration_minutes': durationMinutes,
+            'status': status,
+            if (state.currentTask?.id != null) 'task_id': state.currentTask!.id,
+            if (linkedPrediction != null) ...{
+              'prediction_id': linkedPrediction['prediction_id'],
+              'candidate_id': linkedPrediction['candidate_id'],
+              'prediction_action_type': linkedPrediction['action_type'],
+              'prediction_surface': linkedPrediction['surface'],
+              'prediction_horizon': linkedPrediction['horizon'],
+              'prediction_source': linkedPrediction['source'],
+            },
+          },
+        );
+
+        // TRACKED(TD-004): Show reward feedback to user
         // Can emit an event or update state to trigger UI update
       } catch (e) {
         // Log error but don't block exit
@@ -230,13 +269,16 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           translationGranularity: state.lastTranslationGranularity,
         );
 
+        final focusContext = envelope['focus'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
         debugPrint('📊 Context: interruptions=${state.interruptionCount}, '
             'translations=${state.translationRequestCount}, '
-            'completion=${envelope['focus']['completion']}');
+            'completion=${focusContext['completion']}');
 
         // PR-15: Call prediction API and store candidates in state
         final candidates = await _predictionService.requestPredictions(
-          userId: state.currentTask?.userId ?? 'unknown', // TODO: Get actual user ID from auth
+          userId: state.currentTask?.userId ??
+              'unknown', // TRACKED(TD-004): Get actual user ID from auth
           contextEnvelope: envelope,
         );
 
@@ -306,5 +348,13 @@ final mindfulnessProvider =
   final focusRepository = ref.watch(focusRepositoryProvider);
   final predictionService = ref.watch(predictionServiceProvider);
   final taskRepository = ref.watch(taskRepositoryProvider);
-  return MindfulnessNotifier(focusRepository, predictionService, taskRepository);
+  final eventStream = ref.watch(appEventStreamServiceProvider);
+  final predictionAttribution = ref.watch(predictionAttributionServiceProvider);
+  return MindfulnessNotifier(
+    focusRepository,
+    predictionService,
+    taskRepository,
+    eventStream,
+    predictionAttribution,
+  );
 });

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Review feedback types
 enum ReviewFeedbackType {
@@ -11,13 +14,24 @@ enum ReviewFeedbackType {
 
 /// Specificity level options
 enum SpecificityLevel {
-  tooVague('too_vague', '太笼统'),
-  appropriate('appropriate', '适中'),
-  tooDetailed('too_detailed', '太详细');
+  tooVague('too_vague'),
+  appropriate('appropriate'),
+  tooDetailed('too_detailed');
 
-  const SpecificityLevel(this.value, this.label);
+  const SpecificityLevel(this.value);
   final String value;
-  final String label;
+
+  String label(BuildContext context) {
+    final l10n = context.l10n;
+    switch (this) {
+      case SpecificityLevel.tooVague:
+        return l10n.reviewSpecificityTooVague;
+      case SpecificityLevel.appropriate:
+        return l10n.reviewSpecificityAppropriate;
+      case SpecificityLevel.tooDetailed:
+        return l10n.reviewSpecificityTooDetailed;
+    }
+  }
 }
 
 /// Review feedback data
@@ -78,7 +92,7 @@ class ReviewRatingDialog extends StatefulWidget {
     int? initialRating,
     bool showDetailedFeedback = false,
   }) =>
-      showModalBottomSheet<ReviewFeedbackData>(
+      showSensoryModalBottomSheet<ReviewFeedbackData>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
@@ -106,14 +120,14 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   bool _isSubmitting = false;
   bool _showAdvancedOptions = false;
 
-  final List<String> _availableTags = [
-    '内容准确',
-    '解释清晰',
-    '建议实用',
-    '需要改进',
-    '太严格',
-    '太宽松',
-  ];
+  List<String> _availableTags(BuildContext context) => [
+        context.l10n.reviewTagAccurate,
+        context.l10n.reviewTagClear,
+        context.l10n.reviewTagPractical,
+        context.l10n.reviewTagNeedsImprovement,
+        context.l10n.reviewTagTooStrict,
+        context.l10n.reviewTagTooLenient,
+      ];
 
   @override
   void initState() {
@@ -134,7 +148,17 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surface,
+            Color.alphaBlend(
+              DS.info.withValues(alpha: 0.03),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
         borderRadius:
             const BorderRadius.vertical(top: Radius.circular(DS.spacing20)),
       ),
@@ -162,7 +186,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
             // Title
             Text(
-              '为这次审查评分',
+              context.l10n.reviewRatingTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -170,7 +194,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '您的反馈将帮助我们改进审查质量',
+              context.l10n.reviewRatingSubtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -210,7 +234,9 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             if (!widget.showDetailedFeedback)
               Center(
                 child: SparkleButton.ghost(
-                  label: _showAdvancedOptions ? '收起详细选项' : '更多反馈选项',
+                  label: _showAdvancedOptions
+                      ? context.l10n.reviewRatingLessOptions
+                      : context.l10n.reviewRatingMoreOptions,
                   icon: Icon(
                     _showAdvancedOptions
                         ? Icons.expand_less
@@ -234,8 +260,15 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
             // Cancel button
             SparkleButton(
-              label: '取消',
-              onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+              label: context.l10n.cancel,
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.tap,
+                      );
+                      Navigator.pop(context);
+                    },
               variant: ButtonVariant.ghost,
               expand: true,
             ),
@@ -253,6 +286,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
 
           return GestureDetector(
             onTap: () {
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
               setState(() {
                 _rating = starValue;
                 // Auto-set helpful based on rating
@@ -288,9 +322,10 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               theme: theme,
               icon: Icons.thumb_up_outlined,
               selectedIcon: Icons.thumb_up,
-              label: '有帮助',
+              label: context.l10n.reviewRatingHelpful,
               isSelected: _wasHelpful ?? false,
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 setState(() {
                   _wasHelpful = _wasHelpful ?? false ? null : true;
                 });
@@ -303,10 +338,11 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               theme: theme,
               icon: Icons.thumb_down_outlined,
               selectedIcon: Icons.thumb_down,
-              label: '没帮助',
+              label: context.l10n.reviewRatingNotHelpful,
               isSelected: _wasHelpful == false,
               isNegative: true,
               onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 setState(() {
                   _wasHelpful = _wasHelpful == false ? null : false;
                 });
@@ -372,7 +408,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '审查是否准确？',
+            context.l10n.reviewRatingAccuracyTitle,
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
@@ -381,10 +417,11 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               Expanded(
                 child: _buildChoiceChip(
                   theme: theme,
-                  label: '准确',
+                  label: context.l10n.reviewRatingAccurate,
                   icon: Icons.check_circle_outline,
                   isSelected: _wasAccurate ?? false,
                   onTap: () {
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                     setState(() {
                       _wasAccurate = _wasAccurate ?? false ? null : true;
                     });
@@ -395,11 +432,12 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               Expanded(
                 child: _buildChoiceChip(
                   theme: theme,
-                  label: '不准确',
+                  label: context.l10n.reviewRatingInaccurate,
                   icon: Icons.error_outline,
                   isSelected: _wasAccurate == false,
                   isNegative: true,
                   onTap: () {
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                     setState(() {
                       _wasAccurate = _wasAccurate == false ? null : false;
                     });
@@ -415,7 +453,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '审查的详细程度',
+            context.l10n.reviewRatingSpecificityTitle,
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
@@ -434,9 +472,12 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                       ),
                       child: _buildChoiceChip(
                         theme: theme,
-                        label: level.label,
+                        label: level.label(context),
                         isSelected: _specificityLevel == level,
                         onTap: () {
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          );
                           setState(() {
                             _specificityLevel =
                                 _specificityLevel == level ? null : level;
@@ -514,7 +555,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '哪些地方不准确？',
+            context.l10n.reviewRatingInaccuratePointsTitle,
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
@@ -524,7 +565,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 child: TextField(
                   controller: _inaccuratePointController,
                   decoration: InputDecoration(
-                    hintText: '输入不准确的具体内容',
+                    hintText: context.l10n.reviewRatingInaccuratePointHint,
                     isDense: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(DS.spacing8),
@@ -538,7 +579,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 onPressed: () => _addInaccuratePoint(
                   _inaccuratePointController.text,
                 ),
-                semanticLabel: '添加不准确项',
+                semanticLabel: context.l10n.reviewRatingAddInaccuratePoint,
                 variant: ButtonVariant.ghost,
               ),
             ],
@@ -572,6 +613,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   void _addInaccuratePoint(String point) {
     final trimmed = point.trim();
     if (trimmed.isNotEmpty && !_inaccuratePoints.contains(trimmed)) {
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
       setState(() {
         _inaccuratePoints.add(trimmed);
         _inaccuratePointController.clear();
@@ -583,19 +625,20 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '标签（可选）',
+            context.l10n.reviewRatingTagsTitle,
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
           Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: _availableTags.map((tag) {
+            children: _availableTags(context).map((tag) {
               final isSelected = _selectedTags.contains(tag);
               return FilterChip(
                 label: Text(tag),
                 selected: isSelected,
                 onSelected: (selected) {
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                   setState(() {
                     if (selected) {
                       _selectedTags.add(tag);
@@ -614,7 +657,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '其他意见（可选）',
+            context.l10n.reviewRatingCommentsTitle,
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
@@ -622,7 +665,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             controller: _commentsController,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: '请分享您对这次审查的看法...',
+              hintText: context.l10n.reviewRatingCommentsHint,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(DS.spacing12),
               ),
@@ -635,7 +678,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     final hasValidFeedback = _rating != null || _wasHelpful != null;
 
     return SparkleButton(
-      label: '提交反馈',
+      label: context.l10n.reviewRatingSubmit,
       onPressed: hasValidFeedback && !_isSubmitting ? _handleSubmit : null,
       loading: _isSubmitting,
       disabled: !hasValidFeedback || _isSubmitting,
@@ -664,14 +707,17 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     );
 
     try {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
       final success = await widget.onSubmit(feedback);
 
       if (mounted) {
         if (success) {
+          await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
           Navigator.pop(context, feedback);
-          AppFeedback.success(context, '感谢您的反馈！');
+          AppFeedback.success(context, context.l10n.reviewRatingSubmitSuccess);
         } else {
-          AppFeedback.error(context, '提交失败，请重试');
+          await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
+          AppFeedback.error(context, context.l10n.reviewRatingSubmitFailed);
         }
       }
     } finally {

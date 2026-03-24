@@ -1,7 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
@@ -14,6 +22,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(knowledgeDetailProvider(nodeId));
+    final l10n = context.l10n;
 
     return detailAsync.when(
       loading: () => const GraphiteScaffold(
@@ -22,12 +31,17 @@ class KnowledgeDetailScreen extends ConsumerWidget {
       ),
       error: (error, stack) => GraphiteScaffold(
         role: SparklePageRole.content,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: BackButton(onPressed: () => context.pop()),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '知识节点加载失败',
+                l10n.knowledgeLoadFailed,
                 style: DS.titleLarge.copyWith(color: DS.textPrimary),
               ),
               const SizedBox(height: DS.lg),
@@ -38,7 +52,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.lg),
               SparkleButton.primary(
-                label: '重新加载',
+                label: l10n.knowledgeReload,
                 onPressed: () =>
                     ref.invalidate(knowledgeDetailProvider(nodeId)),
               ),
@@ -57,22 +71,26 @@ class KnowledgeDetailScreen extends ConsumerWidget {
   ) {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
       floatingActionButton: SparkleButton(
-        label: '生成学习路径',
+        label: l10n.knowledgeGeneratePath,
         icon: const Icon(Icons.timeline),
         onPressed: () {
-          showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-            builder: (context) => GraphiteModalSurface(
-              title: '生成学习路径',
-              child: LearningPathDialog(
-                targetNodeId: nodeId,
-                targetNodeName: detail.node.name,
+          unawaited(
+            showSensoryModalBottomSheet<void>(
+              context: context,
+              useRootNavigator: true,
+              isScrollControlled: true,
+              backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+              builder: (context) => GraphiteModalSurface(
+                title: l10n.knowledgeGeneratePath,
+                child: LearningPathDialog(
+                  targetNodeId: nodeId,
+                  targetNodeName: detail.node.name,
+                ),
               ),
             ),
           );
@@ -104,6 +122,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                   ref.read(toggleFavoriteProvider(nodeId));
                 },
               ),
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () => unawaited(_showShareSheet(context, detail)),
+              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: DecoratedBox(
@@ -113,9 +136,15 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.primaryColor, 0.28,)!,
+                        DS.surfaceCanvas,
+                        sectorStyle.primaryColor,
+                        0.28,
+                      )!,
                       Color.lerp(
-                          DS.surfaceCanvas, sectorStyle.glowColor, 0.16,)!,
+                        DS.surfaceCanvas,
+                        sectorStyle.glowColor,
+                        0.16,
+                      )!,
                       DS.surfaceCanvas,
                     ],
                   ),
@@ -175,9 +204,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Mastery Progress Card
           SliverToBoxAdapter(
             child: ContentConstraint(
-              child: _MasteryCard(
-                stats: detail.userStats,
-                sectorColor: sectorStyle.primaryColor,
+              child: SparkleStaggerItem(
+                index: 0,
+                child: _MasteryCard(
+                  stats: detail.userStats,
+                  sectorColor: sectorStyle.primaryColor,
+                ),
               ),
             ),
           ),
@@ -187,11 +219,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               detail.node.description!.isNotEmpty)
             SliverToBoxAdapter(
               child: ContentConstraint(
-                child: _SectionCard(
-                  title: '描述',
-                  child: Text(
-                    detail.node.description!,
-                    style: theme.textTheme.bodyMedium,
+                child: SparkleStaggerItem(
+                  index: 1,
+                  child: _SectionCard(
+                    title: context.l10n.knowledgeDescription,
+                    child: Text(
+                      detail.node.description!,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ),
                 ),
               ),
@@ -201,20 +236,23 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           if (detail.node.keywords.isNotEmpty)
             SliverToBoxAdapter(
               child: ContentConstraint(
-                child: _SectionCard(
-                  title: '关键词',
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: detail.node.keywords
-                        .map(
-                          (keyword) => Chip(
-                            label: Text(keyword),
-                            backgroundColor:
-                                sectorStyle.glowColor.withAlpha(50),
-                          ),
-                        )
-                        .toList(),
+                child: SparkleStaggerItem(
+                  index: 2,
+                  child: _SectionCard(
+                    title: context.l10n.knowledgeKeywords,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: detail.node.keywords
+                          .map(
+                            (keyword) => Chip(
+                              label: Text(keyword),
+                              backgroundColor:
+                                  sectorStyle.glowColor.withAlpha(50),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
               ),
@@ -225,7 +263,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关知识',
+                  title: context.l10n.knowledgeRelatedNodes,
                   child: Column(
                     children: detail.relations.map((relation) {
                       final isSource = relation.sourceNodeId == nodeId;
@@ -245,10 +283,84 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         subtitle: Text(relation.relationLabel),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
-                          context.push('/galaxy/node/$relatedNodeId');
+                          unawaited(context.push('/galaxy/node/$relatedNodeId'));
                         },
                       );
                     }).toList(),
+                  ),
+                ),
+              ),
+            ),
+
+          if (detail.learningPathSnapshot != null)
+            SliverToBoxAdapter(
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '最近生成的学习路径',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(DS.sm),
+                        decoration: BoxDecoration(
+                          color: DS.surfacePanel,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          detail.learningPathSnapshot!.mode == 'task_path'
+                              ? '当前为轻量任务路径，不占用计划额度。'
+                              : '当前为完整学习计划路径。',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.md),
+                      SparkleMarkdown(
+                        content: detail.learningPathSnapshot!.summary,
+                        textColor: DS.textPrimary,
+                        codeBackgroundColor: DS.surfacePanel,
+                        linkColor: DS.brandPrimary,
+                        fontSize: theme.textTheme.bodyMedium?.fontSize ?? 14,
+                        contentRole: SparkleMarkdownRole.knowledgeSummary,
+                      ),
+                      if (detail.learningPathSnapshot!.tasks.isNotEmpty) ...[
+                        const SizedBox(height: DS.md),
+                        Text(
+                          '已生成任务',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: DS.xs),
+                        ...detail.learningPathSnapshot!.tasks.map(
+                          (task) => Container(
+                            margin: const EdgeInsets.only(bottom: DS.spacing8),
+                            decoration: BoxDecoration(
+                              color: DS.surfacePanel,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing12,
+                                vertical: DS.spacing4,
+                              ),
+                              leading: const Icon(Icons.task_alt),
+                              title: Text(
+                                task.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text('约 ${task.estimatedMinutes} 分钟'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () =>
+                                  unawaited(context.push('/tasks/${task.id}')),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -259,7 +371,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关任务',
+                  title: context.l10n.knowledgeRelatedTasks,
                   child: Column(
                     children: detail.relatedTasks
                         .map(
@@ -271,10 +383,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                                   : DS.brandPrimary,
                             ),
                             title: Text(task.title),
-                            subtitle: Text('预计 ${task.estimatedMinutes} 分钟'),
+                            subtitle: Text(
+                                '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}',),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
-                              context.push('/tasks/${task.id}');
+                              unawaited(context.push('/tasks/${task.id}'));
                             },
                           ),
                         )
@@ -289,7 +402,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '相关计划',
+                  title: context.l10n.knowledgeRelatedPlans,
                   child: Column(
                     children: detail.relatedPlans
                         .map(
@@ -302,14 +415,16 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(plan.title),
                             subtitle: Text(
-                              plan.planType == 'sprint' ? '冲刺计划' : '成长计划',
+                              plan.planType == 'sprint'
+                                  ? context.l10n.planTypeSprint
+                                  : context.l10n.planTypeGrowth,
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               if (plan.planType == 'sprint') {
-                                context.push('/sprint');
+                                unawaited(context.push('/sprint'));
                               } else {
-                                context.push('/growth');
+                                unawaited(context.push('/growth'));
                               }
                             },
                           ),
@@ -326,6 +441,33 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showShareSheet(
+    BuildContext context,
+    KnowledgeDetailResponse detail,
+  ) async {
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.knowledgeNode,
+        resourceId: detail.node.id,
+        title: detail.node.name,
+        subtitle:
+            detail.node.nameEn ?? detail.node.description?.split('\n').first,
+        description: detail.node.description,
+        metadata: {
+          'mastery': detail.userStats.masteryProgress,
+          'category': SectorConfig.getLocalizedName(detail.node.sector),
+          'parent_path': detail.node.subjectName,
+          'connections': detail.relations.length,
+          'learning_time': detail.userStats.totalStudyMinutes,
+          'study_count': detail.userStats.studyCount,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
     );
   }
 
@@ -369,7 +511,7 @@ class _MasteryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '掌握度',
+                    context.l10n.knowledgeMastery,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Container(
@@ -420,18 +562,18 @@ class _MasteryCard extends StatelessWidget {
                   _StatItem(
                     icon: Icons.timer,
                     value: '${stats.totalStudyMinutes}',
-                    label: '学习分钟',
+                    label: context.l10n.knowledgeStudyMinutes,
                   ),
                   _StatItem(
                     icon: Icons.repeat,
                     value: '${stats.studyCount}',
-                    label: '学习次数',
+                    label: context.l10n.knowledgeStudyCount,
                   ),
                   if (stats.nextReviewAt != null)
                     _StatItem(
                       icon: Icons.event,
-                      value: _formatReviewDate(stats.nextReviewAt!),
-                      label: '下次复习',
+                      value: _formatReviewDate(context, stats.nextReviewAt!),
+                      label: context.l10n.knowledgeNextReview,
                     ),
                 ],
               ),
@@ -454,7 +596,7 @@ class _MasteryCard extends StatelessWidget {
                       ),
                       const SizedBox(width: DS.smConst),
                       Text(
-                        '遗忘衰减已暂停',
+                        context.l10n.knowledgeDecayPaused,
                         style: DS.bodyMedium.copyWith(color: DS.textPrimary),
                       ),
                     ],
@@ -474,13 +616,13 @@ class _MasteryCard extends StatelessWidget {
     return DS.brandPrimary;
   }
 
-  String _formatReviewDate(DateTime date) {
+  String _formatReviewDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final diff = date.difference(now);
-    if (diff.inDays == 0) return '今天';
-    if (diff.inDays == 1) return '明天';
-    if (diff.inDays < 7) return '${diff.inDays}天后';
-    return '${(diff.inDays / 7).floor()}周后';
+    if (diff.inDays == 0) return context.l10n.knowledgeToday;
+    if (diff.inDays == 1) return context.l10n.knowledgeTomorrow;
+    if (diff.inDays < 7) return context.l10n.knowledgeDaysLater(diff.inDays);
+    return context.l10n.knowledgeWeeksLater((diff.inDays / 7).floor());
   }
 }
 
@@ -524,16 +666,16 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Padding(
-          padding: const EdgeInsets.all(DS.md),
+          padding: const EdgeInsets.all(DS.spacing12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GraphiteSectionTitle(
                 title: title,
               ),
-              const SizedBox(height: DS.md),
+              const SizedBox(height: DS.spacing12),
               child,
             ],
           ),

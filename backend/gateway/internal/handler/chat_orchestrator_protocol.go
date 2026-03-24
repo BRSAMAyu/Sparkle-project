@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
@@ -33,6 +32,7 @@ var jsonMetadataKeys = map[string]bool{
 	"state_change_event":     true,
 	"visualization":          true,
 	"selected_experts":       true,
+	"answer_experts":         true,
 	"routing_strategy":       true,
 	"fallback_reason":        true,
 	"route_confidence":       true,
@@ -49,7 +49,7 @@ var jsonMetadataKeys = map[string]bool{
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
-func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
+func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if jsonMetadataKeys[key] {
@@ -81,7 +81,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
-		"session_id":     sessionID,
+		"session_id":     resp.SessionId, // Use proto field directly
 		"metadata":       metadata,
 	}
 	if ts := responseEventTimeMillis(resp); ts > 0 {
@@ -249,14 +249,18 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 		}
 		result["intervention"] = intervention
 	default:
-		// If no content field is set, add type "metadata" for responses with only metadata
-		if _, hasType := result["type"]; !hasType {
+		// Finish-only responses are terminal stream markers for WebSocket clients.
+		if resp.FinishReason != agentv1.FinishReason_NULL {
+			result["type"] = "done"
+		} else if _, hasType := result["type"]; !hasType {
+			// If no content field is set, add type "metadata" for responses with only metadata
 			result["type"] = "metadata"
 		}
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {
 		result["finish_reason"] = resp.FinishReason.String()
+		metadata["done"] = true
 	}
 
 	return result
@@ -485,7 +489,7 @@ func generateRequestID() string {
 	return "req_" + strings.ReplaceAll(id.String(), "-", "")
 }
 
-func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
+func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
 	wsMsg := &pbws.WebSocketMessage{}
 	if err := proto.Unmarshal(msg, wsMsg); err != nil {
 		log.Printf("Failed to unmarshal protobuf message: %v", err)
@@ -493,7 +497,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byt
 	}
 
 	// Extract trace context
-	// TODO: Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
+	// TRACKED(TD-009): Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
 	ctx := baseCtx
 	ctx, span := tracer.Start(ctx, "HandleMessage.Proto")
 	span.SetAttributes(
@@ -503,7 +507,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byt
 	)
 	defer span.End()
 
-	responder := newProtobufResponder(conn, wsMsg, ctx)
+	responder := newProtobufResponder(writer, wsMsg, ctx)
 
 	switch wsMsg.Type {
 	case "chat":

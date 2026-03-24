@@ -1,7 +1,11 @@
 # Unified Sparkle Docker Infrastructure - Stabilized Communication
 services:
   sparkle_db:
-    image: pgvector/pgvector:pg16
+    build:
+      context: .
+      dockerfile: docker/pgvector-age.Dockerfile
+      args:
+        AGE_REF: PG16/v1.6.0-rc0
     container_name: sparkle_db
     ports:
       - "${SPARKLE_DB_PORT:-5432}:5432"
@@ -12,10 +16,30 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  sparkle_age_init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_age_init
+    env_file:
+      - .env
+    command: python scripts/init_age_extension.py
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - SERVICE_ROLE=age-init
+    volumes:
+      - ./backend:/app
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis/redis-stack-server:latest
@@ -53,8 +77,14 @@ services:
     ports:
       - "${SPARKLE_API_PORT:-8000}:8000"
     environment:
+      # Override localhost URLs from .env with correct Docker service names
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=api
+      - RUN_MIGRATIONS=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
@@ -62,9 +92,23 @@ services:
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     user: root
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   sparkle_agent:
     build:
@@ -77,17 +121,37 @@ services:
     ports:
       - "${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
+      # Override localhost URLs from .env with correct Docker service names
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_ROLE=grpc
     volumes:
       - ./backend:/app
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # LLM processing requires more memory
+        reservations:
+          memory: 1G
+    # Probe gRPC port directly: a TCP connection to 50051 means the server is up
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',50051)); s.close()\" 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   celery_worker:
     build:
@@ -95,21 +159,80 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
     environment:
+      # Override localhost URLs from .env with correct Docker service names
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=celery
     depends_on:
       sparkle_db:
         condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+
+  celery_glm_batch_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=celery-glm-batch
+      - GLM_BATCH_MAX_CONCURRENCY=6
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d glm-batch@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
 
   sparkle_gateway:
-    build: 
+    build:
       context: ./backend/gateway
       dockerfile: Dockerfile
     container_name: sparkle_gateway
@@ -118,7 +241,11 @@ services:
     ports:
       - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      # Explicit container-internal addresses (override .env localhost values)
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
       - REDIS_URL=sparkle_redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - AGENT_ADDRESS=sparkle_agent:50051
@@ -140,16 +267,93 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # ==================== Monitoring Simplified ====================
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.4.1
     container_name: sparkle_tempo
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./monitoring/tempo.yaml:/etc/tempo.yaml
     ports:
       - "4317:4317"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sparkle_prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/celery_alerts.yml:/etc/prometheus/celery_alerts.yml:ro
+      - ./monitoring/sparkle_slo_alerts.yml:/etc/prometheus/sparkle_slo_alerts.yml:ro
+      - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - sparkle_api
+      - sparkle_gateway
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: sparkle_alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: sparkle_loki
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: sparkle_promtail
+    command: [ "-config.file=/etc/promtail/config.yml" ]
+    volumes:
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sparkle_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana-dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
 
 volumes:
   sparkle_minio_data:

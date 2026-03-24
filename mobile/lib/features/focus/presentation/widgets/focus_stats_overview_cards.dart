@@ -52,7 +52,7 @@ class FocusStatsOverviewCards extends StatelessWidget {
           return Column(
             children: [
               for (var i = 0; i < cards.length; i++) ...[
-                cards[i],
+                SparkleStaggerItem(index: i, child: cards[i]),
                 if (i != cards.length - 1) const SizedBox(height: DS.md),
               ],
             ],
@@ -62,7 +62,9 @@ class FocusStatsOverviewCards extends StatelessWidget {
         return Row(
           children: [
             for (var i = 0; i < cards.length; i++) ...[
-              Expanded(child: cards[i]),
+              Expanded(
+                child: SparkleStaggerItem(index: i, child: cards[i]),
+              ),
               if (i != cards.length - 1) const SizedBox(width: DS.md),
             ],
           ],

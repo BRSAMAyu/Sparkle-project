@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
 
@@ -113,6 +116,11 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                 size: 36,
                 icon: const Icon(Icons.close, size: 20),
                 onPressed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
                   // Record implicit ignore for all visible candidates
                   for (final candidate in visibleCandidates) {
                     _recordFeedback(candidate, 'ignore');
@@ -126,11 +134,14 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
           const SizedBox(height: DS.md),
 
           // Candidate cards
-          ...visibleCandidates.map(
-            (candidate) => _CandidateCard(
-              candidate: candidate,
-              onAccept: () => _handleAccept(candidate),
-              onDismiss: () => _handleDismiss(candidate),
+          ...visibleCandidates.indexed.map(
+            (entry) => SparkleStaggerItem(
+              index: entry.$1,
+              child: _CandidateCard(
+                candidate: entry.$2,
+                onAccept: () => _handleAccept(entry.$2),
+                onDismiss: () => _handleDismiss(entry.$2),
+              ),
             ),
           ),
 
@@ -150,12 +161,18 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
   }
 
   void _handleAccept(CandidateActionModel candidate) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+    );
     _recordFeedback(candidate, 'accept');
     widget.onAccept?.call(candidate);
     Navigator.of(context).pop();
   }
 
   void _handleDismiss(CandidateActionModel candidate) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     setState(() {
       _dismissedCandidates.add(candidate.id);
     });

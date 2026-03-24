@@ -7,6 +7,7 @@ Responsibilities:
 3. Support re-plan mechanism for version conflicts
 4. Support multi-agent collaboration output (Phase 3)
 """
+from __future__ import annotations
 import uuid
 from typing import Any
 
@@ -166,6 +167,8 @@ class LangGraphPlanner:
         configurable: dict[str, Any] = {"thread_id": session_id}
         if stream_callback:
             configurable["stream_callback"] = stream_callback
+        if self.redis:
+            configurable["redis_client"] = self.redis
         config = {"configurable": configurable}
         final_state = None
 
@@ -179,15 +182,12 @@ class LangGraphPlanner:
 
         except Exception as e:
             logger.error(f"LangGraph planning error: {e}")
-            # Return empty plan on error
-            return ExecutablePlan(
-                schema_version="5.0",
-                snapshot_id=snapshot.snapshot_id if snapshot else "",
-                context_version=snapshot.context_versions.get("tasks", "v0") if snapshot else "v0",
-                source="langgraph",
-                confidence=0.0,
-                rationale=f"Planning failed: {str(e)}",
-                tool_calls=[],
+            return self.build_fallback_plan(
+                message=message,
+                snapshot=snapshot,
+                user_id=user_id,
+                session_id=session_id,
+                rationale=f"Planning failed, synthesized fallback: {str(e)}",
                 plan_version=plan_version,
             )
 
@@ -212,9 +212,25 @@ class LangGraphPlanner:
         for key, value in planning_constraints.items():
             if key == "_meta":
                 continue
-            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes"}:
+            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes", "cognitive_policy_signals"}:
                 continue
             lines.append(f"- {key}: {value}")
+            
+        cognitive_signals = planning_constraints.get("cognitive_policy_signals")
+        if isinstance(cognitive_signals, list) and cognitive_signals:
+            lines.append("用户认知和行为约束（重点考虑）：")
+            for sig in cognitive_signals:
+                if sig == "task.time_estimate.add_buffer_30pct":
+                    lines.append("- 时间预估缓冲: 将所有任务的预估时间增加约30%，避免用户挫败感。")
+                elif sig == "task.difficulty.start_easy":
+                    lines.append("- 难度排序偏好: 优先安排简单、低阻力的任务，帮助用户启动。")
+                elif sig == "plan.milestone.add_checkpoint":
+                    lines.append("- 里程碑检查点: 在计划执行中自动插入检查点（Checkpoint）进行复盘。")
+                elif sig == "llm.feedback.emphasize_progress":
+                    lines.append("- 互动反馈偏好: 强调用户的进步和正向反馈，增强对话语气中的鼓励性。")
+                else:
+                    lines.append(f"- {sig}")
+
         return "\n".join(lines)
 
     @staticmethod
@@ -304,6 +320,15 @@ class LangGraphPlanner:
                         point_of_no_return=tool_name in self.PONR_TOOLS
                     ))
 
+        if not tool_calls:
+            synthesized = self._synthesize_plan_tool_calls(
+                langgraph_state=langgraph_state,
+                session_id=session_id,
+            )
+            if synthesized:
+                tool_calls.extend(synthesized)
+                rationale = "Generated via LangGraph (tool plan synthesized)"
+
         # Phase 5: Infer DAG dependencies and build execution order
         tool_calls = self._infer_dependencies(tool_calls)
         execution_order = self._build_execution_order(tool_calls)
@@ -311,6 +336,8 @@ class LangGraphPlanner:
         # Get active_agent for rationale
         active_agent = langgraph_state.get("active_agent")
         if active_agent:
+            if collaboration_mode == "single" and not agents_involved:
+                agents_involved = [str(active_agent)]
             if collaboration_mode != "single" and agents_involved:
                 rationale = f"Planned via collaboration: {', '.join(agents_involved)}"
             else:
@@ -353,6 +380,142 @@ class LangGraphPlanner:
             execution_order=execution_order,
             total_steps=len(tool_calls),
         )
+
+    def _synthesize_plan_tool_calls(
+        self,
+        *,
+        langgraph_state: SparkleState,
+        session_id: str,
+    ) -> list[ToolCallSpec]:
+        """Build a minimal executable plan when LangGraph only returns semantic intent.
+
+        Some planning runs currently produce a valid planning rationale but no
+        structured tool calls. Instead of failing validation and tripping the
+        circuit breaker, synthesize the smallest useful chain:
+        `create_plan -> generate_tasks_for_plan`.
+        """
+        topic = self._extract_plan_topic(langgraph_state)
+        if not topic:
+            return []
+
+        create_id = f"call_{uuid.uuid4().hex[:8]}"
+        taskgen_id = f"call_{uuid.uuid4().hex[:8]}"
+        title = self._build_plan_title(topic)
+        difficulty = self._infer_difficulty(topic)
+
+        return [
+            ToolCallSpec(
+                id=create_id,
+                name="create_plan",
+                params={
+                    "title": title,
+                    "plan_type": "growth",
+                    "description": f"围绕“{topic}”自动生成的学习计划",
+                },
+                timeout_ms=15000,
+                priority="high",
+                allow_retry=True,
+                max_retries=2,
+                point_of_no_return=False,
+            ),
+            ToolCallSpec(
+                id=taskgen_id,
+                name="generate_tasks_for_plan",
+                params={
+                    "plan_id": "__pending__",
+                    "topic": topic,
+                    "difficulty": difficulty,
+                    "task_count": 5,
+                },
+                timeout_ms=30000,
+                priority="high",
+                allow_retry=True,
+                max_retries=2,
+                point_of_no_return=False,
+                depends_on=[create_id],
+            ),
+        ]
+
+    def build_fallback_plan(
+        self,
+        *,
+        message: str,
+        snapshot: StateSnapshot,
+        user_id: str,
+        session_id: str,
+        rationale: str,
+        plan_version: int = 1,
+    ) -> ExecutablePlan:
+        fallback_state: SparkleState = {
+            "messages": [HumanMessage(content=message)],
+            "user_id": user_id,
+            "session_id": session_id,
+            "user_profile": None,
+            "current_plan": None,
+            "planning_status": None,
+            "next_step": None,
+            "intent_data": None,
+            "active_agent": "study_planner",
+            "collaboration_mode": "single",
+            "collaboration_agents": ["study_planner"],
+            "collaboration_order": [],
+            "collaboration_index": 0,
+            "mode_name": None,
+            "mode_constraints": None,
+            "synthesis_policy": None,
+            "review_feedback": None,
+            "require_approval": False,
+            "approval_context": None,
+            "approval_result": None,
+        }
+        fallback_plan = self._convert_to_plan(fallback_state, snapshot, user_id, session_id)
+        # Keep fallback plans on the same executable lane as native LangGraph plans
+        # so downstream tool execution does not silently skip them.
+        fallback_plan.source = "langgraph"
+        fallback_plan.confidence = max(fallback_plan.confidence, 0.35)
+        fallback_plan.rationale = rationale
+        fallback_plan.plan_version = plan_version
+        return fallback_plan
+
+    @staticmethod
+    def _extract_plan_topic(langgraph_state: SparkleState) -> str:
+        messages = langgraph_state.get("messages", [])
+        user_messages: list[str] = []
+        for msg in messages:
+            msg_type = getattr(msg, "type", "")
+            if msg_type == "human":
+                content = getattr(msg, "content", "")
+                if isinstance(content, str) and content.strip():
+                    user_messages.append(content.strip())
+
+        if not user_messages:
+            return ""
+
+        latest = user_messages[-1]
+        normalized = " ".join(latest.replace("，", " ").replace("。", " ").split())
+        for marker in ("掌握", "学习", "学会", "制定", "计划", "目标是", "目标"):
+            normalized = normalized.replace(marker, " ")
+        normalized = " ".join(normalized.split())
+        if not normalized:
+            normalized = latest.strip()
+        return normalized[:60]
+
+    @staticmethod
+    def _build_plan_title(topic: str) -> str:
+        compact = topic[:24].strip()
+        if not compact:
+            return "AI 学习计划"
+        return f"{compact}学习计划"
+
+    @staticmethod
+    def _infer_difficulty(topic: str) -> str:
+        hard_markers = ("项目", "系统", "进阶", "高阶", "实战")
+        easy_markers = ("入门", "基础", "起步")
+        if any(marker in topic for marker in hard_markers):
+            return "hard"
+        if any(marker in topic for marker in easy_markers):
+            return "easy"
+        return "medium"
 
     # ------------------------------------------------------------------
     # Phase 5: DAG dependency inference & topological sort

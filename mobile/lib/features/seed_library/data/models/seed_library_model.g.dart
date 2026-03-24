@@ -24,6 +24,10 @@ SeedLibrary _$SeedLibraryFromJson(Map<String, dynamic> json) => SeedLibrary(
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       extraMetadata: json['extra_metadata'] as Map<String, dynamic>?,
       qualityScore: (json['quality_score'] as num?)?.toDouble(),
+      systemQualityScore: (json['system_quality_score'] as num?)?.toDouble(),
+      userRatingAvg: (json['user_rating_avg'] as num?)?.toDouble(),
+      userRatingCount: (json['user_rating_count'] as num?)?.toInt(),
+      currentUserRating: (json['current_user_rating'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
@@ -41,6 +45,10 @@ Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
       'is_featured': instance.isFeatured,
       'usage_count': instance.usageCount,
       'quality_score': instance.qualityScore,
+      'system_quality_score': instance.systemQualityScore,
+      'user_rating_avg': instance.userRatingAvg,
+      'user_rating_count': instance.userRatingCount,
+      'current_user_rating': instance.currentUserRating,
       'item_count': instance.itemCount,
       'subscriber_count': instance.subscriberCount,
       'created_at': instance.createdAt.toIso8601String(),
@@ -213,4 +221,32 @@ Map<String, dynamic> _$UpdateLibraryRequestToJson(
       'tags': instance.tags,
       'extra_metadata': instance.extraMetadata,
       'quality_score': instance.qualityScore,
+    };
+
+UpdateSubscriptionRequest _$UpdateSubscriptionRequestFromJson(
+        Map<String, dynamic> json) =>
+    UpdateSubscriptionRequest(
+      isEnabled: json['is_enabled'] as bool?,
+      priority: (json['priority'] as num?)?.toInt(),
+      notes: json['notes'] as String?,
+    );
+
+Map<String, dynamic> _$UpdateSubscriptionRequestToJson(
+        UpdateSubscriptionRequest instance) =>
+    <String, dynamic>{
+      'is_enabled': instance.isEnabled,
+      'priority': instance.priority,
+      'notes': instance.notes,
+    };
+
+RateLibraryRequest _$RateLibraryRequestFromJson(Map<String, dynamic> json) =>
+    RateLibraryRequest(
+      score: (json['score'] as num).toDouble(),
+      comment: json['comment'] as String?,
+    );
+
+Map<String, dynamic> _$RateLibraryRequestToJson(RateLibraryRequest instance) =>
+    <String, dynamic>{
+      'score': instance.score,
+      'comment': instance.comment,
     };

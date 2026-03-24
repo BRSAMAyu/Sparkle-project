@@ -11,6 +11,7 @@ class DashboardCardIds {
   static const String nextActions = 'next_actions';
   static const String curiosity = 'curiosity';
   static const String longTermPlan = 'long_term_plan';
+  static const String seedLibrary = 'seed_library';
 
   static const List<String> all = [
     focus,
@@ -20,12 +21,14 @@ class DashboardCardIds {
     nextActions,
     curiosity,
     longTermPlan,
+    seedLibrary,
   ];
 
   static const List<String> defaultOrder = [
     calendar,
     tools,
     curiosity,
+    seedLibrary,
     longTermPlan,
     nextActions,
     focus,
@@ -38,6 +41,7 @@ class DashboardCardIds {
     calendar,
     tools,
     curiosity,
+    seedLibrary,
     longTermPlan,
   ];
 }

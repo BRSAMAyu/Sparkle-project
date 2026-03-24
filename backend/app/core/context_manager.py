@@ -1,13 +1,14 @@
+from __future__ import annotations
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
@@ -22,7 +23,7 @@ from app.services.user_service import UserService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class CognitiveContext(BaseModel):
@@ -101,14 +102,23 @@ class ContextOrchestrator:
 
         uid = UUID(user_id)
 
+        # ✅ Fix C3: Create independent DB sessions for each parallel task
+        # This prevents shared session issues when tasks run concurrently
+        async def _with_session(coro):
+            """Execute coroutine in an independent DB session."""
+            # Create a new session factory using the same bind
+            session_factory = async_sessionmaker(bind=self.db.bind, expire_on_commit=False)
+            async with session_factory() as session:
+                return await coro(session)
+
         # Parallel Execution of independent context gathering
         # We protect against individual service failures to return at least partial context
         results = await asyncio.gather(
-            self._get_profile_context(uid),
-            self._get_error_profile(uid),
-            self._get_task_profile(uid),
-            self._get_user_metrics(uid),
-            self._get_community_profile(uid),
+            _with_session(lambda db: self._get_profile_context(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_error_profile(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_task_profile(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_user_metrics(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_community_profile(uid, db)),  # type: ignore[misc]
             return_exceptions=True
         )
 
@@ -220,8 +230,10 @@ class ContextOrchestrator:
             "recent": recent
         }
 
-    async def _get_error_profile(self, user_id: UUID) -> dict[str, Any]:
+    async def _get_error_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Error Book stats and recent errors"""
+        # Use provided session or fall back to self.db
+        db = db_session if db_session is not None else self.db
         # 1. Stats
         stats = await self.error_book_service.get_review_stats(user_id)
 
@@ -247,11 +259,13 @@ class ContextOrchestrator:
             "recent": recent_errors_data
         }
 
-    async def _get_task_profile(self, user_id: UUID) -> dict[str, Any]:
+    async def _get_task_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Active Tasks and Focus Stats"""
+        # Use provided session or fall back to self.db
+        db = db_session if db_session is not None else self.db
         # 1. Active Tasks
         tasks, _ = await TaskService.get_multi(
-            self.db,
+            db,
             user_id,
             TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
         )
@@ -267,7 +281,7 @@ class ContextOrchestrator:
             })
 
         # 2. Focus Stats
-        focus = await focus_service.get_today_stats(self.db, user_id)
+        focus = await focus_service.get_today_stats(db, user_id)
 
         return {
             "tasks": active_tasks_data,
@@ -290,11 +304,11 @@ class ContextOrchestrator:
             "metrics": analytics
         }
 
-    async def _get_user_metrics(self, user_id: UUID) -> dict[str, Any]:
+    async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch analytics metrics only."""
         return await self.user_service.get_analytics_summary(user_id)
 
-    async def _get_profile_context(self, user_id: UUID):
+    async def _get_profile_context(self, user_id: UUID, db_session: AsyncSession | None = None):
         return await self.profile_context_service.get_profile_context(user_id)
 
     async def _get_preference_version(self, user_id: str) -> int:
@@ -309,8 +323,10 @@ class ContextOrchestrator:
             logger.warning(f"Failed to get preference version for {user_id}: {e}")
             return 0
 
-    async def _get_community_profile(self, user_id: UUID) -> dict[str, Any]:
-        membership_result = await self.db.execute(
+    async def _get_community_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
+        # Use provided session or fall back to self.db
+        db = db_session if db_session is not None else self.db
+        membership_result = await db.execute(
             select(GroupMember, Group)
             .join(Group, Group.id == GroupMember.group_id)
             .where(

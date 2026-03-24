@@ -2,6 +2,7 @@
 Plan Service
 Handle plan business logic
 """
+from __future__ import annotations
 from uuid import UUID
 
 from loguru import logger
@@ -230,7 +231,7 @@ class PlanService:
             and_(
                 Plan.id == plan_id,
                 Plan.user_id == user_id,
-                not Plan.is_active
+                Plan.is_active.is_(False),
             )
         )
         result = await db.execute(query)
@@ -333,7 +334,7 @@ class PlanService:
         """
         query = (
             select(Plan)
-            .where(and_(Plan.user_id == user_id, not Plan.is_active))
+            .where(and_(Plan.user_id == user_id, Plan.is_active.is_(False)))
             .order_by(desc(Plan.updated_at))
             .limit(limit)
         )

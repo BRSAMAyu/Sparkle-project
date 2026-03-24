@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -48,6 +52,9 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
           SparkleIconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+              );
               unawaited(ref.read(generationJobsProvider.notifier).fetchJobs());
             },
             variant: ButtonVariant.ghost,
@@ -68,42 +75,35 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
                       final job = jobs[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing16),
-                        child: _JobCard(job: job),
+                        child: SparkleStaggerItem(
+                          index: index,
+                          child: _JobCard(job: job),
+                        ),
                       );
                     },
                   ),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) =>
-              Center(child: Text(l10n.capsuleLoadFailed('$err'))),
+          loading: () => LoadingIndicator.circular(
+            showText: true,
+            loadingText: '正在同步生成任务...',
+          ),
+          error: (err, stack) => CustomErrorWidget.page(
+            context: context,
+            title: '生成任务加载失败',
+            message: l10n.capsuleLoadFailed('$err'),
+            onRetry: () => ref.read(generationJobsProvider.notifier).fetchJobs(),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() => Builder(
-        builder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.task_alt_outlined,
-              size: 64,
-              color: DS.brandPrimary.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              context.l10n.capsuleNoJobs,
-              style: TextStyle(color: DS.textPrimary, fontSize: 16),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              context.l10n.capsuleNoJobsSubtitle,
-              style: TextStyle(color: DS.textSecondary, fontSize: 14),
-            ),
-          ],
+        builder: (context) => EmptyState(
+          title: context.l10n.capsuleNoJobs,
+          description: context.l10n.capsuleNoJobsSubtitle,
+          icon: Icons.task_alt_outlined,
         ),
-      ),
       );
 }
 
@@ -281,7 +281,7 @@ class _JobCard extends StatelessWidget {
                       avatar: const Icon(Icons.check_circle_outline, size: 16),
                       backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
                       onPressed: () {
-                        // TODO: 导航到胶囊详情
+                        // TRACKED(TD-005): 导航到胶囊详情
                       },
                     ),
                   )
@@ -298,7 +298,7 @@ class _JobCard extends StatelessWidget {
                   child: SparkleButton.outline(
                     label: l10n.commonRetry,
                     onPressed: () {
-                      // TODO: 重试
+                      // TRACKED(TD-005): 重试
                     },
                     icon: const Icon(Icons.refresh),
                   ),
@@ -311,7 +311,7 @@ class _JobCard extends StatelessWidget {
                   child: SparkleButton.primary(
                     label: l10n.capsuleViewCapsules,
                     onPressed: () {
-                      // TODO: 查看生成的胶囊
+                      // TRACKED(TD-005): 查看生成的胶囊
                     },
                     icon: const Icon(Icons.visibility),
                   ),

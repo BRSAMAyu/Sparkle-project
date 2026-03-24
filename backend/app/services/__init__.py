@@ -1,16 +1,6 @@
-from .embedding_service import embedding_service
-from .expansion_service import ExpansionService
-from .feedback_service import feedback_service
-from .focus_service import focus_service
-from .galaxy.retrieval_service import KnowledgeRetrievalService
-from .galaxy.stats_service import GalaxyStatsService
-from .galaxy.structure_service import GraphStructureService
-from .galaxy_service import GalaxyService
-from .llm_service import llm_service
-from .notification_service import notification_service
-from .plan_service import PlanService
-from .rerank_service import rerank_service
-from .task_guide_service import task_guide_service
-from .task_service import TaskService
-from .tool_history_service import ToolHistoryService
-from .user_service import UserService
+"""Service package.
+
+Keep imports local in modules to avoid circular dependencies during app startup.
+"""
+
+__all__: list[str] = []

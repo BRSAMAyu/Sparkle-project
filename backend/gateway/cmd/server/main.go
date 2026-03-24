@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/infra/logger"
@@ -62,15 +66,60 @@ func main() {
 	cqrs := initCQRS(ctx, cfg, dbh, rdb, services, logger.Log)
 	startCQRSWorkers(cqrs, logger.Log)
 
-	proxy, err := setupProxy(cfg)
+	proxy, err := setupProxy(cfg, logger.Log)
 	if err != nil {
 		log.Fatalf("Failed to setup backend proxy: %v", err)
 	}
 
-	r := setupRouter(cfg, dbh, rdb, services, handlers, cqrs, proxy)
+	r := setupRouter(cfg, dbh, rdb, services, handlers, cqrs, proxy, agentClient, logger.Log)
 
-	logger.Log.Info("Gateway starting", zap.String("port", cfg.Port))
-	if err := r.Run(":" + cfg.Port); err != nil {
-		logger.Log.Fatal("Failed to run server", zap.Error(err))
+	// --- Graceful shutdown ---
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
 	}
+
+	// Start server in a goroutine
+	go func() {
+		logger.Log.Info("Gateway starting", zap.String("port", cfg.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Log.Fatal("Failed to run server", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	<-quit.Done()
+
+	shutdownTimeout := 15
+	if cfg.ShutdownTimeoutSeconds > 0 {
+		shutdownTimeout = cfg.ShutdownTimeoutSeconds
+	}
+	logger.Log.Info("Shutdown signal received, draining connections...",
+		zap.Int("timeout_seconds", shutdownTimeout))
+
+	// Phase 1: Drain WebSocket connections (1/3 of total timeout)
+	drainTimeout := time.Duration(shutdownTimeout/3) * time.Second
+	if drainTimeout < 2*time.Second {
+		drainTimeout = 2 * time.Second
+	}
+	if registry := handlers.chatOrchestrator.Registry(); registry != nil {
+		connCount := registry.Count()
+		logger.Log.Info("Draining WebSocket connections",
+			zap.Int("count", connCount),
+			zap.Duration("drain_timeout", drainTimeout))
+		registry.DrainAll(drainTimeout)
+		logger.Log.Info("WebSocket connections drained")
+	}
+
+	// Phase 2: Shutdown HTTP server (remaining time)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeout)*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error("Server forced to shutdown", zap.Error(err))
+	}
+
+	logger.Log.Info("Server exited gracefully")
 }

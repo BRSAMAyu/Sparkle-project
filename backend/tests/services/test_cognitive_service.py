@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-import json
 
+import app.services.cognitive_service as cognitive_service_module
 from app.services.cognitive_service import CognitiveService
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
 from app.models.user import User
@@ -11,6 +11,7 @@ from app.models.user import User
 async def test_analyze_behavior_creates_pattern():
     # Setup
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     service = CognitiveService(mock_db)
     
     user_id = uuid4()
@@ -51,8 +52,11 @@ async def test_analyze_behavior_creates_pattern():
     ]
     
     # Mock external services
-    with patch("app.services.cognitive_service.llm_service.chat", new_callable=AsyncMock) as mock_llm, \
-         patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock) as mock_analytics:
+    with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+         patch("app.services.llm_fallback_utils.cognitive_llm.json_call", new_callable=AsyncMock) as mock_llm, \
+         patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock) as mock_analytics, \
+         patch("app.services.cognitive_service.SystemUpdateService.enqueue", new_callable=AsyncMock), \
+         patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock):
         
         mock_analytics.return_value = "User is a student."
         
@@ -65,7 +69,7 @@ async def test_analyze_behavior_creates_pattern():
             "solution_text": "Just start for 2 mins.",
             "confidence_score": 0.9
         }
-        mock_llm.return_value = json.dumps(llm_response)
+        mock_llm.return_value = llm_response
         
         # Also need to mock _upsert_pattern internal DB calls if we don't mock the method itself.
         # It's better to test _upsert_pattern logic too.
@@ -99,3 +103,49 @@ async def test_analyze_behavior_creates_pattern():
         assert added_obj.evidence_ids == [str(fragment_id)]
         
         assert mock_db.commit.called
+
+
+@pytest.mark.asyncio
+async def test_create_fragment_falls_back_when_vector_runtime_unavailable(monkeypatch):
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+    service = CognitiveService(mock_db)
+
+    monkeypatch.setattr(cognitive_service_module, "_VECTOR_RUNTIME_ENABLED", True)
+
+    stored_fragment = CognitiveFragment(
+        id=uuid4(),
+        user_id=uuid4(),
+        content="fallback fragment",
+        source_type="behavior",
+        resource_type="text",
+        severity=2,
+    )
+    result_insert = MagicMock()
+    result_select = MagicMock()
+    result_select.scalar_one.return_value = stored_fragment
+    mock_db.execute.side_effect = [result_insert, result_select]
+    mock_db.commit.side_effect = [RuntimeError("vector.so unavailable"), None]
+
+    with patch(
+        "app.services.cognitive_service.embedding_service.get_embedding",
+        new_callable=AsyncMock,
+    ) as mock_embedding, patch(
+        "app.services.cognitive_service.event_bus.publish",
+        new_callable=AsyncMock,
+    ), patch(
+        "app.services.cognitive_service.SystemUpdateService.enqueue",
+        new_callable=AsyncMock,
+    ):
+        mock_embedding.return_value = [0.0] * 1024
+        fragment = await service.create_fragment(
+            user_id=stored_fragment.user_id,
+            content=stored_fragment.content,
+            source_type=stored_fragment.source_type,
+            severity=stored_fragment.severity,
+        )
+
+    assert fragment is stored_fragment
+    mock_db.rollback.assert_awaited_once()
+    assert mock_db.execute.await_count == 2
+    assert cognitive_service_module._VECTOR_RUNTIME_ENABLED is False

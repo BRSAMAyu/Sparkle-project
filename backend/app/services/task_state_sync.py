@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 TaskStateSync - 任务状态同步服务
 
@@ -12,7 +13,6 @@ Usage:
     await sync_service.on_task_completed(task, actual_minutes)
     await sync_service.on_task_updated(task)
 """
-from __future__ import annotations
 
 from typing import Any
 from uuid import UUID

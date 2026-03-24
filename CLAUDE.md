@@ -223,7 +223,12 @@ When exploring unfamiliar territory, prioritize these files:
 ├── backend/alembic/                          # DB migrations
 ├── docker-compose.yml                         # Service definitions
 ├── buf.yaml / buf.gen.yaml                    # Proto generation config
-└── mobile/lib/core/design/design_system.dart  # UI tokens
+├── mobile/lib/core/design/design_system.dart  # UI tokens
+├── mobile/lib/core/services/bgm_service.dart  # Route-aware BGM orchestration
+├── mobile/lib/core/services/sensory_feedback_service.dart  # Haptic/SFX budget and policy
+├── mobile/lib/core/widgets/scene_audio_scope.dart  # Scene-scoped audio coordination
+├── mobile/lib/core/design/widgets/sparkle_motion_primitives.dart  # Shared motion primitives
+└── mobile/lib/core/design/widgets/sparkle_confetti.dart  # Shared celebration layer
 ```
 
 ---

@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -14,6 +16,7 @@ import (
 type FileStorageService struct {
 	client        *minio.Client
 	bucket        string
+	publicBaseURL *url.URL
 	presignExpiry time.Duration
 	maxUploadSize int64
 }
@@ -28,9 +31,19 @@ func NewFileStorageService(cfg *config.Config, logger *zap.Logger) (*FileStorage
 		return nil, err
 	}
 
+	publicEndpoint := strings.TrimSpace(cfg.MinioPublicEndpoint)
+	if publicEndpoint == "" && strings.HasPrefix(cfg.MinioEndpoint, "minio:") {
+		publicEndpoint = "http://localhost:9000"
+	}
+	publicBaseURL, err := parsePublicStorageURL(publicEndpoint, cfg.MinioUseSSL)
+	if err != nil {
+		return nil, err
+	}
+
 	service := &FileStorageService{
 		client:        client,
 		bucket:        cfg.MinioBucket,
+		publicBaseURL: publicBaseURL,
 		presignExpiry: time.Duration(cfg.FilePresignExpiresSeconds) * time.Second,
 		maxUploadSize: cfg.FileMaxUploadSize,
 	}
@@ -103,7 +116,7 @@ func (s *FileStorageService) PresignPost(
 	if err != nil {
 		return "", nil, err
 	}
-	return url.String(), formData, nil
+	return s.rewritePresignedURL(url), formData, nil
 }
 
 func (s *FileStorageService) PresignGet(ctx context.Context, objectKey string) (string, error) {
@@ -111,7 +124,7 @@ func (s *FileStorageService) PresignGet(ctx context.Context, objectKey string) (
 	if err != nil {
 		return "", err
 	}
-	return url.String(), nil
+	return s.rewritePresignedURL(url), nil
 }
 
 func (s *FileStorageService) PresignPut(ctx context.Context, objectKey string) (string, error) {
@@ -119,7 +132,7 @@ func (s *FileStorageService) PresignPut(ctx context.Context, objectKey string) (
 	if err != nil {
 		return "", err
 	}
-	return url.String(), nil
+	return s.rewritePresignedURL(url), nil
 }
 
 func (s *FileStorageService) DeleteObject(ctx context.Context, bucket string, objectKey string) error {
@@ -137,4 +150,33 @@ func (s *FileStorageService) DeleteObject(ctx context.Context, bucket string, ob
 		return nil
 	}
 	return err
+}
+
+func parsePublicStorageURL(raw string, secure bool) (*url.URL, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	if !strings.Contains(raw, "://") {
+		scheme := "http"
+		if secure {
+			scheme = "https"
+		}
+		raw = scheme + "://" + raw
+	}
+	return url.Parse(raw)
+}
+
+func (s *FileStorageService) rewritePresignedURL(signed *url.URL) string {
+	if signed == nil || s.publicBaseURL == nil {
+		if signed == nil {
+			return ""
+		}
+		return signed.String()
+	}
+
+	rewritten := *signed
+	rewritten.Scheme = s.publicBaseURL.Scheme
+	rewritten.Host = s.publicBaseURL.Host
+	return rewritten.String()
 }

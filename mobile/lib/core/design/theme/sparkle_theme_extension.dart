@@ -80,7 +80,7 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
 }
 
 /// Minimal radius tokens.
-/// TODO: Align with unified radius system when available.
+/// TRACKED(TD-010): Align with unified radius system when available.
 @immutable
 class SparkleRadius {
   const SparkleRadius({
@@ -109,7 +109,7 @@ class SparkleRadius {
 }
 
 /// Minimal motion tokens backed by SparkleMotion.
-/// TODO: Replace with a full motion token system when available.
+/// TRACKED(TD-010): Replace with a full motion token system when available.
 @immutable
 class SparkleMotionTokens {
   const SparkleMotionTokens({

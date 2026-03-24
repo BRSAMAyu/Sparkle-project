@@ -67,9 +67,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       ],
       body: Column(
         children: [
-          Wrap(
-            spacing: DS.spacing12,
-            runSpacing: DS.spacing12,
+          ToolMetricRow(
             children: [
               ToolMetricCard(
                 label: '字数',
@@ -107,8 +105,8 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          SizedBox(
-            height: 360,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 200),
             child: ToolSectionCard(
               accentColor: accent,
               title: '转写结果',

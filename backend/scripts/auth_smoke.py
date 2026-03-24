@@ -2,6 +2,7 @@
 """End-to-end auth and user-settings smoke test against the live local API."""
 import os
 import sys
+import uuid
 
 import httpx
 
@@ -15,20 +16,44 @@ def assert_status(resp: httpx.Response, expected: int, label: str) -> None:
         raise RuntimeError(f"{label} failed: {resp.status_code} {resp.text}")
 
 
+def _register_ephemeral_user(client: httpx.Client) -> tuple[str, str]:
+    username = f"auth_smoke_{uuid.uuid4().hex[:10]}"
+    resp = client.post(
+        f"{API_BASE}/auth/register",
+        json={
+            "username": username,
+            "password": DEMO_PASSWORD,
+            "email": f"{username}@example.com",
+            "accepted_tos": True,
+            "accepted_privacy": True,
+            "tos_version": "local-acceptance",
+            "privacy_version": "local-acceptance",
+            "agreed_locale": "zh-CN",
+        },
+    )
+    assert_status(resp, 200, "register fallback")
+    payload = resp.json()
+    return payload["access_token"], username
+
+
 def main() -> int:
     with httpx.Client(timeout=20.0) as client:
         login = client.post(
             f"{API_BASE}/auth/login",
             json={"username": DEMO_USERNAME, "password": DEMO_PASSWORD},
         )
-        assert_status(login, 200, "login")
-        token = login.json()["access_token"]
+        if login.status_code == 429:
+            token, active_username = _register_ephemeral_user(client)
+        else:
+            assert_status(login, 200, "login")
+            token = login.json()["access_token"]
+            active_username = DEMO_USERNAME
         headers = {"Authorization": f"Bearer {token}"}
 
         me = client.get(f"{API_BASE}/users/me", headers=headers)
         assert_status(me, 200, "users/me")
         profile = me.json()
-        print(f"login ok: user={profile['username']} id={profile['id']}")
+        print(f"login ok: user={profile['username']} id={profile['id']} source={active_username}")
 
         preference_payload = {
             "learning_depth": profile.get("depth_preference", 0.7),

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 排行榜服务
 Leaderboard Service
@@ -11,7 +12,7 @@ Leaderboard Service
 - STREAK: 连胜排行榜
 - GROUP_FLAME: 群组火苗榜
 """
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -36,7 +37,7 @@ from app.schemas.leaderboard import (
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class LeaderboardService:
@@ -111,10 +112,12 @@ class LeaderboardService:
         Returns:
             MyRankResponse: 我的排名响应
         """
+        # Use max allowed limit (100) for rank calculation
+        # Note: For accurate ranking in large systems, consider using COUNT queries instead
         request = LeaderboardRequest(
             type=leaderboard_type,
             period=period,
-            limit=1000  # 获取更多以计算排名
+            limit=100  # Max allowed by schema
         )
 
         full_leaderboard = await self.get_leaderboard(request, user_id)
@@ -163,20 +166,20 @@ class LeaderboardService:
         Returns:
             LeaderboardSummary: 排行榜摘要
         """
-        # 并发获取各类排行榜
-        global_board, *_ = await self._get_global_leaderboard(
+        # 并发获取各类排行榜 - 这些函数返回单个LeaderboardResponse对象，不是元组
+        global_board = await self._get_global_leaderboard(
             LeaderboardRequest(type=LeaderboardType.GLOBAL, limit=10),
             user_id
         )
-        friends_board, *_ = await self._get_friends_leaderboard(
+        friends_board = await self._get_friends_leaderboard(
             LeaderboardRequest(type=LeaderboardType.FRIENDS, limit=10),
             user_id
         )
-        weekly_board, *_ = await self._get_weekly_leaderboard(
+        weekly_board = await self._get_weekly_leaderboard(
             LeaderboardRequest(type=LeaderboardType.WEEKLY, limit=10),
             user_id
         )
-        streak_board, *_ = await self._get_streak_leaderboard(
+        streak_board = await self._get_streak_leaderboard(
             LeaderboardRequest(type=LeaderboardType.STREAK, limit=10),
             user_id
         )
@@ -202,11 +205,12 @@ class LeaderboardService:
         """全局综合排行榜"""
         # 计算综合分数
         # 全局排行 = 知识点数×1.0 + 打卡天数×0.5 + 成就数×2.0 + 最长连胜×1.5
+        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
         query = select(
             User.id,
             User.username,
             User.avatar_url,
-            func.count(UserNodeStatus.id).label('node_count'),
+            func.count(UserNodeStatus.user_id).label('node_count'),
             func.count(UserAchievement.id).label('achievement_count'),
             func.coalesce(UserStreakStats.longest_streak, 0).label('streak'),
             func.coalesce(UserStreakStats.total_checkin_days, 0).label('study_days')
@@ -313,11 +317,12 @@ class LeaderboardService:
         friend_ids.add(current_user_id)
 
         # 查询好友的学习数据
+        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
         query = select(
             User.id,
             User.username,
             User.avatar_url,
-            func.count(UserNodeStatus.id).label('node_count'),
+            func.count(UserNodeStatus.user_id).label('node_count'),
             func.count(UserAchievement.id).label('achievement_count'),
             func.coalesce(UserStreakStats.current_streak, 0).label('streak')
         ).outerjoin(
@@ -481,11 +486,12 @@ class LeaderboardService:
         subject_name = subject.name if subject else "学科"
 
         # 查询该学科下的用户掌握情况
+        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
         query = select(
             User.id,
             User.username,
             User.avatar_url,
-            func.count(UserNodeStatus.id).label('mastered_nodes'),
+            func.count(UserNodeStatus.user_id).label('mastered_nodes'),
             func.avg(UserNodeStatus.mastery_score).label('avg_mastery')
         ).join(
             UserNodeStatus, UserNodeStatus.user_id == User.id
@@ -563,11 +569,12 @@ class LeaderboardService:
 
         # 查询本周活跃用户的学习数据
         # 这里简化处理，实际应该从学习记录表统计
+        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
         query = select(
             User.id,
             User.username,
             User.avatar_url,
-            func.count(UserNodeStatus.id).label('nodes_this_week')
+            func.count(UserNodeStatus.user_id).label('nodes_this_week')
         ).join(
             UserNodeStatus, UserNodeStatus.user_id == User.id
         ).where(
@@ -856,7 +863,8 @@ class LeaderboardService:
     async def _get_my_stats(self, user_id: UUID) -> dict[str, Any]:
         """获取我的统计信息"""
         # 获取知识点数
-        nodes_query = select(func.count(UserNodeStatus.id)).where(
+        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
+        nodes_query = select(func.count(UserNodeStatus.user_id)).where(
             UserNodeStatus.user_id == user_id,
             UserNodeStatus.mastery_score >= 50
         )

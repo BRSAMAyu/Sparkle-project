@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
@@ -39,17 +43,17 @@ class ErrorCard extends StatelessWidget {
           ? (_) async => showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('确认删除'),
-                  content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
+                  title: Text(context.l10n.errorBookDeleteConfirmTitle),
+                  content: Text(context.l10n.errorBookDeleteConfirmMessage),
                   actions: [
                     SparkleButton.ghost(
                       onPressed: () => Navigator.of(context).pop(false),
-                      label: '取消',
+                      label: context.l10n.cancel,
                     ),
                     SparkleButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       variant: ButtonVariant.destructive,
-                      label: '删除',
+                      label: context.l10n.commonDelete,
                     ),
                   ],
                 ),
@@ -69,7 +73,12 @@ class ErrorCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
+            onTap?.call();
+          },
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
@@ -107,7 +116,7 @@ class ErrorCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          '待复习',
+                          context.l10n.errorBookTabNeedReview,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -187,7 +196,7 @@ class ErrorCard extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.spacing4),
                     Text(
-                      '复习 ${error.reviewCount} 次',
+                      context.l10n.errorBookReviewCount(error.reviewCount),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -200,7 +209,7 @@ class ErrorCard extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.spacing4),
                     Text(
-                      _formatTime(error.createdAt),
+                      _formatTime(context, error.createdAt),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -214,7 +223,7 @@ class ErrorCard extends StatelessWidget {
                       ),
                       const SizedBox(width: DS.spacing4),
                       Text(
-                        'AI已分析',
+                        context.l10n.errorBookAIAnalyzed,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w500,
@@ -237,17 +246,18 @@ class ErrorCard extends StatelessWidget {
     return DS.semanticError;
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(BuildContext context, DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);
+    final l10n = context.l10n;
 
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {
-        return '${difference.inMinutes}分钟前';
+        return l10n.errorBookTimeAgoMinutes(difference.inMinutes);
       }
-      return '${difference.inHours}小时前';
+      return l10n.errorBookTimeAgoHours(difference.inHours);
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
+      return l10n.errorBookTimeAgoDays(difference.inDays);
     } else {
       return DateFormat('MM-dd').format(time);
     }

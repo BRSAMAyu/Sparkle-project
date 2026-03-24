@@ -19,7 +19,7 @@ import asyncio
 import json
 import jwt
 from typing import Dict, Any
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import websockets
@@ -79,13 +79,13 @@ def expired_token(test_user_with_password: User) -> str:
 
     # Create token with past expiration
     import time
-    past_time = datetime.now(UTC) - timedelta(hours=1)
+    past_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
     # Encode manually with expired timestamp
     payload = {
         "sub": str(test_user_with_password.id),
         "exp": past_time,
-        "iat": datetime.now(UTC),
+        "iat": datetime.now(timezone.utc),
         "aud": settings.JWT_AUDIENCE,
         "iss": settings.JWT_ISSUER,
     }
@@ -152,7 +152,7 @@ class TestJWTTokens:
 
         # Check expiration is about 30 minutes from now
         exp_ts = payload["exp"]
-        now_ts = datetime.now(UTC).timestamp()
+        now_ts = datetime.now(timezone.utc).timestamp()
         time_diff = exp_ts - now_ts
 
         # Should be approximately 30 minutes (give or take a few seconds)
@@ -182,7 +182,7 @@ class TestJWTTokens:
         # Create token with wrong secret
         payload = {
             "sub": str(test_user_with_password.id),
-            "exp": datetime.now(UTC) + timedelta(minutes=30),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
             "aud": settings.JWT_AUDIENCE,
             "iss": settings.JWT_ISSUER,
         }

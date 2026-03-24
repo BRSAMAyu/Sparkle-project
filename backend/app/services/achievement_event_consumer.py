@@ -2,8 +2,9 @@
 Achievement event consumer.
 Closes event-bus paths for achievement progression without blocking request handlers.
 """
+
 import asyncio
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from loguru import logger
 
@@ -13,7 +14,7 @@ from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AchievementEventConsumer:
@@ -48,6 +49,8 @@ class AchievementEventConsumer:
             await self._handle_group_task_completed(event)
         elif event_type == "galaxy.node.updated":
             await self._handle_node_updated(event)
+        elif event_type == "achievement.unlocked":
+            await self._handle_achievement_unlocked(event)
 
     async def _handle_task_completed(self, event: dict):
         if str(event.get("source") or "personal") == "group":
@@ -94,6 +97,52 @@ class AchievementEventConsumer:
                     event_type=AchievementEvent.NODE_MASTERED,
                     node_id=str(event.get("node_id") or ""),
                 )
+
+    async def _handle_achievement_unlocked(self, event: dict):
+        """处理成就解锁事件，触发认知系统碎片记录及可能的广播"""
+        user_id = event.get("user_id")
+        achievement_id = event.get("achievement_id")
+        if not user_id or not achievement_id:
+            return
+
+        try:
+            from uuid import UUID
+
+            from app.core.cache import cache_service
+            from app.services.cognitive_service import CognitiveService
+            from app.services.community_signal_bridge import CommunitySignalBridge
+            from app.services.personalization.preference_service import PreferenceService
+
+            async with AsyncSessionLocal() as db:
+                cognitive_service = CognitiveService(db)
+                achievement_title = event.get("achievement_name") or event.get("title") or str(achievement_id)
+                await cognitive_service.create_fragment(
+                    user_id=UUID(str(user_id)),
+                    content=f"用户达成了 {achievement_title} 成就。这是用户持续努力和进步的证明。",
+                    source_type="achievement",
+                    severity=1,
+                    context_tags={"achievement_id": str(achievement_id), "type": "positive_milestone"},
+                )
+                logger.info(f"Recorded cognitive fragment for achievement {achievement_id} unlock by user {user_id}")
+
+                pref_service = PreferenceService(db, cache_service.redis)
+                prefs = await pref_service.get_preferences(UUID(str(user_id)))
+                share_enabled = (prefs.explicit or {}).get("share_achievements_to_community", True)
+
+                if share_enabled:
+                    try:
+                        bridge = CommunitySignalBridge(db, cache_service.redis)
+                        await bridge.broadcast_achievement_unlock(
+                            user_id=UUID(str(user_id)),
+                            achievement_id=str(achievement_id),
+                            achievement_title=achievement_title,
+                            rarity=event.get("rarity", "common"),
+                        )
+                        logger.info(f"Broadcast achievement {achievement_id} unlock to community for user {user_id}")
+                    except Exception as broadcast_err:
+                        logger.warning(f"Failed to broadcast achievement to community: {broadcast_err}")
+        except Exception as e:
+            logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 
     def stop(self):
         self._running = False

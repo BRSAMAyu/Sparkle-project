@@ -500,6 +500,7 @@ const ChatResponse$json = {
       '6': '.agent.v1.FinishReason',
       '10': 'finishReason'
     },
+    {'1': 'session_id', '3': 20, '4': 1, '5': 9, '10': 'sessionId'},
     {
       '1': 'event_time',
       '3': 19,
@@ -544,10 +545,11 @@ final $typed_data.Uint8List chatResponseDescriptor = $convert.base64Decode(
     'Q2l0YXRpb25CbG9ja0gAUgljaXRhdGlvbnMSPgoLdG9vbF9yZXN1bHQYDCABKAsyGy5hZ2VudC'
     '52MS5Ub29sUmVzdWx0UGF5bG9hZEgAUgp0b29sUmVzdWx0EkMKDGludGVydmVudGlvbhgOIAEo'
     'CzIdLmFnZW50LnYxLkludGVydmVudGlvblBheWxvYWRIAFIMaW50ZXJ2ZW50aW9uEjsKDWZpbm'
-    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhI5'
-    'CgpldmVudF90aW1lGBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJZXZlbnRUaW'
-    '1lGjsKDU1ldGFkYXRhRW50cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZh'
-    'bHVlOgI4AUIJCgdjb250ZW50SgQIDRAOUgl0aW1lc3RhbXA=');
+    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhId'
+    'CgpzZXNzaW9uX2lkGBQgASgJUglzZXNzaW9uSWQSOQoKZXZlbnRfdGltZRgTIAEoCzIaLmdvb2'
+    'dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCWV2ZW50VGltZRo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tl'
+    'eRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAFCCQoHY29udGVudEoECA0QDl'
+    'IJdGltZXN0YW1w');
 
 @$core.Deprecated('Use responseFeedbackRequestDescriptor instead')
 const ResponseFeedbackRequest$json = {

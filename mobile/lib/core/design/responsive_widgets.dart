@@ -90,7 +90,7 @@ class ResponsiveScaffold extends StatelessWidget {
         body: Row(
           children: [
             SizedBox(
-              width: 280,
+              width: ResponsiveSpacing.sidebarWidth(context),
               child: NavigationDrawer(
                 selectedIndex: currentIndex,
                 onDestinationSelected: onDestinationSelected,

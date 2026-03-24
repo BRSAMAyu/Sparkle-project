@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: unused_element
 
 part of 'community_model.dart';
 
@@ -255,6 +256,38 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
 // JsonSerializableGenerator
 // **************************************************************************
 
+AccountabilityFriendSummary _$AccountabilityFriendSummaryFromJson(
+        Map<String, dynamic> json) =>
+    AccountabilityFriendSummary(
+      partnershipId: json['partnership_id'] as String,
+      slotType: json['slot_type'] as String,
+      status: json['status'] as String,
+      myRole: json['my_role'] as String?,
+      myCheckedInToday: json['my_checked_in_today'] as bool?,
+      partnerCheckedInToday: json['partner_checked_in_today'] as bool?,
+      myStreakDays: (json['my_streak_days'] as num?)?.toInt(),
+      partnerStreakDays: (json['partner_streak_days'] as num?)?.toInt(),
+      lastCheckinAt: json['last_checkin_at'] == null
+          ? null
+          : DateTime.parse(json['last_checkin_at'] as String),
+      goalPreview: json['goal_preview'] as String?,
+    );
+
+Map<String, dynamic> _$AccountabilityFriendSummaryToJson(
+        AccountabilityFriendSummary instance) =>
+    <String, dynamic>{
+      'partnership_id': instance.partnershipId,
+      'slot_type': instance.slotType,
+      'status': instance.status,
+      'my_role': instance.myRole,
+      'my_checked_in_today': instance.myCheckedInToday,
+      'partner_checked_in_today': instance.partnerCheckedInToday,
+      'my_streak_days': instance.myStreakDays,
+      'partner_streak_days': instance.partnerStreakDays,
+      'last_checkin_at': instance.lastCheckinAt?.toIso8601String(),
+      'goal_preview': instance.goalPreview,
+    };
+
 FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
     FriendshipInfo(
       id: json['id'] as String,
@@ -264,6 +297,10 @@ FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updated_at'] as String),
       matchReason: json['match_reason'] as Map<String, dynamic>?,
       initiatedByMe: json['initiated_by_me'] as bool? ?? false,
+      accountability: json['accountability'] == null
+          ? null
+          : AccountabilityFriendSummary.fromJson(
+              json['accountability'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$FriendshipInfoToJson(FriendshipInfo instance) =>
@@ -273,6 +310,7 @@ Map<String, dynamic> _$FriendshipInfoToJson(FriendshipInfo instance) =>
       'status': _$FriendshipStatusEnumMap[instance.status]!,
       'match_reason': instance.matchReason,
       'initiated_by_me': instance.initiatedByMe,
+      'accountability': instance.accountability,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -283,6 +321,36 @@ const _$FriendshipStatusEnumMap = {
   FriendshipStatus.blocked: 'blocked',
 };
 
+FriendProfileDetail _$FriendProfileDetailFromJson(Map<String, dynamic> json) =>
+    FriendProfileDetail(
+      user: UserBrief.fromJson(json['user'] as Map<String, dynamic>),
+      friendship: json['friendship'] as Map<String, dynamic>,
+      accountability: json['accountability'] as Map<String, dynamic>?,
+      relationshipSummary:
+          json['relationship_summary'] as Map<String, dynamic>?,
+      achievementsSummary:
+          json['achievements_summary'] as Map<String, dynamic>?,
+      leaderboardSummary: json['leaderboard_summary'] as Map<String, dynamic>?,
+      recentShares: (json['recent_shares'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const [],
+      quickActions: json['quick_actions'] as Map<String, dynamic>? ?? const {},
+    );
+
+Map<String, dynamic> _$FriendProfileDetailToJson(
+        FriendProfileDetail instance) =>
+    <String, dynamic>{
+      'user': instance.user,
+      'friendship': instance.friendship,
+      'accountability': instance.accountability,
+      'relationship_summary': instance.relationshipSummary,
+      'achievements_summary': instance.achievementsSummary,
+      'leaderboard_summary': instance.leaderboardSummary,
+      'recent_shares': instance.recentShares,
+      'quick_actions': instance.quickActions,
+    };
+
 FriendRecommendation _$FriendRecommendationFromJson(
         Map<String, dynamic> json) =>
     FriendRecommendation(
@@ -291,6 +359,19 @@ FriendRecommendation _$FriendRecommendationFromJson(
       matchReasons: (json['match_reasons'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
+      strategy: json['strategy'] as String? ?? 'compatibility',
+      target: json['target'] as String? ?? 'accountability',
+      summary: json['summary'] as String?,
+      relationshipStatus: json['relationship_status'] as String? ?? 'none',
+      isExistingFriend: json['is_existing_friend'] as bool? ?? false,
+      canInviteAccountability:
+          json['can_invite_accountability'] as bool? ?? false,
+      recommendedAction:
+          json['recommended_action'] as String? ?? 'send_friend_request',
+      scoreBreakdown: (json['score_breakdown'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toDouble()),
+          ) ??
+          const {},
     );
 
 Map<String, dynamic> _$FriendRecommendationToJson(
@@ -299,6 +380,105 @@ Map<String, dynamic> _$FriendRecommendationToJson(
       'user': instance.user,
       'match_score': instance.matchScore,
       'match_reasons': instance.matchReasons,
+      'strategy': instance.strategy,
+      'target': instance.target,
+      'summary': instance.summary,
+      'relationship_status': instance.relationshipStatus,
+      'is_existing_friend': instance.isExistingFriend,
+      'can_invite_accountability': instance.canInviteAccountability,
+      'recommended_action': instance.recommendedAction,
+      'score_breakdown': instance.scoreBreakdown,
+    };
+
+RecommendationFeedbackPrompt _$RecommendationFeedbackPromptFromJson(
+        Map<String, dynamic> json) =>
+    RecommendationFeedbackPrompt(
+      promptId: json['prompt_id'] as String,
+      itemType: $enumDecode(_$RecommendationItemTypeEnumMap, json['item_type']),
+      itemId: json['item_id'] as String,
+      stage: $enumDecode(_$RecommendationFeedbackStageEnumMap, json['stage']),
+      triggerAction: json['trigger_action'] as String,
+      title: json['title'] as String,
+      dueAt: DateTime.parse(json['due_at'] as String),
+      subtitle: json['subtitle'] as String?,
+      strategy: json['strategy'] as String?,
+      target: json['target'] as String?,
+      user: json['user'] == null
+          ? null
+          : UserBrief.fromJson(json['user'] as Map<String, dynamic>),
+      group: json['group'] == null
+          ? null
+          : GroupListItem.fromJson(json['group'] as Map<String, dynamic>),
+      reasonTags: (json['reason_tags'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$RecommendationFeedbackPromptToJson(
+        RecommendationFeedbackPrompt instance) =>
+    <String, dynamic>{
+      'prompt_id': instance.promptId,
+      'item_type': _$RecommendationItemTypeEnumMap[instance.itemType]!,
+      'item_id': instance.itemId,
+      'stage': _$RecommendationFeedbackStageEnumMap[instance.stage]!,
+      'trigger_action': instance.triggerAction,
+      'title': instance.title,
+      'subtitle': instance.subtitle,
+      'due_at': instance.dueAt.toIso8601String(),
+      'strategy': instance.strategy,
+      'target': instance.target,
+      'user': instance.user,
+      'group': instance.group,
+      'reason_tags': instance.reasonTags,
+    };
+
+const _$RecommendationItemTypeEnumMap = {
+  RecommendationItemType.friend: 'friend',
+  RecommendationItemType.group: 'group',
+};
+
+const _$RecommendationFeedbackStageEnumMap = {
+  RecommendationFeedbackStage.immediate: 'immediate',
+  RecommendationFeedbackStage.followUp: 'follow_up',
+  RecommendationFeedbackStage.outcome: 'outcome',
+};
+
+RecommendationFeedbackInsight _$RecommendationFeedbackInsightFromJson(
+        Map<String, dynamic> json) =>
+    RecommendationFeedbackInsight(
+      itemType: $enumDecode(_$RecommendationItemTypeEnumMap, json['item_type']),
+      recentFeedbackCount: (json['recent_feedback_count'] as num).toInt(),
+      averageScores: (json['average_scores'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toDouble()),
+          ) ??
+          const {},
+      topPositiveSignals: (json['top_positive_signals'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      topNegativeSignals: (json['top_negative_signals'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      userTuning: json['user_tuning'] as Map<String, dynamic>? ?? const {},
+      globalAdjustments:
+          (json['global_adjustments'] as Map<String, dynamic>?)?.map(
+                (k, e) => MapEntry(k, (e as num).toDouble()),
+              ) ??
+              const {},
+    );
+
+Map<String, dynamic> _$RecommendationFeedbackInsightToJson(
+        RecommendationFeedbackInsight instance) =>
+    <String, dynamic>{
+      'item_type': _$RecommendationItemTypeEnumMap[instance.itemType]!,
+      'recent_feedback_count': instance.recentFeedbackCount,
+      'average_scores': instance.averageScores,
+      'top_positive_signals': instance.topPositiveSignals,
+      'top_negative_signals': instance.topNegativeSignals,
+      'user_tuning': instance.userTuning,
+      'global_adjustments': instance.globalAdjustments,
     };
 
 GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
@@ -325,6 +505,7 @@ GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
       sprintGoal: json['sprint_goal'] as String?,
       daysRemaining: (json['days_remaining'] as num?)?.toInt(),
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
+      announcement: json['announcement'] as String?,
     );
 
 Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
@@ -345,6 +526,7 @@ Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
       'is_public': instance.isPublic,
       'join_requires_approval': instance.joinRequiresApproval,
       'my_role': _$GroupRoleEnumMap[instance.myRole],
+      'announcement': instance.announcement,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -370,10 +552,15 @@ GroupListItem _$GroupListItemFromJson(Map<String, dynamic> json) =>
       focusTags: (json['focus_tags'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
+      description: json['description'] as String?,
+      todayCheckinCount: (json['today_checkin_count'] as num?)?.toInt() ?? 0,
       deadline: json['deadline'] == null
           ? null
           : DateTime.parse(json['deadline'] as String),
       daysRemaining: (json['days_remaining'] as num?)?.toInt(),
+      isPublic: json['is_public'] as bool? ?? true,
+      joinRequiresApproval: json['join_requires_approval'] as bool? ?? false,
+      activityScore: (json['activity_score'] as num?)?.toDouble(),
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
     );
 
@@ -381,12 +568,17 @@ Map<String, dynamic> _$GroupListItemToJson(GroupListItem instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
+      'description': instance.description,
       'type': _$GroupTypeEnumMap[instance.type]!,
       'member_count': instance.memberCount,
       'total_flame_power': instance.totalFlamePower,
+      'today_checkin_count': instance.todayCheckinCount,
       'deadline': instance.deadline?.toIso8601String(),
       'days_remaining': instance.daysRemaining,
       'focus_tags': instance.focusTags,
+      'is_public': instance.isPublic,
+      'join_requires_approval': instance.joinRequiresApproval,
+      'activity_score': instance.activityScore,
       'my_role': _$GroupRoleEnumMap[instance.myRole],
     };
 
@@ -424,6 +616,44 @@ Map<String, dynamic> _$GroupRecommendationItemToJson(
       'reasons': instance.reasons,
       'requires_approval': instance.requiresApproval,
     };
+
+GroupDirectoryInfo _$GroupDirectoryInfoFromJson(Map<String, dynamic> json) =>
+    GroupDirectoryInfo(
+      sortBy: $enumDecode(_$GroupDirectorySortEnumMap, json['sort_by']),
+      availableTags: (json['available_tags'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      totalCount: (json['total_count'] as num).toInt(),
+      recommendations: (json['recommendations'] as List<dynamic>)
+          .map((e) =>
+              GroupRecommendationItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      groups: (json['groups'] as List<dynamic>)
+          .map((e) => GroupListItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      keyword: json['keyword'] as String?,
+      appliedTags: (json['applied_tags'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$GroupDirectoryInfoToJson(GroupDirectoryInfo instance) =>
+    <String, dynamic>{
+      'sort_by': _$GroupDirectorySortEnumMap[instance.sortBy]!,
+      'keyword': instance.keyword,
+      'applied_tags': instance.appliedTags,
+      'available_tags': instance.availableTags,
+      'total_count': instance.totalCount,
+      'recommendations': instance.recommendations,
+      'groups': instance.groups,
+    };
+
+const _$GroupDirectorySortEnumMap = {
+  GroupDirectorySort.hot: 'hot',
+  GroupDirectorySort.latest: 'latest',
+  GroupDirectorySort.random: 'random',
+};
 
 GroupCreate _$GroupCreateFromJson(Map<String, dynamic> json) => GroupCreate(
       name: json['name'] as String,
@@ -1212,4 +1442,249 @@ Map<String, dynamic> _$OfflineMessageRetryRequestToJson(
         OfflineMessageRetryRequest instance) =>
     <String, dynamic>{
       'message_ids': instance.messageIds,
+    };
+
+BlockUserInfo _$BlockUserInfoFromJson(Map<String, dynamic> json) =>
+    BlockUserInfo(
+      blockedUser:
+          UserBrief.fromJson(json['blocked_user'] as Map<String, dynamic>),
+      reason: json['reason'] as String?,
+    );
+
+Map<String, dynamic> _$BlockUserInfoToJson(BlockUserInfo instance) =>
+    <String, dynamic>{
+      'blocked_user': instance.blockedUser,
+      'reason': instance.reason,
+    };
+
+UserPrivacySettings _$UserPrivacySettingsFromJson(Map<String, dynamic> json) =>
+    UserPrivacySettings(
+      searchableBy:
+          $enumDecode(_$SearchVisibilityEnumMap, json['searchable_by']),
+    );
+
+Map<String, dynamic> _$UserPrivacySettingsToJson(
+        UserPrivacySettings instance) =>
+    <String, dynamic>{
+      'searchable_by': _$SearchVisibilityEnumMap[instance.searchableBy]!,
+    };
+
+const _$SearchVisibilityEnumMap = {
+  SearchVisibility.everyone: 'everyone',
+  SearchVisibility.friends: 'friends',
+  SearchVisibility.nobody: 'nobody',
+};
+
+GroupFileInfo _$GroupFileInfoFromJson(Map<String, dynamic> json) =>
+    GroupFileInfo(
+      id: json['id'] as String,
+      groupId: json['group_id'] as String,
+      uploaderId: json['uploader_id'] as String,
+      fileName: json['file_name'] as String,
+      fileSize: (json['file_size'] as num).toInt(),
+      mimeType: json['mime_type'] as String,
+      fileUrl: json['file_url'] as String,
+      permissions: GroupFilePermissions.fromJson(
+          json['permissions'] as Map<String, dynamic>),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      description: json['description'] as String?,
+      category: json['category'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      uploader: json['uploader'] == null
+          ? null
+          : UserBrief.fromJson(json['uploader'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$GroupFileInfoToJson(GroupFileInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'group_id': instance.groupId,
+      'uploader_id': instance.uploaderId,
+      'file_name': instance.fileName,
+      'file_size': instance.fileSize,
+      'mime_type': instance.mimeType,
+      'file_url': instance.fileUrl,
+      'description': instance.description,
+      'category': instance.category,
+      'tags': instance.tags,
+      'permissions': instance.permissions,
+      'created_at': instance.createdAt.toIso8601String(),
+      'uploader': instance.uploader,
+    };
+
+GroupFilePermissions _$GroupFilePermissionsFromJson(
+        Map<String, dynamic> json) =>
+    GroupFilePermissions(
+      canView: (json['can_view'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      canDownload: (json['can_download'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      canDelete: (json['can_delete'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$GroupFilePermissionsToJson(
+        GroupFilePermissions instance) =>
+    <String, dynamic>{
+      'can_view': instance.canView,
+      'can_download': instance.canDownload,
+      'can_delete': instance.canDelete,
+    };
+
+GroupFilePermissionUpdate _$GroupFilePermissionUpdateFromJson(
+        Map<String, dynamic> json) =>
+    GroupFilePermissionUpdate(
+      canView: (json['can_view'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      canDownload: (json['can_download'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      canDelete: (json['can_delete'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$GroupFilePermissionUpdateToJson(
+        GroupFilePermissionUpdate instance) =>
+    <String, dynamic>{
+      'can_view': instance.canView,
+      'can_download': instance.canDownload,
+      'can_delete': instance.canDelete,
+    };
+
+GroupFileCategoryStat _$GroupFileCategoryStatFromJson(
+        Map<String, dynamic> json) =>
+    GroupFileCategoryStat(
+      category: json['category'] as String,
+      count: (json['count'] as num).toInt(),
+      totalSize: (json['total_size'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$GroupFileCategoryStatToJson(
+        GroupFileCategoryStat instance) =>
+    <String, dynamic>{
+      'category': instance.category,
+      'count': instance.count,
+      'total_size': instance.totalSize,
+    };
+
+GroupFileShareRequest _$GroupFileShareRequestFromJson(
+        Map<String, dynamic> json) =>
+    GroupFileShareRequest(
+      fileId: json['file_id'] as String,
+      description: json['description'] as String?,
+      category: json['category'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$GroupFileShareRequestToJson(
+        GroupFileShareRequest instance) =>
+    <String, dynamic>{
+      'file_id': instance.fileId,
+      'description': instance.description,
+      'category': instance.category,
+      'tags': instance.tags,
+    };
+
+SharedResourceInfo _$SharedResourceInfoFromJson(Map<String, dynamic> json) =>
+    SharedResourceInfo(
+      id: json['id'] as String,
+      resourceType:
+          $enumDecode(_$SharedResourceTypeEnumMap, json['resource_type']),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.parse(json['updated_at'] as String),
+      planId: json['plan_id'] as String?,
+      taskId: json['task_id'] as String?,
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
+      seedLibraryId: json['seed_library_id'] as String?,
+      seedItemId: json['seed_item_id'] as String?,
+      cognitiveFragmentId: json['cognitive_fragment_id'] as String?,
+      curiosityCapsuleId: json['curiosity_capsule_id'] as String?,
+      behaviorPatternId: json['behavior_pattern_id'] as String?,
+      permission: json['permission'] as String?,
+      comment: json['comment'] as String?,
+      viewCount: (json['view_count'] as num?)?.toInt(),
+      saveCount: (json['save_count'] as num?)?.toInt(),
+      sharer: json['sharer'] == null
+          ? null
+          : UserBrief.fromJson(json['sharer'] as Map<String, dynamic>),
+      resourceTitle: json['resource_title'] as String?,
+      resourceSummary: json['resource_summary'] as String?,
+      entityCard: json['entity_card'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$SharedResourceInfoToJson(SharedResourceInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'resource_type': _$SharedResourceTypeEnumMap[instance.resourceType]!,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
+      'plan_id': instance.planId,
+      'task_id': instance.taskId,
+      'knowledge_node_id': instance.knowledgeNodeId,
+      'seed_library_id': instance.seedLibraryId,
+      'seed_item_id': instance.seedItemId,
+      'cognitive_fragment_id': instance.cognitiveFragmentId,
+      'curiosity_capsule_id': instance.curiosityCapsuleId,
+      'behavior_pattern_id': instance.behaviorPatternId,
+      'permission': instance.permission,
+      'comment': instance.comment,
+      'view_count': instance.viewCount,
+      'save_count': instance.saveCount,
+      'sharer': instance.sharer,
+      'resource_title': instance.resourceTitle,
+      'resource_summary': instance.resourceSummary,
+      'entity_card': instance.entityCard,
+    };
+
+const _$SharedResourceTypeEnumMap = {
+  SharedResourceType.task: 'task',
+  SharedResourceType.plan: 'plan',
+  SharedResourceType.knowledgeNode: 'knowledge_node',
+  SharedResourceType.seedLibrary: 'seed_library',
+  SharedResourceType.seedItem: 'seed_item',
+  SharedResourceType.cognitiveFragment: 'cognitive_fragment',
+  SharedResourceType.curiosityCapsule: 'curiosity_capsule',
+  SharedResourceType.cognitivePrismPattern: 'cognitive_prism_pattern',
+  SharedResourceType.fragment: 'fragment',
+  SharedResourceType.capsule: 'capsule',
+  SharedResourceType.achievement: 'achievement',
+  SharedResourceType.file: 'file',
+};
+
+SharedResourceCreate _$SharedResourceCreateFromJson(
+        Map<String, dynamic> json) =>
+    SharedResourceCreate(
+      resourceType:
+          $enumDecode(_$SharedResourceTypeEnumMap, json['resource_type']),
+      resourceId: json['resource_id'] as String,
+      groupIds:
+          (json['group_ids'] as List<dynamic>).map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$SharedResourceCreateToJson(
+        SharedResourceCreate instance) =>
+    <String, dynamic>{
+      'resource_type': _$SharedResourceTypeEnumMap[instance.resourceType]!,
+      'resource_id': instance.resourceId,
+      'group_ids': instance.groupIds,
+    };
+
+UserStatusUpdate _$UserStatusUpdateFromJson(Map<String, dynamic> json) =>
+    UserStatusUpdate(
+      status: json['status'] as String,
+    );
+
+Map<String, dynamic> _$UserStatusUpdateToJson(UserStatusUpdate instance) =>
+    <String, dynamic>{
+      'status': instance.status,
     };

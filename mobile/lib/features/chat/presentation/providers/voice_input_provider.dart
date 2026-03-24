@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 
 /// 语音输入状态
@@ -53,7 +54,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     // 检查权限
     final hasPermission = await checkPermissions();
     if (!hasPermission) {
-      _errorMessage = '没有麦克风权限';
+      _errorMessage = I18nService.instance.l10n.chatVoiceNoMicPermission;
       state = VoiceInputState.error;
       onError(_errorMessage);
       return;
@@ -94,7 +95,8 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
         maxDuration: maxDuration,
       );
     } catch (e) {
-      _errorMessage = '启动录音失败: $e';
+      _errorMessage =
+          I18nService.instance.l10n.chatVoiceStartFailed(e.toString());
       state = VoiceInputState.error;
       onError(_errorMessage);
     }

@@ -1,9 +1,12 @@
 // ignore_for_file: avoid_dynamic_calls, unawaited_futures, discarded_futures
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
@@ -86,7 +89,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       if (!mounted) {
         return;
       }
-      HapticFeedback.lightImpact();
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     }
 
     if (_currentReviewIndex >= _sessionWords.length - 1) {
@@ -107,7 +110,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   void _showImportanceDialog(Map<String, dynamic> word) {
     var selectedImportance = (word['importance'] as int?) ?? 3;
 
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -209,9 +212,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             ],
             body: Column(
               children: [
-                Wrap(
-                  spacing: DS.spacing12,
-                  runSpacing: DS.spacing12,
+                ToolMetricRow(
                   children: [
                     ToolMetricCard(
                       label: '总词条',
@@ -291,7 +292,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
-                  height: 420,
+                  height:
+                      (MediaQuery.sizeOf(context).height * 0.4).clamp(280, 420),
                   child: TabBarView(
                     controller: _tabController,
                     children: [
@@ -358,7 +360,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           word: word,
           onTap: () => _showImportanceDialog(word),
           onDelete: () async {
-            final confirmed = await showDialog<bool>(
+            final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('删除单词'),
@@ -414,7 +416,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       body: Column(
         children: [
           SizedBox(
-            height: 360,
+            height: (MediaQuery.sizeOf(context).height * 0.35).clamp(240, 360),
             child: ToolSectionCard(
               accentColor: _showAnswer ? DS.success : DS.warning,
               title: word['word'] as String? ?? '',
@@ -444,9 +446,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            _showAnswer
-                                ? (definition ?? '暂无释义')
-                                : '点击显示释义',
+                            _showAnswer ? (definition ?? '暂无释义') : '点击显示释义',
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme

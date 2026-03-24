@@ -109,17 +109,17 @@ class LoadingIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (type) {
       case LoadingType.circular:
-        return _buildCircularLoading();
+        return _buildCircularLoading(context);
       case LoadingType.skeleton:
-        return _buildSkeletonLoading();
+        return _buildSkeletonLoading(context);
       case LoadingType.linear:
-        return _buildLinearLoading();
+        return _buildLinearLoading(context);
       case LoadingType.fullScreen:
-        return _buildFullScreenLoading();
+        return _buildFullScreenLoading(context);
     }
   }
 
-  Widget _buildCircularLoading() {
+  Widget _buildCircularLoading(BuildContext context) {
     final indicator = SizedBox(
       width: size ?? 40.0,
       height: size ?? 40.0,
@@ -132,26 +132,36 @@ class LoadingIndicator extends StatelessWidget {
     );
 
     if (showText) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          indicator,
-          const SizedBox(height: DS.spacing12),
-          Text(
-            loadingText ?? '加载中...',
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.neutral600,
+      return Semantics(
+        container: true,
+        liveRegion: true,
+        label: loadingText ?? '加载中',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            indicator,
+            const SizedBox(height: DS.spacing12),
+            Text(
+              loadingText ?? '加载中...',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: context.colors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
-    return indicator;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: loadingText ?? '加载中',
+      child: indicator,
+    );
   }
 
-  Widget _buildSkeletonLoading() {
+  Widget _buildSkeletonLoading(BuildContext context) {
     final variant = skeletonVariant ?? SkeletonVariant.listItem;
 
     return ListView.separated(
@@ -163,69 +173,89 @@ class LoadingIndicator extends StatelessWidget {
       itemBuilder: (context, index) {
         switch (variant) {
           case SkeletonVariant.taskCard:
-            return const TaskCardSkeleton();
+            return SparkleStaggerItem(index: index, child: const TaskCardSkeleton());
           case SkeletonVariant.chatBubble:
-            return ChatBubbleSkeleton(isUser: index % 2 == 0);
+            return SparkleStaggerItem(
+              index: index,
+              child: ChatBubbleSkeleton(isUser: index.isEven),
+            );
           case SkeletonVariant.profileCard:
-            return const ProfileCardSkeleton();
+            return SparkleStaggerItem(
+              index: index,
+              child: const ProfileCardSkeleton(),
+            );
           case SkeletonVariant.listItem:
-            return const ListItemSkeleton();
+            return SparkleStaggerItem(index: index, child: const ListItemSkeleton());
         }
       },
     );
   }
 
-  Widget _buildLinearLoading() => LinearProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? DS.primaryBase,
+  Widget _buildLinearLoading(BuildContext context) => Semantics(
+        container: true,
+        liveRegion: true,
+        label: loadingText ?? '加载中',
+        child: LinearProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            color ?? DS.primaryBase,
+          ),
+          backgroundColor: DS.neutral200,
         ),
-        backgroundColor: DS.neutral200,
       );
 
-  Widget _buildFullScreenLoading() => ColoredBox(
+  Widget _buildFullScreenLoading(BuildContext context) => ColoredBox(
         color: DS.overlay30,
         child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(DS.spacing32),
-            decoration: BoxDecoration(
-              gradient: DS.cardGradientNeutral,
-              borderRadius: DS.borderRadius20,
-              boxShadow: DS.shadowXl,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80.0,
-                  height: 80.0,
-                  decoration: BoxDecoration(
-                    gradient: DS.primaryGradient,
-                    borderRadius: DS.borderRadiusFull,
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      width: 40.0,
-                      height: 40.0,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3.0,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: loadingText ?? '加载中',
+            child: SparkleStaggerItem(
+              index: 0,
+              motionToken: SparkleMotionToken.micro,
+              child: Container(
+                padding: const EdgeInsets.all(DS.spacing32),
+                decoration: BoxDecoration(
+                  gradient: DS.cardGradientNeutral,
+                  borderRadius: DS.borderRadius20,
+                  boxShadow: DS.shadowXl,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80.0,
+                      height: 80.0,
+                      decoration: BoxDecoration(
+                        gradient: DS.primaryGradient,
+                        borderRadius: DS.borderRadiusFull,
+                      ),
+                      child: Center(
+                        child: SizedBox(
+                          width: 40.0,
+                          height: 40.0,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3.0,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (loadingText != null) ...[
+                      const SizedBox(height: DS.spacing20),
+                      Text(
+                        loadingText!,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          fontWeight: DS.fontWeightMedium,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (loadingText != null) ...[
-                  const SizedBox(height: DS.spacing20),
-                  Text(
-                    loadingText!,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight: DS.fontWeightMedium,
-                      color: DS.neutral900,
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),
@@ -240,11 +270,18 @@ class _ShimmerWrapper extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Shimmer.fromColors(
-        baseColor: DS.neutral200,
-        highlightColor: DS.neutral100,
-        child: child,
-      );
+  Widget build(BuildContext context) {
+    if (context.reduceMotion) {
+      return child;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Shimmer.fromColors(
+      baseColor: isDark ? DS.neutral700 : DS.neutral100,
+      highlightColor: isDark ? DS.neutral600 : DS.neutral0,
+      period: const Duration(milliseconds: 1200),
+      child: child,
+    );
+  }
 }
 
 /// 骨架屏占位容器
@@ -263,7 +300,9 @@ class _SkeletonBox extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: DS.neutral300,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? DS.neutral700
+              : DS.neutral300,
           borderRadius: borderRadius ?? DS.borderRadius8,
         ),
       );

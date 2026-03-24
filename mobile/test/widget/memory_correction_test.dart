@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class _CorrectionApiService implements MemoryApiService {
   _CorrectionApiService(this.result);
@@ -113,6 +114,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),
@@ -155,6 +159,9 @@ void main() {
           memoryApiServiceProvider.overrideWithValue(service),
         ],
         child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),

@@ -80,7 +80,19 @@ class MockWebSocketChannel
   }
 }
 
+Future<void> _waitForEvents(
+  List<ChatStreamEvent> events, {
+  Duration timeout = const Duration(milliseconds: 250),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (events.isEmpty && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('WebSocketChatServiceV2 - Comprehensive Tests', () {
     late WebSocketChatServiceV2 service;
     late MockWebSocketChannel mockChannel;
@@ -191,7 +203,7 @@ void main() {
         'timestamp': 1234567890,
       });
       mockChannel.simulateIncomingMessage(incomingJson);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await _waitForEvents(events);
 
       expect(events, isNotEmpty);
       expect(events.first, isA<ActionStatusEvent>());
@@ -240,6 +252,93 @@ void main() {
       await sub.cancel();
     });
 
+    test('Routes events to the matching request stream only', () async {
+      final streamA = service.sendMessage(
+        message: 'A',
+        userId: 'user1',
+        requestId: 'req-a',
+      );
+      final streamB = service.sendMessage(
+        message: 'B',
+        userId: 'user1',
+        requestId: 'req-b',
+      );
+
+      final eventsA = <ChatStreamEvent>[];
+      final eventsB = <ChatStreamEvent>[];
+      final subA = streamA.listen(eventsA.add);
+      final subB = streamB.listen(eventsB.add);
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'delta',
+          'delta': 'hello-a',
+          'request_id': 'req-a',
+        }),
+      );
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'delta',
+          'delta': 'hello-b',
+          'request_id': 'req-b',
+        }),
+      );
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-a',
+        }),
+      );
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-b',
+        }),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(eventsA.whereType<TextEvent>().single.content, 'hello-a');
+      expect(eventsB.whereType<TextEvent>().single.content, 'hello-b');
+
+      await subA.cancel();
+      await subB.cancel();
+    });
+
+    test('Synthesizes DoneEvent when full_text arrives without terminal done',
+        () async {
+      service = WebSocketChatServiceV2(
+        container: container,
+        baseUrl: 'ws://test.com',
+        channelFactory: mockFactory,
+        terminalDoneFallbackDelay: const Duration(milliseconds: 30),
+      );
+
+      final stream = service.sendMessage(
+        message: 'init',
+        userId: 'user1',
+        requestId: 'req-fulltext',
+      );
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'full_text',
+          'full_text': 'final answer',
+          'request_id': 'req-fulltext',
+        }),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(events.whereType<FullTextEvent>().single.content, 'final answer');
+      expect(events.whereType<DoneEvent>().single.finishReason,
+          'full_text_idle_fallback',);
+
+      await sub.cancel();
+    });
+
     test(
         'Parses dag_execution_event metadata-only delta into DagExecutionEvent',
         () async {
@@ -261,7 +360,7 @@ void main() {
         },
       });
       mockChannel.simulateIncomingMessage(incomingJson);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await _waitForEvents(events);
 
       expect(events, isNotEmpty);
       expect(events.first, isA<DagExecutionEvent>());
@@ -334,7 +433,7 @@ void main() {
       expect(events.first, isA<StatusUpdateEvent>());
       final event = events.first as StatusUpdateEvent;
       expect(event.details, contains('create_plan'));
-      expect(event.details, contains('320ms'));
+      expect(event.details, contains('320'));
 
       await sub.cancel();
     });

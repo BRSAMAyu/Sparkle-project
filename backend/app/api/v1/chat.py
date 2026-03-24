@@ -1,13 +1,14 @@
+from __future__ import annotations
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -29,7 +30,19 @@ from app.tools.registry import tool_registry
 router = APIRouter()
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_conversation_id(conversation_id: str | None) -> tuple[UUID, str]:
+    if conversation_id:
+        try:
+            session_id = UUID(conversation_id)
+            return session_id, str(session_id)
+        except ValueError:
+            pass
+
+    session_id = uuid4()
+    return session_id, str(session_id)
 
 
 class ChatRequest(BaseModel):
@@ -161,6 +174,10 @@ async def chat_with_task_context(
     # If ChatMessage doesn't have task_id, we might need to add it or just rely on session_id being tracked elsewhere.
     # For now, we return the response.
 
+    session_id_uuid, session_id_str = _normalize_conversation_id(
+        request.conversation_id,
+    )
+
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,
@@ -172,13 +189,13 @@ async def chat_with_task_context(
     await save_chat_message(
         db=db,
         user_id=current_user.id,
-        conversation_id=request.conversation_id,
+        session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
         tool_results=[tr.model_dump() for tr in tool_results]
     )
 
-    return ChatResponse(**response_data, conversation_id=request.conversation_id or "new_task_chat")
+    return ChatResponse(**response_data, conversation_id=session_id_str)
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -302,6 +319,10 @@ async def chat(
         llm_text = llm_response.content
 
     # 6. 组装响应
+    session_id_uuid, session_id_str = _normalize_conversation_id(
+        request.conversation_id,
+    )
+
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,
@@ -313,13 +334,13 @@ async def chat(
     await save_chat_message(
         db=db,
         user_id=current_user.id,
-        conversation_id=request.conversation_id,
+        session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
         tool_results=[tr.model_dump() for tr in tool_results] # save tool results in message
     )
 
-    return ChatResponse(**response_data, conversation_id=request.conversation_id or "new")
+    return ChatResponse(**response_data, conversation_id=session_id_str)
 
 @router.post("/chat/stream")
 async def chat_stream(
@@ -596,7 +617,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
     """
-    from datetime import UTC, datetime, timedelta
+    from datetime import timezone, datetime, timedelta
 
     from app.models.galaxy import UserNodeStatus
     from app.models.plan import Plan
@@ -813,18 +834,31 @@ async def get_conversation_history(
 async def save_chat_message(
     db: AsyncSession,
     user_id: UUID,
-    conversation_id: str | None,
+    session_id: UUID,
     user_message: str,
     assistant_message: str,
     tool_results: list[dict]
 ):
     """保存聊天消息"""
-    session_id_uuid = UUID(conversation_id) if conversation_id else UUID('00000000-0000-0000-0000-000000000000')
+    session_meta = await db.get(ChatSessionModel, session_id)
+    now = _utcnow()
+    if session_meta is None:
+        db.add(
+            ChatSessionModel(
+                id=session_id,
+                user_id=user_id,
+                is_active=True,
+                last_message_at=now,
+            )
+        )
+    else:
+        session_meta.last_message_at = now
+        session_meta.is_active = True
 
     # Save user message
     user_msg_db = ChatMessage(
         user_id=user_id,
-        session_id=session_id_uuid,
+        session_id=session_id,
         role=MessageRole.USER,
         content=user_message,
     )
@@ -834,7 +868,7 @@ async def save_chat_message(
     # Actions should be saved as JSON directly if the model supports it
     assistant_msg_db = ChatMessage(
         user_id=user_id,
-        session_id=session_id_uuid,
+        session_id=session_id,
         role=MessageRole.ASSISTANT,
         content=assistant_message,
         actions=tool_results if tool_results else None, # Store tool results as actions
@@ -842,3 +876,133 @@ async def save_chat_message(
     db.add(assistant_msg_db)
 
     await db.commit()
+
+
+# ============ Chat Session Management API ============
+
+from app.models.chat import ChatSession as ChatSessionModel
+from app.schemas.chat import ChatMessageDetail, ChatSession
+
+
+@router.get("/sessions", response_model=list[ChatSession])
+async def get_chat_sessions(
+    limit: int = 20,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取用户的聊天会话列表
+    """
+    # Query distinct sessions with message counts and last message time
+    stmt = (
+        select(
+            ChatMessage.session_id,
+            ChatMessage.user_id,
+            ChatMessage.task_id,
+            func.count(ChatMessage.id).label("message_count"),
+            func.max(ChatMessage.created_at).label("last_message_at"),
+            func.min(ChatMessage.created_at).label("created_at")
+        )
+        .where(ChatMessage.user_id == current_user.id)
+        .where(ChatMessage.session_id != UUID('00000000-0000-0000-0000-000000000000'))
+        .group_by(ChatMessage.session_id, ChatMessage.user_id, ChatMessage.task_id)
+        .order_by(func.max(ChatMessage.created_at).desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    sessions = []
+    for row in rows:
+        # Try to get title from ChatSessionModel
+        session_meta = await db.execute(
+            select(ChatSessionModel).where(ChatSessionModel.id == row.session_id)
+        )
+        session_meta = session_meta.scalar_one_or_none()
+
+        sessions.append(ChatSession(
+            session_id=row.session_id,
+            user_id=row.user_id,
+            task_id=row.task_id,
+            message_count=row.message_count,
+            created_at=row.created_at,
+            last_message_at=row.last_message_at,
+        ))
+
+    return sessions
+
+
+@router.get("/history/{session_id}", response_model=list[ChatMessageDetail])
+async def get_chat_history(
+    session_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取特定会话的聊天历史
+    """
+    ownership_stmt = (
+        select(func.count())
+        .select_from(ChatMessage)
+        .where(
+            and_(
+                ChatMessage.user_id == current_user.id,
+                ChatMessage.session_id == session_id,
+            )
+        )
+    )
+    ownership_result = await db.execute(ownership_stmt)
+    owns_session = (ownership_result.scalar() or 0) > 0
+
+    if not owns_session:
+        session_meta_stmt = (
+            select(ChatSessionModel.id)
+            .where(
+                and_(
+                    ChatSessionModel.id == session_id,
+                    ChatSessionModel.user_id == current_user.id,
+                )
+            )
+            .limit(1)
+        )
+        session_meta_result = await db.execute(session_meta_stmt)
+        owns_session = session_meta_result.scalar_one_or_none() is not None
+
+    if not owns_session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+
+    stmt = (
+        select(ChatMessage)
+        .where(
+            and_(
+                ChatMessage.user_id == current_user.id,
+                ChatMessage.session_id == session_id
+            )
+        )
+        .order_by(ChatMessage.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    messages = result.scalars().all()
+
+    return [
+        ChatMessageDetail(
+            id=msg.id,
+            session_id=msg.session_id,
+            user_id=msg.user_id,
+            role=msg.role,
+            content=msg.content,
+            task_id=msg.task_id,
+            actions=msg.actions,
+            tokens_used=msg.tokens_used,
+            model_name=msg.model_name,
+            created_at=msg.created_at,
+            updated_at=msg.updated_at,
+        )
+        for msg in messages
+    ]

@@ -1,0 +1,19 @@
+// Gradle init script to add mirror repositories for China network
+// Use with: ./gradlew --init-script init.gradle <command>
+
+allprojects {
+    buildscript {
+        repositories {
+            maven { url = 'https://maven.aliyun.com/repository/central' }
+            maven { url = 'https://maven.aliyun.com/repository/public' }
+            maven { url = 'https://maven.aliyun.com/repository/google' }
+            maven { url = 'https://maven.aliyun.com/repository/gradle-plugin' }
+        }
+    }
+    repositories {
+        maven { url = 'https://maven.aliyun.com/repository/central' }
+        maven { url = 'https://maven.aliyun.com/repository/public' }
+        maven { url = 'https://maven.aliyun.com/repository/google' }
+        maven { url = 'https://maven.aliyun.com/repository/gradle-plugin' }
+    }
+}

@@ -7,6 +7,7 @@ Responsibilities:
 3. Event tracking
 4. Prometheus metrics integration
 """
+from __future__ import annotations
 import json
 from typing import Any
 

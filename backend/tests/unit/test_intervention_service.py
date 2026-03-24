@@ -1,7 +1,7 @@
-from datetime import UTC, datetime, timezone
+from datetime import timezone, datetime, timezone
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 from app.schemas.intervention import (

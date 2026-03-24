@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 
 class PatternCard extends StatelessWidget {
@@ -72,14 +72,13 @@ class PatternCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             if (pattern.description != null)
-              MarkdownBody(
-                data: pattern.description!,
-                styleSheet: MarkdownStyleSheet(
-                  p: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? DS.neutral300 : DS.neutral700,
-                    height: 1.5,
-                  ),
-                ),
+              SparkleMarkdown(
+                content: pattern.description!,
+                textColor: isDark ? DS.neutral300 : DS.neutral700,
+                codeBackgroundColor: isDark ? DS.neutral700 : DS.neutral100,
+                linkColor: DS.brandPrimary,
+                fontSize: DS.fontSizeSm,
+                lineHeight: 1.55,
               ),
             if (pattern.solutionText != null) ...[
               const SizedBox(height: DS.spacing20),
@@ -96,20 +95,15 @@ class PatternCard extends StatelessWidget {
                     Icon(Icons.lightbulb_outline, color: iconColor),
                     const SizedBox(width: DS.spacing12),
                     Expanded(
-                      child: MarkdownBody(
-                        data:
-                            '**${context.l10n.patternCardSolutionLabel}**: ${pattern.solutionText!}',
-                        styleSheet: MarkdownStyleSheet(
-                          p: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark ? DS.neutral200 : DS.neutral800,
-                            fontWeight: FontWeight.w500,
-                            height: 1.5,
-                          ),
-                          strong: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? DS.brandPrimary : DS.neutral900,
-                          ),
-                        ),
+                      child: SparkleMarkdown(
+                        content:
+                            '**${context.l10n.patternCardSolutionLabel}**：${pattern.solutionText!}',
+                        textColor: isDark ? DS.neutral200 : DS.neutral800,
+                        codeBackgroundColor:
+                            isDark ? DS.neutral800 : DS.neutral100,
+                        linkColor: DS.brandPrimary,
+                        fontSize: DS.fontSizeSm,
+                        lineHeight: 1.55,
                       ),
                     ),
                   ],

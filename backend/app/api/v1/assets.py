@@ -7,12 +7,13 @@ Provides endpoints for managing learning assets:
 - List and filter assets
 - Record suggestion feedback
 """
+from __future__ import annotations
 import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -64,8 +65,7 @@ class AssetResponse(BaseModel):
     created_at: str
     updated_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssetListResponse(BaseModel):
@@ -248,7 +248,7 @@ async def list_assets(
 
     return AssetListResponse(
         assets=[_asset_to_response(a) for a in assets],
-        total=len(assets),  # TODO: Add actual count query for pagination
+        total=len(assets),  # TRACKED(TD-007): Add actual count query for pagination
         limit=limit,
         offset=offset,
     )

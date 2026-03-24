@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/screens/tool_host_screen.dart';
 import 'package:sparkle/features/tools/presentation/screens/tool_library_screen.dart';
@@ -18,7 +21,12 @@ class ToolsRoutes {
                 state.uri.queryParameters['tab'] == 'manage' ? 1 : 0;
             return MaterialPage<void>(
               key: state.pageKey,
-              child: ToolLibraryScreen(initialTab: initialTab),
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.tools,
+                ),
+                child: ToolLibraryScreen(initialTab: initialTab),
+              ),
             );
           },
         ),
@@ -53,10 +61,15 @@ class ToolsRoutes {
             );
             return MaterialPage<void>(
               key: state.pageKey,
-              child: ToolHostScreen(
-                toolId: state.pathParameters['toolId']!,
-                launchContext: launchContext,
-                taskId: state.uri.queryParameters['taskId'],
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.tools,
+                ),
+                child: ToolHostScreen(
+                  toolId: state.pathParameters['toolId']!,
+                  launchContext: launchContext,
+                  taskId: state.uri.queryParameters['taskId'],
+                ),
               ),
             );
           },

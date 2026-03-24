@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 
@@ -26,12 +31,13 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   void _handleSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
       ref.read(userSearchProvider.notifier).search(query);
     }
   }
 
   void _showUserOptions(UserBrief user) {
-    showModalBottomSheet<void>(
+    unawaited(showSensoryModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -57,8 +63,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 Navigator.pop(context);
                 try {
                   await ref
-                      .read(friendRecommendationsProvider.notifier)
-                      .sendRequest(user.id);
+                      .read(communityRepositoryProvider)
+                      .sendFriendRequest(user.id);
                   if (mounted) {
                     AppFeedback.success(
                       context,
@@ -86,7 +92,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           ],
         ),
       ),
-    );
+    ),);
   }
 
   @override
@@ -147,10 +153,12 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                     const SizedBox(height: DS.md),
                 itemBuilder: (context, index) {
                   final user = users[index];
-                  return GraphiteCardSurface(
-                    surfaceRole: SparkleSurfaceRole.card,
-                    padding: EdgeInsets.zero,
-                    child: ListTile(
+                  return SparkleStaggerItem(
+                    index: index,
+                    child: GraphiteCardSurface(
+                      surfaceRole: SparkleSurfaceRole.card,
+                      padding: EdgeInsets.zero,
+                      child: ListTile(
                       leading: Stack(
                         children: [
                           CircleAvatar(
@@ -158,9 +166,11 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                                 ? NetworkImage(user.avatarUrl!)
                                 : null,
                             child: user.avatarUrl == null
-                                ? Text(user.displayName
-                                    .substring(0, 1)
-                                    .toUpperCase(),)
+                                ? Text(
+                                    user.displayName
+                                        .substring(0, 1)
+                                        .toUpperCase(),
+                                  )
                                 : null,
                           ),
                           if (user.status == UserStatus.online)
@@ -212,7 +222,15 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                           Icon(Icons.chevron_right, color: DS.brandPrimary),
                         ],
                       ),
-                      onTap: () => _showUserOptions(user),
+                      onTap: () {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          ),
+                        );
+                        _showUserOptions(user);
+                      },
+                    ),
                     ),
                   );
                 },

@@ -161,3 +161,32 @@ async def test_analyze_blindspots(service, mock_db):
     assert len(results) == 1
     assert results[0].pattern_name == "Cognitive Blindspot"
     assert mock_publish.called
+
+
+@pytest.mark.asyncio
+async def test_create_or_update_pattern_filters_archived_patterns(service, mock_db):
+    user_id = uuid.uuid4()
+    seen_queries: list[str] = []
+
+    mock_pattern_result = MagicMock()
+    mock_pattern_result.scalars.return_value.first.return_value = None
+
+    async def execute_side_effect(query):
+        seen_queries.append(str(query).lower())
+        return mock_pattern_result
+
+    mock_db.execute.side_effect = execute_side_effect
+    mock_db.refresh = AsyncMock()
+
+    result = await service._create_or_update_pattern(
+        user_id=user_id,
+        pattern_name="Planning Optimism",
+        pattern_type="cognitive",
+        description="desc",
+        solution_text="fix",
+        evidence_id=str(uuid.uuid4()),
+        confidence=0.8,
+    )
+
+    assert result.pattern_name == "Planning Optimism"
+    assert "is_archived is false" in seen_queries[0]

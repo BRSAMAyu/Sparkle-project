@@ -7,7 +7,11 @@ Seed Content Initial Data
 2. 常见问题回复模板 (template) - 如何开始学习、功能介绍
 3. Python编程练习题库 (teaching) - 列表操作、函数定义练习
 """
+from datetime import timezone, datetime
 from typing import Any
+import uuid
+
+from sqlalchemy import insert
 
 from app.models.seed_content import (
     DifficultyLevel,
@@ -410,6 +414,10 @@ even_squared = [x**2 for x in numbers if x % 2 == 0]
 ]
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 async def initialize_seed_libraries(db_session) -> int:
     """
     初始化种子内容库数据
@@ -447,15 +455,33 @@ async def initialize_seed_libraries(db_session) -> int:
 
         # 创建内容项
         for item_data in items_data:
-            item_data["library_id"] = library.id
+            normalized_item_data = dict(item_data)
+            normalized_item_data["library_id"] = library.id
             # 处理枚举类型
-            if "item_type" in item_data:
-                item_data["item_type"] = item_data["item_type"].value
-            if "difficulty_level" in item_data and item_data["difficulty_level"]:
-                item_data["difficulty_level"] = item_data["difficulty_level"].value
+            if "item_type" in normalized_item_data:
+                normalized_item_data["item_type"] = normalized_item_data["item_type"].value
+            if "difficulty_level" in normalized_item_data and normalized_item_data["difficulty_level"]:
+                normalized_item_data["difficulty_level"] = normalized_item_data["difficulty_level"].value
 
-            item = SeedItem(**item_data)
-            db_session.add(item)
+            item = SeedItem(**normalized_item_data)
+            await db_session.execute(
+                insert(SeedItem.__table__).values(
+                    id=item.id or uuid.uuid4(),
+                    library_id=item.library_id,
+                    item_type=item.item_type,
+                    title=item.title,
+                    content=item.content,
+                    content_data=item.content_data,
+                    subject=item.subject,
+                    difficulty_level=item.difficulty_level,
+                    tags=item.tags,
+                    order_index=item.order_index or 0,
+                    is_active=True if item.is_active is None else item.is_active,
+                    created_at=item.created_at or _utcnow(),
+                    updated_at=item.updated_at or _utcnow(),
+                    deleted_at=item.deleted_at,
+                )
+            )
             item_count += 1
 
         logger.info(f"Created official library: {library.name} with {len(items_data)} items")

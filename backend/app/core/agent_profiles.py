@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Agent Profile Configuration - 统一的Agent配置管理
 
@@ -10,7 +11,7 @@ Agent Profile Configuration - 统一的Agent配置管理
 支持运行时动态更新，无需重启服务。
 """
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Literal
 
@@ -71,12 +72,43 @@ class TaskType(str, Enum):
 
 class ModelTier(str, Enum):
     """模型层级（按成本/能力分类）"""
-    FAST = "fast"           # 快速响应（如 mimo-v2-flash）
-    FREE_FAST = "free_fast" # 免费快速（如 glm-4.7-flash 非思考模式）
-    STANDARD = "standard"   # 标准模型（如 deepseek-chat, glm-4.7）
-    REASONING = "reasoning" # 强推理（如 deepseek-reasoner）
-    FREE_REASONING = "free_reasoning" # 免费推理（如 glm-4.7-flash 思考模式）
-    SPECIALIST = "specialist" # 专家模型（如 OCR、翻译等专用模型）
+    FREE = "free"           # 后台免费层，不直出主聊天
+    FREE_FAST = "free_fast" # 免费试探/低成本层
+    FREE_REASONING = "free_reasoning"  # 兼容旧值，内部会归一到 free_fast
+    FAST = "fast"           # 快速响应，非思考
+    STANDARD = "standard"   # 甜点层，轻思考
+    PLUS = "plus"           # 高质量非思考
+    PRO = "pro"             # 深推理
+    MAX = "max"             # 最高层，显式使用
+    REASONING = "reasoning" # 兼容旧值，内部会归一到 pro
+    GLM_BATCH = "glm_batch" # GLM批量处理层
+    SPECIALIST = "specialist" # OCR、翻译等专用模型
+
+
+@dataclass
+class AgentModelPolicy:
+    """Agent级模型策略。
+
+    用于解决“所有 agent 只是共用 tier 顺序降级”的问题。
+    每个 agent 可以声明：
+    - 首选模型 key
+    - 首选 tier
+    - tier fallback 链
+    - 禁用模型
+    """
+
+    preferred_models: list[str] = field(default_factory=list)
+    preferred_tier: ModelTier | None = None
+    fallback_tiers: list[ModelTier] = field(default_factory=list)
+    blocked_models: list[str] = field(default_factory=list)
+    lock_to_policy: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        if self.preferred_tier is not None:
+            payload["preferred_tier"] = self.preferred_tier.value
+        payload["fallback_tiers"] = [tier.value for tier in self.fallback_tiers]
+        return payload
 
 
 @dataclass
@@ -93,6 +125,8 @@ class AgentProfile:
     # LLM 配置
     model_tier: ModelTier = ModelTier.STANDARD
     specific_model: str | None = None  # 强制指定具体模型（覆盖 tier）
+    model_policy: AgentModelPolicy | None = None
+    diversity_hint: "ModelDiversityHint | None" = None
     temperature: float = 0.7
     max_tokens: int | None = None
 
@@ -119,13 +153,24 @@ class AgentProfile:
         tier_defaults = {
             ModelTier.FAST: available_models.get("fast_model"),
             ModelTier.STANDARD: available_models.get("standard_model"),
-            ModelTier.REASONING: available_models.get("reasoning_model"),
+            ModelTier.PLUS: available_models.get("plus_model"),
+            ModelTier.PRO: available_models.get("pro_model"),
+            ModelTier.REASONING: available_models.get("pro_model"),
+            ModelTier.MAX: available_models.get("max_model"),
+            ModelTier.GLM_BATCH: available_models.get("glm_batch_model"),
         }
         return tier_defaults.get(self.model_tier, {})
 
     def get_system_prompt(self, **kwargs) -> str:
         """渲染系统Prompt模板"""
         return self.system_prompt_template.format(**kwargs)
+
+
+@dataclass
+class ModelDiversityHint:
+    """提示链路中不同角色应尽量避免复用同一提供商。"""
+
+    avoid_same_provider_as: list[AgentRole] = field(default_factory=list)
 
 
 # ============================================
@@ -139,6 +184,11 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         display_name="协调器",
         description="负责整体流程编排",
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["mimo_pro", "dashscope_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING],
+        ),
         temperature=0.3,
         system_prompt_template="你是Sparkle的流程协调器，负责管理对话流程和工具调用。"
     ),
@@ -148,6 +198,11 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         display_name="生成器",
         description="负责生成回复内容",
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.7,
         system_prompt_template="你是Sparkle（星火），一个智能学习助手。\n\n{user_context}\n\n{preference_instructions}"
     ),
@@ -156,7 +211,12 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.RETRIEVAL,
         display_name="检索器",
         description="负责知识检索",
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
+        ),
         temperature=0.2,
         system_prompt_template="你是知识检索专家，负责从知识图谱中查找相关信息。"
     ),
@@ -166,19 +226,31 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.ROUTER,
         display_name="路由器",
         description="意图识别与路由分发",
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST],
+        ),
         temperature=0.1,
         support_structured_output=True,
-        system_prompt_template="""You are the Dispatcher for Sparkle AI.
+        system_prompt_template="""You are the Dispatcher for Sparkle AI. Output JSON only, no explanation.
 
-Route the query to the best specialist:
-- galaxy_guide: Knowledge graph, concepts, prerequisites, learning paths
-- time_tutor: Scheduling, tasks, planning, deadlines, tomato timer
-- exam_oracle: Exam predictions, mock tests, past paper analysis
-- study_buddy: General chat, emotional support, simple Q&A
-- human_assist: User asks for human help or system cannot handle
+Specialists:
+- galaxy_guide: knowledge graph, concepts, prerequisites, learning paths
+- time_tutor: scheduling, tasks, planning, deadlines, focus timer
+- exam_oracle: exam predictions, mock tests, past paper analysis
+- study_buddy: general chat, emotional support, simple Q&A
+- human_assist: user requests human help or system cannot handle
 
-Query: {query}"""
+Examples:
+{{"query": "微积分求导怎么做", "route": "galaxy_guide", "confidence": 0.9}}
+{{"query": "帮我安排明天学习时间", "route": "time_tutor", "confidence": 0.95}}
+{{"query": "你好啊", "route": "study_buddy", "confidence": 0.85}}
+{{"query": "预测期末考重点", "route": "exam_oracle", "confidence": 0.9}}
+
+Query: {query}
+Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
     ),
 
     AgentRole.GALAXY_GUIDE: AgentProfile(
@@ -190,6 +262,11 @@ Query: {query}"""
         entry_rank=10,
         entry_tags=["knowledge", "prerequisite", "learning-path"],
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_chat", "mimo_pro"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.5,
         allowed_tools=["query_knowledge", "create_knowledge_node", "link_nodes"],
         system_prompt_template="""你是星图向导，Sparkle AI的知识图谱专家。
@@ -211,7 +288,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=20,
         entry_tags=["exam", "strategy", "mock"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
         temperature=0.3,
         allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
         system_prompt_template="""你是考试预言家，Sparkle AI的考试分析专家。
@@ -232,6 +314,11 @@ Query: {query}"""
         entry_rank=30,
         entry_tags=["schedule", "tasks", "focus"],
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["mimo_pro", "dashscope_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.6,
         allowed_tools=[
             "create_plan",
@@ -257,7 +344,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=40,
         entry_tags=["analysis", "reasoning", "evidence"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
         temperature=0.4,
         allowed_tools=["query_knowledge", "create_knowledge_node"],
         system_prompt_template="""你是深度分析师，负责基于证据进行多角度分析。
@@ -276,15 +368,24 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=50,
         entry_tags=["error-diagnosis", "remediation", "root-cause"],
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_reason", "dashscope_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
         temperature=0.3,
         allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
         system_prompt_template="""你是错题分析师，负责识别错误类型并输出补救策略。
 
-你的职责：
-1. 分类错误并解释根因
-2. 对齐正确解法路径
-3. 设计针对性训练建议"""
+诊断格式（必须严格遵守）：
+① 错误类型（知识性/理解性/计算性/粗心）
+② 根因定位：具体指出哪个步骤、哪个概念存在偏差
+③ 正确解法对齐：给出完整的正确思路
+④ 同类题变式：设计1道针对性练习题
+
+[DO] 具体定位到步骤和概念
+[DON'T] 只说"注意审题"等泛泛建议"""
     ),
 
     # ==================== 协作工作流 Agents ====================
@@ -292,7 +393,12 @@ Query: {query}"""
         role=AgentRole.STUDY_PLANNER,
         display_name="学习规划师",
         description="制定宏观学习计划",
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PLUS,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_chat", "deepseek_chat", "dashscope_reason"],
+            preferred_tier=ModelTier.PLUS,
+            fallback_tiers=[ModelTier.PRO, ModelTier.STANDARD],
+        ),
         temperature=0.5,
         system_prompt_template="""你是学习规划师，负责制定宏观学习计划和分析学习状态。"""
     ),
@@ -301,7 +407,12 @@ Query: {query}"""
         role=AgentRole.PROBLEM_SOLVER,
         display_name="问题解决者",
         description="错题诊断与解题分析",
-        model_tier=ModelTier.REASONING,
+        model_tier=ModelTier.PRO,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
         temperature=0.3,
         system_prompt_template="""你是问题解决者，负责分析错题和诊断知识缺陷。"""
     ),
@@ -315,8 +426,19 @@ Query: {query}"""
         entry_rank=60,
         entry_tags=["math", "practice", "derivation"],
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_chat", "dashscope_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING],
+        ),
         temperature=0.4,
-        system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。"""
+        system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。
+
+解题规范：
+1. 必须写出完整步骤，每步标注所用定理/公式名称
+2. 计算题先列公式，再代入数值
+3. 答案必须包含单位（适用时）
+4. 结尾给出验证方法或同类题提示"""
     ),
 
     AgentRole.CODE_AGENT: AgentProfile(
@@ -328,6 +450,11 @@ Query: {query}"""
         entry_rank=70,
         entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.GLM_BATCH],
+        ),
         temperature=0.4,
         system_prompt_template="""你是编程专家，负责设计编程项目和讲解代码概念。"""
     ),
@@ -340,7 +467,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=90,
         entry_tags=["search", "evidence", "retrieval"],
-        model_tier=ModelTier.FAST,
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
+        ),
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
     ),
@@ -350,7 +482,13 @@ Query: {query}"""
         role=AgentRole.REVIEWER,
         display_name="审查专家",
         description="AI内容质量审查（使用独立模型）",
-        model_tier=ModelTier.REASONING,  # 使用强推理模型
+        model_tier=ModelTier.PRO,  # 使用深推理层
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
+        diversity_hint=ModelDiversityHint(avoid_same_provider_as=[AgentRole.GENERATION]),
         temperature=0.2,  # 低温确保客观
         support_structured_output=True,
         system_prompt_template="""你是内容审查专家，负责评估AI生成内容的质量。
@@ -367,7 +505,12 @@ Query: {query}"""
         role=AgentRole.TOOL_EXECUTION,
         display_name="工具执行",
         description="执行工具调用",
-        specific_model="zhipu_chat",  # GLM-4.7: 支持交错式思考
+        model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.3,
         system_prompt_template="""你是工具执行专家，负责调用外部工具并解析结果。"""
     ),
@@ -380,15 +523,22 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=80,
         entry_tags=["chat", "coaching", "support"],
-        specific_model="xiaomi_chat",  # MIMO: 快速响应
+        model_tier=ModelTier.FREE_FAST,
+        model_policy=AgentModelPolicy(
+            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "xiaomi_chat", "dashscope_fast"],
+            preferred_tier=ModelTier.FREE_FAST,
+            fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
+        ),
         temperature=0.7,
         system_prompt_template="""你是学习伙伴，一个友好、轻松的AI助手。
 
-你的职责：
-1. 陪伴用户日常学习
-2. 提供情感支持
-3. 回答简单问题
-4. 保持对话轻松有趣"""
+[DO] 回复控制在3句话以内，使用口语化表达，像朋友而非老师
+[DO] 遇到简单问题直接回答；遇到情绪问题先共情再建议
+[DON'T] 主动展开学术话题，除非用户明确提问
+[DON'T] 给出冗长的解释和列表
+
+遇到复杂学术问题时，简单回应后建议："这个问题我帮你转给专家模式~"
+"""
     ),
 
     AgentRole.WRITING_AGENT: AgentProfile(
@@ -399,7 +549,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=100,
         entry_tags=["writing", "editing", "expression"],
-        specific_model="deepseek_chat",  # DeepSeek: 擅长文本生成
+        model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
+        ),
         temperature=0.8,
         system_prompt_template="""你是写作专家，负责指导写作和优化文本。
 
@@ -418,7 +573,12 @@ Query: {query}"""
         entry_enabled=True,
         entry_rank=110,
         entry_tags=["science", "concepts", "experiments"],
-        specific_model="zhipu_chat",  # GLM-4.7: 支持思考模式
+        model_tier=ModelTier.PRO,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_tier=ModelTier.PRO,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
+        ),
         temperature=0.5,
         system_prompt_template="""你是科学专家，负责讲解科学概念和设计实验。
 
@@ -464,15 +624,15 @@ TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     },
     TaskType.DEEP_REASONING: {
         "default_agent": AgentRole.EXAM_ORACLE,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PRO,
     },
     TaskType.TASK_DECOMPOSITION: {
         "default_agent": AgentRole.STUDY_PLANNER,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PLUS,
     },
     TaskType.ERROR_DIAGNOSIS: {
         "default_agent": AgentRole.PROBLEM_SOLVER,
-        "model_tier": ModelTier.REASONING,
+        "model_tier": ModelTier.PRO,
     },
     TaskType.COLLABORATION: {
         "default_agent": AgentRole.ORCHESTRATOR,
@@ -480,7 +640,7 @@ TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     },
     TaskType.REVIEW: {
         "default_agent": AgentRole.REVIEWER,
-        "model_tier": ModelTier.REASONING,  # 审查使用强推理模型
+        "model_tier": ModelTier.PRO,  # 审查使用深推理层
     },
 }
 
@@ -520,6 +680,7 @@ class AgentProfileRegistry:
             role: {
                 "display_name": p.display_name,
                 "model_tier": p.model_tier,
+                "model_policy": p.model_policy.to_dict() if p.model_policy else None,
                 "temperature": p.temperature,
                 "tools": p.allowed_tools,
             }
@@ -549,6 +710,11 @@ def get_public_agent_catalog() -> list[dict[str, Any]]:
             "recommended_scenarios": profile.entry_tags[:3],
             "enabled": profile.entry_enabled,
             "rank": profile.entry_rank,
+            "source": "official",
+            "official": True,
+            "model_tier": profile.model_tier.value,
+            "specific_model": profile.specific_model,
+            "model_policy": profile.model_policy.to_dict() if profile.model_policy else None,
         })
     return catalog
 

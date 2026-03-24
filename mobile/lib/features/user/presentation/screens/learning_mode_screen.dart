@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
@@ -41,6 +44,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
     setState(() {
       _isLoading = true;
     });
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     try {
       final userRepo = ref.read(userRepositoryProvider);
       final userPreferences = UserPreferences(
@@ -54,6 +58,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
       await ref.read(authProvider.notifier).refreshUser();
 
       if (mounted) {
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
         AppFeedback.success(context, context.l10n.learningModeSaved);
         UserRoutes.popOrGoProfile(context);
       }
@@ -90,52 +95,65 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    context.l10n.learningModeDragHint,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: DS.fontWeightMedium,
-                        ),
-                  ),
-                  const SizedBox(height: DS.spacing24),
-                  Center(
-                    child: PreferenceController2D(
-                      initialDepth: _currentDepthPreference,
-                      initialCuriosity: _currentCuriosityPreference,
-                      onPreferenceChanged: (newPreferences) {
-                        setState(() {
-                          _currentCuriosityPreference =
-                              newPreferences.dx; // dx is curiosity
-                          _currentDepthPreference =
-                              newPreferences.dy; // dy is depth
-                        });
-                      },
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Text(
+                      context.l10n.learningModeDragHint,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: DS.fontWeightMedium,
+                          ),
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),
-                  Text(
-                    context.l10n.learningModeDepthAxisValue(
-                      (_currentDepthPreference * 100).toStringAsFixed(0),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: Center(
+                      child: PreferenceController2D(
+                        initialDepth: _currentDepthPreference,
+                        initialCuriosity: _currentCuriosityPreference,
+                        onPreferenceChanged: (newPreferences) {
+                          setState(() {
+                            _currentCuriosityPreference = newPreferences.dx;
+                            _currentDepthPreference = newPreferences.dy;
+                          });
+                        },
+                      ),
                     ),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: DS.neutral600),
-                  ),
-                  Text(
-                    context.l10n.learningModeCuriosityAxisValue(
-                      (_currentCuriosityPreference * 100).toStringAsFixed(0),
-                    ),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: DS.neutral600),
                   ),
                   const SizedBox(height: DS.spacing24),
-                  Center(
-                    child: SparkleButton(
-                      onPressed: _isLoading ? null : _savePreferences,
-                      label: context.l10n.learningModeSave,
-                      loading: _isLoading,
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: Text(
+                      context.l10n.learningModeDepthAxisValue(
+                        (_currentDepthPreference * 100).toStringAsFixed(0),
+                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: DS.neutral600),
+                    ),
+                  ),
+                  SparkleStaggerItem(
+                    index: 3,
+                    child: Text(
+                      context.l10n.learningModeCuriosityAxisValue(
+                        (_currentCuriosityPreference * 100).toStringAsFixed(0),
+                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: DS.neutral600),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing24),
+                  SparkleStaggerItem(
+                    index: 4,
+                    child: Center(
+                      child: SparkleButton(
+                        onPressed: _isLoading ? null : _savePreferences,
+                        label: context.l10n.learningModeSave,
+                        loading: _isLoading,
+                      ),
                     ),
                   ),
                 ],

@@ -4,7 +4,7 @@ TaskEventListener - 任务事件监听器
 监听任务相关事件并触发知识星图更新
 """
 import asyncio
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -19,7 +19,7 @@ from app.services.galaxy.feedback_service import GalaxyFeedbackService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class TaskEventListener:

@@ -11,6 +11,13 @@ import sys
 from pathlib import Path
 
 
+def _preferred_python(repo_root: Path) -> str:
+    backend_venv = repo_root / "backend" / ".venv" / "bin" / "python"
+    if backend_venv.exists():
+        return str(backend_venv)
+    return sys.executable
+
+
 def _load_json(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -27,17 +34,18 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     snapshot_path = repo_root / args.snapshot
     generated_path = repo_root / "quality" / "openapi_snapshot.generated.json"
+    python_bin = _preferred_python(repo_root)
 
     if args.update:
         subprocess.check_call(
-            [sys.executable, str(repo_root / "scripts" / "export_openapi_snapshot.py"), "--output", args.snapshot],
+            [python_bin, str(repo_root / "scripts" / "export_openapi_snapshot.py"), "--output", args.snapshot],
             cwd=repo_root,
         )
         print("✅ OpenAPI snapshot updated")
         return 0
 
     subprocess.check_call(
-        [sys.executable, str(repo_root / "scripts" / "export_openapi_snapshot.py"), "--output", str(generated_path.relative_to(repo_root))],
+        [python_bin, str(repo_root / "scripts" / "export_openapi_snapshot.py"), "--output", str(generated_path.relative_to(repo_root))],
         cwd=repo_root,
     )
 

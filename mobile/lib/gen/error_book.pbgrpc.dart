@@ -56,6 +56,15 @@ class ErrorBookServiceClient extends $grpc.Client {
     return $createUnaryCall(_$getError, request, options: options);
   }
 
+  /// Get semantic summary for an error
+  $grpc.ResponseFuture<$0.ErrorSemanticSummary> getErrorSemanticSummary(
+    $0.GetErrorRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getErrorSemanticSummary, request,
+        options: options);
+  }
+
   /// Update an error record
   $grpc.ResponseFuture<$0.ErrorRecord> updateError(
     $0.UpdateErrorRequest request, {
@@ -121,6 +130,11 @@ class ErrorBookServiceClient extends $grpc.Client {
           '/error_book.ErrorBookService/GetError',
           ($0.GetErrorRequest value) => value.writeToBuffer(),
           $0.ErrorRecord.fromBuffer);
+  static final _$getErrorSemanticSummary =
+      $grpc.ClientMethod<$0.GetErrorRequest, $0.ErrorSemanticSummary>(
+          '/error_book.ErrorBookService/GetErrorSemanticSummary',
+          ($0.GetErrorRequest value) => value.writeToBuffer(),
+          $0.ErrorSemanticSummary.fromBuffer);
   static final _$updateError =
       $grpc.ClientMethod<$0.UpdateErrorRequest, $0.ErrorRecord>(
           '/error_book.ErrorBookService/UpdateError',
@@ -180,6 +194,13 @@ abstract class ErrorBookServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.GetErrorRequest.fromBuffer(value),
         ($0.ErrorRecord value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetErrorRequest, $0.ErrorSemanticSummary>(
+        'GetErrorSemanticSummary',
+        getErrorSemanticSummary_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetErrorRequest.fromBuffer(value),
+        ($0.ErrorSemanticSummary value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.UpdateErrorRequest, $0.ErrorRecord>(
         'UpdateError',
         updateError_Pre,
@@ -256,6 +277,15 @@ abstract class ErrorBookServiceBase extends $grpc.Service {
   }
 
   $async.Future<$0.ErrorRecord> getError(
+      $grpc.ServiceCall call, $0.GetErrorRequest request);
+
+  $async.Future<$0.ErrorSemanticSummary> getErrorSemanticSummary_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.GetErrorRequest> $request) async {
+    return getErrorSemanticSummary($call, await $request);
+  }
+
+  $async.Future<$0.ErrorSemanticSummary> getErrorSemanticSummary(
       $grpc.ServiceCall call, $0.GetErrorRequest request);
 
   $async.Future<$0.ErrorRecord> updateError_Pre($grpc.ServiceCall $call,

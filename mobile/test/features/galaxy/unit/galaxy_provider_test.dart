@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore_for_file: cascade_invocations
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   FakeEnhancedGalaxyRepository({
@@ -53,6 +53,19 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
     Offset position,
   ) async =>
       updateNodePositions(<String, Offset>{nodeId: position});
+
+  @override
+  Future<NetworkResult<Map<String, dynamic>>> updateNodeMastery(
+    String nodeId, {
+    required int mastery,
+    String reason = 'manual_update',
+  }) async =>
+      NetworkResult.success(<String, dynamic>{
+        'success': true,
+        'node_id': nodeId,
+        'new_mastery': mastery,
+        'reason': reason,
+      });
 
   @override
   Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) => eventsStream;

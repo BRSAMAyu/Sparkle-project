@@ -1,6 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
@@ -38,7 +41,10 @@ class ErrorBookRoutes {
           }
           return _buildTransitionPage(
             state: state,
-            child: ErrorListScreen(filterByDimension: dimension),
+            child: SceneAudioScope(
+              policy: const SceneAudioPolicy(track: BgmTrack.task),
+              child: ErrorListScreen(filterByDimension: dimension),
+            ),
           );
         },
       ),
@@ -47,7 +53,10 @@ class ErrorBookRoutes {
         name: 'addError',
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const AddErrorScreen(),
+          child: const SceneAudioScope(
+            policy: SceneAudioPolicy(track: BgmTrack.task),
+            child: AddErrorScreen(),
+          ),
           type: SharedAxisTransitionType.scaled,
         ),
       ),
@@ -59,7 +68,10 @@ class ErrorBookRoutes {
           final errorId = state.pathParameters['id']!;
           return _buildTransitionPage(
             state: state,
-            child: ErrorDetailScreen(errorId: errorId),
+            child: SceneAudioScope(
+              policy: const SceneAudioPolicy(track: BgmTrack.task),
+              child: ErrorDetailScreen(errorId: errorId),
+            ),
           );
         },
       ),
@@ -77,7 +89,10 @@ class ErrorBookRoutes {
 
           return _buildTransitionPage(
             state: state,
-            child: ReviewScreen(mode: mode, subjectCode: subjectCode),
+            child: SceneAudioScope(
+              policy: const SceneAudioPolicy(track: BgmTrack.task),
+              child: ReviewScreen(mode: mode, subjectCode: subjectCode),
+            ),
             type: SharedAxisTransitionType.scaled,
           );
         },

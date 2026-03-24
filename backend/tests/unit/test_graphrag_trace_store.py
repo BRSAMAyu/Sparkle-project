@@ -1,7 +1,7 @@
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 from app.config import settings

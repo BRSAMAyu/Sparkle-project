@@ -13,14 +13,59 @@ import 'package:timezone/timezone.dart' as tz;
 // Global navigator key to allow navigation without context from notifications
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+/// 通知权限状态
+class NotificationPermissionStatus {
+  final bool hasPermission;
+  final bool? alertEnabled;
+  final bool? badgeEnabled;
+  final bool? soundEnabled;
+  final String? denialReason;
+
+  const NotificationPermissionStatus({
+    required this.hasPermission,
+    this.alertEnabled,
+    this.badgeEnabled,
+    this.soundEnabled,
+    this.denialReason,
+  });
+
+  factory NotificationPermissionStatus.granted() =>
+      const NotificationPermissionStatus(hasPermission: true);
+
+  factory NotificationPermissionStatus.denied({String? reason}) =>
+      NotificationPermissionStatus(hasPermission: false, denialReason: reason);
+
+  factory NotificationPermissionStatus.partial({
+    bool? alert,
+    bool? badge,
+    bool? sound,
+  }) {
+    final hasAny = alert == true || badge == true || sound == true;
+    return NotificationPermissionStatus(
+      hasPermission: hasAny,
+      alertEnabled: alert,
+      badgeEnabled: badge,
+      soundEnabled: sound,
+    );
+  }
+
+  @override
+  String toString() =>
+      'NotificationPermissionStatus(hasPermission: $hasPermission, '
+      'alert: $alertEnabled, badge: $badgeEnabled, sound: $soundEnabled)';
+}
+
 class NotificationService {
-  NotificationService(this._ref) {
-    unawaited(_initialize());
+  NotificationService(this._ref, {bool autoInitialize = true}) {
+    if (autoInitialize) {
+      unawaited(_initialize());
+    }
   }
   final Ref _ref;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger();
+  bool _isInitialized = false;
 
   Future<void> _initialize() async {
     tz_data.initializeTimeZones();
@@ -28,11 +73,10 @@ class NotificationService {
     // tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
 
     const initializationSettingsAndroid = AndroidInitializationSettings(
-        '@mipmap/ic_launcher',); // Verify icon name
+      '@mipmap/ic_launcher',
+    ); // Verify icon name
 
-    const initializationSettingsDarwin = DarwinInitializationSettings(
-      requestBadgePermission: true,
-    );
+    const initializationSettingsDarwin = DarwinInitializationSettings();
 
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -60,32 +104,122 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
-    // Request permissions (Android 13+)
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            MacOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-
+    _isInitialized = true;
     _logger.i('NotificationService initialized');
   }
+
+  /// 检查通知权限状态
+  Future<NotificationPermissionStatus> checkPermissionStatus() async {
+    if (!_isInitialized) {
+      await _initialize();
+    }
+
+    try {
+      // Android
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        final granted = await androidPlugin.areNotificationsEnabled();
+        // Android 13+: areNotificationsEnabled returns bool
+        // For older Android, notifications are always enabled
+        return NotificationPermissionStatus(
+          hasPermission: granted ?? true,
+          alertEnabled: granted,
+          badgeEnabled: granted,
+          soundEnabled: granted,
+        );
+      }
+
+      // iOS
+      final iosPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin != null) {
+        final settings = await iosPlugin.checkPermissions();
+        if (settings != null) {
+          return NotificationPermissionStatus.partial(
+            alert: settings.isEnabled,
+            badge: settings.isEnabled,
+            sound: settings.isEnabled,
+          );
+        }
+      }
+
+      // macOS
+      final macosPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin>();
+      if (macosPlugin != null) {
+        final settings = await macosPlugin.checkPermissions();
+        if (settings != null) {
+          return NotificationPermissionStatus.partial(
+            alert: settings.isEnabled,
+            badge: settings.isEnabled,
+            sound: settings.isEnabled,
+          );
+        }
+      }
+
+      // Fallback: assume granted if we can't check
+      return NotificationPermissionStatus.granted();
+    } catch (e) {
+      _logger.e('Failed to check notification permission: $e');
+      return NotificationPermissionStatus.denied(reason: e.toString());
+    }
+  }
+
+  /// 请求通知权限
+  Future<bool> requestPermission() async {
+    if (!_isInitialized) {
+      await _initialize();
+    }
+
+    try {
+      // Android
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        final granted = await androidPlugin.requestNotificationsPermission();
+        return granted ?? false;
+      }
+
+      // iOS
+      final iosPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin != null) {
+        final granted = await iosPlugin.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? false;
+      }
+
+      // macOS
+      final macosPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin>();
+      if (macosPlugin != null) {
+        final granted = await macosPlugin.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? false;
+      }
+
+      return true; // Other platforms assume granted
+    } catch (e) {
+      _logger.e('Failed to request notification permission: $e');
+      return false;
+    }
+  }
+
+  /// 是否已初始化
+  bool get isInitialized => _isInitialized;
 
   // Static/Global callback for background handling if needed
   @pragma('vm:entry-point')
@@ -96,7 +230,8 @@ class NotificationService {
 
   void _onNotificationResponse(NotificationResponse details) {
     _logger.i(
-        'Notification action: ${details.actionId}, payload: ${details.payload}',);
+      'Notification action: ${details.actionId}, payload: ${details.payload}',
+    );
 
     if (details.payload != null) {
       try {
@@ -120,8 +255,10 @@ class NotificationService {
             // Parse taskId from payload
             final taskId = payload['taskId'] as String?;
             if (taskId != null) {
-              unawaited(GoRouter.of(context)
-                  .pushNamed('taskExecution', pathParameters: {'id': taskId}),);
+              unawaited(
+                GoRouter.of(context)
+                    .pushNamed('taskExecution', pathParameters: {'id': taskId}),
+              );
             }
           }
         } else if (actionId == 'SNOOZE') {
@@ -138,12 +275,12 @@ class NotificationService {
   }
 
   void _handleSnooze(Map<String, dynamic> payload) {
-    // TODO: Call API to snooze
+    // TRACKED(TD-003): Call API to snooze
     _logger.i('Snoozing notification: $payload');
   }
 
   void _handleDismiss(Map<String, dynamic> payload) {
-    // TODO: Call API to dismiss
+    // TRACKED(TD-003): Call API to dismiss
     _logger.i('Dismissing notification: $payload');
   }
 
@@ -267,7 +404,8 @@ class NotificationService {
     );
 
     _logger.i(
-        'Scheduled notification $id for $scheduledDate with match: $matchDateTimeComponents',);
+      'Scheduled notification $id for $scheduledDate with match: $matchDateTimeComponents',
+    );
   }
 
   Future<void> cancelNotification(int id) async {
@@ -278,3 +416,35 @@ class NotificationService {
 
 final notificationServiceProvider =
     Provider<NotificationService>(NotificationService.new);
+
+/// 通知权限状态 Provider
+final notificationPermissionStatusProvider = AsyncNotifierProvider<
+    NotificationPermissionStatusNotifier, NotificationPermissionStatus>(
+  NotificationPermissionStatusNotifier.new,
+);
+
+class NotificationPermissionStatusNotifier
+    extends AsyncNotifier<NotificationPermissionStatus> {
+  @override
+  Future<NotificationPermissionStatus> build() async {
+    final notificationService = ref.read(notificationServiceProvider);
+    return notificationService.checkPermissionStatus();
+  }
+
+  /// 刷新权限状态
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final notificationService = ref.read(notificationServiceProvider);
+      return notificationService.checkPermissionStatus();
+    });
+  }
+
+  /// 请求权限并刷新状态
+  Future<bool> requestPermission() async {
+    final notificationService = ref.read(notificationServiceProvider);
+    final granted = await notificationService.requestPermission();
+    await refresh();
+    return granted;
+  }
+}

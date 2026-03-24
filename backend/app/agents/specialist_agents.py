@@ -8,8 +8,6 @@ import re
 
 from loguru import logger
 
-from app.services.llm_service import llm_service
-
 from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
 
 
@@ -49,6 +47,8 @@ class MathAgent(BaseAgent):
 
     async def process(self, context: AgentContext) -> AgentResponse:
         """处理数学问题"""
+        from app.services.llm_fallback_utils import agent_llm
+
         logger.info(f"MathAgent processing: {context.user_query[:50]}...")
 
         # 构建专业化提示词
@@ -67,27 +67,19 @@ Format your response with:
 - **Answer**: Final answer highlighted
 """
 
-        try:
-            # 调用 LLM
-            response_text = await llm_service.chat(
-                prompt=f"{system_prompt}\n\nUser Question: {context.user_query}",
-                model="deepseek-chat"  # 使用 DeepSeek 进行数学推理
-            )
+        # 调用 LLM (带降级保护)
+        response_text = await agent_llm.call(
+            messages=[{"role": "user", "content": f"{system_prompt}\n\nUser Question: {context.user_query}"}],
+            fallback="抱歉，数学问题处理服务暂时不可用，请稍后重试。",
+            model="deepseek-chat"  # 使用 DeepSeek 进行数学推理
+        )
 
-            return self.format_response(
-                text=response_text,
-                reasoning="Applied mathematical reasoning and symbolic computation",
-                confidence=0.9,
-                metadata={"agent_type": "math", "model": "deepseek"}
-            )
-
-        except Exception as e:
-            logger.error(f"MathAgent error: {e}")
-            return self.format_response(
-                text=f"Sorry, I encountered an error while processing this math problem: {str(e)}",
-                confidence=0.0,
-                metadata={"error": str(e)}
-            )
+        return self.format_response(
+            text=response_text,
+            reasoning="Applied mathematical reasoning and symbolic computation",
+            confidence=0.9,
+            metadata={"agent_type": "math", "model": "deepseek"}
+        )
 
 
 class CodeAgent(BaseAgent):
@@ -126,6 +118,8 @@ class CodeAgent(BaseAgent):
 
     async def process(self, context: AgentContext) -> AgentResponse:
         """处理编程问题"""
+        from app.services.llm_fallback_utils import agent_llm
+
         logger.info(f"CodeAgent processing: {context.user_query[:50]}...")
 
         system_prompt = self.get_system_prompt() + """
@@ -144,26 +138,19 @@ Format your response with:
 - **Notes**: Any important considerations
 """
 
-        try:
-            response_text = await llm_service.chat(
-                prompt=f"{system_prompt}\n\nUser Request: {context.user_query}",
-                model="deepseek-chat"
-            )
+        # 调用 LLM (带降级保护)
+        response_text = await agent_llm.call(
+            messages=[{"role": "user", "content": f"{system_prompt}\n\nUser Request: {context.user_query}"}],
+            fallback="抱歉，代码生成服务暂时不可用，请稍后重试。",
+            model="deepseek-chat"
+        )
 
-            return self.format_response(
-                text=response_text,
-                reasoning="Applied software engineering principles and best practices",
-                confidence=0.95,
-                metadata={"agent_type": "code", "model": "deepseek"}
-            )
-
-        except Exception as e:
-            logger.error(f"CodeAgent error: {e}")
-            return self.format_response(
-                text=f"Sorry, I encountered an error while generating code: {str(e)}",
-                confidence=0.0,
-                metadata={"error": str(e)}
-            )
+        return self.format_response(
+            text=response_text,
+            reasoning="Applied software engineering principles and best practices",
+            confidence=0.95,
+            metadata={"agent_type": "code", "model": "deepseek"}
+        )
 
 
 class WritingAgent(BaseAgent):
@@ -199,6 +186,8 @@ class WritingAgent(BaseAgent):
 
     async def process(self, context: AgentContext) -> AgentResponse:
         """处理写作任务"""
+        from app.services.llm_fallback_utils import agent_llm
+
         logger.info(f"WritingAgent processing: {context.user_query[:50]}...")
 
         system_prompt = self.get_system_prompt() + """
@@ -216,26 +205,19 @@ Format your response with:
 - **Tips**: Writing tips for improvement
 """
 
-        try:
-            response_text = await llm_service.chat(
-                prompt=f"{system_prompt}\n\nUser Request: {context.user_query}",
-                model="qwen-plus"  # 使用 Qwen 进行中文写作
-            )
+        # 调用 LLM (带降级保护)
+        response_text = await agent_llm.call(
+            messages=[{"role": "user", "content": f"{system_prompt}\n\nUser Request: {context.user_query}"}],
+            fallback="抱歉，写作辅助服务暂时不可用，请稍后重试。",
+            model="qwen-plus"  # 使用 Qwen 进行中文写作
+        )
 
-            return self.format_response(
-                text=response_text,
-                reasoning="Applied writing best practices and style guidelines",
-                confidence=0.9,
-                metadata={"agent_type": "writing", "model": "qwen"}
-            )
-
-        except Exception as e:
-            logger.error(f"WritingAgent error: {e}")
-            return self.format_response(
-                text=f"Sorry, I encountered an error while writing: {str(e)}",
-                confidence=0.0,
-                metadata={"error": str(e)}
-            )
+        return self.format_response(
+            text=response_text,
+            reasoning="Applied writing best practices and style guidelines",
+            confidence=0.9,
+            metadata={"agent_type": "writing", "model": "qwen"}
+        )
 
 
 class ScienceAgent(BaseAgent):
@@ -271,6 +253,8 @@ class ScienceAgent(BaseAgent):
 
     async def process(self, context: AgentContext) -> AgentResponse:
         """处理科学问题"""
+        from app.services.llm_fallback_utils import agent_llm
+
         logger.info(f"ScienceAgent processing: {context.user_query[:50]}...")
 
         system_prompt = self.get_system_prompt() + """
@@ -289,23 +273,16 @@ Format your response with:
 - **Further Reading**: Suggested topics to explore
 """
 
-        try:
-            response_text = await llm_service.chat(
-                prompt=f"{system_prompt}\n\nUser Question: {context.user_query}",
-                model="qwen-plus"
-            )
+        # 调用 LLM (带降级保护)
+        response_text = await agent_llm.call(
+            messages=[{"role": "user", "content": f"{system_prompt}\n\nUser Question: {context.user_query}"}],
+            fallback="抱歉，科学问题解答服务暂时不可用，请稍后重试。",
+            model="qwen-plus"
+        )
 
-            return self.format_response(
-                text=response_text,
-                reasoning="Applied scientific method and evidence-based reasoning",
-                confidence=0.85,
-                metadata={"agent_type": "science", "model": "qwen"}
-            )
-
-        except Exception as e:
-            logger.error(f"ScienceAgent error: {e}")
-            return self.format_response(
-                text=f"Sorry, I encountered an error while processing this science question: {str(e)}",
-                confidence=0.0,
-                metadata={"error": str(e)}
-            )
+        return self.format_response(
+            text=response_text,
+            reasoning="Applied scientific method and evidence-based reasoning",
+            confidence=0.85,
+            metadata={"agent_type": "science", "model": "qwen"}
+        )

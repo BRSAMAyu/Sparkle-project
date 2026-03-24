@@ -1,3 +1,4 @@
+from __future__ import annotations
 import base64
 import io
 import os
@@ -79,6 +80,8 @@ class IngestionService:
                 return self._process_docx(file_path)
             elif ext == ".pptx":
                 return self._process_pptx(file_path)
+            elif ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
+                return self._process_image(file_path, options)
             else:
                 logger.warning(f"Unsupported file type: {ext}")
                 return []
@@ -211,12 +214,12 @@ class IngestionService:
             # Use 300 DPI for better OCR
             im = page.to_image(resolution=300).original
 
-            ocr_engine = (options.get("ocr_engine", "local") or "local").lower()
+            ocr_engine = (options.get("ocr_engine", settings.OCR_PROVIDER) or settings.OCR_PROVIDER).lower()
             if ocr_engine == "deepseek":
-                logger.warning("OCR engine 'deepseek' 已废弃，自动切换到 'zhipu'")
-                ocr_engine = "zhipu"
+                logger.warning("OCR engine 'deepseek' 已兼容映射到 'siliconflow'")
+                ocr_engine = "siliconflow"
 
-            if ocr_engine == "zhipu":
+            if ocr_engine in {"zhipu", "siliconflow", "auto", "remote"}:
                 return self._ocr_via_api(im, options), None
             if not HAS_TESSERACT:
                 logger.warning("Local OCR requested but pytesseract not installed.")
@@ -263,12 +266,15 @@ class IngestionService:
 
     def _ocr_via_api(self, image, options: dict[str, Any]) -> str:
         """
-        Run remote GLM OCR.
+        Run remote OCR with provider failover.
         """
-        del options
-        if not settings.ZHIPU_API_KEY:
-            logger.warning("GLM OCR requested but ZHIPU_API_KEY not set.")
-            return ""
+        provider = (options.get("ocr_engine") or "").strip().lower()
+        if provider in {"deepseek", "siliconflow"}:
+            preferred_provider = "siliconflow"
+        elif provider == "zhipu":
+            preferred_provider = "zhipu"
+        else:
+            preferred_provider = None
 
         try:
             # Convert to base64
@@ -279,10 +285,15 @@ class IngestionService:
 
             image.save(buffered, format="JPEG", quality=95)
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            return ocr_service.ocr_from_base64_sync(img_str)
+            prompt_mode = (options.get("ocr_prompt_mode") or "").strip()
+            return ocr_service.ocr_from_base64_sync(
+                img_str,
+                prompt=prompt_mode,
+                preferred_provider=preferred_provider,
+            )
 
         except Exception as e:
-            logger.error(f"GLM OCR API Exception: {e}")
+            logger.error(f"Remote OCR API Exception: {e}")
             return ""
 
     def _process_docx(self, path: str) -> list[ExtractedChunk]:
@@ -356,6 +367,77 @@ class IngestionService:
                 metadata={}
             ))
         return chunks
+
+    def _process_image(self, path: str, options: dict[str, Any] = None) -> list[ExtractedChunk]:
+        """
+        处理图片文件，直接进行 OCR。
+        支持格式: JPG, JPEG, PNG, WebP, GIF
+        """
+        if options is None:
+            options = {}
+
+        if not HAS_PIL:
+            raise HTTPException(
+                status_code=501,
+                detail="Image OCR requires Pillow, which is not installed."
+            )
+
+        from PIL import Image
+
+        try:
+            im = Image.open(path)
+
+            # 获取图片格式信息
+            image_format = im.format or "UNKNOWN"
+            logger.info(f"Processing image: {path}, format={image_format}, size={im.size}")
+
+            # 创建 Mock Page 对象用于复用现有 OCR 逻辑
+            class MockPage:
+                def __init__(self, image):
+                    self._image = image
+
+                def to_image(self, resolution=300):
+                    class PageImage:
+                        def __init__(self, img):
+                            self.original = img
+                    return PageImage(self._image)
+
+            mock_page = MockPage(im)
+
+            # 复用现有 OCR 逻辑
+            enable_ocr = bool(options.get("enable_ocr", True))
+            if not enable_ocr:
+                logger.warning("Image processing requires OCR, but OCR is disabled")
+                return []
+
+            ocr_text, ocr_confidence = self._attempt_ocr(mock_page, options)
+
+            if not ocr_text:
+                logger.warning(f"OCR produced no text for image: {path}")
+                return []
+
+            # 清理文本
+            clean_text = self._clean_text(ocr_text)
+
+            if len(clean_text) < 20:
+                logger.info(f"Image OCR text too short ({len(clean_text)} chars), skipping")
+                return []
+
+            return [ExtractedChunk(
+                text=clean_text,
+                page_num=1,
+                source="image",
+                metadata={
+                    "format": image_format,
+                    "width": im.size[0],
+                    "height": im.size[1],
+                },
+                ocr_confidence=ocr_confidence
+            )]
+
+        except Exception as e:
+            logger.error(f"Failed to process image {path}: {e}")
+            raise
 
     def _clean_text(self, text: str) -> str:
         """

@@ -87,10 +87,11 @@ class GalaxyEdgeModel {
   final bool bidirectional;
   Map<String, dynamic> toJson() => _$GalaxyEdgeModelToJson(this);
 
-  static EdgeRelationType _parseRelationType(String? raw) => EdgeRelationType.values.firstWhere(
-      (type) => type.name == raw || _relationWireValue(type) == raw,
-      orElse: () => EdgeRelationType.related,
-    );
+  static EdgeRelationType _parseRelationType(String? raw) =>
+      EdgeRelationType.values.firstWhere(
+        (type) => type.name == raw || _relationWireValue(type) == raw,
+        orElse: () => EdgeRelationType.related,
+      );
 
   static String _relationWireValue(EdgeRelationType type) {
     switch (type) {
@@ -168,7 +169,12 @@ class GalaxyNodeModel {
           ((json['importance'] ?? json['importance_level']) as num?)?.toInt() ??
               1,
       sector: _parseSector(json['sector_code']),
-      baseColor: json['base_color'] as String?,
+      baseColor: (json['base_color'] ??
+              json['hex_color'] ??
+              (json['subject'] is Map
+                  ? (json['subject'] as Map)['hex_color']
+                  : null))
+          ?.toString(),
       isUnlocked: (json['is_unlocked'] as bool?) ??
           (userStatus?['is_unlocked'] as bool?) ??
           false,

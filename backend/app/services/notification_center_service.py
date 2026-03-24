@@ -3,7 +3,8 @@ Notification Center Service
 
 Provides unified access to system notifications and intervention requests.
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -22,7 +23,7 @@ from app.schemas.unified_notification import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class NotificationCenterService:

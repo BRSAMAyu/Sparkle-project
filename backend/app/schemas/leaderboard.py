@@ -4,6 +4,7 @@ Leaderboard System Schemas
 
 支持多种类型的排行榜：全局、好友、群组、学科、周榜、连胜榜
 """
+from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Any

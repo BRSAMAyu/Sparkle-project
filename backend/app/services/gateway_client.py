@@ -1,3 +1,4 @@
+from __future__ import annotations
 import httpx
 from google.protobuf import json_format
 from loguru import logger

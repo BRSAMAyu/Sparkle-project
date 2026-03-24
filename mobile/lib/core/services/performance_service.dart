@@ -4,7 +4,10 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
+
+const String kMotionIntensityLevelKey = 'settings_motion_intensity_level';
 
 @immutable
 class RenderConfig {
@@ -53,10 +56,14 @@ class PerformanceService extends ChangeNotifier {
   static final PerformanceService instance = PerformanceService._();
 
   // --- State ---
-  final ValueNotifier<PerformanceTier> currentTier =
-      ValueNotifier(defaultPerformanceTier());
+  final ValueNotifier<PerformanceTier> currentTier = ValueNotifier(
+    defaultPerformanceTier(),
+  );
+  final ValueNotifier<MotionIntensityLevel> motionIntensityLevel =
+      ValueNotifier(MotionIntensityLevel.high);
   final ValueNotifier<double> currentDpr =
       ValueNotifier(PlatformDispatcher.instance.views.first.devicePixelRatio);
+  late PerformanceTier _adaptiveTier = defaultPerformanceTier();
 
   // --- Configuration ---
   static const Duration _targetWindowDuration = Duration(seconds: 1);
@@ -77,35 +84,60 @@ class PerformanceService extends ChangeNotifier {
   int _downgradeStreak = 0;
   int _upgradeStreak = 0;
 
+  Future<void> hydratePreferences(SharedPreferences prefs) async {
+    final storedValue = prefs.getString(kMotionIntensityLevelKey);
+    final level = MotionIntensityLevel.values.firstWhere(
+      (candidate) => candidate.storageValue == storedValue,
+      orElse: () => MotionIntensityLevel.high,
+    );
+    setMotionIntensityLevel(level, persist: false);
+  }
+
   // --- Getters for Features based on Tier ---
+  bool get _motionDisabled => motionIntensityLevel.value == MotionIntensityLevel.off;
+
   bool get enableParticles =>
-      currentTier.value == PerformanceTier.ultra ||
-      currentTier.value == PerformanceTier.high;
-  bool get enableGlow => currentTier.value == PerformanceTier.ultra;
+      !_motionDisabled &&
+      (currentTier.value == PerformanceTier.ultra ||
+          currentTier.value == PerformanceTier.high);
+  bool get enableGlow =>
+      !_motionDisabled && currentTier.value == PerformanceTier.ultra;
   bool get enableBlur =>
-      currentTier.value == PerformanceTier.ultra ||
-      currentTier.value == PerformanceTier.high;
-  bool get enableAntialiasing => currentTier.value != PerformanceTier.low;
-  bool get enableFocusTwinkle => currentTier.value == PerformanceTier.ultra ||
-      currentTier.value == PerformanceTier.high;
+      !_motionDisabled &&
+      (currentTier.value == PerformanceTier.ultra ||
+          currentTier.value == PerformanceTier.high);
+  bool get enableAntialiasing =>
+      !_motionDisabled && currentTier.value != PerformanceTier.low;
+  bool get enableFocusTwinkle =>
+      !_motionDisabled &&
+      (currentTier.value == PerformanceTier.ultra ||
+          currentTier.value == PerformanceTier.high);
   
   // Focus Mode configuration
   int get focusStarCount {
     switch (currentTier.value) {
-      case PerformanceTier.ultra: return 200;
-      case PerformanceTier.high: return 120;
-      case PerformanceTier.medium: return 60;
-      case PerformanceTier.low: return 30;
+      case PerformanceTier.ultra:
+        return _motionDisabled ? 0 : 200;
+      case PerformanceTier.high:
+        return _motionDisabled ? 0 : 120;
+      case PerformanceTier.medium:
+        return _motionDisabled ? 24 : 60;
+      case PerformanceTier.low:
+        return _motionDisabled ? 0 : 30;
     }
   }
 
   // Cognitive Prism configuration
   int get prismParticleCount {
      switch (currentTier.value) {
-      case PerformanceTier.ultra: return 30;
-      case PerformanceTier.high: return 20;
-      case PerformanceTier.medium: return 10;
-      case PerformanceTier.low: return 5;
+      case PerformanceTier.ultra:
+        return _motionDisabled ? 0 : 30;
+      case PerformanceTier.high:
+        return _motionDisabled ? 0 : 20;
+      case PerformanceTier.medium:
+        return _motionDisabled ? 4 : 10;
+      case PerformanceTier.low:
+        return _motionDisabled ? 0 : 5;
     }
   }
 
@@ -120,20 +152,20 @@ class PerformanceService extends ChangeNotifier {
   BackgroundRenderSettings get backgroundRenderSettings {
     switch (currentTier.value) {
       case PerformanceTier.low:
-        return const BackgroundRenderSettings(
-          renderScale: 0.5,
-          renderFps: 20,
-          noiseScale: 0.8,
-          fieldStrength: 0.6,
-          maxBursts: 1,
+        return BackgroundRenderSettings(
+          renderScale: _motionDisabled ? 0.45 : 0.5,
+          renderFps: _motionDisabled ? 15 : 20,
+          noiseScale: _motionDisabled ? 0.6 : 0.8,
+          fieldStrength: _motionDisabled ? 0.45 : 0.6,
+          maxBursts: _motionDisabled ? 0 : 1,
         );
       case PerformanceTier.medium:
-        return const BackgroundRenderSettings(
+        return BackgroundRenderSettings(
           renderScale: 0.75,
-          renderFps: 30,
-          noiseScale: 1.0,
-          fieldStrength: 0.8,
-          maxBursts: 2,
+          renderFps: _motionDisabled ? 18 : 30,
+          noiseScale: _motionDisabled ? 0.75 : 1.0,
+          fieldStrength: _motionDisabled ? 0.55 : 0.8,
+          maxBursts: _motionDisabled ? 0 : 2,
         );
       case PerformanceTier.high:
         return const BackgroundRenderSettings(
@@ -154,9 +186,31 @@ class PerformanceService extends ChangeNotifier {
     }
   }
 
+  Future<void> setMotionIntensityLevel(
+    MotionIntensityLevel level, {
+    bool persist = true,
+  }) async {
+    if (motionIntensityLevel.value == level) {
+      return;
+    }
+    motionIntensityLevel.value = level;
+    _syncCurrentTier(notify: true);
+    if (!persist) {
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(kMotionIntensityLevelKey, level.storageValue);
+    } catch (_) {
+      // Silent fail for persistence.
+    }
+  }
+
   /// Start monitoring FPS
   void startMonitoring() {
     if (_monitoring) return;
+    _adaptiveTier = defaultPerformanceTier();
+    _syncCurrentTier();
     _monitoring = true;
     _deviceRefreshRate = _getDeviceRefreshRate();
     SchedulerBinding.instance.addTimingsCallback(_onFrameTiming);
@@ -173,6 +227,45 @@ class PerformanceService extends ChangeNotifier {
     _frameSamples.clear();
     _downgradeStreak = 0;
     _upgradeStreak = 0;
+  }
+
+  PerformanceTier _applyMotionCap(PerformanceTier tier) {
+    switch (motionIntensityLevel.value) {
+      case MotionIntensityLevel.ultra:
+        return tier;
+      case MotionIntensityLevel.high:
+        switch (tier) {
+          case PerformanceTier.ultra:
+            return PerformanceTier.high;
+          case PerformanceTier.high:
+          case PerformanceTier.medium:
+          case PerformanceTier.low:
+            return tier;
+        }
+      case MotionIntensityLevel.medium:
+        switch (tier) {
+          case PerformanceTier.ultra:
+          case PerformanceTier.high:
+            return PerformanceTier.medium;
+          case PerformanceTier.medium:
+          case PerformanceTier.low:
+            return tier;
+        }
+      case MotionIntensityLevel.off:
+        return PerformanceTier.low;
+    }
+  }
+
+  void _syncCurrentTier({bool notify = false}) {
+    final effectiveTier = _applyMotionCap(_adaptiveTier);
+    if (currentTier.value != effectiveTier) {
+      currentTier.value = effectiveTier;
+      notifyListeners();
+      return;
+    }
+    if (notify) {
+      notifyListeners();
+    }
   }
   
   double _getDeviceRefreshRate() {
@@ -300,11 +393,11 @@ class PerformanceService extends ChangeNotifier {
        notifyListeners();
     } else {
       // 2. Tier Downgrade
-      final next = _getNextLowerTier(currentTier.value);
-      if (next != currentTier.value) {
-        currentTier.value = next;
+      final next = _getNextLowerTier(_adaptiveTier);
+      if (next != _adaptiveTier) {
+        _adaptiveTier = next;
         // Keep DPR low to ensure stability
-        notifyListeners();
+        _syncCurrentTier(notify: true);
       }
     }
     _lastStateChangeTime = DateTime.now();
@@ -312,10 +405,10 @@ class PerformanceService extends ChangeNotifier {
 
   void _performUpgrade() {
     // 1. Tier Upgrade
-    final next = _getNextHigherTier(currentTier.value);
-    if (next != currentTier.value) {
-      currentTier.value = next;
-      notifyListeners();
+    final next = _getNextHigherTier(_adaptiveTier);
+    if (next != _adaptiveTier) {
+      _adaptiveTier = next;
+      _syncCurrentTier(notify: true);
     } else {
       // 2. DPR Restoration
       if (currentDpr.value < PlatformDispatcher.instance.views.first.devicePixelRatio) {

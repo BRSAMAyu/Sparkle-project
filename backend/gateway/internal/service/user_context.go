@@ -367,7 +367,7 @@ func buildTaskLines(tasks []TaskSummary) []string {
 func buildPlanLines(plans []PlanSummary) []string {
 	lines := make([]string, 0, len(plans))
 	for _, p := range plans {
-		lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%d",
+		lines = append(lines, fmt.Sprintf("%s|%s|%s|%.0f|%d",
 			p.ID.String(),
 			p.Title,
 			p.Type,

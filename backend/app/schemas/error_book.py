@@ -1,6 +1,7 @@
 """
 错题档案相关的 Pydantic Schema
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum

@@ -194,15 +194,22 @@ void main() {
   test('shareAchievement parses canonical share card payload', () async {
     apiClient.postHandler = (path, data, queryParameters) async {
       expect(path, ApiEndpoints.achievementShare('speed_learner'));
-      expect(queryParameters, isNull);
-      expect(data, isNull);
+      expect(queryParameters, {'locale': 'zh'});
+      expect(
+        data,
+        {
+          'template_id': 'cosmic',
+          'privacy': null,
+        },
+      );
 
       return Response(
         requestOptions: RequestOptions(
           path: ApiEndpoints.achievementShare('speed_learner'),
         ),
         data: {
-          'card_url': '/uploads/achievement-cards/user-1/speed_learner_v1.png',
+          'card_url':
+              '/uploads/achievement-cards/user-1/speed_learner_cosmic_abc123.png',
           'mime_type': 'image/png',
           'width': 1080,
           'height': 1440,
@@ -239,11 +246,13 @@ void main() {
 
     expect(
       result.cardUrl,
-      '/uploads/achievement-cards/user-1/speed_learner_v1.png',
+      '/uploads/achievement-cards/user-1/speed_learner_cosmic_abc123.png',
     );
     expect(result.mimeType, 'image/png');
     expect(result.width, 1080);
     expect(result.height, 1440);
+    expect(result.templateId, 'cosmic');
+    expect(result.privacySettings, isNull);
     expect(result.achievement.id, 'speed_learner');
     expect(result.achievement.name, '速通大师');
   });

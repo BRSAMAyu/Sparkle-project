@@ -2,7 +2,7 @@
 Capsule Generation Job Model
 """
 import enum
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -11,7 +11,7 @@ from app.models.base import GUID, BaseModel
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class JobStatus(enum.Enum):

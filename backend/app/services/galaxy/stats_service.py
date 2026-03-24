@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -8,12 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
-from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult
+from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult, UserStatusInfo
 from app.services.expansion_service import ExpansionService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GalaxyStatsService:
@@ -196,10 +197,24 @@ class GalaxyStatsService:
             logger.warning(f"WebSocket streaming failed in spark_node: {e}")
         # ============================================
 
+        updated_status = UserStatusInfo(
+            mastery_score=status.mastery_score,
+            total_study_minutes=status.total_study_minutes,
+            study_count=status.study_count,
+            is_unlocked=status.is_unlocked,
+            is_collapsed=status.is_collapsed,
+            is_favorite=status.is_favorite,
+            last_study_at=status.last_study_at,
+            next_review_at=status.next_review_at,
+            decay_paused=status.decay_paused,
+            status=NodeWithStatus._calculate_status(status),
+            brightness=NodeWithStatus._calculate_brightness(status),
+        )
+
         return SparkResult(
             spark_event=spark_event,
             expansion_queued=expansion_queued,
-            updated_status=status
+            updated_status=updated_status,
         )
 
     async def calculate_user_stats(self, user_id: UUID) -> GalaxyUserStats:

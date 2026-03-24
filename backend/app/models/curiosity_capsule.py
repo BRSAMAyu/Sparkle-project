@@ -35,6 +35,7 @@ class CuriosityCapsule(BaseModel):
         depth_level: 深度级别 (shallow/medium/deep)
         generation_method: 生成使用的模型名称
         source_context: 来源上下文 (JSON)
+        personalization_context: 个性化来源上下文 (JSON)
         quality_score: 质量评分 (0.0-1.0)
         feedback_count: 反馈数量
         share_count: 分享次数
@@ -53,6 +54,7 @@ class CuriosityCapsule(BaseModel):
     depth_level = Column(Enum(DepthLevel), nullable=True, index=True)
     generation_method = Column(String(100), nullable=True)  # e.g. "xiaomi_chat", "zhipu_chat", "deepseek_reason"
     source_context = Column(JSONBCompat, nullable=True)  # 来源上下文数据
+    personalization_context = Column(JSONBCompat, nullable=True)  # 个性化来源上下文
     quality_score = Column(Float, nullable=True, index=True)  # 0.0-1.0 质量评分
     feedback_count = Column(Integer, nullable=False, default=0)  # 反馈数量
     share_count = Column(Integer, nullable=False, default=0)  # 分享次数

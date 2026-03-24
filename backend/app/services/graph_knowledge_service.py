@@ -3,10 +3,11 @@
 
 在原有 KnowledgeService 基础上增加图数据库支持
 """
+from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.services.knowledge_service import KnowledgeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GraphKnowledgeService:
@@ -273,13 +274,16 @@ class GraphKnowledgeService:
         """
         try:
             cypher = """
-            MATCH (u:User {id: $user_id})-[r:INTERESTED_IN|STUDIED]->(k:KnowledgeNode)
-            OPTIONAL MATCH (k)-[related:RELATED|PREREQUISITE]-(other)
-            RETURN
-                k.name as core,
-                k.sector as sector,
-                collect(DISTINCT other.name) as related,
-                collect(DISTINCT type(related)) as relation_types
+            MATCH (u:User {id: $user_id})-[r]->(k:KnowledgeNode)
+            WHERE type(r) IN ["INTERESTED_IN", "STUDIED"]
+            OPTIONAL MATCH (k)-[related]-(other)
+            WHERE related IS NULL OR type(related) IN ["RELATED", "PREREQUISITE"]
+            RETURN {
+                core: k.name,
+                sector: k.sector,
+                related: collect(DISTINCT other.name),
+                relation_types: collect(DISTINCT type(related))
+            } as result
             """
 
             results = await self.age_client.execute_cypher(

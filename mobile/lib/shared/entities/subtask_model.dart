@@ -9,10 +9,11 @@ enum SubTaskStatus {
   final String value;
   const SubTaskStatus(this.value);
 
-  static SubTaskStatus fromString(String value) => SubTaskStatus.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => SubTaskStatus.pending,
-    );
+  static SubTaskStatus fromString(String value) =>
+      SubTaskStatus.values.firstWhere(
+        (e) => e.value == value,
+        orElse: () => SubTaskStatus.pending,
+      );
 }
 
 /// Subtask model
@@ -21,8 +22,15 @@ class SubTaskModel extends BaseModel {
     required this.id,
     required this.parentTaskId,
     required this.title,
-    required this.order, required this.status, required this.createdAt, required this.updatedAt, this.description,
+    required this.order,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.completedAt,
+    this.knowledgeNodeId,
+    this.estimatedMinutes = 25,
+    this.guideContent,
   });
 
   factory SubTaskModel.fromJson(Map<String, dynamic> json) => SubTaskModel(
@@ -37,6 +45,9 @@ class SubTaskModel extends BaseModel {
             : DateTime.parse(json['completed_at'] as String),
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
+        knowledgeNodeId: json['knowledge_node_id'] as String?,
+        estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 25,
+        guideContent: json['guide_content'] as String?,
       );
 
   final String id;
@@ -48,6 +59,9 @@ class SubTaskModel extends BaseModel {
   final DateTime? completedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? knowledgeNodeId;
+  final int estimatedMinutes;
+  final String? guideContent;
 
   bool get isCompleted => status == SubTaskStatus.completed;
 
@@ -62,6 +76,9 @@ class SubTaskModel extends BaseModel {
         'completed_at': completedAt?.toIso8601String(),
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'knowledge_node_id': knowledgeNodeId,
+        'estimated_minutes': estimatedMinutes,
+        'guide_content': guideContent,
       };
 
   SubTaskModel copyWith({
@@ -74,6 +91,9 @@ class SubTaskModel extends BaseModel {
     DateTime? completedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? knowledgeNodeId,
+    int? estimatedMinutes,
+    String? guideContent,
   }) =>
       SubTaskModel(
         id: id ?? this.id,
@@ -85,6 +105,9 @@ class SubTaskModel extends BaseModel {
         completedAt: completedAt ?? this.completedAt,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        knowledgeNodeId: knowledgeNodeId ?? this.knowledgeNodeId,
+        estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+        guideContent: guideContent ?? this.guideContent,
       );
 
   @override

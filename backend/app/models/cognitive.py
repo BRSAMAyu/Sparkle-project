@@ -6,7 +6,7 @@ import enum
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -62,7 +62,7 @@ class CognitiveFragment(BaseModel):
     severity = Column(Integer, default=1, nullable=False) # 1-5
 
     # 语义向量
-    embedding = Column(VectorCompat, nullable=True)
+    embedding = deferred(Column(VectorCompat, nullable=True))
 
     # 关系
     user = relationship("User", backref="cognitive_fragments")

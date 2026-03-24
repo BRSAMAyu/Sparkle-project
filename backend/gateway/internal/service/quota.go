@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -20,11 +21,35 @@ func NewQuotaService(rdb *redis.Client) *QuotaService {
 	return &QuotaService{rdb: rdb}
 }
 
+// quotaPayload represents the JSON payload for DecrQuota operation
+type quotaPayload struct {
+	UID   string `json:"uid"`
+	Delta int    `json:"delta"`
+	TS    int64  `json:"ts"`
+}
+
+// reservePayload represents the JSON payload for ReserveRequest operation
+type reservePayload struct {
+	UID       string `json:"uid"`
+	Delta     int    `json:"delta"`
+	TS        int64  `json:"ts"`
+	RequestID string `json:"request_id"`
+	Type      string `json:"type"`
+}
+
 func (s *QuotaService) DecrQuota(ctx context.Context, uid string) (int64, error) {
 	// Use script exported from internal/db
 	script := redis.NewScript(db.DecrQuotaScript)
 
-	payload := fmt.Sprintf(`{"uid":"%s", "delta":-1, "ts":%d}`, uid, time.Now().Unix())
+	// Use json.Marshal instead of fmt.Sprintf to prevent JSON injection
+	payload, err := json.Marshal(quotaPayload{
+		UID:   uid,
+		Delta: -1,
+		TS:    time.Now().Unix(),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal quota payload: %w", err)
+	}
 
 	val, err := script.Run(ctx, s.rdb,
 		[]string{fmt.Sprintf("user:quota:%s", uid), "queue:sync:quota"}, // KEYS
@@ -40,7 +65,18 @@ func (s *QuotaService) ReserveRequest(ctx context.Context, uid, requestID string
 	}
 
 	script := redis.NewScript(db.ReserveQuotaScript)
-	payload := fmt.Sprintf(`{"uid":"%s","delta":-1,"ts":%d,"request_id":"%s","type":"reserve"}`, uid, time.Now().Unix(), requestID)
+
+	// Use json.Marshal instead of fmt.Sprintf to prevent JSON injection
+	payload, err := json.Marshal(reservePayload{
+		UID:       uid,
+		Delta:     -1,
+		TS:        time.Now().Unix(),
+		RequestID: requestID,
+		Type:      "reserve",
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal reserve payload: %w", err)
+	}
 
 	result, err := script.Run(ctx, s.rdb,
 		[]string{

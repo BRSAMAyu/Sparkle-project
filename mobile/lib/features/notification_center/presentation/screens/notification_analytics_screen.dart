@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart'
     as providers;
@@ -51,6 +54,11 @@ class _NotificationAnalyticsScreenState
                 .toList(),
             onChanged: (value) {
               if (value != null) {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
                 ref
                     .read(providers.notificationAnalyticsProvider.notifier)
                     .setPeriod(value);
@@ -125,7 +133,9 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          Row(
+          SparkleStaggerItem(
+            index: 0,
+            child: Row(
             children: [
               Expanded(
                   child: _buildStatCard(
@@ -142,8 +152,11 @@ class _NotificationAnalyticsScreenState
               ),),
             ],
           ),
+          ),
           const SizedBox(height: DS.spacing12),
-          Row(
+          SparkleStaggerItem(
+            index: 1,
+            child: Row(
             children: [
               Expanded(
                   child: _buildStatCard(
@@ -159,6 +172,7 @@ class _NotificationAnalyticsScreenState
                 Icons.pie_chart,
               ),),
             ],
+          ),
           ),
         ],
       );
@@ -206,10 +220,14 @@ class _NotificationAnalyticsScreenState
           ),
           const SizedBox(height: DS.spacing16),
           ...byType.entries
-              .map((MapEntry<String, NotificationTypeStats> entry) {
-            final stats = entry.value;
+              .toList()
+              .asMap()
+              .entries
+              .map((entry) {
+            final stats = entry.value.value;
+            final typeKey = entry.value.key;
             return _buildTypeStatCard(
-              entry.key == 'system'
+              typeKey == 'system'
                   ? context.l10n.notificationSourceSystem
                   : context.l10n.notificationSourceIntervention,
               stats.sent,
@@ -222,11 +240,13 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildTypeStatCard(
           String title, int sent, int viewed, double viewRate,) =>
-      GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        margin: const EdgeInsets.only(bottom: DS.spacing12),
-        padding: const EdgeInsets.all(DS.spacing16),
-        child: Column(
+      SparkleStaggerItem(
+        index: sent,
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          margin: const EdgeInsets.only(bottom: DS.spacing12),
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -265,6 +285,7 @@ class _NotificationAnalyticsScreenState
                   ),
             ),
           ],
+        ),
         ),
       );
 
@@ -308,10 +329,13 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: _buildTrendChart(trends),
+          SparkleStaggerItem(
+            index: 0,
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: _buildTrendChart(trends),
+            ),
           ),
         ],
       );
@@ -338,10 +362,13 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: _buildHourlyChart(distribution),
+          SparkleStaggerItem(
+            index: 0,
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: _buildHourlyChart(distribution),
+            ),
           ),
         ],
       );

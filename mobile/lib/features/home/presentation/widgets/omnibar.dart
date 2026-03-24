@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/home/data/repositories/omnibar_repository.dart';
@@ -109,19 +110,76 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
+    final data = result['data'] is Map
+        ? Map<String, dynamic>.from(result['data'] as Map)
+        : const <String, dynamic>{};
     switch (type) {
       case 'CHAT':
         if (mounted) {
-          context.go('/chat');
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': standard.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
         }
         return;
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
+        if (mounted) {
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': standard.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
+        }
         return;
       case 'CAPSULE':
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
+        if (mounted) {
+          final prompt =
+              (data['initial_message']?.toString() ?? _controller.text).trim();
+          final target = Uri(
+            path: '/chat',
+            queryParameters: <String, String>{
+              if (prompt.isNotEmpty) 'prompt': prompt,
+              'chat_mode': standard.apiValue,
+              'source': 'omnibar',
+            },
+          ).toString();
+          final router = GoRouter.of(context);
+          final currentPath = GoRouterState.of(context).uri.path;
+          if (currentPath == '/chat') {
+            router.go(target);
+          } else {
+            await router.push(target);
+          }
+        }
         return;
       default:
         return;

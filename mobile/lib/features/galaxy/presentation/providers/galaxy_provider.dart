@@ -263,7 +263,8 @@ class GalaxyViewState {
 /// Persists the user's view state (scale, selected node, aggregation level).
 final galaxyViewStateProvider =
     StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>(
-        GalaxyViewStateNotifier.new,);
+  GalaxyViewStateNotifier.new,
+);
 
 /// Notifier for the galaxy view state
 class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
@@ -324,8 +325,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;
+  // ignore: unused_field
   static const double _animationDuration = 300; // ms
   static const int _animationFps = 60;
+  // ignore: unused_field
   static const double _animationStep = 1000 / _animationFps; // ~16.67ms
 
   // Performance Monitor

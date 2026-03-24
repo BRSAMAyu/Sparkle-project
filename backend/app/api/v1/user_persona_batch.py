@@ -4,6 +4,8 @@ User Persona Batch Editing API
 
 Provides batch operations for managing user preferences and personas.
 """
+from __future__ import annotations
+
 import csv
 import io
 import json

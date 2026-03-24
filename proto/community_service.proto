@@ -1,0 +1,323 @@
+syntax = "proto3";
+
+package sparkle.community;
+
+option go_package = "github.com/sparkle/gateway/gen/community;communitypb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ============ 枚举定义 ============
+
+enum FriendshipStatus {
+  FRIENDSHIP_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  ACCEPTED = 2;
+  BLOCKED = 3;
+}
+
+enum GroupType {
+  GROUP_TYPE_UNSPECIFIED = 0;
+  SQUAD = 1;     // 学习小队（长期）
+  SPRINT = 2;    // 冲刺群（短期）
+  OFFICIAL = 3;  // 官方课程/考试群
+}
+
+enum GroupRole {
+  GROUP_ROLE_UNSPECIFIED = 0;
+  OWNER = 1;
+  ADMIN = 2;
+  MEMBER = 3;
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  TEXT = 1;
+  TASK_SHARE = 2;
+  PLAN_SHARE = 3;
+  FRAGMENT_SHARE = 4;
+  CAPSULE_SHARE = 5;
+  PRISM_SHARE = 6;
+  FILE_SHARE = 7;
+  PROGRESS = 8;
+  ACHIEVEMENT = 9;
+  CHECKIN = 10;
+  SYSTEM = 11;
+  BROADCAST = 12;
+}
+
+enum SearchVisibility {
+  SEARCH_VISIBILITY_UNSPECIFIED = 0;
+  EVERYONE = 1;
+  FRIENDS = 2;
+  NOBODY = 3;
+}
+
+// ============ 基础消息类型 ============
+
+message UUID {
+  string value = 1;
+}
+
+message UserBrief {
+  UUID id = 1;
+  string username = 2;
+  string nickname = 3;
+  string avatar_url = 4;
+  int32 flame_level = 5;
+  float flame_brightness = 6;
+  string status = 7;
+}
+
+// ============ 好友系统 ============
+
+message FriendRequest {
+  UUID target_user_id = 1;
+  string message = 2;
+}
+
+message FriendResponse {
+  UUID friendship_id = 1;
+  bool accept = 2;
+}
+
+message FriendshipInfo {
+  UserBrief friend = 1;
+  FriendshipStatus status = 2;
+  map<string, string> match_reason = 3;
+  bool initiated_by_me = 4;
+}
+
+message BlockUserRequest {
+  UUID target_user_id = 1;
+  string reason = 2;
+}
+
+message BlockUserInfo {
+  UserBrief blocked_user = 1;
+  string reason = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+// ============ 群组系统 ============
+
+message GroupCreate {
+  string name = 1;
+  string description = 2;
+  GroupType type = 3;
+  repeated string focus_tags = 4;
+  google.protobuf.Timestamp deadline = 5;
+  string sprint_goal = 6;
+  int32 max_members = 7;
+  bool is_public = 8;
+  bool join_requires_approval = 9;
+}
+
+message GroupInfo {
+  UUID id = 1;
+  string name = 2;
+  string description = 3;
+  string avatar_url = 4;
+  GroupType type = 5;
+  repeated string focus_tags = 6;
+  google.protobuf.Timestamp deadline = 7;
+  string sprint_goal = 8;
+  int32 days_remaining = 9;
+  int32 member_count = 10;
+  int32 total_flame_power = 11;
+  int32 today_checkin_count = 12;
+  int32 total_tasks_completed = 13;
+  int32 max_members = 14;
+  bool is_public = 15;
+  bool join_requires_approval = 16;
+  GroupRole my_role = 17;
+}
+
+message GroupMemberInfo {
+  UserBrief user = 1;
+  GroupRole role = 2;
+  int32 flame_contribution = 3;
+  int32 tasks_completed = 4;
+  int32 checkin_streak = 5;
+  google.protobuf.Timestamp joined_at = 6;
+  google.protobuf.Timestamp last_active_at = 7;
+}
+
+// ============ 消息系统 ============
+
+message MessageSend {
+  MessageType message_type = 1;
+  string content = 2;
+  string content_data = 3;  // JSON string
+  UUID reply_to_id = 4;
+  UUID thread_root_id = 5;
+  repeated UUID mention_user_ids = 6;
+  string nonce = 7;
+}
+
+message MessageInfo {
+  UUID id = 1;
+  UserBrief sender = 2;
+  MessageType message_type = 3;
+  string content = 4;
+  string content_data = 5;
+  UUID reply_to_id = 6;
+  UUID thread_root_id = 7;
+  repeated UUID mention_user_ids = 8;
+  map<string, string> reactions = 9;
+  bool is_revoked = 10;
+  google.protobuf.Timestamp revoked_at = 11;
+  google.protobuf.Timestamp edited_at = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+// ============ 私聊消息 ============
+
+message PrivateMessageSend {
+  UUID target_user_id = 1;
+  MessageType message_type = 2;
+  string content = 3;
+  string content_data = 4;
+  UUID reply_to_id = 5;
+  UUID thread_root_id = 6;
+  repeated UUID mention_user_ids = 7;
+  string nonce = 8;
+}
+
+message PrivateMessageInfo {
+  UUID id = 1;
+  UserBrief sender = 2;
+  UserBrief receiver = 3;
+  MessageType message_type = 4;
+  string content = 5;
+  string content_data = 6;
+  UUID reply_to_id = 7;
+  UUID thread_root_id = 8;
+  repeated UUID mention_user_ids = 9;
+  map<string, string> reactions = 10;
+  bool is_revoked = 11;
+  google.protobuf.Timestamp revoked_at = 12;
+  google.protobuf.Timestamp edited_at = 13;
+  bool is_read = 14;
+  google.protobuf.Timestamp read_at = 15;
+  google.protobuf.Timestamp created_at = 16;
+}
+
+// ============ 打卡系统 ============
+
+message CheckinRequest {
+  UUID group_id = 1;
+  string message = 2;
+  int32 today_duration_minutes = 3;
+}
+
+message CheckinResponse {
+  bool success = 1;
+  int32 new_streak = 2;
+  int32 flame_earned = 3;
+  int32 rank_in_group = 4;
+  int32 group_checkin_count = 5;
+}
+
+// ============ 隐私设置 ============
+
+message UserPrivacySettings {
+  SearchVisibility searchable_by = 1;
+}
+
+// ============ 服务定义 ============
+
+service CommunityService {
+  // 好友系统
+  rpc SendFriendRequest(FriendRequest) returns (FriendshipInfo);
+  rpc RespondToFriendRequest(FriendResponse) returns (FriendshipInfo);
+  rpc GetFriends(google.protobuf.Empty) returns (stream FriendshipInfo);
+  rpc GetPendingFriendRequests(google.protobuf.Empty) returns (stream FriendshipInfo);
+  rpc BlockUser(BlockUserRequest) returns (BlockUserInfo);
+  rpc UnblockUser(UUID) returns (google.protobuf.Empty);
+  rpc GetBlockedUsers(google.protobuf.Empty) returns (stream BlockUserInfo);
+
+  // 用户搜索
+  rpc SearchUsers(SearchUsersRequest) returns (stream UserBrief);
+  rpc UpdatePrivacySettings(UserPrivacySettings) returns (google.protobuf.Empty);
+  rpc GetPrivacySettings(google.protobuf.Empty) returns (UserPrivacySettings);
+
+  // 群组系统
+  rpc CreateGroup(GroupCreate) returns (GroupInfo);
+  rpc GetGroup(UUID) returns (GroupInfo);
+  rpc JoinGroup(JoinGroupRequest) returns (GroupMemberInfo);
+  rpc LeaveGroup(UUID) returns (google.protobuf.Empty);
+  rpc GetMyGroups(google.protobuf.Empty) returns (stream GroupInfo);
+  rpc SearchGroups(SearchGroupsRequest) returns (stream GroupInfo);
+  rpc GetGroupMembers(UUID) returns (stream GroupMemberInfo);
+
+  // 群消息系统
+  rpc SendGroupMessage(SendGroupMessageRequest) returns (MessageInfo);
+  rpc GetGroupMessages(GetGroupMessagesRequest) returns (stream MessageInfo);
+  rpc StreamGroupMessages(StreamGroupMessagesRequest) returns (stream MessageInfo);
+  rpc RevokeGroupMessage(RevokeMessageRequest) returns (MessageInfo);
+  rpc MarkMessagesRead(MarkMessagesReadRequest) returns (MarkMessagesReadResponse);
+
+  // 私聊系统
+  rpc SendPrivateMessage(PrivateMessageSend) returns (PrivateMessageInfo);
+  rpc GetPrivateMessages(GetPrivateMessagesRequest) returns (stream PrivateMessageInfo);
+  rpc RevokePrivateMessage(RevokeMessageRequest) returns (PrivateMessageInfo);
+
+  // 打卡系统
+  rpc Checkin(CheckinRequest) returns (CheckinResponse);
+}
+
+// ============ 请求/响应消息 ============
+
+message SearchUsersRequest {
+  string keyword = 1;
+  int32 limit = 2;
+}
+
+message SearchGroupsRequest {
+  string keyword = 1;
+  GroupType type = 2;
+  int32 limit = 3;
+}
+
+message JoinGroupRequest {
+  UUID group_id = 1;
+  string message = 2;
+}
+
+message SendGroupMessageRequest {
+  UUID group_id = 1;
+  MessageSend message = 2;
+}
+
+message GetGroupMessagesRequest {
+  UUID group_id = 1;
+  UUID before_id = 2;
+  int32 limit = 3;
+}
+
+message StreamGroupMessagesRequest {
+  UUID group_id = 1;
+  UUID after_id = 2;
+}
+
+message RevokeMessageRequest {
+  UUID message_id = 1;
+  UUID group_id = 2;  // 仅群消息需要
+}
+
+message MarkMessagesReadRequest {
+  UUID group_id = 1;
+  UUID up_to_message_id = 2;
+}
+
+message MarkMessagesReadResponse {
+  int32 updated_count = 1;
+  UUID up_to_message_id = 2;
+}
+
+message GetPrivateMessagesRequest {
+  UUID friend_id = 1;
+  UUID before_id = 2;
+  int32 limit = 3;
+}

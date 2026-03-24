@@ -11,6 +11,7 @@ from app.data.populate_achievements import (
     validate_achievement_seed_data,
 )
 from app.models.achievement import Achievement, AchievementType, GalaxySkin, UserAchievement
+from app.models.achievement import VisualEffectType
 from app.models.file_storage import StoredFile  # noqa: F401
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
@@ -136,6 +137,21 @@ async def test_sync_achievement_definitions_inserts_and_updates_existing_records
     assert refreshed_achievement.first_unlocker_id == test_user.id
     assert refreshed_skin.name == "经典星系"
     assert refreshed_skin.sort_order == 0
+
+
+@pytest.mark.asyncio
+async def test_sync_achievement_definitions_applies_model_defaults_for_optional_fields(db_session):
+    await sync_achievement_definitions(db_session)
+
+    first_light = await db_session.get(Achievement, "first_light")
+    math_master = await db_session.get(Achievement, "math_master")
+
+    assert first_light is not None
+    assert math_master is not None
+    assert first_light.is_hidden is False
+    assert first_light.visual_effect_type == VisualEffectType.NONE
+    assert math_master.is_hidden is False
+    assert math_master.visual_effect_type == VisualEffectType.NONE
 
 
 @pytest.mark.asyncio

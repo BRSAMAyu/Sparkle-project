@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -967,6 +968,7 @@ class StarMapPainter extends CustomPainter {
         gapLength: edgeStyle.gapLength,
         relationType: edge.relationType,
         strength: edge.strength,
+        reveal: reveal,
         curveDirection: _stableCurveDirection(edge.sourceId, edge.targetId),
         sourceConnections: nodeConnectionCounts[edge.sourceId] ?? 0,
         targetConnections: nodeConnectionCounts[edge.targetId] ?? 0,
@@ -1024,6 +1026,9 @@ class StarMapPainter extends CustomPainter {
         strength: edge.strength,
         curveDirection: edge.curveDirection,
       );
+      final renderedPath = isBuildAnimating && edge.reveal < 0.999
+          ? _extractPathReveal(path, edge.reveal)
+          : path;
       final hasHubGlow =
           edge.sourceConnections >= 5 || edge.targetConnections >= 5;
       paint.shader = ui.Gradient.linear(
@@ -1043,12 +1048,12 @@ class StarMapPainter extends CustomPainter {
               ..strokeCap = StrokeCap.round
               ..color = edge.color.withValues(alpha: edge.color.a * 0.32)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
-        canvas.drawPath(path, glowPaint);
+        canvas.drawPath(renderedPath, glowPaint);
       }
       if (edge.isDashed) {
         _drawDashedPath(
           canvas: canvas,
-          path: path,
+          path: renderedPath,
           paint: paint,
           dashLength: edge.dashLength,
           gapLength: edge.gapLength,
@@ -1057,31 +1062,50 @@ class StarMapPainter extends CustomPainter {
           edge.relationType == EdgeRelationType.prerequisite) {
         _drawTaperedEdge(
           canvas: canvas,
-          path: path,
+          path: renderedPath,
           startColor: edge.sourceColor,
           endColor: edge.targetColor,
           startWidth: edge.strokeWidth,
           endWidth: edge.strokeWidth * 0.6,
         );
       } else {
-        canvas.drawPath(path, paint);
+        canvas.drawPath(renderedPath, paint);
       }
 
-      if (edge.relationType == EdgeRelationType.prerequisite) {
+      if (edge.relationType == EdgeRelationType.prerequisite &&
+          edge.reveal >= 0.999) {
         _drawArrowHead(
           canvas,
-          path,
+          renderedPath,
           edge.targetColor,
           edge.strokeWidth,
         );
         _drawPathTailDashes(
           canvas: canvas,
-          path: path,
+          path: renderedPath,
           color: edge.targetColor,
           strokeWidth: edge.strokeWidth * 0.86,
         );
       }
     }
+  }
+
+  Path _extractPathReveal(Path path, double reveal) {
+    final clamped = reveal.clamp(0.0, 1.0);
+    if (clamped <= 0) {
+      return Path();
+    }
+    if (clamped >= 1) {
+      return path;
+    }
+    final revealed = Path();
+    for (final metric in path.computeMetrics()) {
+      revealed.addPath(
+        metric.extractPath(0, metric.length * clamped),
+        Offset.zero,
+      );
+    }
+    return revealed;
   }
 
   void _drawEdgeParticles(Canvas canvas) {
@@ -1132,7 +1156,6 @@ class StarMapPainter extends CustomPainter {
         );
     }
   }
-
 
   void _drawNodes(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
     final allowPulse = lod.index >= GalaxyLod.l3.index &&
@@ -1363,13 +1386,22 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (celebrationNodeIds.contains(node.id)) {
-        canvas.drawCircle(
-          nodeCenter,
-          radius * 2.1,
-          Paint()
-            ..color = style.baseColor.withValues(alpha: 0.12 * nodeAlpha)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
-        );
+        canvas
+          ..drawCircle(
+            nodeCenter,
+            radius * 3.4,
+            Paint()
+              ..color = style.baseColor.withValues(alpha: 0.22 * nodeAlpha)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
+          )
+          ..drawCircle(
+            nodeCenter,
+            radius * 1.9,
+            Paint()
+              ..color = DS.brandPrimary.withValues(alpha: 0.14 * nodeAlpha)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.6,
+          );
       }
     }
   }
@@ -2068,7 +2100,7 @@ class StarMapPainter extends CustomPainter {
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
     final blended = blendedColors[node.id] ??
-        SectorConfig.getColor(node.sector, isDarkMode: isDarkMode);
+        SectorConfig.resolveNodeBaseColor(node: node, isDarkMode: isDarkMode);
     return SectorConfig.applyImportanceRamp(
       blended,
       importance: node.importance,
@@ -2236,6 +2268,7 @@ class _PaintEdge {
     required this.gapLength,
     required this.relationType,
     required this.strength,
+    required this.reveal,
     required this.curveDirection,
     required this.sourceConnections,
     required this.targetConnections,
@@ -2254,6 +2287,7 @@ class _PaintEdge {
   final double gapLength;
   final EdgeRelationType relationType;
   final double strength;
+  final double reveal;
   final double curveDirection;
   final int sourceConnections;
   final int targetConnections;

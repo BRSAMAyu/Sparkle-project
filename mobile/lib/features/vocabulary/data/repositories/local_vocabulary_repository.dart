@@ -173,7 +173,7 @@ class LocalVocabularyRepository {
   }
 
   /// Build filter query
-  // TODO: Implement this method when needed
+  // TRACKED(TD-010): Implement this method when needed
   // Query<VocabWord> _buildFilterQuery(VocabFilter filter, String? tagFilter) {
   //   throw UnimplementedError();
   // }

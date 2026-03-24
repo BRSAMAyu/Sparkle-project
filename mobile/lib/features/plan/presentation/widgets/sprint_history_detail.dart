@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -14,7 +15,11 @@ class SprintHistoryDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy年MM月dd日');
+    final l10n = context.l10n;
+    final startDateLabel = Formatters.formatDateMedium(item.startDate);
+    final endDateLabel = item.endDate != null
+        ? Formatters.formatDateMedium(item.endDate!)
+        : l10n.sprintOngoing;
 
     return Container(
       height: ResponsiveSystem.height(context) * 0.7,
@@ -54,7 +59,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '${dateFormat.format(item.startDate)} - ${item.endDate != null ? dateFormat.format(item.endDate!) : '进行中'}',
+                        '$startDateLabel - $endDateLabel',
                         style: context.sparkleTypography.bodyMedium.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -97,7 +102,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '完成进度',
+            context.l10n.sprintProgressTitle,
             style: context.sparkleTypography.labelLarge.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -135,7 +140,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '完成率',
+                          context.l10n.sprintCompletionRate,
                           style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -152,20 +157,20 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                   children: [
                     _buildStatRow(
                       context,
-                      label: '总任务',
+                      label: context.l10n.sprintTotalTasks,
                       value: '${item.totalTasks}',
                     ),
                     const SizedBox(height: DS.spacing8),
                     _buildStatRow(
                       context,
-                      label: '已完成',
+                      label: context.l10n.sprintCompletedTasks,
                       value: '${item.completedTasks}',
                       color: DS.semanticSuccess,
                     ),
                     const SizedBox(height: DS.spacing8),
                     _buildStatRow(
                       context,
-                      label: '未完成',
+                      label: context.l10n.sprintIncompleteTasks,
                       value: '${item.totalTasks - item.completedTasks}',
                       color: DS.semanticWarning,
                     ),
@@ -187,7 +192,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '任务统计',
+              context.l10n.sprintTaskSummaryTitle,
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -198,21 +203,21 @@ class SprintHistoryDetailSheet extends StatelessWidget {
               children: [
                 _buildTaskStat(
                   context,
-                  label: '完成率',
+                  label: context.l10n.sprintCompletionRate,
                   value: '${(item.finalProgress * 100).toInt()}%',
                   icon: Icons.check_circle,
                   color: DS.semanticSuccess,
                 ),
                 _buildTaskStat(
                   context,
-                  label: '持续天数',
+                  label: context.l10n.sprintDurationDaysLabel,
                   value: '${item.durationDays}',
                   icon: Icons.calendar_today,
                   color: DS.info,
                 ),
                 _buildTaskStat(
                   context,
-                  label: '状态',
+                  label: context.l10n.sprintStatusLabel,
                   value: _getStatusText(context),
                   icon: _getStatusIcon(item.status),
                   color: _getStatusColor(item.status),
@@ -233,7 +238,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '冲刺信息',
+              context.l10n.sprintInfoTitle,
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -241,21 +246,21 @@ class SprintHistoryDetailSheet extends StatelessWidget {
             const SizedBox(height: DS.spacing12),
             _buildInfoRow(
               context,
-              label: '开始日期',
-              value: DateFormat('yyyy年MM月dd日 EEEE', 'zh_CN').format(item.startDate),
+              label: context.l10n.sprintStartDateLabel,
+              value: Formatters.formatDateLong(item.startDate),
             ),
             const SizedBox(height: DS.spacing8),
             if (item.endDate != null)
               _buildInfoRow(
                 context,
-                label: '结束日期',
-                value: DateFormat('yyyy年MM月dd日 EEEE', 'zh_CN').format(item.endDate!),
+                label: context.l10n.sprintEndDateLabel,
+                value: Formatters.formatDateLong(item.endDate!),
               ),
             const SizedBox(height: DS.spacing8),
             _buildInfoRow(
               context,
-              label: '持续时间',
-              value: '${item.durationDays} 天',
+              label: context.l10n.sprintDurationLabel,
+              value: context.l10n.sprintDurationDaysValue(item.durationDays),
             ),
           ],
         ),

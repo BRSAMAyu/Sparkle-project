@@ -1,5 +1,17 @@
 """User Schemas - Registration, login, profile, etc."""
+from __future__ import annotations
 import enum
+
+
+# Python 3.9 compatible StrEnum
+class StrEnum(str, enum.Enum):
+    """String enum for Python 3.9 compatibility"""
+    def __new__(cls, value):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -8,13 +20,13 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # ========== Request Schemas ==========
 
-class UserStatusEnum(enum.StrEnum):
+class UserStatusEnum(StrEnum):
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
 
 
-class AvatarStatus(enum.StrEnum):
+class AvatarStatus(StrEnum):
     """头像审核状态"""
     APPROVED = "approved"   # 审核通过
     PENDING = "pending"     # 待审核
@@ -27,6 +39,11 @@ class UserRegister(BaseModel):
     email: EmailStr = Field(description="Email")
     password: str = Field(min_length=6, max_length=100, description="Password")
     nickname: str | None = Field(default=None, max_length=100, description="Nickname")
+    accepted_tos: bool = Field(default=False, description="Accepted terms of service")
+    accepted_privacy: bool = Field(default=False, description="Accepted privacy policy")
+    tos_version: str | None = Field(default="v1", description="Terms version")
+    privacy_version: str | None = Field(default="v1", description="Privacy version")
+    agreed_locale: str | None = Field(default=None, description="Locale for agreement")
 
 class UserLogin(BaseModel):
     """User login"""
@@ -62,6 +79,14 @@ class SetPasswordRequest(BaseModel):
     """Set password (no old password)"""
     new_password: str = Field(min_length=6, max_length=100, description="New password")
 
+
+class DeleteAccountRequest(BaseModel):
+    """Delete account request with re-authentication."""
+    confirmation: str = Field(description="Type DELETE to confirm")
+    password: str | None = Field(default=None, description="Current password")
+    provider: str | None = Field(default=None, description="google|apple|wechat")
+    provider_token: str | None = Field(default=None, description="Fresh social provider token")
+
 class RefreshTokenRequest(BaseModel):
     """Refresh token request"""
     refresh_token: str = Field(description="Refresh token")
@@ -83,6 +108,43 @@ class VerifyEmailRequest(BaseModel):
     """Verify email request"""
     token: str = Field(description="Verification token")
 
+
+class LinkSocialRequest(BaseModel):
+    """Link a social login provider."""
+    provider: str = Field(description="Provider (google, apple, wechat)")
+    token: str = Field(description="Provider token")
+    openid: str | None = Field(default=None, description="WeChat OpenID")
+
+
+class UnlinkSocialRequest(BaseModel):
+    """Unlink a social provider."""
+    provider: str = Field(description="Provider (google, apple, wechat)")
+
+
+class UpgradeGuestRequest(BaseModel):
+    """Upgrade guest to full email account."""
+    username: str = Field(min_length=3, max_length=50, description="Username")
+    email: EmailStr = Field(description="Email")
+    password: str = Field(min_length=6, max_length=100, description="Password")
+    nickname: str | None = Field(default=None, max_length=100, description="Nickname")
+    accepted_tos: bool = Field(default=False, description="Accepted terms of service")
+    accepted_privacy: bool = Field(default=False, description="Accepted privacy policy")
+    tos_version: str | None = Field(default="v1", description="Terms version")
+    privacy_version: str | None = Field(default="v1", description="Privacy version")
+    agreed_locale: str | None = Field(default=None, description="Locale for agreement")
+
+
+class UpgradeGuestSocialRequest(BaseModel):
+    """Upgrade guest via social provider."""
+    provider: str = Field(description="Provider (google, apple, wechat)")
+    token: str = Field(description="Provider token")
+    openid: str | None = Field(default=None, description="WeChat OpenID")
+    accepted_tos: bool = Field(default=False, description="Accepted terms of service")
+    accepted_privacy: bool = Field(default=False, description="Accepted privacy policy")
+    tos_version: str | None = Field(default="v1", description="Terms version")
+    privacy_version: str | None = Field(default="v1", description="Privacy version")
+    agreed_locale: str | None = Field(default=None, description="Locale for agreement")
+
 class SocialLoginRequest(BaseModel):
     """Social login request"""
     provider: str = Field(description="Provider (google, apple, wechat)")
@@ -100,6 +162,7 @@ class UserBase(BaseModel):
     username: str = Field(description="Username")
     email: str = Field(description="Email")
     email_verified: bool = Field(default=False, description="Email verified")
+    password_login_enabled: bool = Field(default=True, description="Password login enabled")
     nickname: str | None = Field(description="Nickname")
     avatar_url: str | None = Field(description="Avatar URL")
     avatar_status: AvatarStatus = Field(default=AvatarStatus.APPROVED, description="Avatar status")
@@ -125,6 +188,38 @@ class UserProfile(UserBase):
     equipped_title_source: str | None = Field(default=None, description="Equipped title source")
     push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
     registration_source: str | None = Field(default=None, description="Registration source")
+    linked_providers: list[str] = Field(default_factory=list, description="Linked social providers")
+    tos_version: str | None = Field(default=None, description="Accepted terms version")
+    privacy_version: str | None = Field(default=None, description="Accepted privacy version")
+
+
+class SocialAccountStatus(BaseModel):
+    """Social provider linked status."""
+    provider: str = Field(description="Provider")
+    linked: bool = Field(description="Whether linked")
+
+
+class UserSessionInfo(BaseModel):
+    """Active login session info."""
+    session_id: str = Field(description="Session ID")
+    device_id: str | None = Field(default=None, description="Device ID")
+    device_name: str | None = Field(default=None, description="Device name")
+    device_type: str | None = Field(default=None, description="Device type")
+    ip_address: str | None = Field(default=None, description="IP address")
+    user_agent: str | None = Field(default=None, description="User agent")
+    is_active: bool = Field(description="Whether session is active")
+    is_current: bool = Field(default=False, description="Whether current session")
+    created_at: datetime = Field(description="Created at")
+    last_active_at: datetime = Field(description="Last active at")
+
+
+class AuthAuditLogInfo(BaseModel):
+    """Security log item for the current user."""
+    action: str = Field(description="Action")
+    ip_address: str | None = Field(default=None, description="IP address")
+    user_agent: str | None = Field(default=None, description="User agent")
+    metadata: dict[str, Any] | None = Field(default=None, description="Additional metadata")
+    occurred_at: datetime = Field(description="Occurred at")
 
 class UserFlameStatus(BaseModel):
     """User flame status"""

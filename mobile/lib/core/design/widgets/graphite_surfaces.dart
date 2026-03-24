@@ -67,7 +67,10 @@ class GraphiteScaffold extends StatelessWidget {
       extendBodyBehindAppBar: extendBodyBehindAppBar,
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
-      body: body,
+      body: _GraphiteEntranceMotion(
+        motionToken: motionToken,
+        child: body,
+      ),
     );
   }
 }
@@ -202,48 +205,53 @@ class GraphiteModalSurface extends StatelessWidget {
       SparkleMotionToken.standard,
       reduceMotion: context.reduceMotion,
     );
-    return SafeArea(
-      top: false,
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: AnimatedContainer(
-            duration: duration,
-            curve: DS.motionCurve(SparkleMotionToken.standard),
-            padding: padding,
-            decoration: BoxDecoration(
-              color: DS.surfaceRoleColor(surfaceRole),
-              borderRadius: borderRadius,
-              border: Border.all(
-                color: DS.borderSubtle,
+    return _GraphiteEntranceMotion(
+      motionToken: SparkleMotionToken.scene,
+      offsetY: 0.028,
+      beginScale: 0.985,
+      child: SafeArea(
+        top: false,
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: AnimatedContainer(
+              duration: duration,
+              curve: DS.motionCurve(SparkleMotionToken.standard),
+              padding: padding,
+              decoration: BoxDecoration(
+                color: DS.surfaceRoleColor(surfaceRole),
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: DS.borderSubtle,
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (showHandle)
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: DS.borderStrong,
-                        borderRadius: BorderRadius.circular(999),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showHandle)
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: DS.borderStrong,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                     ),
-                  ),
-                if (title != null) ...[
+                  if (title != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      title!,
+                      style: DS.titleLarge.copyWith(color: DS.textPrimary),
+                    ),
+                  ],
                   const SizedBox(height: 16),
-                  Text(
-                    title!,
-                    style: DS.titleLarge.copyWith(color: DS.textPrimary),
-                  ),
+                  child,
                 ],
-                const SizedBox(height: 16),
-                child,
-              ],
+              ),
             ),
           ),
         ),
@@ -264,18 +272,18 @@ class GraphiteSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      children: [
-        Text(
-          title,
-          style: DS.titleLarge.copyWith(
-            color: DS.textPrimary,
-            fontWeight: FontWeight.w600,
+        children: [
+          Text(
+            title,
+            style: DS.titleLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const Spacer(),
-        if (trailing != null) trailing!,
-      ],
-    );
+          const Spacer(),
+          if (trailing != null) trailing!,
+        ],
+      );
 }
 
 class SparklePageScaffold extends StatelessWidget {
@@ -317,4 +325,50 @@ class SparklePageScaffold extends StatelessWidget {
         motionToken: motionToken,
         child: child,
       );
+}
+
+class _GraphiteEntranceMotion extends StatelessWidget {
+  const _GraphiteEntranceMotion({
+    required this.child,
+    required this.motionToken,
+    this.offsetY = 0.02,
+    this.beginScale = 0.992,
+  });
+
+  final Widget child;
+  final SparkleMotionToken motionToken;
+  final double offsetY;
+  final double beginScale;
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.reduceMotion) return child;
+
+    final duration = DS.motionDuration(motionToken);
+    final curve = DS.motionCurve(motionToken);
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: duration,
+      curve: curve,
+      child: child,
+      builder: (context, value, child) {
+        final eased = Curves.easeOutCubic.transform(value);
+        final translateY = (1 - eased) * 18;
+        final scale = beginScale + ((1 - beginScale) * eased);
+        final opacity = (value * 1.15).clamp(0, 1);
+
+        return Transform.translate(
+          offset: Offset(0, translateY + ((1 - eased) * offsetY * 60)),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: opacity.toDouble(),
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

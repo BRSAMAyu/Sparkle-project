@@ -12,7 +12,6 @@ from app.api.deps import get_current_user
 from app.core.cache import cache_service
 from app.db.session import get_db
 from app.models.user import User
-from app.services.llm_service import llm_service
 from app.services.personalization import get_personalization_engine
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
@@ -65,6 +64,8 @@ async def preview_preference_effects(
 
 async def _generate_ai_sample(llm_profile) -> str:
     """生成 AI 回复示例"""
+    from app.services.llm_fallback_utils import preferences_llm
+
     sample_question = "什么是机器学习？请简单介绍一下。"
 
     messages = [
@@ -72,15 +73,13 @@ async def _generate_ai_sample(llm_profile) -> str:
         {"role": "user", "content": sample_question},
     ]
 
-    try:
-        response = await llm_service.chat(
-            messages=messages,
-            temperature=llm_profile.temperature,
-            max_tokens=200,
-        )
-        return response
-    except Exception as e:
-        return f"[预览生成失败: {e}]"
+    response = await preferences_llm.call(
+        messages,
+        fallback="[预览生成失败，请稍后重试]",
+        temperature=llm_profile.temperature,
+        max_tokens=200,
+    )
+    return response
 
 
 async def _generate_push_sample(prefs: dict[str, Any]) -> str:

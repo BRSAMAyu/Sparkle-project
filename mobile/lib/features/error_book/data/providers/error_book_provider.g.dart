@@ -418,7 +418,7 @@ final errorStatsProvider = AutoDisposeFutureProvider<ReviewStats>.internal(
 );
 
 typedef ErrorStatsRef = AutoDisposeFutureProviderRef<ReviewStats>;
-String _$errorOperationsHash() => r'22c9d4b7ec8864bb553b8d17c03a5e4662f99e23';
+String _$errorOperationsHash() => r'43cecbdd7c06e285772b1631a719d13aa7e9759d';
 
 /// 错题操作 Notifier
 ///

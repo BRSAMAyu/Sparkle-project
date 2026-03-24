@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.schemas.analysis import AnalysisResult, AnalysisTaskInput
 from app.services.analysis.model_router import ModelRouter
-from app.services.llm_service import llm_service
+from app.services.llm_fallback_utils import analysis_llm
 
 
 class AnalysisOrchestrator:
@@ -57,9 +57,20 @@ class AnalysisOrchestrator:
             {"role": "user", "content": prompt},
         ]
 
-        response_text = await llm_service.chat(messages, model=model_name, temperature=temperature)
-        analysis = _parse_json_response(response_text)
-        if analysis is None:
+        # 使用带降级保护的LLM调用
+        analysis = await analysis_llm.json_call(
+            messages,
+            fallback={
+                "root_cause": "Analysis temporarily unavailable",
+                "pattern": "unknown",
+                "intervention": "Please try again later",
+                "confidence_score": 0.0
+            },
+            model=model_name,
+            temperature=temperature,
+        )
+
+        if analysis is None or not analysis.get("root_cause"):
             logger.warning(f"Analysis parsing failed for task {task.task_id}")
             return AnalysisResult(
                 task_id=task.task_id,

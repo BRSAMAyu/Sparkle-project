@@ -1,5 +1,5 @@
 """
-Achievement share card generation service.
+Achievement share card generation service with template system and privacy controls.
 """
 from __future__ import annotations
 
@@ -7,13 +7,15 @@ import asyncio
 import math
 import random
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from pathlib import Path
 from textwrap import shorten
 from typing import Any
 from uuid import UUID
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from sqlalchemy import and_, select
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,10 +23,15 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.models.achievement import Achievement, UserAchievement
 from app.models.user import User
+from app.schemas.achievement import ShareCardPrivacySettings
+from app.services.share_card_templates import (
+    TemplateStyle,
+    get_template,
+)
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @dataclass(slots=True)
@@ -36,12 +43,14 @@ class ShareCardResult:
     width: int
     height: int
     generated_at: datetime
+    template_id: str
+    privacy_settings: ShareCardPrivacySettings
 
 
 class ShareCardService:
-    """Generate and cache achievement share cards."""
+    """Generate and cache achievement share cards with template and privacy support."""
 
-    TEMPLATE_VERSION = "v1"
+    TEMPLATE_VERSION = "v2"
     WIDTH = 1080
     HEIGHT = 1440
     MIME_TYPE = "image/png"
@@ -53,37 +62,6 @@ class ShareCardService:
         "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
         "/Library/Fonts/Arial Unicode.ttf",
     )
-    STYLE_MAP = {
-        "common": {
-            "bg_top": (51, 65, 85),
-            "bg_bottom": (15, 23, 42),
-            "accent": (226, 232, 240),
-            "glow": (148, 163, 184),
-            "panel": (255, 255, 255, 28),
-        },
-        "rare": {
-            "bg_top": (120, 53, 15),
-            "bg_bottom": (69, 26, 3),
-            "accent": (253, 224, 71),
-            "glow": (251, 191, 36),
-            "panel": (255, 255, 255, 30),
-        },
-        "epic": {
-            "bg_top": (76, 29, 149),
-            "bg_bottom": (59, 7, 100),
-            "accent": (216, 180, 254),
-            "glow": (192, 132, 252),
-            "panel": (255, 255, 255, 30),
-        },
-        "legendary": {
-            "bg_top": (5, 150, 105),
-            "bg_mid": (37, 99, 235),
-            "bg_bottom": (126, 34, 206),
-            "accent": (254, 240, 138),
-            "glow": (251, 191, 36),
-            "panel": (255, 255, 255, 36),
-        },
-    }
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -92,8 +70,13 @@ class ShareCardService:
         self,
         user_id: UUID | str,
         achievement_id: str,
+        template_id: str = "cosmic",
+        privacy: ShareCardPrivacySettings | None = None,
     ) -> tuple[ShareCardResult, Achievement, UserAchievement]:
         """Generate a static PNG share card for an unlocked achievement."""
+        if privacy is None:
+            privacy = ShareCardPrivacySettings()
+
         user = await self._get_user(user_id)
         achievement = await self._get_achievement(achievement_id)
         user_achievement = await self._get_user_achievement(user_id, achievement_id)
@@ -105,15 +88,29 @@ class ShareCardService:
         if user_achievement is None or user_achievement.unlocked_at is None:
             raise ValueError("Achievement not unlocked yet")
 
-        cache_key = self._cache_key(user.id, achievement.id)
+        cache_key = self._cache_key(
+            user.id,
+            achievement.id,
+            template_id,
+            privacy.settings_hash(),
+        )
         cached_payload = await cache_service.get(cache_key)
-        result = await self._resolve_cached_result(user.id, achievement.id, cached_payload)
+        result = await self._resolve_cached_result(
+            user.id,
+            achievement.id,
+            template_id,
+            privacy,
+            cached_payload,
+        )
 
         if result is None:
             result = await self._render_and_store_card(
                 user=user,
                 achievement=achievement,
+                user_achievement=user_achievement,
                 unlocked_at=user_achievement.unlocked_at,
+                template_id=template_id,
+                privacy=privacy,
             )
             await cache_service.set(
                 cache_key,
@@ -123,6 +120,8 @@ class ShareCardService:
                     "width": result.width,
                     "height": result.height,
                     "generated_at": result.generated_at.isoformat(),
+                    "template_id": result.template_id,
+                    "privacy_hash": privacy.settings_hash(),
                 },
                 ttl=self.CACHE_TTL_SECONDS,
             )
@@ -137,12 +136,18 @@ class ShareCardService:
         self,
         user_id: UUID,
         achievement_id: str,
+        template_id: str,
+        privacy: ShareCardPrivacySettings,
         cached_payload: Any,
     ) -> ShareCardResult | None:
         if not isinstance(cached_payload, dict):
             return None
 
-        file_path = self._card_file_path(user_id, achievement_id)
+        cached_hash = cached_payload.get("privacy_hash")
+        if cached_hash != privacy.settings_hash():
+            return None
+
+        file_path = self._card_file_path(user_id, achievement_id, template_id, privacy.settings_hash())
         if not file_path.exists():
             return None
 
@@ -153,11 +158,16 @@ class ShareCardService:
             generated_at_value = _utcnow()
 
         return ShareCardResult(
-            card_url=str(cached_payload.get("card_url") or self._public_card_url(user_id, achievement_id)),
+            card_url=str(
+                cached_payload.get("card_url")
+                or self._public_card_url(user_id, achievement_id, template_id, privacy.settings_hash())
+            ),
             mime_type=str(cached_payload.get("mime_type") or self.MIME_TYPE),
             width=int(cached_payload.get("width") or self.WIDTH),
             height=int(cached_payload.get("height") or self.HEIGHT),
             generated_at=generated_at_value,
+            template_id=cached_payload.get("template_id", template_id),
+            privacy_settings=privacy,
         )
 
     async def _render_and_store_card(
@@ -165,24 +175,34 @@ class ShareCardService:
         *,
         user: User,
         achievement: Achievement,
+        user_achievement: UserAchievement,
         unlocked_at: datetime,
+        template_id: str,
+        privacy: ShareCardPrivacySettings,
     ) -> ShareCardResult:
-        output_path = self._card_file_path(user.id, achievement.id)
+        output_path = self._card_file_path(user.id, achievement.id, template_id, privacy.settings_hash())
         output_path.parent.mkdir(parents=True, exist_ok=True)
         generated_at = _utcnow()
+
         await asyncio.to_thread(
             self._render_card_sync,
             output_path,
             user,
             achievement,
+            user_achievement,
             unlocked_at,
+            template_id,
+            privacy,
         )
+
         return ShareCardResult(
-            card_url=self._public_card_url(user.id, achievement.id),
+            card_url=self._public_card_url(user.id, achievement.id, template_id, privacy.settings_hash()),
             mime_type=self.MIME_TYPE,
             width=self.WIDTH,
             height=self.HEIGHT,
             generated_at=generated_at,
+            template_id=template_id,
+            privacy_settings=privacy,
         )
 
     async def _get_user(self, user_id: UUID | str) -> User | None:
@@ -191,7 +211,9 @@ class ShareCardService:
     async def _get_achievement(self, achievement_id: str) -> Achievement | None:
         return await self.db.get(Achievement, achievement_id)
 
-    async def _get_user_achievement(self, user_id: UUID | str, achievement_id: str) -> UserAchievement | None:
+    async def _get_user_achievement(
+        self, user_id: UUID | str, achievement_id: str
+    ) -> UserAchievement | None:
         result = await self.db.execute(
             select(UserAchievement).where(
                 and_(
@@ -202,27 +224,41 @@ class ShareCardService:
         )
         return result.scalar_one_or_none()
 
-    def _cache_key(self, user_id: UUID, achievement_id: str) -> str:
-        return f"achievement:share_card:{user_id}:{achievement_id}:{self.TEMPLATE_VERSION}"
+    def _cache_key(
+        self, user_id: UUID, achievement_id: str, template_id: str, privacy_hash: str
+    ) -> str:
+        return f"achievement:share_card:{user_id}:{achievement_id}:{template_id}:{privacy_hash}:{self.TEMPLATE_VERSION}"
 
-    def _card_file_path(self, user_id: UUID, achievement_id: str) -> Path:
-        return Path(settings.UPLOAD_DIR).resolve() / "achievement-cards" / str(user_id) / (
-            f"{achievement_id}_{self.TEMPLATE_VERSION}.png"
+    def _card_file_path(
+        self, user_id: UUID, achievement_id: str, template_id: str, privacy_hash: str
+    ) -> Path:
+        return (
+            Path(settings.UPLOAD_DIR)
+            / "achievement-cards"
+            / str(user_id)
+            / f"{achievement_id}_{template_id}_{privacy_hash}.png"
         )
 
-    def _public_card_url(self, user_id: UUID, achievement_id: str) -> str:
-        return f"/uploads/achievement-cards/{user_id}/{achievement_id}_{self.TEMPLATE_VERSION}.png"
+    def _public_card_url(
+        self, user_id: UUID, achievement_id: str, template_id: str, privacy_hash: str
+    ) -> str:
+        return f"/uploads/achievement-cards/{user_id}/{achievement_id}_{template_id}_{privacy_hash}.png"
 
     def _render_card_sync(
         self,
         output_path: Path,
         user: User,
         achievement: Achievement,
+        user_achievement: UserAchievement,
         unlocked_at: datetime,
+        template_id: str,
+        privacy: ShareCardPrivacySettings,
     ) -> None:
         rarity = getattr(achievement.rarity, "value", str(achievement.rarity))
-        style = self.STYLE_MAP[rarity]
-        image = self._build_background(style, seed=f"{user.id}:{achievement.id}")
+        template = get_template(template_id)
+        style = template.get_style(rarity)
+
+        image = self._build_background(style, seed=f"{user.id}:{achievement.id}:{template_id}")
         draw = ImageDraw.Draw(image, "RGBA")
 
         title_font = self._load_font(72)
@@ -231,14 +267,15 @@ class ShareCardService:
         body_font = self._load_font(28)
         tiny_font = self._load_font(24)
 
-        accent = style["accent"]
-        panel = style["panel"]
+        accent = style.accent
+        panel = style.panel
 
         self._draw_glow_ring(draw, style)
         self._draw_header(draw, achievement, title_font, badge_font, accent)
         self._draw_info_panels(
             draw=draw,
             achievement=achievement,
+            user_achievement=user_achievement,
             user=user,
             unlocked_at=unlocked_at,
             heading_font=heading_font,
@@ -246,18 +283,20 @@ class ShareCardService:
             tiny_font=tiny_font,
             panel_color=panel,
             accent=accent,
+            style=style,
+            privacy=privacy,
         )
-        self._draw_footer(draw, tiny_font, accent)
+        self._draw_footer(draw, tiny_font, accent, style)
 
         image = image.filter(ImageFilter.SMOOTH_MORE)
         image.save(output_path, format="PNG", optimize=True)
 
-    def _build_background(self, style: dict[str, Any], *, seed: str) -> Image.Image:
+    def _build_background(self, style: TemplateStyle, *, seed: str) -> Image.Image:
         image = Image.new("RGBA", (self.WIDTH, self.HEIGHT), (0, 0, 0, 255))
         draw = ImageDraw.Draw(image, "RGBA")
-        top = style["bg_top"]
-        bottom = style["bg_bottom"]
-        mid = style.get("bg_mid")
+        top = style.bg_top
+        bottom = style.bg_bottom
+        mid = style.bg_mid
 
         for y in range(self.HEIGHT):
             ratio = y / max(self.HEIGHT - 1, 1)
@@ -269,16 +308,17 @@ class ShareCardService:
                 color = self._lerp_color(mid, bottom, (ratio - 0.5) * 2)
             draw.line([(0, y), (self.WIDTH, y)], fill=(*color, 255))
 
-        rng = random.Random(seed)
-        for _ in range(90):
-            radius = rng.randint(2, 6)
-            alpha = rng.randint(70, 180)
-            x = rng.randint(0, self.WIDTH)
-            y = rng.randint(0, self.HEIGHT)
-            draw.ellipse(
-                (x - radius, y - radius, x + radius, y + radius),
-                fill=(*style["accent"], alpha),
-            )
+        if style.particle_count > 0:
+            rng = random.Random(seed)
+            for _ in range(style.particle_count):
+                radius = rng.randint(2, 6)
+                alpha = rng.randint(style.particle_alpha_min, style.particle_alpha_max)
+                x = rng.randint(0, self.WIDTH)
+                y = rng.randint(0, self.HEIGHT)
+                draw.ellipse(
+                    (x - radius, y - radius, x + radius, y + radius),
+                    fill=(*style.accent, alpha),
+                )
 
         for offset in range(-250, 251, 125):
             draw.ellipse(
@@ -288,13 +328,13 @@ class ShareCardService:
                     self.WIDTH - 80 + offset,
                     self.HEIGHT - 220 + max(offset, 0),
                 ),
-                outline=(*style["glow"], 30),
+                outline=(*style.glow, 30),
                 width=3,
             )
 
         return image
 
-    def _draw_glow_ring(self, draw: ImageDraw.ImageDraw, style: dict[str, Any]) -> None:
+    def _draw_glow_ring(self, draw: ImageDraw.ImageDraw, style: TemplateStyle) -> None:
         center_x = self.WIDTH // 2
         center_y = 320
         for step in range(5):
@@ -307,14 +347,14 @@ class ShareCardService:
                     center_x + radius,
                     center_y + radius,
                 ),
-                outline=(*style["glow"], alpha),
+                outline=(*style.glow, alpha),
                 width=6,
             )
 
         draw.ellipse(
             (center_x - 72, center_y - 72, center_x + 72, center_y + 72),
-            fill=(*style["accent"], 44),
-            outline=(*style["accent"], 255),
+            fill=(*style.accent, 44),
+            outline=(*style.accent, 255),
             width=5,
         )
 
@@ -324,7 +364,9 @@ class ShareCardService:
         for index in range(10):
             angle = math.pi / 2 + index * math.pi / 5
             radius = outer if index % 2 == 0 else inner
-            star_points.append((center_x + math.cos(angle) * radius, center_y - math.sin(angle) * radius))
+            star_points.append(
+                (center_x + math.cos(angle) * radius, center_y - math.sin(angle) * radius)
+            )
         draw.polygon(star_points, fill=(255, 255, 255, 240))
 
     def _draw_header(
@@ -335,7 +377,8 @@ class ShareCardService:
         badge_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         accent: tuple[int, int, int],
     ) -> None:
-        rarity_name = self._rarity_label(getattr(achievement.rarity, "value", str(achievement.rarity)))
+        rarity = getattr(achievement.rarity, "value", str(achievement.rarity))
+        rarity_name = self._rarity_label(rarity)
         badge_box = (90, 72, 360, 132)
         draw.rounded_rectangle(badge_box, radius=28, fill=(*accent, 42), outline=(*accent, 128), width=2)
         draw.text((122, 88), f"SPARKLE {rarity_name}", fill=(255, 255, 255, 240), font=badge_font)
@@ -357,6 +400,7 @@ class ShareCardService:
         *,
         draw: ImageDraw.ImageDraw,
         achievement: Achievement,
+        user_achievement: UserAchievement,
         user: User,
         unlocked_at: datetime,
         heading_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
@@ -364,6 +408,8 @@ class ShareCardService:
         tiny_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         panel_color: tuple[int, int, int, int],
         accent: tuple[int, int, int],
+        style: TemplateStyle,
+        privacy: ShareCardPrivacySettings,
     ) -> None:
         info_top = 690
         draw.rounded_rectangle(
@@ -388,27 +434,51 @@ class ShareCardService:
             max_lines=4,
         )
 
-        username = user.nickname or user.full_name or user.username
+        badge_offset = 0
+        if privacy.show_first_unlocker_badge and user_achievement.is_first_unlocker:
+            badge_y = info_top + 250
+            if privacy.show_progress_stats:
+                badge_y = info_top + 290
+            badge_text = "First Unlocked!"
+            badge_box = (120, badge_y, 320, badge_y + 36)
+            draw.rounded_rectangle(
+                badge_box, radius=18, fill=(*style.glow, 60), outline=(*style.glow, 200), width=2
+            )
+            draw.text((135, badge_y + 6), badge_text, fill=(255, 255, 255, 255), font=tiny_font)
+            badge_offset = 50
+
+        user_panel_top = info_top + 282 + badge_offset
         draw.rounded_rectangle(
-            (120, info_top + 282, self.WIDTH - 120, info_top + 378),
+            (120, user_panel_top, self.WIDTH - 120, user_panel_top + 96),
             radius=26,
             fill=(255, 255, 255, 20),
             outline=(255, 255, 255, 36),
             width=2,
         )
-        draw.text((150, info_top + 304), shorten(username, width=24, placeholder="..."), fill=(255, 255, 255, 255), font=body_font)
+
+        default_name = user.nickname or user.full_name or user.username
+        display_name = privacy.get_effective_display_name(default_name)
         draw.text(
-            (150, info_top + 344),
-            unlocked_at.strftime("Unlocked on %Y-%m-%d %H:%M UTC"),
-            fill=(255, 255, 255, 188),
-            font=tiny_font,
+            (150, user_panel_top + 22),
+            shorten(display_name, width=24, placeholder="..."),
+            fill=(255, 255, 255, 255),
+            font=body_font,
         )
+
+        if privacy.show_unlock_date:
+            draw.text(
+                (150, user_panel_top + 60),
+                unlocked_at.strftime("Unlocked on %Y-%m-%d %H:%M UTC"),
+                fill=(255, 255, 255, 188),
+                font=tiny_font,
+            )
 
     def _draw_footer(
         self,
         draw: ImageDraw.ImageDraw,
         font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
         accent: tuple[int, int, int],
+        style: TemplateStyle,
     ) -> None:
         footer_text = "Share your latest milestone from Sparkle."
         text_box = draw.textbbox((0, 0), footer_text, font=font)
@@ -498,9 +568,11 @@ class ShareCardService:
 
         return lines
 
-    def _lerp_color(self, start: tuple[int, int, int], end: tuple[int, int, int], ratio: float) -> tuple[int, int, int]:
+    def _lerp_color(
+        self, start: tuple[int, int, int], end: tuple[int, int, int], ratio: float
+    ) -> tuple[int, int, int]:
         ratio = max(0.0, min(1.0, ratio))
-        return tuple(int(start[index] + (end[index] - start[index]) * ratio) for index in range(3))
+        return tuple(int(start[i] + (end[i] - start[i]) * ratio) for i in range(3))
 
     def _rarity_label(self, rarity: str) -> str:
         labels = {

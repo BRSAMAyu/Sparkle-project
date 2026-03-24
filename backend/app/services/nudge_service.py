@@ -3,6 +3,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from loguru import logger
+
 from app.models.notification import Notification
 from app.services.push_service import PushService
 
@@ -61,18 +63,16 @@ class NudgeService:
                 "body": message
             }
 
-            # Retrieve user to pass to push_service (required by _send_push signature)
-            # Or use a public method if available.
-            # Checking PushService._send_push, it takes (user, trigger_type, content, data)
-            # But _send_push is "private".
-            # PushService doesn't seem to have a simple "send_message" public method that takes ID.
-            # It has process_user_push(user).
-
-            # We might need to extend PushService or fetch user here.
             from app.models.user import User
+            from app.services.personalization import get_personalization_engine
+            
             user = await self.db.get(User, uuid.UUID(user_id))
             if user:
-                 # Reusing _send_push for now as it handles history/logging
+                 # Get user policy profile
+                 engine = get_personalization_engine(self.db, None)
+                 policy = await engine.get_push_policy_profile(user.id)
+                 
+                 # Calling the private _send_push method with the correct signature
                  await self.push_service._send_push(
                     user=user,
                     trigger_type="nudge",
@@ -82,11 +82,12 @@ class NudgeService:
                         "nudge_type": nudge_type,
                         "notification_id": str(notification.id),
                         **context
-                    }
-                )
+                    },
+                    policy=policy
+                 )
+
         except Exception as e:
-            # Log error but don't fail the transaction
-            print(f"Failed to send push notification for nudge: {e}")
+            logger.error(f"Failed to send push notification for nudge: {e}")
 
 # Singleton Instance (if needed globally, but usually instantiated per request/worker)
 # nudge_service = NudgeService(db_session)

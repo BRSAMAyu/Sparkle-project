@@ -194,7 +194,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
         这里使用模拟数据作为示例
         """
         with tracer.start_as_current_span("build_enhanced_context"):
-            # TODO: 在实际生产环境中，这些数据应该通过服务获取
+            # TRACKED(TD-008): 在实际生产环境中，这些数据应该通过服务获取
             # db = context.db_session
             # galaxy_service = GalaxyService(db)
             # decay_service = DecayService(db)

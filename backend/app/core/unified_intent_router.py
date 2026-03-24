@@ -8,6 +8,7 @@ Unified Intent Router - 统一意图路由系统
 
 替代原 IntentRouter (17行简单版本)，提供智能路由能力。
 """
+from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -15,6 +16,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.services.llm_fallback_utils import router_llm
 from app.services.llm_service import LLMService
 
 
@@ -252,6 +254,22 @@ class UnifiedIntentRouter:
             )
             return rule_result
 
+        if self._should_skip_llm_assist(
+            message=message,
+            rule_result=rule_result,
+            conversation_history=conversation_history or [],
+        ):
+            rule_result.routing_layer = "rule_fast_path"
+            rule_result.context_signals = {
+                **(rule_result.context_signals or {}),
+                "llm_assist_skipped": True,
+            }
+            logger.info(
+                f"Layer 2.5 (fast-path): {rule_result.primary_intent} "
+                f"confidence={rule_result.confidence:.2f}, skip llm assist"
+            )
+            return rule_result
+
         # Layer 3: LLM辅助分类
         logger.info(f"Layer 3 (llm): rule confidence={rule_result.confidence:.2f}, using LLM assist")
         llm_result = await self._llm_classify(
@@ -354,6 +372,15 @@ class UnifiedIntentRouter:
         best_intent = max(scores, key=scores.get)
         confidence = scores[best_intent]
 
+        if best_intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message):
+            return IntentRoutingResult(
+                primary_intent=UnifiedIntentType.CHAT,
+                confidence=min(confidence, 0.72),
+                routing_layer="rule",
+                execution_mode="direct",
+                context_signals={"advisory_plan_override": True, "matched_keywords": list(scores.keys())},
+            )
+
         # 判断执行模式
         execution_mode = "direct"
         if confidence >= 0.8 and best_intent in [
@@ -433,11 +460,15 @@ class UnifiedIntentRouter:
 - reasoning 用中文简短说明"""
 
         try:
-            # 使用低温度确保分类稳定
-            response = await self.llm_service.chat_json(
+            # 使用低温度确保分类稳定 (带降级保护)
+            response = await router_llm.json_call(
                 messages=[{"role": "user", "content": prompt}],
+                fallback={"primary_intent": "chat", "confidence": 0.5, "reasoning": "LLM分类降级", "is_complex": False, "suggested_execution_mode": "direct"},
                 temperature=0.1,
             )
+
+            if response is None:
+                response = {"primary_intent": "chat", "confidence": 0.5, "is_complex": False}
 
             # 解析结果
             primary_intent_str = response.get("primary_intent", "chat").lower()
@@ -458,6 +489,13 @@ class UnifiedIntentRouter:
             if is_complex:
                 execution_mode = "langgraph"
 
+            advisory_override = primary_intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message)
+            if advisory_override:
+                primary_intent = UnifiedIntentType.CHAT
+                confidence = min(confidence, 0.72)
+                execution_mode = "direct"
+                reasoning = f"咨询型学习比较，保留标准直答链；{reasoning}"
+
             result = IntentRoutingResult(
                 primary_intent=primary_intent,
                 confidence=confidence,
@@ -466,7 +504,8 @@ class UnifiedIntentRouter:
                 context_signals={
                     "llm_reasoning": reasoning,
                     "is_complex": is_complex,
-                    "rule_hint": rule_hints.primary_intent.value
+                    "rule_hint": rule_hints.primary_intent.value,
+                    "advisory_plan_override": advisory_override,
                 },
                 conversation_context=context_str
             )
@@ -500,6 +539,70 @@ class UnifiedIntentRouter:
             context_parts.append(f"{i}. [{role}]: {content}")
 
         return "\n".join(context_parts)
+
+    def _should_skip_llm_assist(
+        self,
+        *,
+        message: str,
+        rule_result: IntentRoutingResult,
+        conversation_history: list[dict],
+    ) -> bool:
+        message = (message or "").strip()
+        if not message:
+            return True
+        if not conversation_history:
+            return False
+        if rule_result.primary_intent != UnifiedIntentType.CHAT:
+            return False
+        if rule_result.confidence < 0.5:
+            return False
+        if len(message) > 120:
+            return False
+        if self._is_complex_intent(message):
+            return False
+
+        explicit_action_keywords = (
+            "创建", "新建", "添加", "保存", "同步", "安排", "提醒", "日程", "计划", "任务",
+            "创建计划", "生成计划", "create", "schedule", "remind", "task", "plan",
+        )
+        return not any(keyword in message.lower() for keyword in explicit_action_keywords)
+
+    @staticmethod
+    def _is_advisory_plan_query(message: str) -> bool:
+        message = (message or "").strip().lower()
+        if not message:
+            return False
+
+        advisory_markers = (
+            "先学哪个",
+            "应该先",
+            "怎么选",
+            "判断标准",
+            "取舍",
+            "比较",
+            "区别",
+            "优先学",
+            "值不值得",
+        )
+        explicit_plan_markers = (
+            "制定计划",
+            "做计划",
+            "生成计划",
+            "创建计划",
+            "安排一下",
+            "排个计划",
+            "帮我规划",
+            "帮我安排",
+            "学习计划",
+            "复习计划",
+            "时间安排",
+            "日程安排",
+            "时间表",
+        )
+
+        return any(marker in message for marker in advisory_markers) and not any(
+            marker in message for marker in explicit_plan_markers
+        )
 
     def _is_complex_intent(self, message: str) -> bool:
         """检查是否为复杂意图"""
@@ -579,6 +682,9 @@ class UnifiedIntentRouter:
 
         if intent == UnifiedIntentType.MULTI_INTENT:
             return "langgraph"
+
+        if intent == UnifiedIntentType.PLAN and self._is_advisory_plan_query(message):
+            return "direct"
 
         if intent in {UnifiedIntentType.PLAN, UnifiedIntentType.SPRINT_PLAN} and self._is_complex_intent(message):
             return "langgraph"

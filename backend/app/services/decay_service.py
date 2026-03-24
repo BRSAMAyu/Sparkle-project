@@ -3,8 +3,13 @@
 实现艾宾浩斯遗忘曲线，让知识点随时间逐渐暗淡
 """
 import math
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
+
+
+def _utcnow() -> datetime:
+    """Return current UTC time as timezone-naive datetime (matches DB TIMESTAMP WITHOUT TIME ZONE)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,14 +46,14 @@ class DecayService:
             dict: 衰减统计 {processed: int, dimmed: int, collapsed: int}
         """
         stats = {'processed': 0, 'dimmed': 0, 'collapsed': 0}
-        now = datetime.now(UTC)
+        now = _utcnow()
 
         # 1. 查询需要衰减的节点状态
         # 条件：已解锁 + 未暂停衰减 + 上次学习超过 1 天
         query = select(UserNodeStatus).where(
             and_(
                 UserNodeStatus.is_unlocked,
-                not UserNodeStatus.decay_paused,
+                UserNodeStatus.decay_paused.is_(False),
                 UserNodeStatus.last_study_at < now - timedelta(days=self.DECAY_CHECK_INTERVAL),
                 UserNodeStatus.mastery_score > self.MIN_MASTERY
             )
@@ -112,7 +117,7 @@ class DecayService:
         Returns:
             List[dict]: 建议复习的知识点列表
         """
-        now = datetime.now(UTC)
+        now = _utcnow()
 
         query = (
             select(UserNodeStatus, KnowledgeNode)
@@ -171,7 +176,7 @@ class DecayService:
         Returns:
             dict: 包含需要复习的节点数、暗淡节点数等
         """
-        now = datetime.now(UTC)
+        now = _utcnow()
 
         # 统计需要复习的节点
         review_query = select(func.count()).select_from(UserNodeStatus).where(
@@ -237,7 +242,7 @@ class DecayService:
                 }
             }
         """
-        now = datetime.now(UTC)
+        now = _utcnow()
 
         # 查询用户所有已解锁的节点
         query = (
@@ -310,7 +315,7 @@ class DecayService:
         Returns:
             dict: 与 project_decay_future 相同格式的预测结果
         """
-        datetime.now(UTC)
+        _utcnow()
 
         query = (
             select(UserNodeStatus, KnowledgeNode)

@@ -6,11 +6,12 @@ from datetime import date, datetime, timedelta
 from random import randint, uniform
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from app.core.security import get_password_hash
+from app.data.populate_achievements import sync_achievement_definitions
 from app.db.session import AsyncSessionLocal
 from app.models import (
     Achievement,
@@ -47,10 +48,25 @@ from app.models import (
     ChatMessage,
     ChatSession,
 )
+from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 
 DEMO_USERNAME = "chat_test"
 DEMO_PASSWORD = "Chat123456"
 DEMO_EMAIL = "chat_test@sparkle.demo"
+LEGACY_DEMO_ACHIEVEMENT_IDS = {
+    "study_100h",
+    "sprint_master",
+    "hidden_night",
+    "task_50",
+    "capsule_10",
+    "perfect_day",
+    "social_butterfly",
+}
+LEGACY_ACHIEVEMENT_REMAP = {
+    "study_100h": "study_100hours",
+    "sprint_master": "sprint_first",
+    "hidden_night": "night_owl",
+}
 
 
 def random_date(start, end):
@@ -58,6 +74,35 @@ def random_date(start, end):
     delta = end - start
     random_seconds = randint(0, int(delta.total_seconds()))
     return start + timedelta(seconds=random_seconds)
+
+
+async def _cleanup_legacy_demo_achievements(session, user: User) -> None:
+    for legacy_id, canonical_id in LEGACY_ACHIEVEMENT_REMAP.items():
+        await session.execute(
+            update(UserTitle)
+            .where(UserTitle.source_achievement_id == legacy_id)
+            .values(source_achievement_id=canonical_id)
+        )
+    await session.execute(
+        delete(UserAchievement).where(
+            UserAchievement.achievement_id.in_(LEGACY_DEMO_ACHIEVEMENT_IDS),
+        )
+    )
+    await session.execute(
+        delete(Achievement).where(
+            Achievement.id.in_(LEGACY_DEMO_ACHIEVEMENT_IDS),
+        )
+    )
+
+    sprinter_title = await session.execute(
+        select(UserTitle).where(
+            UserTitle.user_id == user.id,
+            UserTitle.title_id == "title_sprinter",
+        )
+    )
+    existing_title = sprinter_title.scalar_one_or_none()
+    if existing_title is not None:
+        existing_title.source_achievement_id = "sprint_first"
 
 
 async def _get_or_create_user(session, username: str, email: str, password: str) -> User:
@@ -96,129 +141,7 @@ async def _get_or_create_user(session, username: str, email: str, password: str)
 
 
 async def _ensure_achievements(session):
-    now = datetime.utcnow()
-    items = [
-        dict(
-            id="streak_7",
-            name="一周坚持",
-            description="连续学习7天",
-            icon_url="/icons/streak_7.png",
-            type=AchievementType.STREAK,
-            rarity=AchievementRarity.COMMON,
-            trigger_code="STREAK_DAYS_7",
-            trigger_config={"days": 7},
-            category="streak",
-        ),
-        dict(
-            id="streak_30",
-            name="月度冠军",
-            description="连续学习30天",
-            icon_url="/icons/streak_30.png",
-            type=AchievementType.STREAK,
-            rarity=AchievementRarity.RARE,
-            trigger_code="STREAK_DAYS_30",
-            trigger_config={"days": 30},
-            category="streak",
-        ),
-        dict(
-            id="nodes_100",
-            name="星图探索者",
-            description="解锁100个知识点",
-            icon_url="/icons/nodes_100.png",
-            type=AchievementType.NODE_EXPLORE,
-            rarity=AchievementRarity.RARE,
-            trigger_code="NODES_UNLOCKED_100",
-            trigger_config={"count": 100},
-            category="exploration",
-        ),
-        dict(
-            id="study_100h",
-            name="百小时学者",
-            description="累计学习100小时",
-            icon_url="/icons/study_100h.png",
-            type=AchievementType.STUDY_TIME,
-            rarity=AchievementRarity.EPIC,
-            trigger_code="STUDY_HOURS_100",
-            trigger_config={"hours": 100},
-            category="study_time",
-        ),
-        dict(
-            id="sprint_master",
-            name="冲刺达人",
-            description="完成一次冲刺计划",
-            icon_url="/icons/sprint_master.png",
-            type=AchievementType.SPRINT,
-            rarity=AchievementRarity.RARE,
-            trigger_code="SPRINT_COMPLETE_1",
-            trigger_config={"count": 1},
-            category="sprint",
-        ),
-        dict(
-            id="hidden_night",
-            name="夜猫学霸",
-            description="在凌晨2点后仍在学习（隐藏成就）",
-            icon_url="/icons/hidden_night.png",
-            type=AchievementType.HIDDEN,
-            rarity=AchievementRarity.LEGENDARY,
-            trigger_code="NIGHT_OWL",
-            trigger_config={"hour": 2},
-            category="hidden",
-            is_hidden=True,
-            hint="深夜灵感突然爆发…",
-        ),
-        dict(
-            id="task_50",
-            name="任务达人",
-            description="完成50个任务",
-            icon_url="/icons/task_50.png",
-            type=AchievementType.TASK_COMPLETE,
-            rarity=AchievementRarity.COMMON,
-            trigger_code="TASKS_COMPLETED_50",
-            trigger_config={"count": 50},
-            category="tasks",
-        ),
-        dict(
-            id="capsule_10",
-            name="好奇宝宝",
-            description="收藏10个认知胶囊",
-            icon_url="/icons/capsule_10.png",
-            type=AchievementType.MILESTONE,
-            rarity=AchievementRarity.COMMON,
-            trigger_code="CAPSULE_FAVORITE_10",
-            trigger_config={"count": 10},
-            category="curiosity",
-        ),
-        dict(
-            id="perfect_day",
-            name="完美一天",
-            description="单日专注时长超过4小时",
-            icon_url="/icons/perfect_day.png",
-            type=AchievementType.MILESTONE,
-            rarity=AchievementRarity.RARE,
-            trigger_code="FOCUS_4H_ONE_DAY",
-            trigger_config={"hours": 4},
-            category="focus",
-        ),
-        dict(
-            id="social_butterfly",
-            name="社交达人",
-            description="添加10个好友",
-            icon_url="/icons/social.png",
-            type=AchievementType.SOCIAL,
-            rarity=AchievementRarity.COMMON,
-            trigger_code="FRIENDS_10",
-            trigger_config={"count": 10},
-            category="social",
-        ),
-    ]
-
-    for item in items:
-        existing = await session.execute(
-            select(Achievement).where(Achievement.id == item["id"])
-        )
-        if existing.scalar_one_or_none():
-            continue
-        session.add(Achievement(**item, created_at=now, updated_at=now))
+    await sync_achievement_definitions(session)
 
 
 async def _ensure_galaxy_skins(session):
@@ -240,7 +163,7 @@ async def _ensure_galaxy_skins(session):
             description="高亮太阳核心皮肤",
             preview_url="/skins/solar.png",
             unlock_type="achievement",
-            unlock_requirement={"achievement_id": "study_100h"},
+            unlock_requirement={"achievement_id": "study_100hours"},
             rarity=AchievementRarity.EPIC,
             sort_order=2,
         ),
@@ -250,7 +173,7 @@ async def _ensure_galaxy_skins(session):
             description="量子场主题皮肤",
             preview_url="/skins/quantum.png",
             unlock_type="achievement",
-            unlock_requirement={"achievement_id": "hidden_night"},
+            unlock_requirement={"achievement_id": "night_owl"},
             rarity=AchievementRarity.LEGENDARY,
             sort_order=3,
         ),
@@ -1077,6 +1000,7 @@ async def _seed_user_data(session, user: User):
 
     # Achievements
     await _ensure_achievements(session)
+    await _cleanup_legacy_demo_achievements(session, user)
     await session.flush()
     achievements = {
         row.id: row
@@ -1099,13 +1023,10 @@ async def _seed_user_data(session, user: User):
         _upsert_user_achievement("streak_7", 1.0, 7, 7, True),
         _upsert_user_achievement("streak_30", 0.63, 19, 30, False),
         _upsert_user_achievement("nodes_100", 0.68, 68, 100, False),
-        _upsert_user_achievement("study_100h", 0.87, 87, 100, False),
-        _upsert_user_achievement("sprint_master", 1.0, 1, 1, True),
-        _upsert_user_achievement("hidden_night", 1.0, 1, 1, True),
-        _upsert_user_achievement("task_50", 0.72, 36, 50, False),
-        _upsert_user_achievement("capsule_10", 0.60, 6, 10, False),
-        _upsert_user_achievement("perfect_day", 1.0, 1, 1, True),
-        _upsert_user_achievement("social_butterfly", 0.30, 3, 10, False),
+        _upsert_user_achievement("study_100hours", 0.87, 87, 100, False),
+        _upsert_user_achievement("sprint_first", 1.0, 1, 1, True),
+        _upsert_user_achievement("night_owl", 1.0, 10, 10, True),
+        _upsert_user_achievement("tasks_100", 0.36, 36, 100, False),
     ]
 
     for item in user_achievements:
@@ -1139,6 +1060,54 @@ async def _seed_user_data(session, user: User):
             )
         )
 
+    existing_photon_history = await session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == user.id,
+        )
+    )
+    if existing_photon_history.first() is None:
+        photon_entries = [
+            dict(
+                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT.value,
+                amount=50,
+                balance_before=0,
+                balance_after=50,
+                source="achievement:streak_7",
+                related_item_id="streak_7",
+                extra_data={"achievement_name": "一周坚持"},
+            ),
+            dict(
+                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT.value,
+                amount=120,
+                balance_before=50,
+                balance_after=170,
+                source="achievement:sprint_first",
+                related_item_id="sprint_first",
+                extra_data={"achievement_name": "初出茅庐"},
+            ),
+            dict(
+                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT.value,
+                amount=180,
+                balance_before=170,
+                balance_after=350,
+                source="achievement:night_owl",
+                related_item_id="night_owl",
+                extra_data={"achievement_name": "深夜学者"},
+            ),
+        ]
+        for entry in photon_entries:
+            session.add(
+                PhotonTransactionHistory(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    created_at=now - timedelta(days=randint(1, 14)),
+                    updated_at=now,
+                    **entry,
+                )
+            )
+        user.photon_balance = 350
+        user.photon_updated_at = now
+
     # Galaxy skins + titles
     await _ensure_galaxy_skins(session)
     await session.flush()
@@ -1165,7 +1134,7 @@ async def _seed_user_data(session, user: User):
                 )
 
     for title_spec in [
-        ("title_sprinter", "冲刺高手", "🏃 冲刺高手", "sprint_master"),
+        ("title_sprinter", "冲刺高手", "🏃 冲刺高手", "sprint_first"),
         ("title_explorer", "星图探索者", "🌟 星图探索者", "nodes_100"),
     ]:
         title_exists = await session.execute(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -28,8 +29,10 @@ class DashboardCuriosityCard extends ConsumerWidget {
             ? solutionText
             : null;
 
-    return GestureDetector(
+    return SparklePressable(
       onTap: () => context.push('/curiosity-capsule'),
+      padding: EdgeInsets.zero,
+      borderRadius: DS.borderRadius20,
       child: MaterialStyler(
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,

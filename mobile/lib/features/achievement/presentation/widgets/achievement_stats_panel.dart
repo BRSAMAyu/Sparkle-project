@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就统计面板组件
@@ -19,12 +22,12 @@ class AchievementStatsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isCompact) {
-      return _buildCompactStats();
+      return _buildCompactStats(context.l10n);
     }
-    return _buildFullStats();
+    return _buildFullStats(context.l10n);
   }
 
-  Widget _buildFullStats() => Container(
+  Widget _buildFullStats(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -36,19 +39,19 @@ class AchievementStatsPanel extends StatelessWidget {
             final compactStats = constraints.maxWidth < 520;
             final cards = [
               _buildStatCard(
-                '总成就',
+                l10n.achievementTotalLabel,
                 '${stats.unlockedCount}/${stats.totalAchievements}',
                 Icons.emoji_events_outlined,
                 DS.brandPrimary,
               ),
               _buildStatCard(
-                '完成率',
+                l10n.achievementCompletionRate,
                 '${stats.unlockedPercentage.toStringAsFixed(0)}%',
                 Icons.bar_chart,
                 DS.semanticSuccess,
               ),
               _buildStatCard(
-                '光子',
+                l10n.achievementPhotons,
                 '${stats.totalPhotons}',
                 Icons.stars,
                 DS.warning,
@@ -62,7 +65,7 @@ class AchievementStatsPanel extends StatelessWidget {
                     children: [
                       for (var index = 0; index < cards.length; index++) ...[
                         if (index > 0) const SizedBox(height: DS.spacing10),
-                        cards[index],
+                        SparkleStaggerItem(index: index, child: cards[index]),
                       ],
                     ],
                   )
@@ -71,22 +74,33 @@ class AchievementStatsPanel extends StatelessWidget {
                     children: [
                       for (var index = 0; index < cards.length; index++) ...[
                         if (index > 0) const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[index]),
+                        Expanded(
+                          child: SparkleStaggerItem(
+                            index: index,
+                            child: cards[index],
+                          ),
+                        ),
                       ],
                     ],
                   ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                  child: _buildOverallProgressBar(compact: compactStats),
+                  child: SparkleStaggerItem(
+                    index: 3,
+                    child: _buildOverallProgressBar(l10n, compact: compactStats),
+                  ),
                 ),
-                _buildRarityDistribution(),
+                SparkleStaggerItem(
+                  index: 4,
+                  child: _buildRarityDistribution(l10n),
+                ),
               ],
             );
           },
         ),
       );
 
-  Widget _buildCompactStats() => Container(
+  Widget _buildCompactStats(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -100,15 +114,15 @@ class AchievementStatsPanel extends StatelessWidget {
           children: [
             _buildCompactStatItem(
               '${stats.unlockedCount}/${stats.totalAchievements}',
-              '成就',
+              l10n.achievementTitle,
             ),
             _buildCompactStatItem(
               '${stats.unlockedPercentage.toStringAsFixed(0)}%',
-              '完成率',
+              l10n.achievementCompletionRate,
             ),
             _buildCompactStatItem(
               '${stats.currentStreak}',
-              '连胜',
+              l10n.winStreak,
             ),
           ],
         ),
@@ -174,7 +188,10 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       );
 
-  Widget _buildOverallProgressBar({bool compact = false}) {
+  Widget _buildOverallProgressBar(
+    AppLocalizations l10n, {
+    bool compact = false,
+  }) {
     final progress = stats.unlockedPercentage / 100;
 
     return Column(
@@ -185,7 +202,7 @@ class AchievementStatsPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '总体进度',
+                l10n.achievementOverallProgress,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   color: DS.textSecondary,
@@ -206,7 +223,7 @@ class AchievementStatsPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '总体进度',
+                l10n.achievementOverallProgress,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   color: DS.textSecondary,
@@ -222,19 +239,24 @@ class AchievementStatsPanel extends StatelessWidget {
             ],
           ),
         SizedBox(height: compact ? DS.spacing10 : DS.spacing8),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            color: DS.neutral200,
-            borderRadius: DS.borderRadiusFull,
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: DS.primaryGradient,
-                borderRadius: DS.borderRadiusFull,
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+          duration: DS.durationSlow,
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) => Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: DS.neutral200,
+              borderRadius: DS.borderRadiusFull,
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: value,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: DS.primaryGradient,
+                  borderRadius: DS.borderRadiusFull,
+                ),
               ),
             ),
           ),
@@ -243,11 +265,11 @@ class AchievementStatsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildRarityDistribution() => Column(
+  Widget _buildRarityDistribution(AppLocalizations l10n) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '稀有度分布',
+            l10n.achievementRarityDistribution,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightSemibold,
@@ -260,29 +282,29 @@ class AchievementStatsPanel extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               _buildRarityBarItem(
-                '普通',
+                l10n.achievementRarityCommon,
                 stats.commonCount,
                 DS.neutral500,
               ),
               const SizedBox(width: DS.spacing8),
               _buildRarityBarItem(
-                '稀有',
+                l10n.achievementRarityRare,
                 stats.rareCount,
                 DS.warning,
               ),
               const SizedBox(width: DS.spacing8),
               _buildRarityBarItem(
-                '史诗',
+                l10n.achievementRarityEpic,
                 stats.epicCount,
                 DS.prismPurple,
               ),
               const SizedBox(width: DS.spacing8),
               _buildRarityBarItem(
-                '传说',
+                l10n.achievementRarityLegendary,
                 stats.legendaryCount,
                 DS.error,
               ),
-              if (stats.hiddenFound > 0) _buildHiddenStat(),
+              if (stats.hiddenFound > 0) _buildHiddenStat(l10n),
             ],
           ),
         ],
@@ -324,7 +346,7 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       );
 
-  Widget _buildHiddenStat() => Container(
+  Widget _buildHiddenStat(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
           vertical: DS.spacing4,
@@ -346,7 +368,7 @@ class AchievementStatsPanel extends StatelessWidget {
             ),
             const SizedBox(width: DS.spacing4),
             Text(
-              '隐藏: ${stats.hiddenFound}',
+              l10n.achievementHiddenCount(stats.hiddenFound),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: DS.prismPurple,

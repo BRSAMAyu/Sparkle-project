@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 必杀技 A: GraphRAG 检索可视化组件
 ///
@@ -36,6 +38,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late AnimationController _fadeController;
+  late AnimationController _revealController;
   Timer? _autoHideTimer;
 
   @override
@@ -54,6 +57,11 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       duration: const Duration(milliseconds: 500),
       value: 1.0,
     );
+    _revealController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 720),
+      value: 1.0,
+    );
   }
 
   @override
@@ -64,6 +72,10 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
     if (widget.trace != oldWidget.trace && widget.trace != null) {
       // 重置淡出动画
       _fadeController.value = 1.0;
+      _revealController
+        ..stop()
+        ..value = 0;
+      unawaited(_revealController.forward());
 
       // 取消之前的自动隐藏
       _autoHideTimer?.cancel();
@@ -81,6 +93,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
   void dispose() {
     _pulseController.dispose();
     _fadeController.dispose();
+    _revealController.dispose();
     _autoHideTimer?.cancel();
     super.dispose();
   }
@@ -104,6 +117,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       return const SizedBox.shrink();
     }
 
+    final l10n = context.l10n;
     final trace = widget.trace!;
 
     return Align(
@@ -154,7 +168,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'AI 检索中...',
+                        l10n.galaxyGraphRagSearching,
                         style: TextStyle(
                           color: DS.brandPrimary.withValues(alpha: 0.8),
                           fontSize: 12,
@@ -177,7 +191,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
               // 统计信息
               Padding(
                 padding: const EdgeInsets.fromLTRB(DS.md, 0, DS.md, DS.sm),
-                child: _buildStats(trace),
+                child: _buildStats(l10n, trace),
               ),
             ],
           ),
@@ -194,28 +208,30 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       painter: _NodeGraphPainter(
         nodes: nodesToShow,
         nodeSources: trace.nodeSources,
+        repaint: Listenable.merge([_pulseController, _revealController]),
         pulseAnimation: _pulseController,
         getColor: _getNodeColor,
+        revealProgress: _revealController.value,
       ),
       child: const SizedBox.expand(),
     );
   }
 
-  Widget _buildStats(GraphRAGTrace trace) => Row(
+  Widget _buildStats(AppLocalizations l10n, GraphRAGTrace trace) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem(
-            '向量',
+            l10n.galaxyGraphRagVector,
             trace.vectorSearchCount.toString(),
             DS.brandPrimary.shade400,
           ),
           _buildStatItem(
-            '图谱',
+            l10n.galaxyGraphRagGraph,
             trace.graphSearchCount.toString(),
             DS.prismPurple,
           ),
           _buildStatItem(
-            '时间',
+            l10n.galaxyGraphRagTime,
             '${(trace.timing['total'] ?? 0).toStringAsFixed(2)}s',
             DS.brandPrimary70,
           ),
@@ -249,13 +265,17 @@ class _NodeGraphPainter extends CustomPainter {
   _NodeGraphPainter({
     required this.nodes,
     required this.nodeSources,
+    required this.repaint,
     required this.pulseAnimation,
     required this.getColor,
-  }) : super(repaint: pulseAnimation);
+    required this.revealProgress,
+  }) : super(repaint: repaint);
   final List<NodeInfo> nodes;
   final Map<String, String> nodeSources;
+  final Listenable repaint;
   final Animation<double> pulseAnimation;
   final Color Function(String) getColor;
+  final double revealProgress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -270,6 +290,11 @@ class _NodeGraphPainter extends CustomPainter {
       final node = nodes[i];
       final source = nodeSources[node.id] ?? 'vector';
       final color = getColor(source);
+      final revealStart = i * 0.12;
+      final revealValue =
+          ((revealProgress - revealStart) / 0.28).clamp(0.0, 1.0);
+      if (revealValue <= 0) continue;
+      final opacity = Curves.easeOutCubic.transform(revealValue);
 
       // 圆形布局
       final angle = (2 * math.pi / nodes.length) * i;
@@ -286,7 +311,7 @@ class _NodeGraphPainter extends CustomPainter {
         final nextY = centerY + radius * math.sin(nextAngle);
 
         final linePaint = Paint()
-          ..color = color.withValues(alpha: 0.3)
+          ..color = color.withValues(alpha: 0.3 * opacity)
           ..strokeWidth = 1.0
           ..style = PaintingStyle.stroke;
 
@@ -295,18 +320,20 @@ class _NodeGraphPainter extends CustomPainter {
 
       // 绘制节点圆圈（外圈脉冲）
       final outerPaint = Paint()
-        ..color = color.withValues(alpha: 0.3 * pulseAnimation.value)
+        ..color = color.withValues(
+          alpha: 0.3 * pulseAnimation.value * opacity,
+        )
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(
         Offset(x, y),
-        8 * pulseScale,
+        8 * pulseScale * (0.82 + 0.18 * opacity),
         outerPaint,
       );
 
       // 绘制节点圆圈（内圈）
       final innerPaint = Paint()
-        ..color = color
+        ..color = color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(Offset(x, y), 5, innerPaint);
@@ -338,7 +365,9 @@ class _NodeGraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_NodeGraphPainter oldDelegate) =>
-      oldDelegate.nodes != nodes || oldDelegate.nodeSources != nodeSources;
+      oldDelegate.nodes != nodes ||
+      oldDelegate.nodeSources != nodeSources ||
+      oldDelegate.revealProgress != revealProgress;
 }
 
 /// GraphRAG 追踪数据模型

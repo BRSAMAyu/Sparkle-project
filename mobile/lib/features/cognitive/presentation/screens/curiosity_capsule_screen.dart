@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
@@ -46,30 +49,33 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             length: 2,
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DS.spacing16,
-                    DS.spacing12,
-                    DS.spacing16,
-                    DS.spacing8,
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: DS.surfaceSecondary,
-                      borderRadius: DS.borderRadius16,
-                      border: Border.all(color: DS.borderSubtle),
+                SparkleStaggerItem(
+                  index: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DS.spacing16,
+                      DS.spacing12,
+                      DS.spacing16,
+                      DS.spacing8,
                     ),
-                    child: TabBar(
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      indicator: BoxDecoration(
-                        color: DS.capsuleAccent.withValues(alpha: 0.14),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
                         borderRadius: DS.borderRadius16,
+                        border: Border.all(color: DS.borderSubtle),
                       ),
-                      tabs: [
-                        Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
-                        Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
-                      ],
+                      child: TabBar(
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        indicator: BoxDecoration(
+                          color: DS.capsuleAccent.withValues(alpha: 0.14),
+                          borderRadius: DS.borderRadius16,
+                        ),
+                        tabs: [
+                          Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
+                          Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -97,35 +103,26 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text(l10n.capsuleLoadFailed('$err'))),
+        loading: () => LoadingIndicator.circular(
+          showText: true,
+          loadingText: '正在整理今日胶囊...',
+        ),
+        error: (err, stack) => CustomErrorWidget.page(
+          context: context,
+          title: '胶囊列表加载失败',
+          message: l10n.capsuleLoadFailed('$err'),
+          onRetry: () => ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() => Builder(
-        builder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lightbulb_outline,
-              size: 64,
-              color: DS.brandPrimary.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              context.l10n.capsuleEmptyTitle,
-              style: TextStyle(color: DS.textPrimary, fontSize: 16),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              context.l10n.capsuleEmptySubtitle,
-              style: TextStyle(color: DS.textSecondary, fontSize: 14),
-            ),
-          ],
+        builder: (context) => EmptyState(
+          title: context.l10n.capsuleEmptyTitle,
+          description: context.l10n.capsuleEmptySubtitle,
+          icon: Icons.lightbulb_outline,
         ),
-      ),
       );
 }
 
@@ -150,11 +147,14 @@ class _CapsuleList extends StatelessWidget {
         children: [
           SizedBox(
             height: 360,
-            child: Center(
-              child: Text(
-                emptyMessage ?? context.l10n.capsuleEmptyTitle,
-                style: TextStyle(color: DS.textSecondary, fontSize: 14),
-              ),
+            child: EmptyState(
+              title: emptyMessage ?? context.l10n.capsuleEmptyTitle,
+              description: archived
+                  ? '已归档的胶囊会在这里显示。'
+                  : context.l10n.capsuleEmptySubtitle,
+              icon: archived
+                  ? Icons.inventory_2_outlined
+                  : Icons.auto_awesome_outlined,
             ),
           ),
         ],

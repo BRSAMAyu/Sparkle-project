@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 
 /// Provider for subtask list state
@@ -79,59 +83,170 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
       );
 
   Widget _buildProgressIndicator() => Consumer(
-        builder: (context, ref, child) => const SizedBox.shrink(),
+        builder: (context, ref, child) {
+          final state = ref.watch(subtaskNotifierProvider(widget.parentTaskId));
+          if (state.total == 0) return const SizedBox.shrink();
+          return SubtaskProgressIndicator(
+            completed: state.completed,
+            total: state.total,
+          );
+        },
       );
 
-  Widget _buildQuickAddInput() => Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _titleController,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: context.l10n.subtaskAddHint,
-                hintStyle:
-                    TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
-                border: InputBorder.none,
-                filled: true,
-                fillColor: DS.brandPrimary10,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: DS.md,
-                  vertical: DS.sm,
+  Widget _buildQuickAddInput() => Consumer(
+        builder: (context, ref, child) => Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _titleController,
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.subtaskAddHint,
+                    hintStyle:
+                        TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: DS.brandPrimary10,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: DS.md,
+                      vertical: DS.sm,
+                    ),
+                    isDense: true,
+                  ),
+                  onSubmitted: (value) {
+                    if (value.trim().isNotEmpty) {
+                      _addSubtask(ref, value.trim());
+                      _titleController.clear();
+                    }
+                  },
                 ),
-                isDense: true,
               ),
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  widget.onSubtaskAdd?.call(widget.parentTaskId, value.trim());
-                  _titleController.clear();
-                }
-              },
-            ),
+              const SizedBox(width: DS.sm),
+              Tooltip(
+                message: context.l10n.subtaskAddTooltip,
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 36,
+                  onPressed: () {
+                    if (_titleController.text.trim().isNotEmpty) {
+                      _addSubtask(ref, _titleController.text.trim());
+                      _titleController.clear();
+                    }
+                  },
+                  icon: Icon(Icons.add_circle, color: DS.primaryBase),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: DS.sm),
-          Tooltip(
-            message: context.l10n.subtaskAddTooltip,
-            child: SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              size: 36,
-              onPressed: () {
-                if (_titleController.text.trim().isNotEmpty) {
-                  widget.onSubtaskAdd?.call(
-                    widget.parentTaskId,
-                    _titleController.text.trim(),
-                  );
-                  _titleController.clear();
-                }
-              },
-              icon: Icon(Icons.add_circle, color: DS.primaryBase),
-            ),
-          ),
-        ],
       );
+
+  void _addSubtask(WidgetRef ref, String title) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    unawaited(
+      ref
+          .read(subtaskNotifierProvider(widget.parentTaskId).notifier)
+          .addSubtask(SubTaskCreate(title: title)),
+    );
+    // Also call the callback if provided for backwards compatibility
+    widget.onSubtaskAdd?.call(widget.parentTaskId, title);
+  }
 
   Widget _buildSubtaskList() => Consumer(
-        builder: (context, ref, child) => _buildEmptyState(),
+        builder: (context, ref, child) {
+          final state = ref.watch(subtaskNotifierProvider(widget.parentTaskId));
+
+          if (state.isLoading) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(DS.lg),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+
+          if (state.error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(DS.lg),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, color: DS.semanticError, size: 32),
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      'Error: ${state.error}',
+                      style: TextStyle(color: DS.semanticError, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: DS.sm),
+                    SparkleButton(
+                      label: context.l10n.retry,
+                      variant: ButtonVariant.ghost,
+                      onPressed: () => unawaited(
+                        ref
+                            .read(
+                              subtaskNotifierProvider(widget.parentTaskId)
+                                  .notifier,
+                            )
+                            .refresh(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (state.subtasks.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.subtasks.length,
+            itemBuilder: (context, index) {
+              final subtask = state.subtasks[index];
+              return SparkleStaggerItem(
+                index: index,
+                child: SubtaskItemWidget(
+                  subtask: subtask,
+                  onToggle: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        subtask.isCompleted
+                            ? SensoryFeedbackEvent.selection
+                            : SensoryFeedbackEvent.success,
+                      ),
+                    );
+                    unawaited(
+                      ref
+                          .read(
+                            subtaskNotifierProvider(widget.parentTaskId)
+                                .notifier,
+                          )
+                          .toggleSubtask(subtask),
+                    );
+                  },
+                  onDelete: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.warning,
+                      ),
+                    );
+                    unawaited(
+                      ref
+                          .read(
+                            subtaskNotifierProvider(widget.parentTaskId)
+                                .notifier,
+                          )
+                          .deleteSubtask(subtask.id),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
       );
 
   Widget _buildEmptyState() => Container(
@@ -197,29 +312,40 @@ class SubtaskItemWidget extends StatelessWidget {
             activeColor: DS.semanticSuccess,
             checkColor: DS.brandPrimary,
           ),
-          title: Text(
-            subtask.title,
-            style: TextStyle(
-              color: subtask.isCompleted ? DS.brandPrimary38 : DS.brandPrimary,
-              fontSize: 14,
-              decoration:
-                  subtask.isCompleted ? TextDecoration.lineThrough : null,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle:
-              subtask.description != null && subtask.description!.isNotEmpty
-                  ? Text(
-                      subtask.description!,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                subtask.title,
+                style: TextStyle(
+                  color:
+                      subtask.isCompleted ? DS.brandPrimary38 : DS.brandPrimary,
+                  fontSize: 14,
+                  decoration:
+                      subtask.isCompleted ? TextDecoration.lineThrough : null,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (subtask.estimatedMinutes != 25) ...[
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 12, color: DS.brandPrimary54),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${subtask.estimatedMinutes} 分钟',
                       style: TextStyle(
                         color: DS.brandPrimary54,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : null,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          subtitle: _buildSubtitle(),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -241,6 +367,43 @@ class SubtaskItemWidget extends StatelessWidget {
           ),
         ),
       );
+
+  Widget _buildSubtitle() {
+    final hasDescription =
+        subtask.description != null && subtask.description!.isNotEmpty;
+    final hasGuide =
+        subtask.guideContent != null && subtask.guideContent!.isNotEmpty;
+
+    if (!hasDescription && !hasGuide) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasDescription)
+          Text(
+            subtask.description!,
+            style: TextStyle(
+              color: DS.brandPrimary54,
+              fontSize: 12,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        if (hasGuide) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtask.guideContent!,
+            style: TextStyle(
+              color: DS.brandPrimary38,
+              fontSize: 11,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 /// Subtask progress indicator widget

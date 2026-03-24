@@ -33,6 +33,9 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
           ? null
           : DateTime.parse(json['due_date'] as String),
       knowledgeNodeId: json['knowledge_node_id'] as String?,
+      orderIndex: (json['order_index'] as num?)?.toInt() ?? 0,
+      subtasksTotal: (json['subtasks_total'] as num?)?.toInt() ?? 0,
+      subtasksCompleted: (json['subtasks_completed'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
@@ -54,6 +57,9 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'priority': instance.priority,
       'due_date': instance.dueDate?.toIso8601String(),
       'knowledge_node_id': instance.knowledgeNodeId,
+      'order_index': instance.orderIndex,
+      'subtasks_total': instance.subtasksTotal,
+      'subtasks_completed': instance.subtasksCompleted,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -107,24 +113,30 @@ Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
 TaskUpdate _$TaskUpdateFromJson(Map<String, dynamic> json) => TaskUpdate(
       title: json['title'] as String?,
       type: $enumDecodeNullable(_$TaskTypeEnumMap, json['type']),
-      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt(),
       difficulty: (json['difficulty'] as num?)?.toInt(),
+      energyCost: (json['energy_cost'] as num?)?.toInt(),
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       status: $enumDecodeNullable(_$TaskStatusEnumMap, json['status']),
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      guideContent: json['guide_content'] as String?,
+      userNote: json['user_note'] as String?,
     );
 
 Map<String, dynamic> _$TaskUpdateToJson(TaskUpdate instance) =>
     <String, dynamic>{
       'title': instance.title,
       'type': _$TaskTypeEnumMap[instance.type],
-      'estimatedMinutes': instance.estimatedMinutes,
+      'estimated_minutes': instance.estimatedMinutes,
       'difficulty': instance.difficulty,
+      'energy_cost': instance.energyCost,
       'tags': instance.tags,
       'status': _$TaskStatusEnumMap[instance.status],
       'due_date': instance.dueDate?.toIso8601String(),
+      'guide_content': instance.guideContent,
+      'user_note': instance.userNote,
     };
 
 TaskComplete _$TaskCompleteFromJson(Map<String, dynamic> json) => TaskComplete(

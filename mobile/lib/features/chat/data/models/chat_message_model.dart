@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:uuid/uuid.dart';
@@ -41,12 +42,18 @@ class ChatMessageModel {
     this.uxEnvelope,
     this.orchestrationTrace,
     this.modeSuggestion,
+    this.collaborationNarrative,
+    this.collaborationMode,
+    this.agentsInvolved = const [],
     this.agentActivities = const [],
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
-      _$ChatMessageModelFromJson(json);
+  factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['role'] = _normalizeRoleJsonValue(json['role']);
+    return _$ChatMessageModelFromJson(normalized);
+  }
   final String id;
   @JsonKey(name: 'user_id')
   final String? userId; // Optional for client-generated messages
@@ -114,6 +121,15 @@ class ChatMessageModel {
   final Map<String, dynamic>? modeSuggestion;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? collaborationNarrative;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? collaborationMode;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final List<String> agentsInvolved;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final List<Map<String, dynamic>> agentActivities;
 
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
@@ -145,6 +161,9 @@ class ChatMessageModel {
     Map<String, dynamic>? uxEnvelope,
     Map<String, dynamic>? orchestrationTrace,
     Map<String, dynamic>? modeSuggestion,
+    String? collaborationNarrative,
+    String? collaborationMode,
+    List<String>? agentsInvolved,
     List<Map<String, dynamic>>? agentActivities,
   }) =>
       ChatMessageModel(
@@ -174,8 +193,41 @@ class ChatMessageModel {
         uxEnvelope: uxEnvelope ?? this.uxEnvelope,
         orchestrationTrace: orchestrationTrace ?? this.orchestrationTrace,
         modeSuggestion: modeSuggestion ?? this.modeSuggestion,
+        collaborationNarrative:
+            collaborationNarrative ?? this.collaborationNarrative,
+        collaborationMode: collaborationMode ?? this.collaborationMode,
+        agentsInvolved: agentsInvolved ?? this.agentsInvolved,
         agentActivities: agentActivities ?? this.agentActivities,
       );
+}
+
+String _normalizeRoleJsonValue(Object? rawRole) {
+  final role = rawRole?.toString().trim();
+  if (role == null || role.isEmpty) {
+    return MessageRole.assistant.name;
+  }
+
+  switch (role.toLowerCase()) {
+    case 'user':
+    case 'human':
+    case 'customer':
+      return MessageRole.user.name;
+    case 'assistant':
+    case 'ai':
+    case 'bot':
+    case 'model':
+    case 'tool':
+    case 'tool_result':
+      return MessageRole.assistant.name;
+    case 'system':
+    case 'developer':
+      return MessageRole.system.name;
+    default:
+      debugPrint(
+        'ChatMessageModel: unsupported role "$role", defaulting to assistant',
+      );
+      return MessageRole.assistant.name;
+  }
 }
 
 @JsonSerializable()
@@ -184,22 +236,84 @@ class MessageMeta {
 
   MessageMeta({
     this.latencyMs,
+    this.totalDurationMs,
+    this.firstEventMs,
+    this.firstTokenMs,
+    this.streamDurationMs,
+    this.responseEventCount,
     this.isCacheHit,
     this.costSaved,
     this.breakerStatus,
+    this.modelTier,
+    this.reasoningMode,
+    this.chatMode,
   });
 
   factory MessageMeta.fromJson(Map<String, dynamic> json) =>
       _$MessageMetaFromJson(json);
+  factory MessageMeta.fromLooseJson(Map<String, dynamic> json) => MessageMeta(
+        latencyMs: _looseInt(json['latency_ms']),
+        totalDurationMs: _looseInt(json['total_duration_ms']),
+        firstEventMs: _looseInt(json['first_event_ms']),
+        firstTokenMs: _looseInt(json['first_token_ms']),
+        streamDurationMs: _looseInt(json['stream_duration_ms']),
+        responseEventCount: _looseInt(json['response_event_count']),
+        isCacheHit: _looseBool(json['is_cache_hit']),
+        costSaved: _looseDouble(json['cost_saved']),
+        breakerStatus: json['breaker_status']?.toString(),
+        modelTier: json['generation_model_tier']?.toString() ??
+            json['model_tier']?.toString(),
+        reasoningMode: json['reasoning_mode']?.toString(),
+        chatMode: json['chat_mode']?.toString(),
+      );
   @JsonKey(name: 'latency_ms')
   final int? latencyMs;
+  @JsonKey(name: 'total_duration_ms')
+  final int? totalDurationMs;
+  @JsonKey(name: 'first_event_ms')
+  final int? firstEventMs;
+  @JsonKey(name: 'first_token_ms')
+  final int? firstTokenMs;
+  @JsonKey(name: 'stream_duration_ms')
+  final int? streamDurationMs;
+  @JsonKey(name: 'response_event_count')
+  final int? responseEventCount;
   @JsonKey(name: 'is_cache_hit')
   final bool? isCacheHit;
   @JsonKey(name: 'cost_saved')
   final double? costSaved;
   @JsonKey(name: 'breaker_status')
   final String? breakerStatus;
+  @JsonKey(name: 'generation_model_tier')
+  final String? modelTier;
+  @JsonKey(name: 'reasoning_mode')
+  final String? reasoningMode;
+  @JsonKey(name: 'chat_mode')
+  final String? chatMode;
   Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
+}
+
+int? _looseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+double? _looseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+bool? _looseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  final normalized = value.toString().trim().toLowerCase();
+  if (normalized == 'true') return true;
+  if (normalized == 'false') return false;
+  return null;
 }
 
 // Helper functions for ReasoningStep serialization

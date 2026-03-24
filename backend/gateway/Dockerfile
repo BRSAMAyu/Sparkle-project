@@ -15,16 +15,20 @@ RUN go mod download
 COPY . .
 # Build the binary
 # -ldflags="-w -s" strips debug information to reduce size
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway ./cmd/server
 
-FROM alpine:latest
+# Use debian slim for runtime to avoid Alpine TLS/apk issues
+FROM debian:bookworm-slim
 
-# Install CA certificates and Timezone data
-RUN apk --no-cache add ca-certificates tzdata
+# Install CA certificates, timezone data, and curl (for healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root application user for security
-RUN addgroup -D sparkle 2>/dev/null || addgroup sparkle && \
-    adduser -D -G sparkle sparkle 2>/dev/null || adduser -G sparkle sparkle
+RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 
 WORKDIR /app
 

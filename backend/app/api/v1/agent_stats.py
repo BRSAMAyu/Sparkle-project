@@ -1,6 +1,7 @@
 """
 Agent Statistics API Endpoints
 """
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -12,6 +13,11 @@ from app.models.user import User
 from app.services.agent_stats_service import AgentStatsService
 
 router = APIRouter(prefix="/agent-stats", tags=["agent-stats"])
+
+
+def _is_missing_agent_stats_dependency(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "agent_execution_stats" in message or "materialized view" in message
 
 
 @router.get("/user/overview")
@@ -36,8 +42,34 @@ async def get_user_stats_overview(
             "data": stats
         }
     except Exception as e:
+        if _is_missing_agent_stats_dependency(e):
+            await db.rollback()
+            return {
+                "success": True,
+                "data": {
+                    "period_days": days,
+                    "overall": {
+                        "total_executions": 0,
+                        "avg_duration_ms": 0,
+                        "total_sessions": 0,
+                    },
+                    "by_agent": [],
+                    "recent_executions": [],
+                    "degraded": True,
+                },
+            }
         logger.error(f"Failed to get user stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+
+
+@router.get("/overview")
+async def get_user_stats_overview_alias(
+    days: int = Query(30, ge=1, le=365, description="统计天数"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Compatibility alias for legacy acceptance paths."""
+    return await get_user_stats_overview(days=days, current_user=current_user, db=db)
 
 
 @router.get("/user/top-agents")
@@ -70,6 +102,16 @@ async def get_top_agents(
             }
         }
     except Exception as e:
+        if _is_missing_agent_stats_dependency(e):
+            await db.rollback()
+            return {
+                "success": True,
+                "data": {
+                    "period_days": days,
+                    "top_agents": [],
+                    "degraded": True,
+                },
+            }
         logger.error(f"Failed to get top agents: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve top agents")
 
@@ -102,6 +144,21 @@ async def get_performance_metrics(
             "data": metrics
         }
     except Exception as e:
+        if _is_missing_agent_stats_dependency(e):
+            await db.rollback()
+            return {
+                "success": True,
+                "data": {
+                    "period_days": days,
+                    "agent_type": agent_type,
+                    "total_executions": 0,
+                    "avg_duration_ms": 0,
+                    "max_duration_ms": 0,
+                    "success_rate": 0,
+                    "failure_rate": 0,
+                    "degraded": True,
+                },
+            }
         logger.error(f"Failed to get performance metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics")
 
@@ -210,7 +267,7 @@ async def refresh_stats_summary(
     注意：此操作可能耗时较长，建议通过定时任务调用
     """
     # 仅管理员可以手动刷新
-    if not current_user.is_admin:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
 
     try:

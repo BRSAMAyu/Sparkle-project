@@ -3,6 +3,7 @@
 
 消费 Redis Stream 中的同步事件，异步写入到 AGE
 """
+from __future__ import annotations
 
 import asyncio
 import json

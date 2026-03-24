@@ -3,33 +3,37 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/utils/grapheme_utils.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
-import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
-const _chatContentFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-];
-
-class ChatBubble extends StatefulWidget {
+class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
     required this.message,
     super.key,
@@ -57,10 +61,13 @@ class ChatBubble extends StatefulWidget {
   final bool isLatestAssistantMessage;
 
   @override
-  State<ChatBubble> createState() => _ChatBubbleState();
+  ConsumerState<ChatBubble> createState() => _ChatBubbleState();
 }
 
-class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
+class _ChatBubbleState extends ConsumerState<ChatBubble>
+    with TickerProviderStateMixin {
+  static final Map<String, String> _responseFeedbackSelections =
+      <String, String>{};
   late AnimationController _entryController;
   late Animation<double> _scale;
   late Animation<Offset> _position;
@@ -68,23 +75,87 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   bool _showHeart = false;
   bool _isPressed = false;
 
+  bool get _isFreshUserBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.user) {
+      return false;
+    }
+    return message.id.startsWith('temp_user_') ||
+        DateTime.now().difference(message.createdAt).inSeconds <= 2;
+  }
+
+  bool get _isFreshAssistantBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.assistant) {
+      return false;
+    }
+    return widget.isLatestAssistantMessage &&
+        DateTime.now().difference(message.createdAt).inSeconds <= 3;
+  }
+
+  bool get _isStreamingAssistantBubble {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    if (message.role != MessageRole.assistant) {
+      return false;
+    }
+    final status = message.aiStatus?.toUpperCase();
+    return widget.isLatestAssistantMessage &&
+        (status == 'GENERATING' || status == 'THINKING');
+  }
+
   @override
   void initState() {
     super.initState();
+    final isFreshUserBubble = _isFreshUserBubble;
+    final isFreshAssistantBubble = _isFreshAssistantBubble;
     _entryController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: isFreshUserBubble
+          ? const Duration(milliseconds: 200)
+          : isFreshAssistantBubble
+              ? const Duration(milliseconds: 220)
+              : const Duration(milliseconds: 320),
       vsync: this,
     );
 
-    _scale = Tween<double>(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.elasticOut),
+    _scale = Tween<double>(
+      begin: isFreshUserBubble
+          ? 0.8
+          : isFreshAssistantBubble
+              ? 0.96
+              : 0.92,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: isFreshUserBubble || isFreshAssistantBubble
+            ? Curves.easeOutBack
+            : Curves.easeOutQuart,
+      ),
     );
 
     _position = Tween<Offset>(
-      begin: const Offset(0, 0.5),
+      begin: isFreshUserBubble
+          ? const Offset(0.16, 0.18)
+          : isFreshAssistantBubble
+              ? const Offset(0, 0.08)
+              : const Offset(0, 0.14),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),
+      CurvedAnimation(
+        parent: _entryController,
+        curve: isFreshUserBubble || isFreshAssistantBubble
+            ? Curves.easeOutBack
+            : Curves.easeOutQuart,
+      ),
     );
 
     unawaited(_entryController.forward());
@@ -150,7 +221,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       ? (widget.message as ChatMessageModel).responseId
       : null;
 
-  bool get _shouldUseMarkdown => _hasStrongMarkdownSyntax(_content);
+  String? get _responseFeedbackSelection => _responseId == null
+      ? null
+      : _responseFeedbackSelections[_responseId!];
 
   List<WidgetPayload> get _widgets => widget.message is ChatMessageModel
       ? (widget.message as ChatMessageModel).widgets ?? const []
@@ -175,9 +248,21 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           case 'mode_explanation':
           case 'source_summary':
           case 'next_actions':
+          case 'plan_context_summary':
+          case 'plan_state':
             return false;
           default:
             return true;
+        }
+      }).toList();
+
+  List<WidgetPayload> get _informationalWidgets => _widgets.where((widgetItem) {
+        switch (widgetItem.type) {
+          case 'plan_context_summary':
+          case 'plan_state':
+            return true;
+          default:
+            return false;
         }
       }).toList();
 
@@ -231,7 +316,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.overlay30.withValues(alpha: 0),
         builder: (context) => DecoratedBox(
@@ -250,9 +335,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is ChatMessageModel)
                   ListTile(
                     leading: const Icon(Icons.thumb_up_alt_rounded),
-                    title: const Text('有帮助'),
+                    title: Text(context.l10n.chatHelpful),
                     onTap: () {
                       Navigator.pop(context);
+                      if (_responseId != null) {
+                        setState(() {
+                          _responseFeedbackSelections[_responseId!] = 'up';
+                        });
+                      }
                       widget.onResponseFeedback!(
                         widget.message as ChatMessageModel,
                         'up',
@@ -266,9 +356,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is ChatMessageModel)
                   ListTile(
                     leading: const Icon(Icons.thumb_down_alt_rounded),
-                    title: const Text('没帮助'),
+                    title: Text(context.l10n.chatNotHelpful),
                     onTap: () {
                       Navigator.pop(context);
+                      if (_responseId != null) {
+                        setState(() {
+                          _responseFeedbackSelections[_responseId!] = 'down';
+                        });
+                      }
                       widget.onResponseFeedback!(
                         widget.message as ChatMessageModel,
                         'down',
@@ -279,7 +374,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.message is PrivateMessageInfo)
                   ListTile(
                     leading: const Icon(Icons.format_quote_rounded),
-                    title: const Text('引用'),
+                    title: Text(context.l10n.chatQuote),
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
@@ -289,21 +384,21 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   ),
                 ListTile(
                   leading: const Icon(Icons.copy_rounded),
-                  title: const Text('复制'),
-                  onTap: () {
-                    unawaited(
-                      Clipboard.setData(ClipboardData(text: _content)),
-                    );
-                    if (mounted) {
-                      Navigator.pop(context);
-                      AppFeedback.info(context, '已复制到剪贴板');
-                    }
+                  title: Text(context.l10n.chatCopy),
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: _content));
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                    AppFeedback.success(context, context.l10n.chatCopied);
                   },
                 ),
                 if (canRevoke && widget.onRevoke != null)
                   ListTile(
                     leading: Icon(Icons.undo_rounded, color: DS.error),
-                    title: Text('撤销', style: TextStyle(color: DS.error)),
+                    title: Text(
+                      context.l10n.chatUndo,
+                      style: TextStyle(color: DS.error),
+                    ),
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
@@ -333,6 +428,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final modeSuggestion = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).modeSuggestion
         : null;
+    final collaborationNarrative = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).collaborationNarrative
+        : null;
+    final collaborationMode = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).collaborationMode
+        : null;
+    final agentsInvolved = widget.message is ChatMessageModel
+        ? (widget.message as ChatMessageModel).agentsInvolved
+        : const <String>[];
     final agentActivities = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentActivities
         : const <Map<String, dynamic>>[];
@@ -389,17 +493,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            DS.brandPrimary,
+                                            Color.lerp(
+                                                  DS.brandPrimary,
+                                                  DS.info,
+                                                  0.16,
+                                                ) ??
+                                                DS.brandPrimary,
                                             DS.brandPrimary
-                                                .withValues(alpha: 0.85),
+                                                .withValues(alpha: 0.9),
                                           ],
                                         ),
+                                        borderColor: Colors.white
+                                            .withValues(alpha: 0.18),
                                         shadows: [
                                           BoxShadow(
                                             color: DS.brandPrimary
-                                                .withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                                .withValues(alpha: 0.16),
+                                            blurRadius: 14,
+                                            offset: const Offset(0, 8),
                                           ),
                                         ],
                                       )
@@ -442,98 +553,83 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           ),
                                         ),
                                       ),
-                                    // Use constrained height for long messages
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        // Calculate max height based on screen size
-                                        final maxHeight =
-                                            MediaQuery.of(context).size.height *
-                                                0.5;
-                                        final contentWidget = _shouldUseMarkdown
-                                            ? MarkdownBody(
-                                                data: _content,
-                                                styleSheet: _getMarkdownStyle(
-                                                  context,
-                                                  isUser,
-                                                ),
-                                                onTapLink:
-                                                    (text, href, title) async {
-                                                  if (href == null) return;
-                                                  final uri =
-                                                      Uri.tryParse(href);
-                                                  if (uri == null) return;
+                                    // Share card for private messages
+                                    if (_isShareMessage())
+                                      _buildPrivateShareCard() ??
+                                          const SizedBox.shrink()
+                                    else
+                                      // Use constrained height for long messages
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          // Calculate max height based on screen size
+                                          final maxHeight =
+                                              MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  0.5;
+                                          final contentWidget = SparkleMarkdown(
+                                            content: _content,
+                                            textColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                : DS.chatBubbleOtherText,
+                                            codeBackgroundColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                    .withValues(alpha: 0.12)
+                                                : DS.surfaceTertiary,
+                                            linkColor: isUser
+                                                ? DS.chatBubbleUserText
+                                                : DS.brandPrimary,
+                                            isStreaming:
+                                                _isStreamingAssistantBubble,
+                                            contentRole:
+                                                SparkleMarkdownRole.chatBubble,
+                                          );
 
-                                                  final scheme =
-                                                      uri.scheme.toLowerCase();
-                                                  const allowedSchemes = [
-                                                    'http',
-                                                    'https',
-                                                  ];
-                                                  if (!allowedSchemes
-                                                      .contains(scheme)) {
-                                                    return;
-                                                  }
+                                          // Try to estimate content height and decide if scrolling is needed
+                                          // For long content (heuristic: >500 chars), use constrained scrollable
+                                          final shouldConstrain =
+                                              _content.length > 500;
 
-                                                  try {
-                                                    if (await canLaunchUrl(
-                                                      uri,
-                                                    )) {
-                                                      unawaited(
-                                                        launchUrl(
-                                                          uri,
-                                                          mode: LaunchMode
-                                                              .externalApplication,
-                                                        ),
-                                                      );
-                                                    }
-                                                  } catch (e) {
-                                                    debugPrint(
-                                                      'Failed to launch URL: $e',
-                                                    );
-                                                  }
-                                                },
-                                              )
-                                            : Text(
-                                                _content,
-                                                style: TextStyle(
-                                                  color: isUser
-                                                      ? DS.chatBubbleUserText
-                                                      : DS.chatBubbleOtherText,
-                                                  fontSize: 16,
-                                                  height: 1.5,
-                                                  fontFamilyFallback:
-                                                      _chatContentFontFallback,
-                                                ),
-                                              );
+                                          final animatedContent = AnimatedSize(
+                                            duration: context.reduceMotion
+                                                ? Duration.zero
+                                                : DS.motionDuration(
+                                                    SparkleMotionToken.micro,
+                                                  ),
+                                            curve: Curves.easeOutCubic,
+                                            alignment: Alignment.topLeft,
+                                            child: shouldConstrain
+                                                ? SizedBox(
+                                                    height: maxHeight,
+                                                    child:
+                                                        SingleChildScrollView(
+                                                      physics:
+                                                          const ClampingScrollPhysics(),
+                                                      child: contentWidget,
+                                                    ),
+                                                  )
+                                                : contentWidget,
+                                          );
 
-                                        // Try to estimate content height and decide if scrolling is needed
-                                        // For long content (heuristic: >500 chars), use constrained scrollable
-                                        final shouldConstrain =
-                                            _content.length > 500;
+                                          if (!shouldConstrain) {
+                                            return animatedContent;
+                                          }
 
-                                        if (!shouldConstrain) {
-                                          return contentWidget;
-                                        }
-
-                                        return SizedBox(
-                                          height: maxHeight,
-                                          child: SingleChildScrollView(
-                                            physics:
-                                                const ClampingScrollPhysics(),
-                                            child: contentWidget,
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                          return animatedContent;
+                                        },
+                                      ),
                                   ],
                                 ),
                               ),
                             ),
                             if (_metadataWidgets.isNotEmpty ||
                                 (widget.message is ChatMessageModel &&
-                                    (widget.message as ChatMessageModel)
-                                            .aiStatus !=
-                                        null))
+                                    ((widget.message as ChatMessageModel)
+                                                .aiStatus !=
+                                            null ||
+                                        (widget.message as ChatMessageModel)
+                                                .meta !=
+                                            null)))
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -548,6 +644,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                       ? (widget.message as ChatMessageModel)
                                           .aiStatus
                                       : null,
+                                  messageMeta:
+                                      widget.message is ChatMessageModel
+                                          ? (widget.message as ChatMessageModel)
+                                              .meta
+                                          : null,
                                   onWidgetAction: widget.onWidgetAction,
                                 ),
                               ),
@@ -573,6 +674,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   traceData: orchestrationTrace,
                                 ),
                               ),
+                            if (!isUser &&
+                                agentActivities.isEmpty &&
+                                ((collaborationNarrative != null &&
+                                        collaborationNarrative.isNotEmpty) ||
+                                    agentsInvolved.isNotEmpty))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _CollaborationSignatureCard(
+                                  narrative: collaborationNarrative,
+                                  collaborationMode: collaborationMode,
+                                  agentIds: agentsInvolved,
+                                  activitySnapshots: agentActivities,
+                                ),
+                              ),
                             if (!isUser && agentActivities.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(
@@ -582,8 +701,19 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                 ),
                                 child: AgentWorkflowPanel(
                                   snapshotActivities: agentActivities,
+                                  narrative: collaborationNarrative,
                                 ),
                               ),
+                            ..._informationalWidgets.map(
+                              (w) => Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _buildInformationalWidget(w),
+                              ),
+                            ),
                             ..._actionableWidgets.map(
                               (w) {
                                 final actionable = (w.data['id'] ??
@@ -607,11 +737,37 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                             widget.onActionDismiss != null
                                         ? () => widget.onActionDismiss!(w)
                                         : null,
+                                    onConfirmTasks: (toolResultId) async {
+                                      final planId =
+                                          w.data['plan_id']?.toString() ??
+                                              w.data['planId']?.toString();
+                                      await _confirmGeneratedTasks(
+                                        toolResultId: toolResultId,
+                                        planId: planId,
+                                      );
+                                    },
+                                    onConfirmAllTasks: (toolResultId) async {
+                                      final planId =
+                                          w.data['plan_id']?.toString() ??
+                                              w.data['planId']?.toString();
+                                      await _confirmGeneratedTasks(
+                                        toolResultId: toolResultId,
+                                        planId: planId,
+                                      );
+                                    },
+                                    onPlanNavigation: (planId) {
+                                      unawaited(
+                                        ref
+                                            .read(planListProvider.notifier)
+                                            .refresh(),
+                                      );
+                                    },
                                     onWidgetAction: widget.onWidgetAction,
                                   ),
                                 );
                               },
                             ),
+                            if (!isUser) _buildResponseFeedbackRow(context),
                           ],
                         ),
                         if (_showHeart) _buildHeartAnimation(context),
@@ -636,6 +792,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
                 if (isUser) _buildMessageStatus(),
+                if (!isUser &&
+                    widget.message is ChatMessageModel &&
+                    (widget.message as ChatMessageModel).meta != null)
+                  _buildTimingBadge((widget.message as ChatMessageModel).meta),
                 const SizedBox(width: DS.xs),
                 Text(
                   timeStr,
@@ -649,14 +809,22 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
 
     if (reduceMotion) {
-      return bubble;
+      return RepaintBoundary(child: bubble);
     }
 
-    return SlideTransition(
-      position: _position,
-      child: ScaleTransition(
-        scale: _scale,
-        child: bubble,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: _entryController,
+          curve: Curves.easeOutCubic,
+        ),
+        child: SlideTransition(
+          position: _position,
+          child: ScaleTransition(
+            scale: _scale,
+            child: bubble,
+          ),
+        ),
       ),
     );
   }
@@ -666,6 +834,203 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
     final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
     return min(screenWidth * 0.72, baseMax * 0.9);
+  }
+
+  Widget _buildInformationalWidget(WidgetPayload widgetPayload) {
+    switch (widgetPayload.type) {
+      case 'plan_context_summary':
+      case 'plan_state':
+        return PlanContextSummary(contextData: widgetPayload.data);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildTimingBadge(MessageMeta? meta) {
+    final durationMs = meta?.totalDurationMs ?? meta?.latencyMs;
+    if (durationMs == null || durationMs <= 0) {
+      return const SizedBox.shrink();
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = durationMs >= 60000
+        ? Color.lerp(DS.warning, DS.error, 0.18) ?? DS.warning
+        : durationMs >= 10000
+            ? Color.lerp(DS.info, DS.brandPrimary, 0.28) ?? DS.info
+            : Color.lerp(DS.success, DS.info, 0.22) ?? DS.success;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Color.alphaBlend(
+                accent.withValues(alpha: 0.12),
+                DS.surfaceSecondary,
+              )
+            : accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: accent.withValues(alpha: isDark ? 0.26 : 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: isDark ? 0.1 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule_rounded,
+            size: 11,
+            color: accent.withValues(alpha: 0.88),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _formatDurationBadge(durationMs),
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? DS.textPrimary : accent.withValues(alpha: 0.96),
+              fontWeight: DS.fontWeightBold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResponseFeedbackRow(BuildContext context) {
+    if (widget.message is! ChatMessageModel ||
+        _responseId == null ||
+        _responseId!.isEmpty ||
+        widget.onResponseFeedback == null) {
+      return const SizedBox.shrink();
+    }
+
+    final selection = _responseFeedbackSelection;
+    final isPositive = selection == 'up';
+    final isNegative = selection == 'down';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: [
+          _buildFeedbackChip(
+            context,
+            label: context.l10n.chatHelpful,
+            icon: Icons.thumb_up_alt_rounded,
+            selected: isPositive,
+            onTap: selection == null
+                ? () {
+                    if (_responseId != null) {
+                      setState(() {
+                        _responseFeedbackSelections[_responseId!] = 'up';
+                      });
+                    }
+                    widget.onResponseFeedback!(
+                      widget.message as ChatMessageModel,
+                      'up',
+                    );
+                  }
+                : null,
+          ),
+          _buildFeedbackChip(
+            context,
+            label: context.l10n.chatNotHelpful,
+            icon: Icons.thumb_down_alt_rounded,
+            selected: isNegative,
+            onTap: selection == null
+                ? () {
+                    if (_responseId != null) {
+                      setState(() {
+                        _responseFeedbackSelections[_responseId!] = 'down';
+                      });
+                    }
+                    widget.onResponseFeedback!(
+                      widget.message as ChatMessageModel,
+                      'down',
+                    );
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback? onTap,
+  }) {
+    final bgColor = selected
+        ? DS.brandPrimary.withValues(alpha: 0.16)
+        : DS.surfaceSecondary;
+    final fgColor = selected ? DS.brandPrimary : DS.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: DS.borderRadiusFull,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(
+            color: selected
+                ? DS.brandPrimary.withValues(alpha: 0.4)
+                : DS.borderSubtle,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: DS.iconSizeSm, color: fgColor),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: fgColor,
+                fontWeight:
+                    selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDurationBadge(int durationMs) {
+    final seconds = durationMs / 1000.0;
+    if (seconds < 1) {
+      return '${durationMs}ms';
+    }
+    if (seconds < 10) {
+      return '${seconds.toStringAsFixed(1)}s';
+    }
+    if (seconds < 60) {
+      return '${seconds.round()}s';
+    }
+    final minutes = durationMs ~/ 60000;
+    final remainingSeconds = (durationMs % 60000) ~/ 1000;
+    if (remainingSeconds == 0) {
+      return '${minutes}m';
+    }
+    return '${minutes}m ${remainingSeconds}s';
   }
 
   Widget _buildQuoteArea(
@@ -724,7 +1089,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
+            _isUser
+                ? context.l10n.chatRecalledSelf
+                : context.l10n.chatRecalledPeer,
             style: TextStyle(
               fontSize: 12,
               color: DS.neutral400,
@@ -765,7 +1132,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(left: 2),
             child: Text(
-              '已读',
+              context.l10n.chatRead,
               style: TextStyle(
                 fontSize: 10,
                 color: DS.info,
@@ -779,10 +1146,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   Widget _buildAvatar(bool isUser) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String? avatarUrl;
-    var initial = '?';
+    var initial = 'S';
 
     if (_isAgent) {
-      final agent = buildCommunityAgentUser();
+      final agent = buildCommunityAgentUser(
+        localizedName: context.l10n.communityAgentName,
+      );
       avatarUrl = agent.avatarUrl;
       initial = 'AI';
     } else if (widget.message is ChatMessageModel) {
@@ -790,11 +1159,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
       avatarUrl = msg.sender.avatarUrl;
-      initial = msg.sender.displayName[0].toUpperCase();
+      initial = (GraphemeUtils.graphemeAt(msg.sender.displayName, 0) ?? 'S')
+          .toUpperCase();
     } else if (widget.message is MessageInfo) {
       final msg = widget.message as MessageInfo;
       avatarUrl = msg.sender?.avatarUrl;
-      initial = (msg.sender?.displayName ?? 'S')[0].toUpperCase();
+      initial =
+          (GraphemeUtils.graphemeAt(msg.sender?.displayName ?? 'S', 0) ?? 'S')
+              .toUpperCase();
     }
 
     return Container(
@@ -824,10 +1196,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ),
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null
-              ? Image.network(
-                  avatarUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Center(child: Text(initial)),
+              ? SparkleNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: 32,
+                  height: 32,
+                  errorWidget: Center(child: Text(initial)),
                 )
               : Center(
                   child: Text(
@@ -842,60 +1215,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
-      MarkdownStyleSheet(
-        p: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 16,
-          height: 1.4,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        h1: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-        code: TextStyle(
-          backgroundColor: isUser
-              ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-              : DS.surfaceTertiary,
-          fontFamily: 'monospace',
-          fontSize: 14,
-          color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,
-        ),
-        codeblockDecoration: BoxDecoration(
-          color: isUser
-              ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-              : DS.surfaceTertiary,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        a: TextStyle(
-          color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
-          decoration: TextDecoration.underline,
-          fontFamilyFallback: _chatContentFontFallback,
-        ),
-      );
-
-  bool _hasStrongMarkdownSyntax(String content) {
-    if (content.isEmpty) {
-      return false;
-    }
-
-    final trimmed = content.trim();
-    final strongPatterns = <RegExp>[
-      RegExp(r'(^|\n)#{1,6}\s', multiLine: true),
-      RegExp('```'),
-      RegExp(r'`[^`\n]+`'),
-      RegExp(r'\[[^\]]+\]\([^)]+\)'),
-      RegExp(r'(^|\n)>\s', multiLine: true),
-      RegExp(r'(^|\n)\|.+\|', multiLine: true),
-      RegExp(r'(\*\*|__)[^*_]+(\*\*|__)'),
-    ];
-
-    return strongPatterns.any((pattern) => pattern.hasMatch(trimmed));
   }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
@@ -942,14 +1261,19 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       );
       return SparkleMaterial(
         backgroundColor: darkSurface,
-        borderColor: DS.border.withValues(alpha: 0.8),
+        borderColor: DS.border.withValues(alpha: 0.72),
+        glowColor: Colors.white.withValues(alpha: 0.04),
       );
     }
 
     // Light mode: use neutral100 for the AI bubble
     return SparkleMaterial(
-      backgroundColor: DS.neutral100,
-      glowColor: DS.brandPrimary.withValues(alpha: 0.1),
+      backgroundColor: Color.alphaBlend(
+        DS.brandPrimary.withValues(alpha: 0.025),
+        DS.neutral100,
+      ),
+      borderColor: DS.border.withValues(alpha: 0.42),
+      glowColor: DS.brandPrimary.withValues(alpha: 0.06),
     );
   }
 
@@ -977,5 +1301,419 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmGeneratedTasks({
+    required String toolResultId,
+    String? planId,
+  }) async {
+    try {
+      final result = await ref
+          .read(taskRepositoryProvider)
+          .confirmGeneratedTasks(toolResultId);
+      if (!mounted) return;
+      unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      unawaited(ref.read(planListProvider.notifier).refresh());
+
+      final countRaw = result['count'];
+      final count = countRaw is num
+          ? countRaw.toInt()
+          : int.tryParse(countRaw?.toString() ?? '') ?? 1;
+      final actionLabel = planId != null ? '查看计划' : '去任务列表';
+      final route = planId != null ? '/plans/$planId' : '/tasks';
+      AppFeedback.undoable(
+        context: context,
+        message: '已确认 $count 个任务，开始执行！',
+        actionLabel: actionLabel,
+        onAction: () => context.push(route),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, '确认失败: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // Share Card Support for Private Messages
+  // ============================================================
+
+  /// Check if private message is a share message
+  bool _isShareMessage() {
+    if (widget.message is! PrivateMessageInfo) return false;
+    final msg = widget.message as PrivateMessageInfo;
+    return msg.messageType != MessageType.text && msg.contentData != null;
+  }
+
+  /// Get shareable content type from message type
+  ShareableContentType? _getShareContentType(
+    MessageType messageType,
+    Map<String, dynamic> data,
+  ) {
+    if (messageType == MessageType.capsuleShare &&
+        data['resource_type']?.toString() == 'knowledge_node') {
+      return ShareableContentType.knowledgeNode;
+    }
+    return switch (messageType) {
+      MessageType.taskShare => ShareableContentType.taskCompletion,
+      MessageType.planShare => ShareableContentType.planProgress,
+      MessageType.capsuleShare => ShareableContentType.capsule,
+      MessageType.prismShare => ShareableContentType.cognitivePrism,
+      MessageType.achievement => ShareableContentType.achievement,
+      _ => null,
+    };
+  }
+
+  /// Build share card for private message
+  Widget? _buildPrivateShareCard() {
+    if (widget.message is! PrivateMessageInfo) return null;
+    final msg = widget.message as PrivateMessageInfo;
+    final data = msg.contentData ?? {};
+
+    final contentType = _getShareContentType(msg.messageType, data);
+    if (contentType == null) return null;
+
+    final sharedResourceId = data['shared_resource_id']?.toString();
+    // resource_meta contains task/plan specific fields (progress, estimated_minutes, etc.)
+    // Fall back to data itself for non-task/plan types (capsule, prism, achievement)
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? data;
+    final payload = UniversalSharePayload(
+      contentType: contentType,
+      resourceId: _getResourceId(msg.messageType, data),
+      title: _getShareTitle(msg.messageType, data, msg.content),
+      subtitle: _getShareSubtitle(msg.messageType, data),
+      metadata: meta,
+    );
+
+    return ShareCardFactory.fromPayload(
+      payload,
+      onTap: () => _handleShareCardTap(payload),
+      sharedResourceId: sharedResourceId,
+      onAdopt: sharedResourceId == null ||
+              (contentType != ShareableContentType.taskCompletion &&
+                  contentType != ShareableContentType.planProgress)
+          ? null
+          : () => _handleAdopt(
+                context,
+                sharedResourceId,
+                contentType == ShareableContentType.planProgress
+                    ? 'plan'
+                    : 'task',
+              ),
+    );
+  }
+
+  Future<void> _handleAdopt(
+    BuildContext context,
+    String sharedResourceId,
+    String resourceType,
+  ) async {
+    try {
+      final result = await ref
+          .read(communityShareRepositoryProvider)
+          .adoptResource(sharedResourceId: sharedResourceId);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '已采纳，跳转中...');
+      final entityCard = result['entity_card'] is Map<String, dynamic>
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': result['entity_card'] as Map<String, dynamic>},
+              fallbackType: resourceType,
+            )
+          : null;
+      final actualResourceType =
+          result['resource_type']?.toString() ?? resourceType;
+      final newId = result['new_resource_id']?.toString();
+      final route = entityCard?.detailRoute ??
+          (newId == null
+              ? null
+              : actualResourceType == 'plan'
+                  ? '/plans/$newId'
+                  : '/tasks/$newId');
+      if (actualResourceType == 'plan') {
+        unawaited(ref.read(planListProvider.notifier).refresh());
+      } else if (actualResourceType == 'task') {
+        unawaited(ref.read(taskListProvider.notifier).refreshTasks());
+      }
+      if (route != null && route.isNotEmpty) {
+        unawaited(context.push(route));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, '采纳失败: $e');
+    }
+  }
+
+  /// Get resource ID from content data based on message type
+  String _getResourceId(MessageType type, Map<String, dynamic> data) {
+    // 安全地将各种数值类型转换为字符串
+    String safeGetString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    String preferFirstNonEmpty(dynamic primary, dynamic fallback) {
+      final primaryValue = safeGetString(primary);
+      if (primaryValue.isNotEmpty) return primaryValue;
+      return safeGetString(fallback);
+    }
+
+    return switch (type) {
+      MessageType.taskShare => safeGetString(data['resource_id']),
+      MessageType.planShare => safeGetString(data['resource_id']),
+      MessageType.capsuleShare =>
+        preferFirstNonEmpty(data['resource_id'], data['capsule_id']),
+      MessageType.prismShare => safeGetString(data['prism_id']),
+      MessageType.achievement => safeGetString(data['achievement_id']),
+      _ => '',
+    };
+  }
+
+  /// Get share title from content data
+  String _getShareTitle(
+    MessageType type,
+    Map<String, dynamic> data,
+    String? fallbackContent,
+  ) {
+    // 安全地将各种数值类型转换为字符串
+    String? safeGetString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value.isEmpty ? null : value;
+      return value.toString();
+    }
+
+    final title = switch (type) {
+      MessageType.taskShare => safeGetString(data['resource_title']),
+      MessageType.planShare => safeGetString(data['resource_title']),
+      MessageType.capsuleShare =>
+        safeGetString(data['resource_title']) ?? safeGetString(data['title']),
+      MessageType.prismShare =>
+        safeGetString(data['resource_title']) ?? safeGetString(data['title']),
+      MessageType.achievement => safeGetString(data['name']),
+      _ => null,
+    };
+    return title ?? fallbackContent ?? '';
+  }
+
+  /// Get share subtitle from content data
+  String? _getShareSubtitle(MessageType type, Map<String, dynamic> data) {
+    // 安全地将数值类型转换为字符串
+    String? safeGetString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value.isEmpty ? null : value;
+      return value.toString();
+    }
+
+    // 安全地将数值转换为 double
+    double? safeGetDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is num) return value.toDouble();
+      return null;
+    }
+
+    // 安全地将数值转换为 int
+    int? safeGetInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return null;
+    }
+
+    final meta = (data['resource_meta'] as Map<String, dynamic>?) ?? {};
+    return switch (type) {
+      MessageType.taskShare => () {
+          final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
+          return duration > 0 ? '已完成 · $duration分钟' : '已完成';
+        }(),
+      MessageType.planShare => () {
+          final progress = safeGetDouble(meta['progress']);
+          return progress != null
+              ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+              : null;
+        }(),
+      MessageType.capsuleShare => safeGetString(data['resource_summary']) ??
+          safeGetString(data['summary']),
+      MessageType.prismShare => safeGetString(data['resource_summary']) ??
+          safeGetString(data['insight']),
+      MessageType.achievement => safeGetString(data['description']),
+      _ => null,
+    };
+  }
+
+  /// Handle share card tap - navigate to resource
+  void _handleShareCardTap(UniversalSharePayload payload) {
+    final deepLink = payload.deepLink;
+    if (deepLink.isNotEmpty) {
+      DeepLinkService.handleDeepLink(context, deepLink);
+    }
+  }
+}
+
+Color _chatBubbleHexToColor(String hex, BuildContext context) {
+  final cleaned = hex.replaceFirst('#', '');
+  final normalized = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
+  return Color(int.tryParse(normalized, radix: 16) ?? 0xFF6B7280);
+}
+
+String _formatAgentLabel(String raw) {
+  final l10n = I18nService.instance.l10n;
+  switch (raw) {
+    case 'galaxy_guide':
+      return l10n.chatAgentNavigator;
+    case 'exam_oracle':
+      return l10n.chatAgentExamStrategist;
+    case 'time_tutor':
+      return l10n.chatAgentTimeCoach;
+    case 'deep_analyst':
+      return l10n.chatAgentDeepAnalyst;
+    case 'error_analyst':
+      return l10n.chatAgentCorrectionExpert;
+    case 'study_buddy':
+      return l10n.chatAgentLearningBuddy;
+    case 'math_agent':
+      return l10n.chatAgentMathExpert;
+    case 'code_agent':
+      return l10n.chatAgentCodingExpert;
+    case 'writing_agent':
+      return l10n.chatAgentWritingExpert;
+    case 'science_agent':
+      return l10n.chatAgentScienceExpert;
+    case 'search_agent':
+      return l10n.chatAgentSearchExpert;
+    default:
+      return raw.replaceAll('_', ' ').trim();
+  }
+}
+
+String _formatCollaborationModeLabel(String? mode) {
+  final l10n = I18nService.instance.l10n;
+  switch ((mode ?? '').trim()) {
+    case 'parallel':
+      return l10n.chatCollabParallel;
+    case 'debate':
+      return l10n.chatCollabDebate;
+    case 'delegation':
+      return l10n.chatCollabDelegation;
+    case 'sequential':
+      return l10n.chatCollabSequential;
+    default:
+      return l10n.chatCollabExpert;
+  }
+}
+
+class _CollaborationSignatureCard extends StatelessWidget {
+  const _CollaborationSignatureCard({
+    required this.agentIds,
+    required this.activitySnapshots,
+    this.narrative,
+    this.collaborationMode,
+  });
+
+  final String? narrative;
+  final String? collaborationMode;
+  final List<String> agentIds;
+  final List<Map<String, dynamic>> activitySnapshots;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chips = _buildChips(context);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 14,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                _formatCollaborationModeLabel(collaborationMode),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing6,
+              runSpacing: DS.spacing6,
+              children: chips,
+            ),
+          ],
+          if (narrative != null && narrative!.trim().isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              narrative!,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.45,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildChips(BuildContext context) {
+    final seen = <String>{};
+    final widgets = <Widget>[];
+    for (final agentId in agentIds) {
+      final normalized = agentId.trim();
+      if (normalized.isEmpty || !seen.add(normalized)) {
+        continue;
+      }
+      final snapshot =
+          activitySnapshots.cast<Map<String, dynamic>?>().firstWhere(
+                (item) => item?['agent_id']?.toString() == normalized,
+                orElse: () => null,
+              );
+      final label = snapshot?['display_name']?.toString() ??
+          _formatAgentLabel(normalized);
+      final color = _chatBubbleHexToColor(
+        snapshot?['color']?.toString() ?? '#6B7280',
+        context,
+      );
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8,
+            vertical: DS.spacing4,
+          ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.18)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
   }
 }

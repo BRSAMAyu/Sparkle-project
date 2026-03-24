@@ -36,6 +36,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
 
   int _currentStep = 0;
   final int _totalSteps = 5;
+  Timer? _stepTimer;
 
   @override
   void initState() {
@@ -65,22 +66,31 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     );
 
     if (widget.autoPlay) {
-      unawaited(_startAnimation());
+      _scheduleStep(0);
     }
   }
 
-  Future<void> _startAnimation() async {
-    for (var i = 0; i < _totalSteps; i++) {
-      setState(() => _currentStep = i);
-      unawaited(_mainController.forward(from: 0));
-      await Future<void>.delayed(const Duration(seconds: 3));
+  void _scheduleStep(int step) {
+    if (!mounted) {
+      return;
+    }
+    if (step >= _totalSteps) {
+      widget.onComplete?.call();
+      return;
     }
 
-    widget.onComplete?.call();
+    setState(() => _currentStep = step);
+    unawaited(_mainController.forward(from: 0));
+    _stepTimer?.cancel();
+    _stepTimer = Timer(
+      const Duration(seconds: 3),
+      () => _scheduleStep(step + 1),
+    );
   }
 
   @override
   void dispose() {
+    _stepTimer?.cancel();
     _mainController.dispose();
     _pulseController.dispose();
     super.dispose();
@@ -263,6 +273,9 @@ class _ArchitecturePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty || size.width == 0 || size.height == 0) {
+      return;
+    }
     final center = Offset(size.width / 2, size.height / 2);
 
     // Layer positions
@@ -384,14 +397,12 @@ class _ArchitecturePainter extends CustomPainter {
       ),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
-    );
+    )..layout(maxWidth: 160);
     final textOffset = Offset(
       position.dx - textPainter.width / 2,
       position.dy - textPainter.height / 2,
     );
-    textPainter
-      ..layout()
-      ..paint(canvas, textOffset);
+    textPainter.paint(canvas, textOffset);
   }
 
   void _drawConnection(

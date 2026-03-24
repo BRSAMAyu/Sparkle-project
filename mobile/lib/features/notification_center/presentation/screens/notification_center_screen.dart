@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
@@ -134,11 +137,17 @@ class _NotificationCenterScreenState
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: NotificationFilter.values
+                      .asMap()
+                      .entries
                       .map(
-                        (filter) => NotificationFilterChip(
-                          label: _getFilterLabel(filter),
-                          isSelected: _filter == filter,
-                          onTap: () => _setFilter(filter),
+                        (entry) => SparkleStaggerItem(
+                          index: entry.key,
+                          axis: Axis.horizontal,
+                          child: NotificationFilterChip(
+                          label: _getFilterLabel(entry.value),
+                          isSelected: _filter == entry.value,
+                          onTap: () => _setFilter(entry.value),
+                        ),
                         ),
                       )
                       .toList(),
@@ -149,11 +158,17 @@ class _NotificationCenterScreenState
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: SourceTypeFilter.values
+                      .asMap()
+                      .entries
                       .map(
-                        (filter) => NotificationFilterChip(
-                          label: _getSourceFilterLabel(filter),
-                          isSelected: _sourceFilter == filter,
-                          onTap: () => _setSourceFilter(filter),
+                        (entry) => SparkleStaggerItem(
+                          index: entry.key,
+                          axis: Axis.horizontal,
+                          child: NotificationFilterChip(
+                            label: _getSourceFilterLabel(entry.value),
+                            isSelected: _sourceFilter == entry.value,
+                            onTap: () => _setSourceFilter(entry.value),
+                          ),
                         ),
                       )
                       .toList(),
@@ -190,10 +205,13 @@ class _NotificationCenterScreenState
         itemCount: filteredNotifications.length,
         itemBuilder: (context, index) {
           final notification = filteredNotifications[index];
-          return UnifiedNotificationCard(
-            notification: notification,
-            onRead: () => _markAsRead(notification),
-            onDelete: () => _deleteNotification(notification),
+          return SparkleStaggerItem(
+            index: index,
+            child: UnifiedNotificationCard(
+              notification: notification,
+              onRead: () => _markAsRead(notification),
+              onDelete: () => _deleteNotification(notification),
+            ),
           );
         },
       ),
@@ -294,12 +312,18 @@ class _NotificationCenterScreenState
   }
 
   void _setFilter(NotificationFilter filter) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     setState(() {
       _filter = filter;
     });
   }
 
   void _setSourceFilter(SourceTypeFilter filter) {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     setState(() {
       _sourceFilter = filter;
     });
@@ -316,6 +340,9 @@ class _NotificationCenterScreenState
     await ref.read(notificationCenterProvider.notifier).markAllAsRead();
 
     if (mounted) {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+      );
       AppFeedback.success(context, context.l10n.notificationMarkedAllRead);
     }
   }

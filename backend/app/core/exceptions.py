@@ -2,6 +2,9 @@
 Custom Exceptions
 自定义异常类
 """
+from __future__ import annotations
+
+
 from typing import Any
 
 
@@ -68,27 +71,21 @@ class DatabaseError(SparkleException):
 class DatabaseConnectionError(DatabaseError):
     """数据库连接异常"""
 
-    def __init__(
-        self, message: str = "无法连接到数据库，请稍后再试", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "无法连接到数据库，请稍后再试", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
 
 
 class DatabaseTimeoutError(DatabaseError):
     """数据库超时异常"""
 
-    def __init__(
-        self, message: str = "数据库操作超时", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "数据库操作超时", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
 
 
 class DuplicateKeyError(DatabaseError):
     """唯一键冲突异常"""
 
-    def __init__(
-        self, message: str = "这个数据已经存在了", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "这个数据已经存在了", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
         self.status_code = 409  # Conflict
 
@@ -96,9 +93,7 @@ class DuplicateKeyError(DatabaseError):
 class ForeignKeyViolationError(DatabaseError):
     """外键约束违反异常"""
 
-    def __init__(
-        self, message: str = "关联数据不存在或无法删除", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "关联数据不存在或无法删除", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
         self.status_code = 400
 
@@ -106,27 +101,21 @@ class ForeignKeyViolationError(DatabaseError):
 class DataIntegrityError(DatabaseError):
     """数据完整性异常"""
 
-    def __init__(
-        self, message: str = "数据完整性错误", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "数据完整性错误", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
 
 
 class TransactionError(DatabaseError):
     """事务异常"""
 
-    def __init__(
-        self, message: str = "事务执行失败", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "事务执行失败", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
 
 
 class DeadlockError(DatabaseError):
     """死锁异常"""
 
-    def __init__(
-        self, message: str = "数据库繁忙，请稍后再试", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "数据库繁忙，请稍后再试", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
         self.status_code = 503  # Service Unavailable, should retry
 
@@ -168,7 +157,5 @@ class VersionConflictError(SparkleException):
 class PlanStateNotFoundError(NotFoundError):
     """计划状态不存在异常"""
 
-    def __init__(
-        self, message: str = "计划状态不存在", detail: Any | None = None
-    ):
+    def __init__(self, message: str = "计划状态不存在", detail: Any | None = None):
         super().__init__(message=message, detail=detail)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Text Normalization and Fingerprint Module (文本规范化与指纹模块)
 

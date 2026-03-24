@@ -1,6 +1,7 @@
 """
 State Event Manager - Unified Event Bus for State Changes
 """
+from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from typing import Any

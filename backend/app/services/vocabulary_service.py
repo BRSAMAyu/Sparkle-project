@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 生词本与词典服务
 Vocabulary & Dictionary Service
@@ -14,7 +15,7 @@ import csv
 import io
 import json
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,7 @@ from app.services.llm_service import llm_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class VocabularyService:
@@ -162,6 +163,8 @@ class VocabularyService:
         This keeps the lookup tool usable even when the local dictionary or MDX
         assets are not populated in a fresh environment.
         """
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = (
             "You are a compact English dictionary service. "
             "Return strict JSON with keys: word, phonetic, pos, definitions, examples. "
@@ -169,7 +172,7 @@ class VocabularyService:
             "If unsure, keep phonetic or pos null instead of inventing details.\n"
             f"word: {word}"
         )
-        response = await llm_service.chat(
+        data = await vocabulary_llm.json_call(
             [
                 {
                     "role": "system",
@@ -179,9 +182,11 @@ class VocabularyService:
                 },
                 {"role": "user", "content": prompt},
             ],
+            fallback={"word": word, "definitions": [], "examples": []},
             temperature=0.2,
         )
-        data = VocabularyService._extract_json_object(response) or {}
+        if data is None:
+            data = {}
 
         definitions = data.get("definitions")
         examples = data.get("examples")
@@ -301,7 +306,7 @@ class VocabularyService:
 
     @staticmethod
     async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
-        """Get number of words added today (UTC)"""
+        """Get number of words added today (timezone.utc)"""
         today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         stmt = select(func.count()).select_from(WordBook).where(
@@ -476,23 +481,34 @@ class VocabularyService:
     @staticmethod
     async def get_word_associations(word: str) -> list[str]:
         """Get related words/synonyms/antonyms via LLM"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Provide 5-8 related words (synonyms, antonyms, or related concepts) for the word '{word}'. Format as a simple comma-separated list."
-        response = await llm_service.chat([{"role": "user", "content": prompt}])
-        return [w.strip() for w in response.split(',')]
+        response = await vocabulary_llm.chat(prompt, fallback="")
+        if not response:
+            return []
+        return [w.strip() for w in response.split(',') if w.strip()]
 
     @staticmethod
     async def generate_example_sentence(word: str, context: str | None = None) -> str:
         """Generate a natural example sentence for the word"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Create a natural, helpful example sentence for the word '{word}'."
         if context:
             prompt += f" The context is: {context}"
-        return await llm_service.chat([{"role": "user", "content": prompt}])
+        return await vocabulary_llm.chat(
+            prompt,
+            fallback=f"Example sentence for '{word}' is not available at the moment."
+        )
 
     @staticmethod
     async def polish_definition(word: str, original_def: str) -> str:
         """Polish and simplify a word definition for a student"""
+        from app.services.llm_fallback_utils import vocabulary_llm
+
         prompt = f"Polish and simplify this definition for the word '{word}' so it's easier for a college student to understand: '{original_def}'. Keep it concise."
-        return await llm_service.chat([{"role": "user", "content": prompt}])
+        return await vocabulary_llm.chat(prompt, fallback=original_def)
 
 
 vocabulary_service = VocabularyService()

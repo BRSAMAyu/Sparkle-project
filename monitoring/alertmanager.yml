@@ -1,0 +1,47 @@
+global:
+  resolve_timeout: 5m
+  smtp_from: sparkle-alerts@example.com
+  smtp_smarthost: smtp.example.com:587
+  smtp_auth_username: sparkle-alerts@example.com
+  smtp_auth_password: change-me
+
+route:
+  receiver: default-webhook
+  group_by: ['alertname', 'service', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: critical-webhook
+      continue: true
+    - matchers:
+        - severity="warning"
+      receiver: warning-webhook
+      continue: true
+
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: http://host.docker.internal:19093/alerts/default
+        send_resolved: true
+  - name: critical-webhook
+    webhook_configs:
+      - url: http://host.docker.internal:19093/alerts/critical
+        send_resolved: true
+  - name: warning-webhook
+    webhook_configs:
+      - url: http://host.docker.internal:19093/alerts/warning
+        send_resolved: true
+  - name: email-fallback
+    email_configs:
+      - to: ops@example.com
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['alertname', 'service']

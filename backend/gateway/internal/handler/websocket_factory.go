@@ -26,9 +26,10 @@ func NewWebSocketFactory(cfg *config.Config) *WebSocketFactory {
 // CreateUpgrader creates a WebSocket upgrader with proper origin checking
 func (f *WebSocketFactory) CreateUpgrader() websocket.Upgrader {
 	return websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin:     f.checkOrigin,
+		ReadBufferSize:    4096,
+		WriteBufferSize:   4096,
+		EnableCompression: true,
+		CheckOrigin:       f.checkOrigin,
 	}
 }
 

@@ -159,9 +159,15 @@ class FocusStatisticsState {
 class FocusStatistics extends _$FocusStatistics {
   FocusStatisticsRepository? _localRepo;
   FocusRepository? _apiRepo;
+  bool _isDisposed = false;
 
   @override
   FocusStatisticsState build() {
+    _isDisposed = false;
+    ref.onDispose(() {
+      _isDisposed = true;
+    });
+
     // Initialize repositories
     final db = ref.read(localDatabaseProvider);
     _localRepo = FocusStatisticsRepository(db.isar);
@@ -170,15 +176,17 @@ class FocusStatistics extends _$FocusStatistics {
     // Get the persisted period
     final persistedPeriod = ref.watch(statsViewPeriodProvider);
 
-    // Load initial data based on persisted period
-    switch (persistedPeriod) {
-      case StatsViewPeriod.today:
-        loadTodayStats();
-      case StatsViewPeriod.week:
-        loadWeeklyStats();
-      case StatsViewPeriod.month:
-        loadMonthlyStats();
-    }
+    Future.microtask(() {
+      if (_isDisposed) return;
+      switch (persistedPeriod) {
+        case StatsViewPeriod.today:
+          loadTodayStats();
+        case StatsViewPeriod.week:
+          loadWeeklyStats();
+        case StatsViewPeriod.month:
+          loadMonthlyStats();
+      }
+    });
 
     return FocusStatisticsState(period: persistedPeriod);
   }
@@ -427,7 +435,7 @@ class FocusStatistics extends _$FocusStatistics {
           status: session.status,
           whiteNoiseType: session.whiteNoiseType,
         );
-        await _localRepo!.markAsSynced(session.id, response.id);
+        await _localRepo!.markAsSynced(session.id, response.response.id);
       } catch (e) {
         await _localRepo!.markSyncFailed(session.id, e.toString());
       }
@@ -438,7 +446,7 @@ class FocusStatistics extends _$FocusStatistics {
   }
 
   /// Save a completed focus session locally
-  Future<void> saveSession({
+  Future<LoggedFocusSession?> saveSession({
     required DateTime startTime,
     required DateTime endTime,
     required int durationMinutes,
@@ -449,7 +457,7 @@ class FocusStatistics extends _$FocusStatistics {
     int interruptionCount = 0,
     int? qualityScore,
   }) async {
-    if (_localRepo == null) return;
+    if (_localRepo == null) return null;
 
     final record = FocusSessionRecordExtension.createCompleted(
       startTime: startTime,
@@ -480,9 +488,11 @@ class FocusStatistics extends _$FocusStatistics {
         focusType: focusType,
         whiteNoiseType: whiteNoiseType,
       );
-      await _localRepo!.markAsSynced(record.id, response.id);
+      await _localRepo!.markAsSynced(record.id, response.response.id);
+      return response;
     } catch (e) {
       debugPrint('Sync failed, will retry later: $e');
+      return null;
     }
   }
 }
@@ -499,7 +509,8 @@ FocusStatisticsRepository localStatisticsRepo(Ref ref) {
 /// Persists the user's selected statistics view period (today/week/month).
 final statsViewPeriodProvider =
     StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>(
-        (ref) => StatsViewPeriodNotifier(),);
+  (ref) => StatsViewPeriodNotifier(),
+);
 
 /// Notifier for the stats view period
 class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {

@@ -8,6 +8,7 @@ v2.2 增强:
 - 中文布尔值支持
 - 日期标准化
 """
+from __future__ import annotations
 import re
 from datetime import date, timedelta
 from typing import Annotated, Any

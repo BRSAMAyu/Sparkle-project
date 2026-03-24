@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 const String expertChatModePrefix = 'expert::';
+const String teamChatModePrefix = 'team::';
 
 /// Chat Mode Class
 ///
@@ -38,6 +41,32 @@ abstract class ChatMode {
         displayName: expertName.isEmpty ? expertId : expertName,
       );
     }
+    if (value.startsWith(teamChatModePrefix)) {
+      final raw = value.substring(teamChatModePrefix.length);
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          final agents = decoded['agents'] is List
+              ? (decoded['agents'] as List).map((e) => '$e').toList()
+              : const <String>[];
+          final excluded = decoded['excluded'] is List
+              ? (decoded['excluded'] as List).map((e) => '$e').toList()
+              : const <String>[];
+          final finalAgents = decoded['final_agents'] is List
+              ? (decoded['final_agents'] as List).map((e) => '$e').toList()
+              : const <String>[];
+          final mode = decoded['mode']?.toString() ?? 'auto';
+          return ChatModeTeam(
+            selectedAgents: agents,
+            excludedAgents: excluded,
+            finalAnswerAgents: finalAgents,
+            collaborationMode: mode,
+            teamLabel: decoded['label']?.toString(),
+            teamId: decoded['team_id']?.toString(),
+          );
+        }
+      } catch (_) {}
+    }
     return chatModeValues.firstWhere(
       (mode) => mode.apiValue == value,
       orElse: ChatModeStandard.new,
@@ -62,6 +91,9 @@ abstract class ChatMode {
       case 'expert_auto':
         return l10n.chatModeExpertAutoDesc;
       default:
+        if (apiValue.startsWith(teamChatModePrefix)) {
+          return l10n.chatModeCustomTeamDesc;
+        }
         if (apiValue.startsWith(expertChatModePrefix)) {
           return l10n.chatModeExpertDirectDesc;
         }
@@ -84,6 +116,9 @@ abstract class ChatMode {
       case 'expert_auto':
         return l10n.chatModeExpertAuto;
       default:
+        if (apiValue.startsWith(teamChatModePrefix)) {
+          return l10n.chatModeCustomTeam;
+        }
         if (apiValue.startsWith(expertChatModePrefix)) {
           return expertName ?? apiValue.substring(expertChatModePrefix.length);
         }
@@ -175,6 +210,63 @@ class ChatModeExpert extends ChatMode {
 
   @override
   String? get expertName => displayName;
+}
+
+class ChatModeTeam extends ChatMode {
+  ChatModeTeam({
+    required this.selectedAgents,
+    this.excludedAgents = const [],
+    this.finalAnswerAgents = const [],
+    this.collaborationMode = 'auto',
+    this.teamLabel,
+    this.teamId,
+  }) : super(
+          apiValue: _buildApiValue(
+            selectedAgents,
+            excludedAgents,
+            collaborationMode,
+            finalAnswerAgents,
+            teamLabel,
+            teamId,
+          ),
+          icon: Icons.groups_rounded,
+          color: const Color(0xFF5C6BC0),
+        );
+
+  final List<String> selectedAgents;
+  final List<String> excludedAgents;
+  final List<String> finalAnswerAgents;
+  final String collaborationMode;
+  final String? teamLabel;
+  final String? teamId;
+
+  static String _buildApiValue(
+    List<String> agents,
+    List<String> excluded,
+    String mode,
+    List<String> finalAgents,
+    String? label,
+    String? teamId,
+  ) {
+    final spec = <String, dynamic>{
+      'agents': agents,
+      if (excluded.isNotEmpty) 'excluded': excluded,
+      if (finalAgents.isNotEmpty) 'final_agents': finalAgents,
+      if (mode != 'auto') 'mode': mode,
+      if (label != null && label.isNotEmpty) 'label': label,
+      if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+    };
+    return '$teamChatModePrefix${jsonEncode(spec)}';
+  }
+
+  @override
+  String get label =>
+      teamLabel ?? I18nService.instance.l10n.chatTeamExpertsCount(
+        selectedAgents.length,
+      );
+
+  @override
+  bool get isMultiAgent => true;
 }
 
 /// All available chat modes

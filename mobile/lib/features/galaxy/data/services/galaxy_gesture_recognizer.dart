@@ -3,10 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-// ignore: unused_import
-export 'package:flutter/services.dart' show HapticFeedback;
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Advanced gesture recognition for Galaxy star map
 ///
@@ -100,7 +97,7 @@ class GalaxyGestureRecognizer {
     _longPressTimer = Timer(longPressMinDuration, () {
       _isLongPressActive = true;
       if (enableHaptics) {
-        unawaited(HapticFeedback.mediumImpact());
+        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dragStart));
       }
       onLongPress?.call(_longPressPosition!);
     });
@@ -195,7 +192,7 @@ class GalaxyGestureRecognizer {
         // Haptic feedback at scale boundaries
         if (enableHaptics) {
           if (newScale <= minScale || newScale >= maxScale) {
-            unawaited(HapticFeedback.lightImpact());
+            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
           }
         }
       }
@@ -225,7 +222,7 @@ class GalaxyGestureRecognizer {
 
   void _handleDoubleTap(Offset position) {
     if (enableHaptics) {
-      unawaited(HapticFeedback.lightImpact());
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
     }
 
     // Toggle zoom level
@@ -320,7 +317,7 @@ class GalaxyGestureRecognizer {
     );
 
     if (enableHaptics) {
-      unawaited(HapticFeedback.selectionClick());
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     }
   }
 
@@ -340,7 +337,7 @@ class GalaxyGestureRecognizer {
       final distance = (tapPosition - entry.value).distance;
       if (distance <= nodeRadius) {
         if (enableHaptics) {
-          unawaited(HapticFeedback.selectionClick());
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
         }
         onNodeTap?.call(entry.key, entry.value);
         return;
@@ -358,7 +355,7 @@ class GalaxyGestureRecognizer {
       final distance = (tapPosition - entry.value).distance;
       if (distance <= nodeRadius) {
         if (enableHaptics) {
-          unawaited(HapticFeedback.heavyImpact());
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.starUnlock));
         }
         onNodeLongPress?.call(entry.key, entry.value);
         return;

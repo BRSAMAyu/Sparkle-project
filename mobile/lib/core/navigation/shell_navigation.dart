@@ -1,9 +1,21 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
+    as chat;
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
 /// Main navigation shell for StatefulShellRoute
 ///
@@ -11,7 +23,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 /// - InAppNotificationOverlay for in-app notifications
 /// - ResponsiveScaffold for adaptive layout (bottom nav on mobile, side rail on tablet, drawer on desktop)
 /// - Tab switching using StatefulNavigationShell.goBranch()
-class MainNavigationShell extends ConsumerWidget {
+class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({
     required this.navigationShell,
     super.key,
@@ -21,7 +33,149 @@ class MainNavigationShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainNavigationShell> createState() =>
+      _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
+  bool _isShowingAchievementDialog = false;
+  StreamSubscription<dynamic>? _communityEventsSub;
+
+  void _handleDestinationSelected(int index) {
+    if (index == widget.navigationShell.currentIndex) {
+      return;
+    }
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    widget.navigationShell.goBranch(index);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupAchievementListener();
+    });
+  }
+
+  void _setupAchievementListener() {
+    unawaited(ref.read(visualElementProvider.notifier).refresh());
+    _subscribeToCommunityEvents(ref.read(communityEventsStreamProvider));
+    ref.listenManual<Stream<dynamic>>(
+      communityEventsStreamProvider,
+      (previous, next) {
+        _subscribeToCommunityEvents(next);
+      },
+    );
+    ref.listenManual(
+      pendingAchievementUnlockProvider,
+      (previous, next) {
+        if (next != null &&
+            next != previous &&
+            mounted &&
+            !_isShowingAchievementDialog) {
+          unawaited(_showAchievementDialog(next.event, next.comboCount));
+        }
+      },
+    );
+  }
+
+  void _subscribeToCommunityEvents(Stream<dynamic> stream) {
+    unawaited(_communityEventsSub?.cancel());
+    _communityEventsSub = stream.listen(
+      _handleCommunityEvent,
+      onError: (_) {},
+    );
+  }
+
+  void _handleCommunityEvent(dynamic event) {
+    Map<String, dynamic>? payload;
+    if (event is String && event.isNotEmpty) {
+      try {
+        final decoded = json.decode(event);
+        if (decoded is Map<String, dynamic>) {
+          payload = decoded;
+        }
+      } catch (_) {}
+    } else if (event is Map<String, dynamic>) {
+      payload = event;
+    } else if (event is Map) {
+      payload = Map<String, dynamic>.from(event);
+    }
+
+    if (payload == null) {
+      return;
+    }
+
+    final type = payload['type'] as String?;
+    if (type != 'achievement_unlock') {
+      return;
+    }
+
+    final achievementData = payload['achievement_data'];
+    Map<String, dynamic>? achievementMap;
+    if (achievementData is Map<String, dynamic>) {
+      achievementMap = achievementData;
+    } else if (achievementData is Map) {
+      achievementMap = Map<String, dynamic>.from(achievementData);
+    }
+    if (achievementMap == null) {
+      return;
+    }
+
+    final wsEvent = chat.AchievementUnlockEvent(achievementData: achievementMap);
+    final result =
+        ref.read(achievementProvider.notifier).handleAchievementUnlock(wsEvent);
+    if (result == null) {
+      return;
+    }
+
+    ref.read(pendingAchievementUnlockProvider.notifier).setPending(
+          event: result.event,
+          comboCount: result.comboCount,
+        );
+    unawaited(ref.read(achievementProvider.notifier).refreshAchievements());
+    unawaited(ref.read(achievementProvider.notifier).refreshStats());
+    unawaited(ref.read(achievementProvider.notifier).refreshStreakStats());
+    unawaited(ref.read(streakHistoryProvider.notifier).loadHistory());
+  }
+
+  Future<void> _showAchievementDialog(
+    chat.AchievementUnlockEvent event,
+    int? comboCount,
+  ) async {
+    if (_isShowingAchievementDialog) return;
+    _isShowingAchievementDialog = true;
+    try {
+      await AchievementUnlockDialog.showFromWsEvent(
+        context,
+        event,
+        comboCount: comboCount,
+        onShare: () {
+          Navigator.of(context).pop(); // Close unlock dialog first
+          unawaited(
+            showAchievementShareSheet(
+              context,
+              achievementId: event.achievementId,
+              achievementName: event.name,
+            ),
+          );
+        },
+        onViewRewards: () {
+          Navigator.of(context).pop();
+          unawaited(context.push('/achievements/${event.achievementId}'));
+        },
+      );
+    } finally {
+      if (mounted) {
+        _isShowingAchievementDialog = false;
+        ref.read(pendingAchievementUnlockProvider.notifier).clear();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(communityEventsStreamProvider);
     final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
@@ -53,14 +207,20 @@ class MainNavigationShell extends ConsumerWidget {
       ),
     ];
 
-    return InAppNotificationOverlay(
-      child: ResponsiveScaffold(
-        title: 'Sparkle',
-        body: navigationShell,
-        destinations: destinations,
-        currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
-      ),
+    return Stack(
+      children: [
+        InAppNotificationOverlay(
+          child: ResponsiveScaffold(
+            title: 'Sparkle',
+            body: widget.navigationShell,
+            destinations: destinations,
+            currentIndex: widget.navigationShell.currentIndex,
+            onDestinationSelected: _handleDestinationSelected,
+          ),
+        ),
+        // Phase 1B: Close-to-unlock progress banner
+        const AchievementProgressBanner(),
+      ],
     );
   }
 
@@ -94,5 +254,11 @@ class MainNavigationShell extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_communityEventsSub?.cancel());
+    super.dispose();
   }
 }

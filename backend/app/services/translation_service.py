@@ -3,6 +3,7 @@ Translation Service - Focus Translate v2
 
 Provides segment-based translation with caching, glossary support, and timeout handling.
 """
+from __future__ import annotations
 import asyncio
 import hashlib
 import json
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
 from app.core.cache import cache_service
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm_service import llm_service
 from app.services.vocabulary_service import vocabulary_service
 
@@ -66,6 +68,8 @@ class TranslationService:
     def __init__(self):
         self.segmenter_version = self.SEGMENTER_VERSION
         self.prompt_version = self.PROMPT_VERSION
+        self.primary_provider = self._normalize_provider(settings.TRANSLATION_PRIMARY_PROVIDER)
+        self.backup_provider = self._normalize_provider(settings.TRANSLATION_BACKUP_PROVIDER)
 
     async def translate(
         self,
@@ -299,40 +303,44 @@ class TranslationService:
         used_provider = "llm"
         used_model = llm_service.chat_model
 
-        # Prefer translation-specific model (via Hunyuan key or SiliconFlow key)
-        try:
-            if settings.HUNYUAN_API_KEY:
-                provider_label = "hunyuan"
-                api_key = settings.HUNYUAN_API_KEY
-                base_url = settings.HUNYUAN_BASE_URL
-            elif settings.SILICONFLOW_API_KEY:
-                provider_label = "siliconflow"
-                api_key = settings.SILICONFLOW_API_KEY
-                base_url = settings.SILICONFLOW_BASE_URL
-            else:
-                raise ValueError("Neither HUNYUAN_API_KEY nor SILICONFLOW_API_KEY is configured")
+        translation = ""
+        last_error: Exception | None = None
+        for provider_name in self._provider_order():
+            config = self._provider_config(provider_name)
+            if not config:
+                continue
+            try:
+                await circuit_breaker_service.check(self._circuit_key(provider_name))
+                translate_client = AsyncOpenAI(
+                    api_key=config["api_key"],
+                    base_url=config["base_url"],
+                    timeout=settings.TRANSLATION_PROVIDER_TIMEOUT_SECONDS,
+                )
+                response = await translate_client.chat.completions.create(
+                    model=config["model"],
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                )
+                translation = response.choices[0].message.content.strip()
+                if not self._is_valid_translation_output(translation, segment.text):
+                    raise ValueError("translation model returned prompt echo instead of translated text")
+                await circuit_breaker_service.record_success(self._circuit_key(provider_name))
+                used_provider = provider_name
+                used_model = config["model"]
+                break
+            except CircuitBreakerOpenException as exc:
+                logger.warning(f"Translation provider {provider_name} skipped because circuit breaker is open: {exc}")
+                last_error = exc
+            except Exception as exc:
+                logger.warning(f"Translation provider {provider_name} failed: {exc}")
+                await circuit_breaker_service.record_failure(self._circuit_key(provider_name))
+                last_error = exc
 
-            translate_client = AsyncOpenAI(
-                api_key=api_key,
-                base_url=base_url,
-                timeout=30.0,
-            )
-            response = await translate_client.chat.completions.create(
-                model=settings.HUNYUAN_TRANSLATE_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-            )
-            translation = response.choices[0].message.content.strip()
-            if not self._is_valid_translation_output(translation, segment.text):
-                raise ValueError("translation model returned prompt echo instead of translated text")
-            used_provider = provider_label
-            used_model = settings.HUNYUAN_TRANSLATE_MODEL
-        except Exception as e:
-            logger.warning(f"Translation model failed, using fallback LLM: {e}")
-            # Fallback 到通用 LLM
+        if not translation:
+            logger.warning(f"Translation specialists failed, using fallback LLM: {last_error}")
             response = await llm_service.chat(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -386,6 +394,47 @@ class TranslationService:
 
         return normalized != source_text.strip().lower()
 
+    @staticmethod
+    def _normalize_provider(provider_name: str | None) -> str:
+        normalized = (provider_name or "").strip().lower()
+        return normalized or "hunyuan"
+
+    def _provider_order(self) -> list[str]:
+        ordered: list[str] = []
+        for provider in (
+            self.primary_provider,
+            self.backup_provider,
+            "hunyuan",
+            "siliconflow",
+        ):
+            if provider and provider not in ordered:
+                ordered.append(provider)
+        return ordered
+
+    def _provider_config(self, provider_name: str) -> dict[str, str] | None:
+        if provider_name == "hunyuan":
+            api_key = settings.HUNYUAN_API_KEY
+            if not api_key:
+                return None
+            return {
+                "api_key": api_key,
+                "base_url": settings.HUNYUAN_BASE_URL,
+                "model": settings.HUNYUAN_TRANSLATE_MODEL,
+            }
+        if provider_name == "siliconflow":
+            api_key = settings.SILICONFLOW_API_KEY
+            if not api_key:
+                return None
+            return {
+                "api_key": api_key,
+                "base_url": settings.SILICONFLOW_BASE_URL,
+                "model": settings.SILICONFLOW_TRANSLATE_MODEL,
+            }
+        return None
+
+    def _circuit_key(self, provider_name: str) -> str:
+        return f"translation:{provider_name}"
+
     def _generate_cache_key(
         self,
         segments: list[TranslationSegment],
@@ -434,7 +483,7 @@ class TranslationService:
         Returns:
             List of term mappings [{"source": "cache", "target": "缓存"}, ...]
         """
-        # TODO: Implement glossary storage in database
+        # TRACKED(TD-007): Implement glossary storage in database
         # For MVP, return built-in CS glossary
 
         if glossary_id == "cs_terms_v1":
@@ -458,7 +507,7 @@ class TranslationService:
         Segment text into translation units.
 
         Uses simple sentence splitting for MVP.
-        TODO: Use proper sentence tokenizer (spacy, nltk) in Phase 2.
+        TRACKED(TD-007): Use proper sentence tokenizer (spacy, nltk) in Phase 2.
 
         Args:
             text: Input text to segment

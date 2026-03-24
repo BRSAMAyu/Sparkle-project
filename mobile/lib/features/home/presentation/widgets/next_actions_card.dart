@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/task/task.dart';
@@ -294,14 +295,17 @@ class _EmbeddedActionBody extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ...actions.asMap().entries.map(
-                (entry) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: entry.key == actions.length - 1 ? 0 : DS.spacing8,
-                  ),
-                  child: _CompactNextActionRow(
-                    task: entry.value,
-                    dense: dense,
-                    embedded: true,
+                (entry) => SparkleStaggerItem(
+                  index: entry.key,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: entry.key == actions.length - 1 ? 0 : DS.spacing8,
+                    ),
+                    child: _CompactNextActionRow(
+                      task: entry.value,
+                      dense: dense,
+                      embedded: true,
+                    ),
                   ),
                 ),
               ),
@@ -338,13 +342,16 @@ class _FlowActionBody extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           ...actions.asMap().entries.map(
-                (entry) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: entry.key == actions.length - 1 ? 0 : DS.spacing8,
-                  ),
-                  child: _CompactNextActionRow(
-                    task: entry.value,
-                    dense: dense,
+                (entry) => SparkleStaggerItem(
+                  index: entry.key,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: entry.key == actions.length - 1 ? 0 : DS.spacing8,
+                    ),
+                    child: _CompactNextActionRow(
+                      task: entry.value,
+                      dense: dense,
+                    ),
                   ),
                 ),
               ),
@@ -567,6 +574,7 @@ void _openTaskExecution(
 }
 
 void _completeTask(WidgetRef ref, TaskData task) {
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
   unawaited(
     ref
         .read(taskListProvider.notifier)

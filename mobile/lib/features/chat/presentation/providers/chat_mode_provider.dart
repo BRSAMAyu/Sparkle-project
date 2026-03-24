@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 
 /// Chat Mode Provider (persisted)
@@ -13,7 +16,8 @@ final chatModeProvider = chatModeNotifierProvider;
 /// StateNotifier provider for more complex chat mode state management.
 /// This provider persists the last selected mode.
 final chatModeNotifierProvider =
-    StateNotifierProvider<ChatModeNotifier, ChatMode>((ref) => ChatModeNotifier());
+    StateNotifierProvider<ChatModeNotifier, ChatMode>(
+        (ref) => ChatModeNotifier(),);
 
 /// Chat Mode Notifier
 ///
@@ -32,6 +36,19 @@ class ChatModeNotifier extends PersistentNotifier<ChatMode> {
   /// Set the chat mode
   void setMode(ChatMode mode) {
     state = mode;
+  }
+
+  /// Set mode with visual feedback
+  void setModeWithFeedback(ChatMode mode, BuildContext context) {
+    state = mode;
+
+    // Show elegant mode switch feedback
+    if (context.mounted) {
+      AppFeedback.success(
+        context,
+        I18nService.instance.l10n.chatModeActivated(mode.label),
+      );
+    }
   }
 
   /// Reset to standard mode

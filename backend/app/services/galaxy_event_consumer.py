@@ -2,7 +2,7 @@
 Galaxy 事件消费者 - 处理错题创建事件
 """
 import asyncio
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -21,7 +21,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class GalaxyEventConsumer:

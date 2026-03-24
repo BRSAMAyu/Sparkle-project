@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -78,11 +79,34 @@ class ChatRepository {
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final data = ApiResponseParser.unwrapList(response.data,
-        action: 'getConversationHistory',);
-    return data
-        .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    // Handle both list response and wrapped response
+    dynamic data = response.data;
+    if (data is Map<String, dynamic> && data.containsKey('data')) {
+      data = data['data'];
+    }
+    if (data is! List) {
+      return [];
+    }
+
+    final messages = <ChatMessageModel>[];
+    for (final item in data) {
+      if (item is! Map<String, dynamic>) {
+        debugPrint(
+          'ChatRepository.getConversationHistory: skip non-map history item',
+        );
+        continue;
+      }
+      try {
+        messages.add(ChatMessageModel.fromJson(item));
+      } catch (error, stackTrace) {
+        debugPrint(
+          'ChatRepository.getConversationHistory: failed to parse history item '
+          'for conversation=$conversationId error=$error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+    return messages;
   }
 
   /// 获取最近对话列表
@@ -110,25 +134,71 @@ class ChatRepository {
     return MultiAgentCatalog.fromJson(response.data ?? const {});
   }
 
+  Future<ExpertCatalogExpert> createCustomExpert({
+    required String name,
+    required String description,
+    required String systemPrompt,
+    String? baseExpertId,
+    String? preferredModelKey,
+    String reasoningMode = 'balanced',
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/multi-agent/custom-experts',
+      data: {
+        'name': name,
+        'description': description,
+        'system_prompt': systemPrompt,
+        if (baseExpertId != null && baseExpertId.isNotEmpty)
+          'base_expert_id': baseExpertId,
+        if (preferredModelKey != null && preferredModelKey.isNotEmpty)
+          'preferred_model_key': preferredModelKey,
+        'reasoning_mode': reasoningMode,
+      },
+    );
+    return ExpertCatalogExpert.fromJson(response.data ?? const {});
+  }
+
+  Future<ExpertCatalogTeam> createCustomTeam({
+    required String name,
+    required List<String> expertIds,
+    required List<String> answerExpertIds,
+    required String collaborationMode,
+    String? description,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/multi-agent/custom-teams',
+      data: {
+        'name': name,
+        'description': description,
+        'expert_ids': expertIds,
+        'answer_expert_ids': answerExpertIds,
+        'collaboration_mode': collaborationMode,
+      },
+    );
+    return ExpertCatalogTeam.fromJson(response.data ?? const {});
+  }
+
   /// 流式聊天（WebSocket）
   Stream<ChatStreamEvent> chatStream(
     String message,
     String? conversationId, {
     String? userId,
+    String? requestId,
     String? nickname,
     Map<String, dynamic>? extraContext,
     String? token,
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
-  }) {
+  }) =>
     // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
     // 只有历史数据使用预设内容
     // 使用 WebSocket 服务
-    return _wsService.sendMessage(
+    _wsService.sendMessage(
       message: message,
       userId: userId ?? 'anonymous',
       sessionId: conversationId,
+      requestId: requestId,
       nickname: nickname,
       extraContext: extraContext,
       token: token,
@@ -136,7 +206,6 @@ class ChatRepository {
       includeReferences: includeReferences,
       chatMode: chatMode,
     );
-  }
 
   /// 发送 ActionCard 确认/忽略反馈
   void sendActionFeedback({
@@ -249,6 +318,7 @@ class ChatRepository {
 
       await for (final chunk
           in stream.cast<List<int>>().transform(utf8.decoder)) {
+        // ignore: use_string_buffers
         buffer += chunk;
 
         // 解析 SSE 事件

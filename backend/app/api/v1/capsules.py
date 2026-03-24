@@ -3,21 +3,26 @@ Curiosity Capsules API
 
 增强版API - 支持胶囊生成、反馈、收藏、分享等功能
 """
+from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.celery_app import celery_app
+from app.config import settings
+from app.core.celery_app import get_celery_queue_status
 from app.db.session import get_db
 from app.models.user import User
 from app.services.capsule_favorite_service import capsule_favorite_service
 from app.services.capsule_feedback_service import capsule_feedback_service
+from app.services.capsule_generation_service import capsule_generation_service
 from app.services.capsule_share_service import capsule_share_service
 from app.services.curiosity_capsule_service import curiosity_capsule_service
+from app.services.glm_batch_service import glm_batch_service
 
 router = APIRouter()
 
@@ -40,6 +45,7 @@ class CuriosityCapsuleSchema(BaseModel):
     quality_score: float | None = None
     feedback_count: int = 0
     share_count: int = 0
+    personalization_context: dict | None = None
 
     class Config:
         from_attributes = True
@@ -321,22 +327,126 @@ async def request_batch_generation(
 
     返回任务ID，可以通过 /generation/jobs 查询状态
     """
-    # 通过 Celery 异步生成
-    task = celery_app.send_task(
-        "generate_capsules_batch",
-        args=(
-            str(current_user.id),
-            request.depth_preference,
-            request.curiosity_preference,
-            "manual",
-            request.requested_count,
-        ),
-        queue="default",
+    interactive_manual_request = (request.requested_count or 1) <= 1
+    celery_status = (
+        {
+            "status": "unhealthy",
+            "queue": settings.GLM_BATCH_QUEUE,
+            "queue_worker_count": 0,
+            "queue_active_tasks": 0,
+            "queue_reserved_tasks": 0,
+            "reason": "interactive_manual_request",
+        }
+        if interactive_manual_request
+        else get_celery_queue_status(settings.GLM_BATCH_QUEUE)
     )
+    dispatch = glm_batch_service.decide_capsule_dispatch(
+        depth_preference=request.depth_preference,
+        curiosity_preference=request.curiosity_preference,
+        requested_count=request.requested_count or 1,
+        generation_type="manual",
+        celery_status=celery_status,
+    )
+    expired_jobs = await capsule_generation_service.expire_stale_jobs(
+        user_id=current_user.id,
+        db=db,
+        older_than_seconds=300,
+    )
+    should_fallback_sync = interactive_manual_request or (not dispatch.should_enqueue) or expired_jobs > 0
+
+    if should_fallback_sync:
+        logger.warning(
+            f"Capsule batch generation falling back to sync mode: decision={dispatch} celery_status={celery_status} expired_jobs={expired_jobs} interactive_manual_request={interactive_manual_request}"
+        )
+        job = await curiosity_capsule_service.generate_batch(
+            user_id=current_user.id,
+            db=db,
+            depth_preference=request.depth_preference,
+            curiosity_preference=request.curiosity_preference,
+            generation_type="manual",
+            requested_count=request.requested_count,
+            model_key=dispatch.spillover_model_key,
+            execution_mode=dispatch.execution_mode,
+        )
+        return {
+            "success": True,
+            "task_id": str(job.id),
+            "job_id": str(job.id),
+            "status": job.status,
+            "actual_count": job.actual_count,
+            "message": "胶囊已生成（同步降级）",
+        }
+
+    pending_job = None
+    try:
+        if settings.GLM_BATCH_ENABLED and settings.GLM_BATCH_CAPSULES_ENABLED and dispatch.should_enqueue:
+            pending_job = await capsule_generation_service.create_generation_job(
+                user_id=current_user.id,
+                db=db,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                model_used=dispatch.batch_model_key,
+            )
+            task = glm_batch_service.enqueue_capsule_generation(
+                user_id=current_user.id,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                job_id=pending_job.id,
+            )
+        else:
+            from app.core.celery_app import celery_app
+
+            pending_job = await capsule_generation_service.create_generation_job(
+                user_id=current_user.id,
+                db=db,
+                depth_preference=request.depth_preference,
+                curiosity_preference=request.curiosity_preference,
+                generation_type="manual",
+                requested_count=request.requested_count or 1,
+                model_used=None,
+            )
+            task = celery_app.send_task(
+                "generate_capsules_batch",
+                args=(
+                    str(current_user.id),
+                    request.depth_preference,
+                    request.curiosity_preference,
+                    "manual",
+                    request.requested_count,
+                    None,
+                    "online",
+                    str(pending_job.id),
+                ),
+            )
+    except Exception as exc:
+        logger.warning(f"Celery batch generation failed, retrying synchronously: {exc}")
+        job = await curiosity_capsule_service.generate_batch(
+            user_id=current_user.id,
+            db=db,
+            depth_preference=request.depth_preference,
+            curiosity_preference=request.curiosity_preference,
+            generation_type="manual",
+            requested_count=request.requested_count,
+            model_key=dispatch.spillover_model_key or dispatch.batch_model_key,
+            execution_mode="sync_fallback",
+        )
+        return {
+            "success": True,
+            "task_id": str(job.id),
+            "job_id": str(job.id),
+            "status": job.status,
+            "actual_count": job.actual_count,
+            "message": "胶囊已生成（同步降级）",
+        }
 
     return {
         "success": True,
         "task_id": task.id,
+        "job_id": str(pending_job.id) if pending_job else None,
         "message": "胶囊生成任务已提交，请稍后查询结果",
     }
 
@@ -415,3 +525,25 @@ async def get_capsule_detail(
         is_favorite=is_fav,
     )
 
+
+# =============================================================================
+# 根路径端点（兼容性）- 使用 /list 避免与 /{id} 路由冲突
+# =============================================================================
+
+@router.get("/list/all", response_model=list[CuriosityCapsuleSchema])
+async def list_capsules(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """
+    获取用户的胶囊列表
+    """
+    capsules = await curiosity_capsule_service.get_user_capsules(
+        user_id=current_user.id,
+        db=db,
+        limit=limit,
+        offset=offset
+    )
+    return capsules

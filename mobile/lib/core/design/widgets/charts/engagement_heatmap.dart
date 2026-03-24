@@ -11,6 +11,7 @@ class EngagementHeatmap extends StatelessWidget {
     this.daysToShow = 90,
     this.lowColor,
     this.highColor,
+    this.onDayTap,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class EngagementHeatmap extends StatelessWidget {
   final int daysToShow;
   final Color? lowColor;
   final Color? highColor;
+  final ValueChanged<DateTime>? onDayTap;
 
   Color get _resolvedLowColor => lowColor ?? DS.surfaceTertiary;
   Color get _resolvedHighColor => highColor ?? DS.success;
@@ -112,13 +114,16 @@ class EngagementHeatmap extends StatelessWidget {
 
   Widget _buildDayCell(DateTime date, double intensity) => Tooltip(
         message: '${_formatDate(date)}\n学习强度: ${_getIntensityLabel(intensity)}',
-        child: Container(
-          width: 14,
-          height: 14,
-          margin: const EdgeInsets.all(1),
-          decoration: BoxDecoration(
-            color: _getColorForIntensity(intensity),
-            borderRadius: BorderRadius.circular(2),
+        child: GestureDetector(
+          onTap: onDayTap == null ? null : () => onDayTap!(date),
+          child: Container(
+            width: 14,
+            height: 14,
+            margin: const EdgeInsets.all(1),
+            decoration: BoxDecoration(
+              color: _getColorForIntensity(intensity),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
         ),
       );

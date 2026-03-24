@@ -98,6 +98,7 @@ class ProfileWriteService:
                     latest_history_version = record.version
                     latest_record_id = str(record.id)
             except Exception as exc:
+                await self.db.rollback()
                 logger.warning(
                     "Preference history write failed user_id=%s pref_key=%s error=%s",
                     user_id,
@@ -195,6 +196,7 @@ class ProfileWriteService:
                     source_type="ai_inferred",
                 )
             except Exception as exc:
+                await self.db.rollback()
                 logger.warning(
                     "Inferred preference history write failed user_id=%s pref_key=%s error=%s",
                     user_id,

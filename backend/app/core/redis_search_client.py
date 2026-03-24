@@ -1,3 +1,4 @@
+from __future__ import annotations
 import struct
 from typing import Any
 
@@ -16,7 +17,13 @@ class RedisSearchClient:
     """
     def __init__(self, redis_url: str = settings.REDIS_URL, password: str | None = settings.REDIS_PASSWORD):
         resolved_password, _ = resolve_redis_password(redis_url, password)
-        self.redis = Redis.from_url(redis_url, password=resolved_password, decode_responses=True)
+        # Note: Redis 7.x with ACL requires username='default' when password is set
+        self.redis = Redis.from_url(
+            redis_url,
+            username='default',
+            password=resolved_password,
+            decode_responses=True
+        )
         self.index_name = "idx:knowledge"
 
     async def search(self, query: Query, query_params: dict[str, Any] | None = None):

@@ -4,6 +4,13 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 part 'error_record.freezed.dart';
 part 'error_record.g.dart';
 
+String _stringFromJson(Object? value) {
+  if (value == null) {
+    return '';
+  }
+  return value.toString();
+}
+
 int _intFromJson(Object? value) {
   if (value is int) {
     return value;
@@ -31,10 +38,14 @@ Map<String, int> _intMapFromJson(Object? value) {
 class ErrorRecord with _$ErrorRecord {
   const factory ErrorRecord({
     required String id,
-    @JsonKey(name: 'question_text') required String questionText,
-    @JsonKey(name: 'user_answer') required String userAnswer,
-    @JsonKey(name: 'correct_answer') required String correctAnswer,
-    @JsonKey(name: 'subject_code') required String subject,
+    @JsonKey(name: 'question_text', fromJson: _stringFromJson)
+    required String questionText,
+    @JsonKey(name: 'user_answer', fromJson: _stringFromJson)
+    required String userAnswer,
+    @JsonKey(name: 'correct_answer', fromJson: _stringFromJson)
+    required String correctAnswer,
+    @JsonKey(name: 'subject_code', fromJson: _stringFromJson)
+    required String subject,
     @JsonKey(name: 'mastery_level') required double masteryLevel,
     @JsonKey(name: 'review_count') required int reviewCount,
     @JsonKey(name: 'created_at') required DateTime createdAt,

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -12,7 +12,7 @@ from app.orchestration.orchestrator import ChatOrchestrator
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FakeRedis:

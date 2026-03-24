@@ -12,9 +12,15 @@ RUN pip install --no-cache-dir uv
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     gcc \
+    libc6-dev \
     libpq-dev \
+    liblzo2-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# python-lzo can fail under uv's isolated wheel build on aarch64; prebuild it with pip first.
+RUN pip install --no-cache-dir python-lzo==1.15
 
 # Copy dependency files
 COPY pyproject.toml .
@@ -52,9 +58,10 @@ ENV PYTHONUNBUFFERED=1
 # Create non-root application user for security
 RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 
-# Install runtime dependencies (libpq5 for PostgreSQL)
+# Install runtime dependencies (libpq5 for PostgreSQL, curl for healthchecks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    liblzo2-2 \
     libglib2.0-0 \
     libcairo2 \
     libpango-1.0-0 \
@@ -65,6 +72,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6 \
     shared-mime-info \
     libgomp1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -73,6 +81,9 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
+
+# Make entrypoint executable
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Set ownership to sparkle user
 RUN chown -R sparkle:sparkle /app
@@ -83,5 +94,6 @@ USER sparkle
 # Expose port
 EXPOSE 8000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 # Start command
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

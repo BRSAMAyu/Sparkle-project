@@ -27,6 +27,12 @@ class BentoGrid extends StatelessWidget {
         crossAxisCount: _crossAxisCount(context),
         mainAxisSpacing: DS.spacing12,
         crossAxisSpacing: DS.spacing12,
-        children: children,
+        children: List.generate(
+          children.length,
+          (index) => SparkleStaggerItem(
+            index: index,
+            child: children[index],
+          ),
+        ),
       );
 }

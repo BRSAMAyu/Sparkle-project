@@ -4,9 +4,9 @@ Agent Execution Statistics Models
 from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, Index, Integer, String, Text
-from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+from app.db.session import Base
+from app.models.base import GUID
 
 
 class AgentExecutionStats(Base):
@@ -14,7 +14,7 @@ class AgentExecutionStats(Base):
     __tablename__ = 'agent_execution_stats'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(GUID(), nullable=False, index=True)
     session_id = Column(String(255), nullable=False, index=True)
     request_id = Column(String(255), nullable=False)
 

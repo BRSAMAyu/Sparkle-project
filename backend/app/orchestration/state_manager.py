@@ -6,10 +6,11 @@ Session State Manager
 - 活跃计划管理（P0: 任务→计划自动切换）
 - 计划上下文跟踪
 """
+from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
@@ -56,7 +57,7 @@ class FSMState:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SessionStateManager:

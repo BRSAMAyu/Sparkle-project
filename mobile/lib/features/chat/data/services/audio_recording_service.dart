@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:record/record.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -16,9 +17,12 @@ class AudioRecordingService {
   WebSocketChannel? _webSocket;
   StreamSubscription<Uint8List>? _audioStreamSubscription;
   bool _isRecording = false;
+  bool _isStopping = false;
+  bool _stopSignalSent = false;
   Timer? _durationTimer;
   int _recordingDuration = 0;
   Completer<void>? _recordingCompleter;
+  Completer<void>? _serverCompletionCompleter;
 
   /// 开始录制音频并连接到WebSocket
   Future<void> startRecording({
@@ -35,8 +39,11 @@ class AudioRecordingService {
     }
 
     _isRecording = true;
+    _isStopping = false;
+    _stopSignalSent = false;
     _recordingDuration = 0;
     _recordingCompleter = Completer<void>();
+    _serverCompletionCompleter = Completer<void>();
 
     try {
       // 1. 连接WebSocket
@@ -59,12 +66,17 @@ class AudioRecordingService {
         },
         onError: (Object error) {
           _logger.e('WebSocket error: $error');
-          onError('WebSocket连接失败: $error');
-          stopRecording();
+          onError(
+            I18nService.instance.l10n.chatAudioWsConnectFailed(
+              error.toString(),
+            ),
+          );
+          unawaited(stopRecording());
         },
         onDone: () {
           _logger.d('WebSocket closed');
-          stopRecording();
+          _completeServerCompletion();
+          unawaited(_cleanupSession());
         },
         cancelOnError: true,
       );
@@ -87,15 +99,19 @@ class AudioRecordingService {
         },
         onError: (Object error) {
           _logger.e('Audio stream error: $error');
-          onError('音频录制失败: $error');
-          stopRecording();
+          onError(
+            I18nService.instance.l10n.chatAudioRecordFailed(
+              error.toString(),
+            ),
+          );
+          unawaited(stopRecording());
         },
         onDone: () {
           _logger.d('Audio stream ended');
           // Send stop signal to server
           _sendStopSignal();
           onCompleted();
-          stopRecording();
+          unawaited(stopRecording());
         },
         cancelOnError: true,
       );
@@ -106,17 +122,16 @@ class AudioRecordingService {
           _recordingDuration++;
           if (_recordingDuration >= maxDuration.inSeconds) {
             _logger.d('Max duration reached: $maxDuration');
-            _sendStopSignal();
-            stopRecording();
+            unawaited(stopRecording());
           }
         });
       }
 
       _logger.d('Recording started successfully');
     } catch (e) {
-      _logger.e('Failed to start recording: $e');
-      onError('录制启动失败: $e');
-      stopRecording();
+        _logger.e('Failed to start recording: $e');
+      onError(I18nService.instance.l10n.chatAudioStartFailed(e.toString()));
+      await _cleanupSession();
     }
   }
 
@@ -144,16 +159,18 @@ class AudioRecordingService {
             final content = data['content'] as String?;
             if (content == 'completed') {
               _logger.d('Transcription completed');
+              _completeServerCompletion();
               onCompleted();
-              stopRecording();
+              unawaited(_cleanupSession());
             }
 
           case 'error':
             final error = data['content'] as String?;
             if (error != null) {
               _logger.e('Transcription error: $error');
+              _completeServerCompletion();
               onError(error);
-              stopRecording();
+              unawaited(_cleanupSession());
             }
 
           default:
@@ -162,7 +179,7 @@ class AudioRecordingService {
       }
     } catch (e) {
       _logger.e('Failed to parse WebSocket message: $e');
-      onError('解析消息失败: $e');
+      onError(I18nService.instance.l10n.chatAudioParseFailed(e.toString()));
     }
   }
 
@@ -180,8 +197,9 @@ class AudioRecordingService {
 
   /// 发送停止信号
   void _sendStopSignal() {
-    if (_webSocket != null) {
+    if (_webSocket != null && !_stopSignalSent) {
       try {
+        _stopSignalSent = true;
         _webSocket!.sink.add('STOP');
       } catch (e) {
         _logger.e('Failed to send STOP signal: $e');
@@ -191,41 +209,43 @@ class AudioRecordingService {
 
   /// 停止录制
   Future<void> stopRecording() async {
-    if (!_isRecording) {
+    if (!_isRecording && !_isStopping) {
       return;
     }
 
-    _isRecording = false;
+    if (_isStopping) {
+      final completer = _recordingCompleter;
+      if (completer != null) {
+        await completer.future;
+      }
+      return;
+    }
+
+    _isStopping = true;
 
     try {
-      // 停止录制
-      await _recorder.stop();
-
-      // 取消订阅
+      try {
+        await _recorder.stop();
+      } catch (e) {
+        _logger.d('Recorder stop skipped/failed: $e');
+      }
       await _audioStreamSubscription?.cancel();
       _audioStreamSubscription = null;
 
-      // 关闭WebSocket
-      if (_webSocket != null) {
-        await _webSocket!.sink.close();
-        _webSocket = null;
+      _sendStopSignal();
+
+      final completion = _serverCompletionCompleter;
+      if (completion != null && !completion.isCompleted) {
+        try {
+          await completion.future.timeout(const Duration(seconds: 2));
+        } on TimeoutException {
+          _logger.w('Timed out waiting for final transcription acknowledgement');
+        }
       }
-
-      // 停止计时器
-      _durationTimer?.cancel();
-      _durationTimer = null;
-
-      // 完成录制
-      if (!_recordingCompleter!.isCompleted) {
-        _recordingCompleter!.complete();
-      }
-
-      _logger.d('Recording stopped');
     } catch (e) {
       _logger.e('Failed to stop recording: $e');
-      if (!_recordingCompleter!.isCompleted) {
-        _recordingCompleter!.completeError(e);
-      }
+    } finally {
+      await _cleanupSession();
     }
   }
 
@@ -244,5 +264,49 @@ class AudioRecordingService {
   Future<void> dispose() async {
     await stopRecording();
     await _recorder.dispose();
+  }
+
+  void _completeServerCompletion() {
+    final completer = _serverCompletionCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  Future<void> _cleanupSession() async {
+    if (_recordingCompleter == null || _recordingCompleter!.isCompleted) {
+      _isRecording = false;
+      _isStopping = false;
+      return;
+    }
+
+    try {
+      _isRecording = false;
+
+      _durationTimer?.cancel();
+      _durationTimer = null;
+
+      await _audioStreamSubscription?.cancel();
+      _audioStreamSubscription = null;
+
+      if (_webSocket != null) {
+        await _webSocket!.sink.close();
+        _webSocket = null;
+      }
+
+      _logger.d('Recording stopped');
+      _recordingCompleter?.complete();
+    } catch (e) {
+      _logger.e('Failed during recording cleanup: $e');
+      final completer = _recordingCompleter;
+      if (completer != null && !completer.isCompleted) {
+        completer.completeError(e);
+      }
+    } finally {
+      _recordingCompleter = null;
+      _serverCompletionCompleter = null;
+      _isStopping = false;
+      _stopSignalSent = false;
+    }
   }
 }

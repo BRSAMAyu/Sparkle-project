@@ -19,7 +19,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	redisv9 "github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/agent"
-	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
@@ -78,14 +77,13 @@ type handlerBundle struct {
 	errorBookHandler         *handler.ErrorBookHandler
 	chaosHandler             *handler.ChaosHandler
 	fileHandler              *handler.FileHandler
-	interventionPushHandler  *handler.InterventionPushHandler
-	interventionProxyHandler *handler.InterventionProxyHandler
-	dashboardProxyHandler    *handler.DashboardProxyHandler
-	predictiveProxyHandler   *handler.PredictiveProxyHandler
-	dataConsistencyHandler   *handler.DataConsistencyHandler
+	interventionPushHandler *handler.InterventionPushHandler
+	dataConsistencyHandler  *handler.DataConsistencyHandler
 	sttHandler               *handler.STTHandler
 	wsProxy                  *handler.WebSocketProxy
 	authHandler              *handler.AuthHandler
+	galaxyHandler            *handler.GalaxyHandler
+	proxyRoutesHandler       *handler.ProxyRoutesHandler
 }
 
 type cqrsBundle struct {
@@ -153,7 +151,7 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	if chatHistoryTTL == 0 {
 		chatHistoryTTL = 30 * time.Minute
 	}
-	chatHistoryService := service.NewChatHistoryServiceWithTTL(rdb, chatHistoryTTL)
+	chatHistoryService := service.NewChatHistoryServiceWithPool(rdb, dbh.pool, chatHistoryTTL)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(dbh.pool)
@@ -229,22 +227,22 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	chaosHandler := handler.NewChaosHandler(services.chatHistory, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(services.fileStorage, services.fileMetadata, services.fileProcessing)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
-	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
-	dashboardProxyHandler := handler.NewDashboardProxyHandler(cfg.BackendURL)
-	predictiveProxyHandler := handler.NewPredictiveProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.chatHistory, dbh.queries, rdb)
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
 	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger)
 
-	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger)
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger, cfg)
 
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {
 		log.Printf("Warning: Apple Auth Service init failed: %v", err)
 	}
 	authHandler := handler.NewAuthHandler(cfg, dbh.queries, appleAuthService)
+
+	// Galaxy handler for knowledge graph endpoints
+	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)
 
 	return &handlerBundle{
 		wsFactory:                wsFactory,
@@ -257,14 +255,12 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		errorBookHandler:         errorBookHandler,
 		chaosHandler:             chaosHandler,
 		fileHandler:              fileHandler,
-		interventionPushHandler:  interventionPushHandler,
-		interventionProxyHandler: interventionProxyHandler,
-		dashboardProxyHandler:    dashboardProxyHandler,
-		predictiveProxyHandler:   predictiveProxyHandler,
-		dataConsistencyHandler:   dataConsistencyHandler,
+		interventionPushHandler: interventionPushHandler,
+		dataConsistencyHandler:  dataConsistencyHandler,
 		sttHandler:               sttHandler,
 		wsProxy:                  wsProxy,
 		authHandler:              authHandler,
+		galaxyHandler:            galaxyHandler,
 	}, nil
 }
 
@@ -378,12 +374,12 @@ func startCQRSWorkers(cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle) *gin.Engine {
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
 	r.Use(middleware.RequestContextMiddleware())
-	r.Use(middleware.SecurityHeadersMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware(cfg))
 	if cfg.CORSEnabled {
 		r.Use(middleware.CORSMiddleware(cfg))
 	}
@@ -391,7 +387,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	if strings.TrimSpace(healthVersion) == "" {
 		healthVersion = "dev"
 	}
-	handler.NewHealthHandler(dbh.pool, rdb, healthVersion).RegisterRoutes(r)
+	handler.NewHealthHandler(dbh.pool, rdb, agentClient, healthVersion).RegisterRoutes(r)
 
 	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
 	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
@@ -404,10 +400,23 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		middleware.WsAuthMiddleware(cfg, rdb),
 		handlers.wsProxy.HandlePersonalWS)
 
-	authMiddleware := middleware.AuthMiddleware(cfg)
-	authRateLimit := middleware.AuthRateLimitMiddleware()
+	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
+	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
+
+	requestTimeout := 30
+	if cfg.RequestTimeoutSeconds > 0 {
+		requestTimeout = cfg.RequestTimeoutSeconds
+	}
+
+	// Create explicit proxy routes handler for better control and observability
+	proxyRoutesHandler := handler.NewProxyRoutesHandler(
+		proxy.proxy,
+		proxy.abTestMiddleware,
+		logger,
+	)
 
 	api := r.Group("/api/v1")
+	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -449,7 +458,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		api.POST(
 			"/ws/ticket",
 			authMiddleware,
-			middleware.UserBasedRateLimit(cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
+			middleware.HybridRateLimitMiddlewareSimple(rdb, cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
 			handlers.wsTicketHandler.Issue,
 		)
 		api.GET("/chat/sessions", authMiddleware, handlers.chatHistoryHandler.GetRecentSessions)
@@ -458,16 +467,15 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		api.GET("/groups/:group_id/messages", authMiddleware, handlers.groupChatHandler.GetMessages)
 		handlers.errorBookHandler.RegisterRoutes(api, authMiddleware)
 
-		commCmdService := service.NewCommunityCommandService(dbh.pool)
-		commQueryService := service.NewCommunityQueryService(rdb)
-		commHandler := v1.NewCommunityHandler(commCmdService, commQueryService)
-		commHandler.RegisterRoutes(api, authMiddleware)
-
 		handlers.fileHandler.RegisterRoutes(api, authMiddleware)
 		handlers.dataConsistencyHandler.RegisterRoutes(api)
-		api.Any("/interventions/*path", authMiddleware, handlers.interventionProxyHandler.Proxy)
-		api.Any("/dashboard/*path", authMiddleware, handlers.dashboardProxyHandler.Proxy)
-		api.Any("/predictive/*path", authMiddleware, handlers.predictiveProxyHandler.Proxy)
+
+		// Galaxy routes - authentication passthrough with rate limiting
+		galaxyRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 10, 20)
+		handlers.galaxyHandler.RegisterRoutes(api, authMiddleware, galaxyRateLimit)
+
+		// Register explicit proxy routes for critical Python Backend APIs
+		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
 	}
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
@@ -704,6 +712,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
+		method := c.Request.Method
+
+		// DEBUG: 记录所有 NoRoute 请求
+		zap.L().Debug("NoRoute: proxying request",
+			zap.String("path", path),
+			zap.String("method", method),
+			zap.String("query", c.Request.URL.RawQuery))
 
 		if strings.HasPrefix(path, "/api/v1/auth") ||
 			path == "/api/v1/health" ||
@@ -717,35 +732,45 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 				}
 			}
 			proxy.proxy.ServeHTTP(c.Writer, c.Request)
+
+			// 记录代理结果
+			zap.L().Debug("NoRoute: auth path proxy completed",
+				zap.String("path", path),
+				zap.Int("status", c.Writer.Status()))
 			return
 		}
 
 		authMiddleware(c)
 		if c.IsAborted() {
+			zap.L().Debug("NoRoute: auth middleware aborted",
+				zap.String("path", path),
+				zap.Int("status", c.Writer.Status()))
 			return
 		}
 
-		userID := c.GetString("user_id")
-		if userID != "" {
-			c.Request.Header.Set("X-User-ID", userID)
-		}
-		if token := c.GetString("auth_token"); token != "" {
-			c.Request.Header.Set("Authorization", "Bearer "+token)
-		}
+		handler.SetProxyUserContextHeaders(c)
 
 		proxy.abTestMiddleware.AssignVariant()(c)
 		proxy.proxy.ServeHTTP(c.Writer, c.Request)
 		proxy.abTestMiddleware.RecordMetricAfter(c)
+
+		// 记录代理结果
+		zap.L().Debug("NoRoute: proxy completed",
+			zap.String("path", path),
+			zap.Int("status", c.Writer.Status()))
 	})
 
 	return r
 }
 
-func setupProxy(cfg *config.Config) (*proxyBundle, error) {
+func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
 	backendURL := cfg.BackendURL
 	if backendURL == "" {
 		backendURL = "http://sparkle_api:8000"
 	}
+	logger.Info("Gateway proxy configured",
+		zap.String("backend_url", backendURL))
+
 	abTestMiddleware := middleware.NewABTestMiddleware(&middleware.ABTestConfig{
 		BackendURL: backendURL,
 		Timeout:    3 * time.Second,
@@ -755,6 +780,10 @@ func setupProxy(cfg *config.Config) (*proxyBundle, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info("Gateway proxy target resolved",
+		zap.String("target_host", targetURL.Host),
+		zap.String("target_scheme", targetURL.Scheme))
 
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
 	proxy.Director = func(req *http.Request) {

@@ -18,6 +18,7 @@ class MockChatRepository extends Mock implements ChatRepository {
     String message,
     String? conversationId, {
     String? userId,
+    String? requestId,
     String? nickname,
     Map<String, dynamic>? extraContext,
     String? token,

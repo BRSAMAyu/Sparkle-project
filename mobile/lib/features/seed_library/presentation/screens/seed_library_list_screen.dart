@@ -1,11 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
-import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_library_card.dart';
+import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 
 /// Seed Library List Screen
 /// Displays a list of seed libraries with filtering and search
@@ -49,6 +58,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _applyFilters() {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
     ref
         .read(
           seedLibraryListProvider(
@@ -86,7 +98,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('种子库'),
+        title: Text(context.l10n.seedLibraryTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -103,6 +115,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
       floatingActionButton: SparkleIconButton(
         size: DS.touchTargetMinSize + DS.spacing8,
         onPressed: () async {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+          );
           final result =
               await context.push<bool>(SeedLibraryRoutes.createLibrary);
           if (result ?? false) {
@@ -123,7 +138,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: '搜索种子库...',
+                    hintText: context.l10n.seedLibrarySearchHint,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? SparkleIconButton(
@@ -196,57 +211,46 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     SeedLibraryListNotifier notifier,
   ) {
     if (state.isLoading && state.libraries.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return LoadingIndicator.circular(
+        showText: true,
+        loadingText: 'Loading seed libraries...',
+      );
     }
 
     if (state.error != null && state.libraries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              state.error!,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.spacing16),
-            SparkleButton(
-              onPressed: _applyFilters,
-              label: '重试',
-              icon: const Icon(Icons.refresh),
-              variant: ButtonVariant.destructive,
-            ),
-          ],
-        ),
+      return CustomErrorWidget.page(
+        context: context,
+        message: state.error!,
+        onRetry: _applyFilters,
       );
     }
 
     if (state.libraries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.library_books_outlined,
-              size: DS.spacing64,
-              color: DS.textTertiary,
-            ),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              '暂无种子库',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              '创建一个新的种子库开始使用',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-            ),
-          ],
-        ),
+      final hasFilters =
+          _searchController.text.isNotEmpty ||
+          _selectedCategory != null ||
+          _selectedVisibility != null;
+      return EmptyState(
+        title: hasFilters
+            ? 'No seed libraries match this filter'
+            : context.l10n.seedLibraryEmpty,
+        description: hasFilters
+            ? 'Try clearing a filter or broadening the keyword to discover more reusable growth patterns.'
+            : 'Create the first seed library and turn a great prompt, workflow, or strategy into something reusable.',
+        icon: Icons.library_books_outlined,
+        actionText: hasFilters ? 'Clear filters' : 'Create seed library',
+        onAction: () {
+          if (hasFilters) {
+            setState(() {
+              _selectedCategory = null;
+              _selectedVisibility = null;
+              _searchController.clear();
+            });
+            _applyFilters();
+            return;
+          }
+          context.push(SeedLibraryRoutes.createLibrary);
+        },
       );
     }
 
@@ -256,41 +260,51 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         visibility: _selectedVisibility,
         search: _searchController.text.isEmpty ? null : _searchController.text,
       ),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(DS.spacing16),
-        itemCount: state.libraries.length + (state.hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index >= state.libraries.length) {
-            // Load more indicator
-            notifier.loadMore();
-            return const Padding(
-              padding: EdgeInsets.all(DS.spacing16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
+      child: ScrollEdgeHaptics(
+        child: ListView.builder(
+          padding: const EdgeInsets.all(DS.spacing16),
+          itemCount: state.libraries.length + (state.hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= state.libraries.length) {
+              // Load more indicator
+              notifier.loadMore();
+              return const Padding(
+                padding: EdgeInsets.all(DS.spacing16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-          final library = state.libraries[index];
-          return SeedLibraryCard(
-            library: library,
-            onTap: () {
-              context.push(SeedLibraryRoutes.detail(library.id));
-            },
-          );
-        },
+            final library = state.libraries[index];
+            return SparkleStaggerItem(
+              index: index,
+              child: SeedLibraryCard(
+                library: library,
+                onTap: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
+                  context.push(SeedLibraryRoutes.detail(library.id));
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   void _showFilterDialog() {
-    showDialog<void>(
+    showSensoryDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('筛选'),
+        title: Text(context.l10n.seedLibraryFilter),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('分类', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(context.l10n.seedLibraryCategory, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: DS.spacing8),
             Wrap(
               spacing: DS.spacing8,
@@ -308,7 +322,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               }).toList(),
             ),
             const SizedBox(height: DS.spacing16),
-            const Text('可见性', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(context.l10n.seedLibraryVisibility, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: DS.spacing8),
             Wrap(
               spacing: DS.spacing8,
@@ -337,14 +351,14 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               Navigator.pop(context);
               _applyFilters();
             },
-            label: '清除',
+            label: context.l10n.seedLibraryClear,
           ),
           SparkleButton(
             onPressed: () {
               Navigator.pop(context);
               _applyFilters();
             },
-            label: '应用',
+            label: context.l10n.seedLibraryApply,
           ),
         ],
       ),

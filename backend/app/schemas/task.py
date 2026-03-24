@@ -1,4 +1,6 @@
 """Task Schemas - Task creation, update, query, etc."""
+
+from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
 from uuid import UUID
@@ -10,8 +12,10 @@ from app.schemas.common import BaseSchema
 
 # ========== Request Schemas ==========
 
+
 class TaskCreate(BaseModel):
     """Create task"""
+
     title: str = Field(min_length=1, max_length=255, description="Task title")
     type: TaskType = Field(validation_alias=AliasChoices("type", "task_type"), description="Task type")
     plan_id: UUID | None = Field(default=None, description="Related plan ID")
@@ -79,43 +83,58 @@ class TaskCreate(BaseModel):
                     return value
         return value
 
+
 class TaskUpdate(BaseModel):
     """Update task"""
+
     title: str | None = Field(default=None, min_length=1, max_length=255, description="Task title")
+    type: TaskType | None = Field(default=None, description="Task type")
     tags: list[str] | None = Field(default=None, description="Tags list")
     estimated_minutes: int | None = Field(default=None, ge=1, description="Estimated minutes")
     difficulty: int | None = Field(default=None, ge=1, le=5, description="Difficulty level")
     energy_cost: int | None = Field(default=None, ge=1, le=5, description="Energy cost")
     guide_content: str | None = Field(default=None, description="Guide content")
     priority: int | None = Field(default=None, description="Priority")
+    order_index: int | None = Field(default=None, description="Display order")
     due_date: date | None = Field(default=None, description="Due date")
     user_note: str | None = Field(default=None, description="User note")
 
+
 class TaskStart(BaseModel):
     """Start task"""
+
     task_id: UUID = Field(description="Task ID")
+
 
 class TaskComplete(BaseModel):
     """Complete task (Legacy/Internal)"""
+
     task_id: UUID = Field(description="Task ID")
     actual_minutes: int = Field(ge=1, description="Actual minutes")
     user_note: str | None = Field(default=None, description="Completion note")
 
+
 class TaskCompleteRequest(BaseModel):
     """Complete task request body (v2.1)"""
+
     actual_minutes: int = Field(ge=1, description="Actual minutes")
     note: str | None = Field(default=None, validation_alias=AliasChoices("note", "user_note"), description="User note")
     completion_quality: int | None = Field(default=None, ge=1, le=5, description="Self rating 1-5")
 
+
 class TaskAbandon(BaseModel):
     """Abandon task"""
+
     task_id: UUID = Field(description="Task ID")
     reason: str | None = Field(default=None, description="Abandon reason")
 
+
 # ========== Response Schemas ==========
+
 
 class TaskBase(BaseSchema):
     """Task basic information"""
+
     title: str = Field(description="Task title")
     type: TaskType = Field(description="Task type")
     status: TaskStatus = Field(description="Task status")
@@ -126,8 +145,10 @@ class TaskBase(BaseSchema):
     priority: int = Field(description="Priority")
     due_date: date | None = Field(description="Due date")
 
+
 class TaskDetail(TaskBase):
     """Task detailed information"""
+
     user_id: UUID = Field(description="User ID")
     plan_id: UUID | None = Field(description="Related plan ID")
     guide_content: str | None = Field(description="Guide content")
@@ -138,17 +159,61 @@ class TaskDetail(TaskBase):
     user_note: str | None = Field(description="User note")
     knowledge_node_id: UUID | None = Field(description="Knowledge node ID")
     tool_result_id: str | None = Field(description="Tool result ID")
+    order_index: int = Field(default=0, description="Display order")
+    subtasks_total: int = Field(default=0, description="Total subtasks")
+    subtasks_completed: int = Field(default=0, description="Completed subtasks")
+
+
+class TaskReorderRequest(BaseModel):
+    """Persist task ordering for the current user."""
+
+    task_ids: list[UUID] = Field(min_length=1, description="Ordered task IDs")
+
+
+class TaskResourceLinkCreate(BaseModel):
+    """Attach a resource to a task."""
+
+    resource_type: str = Field(
+        ...,
+        pattern="^(seed_library|seed_item|knowledge_node|external_url|file|note)$",
+        description="Resource type",
+    )
+    resource_id: UUID | None = Field(default=None, description="Referenced resource ID")
+    title: str | None = Field(default=None, max_length=255, description="Display title")
+    url: str | None = Field(default=None, max_length=500, description="External URL")
+    summary: str | None = Field(default=None, description="Short summary")
+    resource_metadata: dict | None = Field(default=None, description="Extra metadata")
+    order_index: int | None = Field(default=None, ge=0, description="Display order")
+    is_primary: bool = Field(default=False, description="Primary resource flag")
+
+
+class TaskResourceLinkInfo(BaseSchema):
+    """Attached task resource."""
+
+    task_id: UUID = Field(description="Task ID")
+    resource_type: str = Field(description="Resource type")
+    resource_id: UUID | None = Field(default=None, description="Referenced resource ID")
+    title: str | None = Field(default=None, description="Display title")
+    url: str | None = Field(default=None, description="External URL")
+    summary: str | None = Field(default=None, description="Short summary")
+    resource_metadata: dict | None = Field(default=None, description="Extra metadata")
+    order_index: int = Field(default=0, description="Display order")
+    is_primary: bool = Field(default=False, description="Primary resource flag")
+
 
 class TaskSummary(BaseModel):
     """Task summary statistics"""
+
     total: int = Field(description="Total tasks")
     pending: int = Field(description="Pending tasks")
     in_progress: int = Field(description="In progress tasks")
     completed: int = Field(description="Completed tasks")
     abandoned: int = Field(description="Abandoned tasks")
 
+
 class TaskRecommendationResponse(BaseModel):
     """Task recommendation response"""
+
     knowledge_node_id: UUID = Field(description="Knowledge node ID")
     title: str = Field(description="Task title")
     estimated_minutes: int = Field(description="Estimated minutes")
@@ -157,8 +222,10 @@ class TaskRecommendationResponse(BaseModel):
     priority: float = Field(description="Priority score")
     reason: str = Field(description="Recommendation reason")
 
+
 class TaskListQuery(BaseModel):
     """Task list query parameters"""
+
     status: TaskStatus | None = Field(default=None, description="Task status")
     type: TaskType | None = Field(default=None, description="Task type")
     plan_id: UUID | None = Field(default=None, description="Plan ID")
@@ -196,31 +263,41 @@ class TaskListQuery(BaseModel):
                 return value
         return value
 
+
 # ========== Suggestion Schemas ==========
+
 
 class SuggestedNode(BaseModel):
     """Suggested knowledge node"""
+
     id: UUID | None = Field(default=None, description="Node ID (if existing)")
     name: str = Field(description="Node name")
     reason: str = Field(description="Reason for suggestion")
     is_new: bool = Field(default=False, description="Whether this is a potential new node")
 
+
 class TaskSuggestionRequest(BaseModel):
     """Request for task suggestions"""
+
     input_text: str = Field(min_length=1, description="User input title or description")
+
 
 class TaskSuggestionResponse(BaseModel):
     """Response for task suggestions"""
+
     intent: str = Field(description="Recognized user intent")
     suggested_nodes: list[SuggestedNode] = Field(default_factory=list, description="Suggested knowledge nodes")
     suggested_tags: list[str] = Field(default_factory=list, description="Suggested tags")
     estimated_minutes: int | None = Field(default=None, description="Suggested duration")
     difficulty: int | None = Field(default=None, description="Suggested difficulty")
 
+
 # ========== Next Step Recommendation Schemas ==========
+
 
 class NextActionType(str, Enum):
     """下一步行动类型"""
+
     QUICK_REVIEW = "quick_review"
     LIGHT_EXPAND = "light_expand"
     PRACTICE_APPLY = "practice_apply"
@@ -230,6 +307,7 @@ class NextActionType(str, Enum):
 
 class NextActionSuggestion(BaseModel):
     """Next action suggestion after task completion"""
+
     type: NextActionType = Field(description="Action type")
     title: str = Field(description="Action title")
     description: str = Field(description="Action description")
@@ -244,31 +322,48 @@ class NextActionSuggestion(BaseModel):
 
 # ========== Subtask Schemas ==========
 
+
 class SubTaskCreate(BaseModel):
     """Create subtask"""
+
     title: str = Field(min_length=1, max_length=255, description="Subtask title")
     description: str | None = Field(default=None, description="Subtask description")
     order: int | None = Field(default=0, description="Display order")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
+    estimated_minutes: int | None = Field(default=25, description="Estimated study time in minutes")
+    guide_content: str | None = Field(default=None, description="Learning guide content")
+
 
 class SubTaskUpdate(BaseModel):
     """Update subtask"""
+
     title: str | None = Field(default=None, min_length=1, max_length=255, description="Subtask title")
     description: str | None = Field(default=None, description="Subtask description")
     status: SubTaskStatus | None = Field(default=None, description="Subtask status")
     order: int | None = Field(default=None, description="Display order")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
+    estimated_minutes: int | None = Field(default=None, description="Estimated study time in minutes")
+    guide_content: str | None = Field(default=None, description="Learning guide content")
+
 
 class SubTaskDetail(BaseSchema):
     """Subtask detailed information"""
+
     parent_task_id: UUID = Field(description="Parent task ID")
     title: str = Field(description="Subtask title")
     description: str | None = Field(default=None, description="Subtask description")
     order: int = Field(description="Display order")
     status: SubTaskStatus = Field(description="Subtask status")
     completed_at: datetime | None = Field(default=None, description="Completion time")
+    knowledge_node_id: UUID | None = Field(default=None, description="Linked knowledge node ID")
+    estimated_minutes: int = Field(description="Estimated study time in minutes")
+    guide_content: str | None = Field(default=None, description="Learning guide content")
+
 
 class SubTaskReorderRequest(BaseModel):
     """Reorder subtasks"""
+
     subtask_orders: list[dict] = Field(
         description="List of {subtask_id, order} pairs",
-        examples=[[{"subtask_id": "uuid", "order": 0}, {"subtask_id": "uuid", "order": 1}]]
+        examples=[[{"subtask_id": "uuid", "order": 0}, {"subtask_id": "uuid", "order": 1}]],
     )

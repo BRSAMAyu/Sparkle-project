@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/translation.dart';
 
 /// A widget that makes text translatable via long-press selection
@@ -64,7 +67,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
     if (selectedText.trim().isEmpty) return;
 
     // Trigger haptic feedback
-    HapticFeedback.mediumImpact();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
 
     // Show translation based on length
     if (selectedText.length < 50) {

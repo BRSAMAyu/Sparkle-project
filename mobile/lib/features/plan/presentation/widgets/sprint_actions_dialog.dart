@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
 
 /// Sprint action type
@@ -12,7 +17,7 @@ Future<SprintActionType?> showSprintActionsDialog(
   required String planId,
   required String planName,
 }) =>
-    showModalBottomSheet<SprintActionType>(
+    showSensoryModalBottomSheet<SprintActionType>(
       context: context,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => _SprintActionsSheet(
@@ -26,7 +31,7 @@ Future<bool> showConfirmCompleteDialog(
   BuildContext context, {
   required String planName,
 }) async {
-  final result = await showDialog<bool>(
+  final result = await showSensoryDialog<bool>(
     context: context,
     builder: (context) => _ConfirmCompleteDialog(planName: planName),
   );
@@ -38,7 +43,7 @@ Future<int?> showExtendSprintDialog(
   BuildContext context, {
   required String planName,
 }) async =>
-    showDialog<int>(
+    showSensoryDialog<int>(
       context: context,
       builder: (context) => _ExtendSprintDialog(planName: planName),
     );
@@ -48,7 +53,7 @@ Future<bool> showConfirmAbandonDialog(
   BuildContext context, {
   required String planName,
 }) async {
-  final result = await showDialog<bool>(
+  final result = await showSensoryDialog<bool>(
     context: context,
     builder: (context) => _ConfirmAbandonDialog(planName: planName),
   );
@@ -73,6 +78,7 @@ class _SprintActionsSheet extends ConsumerStatefulWidget {
 class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final actionsState = ref.watch(sprintActionsProvider);
 
     // Show success/error messages
@@ -128,7 +134,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '冲刺操作',
+                          l10n.sprintActionsTitle,
                           style: context.sparkleTypography.labelLarge.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -157,26 +163,35 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
                 children: [
-                  _ActionTile(
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: _ActionTile(
                     icon: Icons.check_circle_rounded,
-                    title: '完成冲刺',
-                    subtitle: '标记冲刺为已完成并归档',
+                    title: l10n.sprintActionCompleteTitle,
+                    subtitle: l10n.sprintActionCompleteSubtitle,
                     color: DS.semanticSuccess,
                     onTap: () => _handleComplete(context),
                   ),
-                  _ActionTile(
+                  ),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: _ActionTile(
                     icon: Icons.date_range_rounded,
-                    title: '延长冲刺',
-                    subtitle: '延长冲刺截止日期',
+                    title: l10n.sprintActionExtendTitle,
+                    subtitle: l10n.sprintActionExtendSubtitle,
                     color: DS.info,
                     onTap: () => _handleExtend(context),
                   ),
-                  _ActionTile(
+                  ),
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: _ActionTile(
                     icon: Icons.cancel_rounded,
-                    title: '放弃冲刺',
-                    subtitle: '放弃当前冲刺并归档',
+                    title: l10n.sprintActionAbandonTitle,
+                    subtitle: l10n.sprintActionAbandonSubtitle,
                     color: DS.semanticError,
                     onTap: () => _handleAbandon(context),
+                  ),
                   ),
                 ],
               ),
@@ -187,7 +202,8 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleComplete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => _ConfirmCompleteDialog(planName: widget.planName),
     );
@@ -203,7 +219,8 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleExtend(BuildContext context) async {
-    final days = await showDialog<int>(
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+    final days = await showSensoryDialog<int>(
       context: context,
       builder: (context) => _ExtendSprintDialog(planName: widget.planName),
     );
@@ -219,7 +236,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
   }
 
   Future<void> _handleAbandon(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (context) => _ConfirmAbandonDialog(planName: widget.planName),
     );
@@ -284,7 +301,7 @@ class _ConfirmCompleteDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('完成冲刺'),
+        title: Text(context.l10n.sprintConfirmCompleteTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,12 +313,12 @@ class _ConfirmCompleteDialog extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '确认完成「$planName」冲刺吗？',
+              context.l10n.sprintConfirmCompleteMessage(planName),
               style: context.sparkleTypography.bodyMedium,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '完成后冲刺将被归档，无法再编辑。',
+              context.l10n.sprintConfirmCompleteDesc,
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -311,14 +328,14 @@ class _ConfirmCompleteDialog extends StatelessWidget {
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            label: '取消',
+            label: context.l10n.cancel,
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: DS.semanticSuccess,
             ),
-            child: const Text('完成'),
+            child: Text(context.l10n.sprintActionCompleteButton),
           ),
         ],
       );
@@ -331,7 +348,7 @@ class _ConfirmAbandonDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('放弃冲刺'),
+        title: Text(context.l10n.sprintConfirmAbandonTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,12 +360,12 @@ class _ConfirmAbandonDialog extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '确认放弃「$planName」冲刺吗？',
+              context.l10n.sprintConfirmAbandonMessage(planName),
               style: context.sparkleTypography.bodyMedium,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '放弃后冲刺将被归档，当前进度将被保留。',
+              context.l10n.sprintConfirmAbandonDesc,
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -358,14 +375,14 @@ class _ConfirmAbandonDialog extends StatelessWidget {
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            label: '取消',
+            label: context.l10n.cancel,
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: DS.semanticError,
             ),
-            child: const Text('放弃'),
+            child: Text(context.l10n.sprintActionAbandonButton),
           ),
         ],
       );
@@ -386,7 +403,7 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('延长冲刺'),
+        title: Text(context.l10n.sprintExtendTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,12 +415,12 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '延长「${widget.planName}」冲刺',
+              context.l10n.sprintExtendMessage(widget.planName),
               style: context.sparkleTypography.bodyMedium,
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '选择延长天数',
+              context.l10n.sprintExtendSelectDays,
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -429,7 +446,7 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
                       ),
                     ),
                     child: Text(
-                      '$days 天',
+                      context.l10n.sprintExtendOptionDays(days),
                       style: context.sparkleTypography.bodyMedium.copyWith(
                         color: isSelected ? DS.white : DS.textPrimary,
                         fontWeight:
@@ -445,14 +462,16 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            label: '取消',
+            label: context.l10n.cancel,
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_selectedDays),
             style: FilledButton.styleFrom(
               backgroundColor: DS.info,
             ),
-            child: Text('延长 $_selectedDays 天'),
+            child: Text(
+              context.l10n.sprintExtendConfirm(_selectedDays),
+            ),
           ),
         ],
       );

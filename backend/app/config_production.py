@@ -8,6 +8,7 @@
 4. ✅ 默认值和类型转换
 5. ✅ 配置分组 (核心、性能、安全)
 """
+from __future__ import annotations
 
 from typing import Any
 
@@ -101,6 +102,21 @@ class ProductionSettings(BaseSettings):
     # 推送系统
     PUSH_CYCLE_MINUTES: int = Field(default=15, env="PUSH_CYCLE_MINUTES")
     PUSH_DAILY_CAP: int = Field(default=5, env="PUSH_DAILY_CAP")
+
+    # ==================== Firebase 配置 ====================
+    # Firebase Admin SDK (用于 FCM/APNs 推送)
+    FIREBASE_PROJECT_ID: str | None = Field(default=None, env="FIREBASE_PROJECT_ID")
+    FIREBASE_PRIVATE_KEY: str | None = Field(default=None, env="FIREBASE_PRIVATE_KEY")
+    FIREBASE_CLIENT_EMAIL: str | None = Field(default=None, env="FIREBASE_CLIENT_EMAIL")
+    FIREBASE_STORAGE_BUCKET: str | None = Field(default=None, env="FIREBASE_STORAGE_BUCKET")
+    FIREBASE_CREDENTIALS_PATH: str | None = Field(default=None, env="FIREBASE_CREDENTIALS_PATH")
+
+    # ==================== JPush 配置 (极光推送) ====================
+    # JPush SDK (用于国内用户推送)
+    JPUSH_APP_KEY: str | None = Field(default=None, env="JPUSH_APP_KEY")
+    JPUSH_MASTER_SECRET: str | None = Field(default=None, env="JPUSH_MASTER_SECRET")
+    JPUSH_REGION: str = Field(default="cn", env="JPUSH_REGION")  # cn, us, sg
+    JPUSH_ENABLED: bool = Field(default=True, env="JPUSH_ENABLED")
 
     # 知识拓展
     EXPANSION_WORKER_INTERVAL: int = Field(default=60, env="EXPANSION_WORKER_INTERVAL")
@@ -196,6 +212,38 @@ class ProductionSettings(BaseSettings):
         if self.REDIS_POOL_SIZE < 10:
             warnings.append("Low Redis pool size may limit concurrency")
 
+        # 检查 Firebase 配置
+        has_firebase_config = (
+            self.FIREBASE_CREDENTIALS_PATH is not None
+            or (
+                self.FIREBASE_PROJECT_ID is not None
+                and self.FIREBASE_PRIVATE_KEY is not None
+                and self.FIREBASE_CLIENT_EMAIL is not None
+            )
+        )
+
+        # 检查 JPush 配置
+        has_jpush_config = (
+            self.JPUSH_ENABLED
+            and self.JPUSH_APP_KEY is not None
+            and self.JPUSH_MASTER_SECRET is not None
+        )
+
+        if not has_firebase_config and not has_jpush_config:
+            warnings.append("Neither Firebase nor JPush configured - push notifications will be disabled")
+
+        # Build features dict
+        features = {
+            "metrics": self.ENABLE_METRICS,
+            "tracing": self.ENABLE_TRACING,
+            "circuit_breaker": True,
+            "context_pruner": True,
+            "token_tracker": True,
+            "push_notifications": has_firebase_config or has_jpush_config,
+            "jpush_enabled": has_jpush_config,
+            "fcm_enabled": has_firebase_config,
+        }
+
         result = {
             "valid": len(errors) == 0,
             "errors": errors,
@@ -203,13 +251,7 @@ class ProductionSettings(BaseSettings):
             "summary": {
                 "app": f"{self.APP_NAME} v{self.APP_VERSION}",
                 "environment": "production" if not self.DEBUG else "development",
-                "features": {
-                    "metrics": self.ENABLE_METRICS,
-                    "tracing": self.ENABLE_TRACING,
-                    "circuit_breaker": True,
-                    "context_pruner": True,
-                    "token_tracker": True,
-                }
+                "features": features,
             }
         }
 
@@ -226,7 +268,8 @@ class ProductionSettings(BaseSettings):
 
         # 脱敏敏感信息
         sensitive_keys = [
-            "SECRET_KEY", "LLM_API_KEY", "DATABASE_URL", "REDIS_URL"
+            "SECRET_KEY", "LLM_API_KEY", "DATABASE_URL", "REDIS_URL",
+            "JPUSH_MASTER_SECRET", "JPUSH_APP_KEY"
         ]
 
         for key in sensitive_keys:

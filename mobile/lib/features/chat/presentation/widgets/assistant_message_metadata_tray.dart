@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
 class AssistantMessageMetadataTray extends StatefulWidget {
@@ -10,12 +11,14 @@ class AssistantMessageMetadataTray extends StatefulWidget {
     required this.isLatestMessage,
     super.key,
     this.status,
+    this.messageMeta,
     this.onWidgetAction,
   });
 
   final List<WidgetPayload> actions;
   final bool isLatestMessage;
   final String? status;
+  final MessageMeta? messageMeta;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
@@ -37,12 +40,13 @@ class _AssistantMessageMetadataTrayState
     final nextActions =
         widget.isLatestMessage ? _findAction('next_actions') : null;
     final hasSources = _hasSourceDetails(sources?.data);
+    final hasTiming = _hasTiming(widget.messageMeta);
 
     if (widget.status != null && widget.status!.trim().isNotEmpty) {
       badges.add(
         _MetadataBadge(
           icon: _statusIcon(widget.status!),
-          label: _statusLabel(widget.status!),
+          label: _statusLabel(context, widget.status!),
           isCompact: true,
           selected: _expandedKey == 'status',
           onTap: () => _toggle('status'),
@@ -53,7 +57,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.link_rounded,
-          label: '承接上文',
+          label: context.l10n.chatMetadataContinuity,
           selected: false,
           onTap: () {},
           enabled: false,
@@ -64,7 +68,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.auto_awesome_rounded,
-          label: _shortModeLabel(mode.data),
+          label: _shortModeLabel(context, mode.data),
           selected: false,
           onTap: () {},
           enabled: false,
@@ -75,7 +79,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.library_books_outlined,
-          label: '依据',
+          label: context.l10n.chatMetadataEvidence,
           selected: _expandedKey == sources.type,
           onTap: () => _toggle(sources.type),
           iconOnlyWhenCollapsed: true,
@@ -86,11 +90,22 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.bookmark_added_rounded,
-          label: '下一步',
+          label: context.l10n.chatMetadataNext,
           selected: _expandedKey == nextActions.type,
           onTap: () => _toggle(nextActions.type),
           iconOnlyWhenCollapsed: true,
           emphasize: true,
+        ),
+      );
+    }
+    if (hasTiming) {
+      badges.add(
+        _MetadataBadge(
+          icon: Icons.timer_outlined,
+          label: '耗时',
+          selected: _expandedKey == 'timing',
+          onTap: () => _toggle('timing'),
+          iconOnlyWhenCollapsed: true,
         ),
       );
     }
@@ -140,7 +155,7 @@ class _AssistantMessageMetadataTrayState
         return _MetadataPanel(
           key: const ValueKey('status'),
           child: Text(
-            _statusLabel(status),
+            _statusLabel(context, status),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textPrimary,
                   height: 1.4,
@@ -169,6 +184,14 @@ class _AssistantMessageMetadataTrayState
             data: nextActions.data,
             onWidgetAction: widget.onWidgetAction,
           ),
+        );
+      case 'timing':
+        if (!_hasTiming(widget.messageMeta)) {
+          return const SizedBox.shrink();
+        }
+        return _MetadataPanel(
+          key: const ValueKey('timing'),
+          child: _TimingContent(meta: widget.messageMeta!),
         );
       default:
         return const SizedBox.shrink();
@@ -200,15 +223,24 @@ class _AssistantMessageMetadataTrayState
     return headline.isNotEmpty || evidenceSummary.isNotEmpty;
   }
 
+  bool _hasTiming(MessageMeta? meta) {
+    if (meta == null) return false;
+    return (meta.firstTokenMs ?? 0) > 0 ||
+        (meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0 ||
+        (meta.streamDurationMs ?? 0) > 0 ||
+        (meta.responseEventCount ?? 0) > 0 ||
+        (meta.modelTier?.isNotEmpty ?? false);
+  }
+
   void _toggle(String key) {
     setState(() {
       _expandedKey = _expandedKey == key ? null : key;
     });
   }
 
-  String _shortModeLabel(Map<String, dynamic> data) {
+  String _shortModeLabel(BuildContext context, Map<String, dynamic> data) {
     final label = data['label']?.toString().trim() ?? '';
-    if (label.isEmpty) return '协作';
+    if (label.isEmpty) return context.l10n.chatMetadataCollaboration;
     if (label.length <= 4) return label;
     return '${label.substring(0, 4)}…';
   }
@@ -230,21 +262,88 @@ class _AssistantMessageMetadataTrayState
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
     switch (status.toUpperCase()) {
       case 'THINKING':
-        return '正在思考';
+        return context.l10n.aiStatusThinking;
       case 'SEARCHING':
-        return '正在检索';
+        return context.l10n.aiStatusSearching;
       case 'EXECUTING_TOOL':
-        return '正在调用工具';
+        return context.l10n.aiStatusExecutingTool;
       case 'GENERATING':
-        return '正在生成';
+        return context.l10n.aiStatusGenerating;
       case 'IDLE':
-        return '已完成';
+        return context.l10n.aiStatusReady;
       default:
         return status;
     }
+  }
+}
+
+class _TimingContent extends StatelessWidget {
+  const _TimingContent({required this.meta});
+
+  final MessageMeta meta;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <MapEntry<String, String>>[
+      if ((meta.firstTokenMs ?? 0) > 0)
+        MapEntry('首包延迟', _formatDuration(meta.firstTokenMs!)),
+      if ((meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0)
+        MapEntry(
+          '总耗时',
+          _formatDuration(meta.totalDurationMs ?? meta.latencyMs!),
+        ),
+      if ((meta.streamDurationMs ?? 0) > 0)
+        MapEntry('流式阶段', _formatDuration(meta.streamDurationMs!)),
+      if ((meta.responseEventCount ?? 0) > 0)
+        MapEntry('事件数', '${meta.responseEventCount}'),
+      if ((meta.modelTier?.isNotEmpty ?? false))
+        MapEntry('模型层级', meta.modelTier!),
+      if ((meta.reasoningMode?.isNotEmpty ?? false))
+        MapEntry('档位', meta.reasoningMode!),
+      if (meta.isCacheHit != null)
+        MapEntry('缓存', meta.isCacheHit! ? '命中' : '未命中'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: rows
+          .map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      row.key,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      row.value,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  String _formatDuration(int ms) {
+    if (ms < 1000) return '${ms}ms';
+    return '${(ms / 1000).toStringAsFixed(1)}s';
   }
 }
 
@@ -339,19 +438,19 @@ class _MetadataPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(top: DS.spacing6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePanel,
-          borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.borderSubtle),
+        padding: const EdgeInsets.only(top: DS.spacing6),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: child,
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: child,
-        ),
-      ),
-    );
+      );
 }
 
 class _SourceSummaryContent extends StatelessWidget {
@@ -394,7 +493,8 @@ class _SourceSummaryContent extends StatelessWidget {
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(
-                          citation['title']?.toString().trim().isNotEmpty ?? false
+                          citation['title']?.toString().trim().isNotEmpty ??
+                                  false
                               ? citation['title'].toString()
                               : (citation['content']?.toString() ?? ''),
                           maxLines: 2,

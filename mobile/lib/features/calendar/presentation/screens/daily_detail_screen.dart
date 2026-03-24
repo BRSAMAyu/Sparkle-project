@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
@@ -20,6 +27,13 @@ class DailyDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarNotifier = ref.watch(calendarProvider.notifier);
     final events = calendarNotifier.getEventsForDay(date);
+    final streakHistory = ref.watch(streakHistoryProvider);
+    final streakRecord = streakHistory.days.where((record) {
+      final day = record.day;
+      return day.year == date.year &&
+          day.month == date.month &&
+          day.day == date.day;
+    }).firstOrNull;
 
     // Filter tasks for this date locally (mock logic as we load all tasks)
     final allTasks = ref.watch(taskListProvider).tasks;
@@ -32,6 +46,24 @@ class DailyDetailScreen extends ConsumerWidget {
     // Get Dashboard state for Prism/Flame (Mocking "historic" data with current data for demo)
     final dashboardState = ref.watch(dashboardProvider);
     final lunarData = LunarService().getLunarData(date);
+
+    // Get active plans for this date
+    final planListState = ref.watch(planListProvider);
+    final activePlans = planListState.activePlans.where((plan) {
+      // Plan is active if date falls between createdAt and targetDate
+      if (plan.targetDate != null) {
+        return date.isAfter(plan.createdAt.subtract(const Duration(days: 1))) &&
+            date.isBefore(plan.targetDate!.add(const Duration(days: 1)));
+      }
+      return plan.isActive;
+    }).toList();
+
+    // Get achievements close to unlock for motivation
+    final achievementState = ref.watch(achievementProvider);
+    final closeToUnlock = achievementState.achievements
+        .where((a) => !a.isUnlocked && a.progressPercentage >= 80)
+        .take(3)
+        .toList();
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -58,21 +90,56 @@ class DailyDetailScreen extends ConsumerWidget {
               _buildMetricsGrid(context, dashboardState),
               const SizedBox(height: DS.spacing20),
 
-              // 3. Cognitive Prism Snapshot
+              if (streakRecord != null) ...[
+                _buildSectionTitle(
+                  context,
+                  '打卡详情',
+                  Icons.local_fire_department_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                _buildCheckinSnapshot(context, streakRecord, dayTasks),
+                const SizedBox(height: DS.spacing20),
+              ],
+
+              // 3. Active Plans Section (NEW)
+              if (activePlans.isNotEmpty) ...[
+                _buildSectionTitle(
+                  context,
+                  '活跃计划',
+                  Icons.flag_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                ...activePlans.map((plan) => _buildActivePlanCard(context, ref, plan)),
+                const SizedBox(height: DS.spacing20),
+              ],
+
+              // 4. Achievements in Progress (NEW)
+              if (closeToUnlock.isNotEmpty) ...[
+                _buildSectionTitle(
+                  context,
+                  '即将解锁',
+                  Icons.emoji_events_rounded,
+                ),
+                const SizedBox(height: DS.spacing10),
+                _buildAchievementsInProgress(context, closeToUnlock),
+                const SizedBox(height: DS.spacing20),
+              ],
+
+              // 5. Cognitive Prism Snapshot
               _buildPrismSnapshot(context, dashboardState),
               const SizedBox(height: DS.spacing20),
 
-              // 4. Events Section
+              // 6. Events Section
               _buildSectionTitle(
                 context,
                 context.l10n.dailyDetailEventsSection,
                 Icons.event,
               ),
               const SizedBox(height: DS.spacing10),
-              _buildEventList(context, events),
+              _buildEventList(context, ref, events),
               const SizedBox(height: DS.spacing20),
 
-              // 5. Tasks Section
+              // 7. Tasks Section
               _buildSectionTitle(
                 context,
                 context.l10n.dailyDetailTasksSection,
@@ -85,6 +152,268 @@ class DailyDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Build active plan card with calendar integration
+  Widget _buildActivePlanCard(
+    BuildContext context,
+    WidgetRef ref,
+    PlanModel plan,
+  ) =>
+      GestureDetector(
+        onTap: () => context.push('/plans/${plan.id}'),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: DS.spacing8),
+          padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              DS.surfaceSecondary,
+              Color.lerp(DS.surfaceSecondary, DS.info, 0.08)!,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: DS.borderSubtle,
+            ),
+        ),
+        child: Row(
+          children: [
+            Container(
+                padding: const EdgeInsets.all(DS.spacing8),
+                decoration: BoxDecoration(
+                  color: DS.info.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  plan.type == PlanType.sprint
+                      ? Icons.flash_on_rounded
+                      : Icons.trending_up_rounded,
+                  color: DS.info,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: plan.progress / 100,
+                              backgroundColor: DS.info.withValues(alpha: 0.16),
+                              valueColor: AlwaysStoppedAnimation<Color>(DS.info),
+                              minHeight: 4,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing8),
+                        Text(
+                          '${plan.progress.toInt()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: DS.info,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: DS.textSecondary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildCheckinSnapshot(
+    BuildContext context,
+    StreakDayRecord record,
+    List<TaskModel> dayTasks,
+  ) {
+    final (title, description, color, icon) = switch (record.status) {
+      StreakDayStatus.active => (
+          '今日已形成有效打卡',
+          '已完成 ${dayTasks.where((task) => task.status == TaskStatus.completed).length} 个任务，连击记录已计入系统。',
+          DS.semanticSuccess,
+          Icons.local_fire_department_rounded,
+        ),
+      StreakDayStatus.frozen => (
+          '今日触发了连击保护',
+          '系统保留了连击，但这一天没有形成标准完成记录。',
+          DS.semanticWarning,
+          Icons.ac_unit_rounded,
+        ),
+      StreakDayStatus.missed => (
+          '今日没有形成打卡',
+          '任务与专注记录不足以计入当日连击。',
+          DS.textSecondary,
+          Icons.event_busy_rounded,
+        ),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                if (record.sourceEvent != null &&
+                    record.sourceEvent!.trim().isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text(
+                    '来源事件：${record.sourceEvent}',
+                    style: TextStyle(
+                      color: DS.textTertiary,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build achievements in progress section
+  Widget _buildAchievementsInProgress(
+    BuildContext context,
+    List<AchievementWithProgress> achievements,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            DS.surfaceSecondary,
+            Color.lerp(DS.surfaceSecondary, DS.brandSecondary, 0.08)!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: DS.borderSubtle,
+          ),
+        ),
+        child: Column(
+          children: achievements.map((achievement) {
+            final progressPercent = achievement.progressPercentage.toDouble();
+            final remaining = 100 - progressPercent;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Row(
+                children: [
+                  Icon(
+                    _getAchievementIcon(achievement.achievement.category),
+                    color: DS.brandSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          achievement.achievement.name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: DS.brandPrimaryConst,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(3),
+                                child: LinearProgressIndicator(
+                                  value: progressPercent / 100,
+                                  backgroundColor: DS.brandSecondary.withValues(alpha: 0.2),
+                                  valueColor: AlwaysStoppedAnimation<Color>(DS.brandSecondary),
+                                  minHeight: 3,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing8),
+                            Text(
+                              '还差 ${remaining.toInt()}%',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: DS.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      );
+
+  IconData _getAchievementIcon(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'learning':
+        return Icons.school_rounded;
+      case 'consistency':
+        return Icons.calendar_today_rounded;
+      case 'social':
+        return Icons.people_rounded;
+      case 'exploration':
+        return Icons.explore_rounded;
+      default:
+        return Icons.emoji_events_rounded;
+    }
   }
 
   Widget _buildDateHeader(
@@ -101,7 +430,7 @@ class DailyDetailScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(width: DS.lg),
@@ -112,13 +441,13 @@ class DailyDetailScreen extends ConsumerWidget {
                   DateFormat('EEEE', 'zh_CN').format(date),
                   style: TextStyle(
                     fontSize: 18,
-                    color: DS.brandPrimaryConst,
+                    color: DS.textPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   '${lunar.lunarMonth}${lunar.lunarDay} ${lunar.term} ${lunar.festivals.join(" ")}',
-                  style: TextStyle(fontSize: 14, color: DS.brandPrimary70),
+                  style: TextStyle(fontSize: 14, color: DS.textSecondary),
                 ),
               ],
             ),
@@ -178,13 +507,13 @@ class DailyDetailScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(height: DS.xs),
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: DS.brandPrimary54),
+              style: TextStyle(fontSize: 12, color: DS.textSecondary),
             ),
           ],
         ),
@@ -210,7 +539,7 @@ class DailyDetailScreen extends ConsumerWidget {
               Text(
                 context.l10n.dailyDetailPrismTitle,
                 style: TextStyle(
-                  color: DS.brandPrimaryConst,
+                  color: DS.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -220,13 +549,13 @@ class DailyDetailScreen extends ConsumerWidget {
           Text(
             state.cognitive.weeklyPattern ??
                 context.l10n.dailyDetailPrismFallback,
-            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 15),
+            style: TextStyle(color: DS.textPrimary, fontSize: 15),
           ),
           if (state.cognitive.description != null) ...[
             const SizedBox(height: DS.sm),
             Text(
               state.cognitive.description!,
-              style: TextStyle(color: DS.brandPrimary70Const, fontSize: 13),
+              style: TextStyle(color: DS.textSecondary, fontSize: 13),
             ),
           ],
         ],
@@ -246,7 +575,7 @@ class DailyDetailScreen extends ConsumerWidget {
           Text(
             title,
             style: TextStyle(
-              color: DS.brandPrimaryConst,
+              color: DS.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -256,6 +585,7 @@ class DailyDetailScreen extends ConsumerWidget {
 
   Widget _buildEventList(
     BuildContext context,
+    WidgetRef ref,
     List<CalendarEventModel> events,
   ) {
     if (events.isEmpty) {
@@ -271,14 +601,24 @@ class DailyDetailScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
-            color: DS.brandPrimary10Const,
+            color: DS.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
             border: Border(
               left: BorderSide(
                   color: _resolveEventColor(event.colorValue), width: 3,),
             ),
           ),
-          child: Row(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              if (event.taskId != null && event.taskId!.isNotEmpty) {
+                final encodedTaskId = Uri.encodeComponent(event.taskId!);
+                unawaited(context.push('/tasks/new?taskId=$encodedTaskId'));
+                return;
+              }
+              _showEditEventDialog(context, ref, event);
+            },
+            child: Row(
             children: [
               Expanded(
                 child: Column(
@@ -287,7 +627,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     Text(
                       event.title,
                       style: TextStyle(
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -296,7 +636,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       event.isAllDay
                           ? context.l10n.calendarAllDay
                           : '${Formatters.formatTime24(event.startTime)} - ${Formatters.formatTime24(event.endTime)}',
-                      style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
+                      style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -308,6 +648,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   size: 16,
                 ),
             ],
+            ),
           ),
         );
       },
@@ -329,8 +670,9 @@ class DailyDetailScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.1),
+            color: DS.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: DS.borderSubtle),
           ),
           child: Row(
             children: [
@@ -347,8 +689,8 @@ class DailyDetailScreen extends ConsumerWidget {
                   task.title,
                   style: TextStyle(
                     color: isCompleted
-                        ? DS.brandPrimary.withValues(alpha: 0.38)
-                        : DS.brandPrimary,
+                        ? DS.textTertiary
+                        : DS.textPrimary,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -370,14 +712,14 @@ class DailyDetailScreen extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: DS.spacing20),
         decoration: BoxDecoration(
-          color: DS.brandPrimary.withAlpha(5),
+          color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: DS.brandPrimary.withAlpha(10),
+            color: DS.borderSubtle,
           ), // Dashed border needs CustomPainter
         ),
         child: Center(
-          child: Text(text, style: TextStyle(color: DS.brandPrimary38)),
+          child: Text(text, style: TextStyle(color: DS.textSecondary)),
         ),
       );
 
@@ -396,5 +738,160 @@ class DailyDetailScreen extends ConsumerWidget {
       default:
         return DS.brandPrimary;
     }
+  }
+
+  void _showEditEventDialog(
+    BuildContext context,
+    WidgetRef ref,
+    CalendarEventModel event,
+  ) {
+    final titleController = TextEditingController(text: event.title);
+    final descController = TextEditingController(text: event.description ?? '');
+    final locationController = TextEditingController(
+      text: event.location ?? '',
+    );
+    var startTime = event.startTime;
+    var endTime = event.endTime;
+    var isAllDay = event.isAllDay;
+    var reminderMinutes = event.reminderMinutes.isNotEmpty
+        ? event.reminderMinutes.first
+        : 15;
+
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfaceSecondary,
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setModalState) => Padding(
+            padding: EdgeInsets.only(
+              left: DS.spacing16,
+              right: DS.spacing16,
+              top: DS.spacing20,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + DS.spacing16,
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '编辑日程',
+                      style: TextStyle(
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: '标题',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('全天'),
+                      value: isAllDay,
+                      onChanged: (value) => setModalState(() => isAllDay = value),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('开始时间'),
+                      subtitle: Text(Formatters.formatDateTime(startTime)),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('结束时间'),
+                      subtitle: Text(Formatters.formatDateTime(endTime)),
+                    ),
+                    TextField(
+                      controller: locationController,
+                      decoration: const InputDecoration(
+                        labelText: '地点',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: '描述',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    DropdownButtonFormField<int>(
+                      initialValue: reminderMinutes,
+                      decoration: const InputDecoration(
+                        labelText: '提醒',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('开始时')),
+                        DropdownMenuItem(value: 5, child: Text('提前 5 分钟')),
+                        DropdownMenuItem(value: 15, child: Text('提前 15 分钟')),
+                        DropdownMenuItem(value: 30, child: Text('提前 30 分钟')),
+                        DropdownMenuItem(value: 60, child: Text('提前 1 小时')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() => reminderMinutes = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SparkleButton.ghost(
+                            label: '取消',
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: SparkleButton(
+                            label: '保存',
+                            onPressed: () async {
+                              final updated = event.copyWith(
+                                title: titleController.text.trim().isEmpty
+                                    ? event.title
+                                    : titleController.text.trim(),
+                                description: descController.text.trim().isEmpty
+                                    ? null
+                                    : descController.text.trim(),
+                                location: locationController.text.trim().isEmpty
+                                    ? null
+                                    : locationController.text.trim(),
+                                startTime: startTime,
+                                endTime: endTime,
+                                isAllDay: isAllDay,
+                                reminderMinutes: [reminderMinutes],
+                                updatedAt: DateTime.now(),
+                              );
+                              await ref.read(calendarProvider.notifier).updateEvent(updated);
+                              if (sheetContext.mounted) {
+                                Navigator.of(sheetContext).pop();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

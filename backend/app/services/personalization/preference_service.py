@@ -1,9 +1,10 @@
 """
 偏好服务 - 统一的偏好数据访问层
 """
+
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -14,7 +15,7 @@ from app.models.user_preferences import UserPreferencesCenter
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PreferenceService:
@@ -33,6 +34,7 @@ class PreferenceService:
         "focus_duration_preference": 25,
         "enable_push": True,
         "enable_curiosity_push": True,
+        "share_achievements_to_community": True,
     }
 
     def __init__(self, db: AsyncSession, redis=None):
@@ -78,9 +80,9 @@ class PreferenceService:
             return await self.get_preferences(user_id)
 
         prefs = await self._get_or_create(user_id)
-        if prefs.explicit is None:
-            prefs.explicit = {}
-        prefs.explicit.update(updates)
+        explicit = dict(prefs.explicit or {})
+        explicit.update(updates)
+        prefs.explicit = explicit
         prefs.version = (prefs.version or 0) + 1
         prefs.last_explicit_update = _utcnow()
         prefs.updated_at = _utcnow()
@@ -92,10 +94,10 @@ class PreferenceService:
     async def delete_explicit_key(self, user_id: UUID, pref_key: str) -> UserPreferencesCenter:
         """删除显式偏好键并递增版本"""
         prefs = await self._get_or_create(user_id)
-        if prefs.explicit is None:
-            prefs.explicit = {}
-        if pref_key in prefs.explicit:
-            prefs.explicit.pop(pref_key, None)
+        explicit = dict(prefs.explicit or {})
+        if pref_key in explicit:
+            explicit.pop(pref_key, None)
+            prefs.explicit = explicit
             prefs.version = (prefs.version or 0) + 1
             prefs.last_explicit_update = _utcnow()
             prefs.updated_at = _utcnow()
@@ -106,10 +108,10 @@ class PreferenceService:
     async def delete_inferred_key(self, user_id: UUID, pref_key: str) -> UserPreferencesCenter:
         """删除推断偏好键并递增版本"""
         prefs = await self._get_or_create(user_id)
-        if prefs.inferred is None:
-            prefs.inferred = {}
-        if pref_key in prefs.inferred:
-            prefs.inferred.pop(pref_key, None)
+        inferred = dict(prefs.inferred or {})
+        if pref_key in inferred:
+            inferred.pop(pref_key, None)
+            prefs.inferred = inferred
             prefs.version = (prefs.version or 0) + 1
             prefs.last_inferred_update = _utcnow()
             prefs.updated_at = _utcnow()
@@ -147,9 +149,9 @@ class PreferenceService:
             prefs = await self._get_or_create(user_id)
             current_version = prefs.version or 0
 
-            if prefs.inferred is None:
-                prefs.inferred = {}
-            prefs.inferred.update(updates)
+            inferred = dict(prefs.inferred or {})
+            inferred.update(updates)
+            prefs.inferred = inferred
             prefs.version = current_version + 1
             prefs.last_inferred_update = _utcnow()
             prefs.updated_at = _utcnow()
@@ -166,10 +168,7 @@ class PreferenceService:
             except Exception as e:
                 await self.db.rollback()
                 if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Concurrent preference update for user {user_id}, "
-                        f"retrying (attempt {attempt + 1})"
-                    )
+                    logger.warning(f"Concurrent preference update for user {user_id}, retrying (attempt {attempt + 1})")
                     await asyncio.sleep(0.01 * (attempt + 1))  # 指数退避
                     continue
                 else:
@@ -178,22 +177,41 @@ class PreferenceService:
 
         return await self.get_preferences(user_id)
 
+    async def save_preferences(self, user_id: UUID, prefs_center: UserPreferencesCenter) -> UserPreferencesCenter:
+        """持久化偏好快照并递增版本。"""
+        stored = await self._get_or_create(user_id)
+
+        explicit = dict((prefs_center.explicit or {}))
+        inferred = dict((prefs_center.inferred or {}))
+
+        explicit_changed = explicit != (stored.explicit or {})
+        inferred_changed = inferred != (stored.inferred or {})
+
+        stored.explicit = explicit
+        stored.inferred = inferred
+
+        if explicit_changed:
+            stored.last_explicit_update = _utcnow()
+        if inferred_changed:
+            stored.last_inferred_update = _utcnow()
+        if explicit_changed or inferred_changed:
+            stored.version = (stored.version or 0) + 1
+            stored.updated_at = _utcnow()
+
+        await self.db.commit()
+        await self._invalidate_cache(user_id)
+        return self._fill_defaults(stored)
+
     async def _get_db_version(self, user_id: UUID) -> int:
         """获取数据库中的版本号"""
         result = await self.db.execute(
-            select(UserPreferencesCenter.version).where(
-                UserPreferencesCenter.user_id == user_id
-            )
+            select(UserPreferencesCenter.version).where(UserPreferencesCenter.user_id == user_id)
         )
         version = result.scalar_one_or_none()
         return version or 0
 
     async def _get_or_create(self, user_id: UUID) -> UserPreferencesCenter:
-        result = await self.db.execute(
-            select(UserPreferencesCenter).where(
-                UserPreferencesCenter.user_id == user_id
-            )
-        )
+        result = await self.db.execute(select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id))
         prefs = result.scalar_one_or_none()
         if prefs:
             return prefs

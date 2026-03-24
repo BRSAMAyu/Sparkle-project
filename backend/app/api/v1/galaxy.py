@@ -2,6 +2,7 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
@@ -9,11 +10,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+from app.models.plan import Plan
+from app.models.task import Task
 from app.schemas.galaxy import (
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
@@ -60,6 +63,14 @@ class MasterySyncRequest(BaseModel):
     reason: str = "offline_sync"
 
 
+class UpdateNodeMasteryRequest(BaseModel):
+    mastery: int | None = Field(None, ge=0, le=100)
+    mastery_delta: float | None = Field(None, ge=-100, le=100)
+    reason: str = "manual_update"
+    source: str | None = None
+    version: datetime | None = None
+
+
 @router.post("/sync/mastery")
 async def sync_node_mastery(
     request: MasterySyncRequest,
@@ -80,6 +91,44 @@ async def sync_node_mastery(
 
     if not result.get("success"):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.get("reason", "conflict"))
+
+    return result
+
+
+@router.post("/nodes/{node_id}/update-mastery")
+async def update_node_mastery(
+    node_id: UUID,
+    request: UpdateNodeMasteryRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Explicit REST entrypoint for node mastery updates used by Galaxy UI flows."""
+    if request.mastery is None and request.mastery_delta is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Either mastery or mastery_delta is required",
+        )
+
+    target_mastery = request.mastery
+    if target_mastery is None:
+        current_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
+        current_mastery = float(current_status.mastery_score or 0) if current_status else 0.0
+        delta = float(request.mastery_delta or 0.0)
+        target_mastery = max(0, min(100, int(round(current_mastery + delta))))
+
+    result = await galaxy_service.update_node_mastery(
+        user_id=UUID(user_id),
+        node_id=node_id,
+        new_mastery=target_mastery,
+        reason=request.reason if request.reason != "manual_update" else (request.source or request.reason),
+        version=request.version,
+    )
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("reason", "conflict"),
+        )
 
     return result
 
@@ -111,7 +160,7 @@ async def get_galaxy_graph(
 @router.post("/node/{node_id}/spark", response_model=SparkResult)
 async def spark_node(
     node_id: UUID,
-    request: SparkRequest,
+    request: SparkRequest | None = None,
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
@@ -123,13 +172,13 @@ async def spark_node(
     return await galaxy_service.spark_node(
         user_id=UUID(user_id),
         node_id=node_id,
-        study_minutes=request.study_minutes,
-        task_id=request.task_id,
-        trigger_expansion=request.trigger_expansion,
+        study_minutes=request.study_minutes if request else 1,
+        task_id=request.task_id if request else None,
+        trigger_expansion=request.trigger_expansion if request else True,
     )
 
 
-@router.get("/node/{node_id}", response_model=NodeDetailResponse)
+@router.get("/node/{node_id}")
 async def get_node_detail(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -137,39 +186,171 @@ async def get_node_detail(
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
-    获取知识点详情
+    获取知识点详情 — Flutter KnowledgeDetailResponse format
 
     包含节点基础信息、用户状态和关系信息。
     """
-    # 获取节点
-    node = await db.get(KnowledgeNode, node_id)
+    from sqlalchemy.orm import joinedload
+
+    # 获取节点（eager-load subject）
+    result = await db.execute(
+        select(KnowledgeNode)
+        .options(joinedload(KnowledgeNode.subject))
+        .where(KnowledgeNode.id == node_id)
+    )
+    node = result.scalar_one_or_none()
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
 
     # 获取用户状态
-    user_status = await galaxy_service._get_user_status(UUID(user_id), node_id)
+    user_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
 
-    # 获取关系
-    relations_query = select(NodeRelation).where(
-        or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
+    # 获取关系（含对端节点名称）
+    relations_query = (
+        select(NodeRelation)
+        .options(
+            joinedload(NodeRelation.source_node),
+            joinedload(NodeRelation.target_node),
+        )
+        .where(
+            or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
+        )
     )
     relations_result = await db.execute(relations_query)
-    relations = relations_result.scalars().all()
+    relations = relations_result.unique().scalars().all()
 
-    from app.schemas.galaxy import NodeWithStatus
+    # 构建 sector_code
+    sector_code = "VOID"
+    if node.subject:
+        sector_code = node.subject.sector_code or "VOID"
 
-    return NodeDetailResponse(
-        node=NodeWithStatus.from_models(node, user_status),
-        relations=[
-            NodeRelationInfo(
-                source_node_id=rel.source_node_id,
-                target_node_id=rel.target_node_id,
-                relation_type=rel.relation_type,
-                strength=rel.strength,
-            )
-            for rel in relations
-        ],
+    # 构建 user_stats (top-level, matching Flutter KnowledgeUserStats)
+    if user_status:
+        user_stats = {
+            "mastery_score": float(user_status.mastery_score or 0),
+            "total_study_minutes": int(user_status.total_study_minutes or 0),
+            "study_count": int(user_status.study_count or 0),
+            "is_unlocked": bool(user_status.is_unlocked),
+            "is_favorite": bool(user_status.is_favorite),
+            "last_study_at": user_status.last_study_at.isoformat() if user_status.last_study_at else None,
+            "next_review_at": user_status.next_review_at.isoformat() if user_status.next_review_at else None,
+            "decay_paused": bool(user_status.decay_paused),
+        }
+    else:
+        user_stats = {
+            "mastery_score": 0.0,
+            "total_study_minutes": 0,
+            "study_count": 0,
+            "is_unlocked": False,
+            "is_favorite": False,
+            "last_study_at": None,
+            "next_review_at": None,
+            "decay_paused": False,
+        }
+
+    # 构建 node dict (matching Flutter KnowledgeNodeDetail)
+    node_dict = {
+        "id": str(node.id),
+        "name": node.name,
+        "name_en": node.name_en,
+        "description": node.description,
+        "keywords": node.keywords or [],
+        "importance_level": node.importance_level,
+        "sector_code": sector_code,
+        "is_seed": bool(node.is_seed),
+        "source_type": node.source_type or "seed",
+        "parent_id": str(node.parent_id) if node.parent_id else None,
+        "subject_id": node.subject_id,
+        "subject_name": node.subject.name if node.subject else None,
+        "created_at": node.created_at.isoformat() if node.created_at else None,
+    }
+
+    # 构建 relations list (matching Flutter NodeRelation)
+    relations_list = [
+        {
+            "id": str(rel.id),
+            "source_node_id": str(rel.source_node_id),
+            "target_node_id": str(rel.target_node_id),
+            "relation_type": rel.relation_type,
+            "strength": float(rel.strength or 0.5),
+            "source_node_name": rel.source_node.name if rel.source_node else None,
+            "target_node_name": rel.target_node.name if rel.target_node else None,
+        }
+        for rel in relations
+    ]
+
+    related_tasks_result = await db.execute(
+        select(Task)
+        .where(Task.user_id == UUID(user_id), Task.knowledge_node_id == node_id)
+        .order_by(Task.updated_at.desc())
+        .limit(6)
     )
+    related_tasks = related_tasks_result.scalars().all()
+
+    related_plans_result = await db.execute(
+        select(Plan)
+        .where(
+            Plan.user_id == UUID(user_id),
+            Plan.source == "learning_path",
+        )
+        .order_by(Plan.updated_at.desc())
+        .limit(6)
+    )
+    related_plans = [
+        plan for plan in related_plans_result.scalars().all()
+        if isinstance(plan.source_metadata, dict)
+        and (
+            str(plan.source_metadata.get("target_node_id")) == str(node_id)
+            or str(node_id) in {
+                str(item) for item in (plan.source_metadata.get("path_node_ids") or [])
+            }
+        )
+    ]
+
+    return {
+        "node": node_dict,
+        "userStats": user_stats,
+        "relations": relations_list,
+        "relatedTasks": [
+            {
+                "id": str(task.id),
+                "user_id": str(task.user_id),
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "title": task.title,
+                "type": task.type.value if task.type else "LEARNING",
+                "tags": task.tags or [],
+                "estimated_minutes": int(task.estimated_minutes or 25),
+                "difficulty": int(task.difficulty or 1),
+                "energy_cost": int(task.energy_cost or 1),
+                "guide_content": task.guide_content,
+                "status": task.status.value if task.status else "PENDING",
+                "started_at": task.started_at.isoformat() if task.started_at else None,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                "actual_minutes": task.actual_minutes,
+                "user_note": task.user_note,
+                "priority": int(task.priority or 0),
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "knowledge_node_id": str(task.knowledge_node_id) if task.knowledge_node_id else None,
+                "order_index": int(task.order_index or 0),
+                "subtasks_total": int(task.subtasks_total or 0),
+                "subtasks_completed": int(task.subtasks_completed or 0),
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+                "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            }
+            for task in related_tasks
+        ],
+        "relatedPlans": [
+            {
+                "id": str(plan.id),
+                "title": plan.name,
+                "plan_type": plan.type.value if plan.type else "GROWTH",
+                "status": "active" if not plan.deleted_at else "archived",
+                "target_date": None,
+            }
+            for plan in related_plans
+        ],
+        "learningPathSnapshot": user_status.learning_path_snapshot if user_status else None,
+    }
 
 
 @router.post("/search", response_model=SearchResponse)
@@ -257,6 +438,41 @@ async def pause_node_decay(
     return {"status": "success", "node_id": str(node_id), "decay_paused": pause}
 
 
+@router.post("/node/{node_id}/favorite")
+async def toggle_node_favorite(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """切换知识点收藏状态"""
+    node = await db.get(KnowledgeNode, node_id)
+    if not node:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
+
+    user_uuid = UUID(user_id)
+    user_status = await db.get(UserNodeStatus, (user_uuid, node_id))
+
+    if not user_status:
+        user_status = UserNodeStatus(
+            user_id=user_uuid,
+            node_id=node_id,
+            is_unlocked=True,
+            is_favorite=True,
+            mastery_score=0,
+            total_minutes=0,
+            total_study_minutes=0,
+            study_count=0,
+        )
+    else:
+        user_status.is_favorite = not bool(user_status.is_favorite)
+
+    db.add(user_status)
+    await db.commit()
+    await db.refresh(user_status)
+
+    return {"status": "success", "node_id": str(node_id), "is_favorite": bool(user_status.is_favorite)}
+
+
 @router.post("/predict-next", response_model=Optional[NodeDetailResponse])
 async def predict_next_node(
     user_id: str = Depends(get_current_user_id),
@@ -305,7 +521,7 @@ async def get_galaxy_stats(
 
     包含节点统计、衰减统计等。
     """
-    user_stats = await galaxy_service._calculate_user_stats(UUID(user_id))
+    user_stats = await galaxy_service.stats.calculate_user_stats(UUID(user_id))
     decay_stats = await decay_service.get_decay_stats(UUID(user_id))
 
     return {"user_stats": user_stats, "decay_stats": decay_stats}

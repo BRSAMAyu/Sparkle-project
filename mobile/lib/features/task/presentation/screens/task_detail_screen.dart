@@ -1,6 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +9,20 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
@@ -31,12 +43,12 @@ class TaskDetailScreen extends ConsumerWidget {
           loading: () => Center(
             child: LoadingIndicator.circular(
               showText: true,
-              loadingText: '加载任务详情...',
+              loadingText: context.l10n.taskDetailLoading,
             ),
           ),
           error: (err, stack) => CustomErrorWidget.page(
             context: context,
-            message: '任务加载失败：$err',
+            message: context.l10n.taskDetailLoadFailed(err.toString()),
             onRetry: () => ref.refresh(taskDetailProvider(taskId)),
           ),
         ),
@@ -60,24 +72,37 @@ class _TaskDetailView extends ConsumerWidget {
                   child: ContentConstraint(
                     child: Padding(
                       padding: const EdgeInsets.all(DS.spacing16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: SparkleStaggerList(
+                        gap: DS.spacing24,
                         children: [
-                          _buildInfoSection(context),
-                          const SizedBox(height: DS.spacing24),
-                          Text(
-                            '执行指南',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                ),
+                          _buildInfoSection(context, ref),
+                          if ((task.userNote ?? '').trim().isNotEmpty)
+                            _buildNoteSection(context),
+                          _buildSubtaskSection(context, ref),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      context.l10n.taskGuideTitle,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: DS.fontWeightBold,
+                                          ),
+                                    ),
+                                  ),
+                                  _GenerateGuideButton(taskId: task.id),
+                                ],
+                              ),
+                              const SizedBox(height: DS.spacing12),
+                              _buildGuideSection(context),
+                            ],
                           ),
-                          const SizedBox(height: DS.spacing12),
-                          _buildGuideSection(context),
-                          const SizedBox(
-                              height: DS.spacing64,), // Space for bottom bar
+                          const SizedBox(height: DS.spacing64),
                         ],
                       ),
                     ),
@@ -90,41 +115,158 @@ class _TaskDetailView extends ConsumerWidget {
         ],
       );
 
+  Widget _buildNoteSection(BuildContext context) => GraphiteCardSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.notes_rounded, color: DS.primaryBase, size: 20),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  '任务说明',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            Text(
+              task.userNote!.trim(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.6,
+                  ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildSubtaskSection(BuildContext context, WidgetRef ref) {
+    final subtaskState = ref.watch(subtaskNotifierProvider(task.id));
+    final shouldShowSection = task.subtasksTotal > 0 || subtaskState.total > 0;
+    if (!shouldShowSection) {
+      return const SizedBox.shrink();
+    }
+
+    return GraphiteCardSurface(
+      padding: EdgeInsets.zero,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        shape: const Border(),
+        tilePadding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Icon(
+                Icons.checklist_rounded,
+                color: DS.primaryBase,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Text(
+                '子任务 (${subtaskState.completed}/${subtaskState.total})',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing16,
+            ),
+            child: subtaskState.isLoading && subtaskState.total == 0
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : subtaskState.error != null && subtaskState.total == 0
+                    ? Text(
+                        '子任务加载失败：${subtaskState.error}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.error,
+                            ),
+                      )
+                    : SubtaskListWidget(
+                        parentTaskId: task.id,
+                        onSubtaskToggle: (_) {},
+                        onSubtaskDelete: (_) {},
+                        readOnly: true,
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
   LinearGradient _getBackgroundGradient(TaskType type) {
     switch (type) {
       case TaskType.learning:
         return LinearGradient(
-          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.62)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.training:
         return LinearGradient(
-          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.success, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.success, 0.58)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.errorFix:
         return LinearGradient(
-          colors: [DS.error.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.error, 0.14)!,
+            Color.lerp(DS.surfaceSecondary, DS.error, 0.52)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.reflection:
         return LinearGradient(
-          colors: [DS.rarityEpicBg, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.rarityEpic, 0.18)!,
+            Color.lerp(DS.surfaceSecondary, DS.rarityEpic, 0.56)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.social:
         return LinearGradient(
-          colors: [DS.success.shade50, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.info, 0.16)!,
+            Color.lerp(DS.surfaceSecondary, DS.info, 0.54)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case TaskType.planning:
         return LinearGradient(
-          colors: [DS.infoLight, DS.brandPrimary],
+          colors: [
+            Color.lerp(DS.surfaceSecondary, DS.warning, 0.14)!,
+            Color.lerp(DS.surfaceSecondary, DS.warning, 0.48)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -145,6 +287,13 @@ class _TaskDetailView extends ConsumerWidget {
         ),
         expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
+        actions: [
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () => unawaited(_showShareSheet(context)),
+          ),
+        ],
         flexibleSpace: FlexibleSpaceBar(
           background: Hero(
             tag: 'task-${task.id}',
@@ -178,22 +327,21 @@ class _TaskDetailView extends ConsumerWidget {
                           children: [
                             Chip(
                               label: Text(
-                                toBeginningOfSentenceCase(task.type.name) ??
-                                    task.type.name,
+                                _taskTypeLabel(context, task.type),
                                 style: const TextStyle(fontSize: DS.fontSizeSm),
                               ),
                               backgroundColor:
-                                  DS.brandPrimary.withValues(alpha: 0.8),
+                                  DS.surfaceOverlay.withValues(alpha: 0.92),
                               avatar: Icon(
                                 Icons.category,
                                 size: DS.iconSizeXs,
-                                color: DS.primaryBase,
+                                color: DS.textSecondary,
                               ),
+                              labelStyle: TextStyle(color: DS.textPrimary),
                             ),
                             Chip(
                               label: Text(
-                                toBeginningOfSentenceCase(task.status.name) ??
-                                    task.status.name,
+                                _taskStatusLabel(context, task.status),
                                 style: const TextStyle(fontSize: DS.fontSizeSm),
                               ),
                               backgroundColor: _getStatusColor(task.status)
@@ -215,107 +363,210 @@ class _TaskDetailView extends ConsumerWidget {
         ),
       );
 
-  Widget _buildInfoSection(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _InfoTileCard(
-            icon: Icons.timer_outlined,
-            title: '预计时长',
-            content: '${task.estimatedMinutes} 分钟',
-            gradient: DS.primaryGradient,
-          ),
+  Future<void> _showShareSheet(BuildContext context) async {
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.taskCompletion,
+        resourceId: task.id,
+        title: task.title,
+        subtitle: task.guideContent?.split('\n').first ?? '',
+        description: task.userNote,
+        metadata: {
+          'duration': task.actualMinutes ?? task.estimatedMinutes,
+          'completed_at':
+              (task.completedAt ?? task.updatedAt).toIso8601String(),
+          'task_type': _taskTypeLabel(context, task.type),
+          'subtasks_completed': task.subtasksCompleted,
+          'subtasks_total': task.subtasksTotal,
+        },
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
+    );
+  }
+
+  Widget _buildInfoSection(BuildContext context, WidgetRef ref) {
+    final planAsync = task.planId == null
+        ? null
+        : ref.watch(planDetailProvider(task.planId!));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (planAsync != null) ...[
+          _buildPlanContextCard(context, planAsync),
           const SizedBox(height: DS.spacing12),
-          Row(
-            children: [
-              Expanded(
-                child: _InfoTileCard(
-                  icon: Icons.star_border,
-                  title: '难度',
-                  content: '${task.difficulty} / 5',
-                  gradient: DS.warningGradient,
+        ],
+        _InfoTileCard(
+          icon: Icons.timer_outlined,
+          title: context.l10n.taskEstimatedDuration,
+          content: Formatters.formatDuration(
+            Duration(minutes: task.estimatedMinutes),
+          ),
+          gradient: DS.primaryGradient,
+        ),
+        const SizedBox(height: DS.spacing12),
+        Row(
+          children: [
+            Expanded(
+              child: _InfoTileCard(
+                icon: Icons.star_border,
+                title: context.l10n.taskDifficulty,
+                content: '${task.difficulty} / 5',
+                gradient: DS.warningGradient,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: _InfoTileCard(
+                icon: Icons.local_fire_department,
+                title: context.l10n.taskEnergyCost,
+                content: '${task.energyCost} / 5',
+                gradient: DS.errorGradient,
+              ),
+            ),
+          ],
+        ),
+        if (task.dueDate != null) ...[
+          const SizedBox(height: DS.spacing12),
+          _InfoTileCard(
+            icon: Icons.calendar_today,
+            title: context.l10n.taskDeadline,
+            content: DateFormat.yMMMd().format(task.dueDate!),
+            gradient: DS.infoGradient,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlanContextCard(
+    BuildContext context,
+    AsyncValue<PlanModel> planAsync,
+  ) =>
+      planAsync.when(
+        data: (plan) => GraphiteCardSurface(
+          child: InkWell(
+            borderRadius: DS.borderRadius16,
+            onTap: () => context.push('/plans/${plan.id}'),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: DS.primaryGradient,
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: const Icon(
+                    Icons.route_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '所属计划',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: DS.textSecondary,
+                                  fontWeight: DS.fontWeightMedium,
+                                ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        plan.name,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: DS.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        loading: () => GraphiteCardSurface(
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: _InfoTileCard(
-                  icon: Icons.local_fire_department,
-                  title: '消耗能量',
-                  content: '${task.energyCost} / 5',
-                  gradient: DS.errorGradient,
-                ),
+              Text(
+                '正在加载所属计划...',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                    ),
               ),
             ],
           ),
-          if (task.dueDate != null) ...[
-            const SizedBox(height: DS.spacing12),
-            _InfoTileCard(
-              icon: Icons.calendar_today,
-              title: '截止日期',
-              content: DateFormat.yMMMd().format(task.dueDate!),
-              gradient: DS.infoGradient,
-            ),
-          ],
-        ],
+        ),
+        error: (_, __) => const SizedBox.shrink(),
       );
 
   Widget _buildGuideSection(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
+          color: DS.surfaceSecondary,
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.neutral200),
           boxShadow: DS.shadowSm,
         ),
-        child: MarkdownBody(
-          data: task.guideContent ?? '暂无执行指南',
-          styleSheet: MarkdownStyleSheet(
-            h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral900,
-                ),
-            h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral800,
-                ),
-            h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral700,
-                ),
-            p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.neutral700,
-                  height: 1.6,
-                ),
-            listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.primaryBase,
-                ),
-            code: TextStyle(
-              backgroundColor: DS.neutral100,
-              color: DS.primaryDark,
-              fontFamily: 'monospace',
-              fontSize: DS.fontSizeSm,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: DS.neutral50,
-              borderRadius: DS.borderRadius8,
-              border: Border.all(color: DS.neutral200),
-            ),
-            blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: DS.neutral600,
-                  fontStyle: FontStyle.italic,
-                ),
-            blockquoteDecoration: BoxDecoration(
-              color: DS.neutral50,
-              borderRadius: DS.borderRadius8,
-              border: Border(
-                left: BorderSide(
-                  color: DS.primaryBase,
-                  width: 4,
-                ),
-              ),
-            ),
-          ),
+        child: SparkleMarkdown(
+          content: task.guideContent ?? context.l10n.taskGuideEmpty,
+          textColor: DS.textPrimary,
+          codeBackgroundColor: DS.neutral100,
+          linkColor: DS.primaryBase,
+          contentRole: SparkleMarkdownRole.taskGuide,
         ),
       );
+
+  String _taskTypeLabel(BuildContext context, TaskType type) {
+    final l10n = context.l10n;
+    switch (type) {
+      case TaskType.learning:
+        return l10n.taskTypeLearning;
+      case TaskType.training:
+        return l10n.taskTypeTraining;
+      case TaskType.errorFix:
+        return l10n.taskTypeFix;
+      case TaskType.reflection:
+        return l10n.taskTypeReflection;
+      case TaskType.social:
+        return l10n.taskTypeSocial;
+      case TaskType.planning:
+        return l10n.taskTypePlanning;
+      case TaskType.ocr:
+        return l10n.taskTypeLearning;
+    }
+  }
+
+  String _taskStatusLabel(BuildContext context, TaskStatus status) {
+    final l10n = context.l10n;
+    switch (status) {
+      case TaskStatus.pending:
+        return l10n.taskStatusPending;
+      case TaskStatus.inProgress:
+        return l10n.taskStatusInProgress;
+      case TaskStatus.completed:
+        return l10n.taskStatusCompleted;
+      case TaskStatus.abandoned:
+        return l10n.taskStatusAbandoned;
+    }
+  }
 
   Color _getStatusColor(TaskStatus status) {
     switch (status) {
@@ -402,8 +653,11 @@ class _InfoTileCardState extends State<_InfoTileCard>
                       ),
                     ],
                   ),
-                  child: Icon(widget.icon,
-                      color: DS.brandPrimaryConst, size: DS.iconSizeSm,),
+                  child: Icon(
+                    widget.icon,
+                    color: DS.brandPrimaryConst,
+                    size: DS.iconSizeSm,
+                  ),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(
@@ -454,11 +708,11 @@ class _BottomActionBar extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(DS.spacing16),
             decoration: BoxDecoration(
-              color: DS.brandPrimaryConst,
+              color: DS.surfacePrimary,
               boxShadow: DS.shadowMd,
               border: Border(
                 top: BorderSide(
-                  color: DS.neutral200,
+                  color: DS.borderSubtle,
                 ),
               ),
             ),
@@ -466,12 +720,14 @@ class _BottomActionBar extends ConsumerWidget {
               children: [
                 Expanded(
                   child: CustomButton.secondary(
-                    text: '编辑',
+                    text: context.l10n.commonEdit,
                     icon: Icons.edit_outlined,
                     onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      // TODO: 需要创建任务编辑页面，暂时导航到创建页面
-                      context.push('/tasks/new');
+                      unawaited(
+                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                      );
+                      // TRACKED(TD-002): 需要创建任务编辑页面，暂时导航到创建页面
+                      unawaited(context.push('/tasks/new'));
                     },
                   ),
                 ),
@@ -479,16 +735,19 @@ class _BottomActionBar extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: CustomButton.primary(
-                    text: '开始任务',
+                    text: context.l10n.taskStart,
                     icon: Icons.play_arrow_rounded,
                     onPressed: () {
-                      HapticFeedback.heavyImpact();
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.confirm,),
+                      );
                       ref.read(activeTaskProvider.notifier).state = task;
                       // P0-1: Auto-switch plan context when starting task
                       ref
                           .read(activePlanProvider.notifier)
                           .selectFromTaskPlanId(task.planId);
-                      context.push('/tasks/${task.id}/execute');
+                      unawaited(context.push('/tasks/${task.id}/execute'));
                     },
                   ),
                 ),
@@ -506,40 +765,51 @@ class _BottomActionBar extends ConsumerWidget {
                     size: 40,
                     icon: Icon(Icons.delete_outline, color: DS.error),
                     onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      showDialog<void>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: DS.borderRadius20,
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.dialogOpen,),
+                      );
+                      unawaited(
+                        showSensoryDialog<void>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: DS.borderRadius20,
+                            ),
+                            title: Text(
+                              context.l10n.taskDeleteTitle,
+                              style: const TextStyle(
+                                fontWeight: DS.fontWeightBold,
+                              ),
+                            ),
+                            content: Text(context.l10n.taskDeleteConfirm),
+                            actions: [
+                              CustomButton.text(
+                                text: context.l10n.cancel,
+                                onPressed: () => Navigator.of(ctx).pop(),
+                              ),
+                              CustomButton.primary(
+                                text: context.l10n.commonDelete,
+                                icon: Icons.delete_rounded,
+                                onPressed: () {
+                                  unawaited(
+                                    SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.error,
+                                    ),
+                                  );
+                                  Navigator.of(ctx).pop();
+                                  unawaited(
+                                    ref
+                                        .read(taskListProvider.notifier)
+                                        .deleteTask(task.id),
+                                  );
+                                  context.pop();
+                                },
+                                customGradient: DS.errorGradient,
+                                size: CustomButtonSize.small,
+                              ),
+                            ],
                           ),
-                          title: const Text(
-                            '删除任务',
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                          ),
-                          content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
-                          actions: [
-                            CustomButton.text(
-                              text: '取消',
-                              onPressed: () => Navigator.of(ctx).pop(),
-                            ),
-                            CustomButton.primary(
-                              text: '删除',
-                              icon: Icons.delete_rounded,
-                              onPressed: () {
-                                HapticFeedback.heavyImpact();
-                                Navigator.of(ctx).pop();
-                                ref
-                                    .read(taskListProvider.notifier)
-                                    .deleteTask(task.id);
-                                context.pop();
-                              },
-                              customGradient: DS.errorGradient,
-                              size: CustomButtonSize.small,
-                            ),
-                          ],
                         ),
                       );
                     },
@@ -550,6 +820,54 @@ class _BottomActionBar extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _GenerateGuideButton extends ConsumerStatefulWidget {
+  const _GenerateGuideButton({required this.taskId});
+  final String taskId;
+
+  @override
+  ConsumerState<_GenerateGuideButton> createState() =>
+      _GenerateGuideButtonState();
+}
+
+class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
+  bool _isGenerating = false;
+
+  Future<void> _generate() async {
+    setState(() => _isGenerating = true);
+    try {
+      await ref.read(taskListProvider.notifier).generateGuide(widget.taskId);
+      if (mounted) {
+        ref.invalidate(taskDetailProvider(widget.taskId));
+        AppFeedback.success(context, '任务指南已生成');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '生成失败: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isGenerating) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return SparkleButton(
+      label: 'AI 生成',
+      size: ButtonSize.small,
+      variant: ButtonVariant.secondary,
+      icon: const Icon(Icons.auto_awesome, size: 14),
+      onPressed: _generate,
     );
   }
 }

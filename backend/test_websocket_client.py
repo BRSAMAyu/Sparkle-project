@@ -165,34 +165,37 @@ async def test_multiple_messages():
         uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
         logger.info(f"\n📤 Message {i}/{len(messages)}: {msg}")
 
-        async with websockets.connect(uri, additional_headers=headers) as websocket:
-            await websocket.send(json.dumps({
-                "message": msg,
-                "session_id": session_id,
-                "nickname": "测试同学"
-            }))
+        try:
+            async with websockets.connect(uri, additional_headers=headers) as websocket:
+                await websocket.send(json.dumps({
+                    "message": msg,
+                    "session_id": session_id,
+                    "nickname": "测试同学"
+                }))
 
-            # 接收这条消息的所有响应
-            saw_finish = False
-            while True:
-                try:
-                    response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
-                    data = json.loads(response)
+                # 接收这条消息的所有响应
+                saw_finish = False
+                while True:
+                    try:
+                        response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                        data = json.loads(response)
 
-                    if data.get("type") == "delta":
-                        print(data.get("delta", ""), end="", flush=True)
+                        if data.get("type") == "delta":
+                            print(data.get("delta", ""), end="", flush=True)
 
-                    if data.get("finish_reason") and data.get("finish_reason") != "NULL":
-                        saw_finish = True
-                        print()  # 换行
-                        continue
+                        if data.get("finish_reason") and data.get("finish_reason") != "NULL":
+                            saw_finish = True
+                            print()  # 换行
+                            continue
 
-                    # finish 后通常会有 meta，拿到后可结束当前消息
-                    if saw_finish and data.get("type") == "meta":
+                        # finish 后通常会有 meta，拿到后可结束当前消息
+                        if saw_finish and data.get("type") == "meta":
+                            break
+
+                    except asyncio.TimeoutError:
                         break
-
-                except asyncio.TimeoutError:
-                    break
+        except websockets.exceptions.ConnectionClosed as exc:
+            logger.warning(f"WebSocket closed without close frame: {exc}")
 
         logger.success("\n✅ Multiple messages test completed!")
 

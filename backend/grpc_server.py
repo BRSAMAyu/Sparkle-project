@@ -3,6 +3,8 @@ Sparkle AI Agent - gRPC Server
 Python 后端 gRPC 服务入口
 负责 AI 推理、RAG 检索、长期记忆管理
 """
+from __future__ import annotations
+
 import sys
 import os
 import asyncio
@@ -30,6 +32,7 @@ from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
 from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
 from app.api.grpc_auth import AuthInterceptor
 from app.core.cache import cache_service
+from app.core.galaxy_event_bridge import galaxy_event_bridge
 from app.db.session import AsyncSessionLocal
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.config import settings
@@ -67,6 +70,8 @@ class GracefulShutdown:
         await self.server.stop(grace=5.0)  # 5 秒优雅关闭
         if self.orchestrator:
             await self.orchestrator.shutdown()
+        # Stop Galaxy Event Bridge (EventBus -> SSE)
+        await galaxy_event_bridge.stop()
         await cache_service.close()
         logger.info("gRPC server stopped successfully")
 
@@ -100,6 +105,9 @@ async def serve():
         raise
 
     orchestrator = ChatOrchestrator(redis_client=cache_service.redis)
+
+    # Start Galaxy Event Bridge (EventBus -> SSE)
+    await galaxy_event_bridge.start()
 
     # 注册 AgentService
     agent_service_pb2_grpc.add_AgentServiceServicer_to_server(

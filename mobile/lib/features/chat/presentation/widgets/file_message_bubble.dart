@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -172,15 +173,16 @@ class _FileMessageBubbleWithThumbnailState
   }
 
   String _statusLabel(String? status) {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case 'processing':
-        return '处理中';
+        return l10n.fileStatusProcessing;
       case 'processed':
-        return '就绪';
+        return l10n.fileStatusReady;
       case 'failed':
-        return '失败';
+        return l10n.fileStatusFailed;
       case 'uploaded':
-        return '已上传';
+        return l10n.fileStatusUploaded;
       default:
         return status ?? '';
     }

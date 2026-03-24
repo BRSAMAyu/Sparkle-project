@@ -2,30 +2,37 @@
 计划模型
 Plan Model - 冲刺计划和成长计划
 """
+
 import enum
 
-from sqlalchemy import Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
 
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+
 
 class PlanType(str, enum.Enum):
     """计划类型枚举"""
+
     SPRINT = "sprint"  # 冲刺计划(短期考试)
     GROWTH = "growth"  # 成长计划(长期技能)
 
 
 class PlanPriority(str, enum.Enum):
     """计划优先级枚举"""
+
     CRITICAL = "critical"  # 紧急/截止日期临近
-    HIGH = "high"          # 重要
-    NORMAL = "normal"      # 普通
-    LOW = "low"            # 低优先级
+    HIGH = "high"  # 重要
+    NORMAL = "normal"  # 普通
+    LOW = "low"  # 低优先级
 
 
 class PlanStage(str, enum.Enum):
     """计划阶段枚举"""
+
     SPRINT = "sprint"
     DAILY = "daily"
     REVIEW = "review"
@@ -34,13 +41,14 @@ class PlanStage(str, enum.Enum):
 
 class PlanStatus(str, enum.Enum):
     """计划状态枚举"""
-    DRAFT = "draft"                  # 草稿
+
+    DRAFT = "draft"  # 草稿
     PENDING_REVIEW = "pending_review"  # 待审核
-    ACTIVE = "active"                # 激活
-    PAUSED = "paused"                # 暂停
-    COMPLETED = "completed"          # 已完成
-    ARCHIVED = "archived"            # 已归档
-    CANCELLED = "cancelled"          # 已取消
+    ACTIVE = "active"  # 激活
+    PAUSED = "paused"  # 暂停
+    COMPLETED = "completed"  # 已完成
+    ARCHIVED = "archived"  # 已归档
+    CANCELLED = "cancelled"  # 已取消
 
 
 class Plan(BaseModel):
@@ -80,7 +88,7 @@ class Plan(BaseModel):
         Enum(PlanStage, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=PlanStage.DAILY,
-        index=True
+        index=True,
     )
 
     # 时间相关
@@ -93,7 +101,7 @@ class Plan(BaseModel):
 
     # 进度跟踪
     mastery_level = Column(Float, default=0.0, nullable=False)  # 范围 0-1
-    progress = Column(Float, default=0.0, nullable=False)        # 进度百分比 0-1
+    progress = Column(Float, default=0.0, nullable=False)  # 进度百分比 0-1
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False, index=True)
@@ -103,18 +111,22 @@ class Plan(BaseModel):
         Enum(PlanPriority, values_callable=lambda obj: [e.value for e in obj]),
         default=PlanPriority.NORMAL,
         nullable=False,
-        index=True
+        index=True,
     )
+    is_primary = Column(Boolean, default=False, nullable=False, index=True)
+
+    # 来源标记 (Phase 4: 学习路径进度追踪)
+    source = Column(String(32), nullable=True, index=True)
+    source_metadata = Column(JSONBCompat, nullable=True)
+
+    # 关系定义
+    user = relationship("User", back_populates="plans")
+    tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
     is_primary = Column(Boolean, default=False, nullable=False, index=True)
 
     # 关系定义
     user = relationship("User", back_populates="plans")
-    tasks = relationship(
-        "Task",
-        back_populates="plan",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
-    )
+    tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
 
     def __repr__(self):
         return f"<Plan(name={self.name}, type={self.type}, progress={self.progress})>"

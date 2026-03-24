@@ -371,6 +371,95 @@ class ResponsiveGridSystem {
       );
 }
 
+/// 响应式间距工具
+///
+/// 提供基于设备类别的响应式尺寸值，用于替换硬编码的固定宽度/高度值。
+class ResponsiveSpacing {
+  const ResponsiveSpacing._();
+
+  /// 侧边栏/抽屉宽度
+  static double sidebarWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 280.0,
+        tablet: 300.0,
+        desktop: 320.0,
+        wide: 360.0,
+      );
+
+  /// 底部面板高度
+  static double bottomSheetHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 280.0,
+        tablet: 320.0,
+        desktop: 360.0,
+      );
+
+  /// 卡片最大宽度
+  static double cardMaxWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: double.infinity,
+        tablet: 400.0,
+        desktop: 480.0,
+      );
+
+  /// 列表项最小高度
+  static double listItemMinHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 56.0,
+        tablet: 64.0,
+        desktop: 72.0,
+      );
+
+  /// 对话框最大宽度
+  static double dialogMaxWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 320.0,
+        tablet: 480.0,
+        desktop: 560.0,
+      );
+
+  /// 图标尺寸
+  static double iconSize(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 24.0,
+        tablet: 28.0,
+        desktop: 32.0,
+      );
+
+  /// 按钮高度
+  static double buttonHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 44.0,
+        tablet: 48.0,
+        desktop: 52.0,
+      );
+
+  /// 输入框高度
+  static double inputHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 48.0,
+        tablet: 52.0,
+        desktop: 56.0,
+      );
+
+  /// 卡片圆角
+  static double cardBorderRadius(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 12.0,
+        tablet: 16.0,
+        desktop: 20.0,
+      );
+}
+
 /// 内容约束系统
 class ContentConstraintSystem {
   /// 最大内容宽度

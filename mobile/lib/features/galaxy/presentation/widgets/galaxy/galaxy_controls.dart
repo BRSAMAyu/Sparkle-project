@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class GalaxyControls extends StatelessWidget {
   const GalaxyControls({
@@ -30,6 +33,7 @@ class GalaxyControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final backgroundColor = isDarkMode
         ? const Color(0xAA0F1726)
         : Colors.white.withValues(alpha: 0.78);
@@ -46,7 +50,17 @@ class GalaxyControls extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                backgroundColor,
+                Color.alphaBlend(
+                  glowColor.withValues(alpha: isDarkMode ? 0.08 : 0.04),
+                  backgroundColor,
+                ),
+              ],
+            ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: borderColor),
             boxShadow: [
@@ -68,19 +82,19 @@ class GalaxyControls extends StatelessWidget {
                   children: [
                     _ControlButton(
                       icon: Icons.add_rounded,
-                      tooltip: '放大',
+                      tooltip: l10n.galaxyControlZoomIn,
                       iconColor: iconColor,
                       onPressed: onZoomIn,
                     ),
                     _ControlButton(
                       icon: Icons.my_location_rounded,
-                      tooltip: '返回全景',
+                      tooltip: l10n.galaxyControlOverview,
                       iconColor: iconColor,
                       onPressed: onFitToOverview,
                     ),
                     _ControlButton(
                       icon: Icons.remove_rounded,
-                      tooltip: '缩小',
+                      tooltip: l10n.galaxyControlZoomOut,
                       iconColor: iconColor,
                       onPressed: onZoomOut,
                     ),
@@ -95,7 +109,9 @@ class GalaxyControls extends StatelessWidget {
                       icon: isSearchOpen
                           ? Icons.search_off_rounded
                           : Icons.search_rounded,
-                      tooltip: isSearchOpen ? '关闭搜索' : '搜索节点',
+                      tooltip: isSearchOpen
+                          ? l10n.galaxyControlSearchClose
+                          : l10n.galaxyControlSearchOpen,
                       iconColor: isSearchOpen ? glowColor : iconColor,
                       onPressed: onSearch,
                       isActive: isSearchOpen,
@@ -105,7 +121,9 @@ class GalaxyControls extends StatelessWidget {
                       icon: isReplaying
                           ? Icons.stop_circle_outlined
                           : Icons.play_circle_outline_rounded,
-                      tooltip: isReplaying ? '停止构建动画' : '回放构建动画',
+                      tooltip: isReplaying
+                          ? l10n.galaxyControlReplayStop
+                          : l10n.galaxyControlReplayStart,
                       iconColor: isReplaying ? glowColor : iconColor,
                       onPressed: onReplay,
                       isActive: isReplaying,
@@ -113,7 +131,7 @@ class GalaxyControls extends StatelessWidget {
                     ),
                     _ControlButton(
                       icon: Icons.tune_rounded,
-                      tooltip: '星图设置',
+                      tooltip: l10n.galaxyControlSettings,
                       iconColor: isSettingsOpen ? glowColor : iconColor,
                       onPressed: onSettings,
                       isActive: isSettingsOpen,
@@ -210,8 +228,15 @@ class _ControlButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? (activeGlowColor ?? iconColor).withValues(alpha: 0.14)
-                : Colors.transparent,
+                : (Colors.white.withValues(
+                    alpha: isActive ? 0 : (Theme.of(context).brightness == Brightness.dark ? 0.02 : 0.015),
+                  )),
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isActive
+                  ? (activeGlowColor ?? iconColor).withValues(alpha: 0.18)
+                  : Colors.transparent,
+            ),
             boxShadow: [
               if (isActive)
                 BoxShadow(
@@ -222,7 +247,16 @@ class _ControlButton extends StatelessWidget {
             ],
           ),
           child: IconButton(
-            onPressed: onPressed,
+            onPressed: () {
+              unawaited(
+                SensoryFeedbackService.emit(
+                  isActive
+                      ? SensoryFeedbackEvent.selection
+                      : SensoryFeedbackEvent.navigation,
+                ),
+              );
+              onPressed();
+            },
             icon: Icon(icon, color: iconColor, size: 20),
             visualDensity: VisualDensity.compact,
           ),

@@ -7,6 +7,7 @@ import sys
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -29,14 +30,19 @@ from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
 from app.core.websocket import manager
+from app.db.extensions import ensure_database_extensions
 from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
 from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
+from app.services.billing_worker import BillingWorker
+from app.services.capsule_event_consumer import CapsuleEventConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
+from app.services.cognitive_event_consumer import CognitiveEventConsumer
+from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
 from app.services.subject_service import SubjectService
 from app.services.task_event_consumer import TaskEventConsumer
@@ -91,6 +97,7 @@ async def lifespan(app: FastAPI):
     # Initialize WebSocket Redis
     await manager.init_redis()
 
+    event_bus = None
     preference_consumer_task = None
     if cache_service.redis:
         user_service = UserService(None, cache_service.redis)
@@ -125,6 +132,21 @@ async def lifespan(app: FastAPI):
         profile_consumer_task = asyncio.create_task(profile_consumer.start())
         app.state.profile_consumer_task = profile_consumer_task
 
+    if cache_service.redis:
+        cognitive_consumer = CognitiveEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
+        cognitive_consumer_task = asyncio.create_task(cognitive_consumer.start())
+        app.state.cognitive_consumer_task = cognitive_consumer_task
+
+    if cache_service.redis:
+        capsule_consumer = CapsuleEventConsumer(event_bus=event_bus)
+        capsule_consumer_task = asyncio.create_task(capsule_consumer.start())
+        app.state.capsule_consumer_task = capsule_consumer_task
+
+    if cache_service.redis and event_bus is not None:
+        nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
+        nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
+        app.state.nudge_consumer_task = nudge_consumer_task
+
     summarization_worker_task = None
     summarization_worker = None
     if cache_service.redis and settings.ENABLE_SUMMARIZATION_WORKER:
@@ -140,8 +162,20 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Failed to start SummarizationWorker: {e}")
 
-    # Start Galaxy Services (Phase 4)
+    billing_worker_task = None
+    billing_worker = None
     if cache_service.redis:
+        try:
+            billing_worker = BillingWorker()
+            billing_worker_task = asyncio.create_task(billing_worker.start())
+            app.state.billing_worker = billing_worker
+            app.state.billing_worker_task = billing_worker_task
+            logger.info("BillingWorker started")
+        except Exception as e:
+            logger.error(f"Failed to start BillingWorker: {e}")
+
+    # Start Galaxy Services (Phase 4)
+    if cache_service.redis and event_bus is not None:
         from app.services.galaxy.streaming_service import init_galaxy_streaming_service
         try:
             galaxy_streaming_service = await init_galaxy_streaming_service(manager, event_bus)
@@ -153,8 +187,35 @@ async def lifespan(app: FastAPI):
 
     async with AsyncSessionLocal() as db:
         try:
+            try:
+                extension_status = await ensure_database_extensions(db, ("vector", "age"))
+                logger.info(
+                    "Database extensions ensured: vector={}, age={}",
+                    extension_status.get("vector", False),
+                    extension_status.get("age", False),
+                )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"Failed to ensure database extensions at startup (non-fatal): {e}")
+
             # 0. 初始化数据库数据
             await init_db(db)
+
+            # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
+            try:
+                from app.services.guest_seed_service import (
+                    _ensure_achievements,
+                    _ensure_galaxy_skins,
+                )
+                from app.data.seed_content_initial import initialize_seed_libraries
+                await _ensure_achievements(db)
+                await _ensure_galaxy_skins(db)
+                await initialize_seed_libraries(db)
+                await db.commit()
+                logger.info("Global achievements, galaxy skins, and official seed libraries ensured")
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"Failed to ensure startup reference data (non-fatal): {e}")
 
             # 1. 恢复中断的 Job
             job_service = JobService()
@@ -224,6 +285,18 @@ async def lifespan(app: FastAPI):
         with suppress(asyncio.CancelledError):
             await profile_consumer_task
 
+    cognitive_consumer_task = getattr(app.state, "cognitive_consumer_task", None)
+    if cognitive_consumer_task:
+        cognitive_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await cognitive_consumer_task
+
+    nudge_consumer_task = getattr(app.state, "nudge_consumer_task", None)
+    if nudge_consumer_task:
+        nudge_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await nudge_consumer_task
+
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)
     summarization_worker_task = getattr(app.state, "summarization_worker_task", None)
@@ -233,6 +306,15 @@ async def lifespan(app: FastAPI):
         summarization_worker_task.cancel()
         with suppress(asyncio.CancelledError):
             await summarization_worker_task
+
+    billing_worker = getattr(app.state, "billing_worker", None)
+    billing_worker_task = getattr(app.state, "billing_worker_task", None)
+    if billing_worker:
+        billing_worker.stop()
+    if billing_worker_task:
+        billing_worker_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await billing_worker_task
 
     # Stop Galaxy Streaming Service
     galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)
@@ -391,14 +473,15 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """处理 Pydantic 验证错误"""
-    logger.error(f"Validation error for {request.method} {request.url}: {exc.errors()}")
+    encoded_errors = jsonable_encoder(exc.errors(), custom_encoder={ValueError: lambda value: str(value)})
+    logger.error(f"Validation error for {request.method} {request.url}: {encoded_errors}")
     return JSONResponse(
         status_code=400,
         content={
             "success": False,
             "error_code": "ValidationError",
             "message": "请求数据格式不正确",
-            "detail": exc.errors()
+            "detail": encoded_errors,
         },
     )
 

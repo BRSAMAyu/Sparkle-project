@@ -2,7 +2,8 @@
 Achievements API Endpoints
 成就系统 API 端点
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
@@ -18,21 +19,50 @@ from app.schemas.achievement import (
     AchievementDetailResponse,
     AchievementEventProcessResponse,
     AchievementPinResponse,
+    AchievementShareRequest,
     AchievementShareResponse,
     CloseToUnlockAchievementListResponse,
     ContractCreateRequest,
     ContractResponse,
+    ShareCardPrivacySettings,
+    ShareTemplateInfo,
+    ShareTemplateListResponse,
+    StreakHistoryResponse,
 )
 from app.services.achievement_engine import AchievementEngine, ContractService
 from app.services.equipment_service import EquipmentService, EquipmentSource
 from app.services.share_card_service import ShareCardService
+from app.services.share_card_templates import get_all_templates
 
 router = APIRouter()
+
+SUPPORTED_ACHIEVEMENT_LOCALES = {"zh", "en"}
+
+
+def _normalize_locale(value: str | None) -> str | None:
+    if not value:
+        return None
+    primary = value.split(",")[0].strip()
+    if not primary:
+        return None
+    primary = primary.split(";")[0].strip()
+    if not primary:
+        return None
+    return primary.split("-")[0].lower()
+
+
+def _resolve_locale(locale: str | None, accept_language: str | None) -> str | None:
+    candidate = _normalize_locale(locale) or _normalize_locale(accept_language)
+    if candidate in SUPPORTED_ACHIEVEMENT_LOCALES:
+        return candidate
+    return None
 
 
 async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
     """Protect internal-only achievement endpoints with a shared key."""
-    if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
+    if not settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code=503, detail="Internal API key not configured")
+    if not x_internal_token or x_internal_token != settings.INTERNAL_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
 
@@ -40,6 +70,7 @@ async def _build_achievement_detail_response(
     achievement_id: str,
     current_user: User,
     db: AsyncSession,
+    locale: str | None = None,
 ) -> AchievementDetailResponse:
     engine = AchievementEngine(db)
     achievement = await engine._get_achievement(achievement_id)
@@ -49,7 +80,7 @@ async def _build_achievement_detail_response(
 
     is_unlocked = await engine._is_unlocked(current_user.id, achievement_id)
     return AchievementDetailResponse(
-        data=AchievementDetail.model_validate(achievement),
+        data=engine._build_achievement_detail(achievement, locale),
         is_unlocked=is_unlocked,
     )
 
@@ -58,13 +89,21 @@ async def _share_achievement_card(
     achievement_id: str,
     current_user: User,
     db: AsyncSession,
+    locale: str | None = None,
+    template_id: str = "cosmic",
+    privacy: ShareCardPrivacySettings | None = None,
 ) -> AchievementShareResponse:
+    if privacy is None:
+        privacy = ShareCardPrivacySettings()
+
     service = ShareCardService(db)
 
     try:
         result, achievement, _ = await service.generate_achievement_share_card(
             current_user.id,
             achievement_id,
+            template_id=template_id,
+            privacy=privacy,
         )
     except ValueError as exc:
         message = str(exc)
@@ -74,13 +113,16 @@ async def _share_achievement_card(
             raise HTTPException(status_code=400, detail=message) from exc
         raise HTTPException(status_code=400, detail=message) from exc
 
+    engine = AchievementEngine(db)
     return AchievementShareResponse(
         card_url=result.card_url,
         mime_type=result.mime_type,
         width=result.width,
         height=result.height,
         generated_at=result.generated_at,
-        achievement=AchievementDetail.model_validate(achievement),
+        template_id=result.template_id,
+        privacy_settings=result.privacy_settings,
+        achievement=engine._build_achievement_detail(achievement, locale),
     )
 
 
@@ -116,6 +158,9 @@ async def list_achievements(
     category: str | None = Query(None, description="Filter by category"),
     rarity: AchievementRarity | None = Query(None, description="Filter by rarity"),
     include_hidden: bool = Query(False, description="Include hidden achievements"),
+    include_inactive: bool = Query(False, description="Include inactive achievements"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -125,11 +170,14 @@ async def list_achievements(
     Returns achievements with user progress and unlock status.
     """
     engine = AchievementEngine(db)
+    resolved_locale = _resolve_locale(locale, accept_language)
     result = await engine.get_user_achievements(
         current_user.id,
         category=category,
         rarity=rarity,
-        include_hidden=include_hidden
+        include_hidden=include_hidden,
+        include_inactive=include_inactive,
+        locale=resolved_locale,
     )
     return result
 
@@ -151,6 +199,8 @@ async def get_achievement_stats(
 
 @router.get("/map", response_model=dict[str, Any])
 async def get_achievement_map(
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -160,7 +210,8 @@ async def get_achievement_map(
     Returns nodes and connections for achievement map visualization.
     """
     engine = AchievementEngine(db)
-    return await engine.get_achievement_map(current_user.id)
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await engine.get_achievement_map(current_user.id, locale=resolved_locale)
 
 
 @router.get("/streak", response_model=dict[str, Any])
@@ -177,6 +228,21 @@ async def get_streak_stats(
     return await engine.get_streak_stats(current_user.id)
 
 
+@router.get("/streak/history", response_model=StreakHistoryResponse)
+async def get_streak_history(
+    days: int = Query(90, ge=1, le=365, description="Number of days to return"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取连胜日历历史
+
+    Returns daily streak status for calendar rendering.
+    """
+    engine = AchievementEngine(db)
+    return await engine.get_streak_history(current_user.id, days=days)
+
+
 @router.get(
     "/achievements/{achievement_id}",
     response_model=AchievementDetailResponse,
@@ -184,6 +250,8 @@ async def get_streak_stats(
 )
 async def get_achievement_detail(
     achievement_id: str = Path(..., description="Achievement ID"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -192,7 +260,13 @@ async def get_achievement_detail(
 
     Returns achievement details with user progress.
     """
-    return await _build_achievement_detail_response(achievement_id, current_user, db)
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await _build_achievement_detail_response(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+    )
 
 
 @router.post(
@@ -202,6 +276,8 @@ async def get_achievement_detail(
 )
 async def share_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -210,7 +286,13 @@ async def share_achievement(
 
     Returns a shareable image URL for the achievement.
     """
-    return await _share_achievement_card(achievement_id, current_user, db)
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await _share_achievement_card(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+    )
 
 
 @router.post(
@@ -243,6 +325,7 @@ async def get_contract_status(
     Returns active contract or null if no active contract.
     """
     service = ContractService(db)
+    status_result = await service.check_contract_status(current_user.id)
     contract = await service._get_active_contract(current_user.id)
 
     if not contract:
@@ -250,7 +333,11 @@ async def get_contract_status(
 
     return {
         "has_active_contract": True,
-        "contract": ContractResponse.model_validate(contract).model_dump()
+        "contract": ContractResponse.model_validate(
+            contract,
+            from_attributes=True,
+        ).model_dump(),
+        "status": status_result,
     }
 
 
@@ -276,7 +363,10 @@ async def create_contract(
         )
         return {
             "success": True,
-            "data": ContractResponse.model_validate(contract).model_dump()
+            "data": ContractResponse.model_validate(
+                contract,
+                from_attributes=True,
+            ).model_dump()
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -309,7 +399,7 @@ async def cancel_contract(
         raise HTTPException(status_code=404, detail="No active contract found")
 
     contract.status = ContractStatus.FAILED
-    contract.failed_at = datetime.now(UTC).replace(tzinfo=None)
+    contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
     await db.commit()
@@ -496,6 +586,8 @@ async def process_achievement_event(
 async def get_close_to_unlock_achievements(
     category: str | None = Query(None, description="Filter by category (e.g., 'sprint')"),
     threshold: float = Query(0.8, description="Progress threshold (0.0-1.0)"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -506,10 +598,12 @@ async def get_close_to_unlock_achievements(
     Useful for showing "X more to unlock" prompts.
     """
     engine = AchievementEngine(db)
+    resolved_locale = _resolve_locale(locale, accept_language)
     close_achievements = await engine.get_close_to_unlock_achievements(
         current_user.id,
         threshold=threshold,
-        category=category
+        category=category,
+        locale=resolved_locale,
     )
 
     return {
@@ -518,24 +612,102 @@ async def get_close_to_unlock_achievements(
     }
 
 
+@router.get("/share-templates", response_model=ShareTemplateListResponse)
+async def get_share_templates(
+    locale: str | None = Query(None, description="Locale for template names"),
+    accept_language: str | None = Header(None),
+):
+    """
+    获取分享卡片模板列表
+
+    Returns available share card templates.
+    """
+    from app.services.share_card_templates import get_all_templates
+
+    resolved_locale = _resolve_locale(locale, accept_language)
+    templates = get_all_templates()
+
+    template_infos = []
+    for template in templates:
+        # Localize template name
+        name = template.name
+        if resolved_locale == "zh":
+            name_map = {
+                "cosmic": "星空",
+                "minimal": "简约",
+                "neon": "霓虹",
+                "elegant": "典雅",
+            }
+            name = name_map.get(template.id, template.name)
+
+            description_map = {
+                "cosmic": "渐变背景 + 粒子 + 光晕效果",
+                "minimal": "纯色背景 + 极简装饰",
+                "neon": "深色背景 + 霓虹发光效果",
+                "elegant": "金色边框 + 优雅字体",
+            }
+            description = description_map.get(template.id, template.description or "")
+        else:
+            description = template.description or ""
+
+        template_infos.append(
+            ShareTemplateInfo(
+                id=template.id,
+                name=name,
+                description=description,
+                preview_url=template.preview_url,
+            )
+        )
+
+    return ShareTemplateListResponse(templates=template_infos)
+
+
 @router.get("/{achievement_id}", response_model=AchievementDetailResponse)
 async def get_achievement_detail_canonical(
     achievement_id: str = Path(..., description="Achievement ID"),
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Canonical achievement detail endpoint."""
-    return await _build_achievement_detail_response(achievement_id, current_user, db)
+    resolved_locale = _resolve_locale(locale, accept_language)
+    return await _build_achievement_detail_response(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+    )
 
 
 @router.post("/{achievement_id}/share", response_model=AchievementShareResponse)
 async def share_achievement_canonical(
     achievement_id: str = Path(..., description="Achievement ID"),
+    request: AchievementShareRequest | None = None,
+    locale: str | None = Query(None, description="Locale for localized fields"),
+    accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Canonical share card endpoint."""
-    return await _share_achievement_card(achievement_id, current_user, db)
+    """
+    生成成就分享卡片
+
+    Returns a shareable image URL for the achievement.
+    Supports template selection and privacy settings.
+    """
+    resolved_locale = _resolve_locale(locale, accept_language)
+
+    if request is None:
+        request = AchievementShareRequest()
+
+    return await _share_achievement_card(
+        achievement_id,
+        current_user,
+        db,
+        locale=resolved_locale,
+        template_id=request.template_id,
+        privacy=request.privacy,
+    )
 
 
 @router.post("/{achievement_id}/pin", response_model=AchievementPinResponse)

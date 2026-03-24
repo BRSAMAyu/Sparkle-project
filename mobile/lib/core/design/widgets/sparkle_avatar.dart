@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class SparkleAvatar extends StatelessWidget {
@@ -55,7 +55,7 @@ class SparkleAvatar extends StatelessWidget {
         ),
       );
     } else {
-      avatar = CachedNetworkImage(
+      avatar = SparkleNetworkImage(
         key: ValueKey('img_$url'),
         imageUrl: url!,
         imageBuilder: (context, imageProvider) => CircleAvatar(
@@ -63,9 +63,8 @@ class SparkleAvatar extends StatelessWidget {
           backgroundColor: effectiveBackgroundColor,
           backgroundImage: imageProvider,
         ),
-        placeholder: (context, url) => _buildFallback(effectiveBackgroundColor),
-        errorWidget: (context, url, error) =>
-            _buildFallback(effectiveBackgroundColor),
+        placeholder: _buildFallback(effectiveBackgroundColor),
+        errorWidget: _buildFallback(effectiveBackgroundColor),
       );
     }
 

@@ -34,6 +34,7 @@ class CuriosityCapsuleModel {
     this.depthLevel,
     this.generationMethod,
     this.sourceContext,
+    this.personalizationContext,
     this.qualityScore,
     this.feedbackCount = 0,
     this.shareCount = 0,
@@ -65,6 +66,9 @@ class CuriosityCapsuleModel {
 
   @JsonKey(name: 'source_context')
   final Map<String, dynamic>? sourceContext;
+
+  @JsonKey(name: 'personalization_context')
+  final Map<String, dynamic>? personalizationContext;
 
   @JsonKey(name: 'quality_score')
   final double? qualityScore;
@@ -121,6 +125,7 @@ class CuriosityCapsuleModel {
     String? depthLevel,
     String? generationMethod,
     Map<String, dynamic>? sourceContext,
+    Map<String, dynamic>? personalizationContext,
     double? qualityScore,
     int? feedbackCount,
     int? shareCount,
@@ -135,6 +140,7 @@ class CuriosityCapsuleModel {
       depthLevel: depthLevel ?? this.depthLevel,
       generationMethod: generationMethod ?? this.generationMethod,
       sourceContext: sourceContext ?? this.sourceContext,
+      personalizationContext: personalizationContext ?? this.personalizationContext,
       qualityScore: qualityScore ?? this.qualityScore,
       feedbackCount: feedbackCount ?? this.feedbackCount,
       shareCount: shareCount ?? this.shareCount,

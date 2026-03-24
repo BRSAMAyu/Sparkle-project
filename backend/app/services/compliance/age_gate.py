@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from typing import Any
 
 from app.models.user import User
@@ -13,7 +15,7 @@ class AgeGateDecision:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AgeGateService:

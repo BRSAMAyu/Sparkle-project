@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
 class BlockingInterceptorDialog extends ConsumerStatefulWidget {
@@ -25,6 +28,17 @@ class _BlockingInterceptorDialogState
   String? _selectedReason;
   bool _isSubmitting = false;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.warning,
+        enableSound: false,
+      ),
+    );
+  }
+
   List<String> _reasons(BuildContext context) => [
         context.l10n.blockingReasonEfficiency,
         context.l10n.blockingReasonInterrupted,
@@ -36,6 +50,7 @@ class _BlockingInterceptorDialogState
   Future<void> _submit() async {
     final content = _selectedReason ?? _controller.text.trim();
     if (content.isEmpty) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.warning));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.blockingSelectReason)),
       );
@@ -43,6 +58,7 @@ class _BlockingInterceptorDialogState
     }
 
     setState(() => _isSubmitting = true);
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     try {
       // 1. Record Cognitive Fragment
@@ -89,7 +105,10 @@ class _BlockingInterceptorDialogState
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing20),
         child: SingleChildScrollView(
-          child: Column(
+          child: SparkleStaggerItem(
+            index: 0,
+            offset: 0.04,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -124,7 +143,15 @@ class _BlockingInterceptorDialogState
               const SizedBox(height: DS.spacing20),
               RadioGroup<String>(
                 groupValue: selectedReason,
-                onChanged: (value) => setState(() => _selectedReason = value),
+                onChanged: (value) {
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                      enableSound: false,
+                    ),
+                  );
+                  setState(() => _selectedReason = value);
+                },
                 child: Column(
                   children: [
                     // Preset Options
@@ -161,7 +188,15 @@ class _BlockingInterceptorDialogState
                 children: [
                   SparkleButton.ghost(
                     label: l10n.cancel,
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.tap,
+                          enableSound: false,
+                        ),
+                      );
+                      Navigator.of(context).pop();
+                    },
                   ),
                   const SizedBox(width: DS.spacing12),
                   CustomButton.primary(
@@ -175,6 +210,7 @@ class _BlockingInterceptorDialogState
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),

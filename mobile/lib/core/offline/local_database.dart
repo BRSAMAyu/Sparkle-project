@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
@@ -144,9 +145,30 @@ class LocalDatabase {
         VocabReviewSchema,
         FocusSessionRecordSchema, // Added for focus statistics
         CachedStatisticsModelSchema, // Added for unified statistics caching
+        OfflineChatMessageSchema, // Added for offline message queue
       ],
       directory: dir.path,
     );
+  }
+
+  Future<void> clearUserScopedData() async {
+    if (!isar.isOpen) {
+      return;
+    }
+    await isar.writeTxn(() async {
+      await knowledgeNodes.clear();
+      await pendingUpdates.clear();
+      await crdtSnapshots.clear();
+      await outboxItems.clear();
+      await analyticsEvents.clear();
+      await focusSessionRecords.clear();
+      await cachedStatistics.clear();
+      await offlineChatMessages.clear();
+      await translationWordLinks.clear();
+      await translationRecords.clear();
+      await vocabReviews.clear();
+      await vocabWords.clear();
+    });
   }
 
   // Convenience accessors for collections
@@ -161,4 +183,5 @@ class LocalDatabase {
   IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
   IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
   IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
+  IsarCollection<OfflineChatMessage> get offlineChatMessages => isar.offlineChatMessages;
 }

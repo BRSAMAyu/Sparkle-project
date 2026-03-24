@@ -1,6 +1,8 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/splash/splash.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -27,7 +29,10 @@ class SplashRoutes {
         name: 'splash',
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
-          child: const SplashScreen(),
+          child: SceneAudioScope(
+            policy: ExperienceProfiles.dashboardProductive.audioPolicy(),
+            child: const SplashScreen(),
+          ),
           type: SharedAxisTransitionType.scaled,
         ),
       ),

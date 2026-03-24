@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,145 +55,149 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
   @override
   Widget build(BuildContext context) => SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          size: DS.touchTargetMinSize,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('群文件库'),
-        actions: [
-          SparkleIconButton(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
-            size: DS.touchTargetMinSize,
-            icon: Icon(
-              _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
-            ),
-            onPressed: () => setState(() => _gridView = !_gridView),
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
           ),
-        ],
-      ),
-      floatingActionButton: SparkleIconButton(
-        variant: ButtonVariant.primary,
-        size: DS.touchTargetMinSize,
-        icon: const Icon(Icons.upload_file_rounded),
-        onPressed: () {
-          showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-            builder: (context) => FilePickerWithPresignedUpload(
-              groupId: widget.groupId,
-              onUploaded: (file) async {
-                Navigator.pop(context);
-                final repo = ref.read(fileRepositoryProvider);
-                await repo.shareToGroup(
-                  widget.groupId,
-                  file.id,
-                  sendMessage: false,
-                );
-                _reload();
-              },
-            ),
-          );
-        },
-      ),
-      child: ContentConstraint(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: DS.lg, vertical: DS.sm),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: '搜索文件',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onChanged: (value) => setState(() => _query = value.trim()),
+          title: const Text('群文件库'),
+          actions: [
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(
+                _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
               ),
-            ),
-            SizedBox(
-              height: 36,
-              child: FutureBuilder<List<GroupFileCategoryStat>>(
-                future: _categoriesFuture,
-                builder: (context, snapshot) {
-                  final categories = snapshot.data ?? [];
-                  return ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: DS.lg),
-                    children: [
-                      _buildCategoryChip('全部', null),
-                      for (final item in categories)
-                        _buildCategoryChip(
-                            item.category ?? '未分类', item.category),
-                    ],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: FutureBuilder<List<GroupFileInfo>>(
-                future: _filesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('加载失败: ${snapshot.error}'));
-                  }
-
-                  final files = (snapshot.data ?? [])
-                      .where(
-                        (f) =>
-                            _query.isEmpty ||
-                            f.fileName
-                                .toLowerCase()
-                                .contains(_query.toLowerCase()),
-                      )
-                      .toList();
-
-                  if (files.isEmpty) {
-                    return const Center(child: Text('暂无文件'));
-                  }
-
-                  if (_gridView) {
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(DS.lg),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: context.isMobile ? 2 : 3,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.2,
-                      ),
-                      itemCount: files.length,
-                      itemBuilder: (context, index) =>
-                          _buildGridItem(files[index]),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(DS.lg),
-                    itemCount: files.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) =>
-                        _buildListItem(files[index]),
-                  );
-                },
-              ),
+              onPressed: () => setState(() => _gridView = !_gridView),
             ),
           ],
         ),
-      ),
-    );
+        floatingActionButton: SparkleIconButton(
+          icon: const Icon(Icons.upload_file_rounded),
+          onPressed: () {
+            unawaited(showSensoryModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+              builder: (context) => FilePickerWithPresignedUpload(
+                groupId: widget.groupId,
+                onUploaded: (file) async {
+                  Navigator.pop(context);
+                  final repo = ref.read(fileRepositoryProvider);
+                  await repo.shareToGroup(
+                    widget.groupId,
+                    file.id,
+                    sendMessage: false,
+                  );
+                  _reload();
+                },
+              ),
+            ),);
+          },
+        ),
+        child: ContentConstraint(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.lg,
+                  vertical: DS.sm,
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: '搜索文件',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) => setState(() => _query = value.trim()),
+                ),
+              ),
+              SizedBox(
+                height: 36,
+                child: FutureBuilder<List<GroupFileCategoryStat>>(
+                  future: _categoriesFuture,
+                  builder: (context, snapshot) {
+                    final categories = snapshot.data ?? [];
+                    return ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                      children: [
+                        _buildCategoryChip('全部', null),
+                        for (final item in categories)
+                          _buildCategoryChip(
+                            item.category ?? '未分类',
+                            item.category,
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: FutureBuilder<List<GroupFileInfo>>(
+                  future: _filesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text('加载失败: ${snapshot.error}'));
+                    }
+
+                    final files = (snapshot.data ?? [])
+                        .where(
+                          (f) =>
+                              _query.isEmpty ||
+                              f.fileName
+                                  .toLowerCase()
+                                  .contains(_query.toLowerCase()),
+                        )
+                        .toList();
+
+                    if (files.isEmpty) {
+                      return const Center(child: Text('暂无文件'));
+                    }
+
+                    if (_gridView) {
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(DS.lg),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: context.isMobile ? 2 : 3,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1.2,
+                        ),
+                        itemCount: files.length,
+                        itemBuilder: (context, index) => SparkleStaggerItem(
+                          index: index,
+                          child: _buildGridItem(files[index]),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(DS.lg),
+                      itemCount: files.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) => SparkleStaggerItem(
+                        index: index,
+                        child: _buildListItem(files[index]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _buildCategoryChip(String label, String? category) {
     final isSelected = category == _category;
@@ -199,6 +207,9 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+          );
           setState(() => _category = category);
           _reload();
         },

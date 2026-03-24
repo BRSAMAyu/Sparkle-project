@@ -1,7 +1,8 @@
 """
 偏好推断服务 - 从用户反馈中学习并调整推断偏好
 """
-from datetime import UTC, datetime
+from __future__ import annotations
+from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -26,7 +27,7 @@ OPPOSITE_DIRECTION_PENALTY = 0.5  # 相反方向调整幅度的惩罚系数
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PreferenceInferenceService:

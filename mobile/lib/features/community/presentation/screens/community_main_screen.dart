@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
-import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
+import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
+import 'package:sparkle/features/community/presentation/widgets/groups_hub_view.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -35,67 +39,152 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   }
 
   void _showSearchOptions() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GraphiteModalSurface(
-        title: '搜索',
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.person_search, color: DS.primaryBase),
-              title: const Text('搜索用户'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/users/search');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.search, color: DS.primaryBase),
-              title: const Text('搜索群组'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/groups/search');
-              },
-            ),
-          ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => GraphiteModalSurface(
+          title: context.l10n.communitySearch,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.person_search, color: DS.primaryBase),
+                title: Text(context.l10n.communitySearchUsers),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.pushNamed('userSearch');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.search, color: DS.primaryBase),
+                title: Text(context.l10n.communitySearchGroups),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.pushNamed('groupDiscover');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   void _showAddOptions() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GraphiteModalSurface(
-        title: '社群操作',
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.person_add, color: DS.primaryBase),
-              title: const Text('发现新好友'),
-              subtitle: const Text('查看推荐的好友'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/friends/discover');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.group_add, color: DS.primaryBase),
-              title: const Text('创建群组'),
-              subtitle: const Text('创建一个新的学习群组'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/community/groups/create');
-              },
-            ),
-          ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => GraphiteModalSurface(
+          title: context.l10n.communityActions,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.person_add, color: DS.primaryBase),
+                title: Text(context.l10n.communityDiscoverFriends),
+                subtitle: Text(context.l10n.communityDiscoverFriendsHint),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.pushNamed('friendsDiscover');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.group_add, color: DS.primaryBase),
+                title: Text(context.l10n.communityCreateGroup),
+                subtitle: Text(context.l10n.communityCreateGroupHint),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.pushNamed('createGroup');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _toggleFocusMode() {
+    final focusMode = ref.read(focusModeProvider);
+    ref.read(focusModeProvider.notifier).toggle();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          focusMode
+              ? context.l10n.communityFocusModeDisabled
+              : context.l10n.communityFocusModeEnabled,
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showMoreOptions() {
+    showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(1000, 88, 16, 0),
+      items: [
+        PopupMenuItem(
+          value: 'focus',
+          child: Row(
+            children: [
+              Icon(
+                ref.read(focusModeProvider)
+                    ? Icons.do_not_disturb_on
+                    : Icons.do_not_disturb_off_outlined,
+                size: 18,
+                color: ref.read(focusModeProvider)
+                    ? DS.warning
+                    : DS.textSecondary,
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Text(
+                  ref.read(focusModeProvider)
+                      ? context.l10n.communityFocusModeOff
+                      : context.l10n.communityFocusModeOn,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'favorites',
+          child: Row(
+            children: const [
+              Icon(Icons.bookmark_outline, size: 18),
+              SizedBox(width: DS.spacing10),
+              Expanded(child: Text('我的收藏')),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'add',
+          child: Row(
+            children: [
+              const Icon(Icons.person_add_outlined, size: 18),
+              const SizedBox(width: DS.spacing10),
+              Expanded(child: Text(context.l10n.commonAdd)),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == null || !mounted) return;
+      switch (value) {
+        case 'focus':
+          _toggleFocusMode();
+          break;
+        case 'favorites':
+          context.pushNamed('favorites');
+          break;
+        case 'add':
+          _showAddOptions();
+          break;
+      }
+    });
   }
 
   void _handleFabPressed() {
@@ -106,7 +195,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       _showAddOptions();
     } else {
       // Groups tab - navigate to group creation
-      context.push('/community/groups/create');
+      context.pushNamed('createGroup');
     }
   }
 
@@ -121,6 +210,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   void _onTabChanged() {
     if (!_tabController.indexIsChanging) {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+      );
       ref.read(communityTabIndexProvider.notifier).state = _tabController.index;
       _saveTabIndex(_tabController.index);
     }
@@ -140,23 +232,25 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final experience = ExperienceProfiles.socialWarm;
     final focusMode = ref.watch(focusModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GraphiteScaffold(
-      role: SparklePageRole.content,
+      role: experience.pageRole,
+      motionToken: experience.motionToken,
       appBar: AppBar(
         backgroundColor:
-            DS.surfaceOverlay.withValues(alpha: isDark ? 0.9 : 0.96),
+            DS.surfaceOverlay.withValues(alpha: isDark ? 0.88 : 0.94),
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
-          '星火社群',
+          context.l10n.communityTitle,
           style: DS.titleLarge.copyWith(
             color: DS.textPrimary,
             fontWeight: FontWeight.w700,
@@ -164,30 +258,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         ),
         centerTitle: false,
         actions: [
-          // Focus mode indicator and toggle
           Tooltip(
-            message: focusMode ? '专注模式开启中' : '开启专注模式',
-            child: SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              icon: Icon(
-                focusMode
-                    ? Icons.do_not_disturb_on
-                    : Icons.do_not_disturb_off_outlined,
-                color: focusMode ? DS.warning : null,
-              ),
-              onPressed: () {
-                ref.read(focusModeProvider.notifier).toggle();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(focusMode ? '已关闭专注模式' : '已开启专注模式，消息将不会打扰您'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-          ),
-          Tooltip(
-            message: '搜索',
+            message: context.l10n.communitySearch,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.search),
@@ -195,23 +267,37 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: '添加',
+            message: '更多',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
-              icon: const Icon(Icons.person_add_outlined),
-              onPressed: _showAddOptions,
+              icon: Icon(
+                Icons.more_horiz_rounded,
+                color: focusMode ? DS.warning : DS.textSecondary,
+              ),
+              onPressed: _showMoreOptions,
             ),
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: '好友'), Tab(text: '群组')],
+          tabAlignment: TabAlignment.fill,
+          labelPadding: const EdgeInsets.symmetric(vertical: DS.spacing4),
+          tabs: [
+            Tab(text: context.l10n.communityTabFriends),
+            Tab(text: context.l10n.communityTabGroups),
+          ],
           indicatorColor: DS.brandPrimary,
+          indicatorWeight: 2.5,
+          dividerColor: Colors.transparent,
+          labelColor: DS.textPrimary,
+          unselectedLabelColor: DS.textSecondary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButton: Tooltip(
-        message: _tabController.index == 0 ? '添加好友' : '创建群组',
+        message: _tabController.index == 0
+            ? context.l10n.communityAddFriend
+            : context.l10n.communityCreateGroup,
         child: SparkleIconButton(
           size: 56,
           icon: const Icon(Icons.add),
@@ -222,8 +308,16 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         child: TabBarView(
           controller: _tabController,
           children: [
-            _FriendsListTab(),
-            _GroupsListTab(),
+            SparkleStaggerItem(
+              index: 0,
+              motionToken: SparkleMotionToken.scene,
+              child: _FriendsListTab(),
+            ),
+            SparkleStaggerItem(
+              index: 1,
+              motionToken: SparkleMotionToken.scene,
+              child: _GroupsListTab(),
+            ),
           ],
         ),
       ),
@@ -233,198 +327,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
 class _FriendsListTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final friendsAsync = ref.watch(friendsProvider);
-
-    return friendsAsync.when(
-      data: (friends) {
-        if (friends.isEmpty) {
-          return Center(
-            child: GraphiteCardSurface(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline, size: 64, color: DS.neutral300),
-                  const SizedBox(height: DS.lg),
-                  Text('还没有好友', style: TextStyle(color: DS.neutral500)),
-                ],
-              ),
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          itemCount: friends.length,
-          itemBuilder: (context, index) {
-            final f = friends[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GraphiteCardSurface(
-                onTap: () => context.push(
-                  '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',
-                ),
-                child: Row(
-                  children: [
-                    StatusAvatar(
-                      status: f.friend.status,
-                      url: f.friend.avatarUrl,
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            f.friend.displayName,
-                            style: DS.bodyLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: f.friend.status == UserStatus.online
-                                      ? DS.success
-                                      : DS.neutral300,
-                                ),
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                f.friend.status == UserStatus.online
-                                    ? '在线'
-                                    : '离线',
-                                style: TextStyle(
-                                  color: f.friend.status == UserStatus.online
-                                      ? DS.success
-                                      : DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(width: DS.sm),
-                              Text(
-                                'Lv.${f.friend.flameLevel}',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, size: 20, color: DS.neutral400),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('加载失败: $e')),
+  Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
     );
-  }
 }
 
 class _GroupsListTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final groupsAsync = ref.watch(myGroupsProvider);
-
-    return groupsAsync.when(
-      data: (groups) {
-        if (groups.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.group_outlined, size: 64, color: DS.neutral300),
-                const SizedBox(height: DS.lg),
-                Text('还没有加入群组', style: TextStyle(color: DS.neutral500)),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(DS.lg),
-          itemCount: groups.length,
-          itemBuilder: (context, index) {
-            final g = groups[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GraphiteCardSurface(
-                onTap: () => context.push('/chat/group/${g.id}'),
-                child: Row(
-                  children: [
-                    SparkleAvatar(
-                      radius: 24,
-                      backgroundColor: DS.surfacePanel,
-                      fallbackText: g.name,
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            g.name,
-                            style: DS.bodyLarge.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: DS.xs),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.people,
-                                size: 14,
-                                color: DS.textSecondary,
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                '${g.memberCount} 成员',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(width: DS.md),
-                              Icon(
-                                Icons.local_fire_department,
-                                size: 14,
-                                color: DS.brandPrimaryConst,
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                '${g.totalFlamePower}',
-                                style: TextStyle(
-                                  color: DS.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, color: DS.neutral400),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('加载失败: $e')),
+  Widget build(BuildContext context, WidgetRef ref) => const GroupsHubView(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
     );
-  }
 }

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
@@ -8,9 +11,11 @@ import 'package:sparkle/features/task/presentation/providers/task_chat_provider.
 class TaskChatPanel extends ConsumerStatefulWidget {
   const TaskChatPanel({
     required this.taskId,
+    this.isAvailable = true,
     super.key,
   });
   final String taskId;
+  final bool isAvailable;
 
   @override
   ConsumerState<TaskChatPanel> createState() => _TaskChatPanelState();
@@ -23,7 +28,9 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
   void _sendMessage() {
     final text = _controller.text;
     if (text.isNotEmpty) {
-      ref.read(taskChatProvider(widget.taskId).notifier).sendMessage(text);
+      unawaited(
+        ref.read(taskChatProvider(widget.taskId).notifier).sendMessage(text),
+      );
       _controller.clear();
       if (!_isExpanded) {
         setState(() => _isExpanded = true);
@@ -33,6 +40,18 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isAvailable) {
+      return GraphiteCardSurface(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Text(
+            '任务助手仅在已同步到服务器的任务中可用。',
+            style: TextStyle(color: DS.neutral500),
+          ),
+        ),
+      );
+    }
+
     final chatState = ref.watch(taskChatProvider(widget.taskId));
     final messages = chatState.messages;
     final lastMessage = messages.isNotEmpty ? messages.last : null;
@@ -64,7 +83,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
-                    'AI 学习助手',
+                    context.l10n.taskChatAssistantTitle,
                     style: TextStyle(
                       fontWeight: DS.fontWeightBold,
                       color: DS.neutral900,
@@ -84,7 +103,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
+                '${lastMessage.role == MessageRole.user ? context.l10n.chatLabelMe : context.l10n.chatLabelAssistant}: ${lastMessage.content}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.neutral600, fontSize: 12),
@@ -93,13 +112,29 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
 
           if (_isExpanded) ...[
             const Divider(height: 1),
+            if (chatState.error != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing10,
+                ),
+                color: DS.error.withValues(alpha: 0.08),
+                child: Text(
+                  chatState.error!,
+                  style: TextStyle(
+                    color: DS.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             Container(
               height: 300,
               color: DS.surfaceSecondary,
               child: messages.isEmpty
                   ? Center(
                       child: Text(
-                        '有问题尽管问我！',
+                        context.l10n.taskChatEmptyPrompt,
                         style: TextStyle(color: DS.neutral400),
                       ),
                     )
@@ -118,10 +153,11 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: '输入问题...',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.taskChatInputHint,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),

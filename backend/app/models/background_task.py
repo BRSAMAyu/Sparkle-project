@@ -4,7 +4,7 @@ For tracking async operations like AI generation, data sync, etc.
 """
 import enum
 
-from sqlalchemy import JSON, Column, Enum, Float, String, Text
+from sqlalchemy import JSON, Column, DateTime, Enum, Float, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import GUID, BaseModel
@@ -57,6 +57,7 @@ class BackgroundTask(BaseModel):
 
     # Celery/async task ID for external job tracking
     external_task_id = Column(String(255), nullable=True, index=True)
+    completed_at = Column(DateTime, nullable=True)
 
     def __repr__(self):
         return f"<BackgroundTask(id={self.id}, type={self.task_type}, status={self.status})>"

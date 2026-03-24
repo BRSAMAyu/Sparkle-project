@@ -15,14 +15,14 @@ import (
 )
 
 type envelopeResponder struct {
-	conn     *websocket.Conn
+	writer   *wsSafeWriter
 	envelope *wsEnvelopeIn
 	ctx      context.Context
 }
 
-func newEnvelopeResponder(conn *websocket.Conn, env *wsEnvelopeIn, ctx context.Context) *envelopeResponder {
+func newEnvelopeResponder(writer *wsSafeWriter, env *wsEnvelopeIn, ctx context.Context) *envelopeResponder {
 	return &envelopeResponder{
-		conn:     conn,
+		writer:   writer,
 		envelope: env,
 		ctx:      ctx,
 	}
@@ -32,9 +32,11 @@ func (r *envelopeResponder) SendAck() {
 	traceparent := traceparentFromContext(r.ctx)
 	payload := map[string]json.RawMessage{}
 	ack := map[string]interface{}{
+		"message_id":  r.envelope.MessageID, // 添加 message_id 以便客户端匹配
 		"request_id":  r.envelope.RequestID,
 		"server_ts":   time.Now().UnixMilli(),
 		"traceparent": traceparent,
+		"status":      "received",
 	}
 	raw, err := json.Marshal(ack)
 	if err != nil {
@@ -219,19 +221,19 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 	if err != nil {
 		return err
 	}
-	return r.conn.WriteMessage(websocket.TextMessage, data)
+	return r.writer.WriteMessage(websocket.TextMessage, data)
 }
 
 // protobufResponder implements the responder interfaces for Binary/Protobuf protocol
 type protobufResponder struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 	msg  *pbws.WebSocketMessage
 	ctx  context.Context
 }
 
-func newProtobufResponder(conn *websocket.Conn, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
+func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
 	return &protobufResponder{
-		conn: conn,
+		writer: writer,
 		msg:  msg,
 		ctx:  ctx,
 	}
@@ -245,7 +247,7 @@ func (r *protobufResponder) SendAck() {
 }
 
 func (r *protobufResponder) SendError(code, message string, retryable bool) {
-	// TODO: Define Error proto in websocket.proto
+	// TRACKED(TD-009): Define Error proto in websocket.proto
 	// For now, sending JSON error inside protobuf wrapper to be compatible with clients expecting structured error
 	enumCode := parseErrorCode(code)
 	errBody := map[string]interface{}{
@@ -348,5 +350,5 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	return r.conn.WriteMessage(websocket.BinaryMessage, data)
+	return r.writer.WriteMessage(websocket.BinaryMessage, data)
 }

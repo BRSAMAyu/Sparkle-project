@@ -94,6 +94,20 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
     }
   }
 
+  Color _getLegendTextColor(AgendaType type, bool isSelected) {
+    if (isSelected) {
+      return Colors.white.withValues(alpha: 0.96);
+    }
+    switch (type) {
+      case AgendaType.busy:
+        return DS.error.shade900;
+      case AgendaType.fragmented:
+        return DS.success.shade900;
+      case AgendaType.relax:
+        return DS.info.shade900;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -151,7 +165,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isDark ? DS.brandPrimary : DS.brandPrimary87,
+                    color: _getLegendTextColor(type, isSelected),
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),

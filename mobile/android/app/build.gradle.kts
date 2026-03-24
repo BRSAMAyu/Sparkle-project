@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,7 +7,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-import java.util.Properties
+// Google Services plugin for Firebase - only apply if config file exists
+// 添加 google-services.json 到 app/ 目录后启用
+val googleServicesJson = file("google-services.json")
+if (googleServicesJson.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn("google-services.json not found. Firebase features will be disabled.")
+}
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -42,6 +51,11 @@ android {
         targetSdk = 34  // Target Android 14
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // JPush configuration
+        manifestPlaceholders["JPUSH_PKGNAME"] = applicationIdValue
+        manifestPlaceholders["JPUSH_APPKEY"] = "YOUR_JPUSH_APPKEY"  // Replace with actual JPush AppKey
+        manifestPlaceholders["JPUSH_CHANNEL"] = "developer-default"
     }
 
     signingConfigs {
