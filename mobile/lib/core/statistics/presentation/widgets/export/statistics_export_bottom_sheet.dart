@@ -49,9 +49,10 @@ class ExportOptionButton extends StatelessWidget {
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: const EdgeInsets.all(DS.xs),
                 decoration: BoxDecoration(
                   color: isSelected ? DS.brandPrimary : DS.white,
                   borderRadius: BorderRadius.circular(DS.borderRadiusMD),
@@ -59,12 +60,14 @@ class ExportOptionButton extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: isSelected ? DS.white : DS.neutral600,
-                  size: 24,
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: DS.sm),
+              const SizedBox(height: DS.xs),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: DS.bodyStyle.copyWith(
                   fontWeight: DS.fontWeightMedium,
                   color: isSelected ? DS.brandPrimary : DS.neutral700,
@@ -73,6 +76,8 @@ class ExportOptionButton extends StatelessWidget {
               const SizedBox(height: DS.xs),
               Text(
                 description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: DS.captionStyle.copyWith(
                   color: DS.neutral400,
                 ),
@@ -159,7 +164,14 @@ class _StatisticsExportBottomSheetState
   }
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final maxHeight = media.size.height * 0.85;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           color: DS.white,
           borderRadius: BorderRadius.only(
@@ -168,29 +180,40 @@ class _StatisticsExportBottomSheetState
           ),
         ),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: media.viewInsets.bottom,
         ),
         child: SafeArea(
+          top: false,
           child: Padding(
             padding: const EdgeInsets.all(DS.xl),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildHeader(),
                 const SizedBox(height: DS.lg),
-                _buildFormatOptions(),
-                if (widget.showChartOptions) ...[
-                  const SizedBox(height: DS.lg),
-                  _buildChartOptions(),
-                ],
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildFormatOptions(),
+                        if (widget.showChartOptions) ...[
+                          const SizedBox(height: DS.lg),
+                          _buildChartOptions(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: DS.xl),
                 _buildExportButton(),
               ],
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildHeader() => Row(
         children: [
@@ -228,29 +251,63 @@ class _StatisticsExportBottomSheetState
             ),
           ),
           const SizedBox(height: DS.md),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            mainAxisSpacing: DS.md,
-            crossAxisSpacing: DS.md,
-            childAspectRatio: 1.2,
-            children: widget.availableFormats
-                .map(
-                  (format) => ExportOptionButton(
-                    format: format,
-                    icon: _getIconForFormat(format),
-                    label: format.label,
-                    description: _getDescriptionForFormat(format),
-                    isSelected: _selectedFormat == format,
-                    onTap: () {
-                      setState(() {
-                        _selectedFormat = format;
-                      });
-                    },
-                  ),
-                )
-                .toList(),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 360) {
+                final tileWidth = (constraints.maxWidth - DS.md) / 2;
+                return Wrap(
+                  spacing: DS.md,
+                  runSpacing: DS.md,
+                  children: widget.availableFormats
+                      .map(
+                        (format) => SizedBox(
+                          width: tileWidth,
+                          child: ExportOptionButton(
+                            format: format,
+                            icon: _getIconForFormat(format),
+                            label: format.label,
+                            description: _getDescriptionForFormat(format),
+                            isSelected: _selectedFormat == format,
+                            onTap: () {
+                              setState(() {
+                                _selectedFormat = format;
+                              });
+                            },
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              }
+
+              final crossAxisCount =
+                  (constraints.maxWidth / 136).floor().clamp(2, 3);
+              final childAspectRatio = crossAxisCount == 2 ? 1.45 : 1.2;
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: DS.md,
+                crossAxisSpacing: DS.md,
+                childAspectRatio: childAspectRatio,
+                children: widget.availableFormats
+                    .map(
+                      (format) => ExportOptionButton(
+                        format: format,
+                        icon: _getIconForFormat(format),
+                        label: format.label,
+                        description: _getDescriptionForFormat(format),
+                        isSelected: _selectedFormat == format,
+                        onTap: () {
+                          setState(() {
+                            _selectedFormat = format;
+                          });
+                        },
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
         ],
       );
@@ -376,7 +433,14 @@ class StatisticsShareBottomSheet extends StatelessWidget {
   final Future<void> Function(ShareOption option) onShare;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: media.size.height * 0.8,
+      ),
+      child: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           color: DS.white,
           borderRadius: BorderRadius.only(
@@ -384,16 +448,29 @@ class StatisticsShareBottomSheet extends StatelessWidget {
             topRight: Radius.circular(DS.borderRadiusXL),
           ),
         ),
-        padding: const EdgeInsets.all(DS.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: DS.lg),
-            _buildShareOptions(),
-          ],
+        padding: EdgeInsets.fromLTRB(
+          DS.xl,
+          DS.xl,
+          DS.xl,
+          media.viewInsets.bottom + DS.xl,
         ),
-      );
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: DS.lg),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _buildShareOptions(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildHeader(BuildContext context) => Row(
         children: [
@@ -420,25 +497,39 @@ class StatisticsShareBottomSheet extends StatelessWidget {
         ],
       );
 
-  Widget _buildShareOptions() => GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 4,
-        mainAxisSpacing: DS.lg,
-        crossAxisSpacing: DS.md,
-        children: options
-            .map(
-              (option) => _ShareOptionButton(
-                option: option,
-                onTap: () async {
-                  await onShare(option);
-                  if (option.closeOnTap) {
-                    // Navigator.pop(context);
-                  }
-                },
-              ),
-            )
-            .toList(),
+  Widget _buildShareOptions() => LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth < 320
+              ? 2
+              : constraints.maxWidth < 480
+                  ? 3
+                  : 4;
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: DS.lg,
+            crossAxisSpacing: DS.md,
+            childAspectRatio: switch (crossAxisCount) {
+              2 => 1.2,
+              3 => 0.92,
+              _ => 1,
+            },
+            children: options
+                .map(
+                  (option) => _ShareOptionButton(
+                    option: option,
+                    onTap: () async {
+                      await onShare(option);
+                      if (option.closeOnTap) {
+                        // Navigator.pop(context);
+                      }
+                    },
+                  ),
+                )
+                .toList(),
+          );
+        },
       );
 
   /// Show the share bottom sheet
@@ -450,6 +541,7 @@ class StatisticsShareBottomSheet extends StatelessWidget {
       showModalBottomSheet<void>(
         context: context,
         backgroundColor: DS.overlay30.withValues(alpha: 0),
+        isScrollControlled: true,
         builder: (context) => StatisticsShareBottomSheet(
           options: options,
           onShare: onShare,
@@ -469,10 +561,11 @@ class _ShareOptionButton extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: option.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(DS.borderRadiusLG),
@@ -480,12 +573,14 @@ class _ShareOptionButton extends StatelessWidget {
               child: Icon(
                 option.icon,
                 color: option.color,
-                size: 28,
+                size: 24,
               ),
             ),
-            const SizedBox(height: DS.sm),
+            const SizedBox(height: DS.xs),
             Text(
               option.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: DS.captionStyle.copyWith(
                 color: DS.neutral600,
               ),

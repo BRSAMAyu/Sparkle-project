@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
@@ -26,6 +27,10 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_confi
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+
+final galaxyBuildPlaybackSessionProvider = StateProvider<bool>(
+  (ref) => false,
+);
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -63,7 +68,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Map<String, double> _edgeStrengths = const <String, double>{};
   Map<String, Color> _darkBlendedColors = const <String, Color>{};
   Map<String, Color> _lightBlendedColors = const <String, Color>{};
-  Map<String, int> _revealRanks = const <String, int>{};
+  GalaxyBuildPlaybackPlan? _playbackPlan;
+  Set<String> _preRevealedNodeIds = const <String>{};
+  Set<String> _preRevealedEdgeIds = const <String>{};
   GalaxyCamera _camera = const GalaxyCamera(
     offset: Offset.zero,
     scale: 0.15,
@@ -91,8 +98,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _isSearchOpen = false;
   bool _isSettingsOpen = false;
   bool _performanceDegraded = false;
-  double _buildRevealProgress = 1;
-  double _entranceRevealProgress = 1;
   double _ambientPhase = 0;
   double _springStrength = 0.045;
   double _repulsionStrength = 12000;
@@ -111,7 +116,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Duration _lastDriftShuffleElapsed = Duration.zero;
   int _consecutiveSlowFrames = 0;
   int _consecutiveFastFrames = 0;
+  int _playbackElapsedMs = 0;
   double _frameBudgetMs = 16;
+  Timer? _previewDismissTimer;
+  Timer? _focusDismissTimer;
+  Timer? _initialBuildReplayTimer;
 
   @override
   void initState() {
@@ -149,15 +158,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
-    )..addListener(() {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _entranceRevealProgress =
-              Curves.easeOutCubic.transform(_entranceController.value);
-        });
-      });
+    );
     _tapFeedbackAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
         tween: Tween<double>(
@@ -221,6 +222,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..removeStatusListener(_handleBuildReplayStatus)
       ..dispose();
     _entranceController.dispose();
+    _previewDismissTimer?.cancel();
+    _focusDismissTimer?.cancel();
+    _initialBuildReplayTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
@@ -261,20 +265,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     GalaxyGraphResponse graph, {
     required bool preserveCamera,
   }) {
-    final positions = _resolvePositions(graph);
+    final previousGraph = _graph;
+    final sanitizedGraph = _sanitizeGraph(graph);
+    final positions = _resolvePositions(sanitizedGraph);
     final nodesById = {
-      for (final node in graph.nodes) node.id: node,
+      for (final node in sanitizedGraph.nodes) node.id: node,
     };
-    final adjacency = _buildAdjacency(graph.edges);
+    final adjacency = _buildAdjacency(sanitizedGraph.edges);
     final nodeConnectionCounts = {
       for (final entry in adjacency.entries) entry.key: entry.value.length,
     };
     final edgeStrengths = _buildEdgeStrengths(graph.edges);
-    final revealRanks = _buildRevealRanks(
-      nodes: graph.nodes,
-      positions: positions,
-      adjacency: adjacency,
-    );
     final darkBlendedColors = _buildBlendedColors(
       nodesById: nodesById,
       adjacency: adjacency,
@@ -285,17 +286,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       adjacency: adjacency,
       isDarkMode: false,
     );
+    final playbackLaunch = _buildPlaybackLaunch(
+      previousGraph: previousGraph,
+      nextGraph: sanitizedGraph,
+      positions: positions,
+      adjacency: adjacency,
+      preserveCamera: preserveCamera,
+    );
 
-    _spatialIndex.build(positions, graph.nodes);
+    _spatialIndex.build(positions, sanitizedGraph.nodes);
     _labelCache.clear();
     setState(() {
-      _graph = graph;
+      _graph = sanitizedGraph;
       _positions = positions;
       _nodesById = nodesById;
       _adjacency = adjacency;
       _nodeConnectionCounts = nodeConnectionCounts;
       _edgeStrengths = edgeStrengths;
-      _revealRanks = revealRanks;
       _darkBlendedColors = darkBlendedColors;
       _lightBlendedColors = lightBlendedColors;
       _pendingPersistNodeId = null;
@@ -305,24 +312,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
 
     if (!preserveCamera) {
-      _startEntranceAnimationIfNeeded();
+      _startEntranceAnimationIfNeeded(playbackLaunch: playbackLaunch);
     } else {
       _refreshSearchState();
       _syncPreviewPosition();
+      if (playbackLaunch != null) {
+        _launchPlayback(
+          playbackLaunch,
+          preserveCurrentCamera: true,
+        );
+      }
     }
   }
 
-  void _startEntranceAnimationIfNeeded() {
+  void _startEntranceAnimationIfNeeded({
+    required _PlaybackLaunch? playbackLaunch,
+  }) {
     if (_viewportSize == Size.zero || _graph == null) {
       return;
     }
 
     final overviewCamera = _fitOverviewCamera();
-    if (_didPlayEntranceAnimation) {
+    final sessionPlayedFullReplay =
+        ref.read(galaxyBuildPlaybackSessionProvider);
+    if (_didPlayEntranceAnimation || sessionPlayedFullReplay) {
       setState(() {
         _camera = overviewCamera;
         _didFitInitialCamera = true;
-        _entranceRevealProgress = 1;
       });
       return;
     }
@@ -338,17 +354,27 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _camera = introCamera;
       _didFitInitialCamera = true;
       _didPlayEntranceAnimation = true;
-      _entranceRevealProgress = 0;
     });
+    if (playbackLaunch != null) {
+      ref.read(galaxyBuildPlaybackSessionProvider.notifier).state = true;
+      _preparePlayback(playbackLaunch);
+    }
 
     _entranceController
       ..stop()
       ..reset();
     _animateCameraTo(
       overviewCamera,
-      duration: const Duration(milliseconds: 820),
+      duration: const Duration(milliseconds: 1400),
       curve: Curves.easeOutCubic,
     );
+    _initialBuildReplayTimer?.cancel();
+    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 280), () {
+      if (!mounted || _graph == null || playbackLaunch == null) {
+        return;
+      }
+      _startPreparedPlayback();
+    });
     unawaited(_entranceController.forward());
   }
 
@@ -485,7 +511,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           _previewScreenPosition = _computePreviewPosition(
             anchor: _camera.worldToScreen(command.hit!.worldPosition),
           );
-          _focusNodeIds = <String>{tappedNode.id, ...?_adjacency[tappedNode.id]};
+          _focusNodeIds = <String>{
+            tappedNode.id,
+            ...?_adjacency[tappedNode.id],
+          };
         });
         return;
       }
@@ -520,6 +549,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           anchor: _camera.worldToScreen(command.hit!.worldPosition),
         );
       });
+      _schedulePreviewDismiss();
       return;
     }
 
@@ -643,8 +673,35 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _clearPreviewState() {
+    _previewDismissTimer?.cancel();
     _previewNode = null;
     _previewScreenPosition = null;
+  }
+
+  void _schedulePreviewDismiss([
+    Duration delay = const Duration(milliseconds: 8000),
+  ]) {
+    _previewDismissTimer?.cancel();
+    _previewDismissTimer = Timer(delay, () {
+      if (!mounted || _previewNode == null) {
+        return;
+      }
+      setState(_clearPreviewState);
+    });
+  }
+
+  void _scheduleFocusDismiss([
+    Duration delay = const Duration(milliseconds: 10000),
+  ]) {
+    _focusDismissTimer?.cancel();
+    _focusDismissTimer = Timer(delay, () {
+      if (!mounted || _focusNodeIds.isEmpty) {
+        return;
+      }
+      setState(() {
+        _focusNodeIds = const <String>{};
+      });
+    });
   }
 
   void _noteInteraction() {
@@ -720,8 +777,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     setState(() {
-      _clearPreviewState();
       if (dragNodeId != null) {
+        _clearPreviewState();
         _draggingNodeId = null;
         _pendingPersistNodeId = dragNodeId;
         _sceneVersion++;
@@ -1059,6 +1116,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _focusNodeIds = emphasis;
       _clearPreviewState();
     });
+    _scheduleFocusDismiss();
     _animateCameraTo(
       targetCamera,
       duration: const Duration(milliseconds: 520),
@@ -1085,6 +1143,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _focusNodeIds = <String>{previewNode.id, ...?_adjacency[previewNode.id]};
       _clearPreviewState();
     });
+    _scheduleFocusDismiss();
   }
 
   void _handleMiniMapNavigate(Offset worldPoint) {
@@ -1143,85 +1202,36 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (_isBuildAnimating) {
       return _buildConstructionEdgeParticles();
     }
-
-    final selectedNodeId = _selectedNodeId;
-    if (selectedNodeId == null || _camera.scale < 0.5) {
-      return const <GalaxyEdgeParticle>[];
-    }
-
-    final particles = <GalaxyEdgeParticle>[];
-    final relevantEdges = graph.edges.where(
-      (edge) =>
-          edge.sourceId == selectedNodeId || edge.targetId == selectedNodeId,
-    );
-    for (final edge in relevantEdges) {
-      final node = _nodesById[edge.sourceId] ?? _nodesById[edge.targetId];
-      if (node == null) {
-        continue;
-      }
-      final color = SectorConfig.getGlowColor(node.sector);
-      final count = edge.strength > 0.8
-          ? 3
-          : edge.strength > 0.55
-              ? 2
-              : 1;
-      for (var index = 0; index < count; index++) {
-        if (particles.length >= 50) {
-          return particles;
-        }
-        particles.add(
-          GalaxyEdgeParticle(
-            sourceId: edge.sourceId,
-            targetId: edge.targetId,
-            relationType: edge.relationType,
-            strength: edge.strength,
-            progress:
-                (timeSeconds * (0.14 + edge.strength * 0.18) + index * 0.37) %
-                    1.0,
-            radius: 1.6 + edge.strength * 1.4,
-            alpha: 0.42 + edge.strength * 0.34,
-            color: color,
-          ),
-        );
-      }
-    }
-    return particles;
+    return const <GalaxyEdgeParticle>[];
   }
 
   List<GalaxyEdgeParticle> _buildConstructionEdgeParticles() {
-    final graph = _graph;
-    if (graph == null || _revealRanks.isEmpty) {
+    final playbackPlan = _playbackPlan;
+    if (playbackPlan == null || playbackPlan.edgeSteps.isEmpty) {
       return const <GalaxyEdgeParticle>[];
     }
 
     final particles = <GalaxyEdgeParticle>[];
-    for (final edge in graph.edges) {
-      final sourceRank = _revealRanks[edge.sourceId];
-      final targetRank = _revealRanks[edge.targetId];
-      if (sourceRank == null || targetRank == null) {
-        continue;
-      }
-
-      final fromId = sourceRank <= targetRank ? edge.sourceId : edge.targetId;
-      final toId = sourceRank <= targetRank ? edge.targetId : edge.sourceId;
-      final growth = _buildRevealForNode(toId);
+    for (final edgeStep in playbackPlan.edgeSteps.values) {
+      final growth = playbackPlan.edgeRevealAt(edgeStep.id, _playbackElapsedMs);
       if (growth <= 0 || growth >= 1) {
         continue;
       }
 
-      final targetNode = _nodesById[toId] ?? _nodesById[fromId];
+      final targetNode =
+          _nodesById[edgeStep.targetId] ?? _nodesById[edgeStep.sourceId];
       if (targetNode == null) {
         continue;
       }
 
       particles.add(
         GalaxyEdgeParticle(
-          sourceId: fromId,
-          targetId: toId,
-          relationType: edge.relationType,
-          strength: edge.strength,
+          sourceId: edgeStep.sourceId,
+          targetId: edgeStep.targetId,
+          relationType: edgeStep.relationType,
+          strength: edgeStep.strength,
           progress: Curves.easeOutCubic.transform(growth.clamp(0.0, 1.0)),
-          radius: 1.8 + edge.strength * 1.1,
+          radius: 1.8 + edgeStep.strength * 1.1,
           alpha: 0.55,
           color: SectorConfig.getGlowColor(targetNode.sector),
         ),
@@ -1404,9 +1414,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
-    final progress = _buildReplayController.value;
+    final playbackPlan = _playbackPlan;
+    final progress = _buildReplayController.value.clamp(0.0, 1.0);
+    final nextElapsedMs = playbackPlan == null
+        ? 0
+        : (playbackPlan.totalDurationMs * progress).round();
     setState(() {
-      _buildRevealProgress = progress;
+      _playbackElapsedMs = nextElapsedMs;
       _ambientPhase =
           _ambientElapsed.inMicroseconds / Duration.microsecondsPerSecond;
     });
@@ -1419,7 +1433,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     setState(() {
       _isBuildAnimating = false;
-      _buildRevealProgress = 1;
+      _playbackElapsedMs = _playbackPlan?.totalDurationMs ?? 0;
+      _playbackPlan = null;
+      _preRevealedNodeIds = const <String>{};
+      _preRevealedEdgeIds = const <String>{};
       _focusNodeIds = const <String>{};
     });
   }
@@ -1432,35 +1449,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _startBuildReplay();
   }
 
-  void _startBuildReplay() {
-    if (_graph == null || _viewportSize == Size.zero) {
+  void _startBuildReplay({bool preserveCurrentCamera = false}) {
+    final graph = _graph;
+    if (graph == null || _viewportSize == Size.zero) {
       return;
     }
 
-    _stopFling();
-    _stopPhysicsSimulation(commitPendingNode: true);
-    _clearPreviewState();
-    _cancelTapFeedbackState();
-    final totalMs = _currentBuildReplayDurationMs();
-    final overviewCamera = _fitOverviewCamera();
-
-    setState(() {
-      _camera = overviewCamera;
-      _selectedNodeId = null;
-      _draggingNodeId = null;
-      _isBuildAnimating = true;
-      _buildRevealProgress = 0;
-      _focusNodeIds = const <String>{};
-      _sceneVersion++;
-    });
-    _buildReplayController
-      ..duration = Duration(milliseconds: totalMs)
-      ..stop()
-      ..reset();
-    unawaited(_buildReplayController.forward());
+    final playbackPlan = GalaxyBuildPlaybackPlan.full(
+      nodes: graph.nodes,
+      edges: graph.edges,
+      positions: _positions,
+      adjacency: _adjacency,
+    );
+    if (playbackPlan.isEmpty) {
+      return;
+    }
+    _launchPlayback(
+      _PlaybackLaunch(
+        plan: playbackPlan,
+        preRevealedNodeIds: const <String>{},
+        preRevealedEdgeIds: const <String>{},
+      ),
+      preserveCurrentCamera: preserveCurrentCamera,
+    );
   }
 
   void _stopBuildReplay() {
+    _initialBuildReplayTimer?.cancel();
     if (!_isBuildAnimating && !_buildReplayController.isAnimating) {
       return;
     }
@@ -1473,18 +1488,227 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     setState(() {
       _isBuildAnimating = false;
-      _buildRevealProgress = 1;
+      _playbackElapsedMs = 0;
+      _playbackPlan = null;
+      _preRevealedNodeIds = const <String>{};
+      _preRevealedEdgeIds = const <String>{};
       _focusNodeIds = const <String>{};
     });
   }
 
   int _currentBuildReplayDurationMs() {
-    final graph = _graph;
-    if (graph == null) {
-      return 4800;
+    final playbackPlan = _playbackPlan;
+    if (playbackPlan == null || playbackPlan.isEmpty) {
+      return 7200;
     }
-    final baseDuration = (2600 + graph.nodes.length * 18).clamp(3600, 12000);
-    return (baseDuration / _replaySpeed).round();
+    return (playbackPlan.totalDurationMs / _replaySpeed)
+        .round()
+        .clamp(1, 40000);
+  }
+
+  _PlaybackLaunch? _buildPlaybackLaunch({
+    required GalaxyGraphResponse? previousGraph,
+    required GalaxyGraphResponse nextGraph,
+    required Map<String, Offset> positions,
+    required Map<String, Set<String>> adjacency,
+    required bool preserveCamera,
+  }) {
+    if (!preserveCamera) {
+      final sessionPlayedFullReplay =
+          ref.read(galaxyBuildPlaybackSessionProvider);
+      if (sessionPlayedFullReplay) {
+        return null;
+      }
+      final fullPlan = GalaxyBuildPlaybackPlan.full(
+        nodes: nextGraph.nodes,
+        edges: nextGraph.edges,
+        positions: positions,
+        adjacency: adjacency,
+      );
+      if (fullPlan.isEmpty) {
+        return null;
+      }
+      return _PlaybackLaunch(
+        plan: fullPlan,
+        preRevealedNodeIds: const <String>{},
+        preRevealedEdgeIds: const <String>{},
+      );
+    }
+
+    final animatedNodeIds = _collectIncrementalAnimatedNodeIds(
+      previousGraph: previousGraph,
+      nextGraph: nextGraph,
+    );
+    if (animatedNodeIds.isEmpty) {
+      return null;
+    }
+
+    final allNodeIds = nextGraph.nodes.map((node) => node.id).toSet();
+    final preRevealedNodeIds = allNodeIds.difference(animatedNodeIds);
+    final preRevealedEdgeIds = nextGraph.edges
+        .where(
+          (edge) =>
+              !animatedNodeIds.contains(edge.sourceId) &&
+              !animatedNodeIds.contains(edge.targetId),
+        )
+        .map((edge) => edge.id)
+        .toSet();
+    final incrementalPlan = GalaxyBuildPlaybackPlan.incremental(
+      nodes: nextGraph.nodes,
+      edges: nextGraph.edges,
+      positions: positions,
+      adjacency: adjacency,
+      animatedNodeIds: animatedNodeIds,
+      preRevealedNodeIds: preRevealedNodeIds,
+    );
+    if (incrementalPlan.isEmpty) {
+      return null;
+    }
+    return _PlaybackLaunch(
+      plan: incrementalPlan,
+      preRevealedNodeIds: preRevealedNodeIds,
+      preRevealedEdgeIds: preRevealedEdgeIds,
+    );
+  }
+
+  Set<String> _collectIncrementalAnimatedNodeIds({
+    required GalaxyGraphResponse? previousGraph,
+    required GalaxyGraphResponse nextGraph,
+  }) {
+    if (previousGraph == null) {
+      return const <String>{};
+    }
+
+    final previousNodesById = {
+      for (final node in previousGraph.nodes) node.id: node,
+    };
+    final animatedNodeIds = <String>{};
+    for (final nextNode in nextGraph.nodes) {
+      final previousNode = previousNodesById[nextNode.id];
+      if (previousNode == null) {
+        animatedNodeIds.add(nextNode.id);
+        continue;
+      }
+      if (!previousNode.isUnlocked && nextNode.isUnlocked) {
+        animatedNodeIds.add(nextNode.id);
+      }
+    }
+    return animatedNodeIds;
+  }
+
+  void _preparePlayback(_PlaybackLaunch launch) {
+    setState(() {
+      _playbackPlan = launch.plan;
+      _preRevealedNodeIds = launch.preRevealedNodeIds;
+      _preRevealedEdgeIds = launch.preRevealedEdgeIds;
+      _playbackElapsedMs = 0;
+      _selectedNodeId = null;
+      _draggingNodeId = null;
+      _isBuildAnimating = true;
+      _focusNodeIds = const <String>{};
+      _sceneVersion++;
+    });
+    _buildReplayController
+      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
+      ..stop()
+      ..reset();
+  }
+
+  void _startPreparedPlayback() {
+    if (!_isBuildAnimating || _playbackPlan == null) {
+      return;
+    }
+    _buildReplayController
+      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
+      ..stop()
+      ..reset();
+    unawaited(_buildReplayController.forward());
+  }
+
+  void _launchPlayback(
+    _PlaybackLaunch launch, {
+    required bool preserveCurrentCamera,
+  }) {
+    if (_graph == null || _viewportSize == Size.zero) {
+      return;
+    }
+
+    _stopFling();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    _clearPreviewState();
+    _cancelTapFeedbackState();
+    final overviewCamera = _fitOverviewCamera();
+
+    setState(() {
+      _camera = preserveCurrentCamera ? _camera : overviewCamera;
+    });
+    _preparePlayback(launch);
+    _startPreparedPlayback();
+  }
+
+  GalaxyGraphResponse _sanitizeGraph(GalaxyGraphResponse graph) {
+    final validNodes =
+        graph.nodes.where(_isRenderableNode).toList(growable: false);
+    final validNodeIds = validNodes.map((node) => node.id).toSet();
+    final validEdges = graph.edges
+        .where(
+          (edge) =>
+              validNodeIds.contains(edge.sourceId) &&
+              validNodeIds.contains(edge.targetId),
+        )
+        .toList(growable: false);
+    return GalaxyGraphResponse(
+      nodes: validNodes,
+      edges: validEdges,
+      userFlameIntensity: graph.userFlameIntensity,
+    );
+  }
+
+  bool _isRenderableNode(GalaxyNodeModel node) {
+    final name = node.name.trim();
+    if (name.isEmpty || name.toLowerCase() == 'null' || name.contains('�')) {
+      return false;
+    }
+    const blockedPrefixes = <String>[
+      'J1',
+      'J2',
+      'J3',
+      'J4',
+      'J5',
+      'J6',
+      'J7',
+      'J8',
+      'J9',
+      'J0',
+      'decay-node-',
+      'test-',
+      'debug-',
+      'tmp-',
+      '测试主题',
+    ];
+    const blockedFragments = <String>[
+      'Sparkle RAG',
+      '系统错误码',
+      'CS101 课程说明',
+    ];
+    if (blockedPrefixes.any(name.startsWith) ||
+        blockedFragments.any(name.contains)) {
+      return false;
+    }
+    if (RegExp(r'^J\d').hasMatch(name) ||
+        RegExp(r'^[a-zA-Z]\d{2,}').hasMatch(name)) {
+      return false;
+    }
+    if (name.length > 36) {
+      return false;
+    }
+    final hasReadableGlyph = RegExp(
+      r'[A-Za-z0-9\u4E00-\u9FFF]',
+    ).hasMatch(name);
+    if (!hasReadableGlyph) {
+      return false;
+    }
+    return !RegExp(r'^[?？·•\-_=\s]+$').hasMatch(name);
   }
 
   void _updatePhysicsSettings({
@@ -1558,18 +1782,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _replaySpeed = value;
     });
     if (!_isBuildAnimating) {
-      _startBuildReplay();
       return;
     }
     final progress = _buildReplayController.value.clamp(0.0, 1.0);
-    final remainingProgress = (1 - progress).clamp(0.0, 1.0);
     _buildReplayController
       ..stop()
-      ..duration = Duration(
-        milliseconds: (_currentBuildReplayDurationMs() * remainingProgress)
-            .round()
-            .clamp(1, 12000),
-      );
+      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs());
     unawaited(_buildReplayController.forward(from: progress));
   }
 
@@ -1715,150 +1933,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return strengths;
   }
 
-  Map<String, int> _buildRevealRanks({
-    required List<GalaxyNodeModel> nodes,
-    required Map<String, Offset> positions,
-    required Map<String, Set<String>> adjacency,
-  }) {
-    if (nodes.isEmpty) {
-      return const <String, int>{};
-    }
-
-    final centroid = positions.values.fold<Offset>(
-          Offset.zero,
-          (sum, position) => sum + position,
-        ) /
-        positions.length.toDouble();
-
-    GalaxyNodeModel pickRoot(List<GalaxyNodeModel> candidates) {
-      final ordered = [...candidates]..sort((a, b) {
-          final aPosition = positions[a.id] ?? Offset.zero;
-          final bPosition = positions[b.id] ?? Offset.zero;
-          final aDistance = (aPosition - centroid).distance;
-          final bDistance = (bPosition - centroid).distance;
-          final aScore =
-              a.importance * 6 + a.studyCount * 0.8 + a.masteryScore * 0.35;
-          final bScore =
-              b.importance * 6 + b.studyCount * 0.8 + b.masteryScore * 0.35;
-          final weightedA = aScore - aDistance * 0.015;
-          final weightedB = bScore - bDistance * 0.015;
-          final scoreCompare = weightedB.compareTo(weightedA);
-          if (scoreCompare != 0) {
-            return scoreCompare;
-          }
-          final degreeCompare = (adjacency[b.id]?.length ?? 0)
-              .compareTo(adjacency[a.id]?.length ?? 0);
-          if (degreeCompare != 0) {
-            return degreeCompare;
-          }
-          return a.name.compareTo(b.name);
-        });
-      return ordered.first;
-    }
-
-    final root = pickRoot(nodes);
-    final rootPosition = positions[root.id] ?? Offset.zero;
-
-    final visited = <String>{};
-    final orderedIds = <String>[];
-    final queue = <String>[root.id];
-    visited.add(root.id);
-
-    while (queue.isNotEmpty) {
-      final layer = [...queue];
-      queue.clear();
-      layer.sort((a, b) {
-        final aNode = nodes.firstWhere((node) => node.id == a);
-        final bNode = nodes.firstWhere((node) => node.id == b);
-        final aPos = positions[a] ?? Offset.zero;
-        final bPos = positions[b] ?? Offset.zero;
-        final aAngle = math.atan2(aPos.dy - rootPosition.dy, aPos.dx - rootPosition.dx);
-        final bAngle = math.atan2(bPos.dy - rootPosition.dy, bPos.dx - rootPosition.dx);
-        final angleCompare = aAngle.compareTo(bAngle);
-        if (angleCompare != 0) {
-          return angleCompare;
-        }
-        final importanceCompare = bNode.importance.compareTo(aNode.importance);
-        if (importanceCompare != 0) {
-          return importanceCompare;
-        }
-        return aNode.name.compareTo(bNode.name);
-      });
-
-      for (final id in layer) {
-        orderedIds.add(id);
-        final neighbors = [...?adjacency[id]];
-        neighbors.sort((a, b) {
-          final aNode = nodes.firstWhere((node) => node.id == a);
-          final bNode = nodes.firstWhere((node) => node.id == b);
-          final aPos = positions[a] ?? Offset.zero;
-          final bPos = positions[b] ?? Offset.zero;
-          final aDistance = (aPos - rootPosition).distance;
-          final bDistance = (bPos - rootPosition).distance;
-          final distanceCompare = aDistance.compareTo(bDistance);
-          if (distanceCompare != 0) {
-            return distanceCompare;
-          }
-          final importanceCompare = bNode.importance.compareTo(aNode.importance);
-          if (importanceCompare != 0) {
-            return importanceCompare;
-          }
-          return aNode.name.compareTo(bNode.name);
-        });
-        for (final neighbor in neighbors) {
-          if (visited.add(neighbor)) {
-            queue.add(neighbor);
-          }
-        }
-      }
-    }
-
-    if (orderedIds.length < nodes.length) {
-      final remaining = nodes.where((node) => !visited.contains(node.id)).toList();
-      while (remaining.isNotEmpty) {
-        final nextRoot = pickRoot(remaining);
-        final stack = <String>[nextRoot.id];
-        visited.add(nextRoot.id);
-        while (stack.isNotEmpty) {
-          final current = stack.removeAt(0);
-          orderedIds.add(current);
-          final neighbors = [...?adjacency[current]];
-          for (final neighbor in neighbors) {
-            if (visited.add(neighbor)) {
-              stack.add(neighbor);
-            }
-          }
-        }
-        remaining.removeWhere((node) => visited.contains(node.id));
-      }
-    }
-
-    return {
-      for (var index = 0; index < orderedIds.length; index++) orderedIds[index]: index,
-    };
-  }
-
-  double _buildRevealForNode(String nodeId) {
-    final rank = _revealRanks[nodeId];
-    if (rank == null || _revealRanks.isEmpty) {
-      return _buildRevealProgress.clamp(0.0, 1.0);
-    }
-    final count = _revealRanks.length;
-    final staggerSpan = count <= 1 ? 0.0 : 0.78;
-    const revealSpan = 0.16;
-    final start = count <= 1 ? 0.0 : (rank / (count - 1)) * staggerSpan;
-    final end = (start + revealSpan).clamp(0.0, 1.0);
-    if (_buildRevealProgress <= start) {
-      return 0;
-    }
-    if (_buildRevealProgress >= end) {
-      return 1;
-    }
-    return Curves.easeOutCubic.transform(
-      ((_buildRevealProgress - start) / (end - start)).clamp(0.0, 1.0),
-    );
-  }
-
   Map<String, Color> _buildBlendedColors({
     required Map<String, GalaxyNodeModel> nodesById,
     required Map<String, Set<String>> adjacency,
@@ -1915,9 +1989,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final graph = _graph;
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
-    final sceneRevealProgress = _isBuildAnimating
-        ? _buildRevealProgress
-        : _entranceRevealProgress.clamp(0.0, 1.0);
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
 
     final baseTheme = Theme.of(context);
@@ -2009,10 +2080,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           isDarkMode: isDarkMode,
                           worldBounds: _computeWorldBounds(),
                           blendedColors: blendedColors,
-                          revealRanks: _revealRanks,
+                          playbackPlan: _playbackPlan,
+                          playbackElapsedMs: _playbackElapsedMs,
+                          preRevealedNodeIds: _preRevealedNodeIds,
+                          preRevealedEdgeIds: _preRevealedEdgeIds,
                           nodeConnectionCounts: _nodeConnectionCounts,
                           ambientPhase: _ambientPhase,
-                          buildRevealProgress: sceneRevealProgress,
                           isBuildAnimating: _isBuildAnimating,
                           focusNodeIds: _focusNodeIds,
                           searchMatchedNodeIds: _searchMatchedNodeIds,
@@ -2032,12 +2105,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         return const SizedBox.shrink();
                       }
                       // Collect neighbor screen positions for connection animation
-                      final neighborIds = _adjacency[entry.nodeId] ?? const <String>{};
+                      final neighborIds =
+                          _adjacency[entry.nodeId] ?? const <String>{};
                       final neighborScreenPositions = <Offset>[];
                       for (final nid in neighborIds) {
                         final nPos = _positions[nid];
                         if (nPos != null) {
-                          neighborScreenPositions.add(_camera.worldToScreen(nPos));
+                          neighborScreenPositions
+                              .add(_camera.worldToScreen(nPos));
                         }
                       }
                       return Positioned.fill(
@@ -2480,6 +2555,18 @@ class _OverviewStatsData {
   final int masteryAverage;
 
   double get unlockRatio => totalNodes == 0 ? 0 : unlockedNodes / totalNodes;
+}
+
+class _PlaybackLaunch {
+  const _PlaybackLaunch({
+    required this.plan,
+    required this.preRevealedNodeIds,
+    required this.preRevealedEdgeIds,
+  });
+
+  final GalaxyBuildPlaybackPlan plan;
+  final Set<String> preRevealedNodeIds;
+  final Set<String> preRevealedEdgeIds;
 }
 
 class _CelebrationEntry {

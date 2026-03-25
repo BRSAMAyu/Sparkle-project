@@ -103,19 +103,29 @@ class NodeShareCard extends StatelessWidget {
         onTap: onTap,
         padding: EdgeInsets.zero,
         borderRadius: DS.borderRadius12,
-        child: Container(
+        child: Builder(
+          builder: (context) {
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+            return Container(
           width: 280,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                DS.brandSecondary.withValues(alpha: 0.1),
-                DS.brandPrimary.withValues(alpha: 0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: isDarkMode
+                ? LinearGradient(
+                    colors: [
+                      DS.brandSecondary.withValues(alpha: 0.1),
+                      DS.brandPrimary.withValues(alpha: 0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDarkMode ? null : DS.surfacePanel,
             borderRadius: DS.borderRadius12,
-            border: Border.all(color: DS.brandSecondary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: isDarkMode
+                  ? DS.brandSecondary.withValues(alpha: 0.3)
+                  : DS.borderSubtle,
+            ),
             boxShadow: DS.shadowSm,
           ),
           child: Stack(
@@ -291,6 +301,8 @@ class NodeShareCard extends StatelessWidget {
               ),
             ],
           ),
+            );
+          },
         ),
       );
 

@@ -660,7 +660,8 @@ class _LearningPathNodeSummary extends StatelessWidget {
                     icon: Icons.extension_rounded,
                     label: '可选拓展',
                   ),
-                if (_LearningPathDialogState._relationLabel(node.relationType) !=
+                if (_LearningPathDialogState._relationLabel(
+                        node.relationType) !=
                     null)
                   _MetaChip(
                     icon: Icons.hub_rounded,
@@ -668,7 +669,8 @@ class _LearningPathNodeSummary extends StatelessWidget {
                       node.relationType,
                     )!,
                   ),
-                if (_LearningPathDialogState._sourceLabel(node.sourceType) != null)
+                if (_LearningPathDialogState._sourceLabel(node.sourceType) !=
+                    null)
                   _MetaChip(
                     icon: Icons.auto_awesome_rounded,
                     label: _LearningPathDialogState._sourceLabel(
@@ -679,9 +681,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              node.isTarget
-                  ? '这是当前学习路径的目标节点。'
-                  : '你可以围绕这个节点单独建任务，或把它并入学习计划。',
+              node.isTarget ? '这是当前学习路径的目标节点。' : '你可以围绕这个节点单独建任务，或把它并入学习计划。',
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.md),
@@ -717,11 +717,27 @@ class _LearningPathNodeSummary extends StatelessWidget {
                     ...visible.map(
                       (task) => Padding(
                         padding: const EdgeInsets.only(bottom: DS.xs),
-                        child: Text(
-                          '• ${task.title}',
-                          style: DS.bodySmall.copyWith(
-                            color: DS.textSecondary,
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              margin: const EdgeInsets.only(top: 7, right: 8),
+                              decoration: BoxDecoration(
+                                color: DS.textSecondary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                task.title,
+                                style: DS.bodySmall.copyWith(
+                                  color: DS.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

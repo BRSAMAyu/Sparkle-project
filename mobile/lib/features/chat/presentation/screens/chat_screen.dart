@@ -682,7 +682,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         .map(
                                           (file) => InputChip(
                                             avatar: Icon(
-                                              _attachmentStatusIcon(file.status),
+                                              _attachmentStatusIcon(
+                                                  file.status),
                                               size: 16,
                                               color: _attachmentStatusColor(
                                                 file.status,
@@ -1261,9 +1262,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         isScrollControlled: true,
         builder: (sheetContext) => Consumer(
           builder: (context, ref, _) {
-            final preferences =
-                ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
-                    _defaultAiSystemPreferences;
+            final preferences = ref
+                    .watch(transparencyPreferencesNotifierProvider)
+                    .valueOrNull ??
+                _defaultAiSystemPreferences;
             final notifier =
                 ref.read(transparencyPreferencesNotifierProvider.notifier);
             final showChatContextToggle =
@@ -1272,152 +1274,177 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ref.watch(showChatPredictionDockProvider);
             final showChatTransparencyCapsule =
                 ref.watch(showChatTransparencyCapsuleProvider);
+            final media = MediaQuery.of(sheetContext);
+            final maxSheetHeight = media.size.height * 0.82;
+            final bottomInset = media.viewInsets.bottom;
 
             return GraphiteModalSurface(
               padding: EdgeInsets.zero,
               child: SafeArea(
                 top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DS.spacing20,
-                    DS.spacing12,
-                    DS.spacing20,
-                    DS.spacing20,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: DS.spacing40,
-                          height: DS.spacing4,
-                          decoration: BoxDecoration(
-                            color: DS.surfaceTertiary,
-                            borderRadius:
-                                BorderRadius.circular(DS.spacing4 / 2),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxSheetHeight),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      DS.spacing20,
+                      DS.spacing12,
+                      DS.spacing20,
+                      DS.spacing20 + bottomInset,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: DS.spacing40,
+                            height: DS.spacing4,
+                            decoration: BoxDecoration(
+                              color: DS.surfaceTertiary,
+                              borderRadius:
+                                  BorderRadius.circular(DS.spacing4 / 2),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: DS.spacing20),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(DS.spacing10),
-                            decoration: BoxDecoration(
-                              color: DS.surfaceOverlay,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: DS.borderSubtle),
+                        const SizedBox(height: DS.spacing20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.only(
+                              bottom: DS.spacing16,
                             ),
-                            child: Icon(
-                              Icons.auto_awesome_rounded,
-                              color: DS.primaryBase,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: DS.spacing12),
-                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Sparkle AI System',
-                                  style: DS.titleLarge.copyWith(
-                                    color: DS.textPrimary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.all(DS.spacing10),
+                                      decoration: BoxDecoration(
+                                        color: DS.surfaceOverlay,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: DS.borderSubtle,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: DS.primaryBase,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: DS.spacing12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Sparkle AI System',
+                                            style: DS.titleLarge.copyWith(
+                                              color: DS.textPrimary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '在对话中展示多 Agent 协作、模型编排与质量依据。',
+                                            style: DS.bodySmall.copyWith(
+                                              color: DS.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '在对话中展示多 Agent 协作、模型编排与质量依据。',
-                                  style: DS.bodySmall.copyWith(
-                                    color: DS.textSecondary,
-                                  ),
+                                const SizedBox(height: DS.spacing20),
+                                _buildAiSettingTile(
+                                  title: '显示 AI 系统面板',
+                                  subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
+                                  value: preferences.enabled,
+                                  onChanged: notifier.setEnabled,
                                 ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildAiSettingTile(
+                                  title: '显示顶部选择条',
+                                  subtitle: '控制聊天页收起/展开的计划、模式和档位入口。',
+                                  value: showChatContextToggle,
+                                  onChanged: (value) => ref
+                                      .read(
+                                        showChatContextToggleProvider.notifier,
+                                      )
+                                      .setEnabled(value),
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildAiSettingTile(
+                                  title: '显示预测组件',
+                                  subtitle: '控制输入框上方的行为预测与快捷建议。',
+                                  value: showChatPredictionDock,
+                                  onChanged: (value) => ref
+                                      .read(
+                                        showChatPredictionDockProvider.notifier,
+                                      )
+                                      .setEnabled(value),
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildAiSettingTile(
+                                  title: '显示透明胶囊',
+                                  subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
+                                  value: showChatTransparencyCapsule,
+                                  onChanged: (value) => ref
+                                      .read(
+                                        showChatTransparencyCapsuleProvider
+                                            .notifier,
+                                      )
+                                      .setEnabled(value),
+                                ),
+                                if (preferences.enabled) ...[
+                                  const SizedBox(height: DS.spacing12),
+                                  _buildAiSettingTile(
+                                    title: '显示 Token 与成本',
+                                    subtitle: '展示本轮用量、成本估算和系统资源消耗。',
+                                    value: preferences.showTokenUsage,
+                                    onChanged: notifier.setShowTokenUsage,
+                                  ),
+                                  const SizedBox(height: DS.spacing12),
+                                  _buildAiSettingTile(
+                                    title: '显示 Agent 协作',
+                                    subtitle: '展示参与的专家、职责分工和模型协同。',
+                                    value: preferences.showAgentSwitching,
+                                    onChanged: notifier.setShowAgentSwitching,
+                                  ),
+                                  const SizedBox(height: DS.spacing12),
+                                  _buildAiSettingTile(
+                                    title: '显示推理时间线',
+                                    subtitle: '展示关键步骤、审查与反思过程。',
+                                    value: preferences.showReasoningSteps,
+                                    onChanged: notifier.setShowReasoningSteps,
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: DS.spacing20),
-                      _buildAiSettingTile(
-                        title: '显示 AI 系统面板',
-                        subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
-                        value: preferences.enabled,
-                        onChanged: notifier.setEnabled,
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      _buildAiSettingTile(
-                        title: '显示顶部选择条',
-                        subtitle: '控制聊天页收起/展开的计划、模式和档位入口。',
-                        value: showChatContextToggle,
-                        onChanged: (value) => ref
-                            .read(showChatContextToggleProvider.notifier)
-                            .setEnabled(value),
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      _buildAiSettingTile(
-                        title: '显示预测组件',
-                        subtitle: '控制输入框上方的行为预测与快捷建议。',
-                        value: showChatPredictionDock,
-                        onChanged: (value) => ref
-                            .read(showChatPredictionDockProvider.notifier)
-                            .setEnabled(value),
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      _buildAiSettingTile(
-                        title: '显示透明胶囊',
-                        subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
-                        value: showChatTransparencyCapsule,
-                        onChanged: (value) => ref
-                            .read(
-                              showChatTransparencyCapsuleProvider.notifier,
-                            )
-                            .setEnabled(value),
-                      ),
-                      if (preferences.enabled) ...[
-                        const SizedBox(height: DS.spacing12),
-                        _buildAiSettingTile(
-                          title: '显示 Token 与成本',
-                          subtitle: '展示本轮用量、成本估算和系统资源消耗。',
-                          value: preferences.showTokenUsage,
-                          onChanged: notifier.setShowTokenUsage,
                         ),
-                        const SizedBox(height: DS.spacing12),
-                        _buildAiSettingTile(
-                          title: '显示 Agent 协作',
-                          subtitle: '展示参与的专家、职责分工和模型协同。',
-                          value: preferences.showAgentSwitching,
-                          onChanged: notifier.setShowAgentSwitching,
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        _buildAiSettingTile(
-                          title: '显示推理时间线',
-                          subtitle: '展示关键步骤、审查与反思过程。',
-                          value: preferences.showReasoningSteps,
-                          onChanged: notifier.setShowReasoningSteps,
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(sheetContext).pop();
+                              unawaited(
+                                Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        const TransparencySettingsScreen(),
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.settings_outlined),
+                            label: const Text('打开高级设置'),
+                          ),
                         ),
                       ],
-                      const SizedBox(height: DS.spacing20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.of(sheetContext).pop();
-                            unawaited(
-                              Navigator.of(context, rootNavigator: true).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      const TransparencySettingsScreen(),
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.settings_outlined),
-                          label: const Text('打开高级设置'),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -2205,7 +2232,8 @@ class _ReasoningBreathOverlay extends StatefulWidget {
   const _ReasoningBreathOverlay();
 
   @override
-  State<_ReasoningBreathOverlay> createState() => _ReasoningBreathOverlayState();
+  State<_ReasoningBreathOverlay> createState() =>
+      _ReasoningBreathOverlayState();
 }
 
 class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>

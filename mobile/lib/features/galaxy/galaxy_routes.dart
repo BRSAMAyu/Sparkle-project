@@ -29,7 +29,7 @@ class GalaxyRoutes {
               child: SceneAudioScope(
                 policy: ExperienceProfiles.focusImmersive.audioPolicy(
                   trackOverride: BgmTrack.galaxy,
-                  atmosphereOverride: ExperienceAtmosphere.galaxyDrift,
+                  atmosphereOverride: ExperienceAtmosphere.none,
                 ),
                 child: KnowledgeDetailScreen(nodeId: nodeId),
               ),

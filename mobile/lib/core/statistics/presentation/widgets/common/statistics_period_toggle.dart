@@ -6,12 +6,14 @@ import 'package:sparkle/core/design/design_system.dart';
 /// Displays a segmented control or tab bar for selecting
 /// today/week/month/year periods.
 class StatisticsPeriodToggle extends StatelessWidget {
-
   const StatisticsPeriodToggle({
-    required this.selectedPeriod, required this.onPeriodChanged, super.key,
+    required this.selectedPeriod,
+    required this.onPeriodChanged,
+    super.key,
     this.showCustomOption = false,
     this.isCompact = false,
   });
+
   /// Currently selected period
   final StatisticsPeriod selectedPeriod;
 
@@ -41,8 +43,9 @@ class StatisticsPeriodToggle extends StatelessWidget {
         borderRadius: BorderRadius.circular(DS.borderRadiusLG),
       ),
       padding: EdgeInsets.all(isCompact ? DS.xs : DS.sm),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: DS.xs,
+        runSpacing: DS.xs,
         children: periods.map((period) {
           final isSelected = selectedPeriod == period;
           return _PeriodButton(
@@ -59,7 +62,6 @@ class StatisticsPeriodToggle extends StatelessWidget {
 
 /// Individual period button
 class _PeriodButton extends StatefulWidget {
-
   const _PeriodButton({
     required this.period,
     required this.isSelected,
@@ -90,10 +92,12 @@ class _PeriodButtonState extends State<_PeriodButton>
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: StatisticsAnimationConfig.cardPressScale,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: StatisticsAnimationConfig.cardCurve,
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: StatisticsAnimationConfig.cardCurve,
+      ),
+    );
   }
 
   @override
@@ -152,6 +156,8 @@ class _PeriodButtonState extends State<_PeriodButton>
           ),
           child: Text(
             widget.period.shortLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: DS.textStyle.copyWith(
               fontSize: widget.isCompact ? DS.fontSizeSM : DS.fontSizeBase,
               fontWeight: widget.isSelected
@@ -168,9 +174,10 @@ class _PeriodButtonState extends State<_PeriodButton>
 
 /// Dropdown-style period selector
 class StatisticsPeriodDropdown extends StatelessWidget {
-
   const StatisticsPeriodDropdown({
-    required this.selectedPeriod, required this.onPeriodChanged, super.key,
+    required this.selectedPeriod,
+    required this.onPeriodChanged,
+    super.key,
     this.showCustomOption = false,
   });
   final StatisticsPeriod selectedPeriod;
@@ -179,36 +186,36 @@ class StatisticsPeriodDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
-      decoration: BoxDecoration(
-        color: DS.neutral100,
-        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-        border: Border.all(color: DS.neutral200),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<StatisticsPeriod>(
-          value: selectedPeriod,
-          onChanged: (period) {
-            if (period != null) {
-              onPeriodChanged(period);
-            }
-          },
-          items: _buildItems(),
-          icon: Icon(
-            Icons.keyboard_arrow_down,
-            color: DS.neutral500,
-            size: 20,
-          ),
-          style: DS.textStyle.copyWith(
-            fontSize: DS.fontSizeBase,
-            color: DS.neutral700,
-          ),
-          dropdownColor: DS.white,
+        padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
           borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-          isDense: true,
+          border: Border.all(color: DS.neutral200),
         ),
-      ),
-    );
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<StatisticsPeriod>(
+            value: selectedPeriod,
+            onChanged: (period) {
+              if (period != null) {
+                onPeriodChanged(period);
+              }
+            },
+            items: _buildItems(),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              color: DS.neutral500,
+              size: 20,
+            ),
+            style: DS.textStyle.copyWith(
+              fontSize: DS.fontSizeBase,
+              color: DS.neutral700,
+            ),
+            dropdownColor: DS.white,
+            borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+            isDense: true,
+          ),
+        ),
+      );
 
   List<DropdownMenuItem<StatisticsPeriod>> _buildItems() {
     final periods = showCustomOption
@@ -220,9 +227,13 @@ class StatisticsPeriodDropdown extends StatelessWidget {
             StatisticsPeriod.year,
           ];
 
-    return periods.map((period) => DropdownMenuItem<StatisticsPeriod>(
-        value: period,
-        child: Text(period.label),
-      ),).toList();
+    return periods
+        .map(
+          (period) => DropdownMenuItem<StatisticsPeriod>(
+            value: period,
+            child: Text(period.label),
+          ),
+        )
+        .toList();
   }
 }

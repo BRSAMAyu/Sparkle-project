@@ -22,9 +22,32 @@ class DashboardRepository {
   Future<Map<String, dynamic>> getPredictiveDashboard() async {
     if (DemoDataService.isDemoMode) {
       return {
-        'engagement_forecast': <String, dynamic>{},
-        'dropout_risk': <String, dynamic>{},
-        'optimal_time': <String, dynamic>{},
+        'engagement_forecast': {
+          'forecast_type': 'engagement',
+          'trend': 'slightly_up',
+          'confidence': 0.76,
+          'summary': '未来 24 小时内保持较高活跃度的概率较大，但晚间会有轻微回落。',
+          'signals': [
+            '最近三次专注会话都发生在下午',
+            '错题本和星图节点的回看频率在上升',
+            '周末动能略低于工作日',
+          ],
+        },
+        'dropout_risk': {
+          'risk_level': 'low_to_medium',
+          'confidence': 0.34,
+          'summary': '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。',
+          'factors': [
+            '近期任务较多',
+            '存在少量未完成任务',
+            '晚间学习容易被打断',
+          ],
+        },
+        'optimal_time': {
+          'best_hours': [15, 16, 17, 20],
+          'best_weekdays': ['monday', 'tuesday', 'wednesday', 'thursday'],
+          'summary': '下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。',
+        },
         'next_intent_forecast': {
           'schema_version': 'prediction.v1',
           'prediction_id': 'demo-prediction-next-intent',
@@ -54,6 +77,16 @@ class DashboardRepository {
               'target_route': '/chat',
               'suggested_prompt': '帮我继续推进今天最关键的任务',
               'resource_type': 'chat',
+              'resource_id': null,
+              'surface': 'dashboard',
+            },
+            {
+              'id': 'demo-prediction-next-intent:secondary',
+              'label': '先做 25 分钟',
+              'action_type': 'start_pomodoro',
+              'target_route': '/focus',
+              'suggested_prompt': '先帮我把今天最重要的任务拆成 25 分钟专注块',
+              'resource_type': 'focus',
               'resource_id': null,
               'surface': 'dashboard',
             },

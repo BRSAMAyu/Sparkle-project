@@ -26,161 +26,203 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = I18nService.instance.l10n;
+    final media = MediaQuery.of(context);
+    final stackActions = media.size.width < 360;
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DS.surfacePrimary,
-              Color.alphaBlend(
-                DS.warning.withValues(alpha: 0.04),
-                DS.surfaceSecondary,
-              ),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: DS.borderSubtle,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 420,
+          maxHeight: media.size.height * 0.85,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animated warning icon
-            _buildAnimatedHeader(context),
-
-            // Content section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                DS.spacing24,
-                DS.spacing8,
-                DS.spacing24,
-                DS.spacing20,
+        child: SingleChildScrollView(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  DS.surfacePrimary,
+                  Color.alphaBlend(
+                    DS.warning.withValues(alpha: 0.04),
+                    DS.surfaceSecondary,
+                  ),
+                ],
               ),
-              child: Column(
-                children: [
-                  // Title
-                  Text(
-                    l10n.chatPlanSwitchTitle,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeLg,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: DS.spacing12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DS.borderSubtle,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated warning icon
+                _buildAnimatedHeader(context),
 
-                  // Message
-                  Text(
-                    l10n.chatPlanSwitchMessage,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      color: DS.textSecondary,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
+                // Content section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing24,
+                    DS.spacing8,
+                    DS.spacing24,
+                    DS.spacing20,
                   ),
-                  const SizedBox(height: DS.spacing16),
+                  child: Column(
+                    children: [
+                      // Title
+                      Text(
+                        l10n.chatPlanSwitchTitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DS.spacing12),
 
-                  // Unsaved count warning
-                  if (unsavedMessageCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing8,
+                      // Message
+                      Text(
+                        l10n.chatPlanSwitchMessage,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          color: DS.textSecondary,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      decoration: BoxDecoration(
-                        color: DS.warning.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            size: DS.iconSizeSm,
-                            color: DS.warning,
+                      const SizedBox(height: DS.spacing16),
+
+                      // Unsaved count warning
+                      if (unsavedMessageCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing12,
+                            vertical: DS.spacing8,
                           ),
-                          const SizedBox(width: DS.spacing8),
-                          Flexible(
-                            child: Text(
-                              l10n.chatPlanSwitchUnsavedCount(unsavedMessageCount),
-                              style: TextStyle(
-                                fontSize: DS.fontSizeSm,
+                          decoration: BoxDecoration(
+                            color: DS.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                size: DS.iconSizeSm,
                                 color: DS.warning,
-                                fontWeight: DS.fontWeightMedium,
+                              ),
+                              const SizedBox(width: DS.spacing8),
+                              Flexible(
+                                child: Text(
+                                  l10n.chatPlanSwitchUnsavedCount(
+                                    unsavedMessageCount,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeSm,
+                                    color: DS.warning,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Action buttons
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    0,
+                    DS.spacing16,
+                    DS.spacing20,
+                  ),
+                  child: stackActions
+                      ? Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: CustomButton.primary(
+                                text: context.l10n.confirm,
+                                onPressed: () {
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.confirm,
+                                  );
+                                  onConfirm();
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+                            const SizedBox(height: DS.spacing12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: CustomButton.secondary(
+                                text: context.l10n.cancel,
+                                onPressed: () {
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.tap,
+                                  );
+                                  onCancel();
+                                },
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: CustomButton.secondary(
+                                text: context.l10n.cancel,
+                                onPressed: () {
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.tap,
+                                  );
+                                  onCancel();
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing12),
+                            Expanded(
+                              child: CustomButton.primary(
+                                text: context.l10n.confirm,
+                                onPressed: () {
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.confirm,
+                                  );
+                                  onConfirm();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
-
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                DS.spacing16,
-                0,
-                DS.spacing16,
-                DS.spacing20,
-              ),
-              child: Row(
-                children: [
-                  // Cancel button
-                  Expanded(
-                    child: CustomButton.secondary(
-                      text: context.l10n.cancel,
-                      onPressed: () {
-                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-                        onCancel();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  // Confirm button
-                  Expanded(
-                    child: CustomButton.primary(
-                      text: context.l10n.confirm,
-                      onPressed: () {
-                        SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.confirm,
-                        );
-                        onConfirm();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildAnimatedHeader(BuildContext context) => Container(
-      padding: const EdgeInsets.only(top: DS.spacing24),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutBack,
-        builder: (context, value, child) => Transform.scale(
+        padding: const EdgeInsets.only(top: DS.spacing24),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutBack,
+          builder: (context, value, child) => Transform.scale(
             scale: value,
             child: Container(
               padding: const EdgeInsets.all(DS.spacing16),
@@ -195,6 +237,6 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
               ),
             ),
           ),
-      ),
-    );
+        ),
+      );
 }

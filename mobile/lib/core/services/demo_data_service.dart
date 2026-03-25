@@ -1,4 +1,4 @@
-// ignore_for_file: use_setters_to_change_properties
+// ignore_for_file: use_setters_to_change_properties, cascade_invocations
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -13,6 +13,122 @@ import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:uuid/uuid.dart';
 
+class _DemoDomainProfile {
+  const _DemoDomainProfile({
+    required this.domainId,
+    required this.displayName,
+    required this.goalTheme,
+    required this.taskTags,
+    required this.contentTone,
+    required this.priorityRole,
+  });
+
+  final String domainId;
+  final String displayName;
+  final String goalTheme;
+  final List<String> taskTags;
+  final String contentTone;
+  final String priorityRole;
+}
+
+class _DemoTouchpointProfile {
+  const _DemoTouchpointProfile({
+    required this.touchpointId,
+    required this.displayName,
+    required this.storyline,
+    required this.anchorTags,
+    required this.signal,
+  });
+
+  final String touchpointId;
+  final String displayName;
+  final String storyline;
+  final List<String> anchorTags;
+  final String signal;
+}
+
+const List<_DemoDomainProfile> _demoDomainProfiles = [
+  _DemoDomainProfile(
+    domainId: 'Academic',
+    displayName: '理工学业',
+    goalTheme: '稳住课程理解，把抽象概念变成可复述的结构',
+    taskTags: ['Academic', 'Math', 'Science', 'Coursework'],
+    contentTone: 'structured',
+    priorityRole: 'primary',
+  ),
+  _DemoDomainProfile(
+    domainId: 'Language',
+    displayName: '语言表达',
+    goalTheme: '提升英语输入输出，让表达更自然、更有组织',
+    taskTags: ['Language', 'English', 'Speaking', 'Writing'],
+    contentTone: 'expressive',
+    priorityRole: 'primary',
+  ),
+  _DemoDomainProfile(
+    domainId: 'Creative',
+    displayName: '艺术创作',
+    goalTheme: '用摄影、写作和策展练习稳定输出审美判断',
+    taskTags: ['Creative', 'Photography', 'Writing', 'Design'],
+    contentTone: 'playful',
+    priorityRole: 'secondary',
+  ),
+  _DemoDomainProfile(
+    domainId: 'Humanities',
+    displayName: '阅读反思',
+    goalTheme: '通过阅读、记录和讨论建立更完整的理解框架',
+    taskTags: ['Humanities', 'Reading', 'Reflection', 'Society'],
+    contentTone: 'reflective',
+    priorityRole: 'secondary',
+  ),
+  _DemoDomainProfile(
+    domainId: 'Wellness',
+    displayName: '健康节律',
+    goalTheme: '先把睡眠、运动和恢复节律拉稳，再谈高强度冲刺',
+    taskTags: ['Wellness', 'Exercise', 'Sleep', 'Recovery'],
+    contentTone: 'grounding',
+    priorityRole: 'support',
+  ),
+  _DemoDomainProfile(
+    domainId: 'Career',
+    displayName: '职业探索',
+    goalTheme: '用作品集、表达训练和信息访谈连接长期方向',
+    taskTags: ['Career', 'Portfolio', 'Interview', 'Planning'],
+    contentTone: 'pragmatic',
+    priorityRole: 'primary',
+  ),
+];
+
+const List<_DemoTouchpointProfile> _demoTouchpointProfiles = [
+  _DemoTouchpointProfile(
+    touchpointId: 'Certification',
+    displayName: '考证用户',
+    storyline: '会把阶段考试、口语计时和错题回看揉进日常节奏里。',
+    anchorTags: ['Exam Prep', 'Speaking', 'Review', 'Routine'],
+    signal: '重视阶段目标和计时练习',
+  ),
+  _DemoTouchpointProfile(
+    touchpointId: 'Creator',
+    displayName: '内容创作者',
+    storyline: '会在创作、选题、发布节奏和作品集整理之间来回切换。',
+    anchorTags: ['Creative', 'Portfolio', 'Writing', 'Photography'],
+    signal: '需要持续输出和素材整理',
+  ),
+  _DemoTouchpointProfile(
+    touchpointId: 'CareerTransition',
+    displayName: '求职转型用户',
+    storyline: '会频繁梳理可迁移能力、信息访谈和作品集叙事。',
+    anchorTags: ['Career', 'Portfolio', 'Interview', 'Planning'],
+    signal: '在探索方向与构建叙事之间反复校准',
+  ),
+  _DemoTouchpointProfile(
+    touchpointId: 'SportsRecovery',
+    displayName: '运动恢复型用户',
+    storyline: '更在意恢复、睡眠和负荷管理，不再只看打卡数量。',
+    anchorTags: ['Wellness', 'Recovery', 'Sleep', 'Mobility'],
+    signal: '会把恢复动作视为主任务的一部分',
+  ),
+];
+
 class DemoDataService {
   factory DemoDataService() => _instance;
   DemoDataService._internal();
@@ -21,25 +137,52 @@ class DemoDataService {
   static final DemoDataService _instance = DemoDataService._internal();
 
   final _uuid = const Uuid();
+  final DateTime _snapshotAnchor = DateTime.now();
 
   String? _currentAvatarUrl;
+  List<TaskModel>? _demoTasksCache;
+  GalaxyGraphResponse? _demoGalaxyCache;
   List<PlanModel>? _demoPlansCache;
+  List<ChatMessageModel>? _demoChatHistoryCache;
+  Map<String, dynamic>? _demoDashboardCache;
+  List<CuriosityCapsuleModel>? _demoCuriosityCapsulesCache;
+  List<AchievementModel>? _demoAchievementsCache;
+  List<Post>? _demoCommunityPostsCache;
+  List<Map<String, dynamic>>? _demoFocusSessionsCache;
+  List<Map<String, dynamic>>? _demoErrorRecordsCache;
+  List<BehaviorPatternModel>? _demoBehaviorPatternsCache;
+  List<Map<String, dynamic>>? _demoNotificationsCache;
+  List<Map<String, dynamic>>? _demoFriendsCache;
+  List<Map<String, dynamic>>? _demoAccountabilityPartnersCache;
+  List<Map<String, dynamic>>? _demoGroupsCache;
+  List<Map<String, dynamic>>? _demoGroupMessagesCache;
+  List<Map<String, dynamic>>? _demoVisualElementsCache;
+  List<Map<String, dynamic>>? _demoAchievementDetailsCache;
+  List<Map<String, dynamic>>? _demoAccountabilityHeatmapCache;
+  List<Map<String, dynamic>>? _demoCheckinsCache;
 
+  static const String demoUserId = 'CS_Sophomore_12345';
+  static const String demoUsername = 'AI_Learner_02';
+  static const String demoAvatarSeed = 'AI_Learner_02';
+
+  final Map<String, _DemoDomainProfile> _domainProfileById = {
+    for (final profile in _demoDomainProfiles) profile.domainId: profile,
+  };
   // --- User Data ---
   UserModel get demoUser => UserModel(
-        id: 'CS_Sophomore_12345',
-        username: 'AI_Learner_02',
+        id: demoUserId,
+        username: demoUsername,
         email: 'learner@sparkle.ai',
-        nickname: 'AI_Learner_02',
+        nickname: 'Mika',
         avatarUrl: _currentAvatarUrl ??
-            'https://api.dicebear.com/9.x/avataaars/png?seed=AI_Learner_02',
+            'https://api.dicebear.com/9.x/avataaars/png?seed=$demoAvatarSeed',
         flameLevel: 15,
         flameBrightness: 0.85,
         depthPreference: 0.7,
         curiosityPreference: 0.8,
         isActive: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 45)),
-        updatedAt: DateTime.now(),
+        createdAt: _snapshotAnchor.subtract(const Duration(days: 45)),
+        updatedAt: _snapshotAnchor,
         pushPreferences: PushPreferences(),
       );
 
@@ -49,303 +192,555 @@ class DemoDataService {
 
   void resetDemoState() {
     _currentAvatarUrl = null;
+    _demoTasksCache = null;
+    _demoGalaxyCache = null;
     _demoPlansCache = null;
+    _demoChatHistoryCache = null;
+    _demoDashboardCache = null;
+    _demoCuriosityCapsulesCache = null;
+    _demoAchievementsCache = null;
+    _demoCommunityPostsCache = null;
+    _demoFocusSessionsCache = null;
+    _demoErrorRecordsCache = null;
+    _demoBehaviorPatternsCache = null;
+    _demoNotificationsCache = null;
+    _demoFriendsCache = null;
+    _demoAccountabilityPartnersCache = null;
+    _demoGroupsCache = null;
+    _demoGroupMessagesCache = null;
+    _demoVisualElementsCache = null;
+    _demoAchievementDetailsCache = null;
+    _demoAccountabilityHeatmapCache = null;
+    _demoCheckinsCache = null;
+  }
+
+  DateTime get _now => _snapshotAnchor;
+
+  String _nodeIdByName(List<GalaxyNodeModel> nodes, String name) =>
+      nodes.firstWhere((node) => node.name == name).id;
+
+  _DemoDomainProfile _domainProfile(String domainId) =>
+      _domainProfileById[domainId]!;
+
+  static const Map<String, List<String>> _nodeSemanticAliases = {
+    '高等数学': ['Academic', 'Math', 'Calculus', 'Exam Prep'],
+    '线性代数': ['Academic', 'Math', 'Linear Algebra'],
+    '概率论与数理统计': ['Academic', 'Statistics', 'Problem Set'],
+    '摄影艺术': ['Creative', 'Photography', 'Portfolio', 'Creator'],
+    '设计思维': ['Creative', 'Career', 'Portfolio', 'Planning'],
+    '文学鉴赏': ['Humanities', 'Reading', 'Writing'],
+    '写作表达': ['Language', 'Writing', 'Creator'],
+    '心理学导论': ['Humanities', 'Wellness', 'Reflection'],
+    '管理学基础': ['Career', 'Planning', 'CareerTransition'],
+    '经济学原理': ['Humanities', 'Career', 'Reading'],
+    '生理学': ['Wellness', 'Recovery', 'SportsRecovery'],
+    '营养学': ['Wellness', 'Recovery', 'Sleep'],
+    '运动科学': ['Wellness', 'Exercise', 'Recovery', 'SportsRecovery'],
+    '批判性思维': ['Humanities', 'Reading', 'Reflection'],
+    '设计思维与创新': ['Creative', 'Career', 'Creator'],
+    '学习方法论': ['Academic', 'Language', 'Review', 'Certification'],
+    '程序设计基础': ['Academic', 'Career', 'Problem Solving'],
+    '机器学习': ['Academic', 'Career', 'Project'],
+  };
+
+  TaskModel _buildDemoTask({
+    required String title,
+    required String domainId,
+    required TaskType type,
+    required TaskStatus status,
+    required int estimatedMinutes,
+    required int difficulty,
+    required int energyCost,
+    required int priority,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    DateTime? dueDate,
+    DateTime? startedAt,
+    DateTime? completedAt,
+    int? actualMinutes,
+    String? userNote,
+    List<String> extraTags = const [],
+  }) {
+    final profile = _domainProfile(domainId);
+    return TaskModel(
+      id: _uuid.v4(),
+      userId: demoUserId,
+      title: title,
+      type: type,
+      tags: [domainId, ...profile.taskTags, ...extraTags],
+      estimatedMinutes: estimatedMinutes,
+      difficulty: difficulty,
+      energyCost: energyCost,
+      status: status,
+      priority: priority,
+      dueDate: dueDate,
+      startedAt: startedAt,
+      completedAt: completedAt,
+      actualMinutes: actualMinutes,
+      userNote: userNote,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  Set<String> _semanticTokensForNode(GalaxyNodeModel node) {
+    final tokens = <String>{
+      node.name,
+      ...?node.tags,
+      ...?_nodeSemanticAliases[node.name],
+    };
+    final description = node.description ?? '';
+    for (final token in [
+      'Academic',
+      'Language',
+      'Creative',
+      'Humanities',
+      'Wellness',
+      'Career',
+      'Math',
+      'Statistics',
+      'Photography',
+      'Writing',
+      'Reading',
+      'Recovery',
+      'Portfolio',
+      'Interview',
+      'Exam Prep',
+    ]) {
+      if (description.toLowerCase().contains(token.toLowerCase())) {
+        tokens.add(token);
+      }
+    }
+    return tokens;
+  }
+
+  Set<String> _domainIdsForNode(GalaxyNodeModel node) {
+    switch (node.sector) {
+      case SectorEnum.cosmos:
+        return {'Academic'};
+      case SectorEnum.tech:
+        return {'Academic', 'Career'};
+      case SectorEnum.art:
+        return {'Creative', 'Language'};
+      case SectorEnum.civilization:
+        return {'Humanities', 'Career'};
+      case SectorEnum.life:
+        return {'Wellness'};
+      case SectorEnum.wisdom:
+        return {'Humanities', 'Wellness', 'Language'};
+      case SectorEnum.voidSector:
+        return {'Humanities'};
+    }
+  }
+
+  int _matchTextScore(String text, Iterable<String> keywords) {
+    final lowerText = text.toLowerCase();
+    var score = 0;
+    for (final keyword in keywords) {
+      if (lowerText.contains(keyword.toLowerCase())) {
+        score += keyword.length > 6 ? 4 : 2;
+      }
+    }
+    return score;
+  }
+
+  int _taskScoreForNode(
+    TaskModel task,
+    GalaxyNodeModel node,
+    Set<String> nodeDomains,
+    Set<String> semanticTokens,
+  ) {
+    var score = _matchTextScore(task.title, semanticTokens);
+    score += _matchTextScore(task.tags.join(' '), semanticTokens);
+    for (final domain in nodeDomains) {
+      if (task.tags.contains(domain)) score += 5;
+    }
+    if (task.status == TaskStatus.inProgress) score += 3;
+    if (task.status == TaskStatus.pending) score += 2;
+    if (task.status == TaskStatus.completed) score += 1;
+    if (task.dueDate != null &&
+        task.dueDate!.isAfter(_now.subtract(const Duration(days: 1)))) {
+      score += 1;
+    }
+    if (node.name.contains('写作') && task.tags.contains('Writing')) score += 4;
+    if (node.name.contains('摄影') && task.tags.contains('Photography')) score += 4;
+    if (node.name.contains('统计') && task.tags.contains('Statistics')) score += 4;
+    if (node.name.contains('运动') && task.tags.contains('Recovery')) score += 4;
+    return score;
+  }
+
+  int _planScoreForNode(
+    PlanModel plan,
+    GalaxyNodeModel node,
+    Set<String> nodeDomains,
+    Set<String> semanticTokens,
+  ) {
+    final planTasks = plan.tasks ?? const <TaskModel>[];
+    final text =
+        '${plan.name} ${plan.description ?? ''} ${plan.subject ?? ''} ${planTasks.map((task) => task.title).join(' ')}';
+    var score = _matchTextScore(text, semanticTokens);
+    for (final domain in nodeDomains) {
+      if (planTasks.any((task) => task.tags.contains(domain))) score += 5;
+    }
+    if (plan.isActive) score += 3;
+    if (plan.priority == PlanPriority.high) score += 1;
+    if (node.name.contains('摄影') &&
+        planTasks.any((task) => task.tags.contains('Photography'))) {
+      score += 4;
+    }
+    if (node.name.contains('管理') &&
+        planTasks.any((task) => task.tags.contains('Career'))) {
+      score += 4;
+    }
+    return score;
   }
 
   // --- Task Data ---
   List<TaskModel> get demoTasks {
-    final now = DateTime.now();
-    return [
-      // 🔥 Today's High Priority
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '数据结构 - 二叉树遍历算法',
+    if (_demoTasksCache != null) return _demoTasksCache!;
+    final now = _now;
+    final tasks = [
+      _buildDemoTask(
+        title: '理工课复盘 - 用自己的话讲清楚积分换元',
+        domainId: 'Academic',
         type: TaskType.learning,
-        tags: ['CS', 'Data Structures', 'Tree'],
-        estimatedMinutes: 90,
-        difficulty: 4,
-        energyCost: 4,
         status: TaskStatus.inProgress,
-        priority: 3,
-        dueDate: now,
-        startedAt: now.subtract(const Duration(minutes: 30)),
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now,
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '操作系统 - 死锁处理机制',
-        type: TaskType.learning,
-        tags: ['OS', 'Concurrency'],
         estimatedMinutes: 75,
         difficulty: 4,
-        energyCost: 3,
-        status: TaskStatus.pending,
+        energyCost: 4,
         priority: 3,
         dueDate: now,
-        createdAt: now.subtract(const Duration(hours: 6)),
+        startedAt: now.subtract(const Duration(minutes: 35)),
+        createdAt: now.subtract(const Duration(days: 1)),
         updatedAt: now,
+        extraTags: const ['Calculus', 'Exam Prep'],
       ),
-
-      // 📚 This Week
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '离散数学 - 图论着色问题',
-        type: TaskType.learning,
-        tags: ['Math', 'Graph Theory'],
-        estimatedMinutes: 120,
+      _buildDemoTask(
+        title: '理工练习 - 统计学抽样误差题组',
+        domainId: 'Academic',
+        type: TaskType.training,
+        status: TaskStatus.pending,
+        estimatedMinutes: 85,
         difficulty: 4,
         energyCost: 4,
-        status: TaskStatus.pending,
         priority: 3,
         dueDate: now.add(const Duration(days: 2)),
-        createdAt: now.subtract(const Duration(days: 3)),
-        updatedAt: now,
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '计算机网络 - TCP协议分析',
-        type: TaskType.learning,
-        tags: ['Network', 'Protocol'],
-        estimatedMinutes: 90,
-        difficulty: 3,
-        energyCost: 3,
-        status: TaskStatus.pending,
-        priority: 2,
-        dueDate: now.add(const Duration(days: 3)),
         createdAt: now.subtract(const Duration(days: 2)),
-        updatedAt: now,
+        updatedAt: now.subtract(const Duration(hours: 9)),
+        extraTags: const ['Statistics', 'Problem Set'],
       ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: 'Python爬虫 - BeautifulSoup实战',
-        type: TaskType.training,
-        tags: ['Python', 'Web Scraping'],
-        estimatedMinutes: 120,
+      _buildDemoTask(
+        title: '理工总结 - 线性代数错题回看',
+        domainId: 'Academic',
+        type: TaskType.reflection,
+        status: TaskStatus.completed,
+        estimatedMinutes: 50,
         difficulty: 2,
         energyCost: 2,
-        status: TaskStatus.pending,
-        priority: 2,
-        dueDate: now.add(const Duration(days: 4)),
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now,
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '数据库系统 - 事务隔离级别',
-        type: TaskType.learning,
-        tags: ['Database', 'Transaction'],
-        estimatedMinutes: 60,
-        difficulty: 3,
-        energyCost: 2,
-        status: TaskStatus.pending,
-        priority: 2,
-        dueDate: now.add(const Duration(days: 5)),
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now,
-      ),
-
-      // 🎯 Mid-term Sprint
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '算法设计 - 动态规划专题',
-        type: TaskType.learning,
-        tags: ['Algorithm', 'DP'],
-        estimatedMinutes: 150,
-        difficulty: 5,
-        energyCost: 4,
-        status: TaskStatus.pending,
-        priority: 3,
-        dueDate: now.add(const Duration(days: 7)),
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now,
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '机器学习 - 线性回归实现',
-        type: TaskType.training,
-        tags: ['ML', 'Python'],
-        estimatedMinutes: 180,
-        difficulty: 4,
-        energyCost: 4,
-        status: TaskStatus.pending,
-        priority: 2,
-        dueDate: now.add(const Duration(days: 10)),
-        createdAt: now.subtract(const Duration(days: 7)),
-        updatedAt: now,
-      ),
-
-      // ✅ Recently Completed
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '数据结构 - 链表实现与操作',
-        type: TaskType.learning,
-        tags: ['CS', 'Data Structures', 'LinkedList'],
-        estimatedMinutes: 120,
-        difficulty: 3,
-        energyCost: 3,
-        status: TaskStatus.completed,
-        priority: 3,
-        dueDate: now.subtract(const Duration(days: 1)),
-        completedAt: now.subtract(const Duration(days: 1)),
-        actualMinutes: 135,
-        userNote: '完成了单链表和双链表的所有操作，理解加深了！',
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '计算机系统 - CPU调度算法模拟',
-        type: TaskType.training,
-        tags: ['OS', 'Scheduling'],
-        estimatedMinutes: 90,
-        difficulty: 3,
-        energyCost: 3,
-        status: TaskStatus.completed,
-        priority: 2,
-        dueDate: now.subtract(const Duration(days: 2)),
-        completedAt: now.subtract(const Duration(days: 2)),
-        actualMinutes: 85,
-        createdAt: now.subtract(const Duration(days: 6)),
-        updatedAt: now.subtract(const Duration(days: 2)),
-      ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '线性代数 - 矩阵运算练习',
-        type: TaskType.training,
-        tags: ['Math', 'Linear Algebra'],
-        estimatedMinutes: 60,
-        difficulty: 2,
-        energyCost: 2,
-        status: TaskStatus.completed,
         priority: 2,
         dueDate: now.subtract(const Duration(days: 3)),
         completedAt: now.subtract(const Duration(days: 3)),
         actualMinutes: 55,
-        createdAt: now.subtract(const Duration(days: 8)),
+        createdAt: now.subtract(const Duration(days: 7)),
         updatedAt: now.subtract(const Duration(days: 3)),
+        userNote: '把总是漏写条件的地方圈出来了，下次先审题再动笔。',
+        extraTags: const ['Linear Algebra', 'Review'],
       ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: 'Web前端 - React组件开发',
+      _buildDemoTask(
+        title: '语言输出 - 口语话题卡 2 轮跟说',
+        domainId: 'Language',
         type: TaskType.training,
-        tags: ['Web', 'React', 'Frontend'],
-        estimatedMinutes: 120,
-        difficulty: 3,
-        energyCost: 2,
-        status: TaskStatus.completed,
-        priority: 2,
-        dueDate: now.subtract(const Duration(days: 5)),
-        completedAt: now.subtract(const Duration(days: 5)),
-        actualMinutes: 140,
-        userNote: '实现了Todo List组件，学会了useState和useEffect',
-        createdAt: now.subtract(const Duration(days: 10)),
-        updatedAt: now.subtract(const Duration(days: 5)),
-      ),
-
-      // 🎨 Personal Growth
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '摄影技巧 - 夜景拍摄实践',
-        type: TaskType.learning,
-        tags: ['Photography', 'Hobby'],
-        estimatedMinutes: 60,
+        status: TaskStatus.pending,
+        estimatedMinutes: 35,
         difficulty: 2,
         energyCost: 1,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 1)),
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(hours: 10)),
+        extraTags: const ['Speaking', 'Shadowing'],
+      ),
+      _buildDemoTask(
+        title: '语言输入 - 精读一篇城市更新英文评论',
+        domainId: 'Language',
+        type: TaskType.learning,
+        status: TaskStatus.inProgress,
+        estimatedMinutes: 45,
+        difficulty: 3,
+        energyCost: 2,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 3)),
+        startedAt: now.subtract(const Duration(minutes: 15)),
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now,
+        extraTags: const ['Reading', 'Vocabulary'],
+      ),
+      _buildDemoTask(
+        title: '语言表达 - 改写上周英语自我介绍',
+        domainId: 'Language',
+        type: TaskType.reflection,
         status: TaskStatus.completed,
+        estimatedMinutes: 40,
+        difficulty: 2,
+        energyCost: 1,
         priority: 1,
         dueDate: now.subtract(const Duration(days: 4)),
         completedAt: now.subtract(const Duration(days: 4)),
-        actualMinutes: 70,
-        createdAt: now.subtract(const Duration(days: 7)),
+        actualMinutes: 42,
+        createdAt: now.subtract(const Duration(days: 6)),
         updatedAt: now.subtract(const Duration(days: 4)),
+        userNote: '句子更短以后自然很多，不再一味追求复杂句。',
+        extraTags: const ['Writing', 'Self Intro'],
       ),
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '英语口语 - TED演讲学习',
-        type: TaskType.learning,
-        tags: ['English', 'Speaking'],
-        estimatedMinutes: 45,
+      _buildDemoTask(
+        title: '考证计时 - 口语 Part 2 计时练习',
+        domainId: 'Language',
+        type: TaskType.training,
+        status: TaskStatus.pending,
+        estimatedMinutes: 20,
         difficulty: 2,
         energyCost: 1,
-        status: TaskStatus.pending,
-        priority: 1,
-        dueDate: now.add(const Duration(days: 6)),
+        priority: 2,
+        dueDate: now.add(const Duration(days: 2)),
         createdAt: now.subtract(const Duration(days: 2)),
-        updatedAt: now,
+        updatedAt: now.subtract(const Duration(hours: 5)),
+        extraTags: const ['Certification', 'Exam Prep', 'Speaking'],
       ),
-
-      // 📖 Reading & Reflection
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '《深度工作》阅读与反思',
-        type: TaskType.reflection,
-        tags: ['Reading', 'Self-improvement'],
-        estimatedMinutes: 90,
+      _buildDemoTask(
+        title: '创作输出 - 拍一组“傍晚通勤”主题照片',
+        domainId: 'Creative',
+        type: TaskType.training,
+        status: TaskStatus.pending,
+        estimatedMinutes: 60,
         difficulty: 2,
         energyCost: 2,
-        status: TaskStatus.pending,
         priority: 1,
-        dueDate: now.add(const Duration(days: 14)),
+        dueDate: now.add(const Duration(days: 2)),
+        createdAt: now.subtract(const Duration(days: 4)),
+        updatedAt: now.subtract(const Duration(hours: 6)),
+        extraTags: const ['Photography', 'Street'],
+      ),
+      _buildDemoTask(
+        title: '创作整理 - 为作品集挑选 6 张最稳定的照片',
+        domainId: 'Creative',
+        type: TaskType.planning,
+        status: TaskStatus.pending,
+        estimatedMinutes: 55,
+        difficulty: 3,
+        energyCost: 2,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 5)),
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(hours: 12)),
+        extraTags: const ['Portfolio', 'Editing'],
+      ),
+      _buildDemoTask(
+        title: '创作复盘 - 给旧文章补一个更清晰的开头',
+        domainId: 'Creative',
+        type: TaskType.reflection,
+        status: TaskStatus.completed,
+        estimatedMinutes: 30,
+        difficulty: 2,
+        energyCost: 1,
+        priority: 1,
+        dueDate: now.subtract(const Duration(days: 2)),
+        completedAt: now.subtract(const Duration(days: 2)),
+        actualMinutes: 33,
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+        userNote: '删掉了太用力的形容词，画面感反而更清楚。',
+        extraTags: const ['Writing', 'Editing'],
+      ),
+      _buildDemoTask(
+        title: '创作者触点 - 整理一周选题碎片',
+        domainId: 'Creative',
+        type: TaskType.planning,
+        status: TaskStatus.inProgress,
+        estimatedMinutes: 35,
+        difficulty: 2,
+        energyCost: 1,
+        priority: 1,
+        dueDate: now.add(const Duration(days: 1)),
+        startedAt: now.subtract(const Duration(minutes: 12)),
         createdAt: now.subtract(const Duration(days: 3)),
         updatedAt: now,
+        extraTags: const ['Creator', 'Content Planning', 'Writing'],
       ),
-
-      // 🏃 Health & Exercise
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '晨跑 - 5公里',
-        type: TaskType.social,
-        tags: ['Exercise', 'Health'],
-        estimatedMinutes: 30,
-        difficulty: 1,
+      _buildDemoTask(
+        title: '阅读反思 - 读《置身事内》并记 3 条问题',
+        domainId: 'Humanities',
+        type: TaskType.learning,
+        status: TaskStatus.pending,
+        estimatedMinutes: 70,
+        difficulty: 3,
         energyCost: 2,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 4)),
+        createdAt: now.subtract(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(hours: 7)),
+        extraTags: const ['Economy', 'Reading Notes'],
+      ),
+      _buildDemoTask(
+        title: '阅读反思 - 整理本周的“我为什么会拖延”摘录',
+        domainId: 'Humanities',
+        type: TaskType.reflection,
+        status: TaskStatus.inProgress,
+        estimatedMinutes: 25,
+        difficulty: 2,
+        energyCost: 1,
+        priority: 1,
+        dueDate: now.add(const Duration(days: 1)),
+        startedAt: now.subtract(const Duration(minutes: 10)),
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now,
+        extraTags: const ['Reflection', 'Journal'],
+      ),
+      _buildDemoTask(
+        title: '阅读反思 - 完成一篇短评《夜晚的潜水艇》',
+        domainId: 'Humanities',
+        type: TaskType.training,
         status: TaskStatus.completed,
+        estimatedMinutes: 50,
+        difficulty: 3,
+        energyCost: 2,
+        priority: 1,
+        dueDate: now.subtract(const Duration(days: 5)),
+        completedAt: now.subtract(const Duration(days: 5)),
+        actualMinutes: 62,
+        createdAt: now.subtract(const Duration(days: 8)),
+        updatedAt: now.subtract(const Duration(days: 5)),
+        userNote: '先写感受再补论证，比一开始就追求完整顺手很多。',
+        extraTags: const ['Literature', 'Review'],
+      ),
+      _buildDemoTask(
+        title: '健康节律 - 晚上 11:30 前关屏',
+        domainId: 'Wellness',
+        type: TaskType.planning,
+        status: TaskStatus.pending,
+        estimatedMinutes: 15,
+        difficulty: 1,
+        energyCost: 1,
+        priority: 3,
+        dueDate: now,
+        createdAt: now.subtract(const Duration(days: 6)),
+        updatedAt: now.subtract(const Duration(hours: 2)),
+        extraTags: const ['Sleep', 'Routine'],
+      ),
+      _buildDemoTask(
+        title: '健康节律 - 午后拉伸和 20 分钟散步',
+        domainId: 'Wellness',
+        type: TaskType.social,
+        status: TaskStatus.completed,
+        estimatedMinutes: 20,
+        difficulty: 1,
+        energyCost: 1,
         priority: 2,
         dueDate: now.subtract(const Duration(days: 1)),
         completedAt: now.subtract(const Duration(days: 1)),
-        actualMinutes: 28,
+        actualMinutes: 24,
         createdAt: now.subtract(const Duration(days: 1)),
         updatedAt: now.subtract(const Duration(days: 1)),
+        extraTags: const ['Recovery', 'Walking'],
       ),
-
-      // 🎯 Future Planning
-      TaskModel(
-        id: _uuid.v4(),
-        userId: 'CS_Sophomore_12345',
-        title: '实习简历更新与投递',
+      _buildDemoTask(
+        title: '健康节律 - 周末早餐后轻量瑜伽',
+        domainId: 'Wellness',
+        type: TaskType.training,
+        status: TaskStatus.pending,
+        estimatedMinutes: 25,
+        difficulty: 1,
+        energyCost: 1,
+        priority: 1,
+        dueDate: now.add(const Duration(days: 4)),
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+        extraTags: const ['Mobility', 'Weekend'],
+      ),
+      _buildDemoTask(
+        title: '运动恢复 - 下肢力量日后的拉伸记录',
+        domainId: 'Wellness',
+        type: TaskType.reflection,
+        status: TaskStatus.completed,
+        estimatedMinutes: 18,
+        difficulty: 1,
+        energyCost: 1,
+        priority: 1,
+        dueDate: now.subtract(const Duration(days: 2)),
+        completedAt: now.subtract(const Duration(days: 2)),
+        actualMinutes: 20,
+        createdAt: now.subtract(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+        userNote: '左腿后侧比想象中更紧，恢复日还是得留出来。',
+        extraTags: const ['SportsRecovery', 'Recovery', 'Mobility'],
+      ),
+      _buildDemoTask(
+        title: '职业探索 - 更新跨领域作品集首页',
+        domainId: 'Career',
         type: TaskType.planning,
-        tags: ['Career', 'Job Search'],
-        estimatedMinutes: 120,
+        status: TaskStatus.pending,
+        estimatedMinutes: 80,
         difficulty: 3,
         energyCost: 3,
-        status: TaskStatus.pending,
         priority: 3,
-        dueDate: now.add(const Duration(days: 15)),
-        createdAt: now.subtract(const Duration(days: 10)),
+        dueDate: now.add(const Duration(days: 6)),
+        createdAt: now.subtract(const Duration(days: 4)),
+        updatedAt: now.subtract(const Duration(hours: 8)),
+        extraTags: const ['Portfolio', 'Personal Brand'],
+      ),
+      _buildDemoTask(
+        title: '职业探索 - 写一封信息访谈邀请邮件',
+        domainId: 'Career',
+        type: TaskType.training,
+        status: TaskStatus.inProgress,
+        estimatedMinutes: 40,
+        difficulty: 3,
+        energyCost: 2,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 2)),
+        startedAt: now.subtract(const Duration(minutes: 20)),
+        createdAt: now.subtract(const Duration(days: 2)),
         updatedAt: now,
+        extraTags: const ['Networking', 'Email'],
+      ),
+      _buildDemoTask(
+        title: '职业探索 - 整理一次模拟面试后的追问清单',
+        domainId: 'Career',
+        type: TaskType.reflection,
+        status: TaskStatus.completed,
+        estimatedMinutes: 35,
+        difficulty: 2,
+        energyCost: 1,
+        priority: 2,
+        dueDate: now.subtract(const Duration(days: 2)),
+        completedAt: now.subtract(const Duration(days: 2)),
+        actualMinutes: 30,
+        createdAt: now.subtract(const Duration(days: 4)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+        userNote: '我对“为什么是你”回答得还不够具体，下次要带项目例子。',
+        extraTags: const ['Interview', 'Reflection'],
+      ),
+      _buildDemoTask(
+        title: '转型梳理 - 写出 3 条可迁移能力证据',
+        domainId: 'Career',
+        type: TaskType.reflection,
+        status: TaskStatus.pending,
+        estimatedMinutes: 30,
+        difficulty: 3,
+        energyCost: 2,
+        priority: 2,
+        dueDate: now.add(const Duration(days: 3)),
+        createdAt: now.subtract(const Duration(days: 4)),
+        updatedAt: now.subtract(const Duration(hours: 4)),
+        extraTags: const ['CareerTransition', 'Portfolio', 'Reflection'],
       ),
     ];
+    _demoTasksCache = tasks;
+    return tasks;
   }
 
   // --- Galaxy Data ---
   GalaxyGraphResponse get demoGalaxy {
+    if (_demoGalaxyCache != null) return _demoGalaxyCache!;
     final nodes = <GalaxyNodeModel>[];
     final edges = <GalaxyEdgeModel>[];
     var nodeId = 0;
@@ -382,11 +777,13 @@ class DemoDataService {
     // 创建跨领域连接
     edges.addAll(_createCrossFieldEdges(nodes));
 
-    return GalaxyGraphResponse(
+    final galaxy = GalaxyGraphResponse(
       nodes: nodes,
       edges: edges,
       userFlameIntensity: 0.85,
     );
+    _demoGalaxyCache = galaxy;
+    return galaxy;
   }
 
   // 🌌 COSMOS - 自然科学星域
@@ -1157,13 +1554,14 @@ class DemoDataService {
   List<GalaxyEdgeModel> _createCrossFieldEdges(List<GalaxyNodeModel> nodes) {
     final edges = <GalaxyEdgeModel>[];
     var edgeId = 0;
+    final nodeId = _nodeIdByName;
 
     // 数学 -> 算法（前置知识）
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_0', // 高等数学
-        targetId: 'node_13', // 算法设计
+        sourceId: nodeId(nodes, '高等数学'),
+        targetId: nodeId(nodes, '算法设计与分析'),
         relationType: EdgeRelationType.prerequisite,
         strength: 0.9,
       ),
@@ -1173,8 +1571,8 @@ class DemoDataService {
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_2', // 概率论
-        targetId: 'node_21', // 机器学习
+        sourceId: nodeId(nodes, '概率论与数理统计'),
+        targetId: nodeId(nodes, '机器学习'),
         relationType: EdgeRelationType.prerequisite,
         strength: 0.9,
       ),
@@ -1184,8 +1582,8 @@ class DemoDataService {
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_1', // 线性代数
-        targetId: 'node_21', // 机器学习
+        sourceId: nodeId(nodes, '线性代数'),
+        targetId: nodeId(nodes, '机器学习'),
         relationType: EdgeRelationType.prerequisite,
         strength: 0.8,
       ),
@@ -1195,8 +1593,8 @@ class DemoDataService {
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_${23 + 5}', // 心理学导论
-        targetId: 'node_27', // 设计思维
+        sourceId: nodeId(nodes, '心理学导论'),
+        targetId: nodeId(nodes, '设计思维'),
         strength: 0.7,
       ),
     );
@@ -1205,8 +1603,8 @@ class DemoDataService {
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_${30 + 3}', // 批判性思维
-        targetId: 'node_9', // 程序设计
+        sourceId: nodeId(nodes, '批判性思维'),
+        targetId: nodeId(nodes, '程序设计基础'),
         relationType: EdgeRelationType.application,
         strength: 0.6,
       ),
@@ -1216,8 +1614,8 @@ class DemoDataService {
     edges.add(
       GalaxyEdgeModel(
         id: 'edge_${edgeId++}',
-        sourceId: 'node_${23 + 3}', // 经济学
-        targetId: 'node_${23 + 4}', // 管理学
+        sourceId: nodeId(nodes, '经济学原理'),
+        targetId: nodeId(nodes, '管理学基础'),
         relationType: EdgeRelationType.derived,
         strength: 0.8,
       ),
@@ -1260,6 +1658,18 @@ class DemoDataService {
 
     // Determine sector code string
     final sectorCode = node.sector.toString().split('.').last.toUpperCase();
+    final nodeDomains = _domainIdsForNode(node);
+    final semanticTokens = _semanticTokensForNode(node);
+    final relatedTasks = [...demoTasks]
+      ..sort(
+        (a, b) => _taskScoreForNode(b, node, nodeDomains, semanticTokens)
+            .compareTo(_taskScoreForNode(a, node, nodeDomains, semanticTokens)),
+      );
+    final relatedPlans = [...demoPlans]
+      ..sort(
+        (a, b) => _planScoreForNode(b, node, nodeDomains, semanticTokens)
+            .compareTo(_planScoreForNode(a, node, nodeDomains, semanticTokens)),
+      );
 
     return KnowledgeDetailResponse(
       node: KnowledgeNodeDetail(
@@ -1278,8 +1688,9 @@ class DemoDataService {
         createdAt: DateTime.now().subtract(Duration(days: node.studyCount * 2)),
       ),
       relations: relations,
-      relatedTasks: demoTasks.take(2).toList(),
-      relatedPlans: demoPlans
+      relatedTasks: relatedTasks.take(3).toList(),
+      relatedPlans: relatedPlans
+          .take(3)
           .map(
             (p) => RelatedPlan(
               id: p.id,
@@ -1297,10 +1708,10 @@ class DemoDataService {
         isUnlocked: node.isUnlocked,
         isFavorite: node.studyCount % 7 == 0,
         lastStudyAt: node.studyCount > 0
-            ? DateTime.now().subtract(Duration(days: node.studyCount % 7))
+            ? _now.subtract(Duration(days: node.studyCount % 7))
             : null,
         nextReviewAt: node.masteryScore > 0 && node.masteryScore < 80
-            ? DateTime.now().add(Duration(days: node.studyCount % 3 + 1))
+            ? _now.add(Duration(days: node.studyCount % 3 + 1))
             : null,
         decayPaused: node.studyCount % 10 == 0,
       ),
@@ -1315,7 +1726,7 @@ class DemoDataService {
     final growthCoreTasks = [
       _buildPlanTask(
         id: 'plan_growth_core_task_1',
-        title: '梳理计算机组成原理知识地图',
+        title: '把积分换元的典型题型整理成一页笔记',
         planId: 'plan_growth_1',
         createdAt: now.subtract(const Duration(days: 9)),
         updatedAt: now.subtract(const Duration(days: 2)),
@@ -1324,12 +1735,12 @@ class DemoDataService {
         type: TaskType.learning,
         status: TaskStatus.completed,
         actualMinutes: 55,
-        userNote: '把 CPU、内存层次和总线的关联重新串起来了。',
-        tags: const ['Architecture', 'Knowledge Map'],
+        userNote: '这次先按“什么时候用”来分类，比按公式抄写更容易记住。',
+        tags: const ['Academic', 'Calculus', 'Knowledge Map'],
       ),
       _buildPlanTask(
         id: 'plan_growth_core_task_2',
-        title: '完成操作系统并发专题错题回看',
+        title: '完成统计学抽样误差错题回看',
         planId: 'plan_growth_1',
         createdAt: now.subtract(const Duration(days: 5)),
         updatedAt: now.subtract(const Duration(hours: 12)),
@@ -1338,11 +1749,11 @@ class DemoDataService {
         type: TaskType.training,
         status: TaskStatus.inProgress,
         dueDate: now.add(const Duration(days: 2)),
-        tags: const ['OS', 'Concurrency'],
+        tags: const ['Academic', 'Statistics', 'Error Review'],
       ),
       _buildPlanTask(
         id: 'plan_growth_core_task_3',
-        title: '补齐网络层与传输层前置概念',
+        title: '补齐本周课堂里没听稳的线性代数前置概念',
         planId: 'plan_growth_1',
         createdAt: now.subtract(const Duration(days: 2)),
         updatedAt: now.subtract(const Duration(hours: 6)),
@@ -1351,86 +1762,45 @@ class DemoDataService {
         type: TaskType.learning,
         status: TaskStatus.pending,
         dueDate: now.add(const Duration(days: 4)),
-        tags: const ['Network', 'Prerequisites'],
-      ),
-    ];
-    final archivedGrowthTasks = [
-      _buildPlanTask(
-        id: 'plan_growth_archived_task_1',
-        title: '完成数据库索引策略练习',
-        planId: 'plan_growth_archived',
-        createdAt: now.subtract(const Duration(days: 40)),
-        updatedAt: now.subtract(const Duration(days: 20)),
-        estimatedMinutes: 35,
-        difficulty: 2,
-        type: TaskType.training,
-        status: TaskStatus.completed,
-        actualMinutes: 32,
-        tags: const ['Database', 'Index'],
-      ),
-    ];
-    final emergingGrowthTasks = [
-      _buildPlanTask(
-        id: 'plan_growth_emerging_task_1',
-        title: '建立 Python 自动化复盘脚本',
-        planId: 'plan_growth_2',
-        createdAt: now.subtract(const Duration(days: 6)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-        estimatedMinutes: 45,
-        difficulty: 2,
-        type: TaskType.training,
-        status: TaskStatus.inProgress,
-        dueDate: now.add(const Duration(days: 3)),
-        tags: const ['Python', 'Automation'],
-      ),
-      _buildPlanTask(
-        id: 'plan_growth_emerging_task_2',
-        title: '把错题本高频模式沉淀成学习清单',
-        planId: 'plan_growth_2',
-        createdAt: now.subtract(const Duration(days: 3)),
-        updatedAt: now.subtract(const Duration(hours: 8)),
-        estimatedMinutes: 30,
-        difficulty: 3,
-        type: TaskType.learning,
-        status: TaskStatus.pending,
-        dueDate: now.add(const Duration(days: 5)),
-        tags: const ['Review', 'Error Book'],
+        tags: const ['Academic', 'Linear Algebra', 'Prerequisites'],
       ),
     ];
     return [
       PlanModel(
         id: 'plan_sprint_1',
-        userId: 'CS_Sophomore_12345',
-        name: '数据结构期中冲刺',
+        userId: demoUserId,
+        name: '本周复合学习节奏校准',
         type: PlanType.sprint,
         dailyAvailableMinutes: 120,
         masteryLevel: 0.6,
-        progress: 0.7, // 70%
+        progress: 0.68,
         isActive: true,
         createdAt: now.subtract(const Duration(days: 5)),
         updatedAt: now,
         targetDate: now.add(const Duration(days: 7)),
-        description: '集中攻克链表、栈、队列和二叉树，准备期中考试。',
+        description: '把白天的高认知任务、晚间语言复盘和睡前降速动作重新排顺。',
         totalEstimatedHours: 20,
         tasks: demoTasks
             .where((task) =>
-                task.title.contains('数据结构') || task.title.contains('算法设计'),)
-            .take(3)
+                task.tags.contains('Academic') ||
+                task.tags.contains('Language') ||
+                task.tags.contains('Wellness'),)
+            .take(4)
             .toList(),
       ),
       PlanModel(
         id: 'plan_growth_1',
-        userId: 'CS_Sophomore_12345',
-        name: '计算机科学基础巩固',
+        userId: demoUserId,
+        name: '学业理解力主线',
         type: PlanType.growth,
         dailyAvailableMinutes: 60,
-        masteryLevel: 0.3,
-        progress: 0.45, // 45%
+        masteryLevel: 0.48,
+        progress: 0.45,
         isActive: true,
         createdAt: now.subtract(const Duration(days: 30)),
         updatedAt: now,
-        targetDate: now.add(const Duration(days: 90)), // 3 months
-        description: '系统性复习CS基础四大件，构建完整的知识体系。',
+        targetDate: now.add(const Duration(days: 90)),
+        description: '稳住理工课程的基础盘，把错题和课堂概念逐步串成可复述的结构。',
         totalEstimatedHours: 100,
         planStage: PlanStage.daily,
         priority: PlanPriority.high,
@@ -1438,26 +1808,29 @@ class DemoDataService {
       ),
       PlanModel(
         id: 'plan_growth_2',
-        userId: 'CS_Sophomore_12345',
-        name: '学习效率与自动化升级',
+        userId: demoUserId,
+        name: '语言与表达升级',
         type: PlanType.growth,
         dailyAvailableMinutes: 45,
-        masteryLevel: 0.38,
-        progress: 0.22,
+        masteryLevel: 0.42,
+        progress: 0.34,
         isActive: true,
         createdAt: now.subtract(const Duration(days: 18)),
         updatedAt: now.subtract(const Duration(hours: 4)),
         targetDate: now.add(const Duration(days: 45)),
-        description: '围绕复盘、自动化和错题反馈，持续优化学习效率。',
+        description: '通过精读、跟说和短文改写，把语言输入转成更自然的输出。',
         totalEstimatedHours: 48,
-        subject: '学习方法',
+        subject: '语言表达',
         planStage: PlanStage.daily,
-        tasks: emergingGrowthTasks,
+        tasks: demoTasks
+            .where((task) => task.tags.contains('Language'))
+            .take(3)
+            .toList(),
       ),
       PlanModel(
         id: 'plan_growth_archived',
-        userId: 'CS_Sophomore_12345',
-        name: '数据库基础补强',
+        userId: demoUserId,
+        name: '恢复与复盘习惯回炉',
         type: PlanType.growth,
         dailyAvailableMinutes: 35,
         masteryLevel: 0.8,
@@ -1466,11 +1839,16 @@ class DemoDataService {
         createdAt: now.subtract(const Duration(days: 60)),
         updatedAt: now.subtract(const Duration(days: 15)),
         targetDate: now.subtract(const Duration(days: 3)),
-        description: '已完成的数据库基础回炉计划，可在历史记录中查看。',
+        description: '已完成的睡眠与周复盘习惯回炉计划，可在历史记录中查看。',
         totalEstimatedHours: 24,
-        subject: '数据库系统',
+        subject: '健康节律',
         planStage: PlanStage.review,
-        tasks: archivedGrowthTasks,
+        tasks: demoTasks
+            .where((task) =>
+                task.tags.contains('Wellness') ||
+                task.tags.contains('Humanities'),)
+            .take(3)
+            .toList(),
       ),
     ];
   }
@@ -1510,37 +1888,38 @@ class DemoDataService {
       );
 
   // --- Chat Data (保留真实LLM功能，只展示历史记录) ---
-  List<ChatMessageModel> get demoChatHistory => [
-        // 最近的对话
+  List<ChatMessageModel> get demoChatHistory {
+    if (_demoChatHistoryCache != null) return _demoChatHistoryCache!;
+    final now = _now;
+    _demoChatHistoryCache = [
         ChatMessageModel(
           id: 'msg_1',
           conversationId: 'demo_conv_1',
           role: MessageRole.user,
-          content: '我觉得最近学习效率有点低，总是忍不住想玩手机，怎么办？',
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          content: '我最近白天能学进去，但一到晚上就很想逃避输出任务，尤其是英语口语和复盘。',
+          createdAt: now.subtract(const Duration(hours: 2)),
         ),
         ChatMessageModel(
           id: 'msg_2',
           conversationId: 'demo_conv_1',
           role: MessageRole.assistant,
           content:
-              '理解你的感受。这种焦虑和自责其实是恶性循环的一部分。我们试着接纳这种情绪，而不是对抗它。\n\n根据你的学习记录，你这周已经在《离散数学》上投入了7.5小时，这非常棒👍 也许你可以试着先做一个简单的任务来找回状态？',
-          createdAt:
-              DateTime.now().subtract(const Duration(hours: 1, minutes: 59)),
+              '这更像是“白天把高能量都花掉了，晚上只剩下对输出的心理负担”。可以把晚上任务改成两段：先做 10 分钟低门槛跟说，再做 10 分钟复盘，而不是一口气要求自己讲完整段内容。',
+          createdAt: now.subtract(const Duration(hours: 1, minutes: 59)),
         ),
         ChatMessageModel(
           id: 'msg_3',
           conversationId: 'demo_conv_1',
           role: MessageRole.user,
-          content: '确实，那我先复习一下链表吧，但是我有点忘了怎么实现了。',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          content: '那我今晚是不是可以先做“口语话题卡 2 轮跟说”，再补一句中文反思？',
+          createdAt: now.subtract(const Duration(minutes: 30)),
         ),
         ChatMessageModel(
           id: 'msg_4',
           conversationId: 'demo_conv_1',
           role: MessageRole.assistant,
-          content: '没问题。根据你的学习进度，建议先复习 **单链表的插入与删除** 操作。\n\n正在为您生成数据结构学习计划...',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
+          content: '可以，这样的组合很适合你当前的晚间状态。我已经按“低门槛开场 + 简短复盘”帮你重排了今晚动作。',
+          createdAt: now.subtract(const Duration(minutes: 29)),
           toolResults: [
             ToolResultModel(
               success: true,
@@ -1554,200 +1933,218 @@ class DemoDataService {
           conversationId: 'demo_conv_1',
           role: MessageRole.assistant,
           content: '''
-这是一个简单的链表节点定义（C++），你可以作为参考：
+今晚的顺序建议：
 
-```cpp
-struct ListNode {
-    int val;
-    ListNode *next;
-    ListNode(int x) : val(x), next(NULL) {}
-};
-```
+1. 先做 10 分钟跟说，目标只有“张嘴”
+2. 再用 8 分钟写下今天最卡的一句表达
+3. 最后补 5 分钟感受记录，判断是累还是怕出错
 
-关键操作包括：
-- **插入节点**：调整next指针
-- **删除节点**：跳过目标节点
-- **反转链表**：迭代或递归改变方向
-
-你想先尝试哪个操作？''',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
+你现在不是缺努力，而是需要更温和的起步阻力。''',
+          createdAt: now.subtract(const Duration(minutes: 28)),
         ),
-        // 之前的对话
         ChatMessageModel(
           id: 'msg_6',
           conversationId: 'demo_conv_2',
           role: MessageRole.user,
-          content: '动态规划的状态转移方程怎么想出来的？感觉每次都想不到😣',
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+          content: '我想把一段英文自我介绍说得更自然，但一紧张就只会背稿子。',
+          createdAt: now.subtract(const Duration(days: 1)),
         ),
         ChatMessageModel(
           id: 'msg_7',
           conversationId: 'demo_conv_2',
           role: MessageRole.assistant,
           content: '''
-动态规划的核心思路是：
+更自然的关键不是“背得更熟”，而是给每一句一个真实意图。
 
-1. **定义状态**：dp[i]表示什么
-2. **找递推关系**：当前状态如何从之前的状态得来
-3. **确定边界**：最简单的情况是什么
+- 第一段只负责打招呼和定位自己
+- 第二段只说最近在做什么
+- 第三段补一个具体例子
 
-以爬楼梯为例：
-- 状态：dp[i] = 到达第i阶的方法数
-- 递推：dp[i] = dp[i-1] + dp[i-2]（从i-1爬1阶或从i-2爬2阶）
-- 边界：dp[1]=1, dp[2]=2
-
-多做几道题，你会发现套路！要不要试试背包问题？''',
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+你可以先用关键词提纲练习，而不是整段背诵。这样卡住时也更容易换种说法。''',
+          createdAt: now.subtract(const Duration(days: 1)),
         ),
         ChatMessageModel(
           id: 'msg_8',
           conversationId: 'demo_conv_3',
           role: MessageRole.user,
-          content: '推荐一些计算机网络的学习资源？想系统学一下',
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+          content: '我拍了几张傍晚通勤的照片，但总觉得画面很满，不知道问题出在哪。',
+          createdAt: now.subtract(const Duration(days: 2)),
         ),
         ChatMessageModel(
           id: 'msg_9',
           conversationId: 'demo_conv_3',
           role: MessageRole.assistant,
           content: '''
-推荐以下资源组合：
+先别急着追求“丰富”，你这组图更像是缺一个明确主角。
 
-📚 **书籍**：
-- 《计算机网络：自顶向下方法》- 经典入门
-- 《TCP/IP详解 卷1》- 深入协议细节
+你可以试试这三个检查点：
 
-🎥 **视频课程**：
-- 斯坦福CS144 - 实践性强
-- 中科大郑烇老师 - 讲解清晰
+- 画面里最亮的区域是不是你真正想强调的
+- 边缘有没有抢戏的杂物
+- 视线能不能在 2 秒内落到主题上
 
-💻 **实践项目**：
-- Wireshark抓包分析
-- 实现一个简单的HTTP服务器
-
-建议：先看书+视频理解原理，然后通过抓包和编程加深理解。你想从哪个方向开始？''',
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+如果你愿意，我可以按你常拍的风格给你一套“通勤街景”取舍清单。''',
+          createdAt: now.subtract(const Duration(days: 2)),
         ),
         ChatMessageModel(
           id: 'msg_10',
           conversationId: 'demo_conv_4',
           role: MessageRole.user,
-          content: '感觉学了很多知识但都很零散，怎么建立知识体系？',
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
+          content: '为什么我周末一睡晚，整个周日都会觉得脑子很钝？',
+          createdAt: now.subtract(const Duration(days: 3)),
         ),
         ChatMessageModel(
           id: 'msg_11',
           conversationId: 'demo_conv_4',
           role: MessageRole.assistant,
           content: '''
-建立知识体系的三个层次：
+睡晚之后觉得“整天都钝”，通常不只是睡眠时长问题，而是节律被整体推迟了。
 
-🌳 **1. 知识树（结构化）**
-- 用思维导图画出知识点层级
-- 明确前置关系：先学A才能学B
+- 起床变晚，第一餐和出门时间也一起后移
+- 白天活动量下降，大脑更难进入清醒状态
+- 到了晚上又不够困，形成循环
 
-🔗 **2. 知识网（关联化）**
-- 找跨领域联系：数学→算法→工程
-- 用类比连接：线程像工厂的工人
+所以周末更适合保留固定起床时间，把任务改轻，而不是彻底打乱节奏。''',
+          createdAt: now.subtract(const Duration(days: 3)),
+        ),
+        ChatMessageModel(
+          id: 'msg_12',
+          conversationId: 'demo_conv_5',
+          role: MessageRole.user,
+          content: '我对以后做什么还没有完全确定，作品集是不是也可以先做成“过程型”的？',
+          createdAt: now.subtract(const Duration(days: 4)),
+        ),
+        ChatMessageModel(
+          id: 'msg_13',
+          conversationId: 'demo_conv_5',
+          role: MessageRole.assistant,
+          content: '''
+完全可以。对你这种跨领域用户来说，过程型作品集反而更真实。
 
-⚡ **3. 知识流（应用化）**
-- 通过项目串联知识点
-- 费曼学习法：教是最好的学
+建议首页先放三类内容：
 
-Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视图了吗？可以看到你的知识点之间的连接关系。''',
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
+- 课程或项目里解决过的问题
+- 语言或写作里能体现表达能力的片段
+- 你持续做过的创作与复盘痕迹
+
+它不需要先证明“我已经定型”，而是先证明“我有连续成长的轨迹”。''',
+          createdAt: now.subtract(const Duration(days: 3)),
         ),
       ];
+    return _demoChatHistoryCache!;
+  }
 
   // --- Dashboard Data ---
-  Map<String, dynamic> get demoDashboard => {
-        'weather': {
-          'type': 'sunny',
-          'condition': 'Clear sky',
-        },
-        'flame': {
-          'level': 15,
-          'brightness': 85,
-          'today_focus_minutes': 120,
-          'tasks_completed': 3,
-          'nudge_message': '你今天已经在《数据结构》上投入了2小时，非常棒！休息一下吧。',
-        },
-        'sprint': {
-          'id': 'plan_sprint_1',
-          'name': '数据结构期中冲刺',
-          'progress': 0.7,
-          'days_left': 7,
-          'total_estimated_hours': 20.0,
-        },
-        'growth': {
-          'id': 'plan_growth_1',
-          'name': 'CS基础巩固',
-          'progress': 0.45,
-          'mastery_level': 0.3,
-        },
-        'next_actions': [
-          {
-            'id': 'task_1',
-            'title': '数据结构 - 链表实现',
-            'estimated_minutes': 120,
-            'priority': 3,
-            'type': 'learning',
-          },
-          {
-            'id': 'task_2',
-            'title': '离散数学 - 图论基础',
-            'estimated_minutes': 90,
-            'priority': 2,
-            'type': 'learning',
-          },
-        ],
-        'cognitive': {
-          'weekly_pattern': 'Deep Work',
-          'pattern_type': 'productive',
-          'description': 'You are in a flow state this week.',
-          'solution_text': 'Keep it up!',
-          'status': 'analyzed',
-          'has_new_insight': true,
-        },
-      };
+  Map<String, dynamic> get demoDashboard {
+    if (_demoDashboardCache != null) return _demoDashboardCache!;
+    final tasks = demoTasks;
+    final sprint = demoPlans.firstWhere((plan) => plan.id == 'plan_sprint_1');
+    final growth = demoPlans.firstWhere((plan) => plan.id == 'plan_growth_1');
+    _demoDashboardCache = {
+      'weather': {
+        'type': 'sunny',
+        'condition': 'Clear sky',
+      },
+      'flame': {
+        'level': 15,
+        'brightness': 85,
+        'today_focus_minutes': 120,
+        'tasks_completed': tasks.where((task) => task.status == TaskStatus.completed).length,
+        'nudge_message': '你今天已经完成了理工复盘和语言热身，晚上更适合做轻一点的表达与整理。',
+      },
+      'sprint': {
+        'id': sprint.id,
+        'name': sprint.name,
+        'progress': sprint.progress,
+        'days_left': sprint.targetDate == null ? 0 : sprint.targetDate!.difference(_now).inDays,
+        'total_estimated_hours': sprint.totalEstimatedHours ?? 20.0,
+      },
+      'growth': {
+        'id': growth.id,
+        'name': growth.name,
+        'progress': growth.progress,
+        'mastery_level': growth.masteryLevel,
+      },
+      'audience_touchpoints': _demoTouchpointProfiles
+          .map(
+            (profile) => {
+              'id': profile.touchpointId,
+              'label': profile.displayName,
+              'storyline': profile.storyline,
+              'signal': profile.signal,
+            },
+          )
+          .toList(),
+      'next_actions': tasks
+          .where((task) => task.status != TaskStatus.completed)
+          .take(3)
+          .map(
+            (task) => {
+              'id': task.id,
+              'title': task.title,
+              'estimated_minutes': task.estimatedMinutes,
+              'priority': task.priority,
+              'type': task.type.name,
+            },
+          )
+          .toList(),
+      'cognitive': {
+        'weekly_pattern': 'Balanced Growth',
+        'pattern_type': 'productive',
+        'description': '你在下午 3-5 点适合推进高认知任务，晚上 8-9 点更适合语言复盘与阅读整理。',
+        'solution_text': '下午处理理工与职业任务，晚上保留给语言、反思和轻量恢复动作。',
+        'status': 'analyzed',
+        'has_new_insight': true,
+      },
+    };
+    return _demoDashboardCache!;
+  }
 
   // --- 🎓 认知胶囊 Data ---
   List<CuriosityCapsuleModel> get demoCuriosityCapsules {
-    final now = DateTime.now();
-    return [
+    if (_demoCuriosityCapsulesCache != null) {
+      return _demoCuriosityCapsulesCache!;
+    }
+    final now = _now;
+    _demoCuriosityCapsulesCache = [
       CuriosityCapsuleModel(
         id: 'capsule_1',
-        title: '为什么二叉树的遍历有三种方式？',
+        title: '为什么“回忆”比反复重读更能记住内容？',
         content: '''
-二叉树的三种遍历方式（前序、中序、后序）源于访问节点的不同时机。
+大脑更容易记住“被主动提取出来的信息”，而不是“看起来很熟的信息”。
 
-**前序遍历**（根→左→右）：适合复制树结构
-**中序遍历**（左→根→右）：对BST可得到有序序列
-**后序遍历**（左→右→根）：适合释放内存、计算表达式树
+当你合上笔记，尝试自己写出要点时，大脑会经历一次“检索”过程。这个过程本身就在强化记忆线路。
 
-这种设计体现了递归思想的优雅性，每种遍历都有其特定的应用场景。你最近在学习数据结构时遇到的困惑，正是深入理解这些概念的机会！''',
+所以比起重复看 3 遍，更有效的做法通常是：
+
+- 看一遍
+- 合上资料回忆
+- 对照缺口再补
+
+这也是为什么你最近做“理工错题回看”时，自己先讲一遍题意会明显更稳。''',
         isRead: false,
         createdAt: now.subtract(const Duration(hours: 2)),
-        relatedSubject: '数据结构',
+        relatedSubject: '学习策略',
         depthLevel: 'deep',
         generationMethod: 'knowledge_gap_analysis',
         qualityScore: 0.92,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_2',
-        title: '进程和线程的本质区别是什么？',
+        title: '为什么口语一紧张就会“只剩背稿感”？',
         content: '''
-很多人觉得进程和线程只是"资源分配"vs"调度单位"的区别，但本质上：
+紧张时，大脑会优先抓住最熟的固定表达，所以整段话会显得像在“回放录音”。
 
-**进程** = 资源容器 + 执行轨迹
-**线程** = 共享资源 + 独立执行轨迹
+想让表达更自然，关键不是再背一次整稿，而是把每一句拆成“意图卡片”：
 
-比喻：进程像一个工厂，线程像工厂里的工人。工人们共享工厂的设备（内存），但各自有自己的工作流程（栈、寄存器）。
+- 这句是为了打招呼
+- 这句是为了说明近况
+- 这句是为了举例子
 
-这解释了为什么线程切换比进程快（不需要切换"工厂"），以及为什么线程间通信更简单（共享内存）。''',
+当你知道每句话在“做什么”，就更容易临场换词，而不是一停顿就整段断掉。''',
         isRead: true,
         createdAt: now.subtract(const Duration(hours: 5)),
-        relatedSubject: '操作系统',
+        relatedSubject: '语言表达',
         depthLevel: 'deep',
         generationMethod: 'concept_clarification',
         qualityScore: 0.88,
@@ -1757,18 +2154,16 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
       ),
       CuriosityCapsuleModel(
         id: 'capsule_3',
-        title: 'TCP为什么需要三次握手？',
+        title: '摄影构图里，为什么“少一点”常常更高级？',
         content: '''
-三次握手不仅仅是"建立连接"，更重要的是**同步序列号**和**确认双方的收发能力**。
+画面不耐看，很多时候不是信息太少，而是主题不够明确。
 
-1️⃣ 客户端 → 服务器：证明客户端能发送
-2️⃣ 服务器 → 客户端：证明服务器能接收+能发送
-3️⃣ 客户端 → 服务器：证明客户端能接收
+当观众在 2 秒内找不到主角，就会感到“乱”。删减的价值在于帮视线更快落到重点上。
 
-两次握手无法验证客户端的接收能力，四次又显得冗余。这是一个经典的"恰到好处"的设计！''',
+你可以做一个简单测试：把每张照片边缘遮掉 10%，如果反而更聚焦，说明原图里有抢戏元素。''',
         isRead: true,
         createdAt: now.subtract(const Duration(days: 1)),
-        relatedSubject: '计算机网络',
+        relatedSubject: '摄影构图',
         depthLevel: 'medium',
         generationMethod: 'why_question',
         qualityScore: 0.85,
@@ -1776,21 +2171,18 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
       ),
       CuriosityCapsuleModel(
         id: 'capsule_4',
-        title: '动态规划的"状态转移"到底在转移什么？',
+        title: '写作里为什么“删形容词”会让句子更有力？',
         content: '''
-动态规划的精髓在于**把大问题拆成小问题，并记住小问题的答案**。
+很多句子显得“用力”，不是因为内容不够，而是作者抢先替读者下了判断。
 
-"状态转移"实际上是在表达：
-- **当前状态** = f(**之前的某些状态**)
+比如：
 
-比如爬楼梯问题：
-- dp[i] = dp[i-1] + dp[i-2]
-- 意思是"到第i阶的方法数" = "先到i-1阶再爬1阶" + "先到i-2阶再爬2阶"
+- “很震撼的晚霞” 不如 “晚霞把整条街照成铜色”
 
-关键是找到"当前状态"和"之前状态"的数学关系。你做过的那道背包问题，本质上也是在转移"放或不放"的决策结果。''',
+后者把感受交给画面，读者更容易自己进入情境。这也是你最近改旧文章时，删掉一些形容词后反而更顺的原因。''',
         isRead: false,
         createdAt: now.subtract(const Duration(days: 1, hours: 3)),
-        relatedSubject: '算法设计',
+        relatedSubject: '写作表达',
         depthLevel: 'deep',
         generationMethod: 'learning_barrier_breakthrough',
         qualityScore: 0.90,
@@ -1798,18 +2190,20 @@ Sparkle的知识星图功能就是帮你可视化这个体系！看过星图视�
       ),
       CuriosityCapsuleModel(
         id: 'capsule_5',
-        title: '为什么Python的字符串是不可变的？',
+        title: '睡眠为什么会直接影响第二天的语言流畅度？',
         content: '''
-Python字符串不可变(immutable)的设计有三个重要原因：
+语言输出需要调用词汇、语序、语气和工作记忆，这些都依赖大脑的清醒度。
 
-1. **性能优化**: 不可变对象可以被缓存和重用（字符串驻留）
-2. **线程安全**: 多线程共享时无需加锁
-3. **哈希键**: 可以作为字典的键（可哈希要求不可变）
+睡眠不足时，你不一定完全不会，但会更容易：
 
-这也是为什么字符串拼接在循环中效率低（每次都创建新对象），应该用join()或列表积累。设计哲学：**用少量的不便换来更多的安全性和性能**。''',
+- 找词慢
+- 句子半途改口
+- 一出错就更想停下来
+
+这也是为什么晚睡之后，比起硬顶高压口语，不如先做精读或关键词跟说。''',
         isRead: true,
         createdAt: now.subtract(const Duration(days: 2)),
-        relatedSubject: 'Python编程',
+        relatedSubject: '健康节律',
         depthLevel: 'medium',
         generationMethod: 'design_rationale',
         qualityScore: 0.82,
@@ -1817,19 +2211,16 @@ Python字符串不可变(immutable)的设计有三个重要原因：
       ),
       CuriosityCapsuleModel(
         id: 'capsule_6',
-        title: '数据库的ACID到底保证了什么？',
+        title: '为什么很多拖延其实是“下一步不够明确”？',
         content: '''
-ACID不是四个独立的特性，而是事务可靠性的四个维度：
+人通常不会无缘无故抗拒做事，而是在面对模糊任务时大脑自动选择了更轻松的替代项。
 
-**A**tomicity(原子性): 要么全做，要么全不做
-**C**onsistency(一致性): 从一个合法状态到另一个合法状态
-**I**solation(隔离性): 事务间互不干扰
-**D**urability(持久性): 提交后永久保存
+“更新作品集”很难开始，但“写首页第一段 80 字版本”就容易得多。
 
-有趣的是，Consistency更像是目标，AID是实现手段。你学的"事务隔离级别"就是在调整I的强度，牺牲隔离性换取性能。''',
+一旦下一步足够具体，阻力会显著下降。你最近职业探索任务推进慢，更多不是不重视，而是目标粒度还偏大。''',
         isRead: false,
         createdAt: now.subtract(const Duration(days: 2, hours: 12)),
-        relatedSubject: '数据库系统',
+        relatedSubject: '行动阻力',
         depthLevel: 'deep',
         generationMethod: 'concept_clarification',
         qualityScore: 0.87,
@@ -1838,25 +2229,20 @@ ACID不是四个独立的特性，而是事务可靠性的四个维度：
       ),
       CuriosityCapsuleModel(
         id: 'capsule_7',
-        title: '递归为什么让人感觉"绕"？',
+        title: '阅读时为什么“记了很多笔记”不等于真正理解？',
         content: '''
-递归让人困惑的根本原因是：**人类习惯顺序思维，而递归是逆向构造**。
+笔记只能证明你接触过材料，不能证明你已经形成了自己的判断。
 
-写递归的思路：
-1. 先写最简单的情况（base case）
-2. 假设子问题已解决
-3. 用子问题的解构造当前问题的解
+真正的理解通常至少会留下三种痕迹：
 
-比如阶乘：
-```
-factorial(n) = n * factorial(n-1)  // 假设factorial(n-1)已知
-factorial(1) = 1  // base case
-```
+- 能换种方式复述
+- 能指出作者没说清的地方
+- 能和自己的经历或别的学科连起来
 
-关键是**信任递归会正确处理子问题**，不要试图在脑子里展开整个调用栈。这种"向下分解，向上组合"的思想，在树的遍历中体现得淋漓尽致。''',
+所以你最近把阅读任务改成“记 3 条问题”是个很好的变化，它逼着你从被动记录转向主动判断。''',
         isRead: true,
         createdAt: now.subtract(const Duration(days: 3)),
-        relatedSubject: '算法思维',
+        relatedSubject: '阅读理解',
         depthLevel: 'medium',
         generationMethod: 'cognitive_barrier_analysis',
         qualityScore: 0.89,
@@ -1866,52 +2252,39 @@ factorial(1) = 1  // base case
       ),
       CuriosityCapsuleModel(
         id: 'capsule_8',
-        title: '机器学习中的"过拟合"是怎么发生的？',
+        title: '为什么跨学科学习更容易“看起来都学了，其实没沉淀”？',
         content: '''
-过拟合的本质是**模型记住了数据的噪声，而不是学会了数据的规律**。
+跨学科学习最大的风险不是内容太多，而是每个领域都停留在“接触过”的表层。
 
-想象你为考试背答案：
-- 欠拟合 = 只背了大纲，题目变化就不会了
-- 刚刚好 = 理解了原理，能举一反三
-- 过拟合 = 把题目和答案都死记硬背，新题目完全不会
+避免“漂浮感”的方法是给每个领域留一个固定锚点：
 
-防止过拟合的方法：
-• 增加数据量（让模型见更多例子）
-• 正则化（惩罚过于复杂的模型）
-• Dropout（随机"忘记"一些神经元）
-• 早停（train loss还在降但val loss开始升时停止）
+- 理工靠错题和讲解
+- 语言靠输出片段
+- 创作靠成品挑选
+- 人文靠问题和短评
 
-记住：**简单的模型往往更robust**。''',
+这样一周结束时，你不只是“学过”，而是真的留下了可回看的痕迹。''',
         isRead: false,
         createdAt: now.subtract(const Duration(days: 3, hours: 8)),
-        relatedSubject: '机器学习',
+        relatedSubject: '跨学科学习',
         depthLevel: 'deep',
         generationMethod: 'analogy_explanation',
         qualityScore: 0.91,
       ),
       CuriosityCapsuleModel(
         id: 'capsule_9',
-        title: 'Git的分支到底是什么？',
+        title: '信息访谈里，什么问题最容易让对话真正深入？',
         content: '''
-很多人把Git分支想象成"复制了一份代码"，其实不是！
+真正有效的问题往往不是“你平时做什么”，而是：
 
-**分支只是一个指向commit的指针**。
+- 你是怎么进入这个方向的？
+- 你最近一次明显感到成长的节点是什么？
+- 如果回到学生阶段，你会更早开始补哪种能力？
 
-当你创建分支时，Git只是创建了一个新指针，指向当前commit。所有commits形成一个DAG（有向无环图），分支就是这个图上的"命名指针"。
-
-```
-main  →  [A] → [B] → [C]
-                ↑
-              feature
-```
-
-切换分支 = 移动HEAD指针
-合并分支 = 让两个指针指向同一个新commit
-
-这就是为什么Git的分支操作如此快速（O(1)），因为只是在移动指针！理解这一点，merge、rebase、cherry-pick都变得清晰了。''',
+它们会把对方从“职责描述”拉回到真实经验，也更适合你这种还在探索方向的人。''',
         isRead: true,
         createdAt: now.subtract(const Duration(days: 4)),
-        relatedSubject: '版本控制',
+        relatedSubject: '职业探索',
         depthLevel: 'medium',
         generationMethod: 'mental_model_correction',
         qualityScore: 0.86,
@@ -1921,39 +2294,71 @@ main  →  [A] → [B] → [C]
       ),
       CuriosityCapsuleModel(
         id: 'capsule_10',
-        title: '为什么说"程序 = 数据结构 + 算法"？',
+        title: '为什么有时“先散步 15 分钟”比硬撑更能救回专注？',
         content: '''
-这句话揭示了编程的本质：
+当注意力已经黏住手机或疲劳感时，继续硬顶通常只会加深挫败感。
 
-**数据结构** = 如何组织信息
-**算法** = 如何处理信息
+短暂散步的作用不是偷懒，而是把大脑从过载状态拉回一个更能重新启动的区间。
 
-比如社交网络：
-- 数据结构：用图表示用户关系
-- 算法：BFS找朋友推荐、PageRank计算影响力
-
-再比如导航系统：
-- 数据结构：用图表示路网
-- 算法：Dijkstra找最短路径
-
-选对数据结构，算法就简单了；选错数据结构，再好的算法也救不了。这就是为什么数据结构是编程的基石！
-
-你最近做的链表题，就是在训练"根据问题选择合适数据结构"的直觉。''',
+重点是回来以后不要直接挑战最难任务，而是先接一个 10 分钟的低门槛动作，让系统重新转起来。''',
         isRead: false,
         createdAt: now.subtract(const Duration(days: 4, hours: 15)),
-        relatedSubject: '计算机科学',
+        relatedSubject: '恢复策略',
         depthLevel: 'shallow',
         generationMethod: 'big_picture_connection',
         qualityScore: 0.80,
         shareCount: 1,
       ),
-    ];
+      CuriosityCapsuleModel(
+        id: 'capsule_11',
+        title: '考证练习里，为什么“计时”会直接改变你的表达质量？',
+        content: '''
+很多人以为自己“内容不会”，其实真正卡住的是在时间压力下没有形成稳定节奏。
+
+计时的价值不只是模拟考试，而是帮你发现：
+
+- 哪一步花太久
+- 哪种句式一紧张就会忘
+- 什么长度才是你当前最稳的输出单位
+
+所以对考证用户来说，计时不是最后才做的事，而是日常训练本身。''',
+        isRead: false,
+        createdAt: now.subtract(const Duration(days: 1, hours: 8)),
+        relatedSubject: '考证训练',
+        depthLevel: 'medium',
+        generationMethod: 'touchpoint_adaptation',
+        qualityScore: 0.84,
+      ),
+      CuriosityCapsuleModel(
+        id: 'capsule_12',
+        title: '内容创作者为什么也需要“选题复盘”？',
+        content: '''
+创作不只是产出作品，也是在训练你判断“什么值得继续做”。
+
+每周回看一次选题碎片，可以帮你看见：
+
+- 哪些题目只是临时兴奋
+- 哪些题目反复出现，说明真的在意
+- 哪些内容最容易和作品集、表达、职业方向连起来
+
+这样你累积的就不是零散灵感，而是一条慢慢成形的主线。''',
+        isRead: true,
+        createdAt: now.subtract(const Duration(days: 2, hours: 4)),
+        relatedSubject: '内容创作',
+        depthLevel: 'medium',
+        generationMethod: 'touchpoint_adaptation',
+        qualityScore: 0.86,
+        isFavorite: true,
+      ),
+      ];
+    return _demoCuriosityCapsulesCache!;
   }
 
   // --- 🏆 成就系统 Data ---
   List<AchievementModel> get demoAchievements {
-    final now = DateTime.now();
-    return [
+    if (_demoAchievementsCache != null) return _demoAchievementsCache!;
+    final now = _now;
+    _demoAchievementsCache = [
       AchievementModel(
         id: 'ach_1',
         name: '初识星火',
@@ -2083,75 +2488,77 @@ main  →  [A] → [B] → [C]
         totalUnlocked: 28,
       ),
     ];
+    return _demoAchievementsCache!;
   }
 
   // --- 👥 社群动态 Data ---
   List<Post> get demoCommunityPosts {
-    final now = DateTime.now();
-    return [
+    if (_demoCommunityPostsCache != null) return _demoCommunityPostsCache!;
+    final now = _now;
+    _demoCommunityPostsCache = [
       Post(
         id: 'post_1',
         userId: 'user_alice',
         content:
-            '今天终于搞懂了快速排序的partition过程！感觉打开了新世界的大门🎉 分享一下我的理解：选一个pivot，比它小的放左边，大的放右边，然后递归处理两边。关键是理解"分治"的思想！',
+            '把“口语话题卡”拆成关键词以后真的顺很多，不再死背全文了。今天第一次能自然地补一句自己的例子，虽然还是会卡壳，但没那么怕开口了。',
         createdAt: now.subtract(const Duration(hours: 2)),
         user: const PostUser(
           id: 'user_alice',
-          username: 'Alice_Codes',
+          username: 'Alice_Words',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
         ),
-        topic: '算法学习',
+        topic: '语言练习',
         likeCount: 15,
       ),
       Post(
         id: 'post_2',
         userId: 'user_bob',
-        content: '刚完成了一个React项目，感觉组件化开发真的很香！推荐大家学习时多动手实践，理论+实战效果最好💪',
+        content: '今天用“边走边录音”的方式整理作品集开场白，居然比坐在桌前更敢说。感觉职业准备也不一定都得很正式，先把想法说出来也算前进。',
         createdAt: now.subtract(const Duration(hours: 5)),
         user: const PostUser(
           id: 'user_bob',
-          username: 'Bob_Dev',
+          username: 'Bob_Pathfinder',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
         ),
-        topic: 'Web开发',
+        topic: '职业探索',
         likeCount: 23,
       ),
       Post(
         id: 'post_3',
         userId: 'user_carol',
         content:
-            '分享一个学习技巧：用费曼学习法复习知识点效果超好！试着把今天学的内容讲给室友听，结果发现自己还有很多不懂的地方😅 教是最好的学！',
+            '分享一个阅读办法：不要急着摘金句，先写下“我真正不同意作者的哪一句”。这样读完以后留下来的不是笔记堆，而是自己的判断。',
         createdAt: now.subtract(const Duration(hours: 8)),
         user: const PostUser(
           id: 'user_carol',
-          username: 'Carol_学习',
+          username: 'Carol_Reader',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
         ),
-        topic: '学习方法',
+        topic: '阅读反思',
         likeCount: 42,
       ),
       Post(
         id: 'post_4',
         userId: 'user_david',
-        content: '数据库事务这块真的太抽象了...有没有大佬能通俗地解释一下ACID？尤其是隔离性的几个级别🤔',
+        content: '周末总想睡到自然醒，结果起来以后整天都昏昏的。有没有人试过“固定起床时间 + 把周末任务减轻”的方法？想听真实反馈。',
         createdAt: now.subtract(const Duration(hours: 12)),
         user: const PostUser(
           id: 'user_david',
-          username: 'David_求知',
+          username: 'David_Reset',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
         ),
-        topic: '求助',
+        topic: '节律求助',
         likeCount: 8,
       ),
       Post(
         id: 'post_5',
         userId: 'user_emma',
         content:
-            '今天用Sparkle的认知棱镜发现了自己的学习模式：我在下午3-5点效率最高！以后要把难题放在这个时间段解决✨ 数据驱动真的有用！',
+            '今天用 Sparkle 的认知棱镜看见一个挺真实的模式：下午适合理工大任务，晚上反而更适合读书和语言复盘。以前我总逼自己晚上冲刺，难怪总挫败。',
         createdAt: now.subtract(const Duration(days: 1)),
         user: const PostUser(
           id: 'user_emma',
-          username: 'Emma_效率',
+          username: 'Emma_Rhythm',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
         ),
         topic: '学习心得',
@@ -2160,76 +2567,104 @@ main  →  [A] → [B] → [C]
       Post(
         id: 'post_6',
         userId: 'user_frank',
-        content: '刷LeetCode第30天打卡！从一开始的痛苦到现在的享受，真的是一个转变的过程。推荐大家从简单题开始，循序渐进💪',
+        content: '今天拍“傍晚通勤”终于不再什么都想塞进画面里了。我强迫自己每张只保留一个主角，结果照片干净了很多，删减真的是创作的一部分。',
         createdAt: now.subtract(const Duration(days: 1, hours: 6)),
         user: const PostUser(
           id: 'user_frank',
-          username: 'Frank_刷题',
+          username: 'Frank_Frame',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Frank',
         ),
-        topic: '算法刷题',
+        topic: '摄影练习',
         likeCount: 19,
       ),
       Post(
         id: 'post_7',
         userId: 'user_grace',
         content:
-            '分享一个Git技巧：用git stash暂存当前修改，切换分支处理紧急bug，然后git stash pop恢复。再也不用到处commit了！',
+            '刚做完一次信息访谈，最有效的问题居然不是“你每天做什么”，而是“你是怎么走到现在这个方向的”。一下子就聊到了真正有用的经验。',
         createdAt: now.subtract(const Duration(days: 2)),
         user: const PostUser(
           id: 'user_grace',
-          username: 'Grace_技巧',
+          username: 'Grace_Career',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Grace',
         ),
-        topic: '工具分享',
+        topic: '访谈技巧',
         likeCount: 56,
       ),
       Post(
         id: 'post_8',
         userId: 'user_henry',
-        content: '机器学习入门推荐Andrew Ng的课程！讲得真的很清楚，而且有配套作业。现在已经能自己实现线性回归了🎓',
+        content: '数学课上最有用的改变不是多做题，而是每做完一题都补一句“这题为什么不是另一个方法”。这种区分感一建立，错题少了很多。',
         createdAt: now.subtract(const Duration(days: 2, hours: 10)),
         user: const PostUser(
           id: 'user_henry',
-          username: 'Henry_ML',
+          username: 'Henry_Logic',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Henry',
         ),
-        topic: '课程推荐',
+        topic: '理工方法',
         likeCount: 38,
       ),
       Post(
         id: 'post_9',
         userId: 'user_iris',
-        content: '今天在图书馆学习了6个小时，虽然累但很充实！配合番茄工作法，效率真的提升了不少🍅 大家也试试看！',
+        content: '试了“读完一章只记 3 个问题”的方式，发现自己终于不是在机械摘抄了。虽然写出来的问题有点笨，但它们真的能暴露我没想清的地方。',
         createdAt: now.subtract(const Duration(days: 3)),
         user: const PostUser(
           id: 'user_iris',
-          username: 'Iris_奋斗',
+          username: 'Iris_Question',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Iris',
         ),
-        topic: '学习日常',
+        topic: '阅读训练',
         likeCount: 27,
       ),
       Post(
         id: 'post_10',
         userId: 'user_jack',
-        content: '终于完成了数据结构的期中项目！实现了一个完整的AVL树，debug了两天😭 但看到测试全过的那一刻，真的太爽了！',
+        content: '今天把作品集首页改成“我最近在学什么、在做什么、在思考什么”三段，瞬间没有那么像硬凹人设了。对还没定方向的人来说，过程感真的比结论更诚实。',
         createdAt: now.subtract(const Duration(days: 3, hours: 15)),
         user: const PostUser(
           id: 'user_jack',
-          username: 'Jack_代码',
+          username: 'Jack_Process',
           avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Jack',
         ),
-        topic: '项目分享',
+        topic: '作品集更新',
         likeCount: 45,
       ),
+      Post(
+        id: 'post_11',
+        userId: 'user_kate',
+        content: '这周开始把雅思口语改成“每天一张话题卡 + 2 分钟计时”，比以前一次练很久更能坚持。原来考证也不一定要一直靠意志力顶。',
+        createdAt: now.subtract(const Duration(days: 1, hours: 2)),
+        user: const PostUser(
+          id: 'user_kate',
+          username: 'Kate_Timer',
+          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Kate',
+        ),
+        topic: '考证节奏',
+        likeCount: 26,
+      ),
+      Post(
+        id: 'post_12',
+        userId: 'user_ryan',
+        content: '转型期最有用的动作不是疯狂投递，而是先把“我做过什么、我能迁移什么、我想往哪去”写成能讲给别人听的版本。写出来以后，焦虑会小很多。',
+        createdAt: now.subtract(const Duration(days: 2, hours: 3)),
+        user: const PostUser(
+          id: 'user_ryan',
+          username: 'Ryan_Shift',
+          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Ryan',
+        ),
+        topic: '转型复盘',
+        likeCount: 34,
+      ),
     ];
+    return _demoCommunityPostsCache!;
   }
 
   // --- 🎯 专注会话历史 Data ---
   List<Map<String, dynamic>> get demoFocusSessions {
-    final now = DateTime.now();
-    return [
+    if (_demoFocusSessionsCache != null) return _demoFocusSessionsCache!;
+    final now = _now;
+    _demoFocusSessionsCache = [
       {
         'id': 'session_1',
         'start_time': now.subtract(const Duration(hours: 2)).toIso8601String(),
@@ -2291,73 +2726,107 @@ main  →  [A] → [B] → [C]
         'white_noise_type': 'cafe',
       },
     ];
+    return _demoFocusSessionsCache!;
   }
 
   // --- 📝 错题本 Data ---
   List<Map<String, dynamic>> get demoErrorRecords {
-    final now = DateTime.now();
-    return [
+    if (_demoErrorRecordsCache != null) return _demoErrorRecordsCache!;
+    final now = _now;
+    _demoErrorRecordsCache = [
       {
         'id': 'error_1',
-        'question_text': '使用快速排序算法对数组[5,2,8,1,9]进行升序排序，第一趟partition后的结果是？',
-        'user_answer': '[2,1,5,8,9]',
-        'correct_answer': '[2,1,5,8,9]（以5为pivot）或[1,2,5,9,8]（取决于实现）',
-        'subject': '数据结构',
+        'question_text': '若函数 f(x)=x^2 e^x，求 f\'(x) 的结果。',
+        'user_answer': '2x e^x',
+        'correct_answer': 'f\'(x)=2x e^x + x^2 e^x',
+        'subject': '高等数学',
         'mastery_level': 0.6,
         'review_count': 2,
         'created_at': now.subtract(const Duration(days: 5)).toIso8601String(),
         'updated_at': now.subtract(const Duration(days: 1)).toIso8601String(),
-        'chapter': '排序算法',
+        'chapter': '乘积求导',
         'difficulty': 3,
         'next_review_at': now.add(const Duration(days: 2)).toIso8601String(),
         'ai_analysis_summary':
-            '你对partition过程的理解基本正确，但需要注意不同实现方式（Lomuto vs Hoare）会影响结果。建议画图模拟完整过程。',
+            '你漏掉了乘积法则中的第二项，说明求导规则本身会，但在书写时容易直接抓住第一个显眼部分。建议先写结构再代入。',
       },
       {
         'id': 'error_2',
-        'question_text': 'TCP三次握手过程中，如果第三次握手丢失会怎样？',
-        'user_answer': '连接建立失败，需要重新开始',
-        'correct_answer': '服务器会认为连接未建立，但客户端认为已建立。客户端发送数据时，服务器会回复RST。',
-        'subject': '计算机网络',
+        'question_text': '请将 “我最近在尝试建立更稳定的学习节奏” 翻译成更自然的英文。',
+        'user_answer': 'I am trying build a more stable study rhythm recently.',
+        'correct_answer': 'I\'ve been trying to build a more stable study routine lately.',
+        'subject': '英语表达',
         'mastery_level': 0.4,
         'review_count': 3,
         'created_at': now.subtract(const Duration(days: 7)).toIso8601String(),
         'updated_at': now.subtract(const Duration(days: 2)).toIso8601String(),
-        'chapter': 'TCP协议',
-        'difficulty': 4,
+        'chapter': '日常表达',
+        'difficulty': 3,
         'next_review_at': now.add(const Duration(days: 3)).toIso8601String(),
         'ai_analysis_summary':
-            '这是一个经典的边界情况问题。关键是理解TCP的状态机：客户端进入ESTABLISHED，服务器仍在SYN_RCVD。',
+            '主要问题在于动词搭配和时间副词位置。你想表达的是“最近一直在尝试”，用现在完成进行意味更自然。',
       },
       {
         'id': 'error_3',
-        'question_text': '进程和线程的主要区别是什么？',
-        'user_answer': '进程是程序的运行实例，线程是进程内的执行单元',
-        'correct_answer': '除了调度和资源分配外，更重要的是地址空间独立性：进程独立，线程共享。',
-        'subject': '操作系统',
+        'question_text': '阅读一段非虚构文本时，作者为什么在第二段突然转向个人经历？',
+        'user_answer': '因为作者想举个例子',
+        'correct_answer': '作者借个人经历建立情感入口，把抽象议题转成可感知的具体场景。',
+        'subject': '阅读理解',
         'mastery_level': 0.7,
         'review_count': 1,
         'created_at': now.subtract(const Duration(days: 3)).toIso8601String(),
         'updated_at': now.subtract(const Duration(days: 1)).toIso8601String(),
-        'chapter': '进程管理',
+        'chapter': '论证结构',
         'difficulty': 2,
         'next_review_at': now.add(const Duration(days: 4)).toIso8601String(),
-        'ai_analysis_summary': '你的答案正确但不够深入。建议从"资源"和"调度"两个维度对比，理解为什么线程切换更快。',
+        'ai_analysis_summary': '你看到了“举例子”，但没有继续判断这个例子在全文结构中的作用。阅读题里要多问一步：它为什么在这里出现。',
+      },
+      {
+        'id': 'error_4',
+        'question_text': '如果一项调查样本主要来自同一个宿舍楼层，结论最可能受到什么影响？',
+        'user_answer': '样本数量可能不够',
+        'correct_answer': '更核心的问题是样本偏差，样本来源过于集中会影响代表性。',
+        'subject': '统计学',
+        'mastery_level': 0.52,
+        'review_count': 2,
+        'created_at': now.subtract(const Duration(days: 4)).toIso8601String(),
+        'updated_at': now.subtract(const Duration(hours: 20)).toIso8601String(),
+        'chapter': '抽样方法',
+        'difficulty': 3,
+        'next_review_at': now.add(const Duration(days: 2)).toIso8601String(),
+        'ai_analysis_summary': '你先注意到了数量，却忽略了来源分布。以后遇到调查题，先判断“样本像不像总体”再看数量。',
+      },
+      {
+        'id': 'error_5',
+        'question_text': '为什么这张街拍照片看起来“很热闹但没有重点”？',
+        'user_answer': '因为人太多',
+        'correct_answer': '问题不只在于元素多，而在于没有明确主角，亮部和边缘杂物共同分散了视线。',
+        'subject': '摄影构图',
+        'mastery_level': 0.46,
+        'review_count': 1,
+        'created_at': now.subtract(const Duration(days: 6)).toIso8601String(),
+        'updated_at': now.subtract(const Duration(days: 2)).toIso8601String(),
+        'chapter': '主体与留白',
+        'difficulty': 2,
+        'next_review_at': now.add(const Duration(days: 5)).toIso8601String(),
+        'ai_analysis_summary': '你已经能感受到“乱”，下一步要训练自己具体指出哪里在抢戏，尤其是边缘和高亮区域。',
       },
     ];
+    return _demoErrorRecordsCache!;
   }
 
   // --- 🧠 行为模式 Data ---
   List<BehaviorPatternModel> get demoBehaviorPatterns {
-    final now = DateTime.now();
-    return [
+    if (_demoBehaviorPatternsCache != null) return _demoBehaviorPatternsCache!;
+    final now = _now;
+    _demoBehaviorPatternsCache = [
       BehaviorPatternModel(
         id: 'pattern_1',
-        userId: 'CS_Sophomore_12345',
+        userId: demoUserId,
         patternName: '下午效率高峰',
         patternType: 'productive',
-        description: '你在下午3-5点的专注时长和任务完成率明显高于其他时段',
-        solutionText: '建议将高难度任务（如算法题、系统设计）安排在下午时段，早上用于复习和预习',
+        description: '你在下午3-5点的专注时长和复杂任务完成率明显高于其他时段',
+        solutionText: '把理工学习、作品集重写和需要判断力的任务安排在下午，早上留给热身与整理。',
         evidenceIds: ['frag_1', 'frag_2', 'frag_3'],
         isArchived: false,
         createdAt: now.subtract(const Duration(days: 7)),
@@ -2365,38 +2834,40 @@ main  →  [A] → [B] → [C]
       ),
       BehaviorPatternModel(
         id: 'pattern_2',
-        userId: 'CS_Sophomore_12345',
-        patternName: '番茄工作法适配良好',
+        userId: demoUserId,
+        patternName: '晚间适合轻输出',
         patternType: 'productive',
-        description: '使用番茄工作法时，你的平均专注时长提升32%，任务完成率提升45%',
-        solutionText: '继续保持使用番茄工作法，可以尝试在休息时间做一些拉伸运动',
+        description: '晚上 8-9 点更适合语言跟说、阅读整理和短复盘，不适合直接冲高难任务。',
+        solutionText: '给晚间任务设置更低起点，用 10-15 分钟动作代替“今晚必须高产”的压力。',
         isArchived: false,
         createdAt: now.subtract(const Duration(days: 10)),
         updatedAt: now.subtract(const Duration(days: 2)),
       ),
       BehaviorPatternModel(
         id: 'pattern_3',
-        userId: 'CS_Sophomore_12345',
+        userId: demoUserId,
         patternName: '周末学习动力不足',
         patternType: 'barrier',
         description: '周末的学习时长仅为工作日的40%，任务完成率下降60%',
-        solutionText: '建议周末早上安排1-2小时的轻量学习任务，利用社群功能与同学互相督促',
+        solutionText: '保留固定起床时间，周末只安排轻量任务和恢复动作，再借助社群一起维持节奏。',
         isArchived: false,
         createdAt: now.subtract(const Duration(days: 14)),
         updatedAt: now.subtract(const Duration(days: 3)),
       ),
     ];
+    return _demoBehaviorPatternsCache!;
   }
 
   // --- 📢 通知中心 Data ---
   List<Map<String, dynamic>> get demoNotifications {
-    final now = DateTime.now();
-    return [
+    if (_demoNotificationsCache != null) return _demoNotificationsCache!;
+    final now = _now;
+    _demoNotificationsCache = [
       {
         'id': 'notif_1',
         'type': 'achievement',
         'title': '🏆 解锁新成就',
-        'message': '恭喜你获得"连续学习7天"成就！',
+        'message': '恭喜你获得“连续学习7天”成就，节奏感正在慢慢稳定下来。',
         'created_at': now.subtract(const Duration(hours: 1)).toIso8601String(),
         'is_read': false,
       },
@@ -2404,7 +2875,7 @@ main  →  [A] → [B] → [C]
         'id': 'notif_2',
         'type': 'task_reminder',
         'title': '⏰ 任务提醒',
-        'message': '你有1个任务即将到期：数据结构 - 二叉树遍历算法',
+        'message': '你有 1 个任务即将到期：理工课复盘 - 用自己的话讲清楚积分换元',
         'created_at': now.subtract(const Duration(hours: 3)).toIso8601String(),
         'is_read': false,
       },
@@ -2412,7 +2883,7 @@ main  →  [A] → [B] → [C]
         'id': 'notif_3',
         'type': 'cognitive_insight',
         'title': '💡 新的学习洞察',
-        'message': '发现你在下午3-5点效率最高，已为你生成优化建议',
+        'message': '发现你在下午适合理工与职业任务，晚上更适合语言复盘与阅读整理',
         'created_at': now.subtract(const Duration(hours: 6)).toIso8601String(),
         'is_read': true,
       },
@@ -2420,7 +2891,7 @@ main  →  [A] → [B] → [C]
         'id': 'notif_4',
         'type': 'community',
         'title': '💬 社群动态',
-        'message': 'Alice_Codes 回复了你的帖子',
+        'message': 'Mori_Creative 在“作品集慢慢长出来”里回复了你的问题',
         'created_at': now.subtract(const Duration(days: 1)).toIso8601String(),
         'is_read': true,
       },
@@ -2428,7 +2899,7 @@ main  →  [A] → [B] → [C]
         'id': 'notif_5',
         'type': 'plan_progress',
         'title': '🎯 计划进度',
-        'message': '你的"数据结构期中冲刺"计划已完成70%，还剩7天！',
+        'message': '你的“本周复合学习节奏校准”计划已完成 68%，还剩 7 天。',
         'created_at': now.subtract(const Duration(days: 1)).toIso8601String(),
         'is_read': true,
       },
@@ -2436,155 +2907,188 @@ main  →  [A] → [B] → [C]
         'id': 'notif_6',
         'type': 'capsule_ready',
         'title': '🎁 新认知胶囊',
-        'message': '为你生成了一个关于"递归思维"的深度洞察',
+        'message': '为你生成了一个关于“下一步不够明确为什么会拖延”的深度洞察',
         'created_at': now.subtract(const Duration(days: 2)).toIso8601String(),
         'is_read': true,
       },
+      {
+        'id': 'notif_7',
+        'type': 'touchpoint',
+        'title': '🧭 转型线索',
+        'message': '你最近的作品集整理、信息访谈和可迁移能力记录正在形成一条更清晰的转型主线',
+        'created_at': now.subtract(const Duration(days: 2, hours: 6)).toIso8601String(),
+        'is_read': false,
+      },
+      {
+        'id': 'notif_8',
+        'type': 'wellness_nudge',
+        'title': '🫁 恢复提醒',
+        'message': '你连续两次在高认知任务后补了恢复动作，运动恢复型节奏正在慢慢稳定',
+        'created_at': now.subtract(const Duration(days: 3)).toIso8601String(),
+        'is_read': true,
+      },
     ];
+    return _demoNotificationsCache!;
   }
 
   // --- 👥 好友列表 Data ---
-  List<Map<String, dynamic>> get demoFriends => [
+  List<Map<String, dynamic>> get demoFriends {
+    if (_demoFriendsCache != null) return _demoFriendsCache!;
+    _demoFriendsCache = [
         {
           'id': 'friend_1',
-          'username': 'Alice_Codes',
+          'username': 'Lena_Words',
           'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
           'flame_level': 12,
           'is_online': true,
-          'recent_activity': '刚刚完成了一个React项目',
+          'recent_activity': '刚完成一轮英语跟说练习',
         },
         {
           'id': 'friend_2',
-          'username': 'Bob_Dev',
+          'username': 'Mori_Creative',
           'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
           'flame_level': 18,
           'is_online': false,
-          'recent_activity': '2小时前学习了算法',
+          'recent_activity': '2小时前在整理摄影作品集',
         },
         {
           'id': 'friend_3',
-          'username': 'Carol_学习',
+          'username': 'Nora_Reset',
           'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
           'flame_level': 15,
           'is_online': true,
-          'recent_activity': '正在专注学习中',
+          'recent_activity': '正在做晚间阅读整理',
         },
         {
           'id': 'friend_4',
-          'username': 'David_求知',
+          'username': 'Owen_Field',
           'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
           'flame_level': 10,
           'is_online': false,
-          'recent_activity': '5小时前完成了数据库任务',
+          'recent_activity': '5小时前完成了统计学练习',
         },
         {
           'id': 'friend_5',
-          'username': 'Emma_效率',
+          'username': 'Rina_Path',
           'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
           'flame_level': 20,
           'is_online': true,
-          'recent_activity': '30分钟前获得新成就',
+          'recent_activity': '30分钟前更新了作品集首页',
         },
       ];
+    return _demoFriendsCache!;
+  }
 
   // --- 🤝 责任伙伴 Data ---
-  List<Map<String, dynamic>> get demoAccountabilityPartners => [
+  List<Map<String, dynamic>> get demoAccountabilityPartners {
+    if (_demoAccountabilityPartnersCache != null) {
+      return _demoAccountabilityPartnersCache!;
+    }
+    _demoAccountabilityPartnersCache = [
         {
           'id': 'partner_1',
           'partner_id': 'friend_1',
-          'partner_name': 'Alice_Codes',
+          'partner_name': 'Lena_Words',
           'partner_avatar':
               'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
           'status': 'active',
-          'started_at': DateTime.now()
+          'started_at': _now
               .subtract(const Duration(days: 14))
               .toIso8601String(),
           'my_streak': 7,
           'partner_streak': 5,
           'total_checkins': 12,
-          'last_checkin': DateTime.now()
+          'last_checkin': _now
               .subtract(const Duration(hours: 3))
               .toIso8601String(),
         },
         {
           'id': 'partner_2',
           'partner_id': 'friend_3',
-          'partner_name': 'Carol_学习',
+          'partner_name': 'Nora_Reset',
           'partner_avatar':
               'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
           'status': 'active',
-          'started_at': DateTime.now()
+          'started_at': _now
               .subtract(const Duration(days: 7))
               .toIso8601String(),
           'my_streak': 3,
           'partner_streak': 4,
           'total_checkins': 8,
-          'last_checkin': DateTime.now()
+          'last_checkin': _now
               .subtract(const Duration(hours: 1))
               .toIso8601String(),
         },
       ];
+    return _demoAccountabilityPartnersCache!;
+  }
 
   // --- 🏘️ 群组 Data ---
-  List<Map<String, dynamic>> get demoGroups => [
+  List<Map<String, dynamic>> get demoGroups {
+    if (_demoGroupsCache != null) return _demoGroupsCache!;
+    _demoGroupsCache = [
         {
           'id': 'group_1',
-          'name': '算法刷题小分队',
-          'description': '每天一起刷算法题，互相监督共同进步',
+          'name': '晚间语言复盘屋',
+          'description': '一起做精读、跟说和短复盘，适合下班下课后慢慢进入状态的人。',
           'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=algo',
           'member_count': 15,
           'is_member': true,
           'is_public': true,
-          'created_at': DateTime.now()
+          'created_at': _now
               .subtract(const Duration(days: 30))
               .toIso8601String(),
-          'last_activity': DateTime.now()
+          'last_activity': _now
               .subtract(const Duration(hours: 1))
               .toIso8601String(),
         },
         {
           'id': 'group_2',
-          'name': 'Flutter开发者联盟',
-          'description': 'Flutter/Dart技术交流群，分享开发经验和最佳实践',
+          'name': '作品集慢慢长出来',
+          'description': '给跨领域学习者一个稳定更新作品集和表达职业方向的空间。',
           'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=flutter',
           'member_count': 42,
           'is_member': true,
           'is_public': true,
-          'created_at': DateTime.now()
+          'created_at': _now
               .subtract(const Duration(days: 60))
               .toIso8601String(),
-          'last_activity': DateTime.now()
+          'last_activity': _now
               .subtract(const Duration(minutes: 30))
               .toIso8601String(),
         },
         {
           'id': 'group_3',
-          'name': 'AI学习小组',
-          'description': '人工智能和机器学习爱好者社区',
+          'name': '周末恢复实验室',
+          'description': '讨论睡眠、运动、恢复和如何避免周末一散就整周失控。',
           'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=ai',
           'member_count': 28,
           'is_member': false,
           'is_public': true,
-          'created_at': DateTime.now()
+          'created_at': _now
               .subtract(const Duration(days: 15))
               .toIso8601String(),
-          'last_activity': DateTime.now()
+          'last_activity': _now
               .subtract(const Duration(hours: 2))
               .toIso8601String(),
         },
       ];
+    return _demoGroupsCache!;
+  }
 
   // --- 💬 群组消息 Data ---
-  List<Map<String, dynamic>> get demoGroupMessages => [
+  List<Map<String, dynamic>> get demoGroupMessages {
+    if (_demoGroupMessagesCache != null) return _demoGroupMessagesCache!;
+    _demoGroupMessagesCache = [
         {
           'id': 'msg_1',
           'group_id': 'group_1',
           'sender_id': 'friend_1',
-          'sender_name': 'Alice_Codes',
+          'sender_name': 'Lena_Words',
           'sender_avatar':
               'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
-          'content': '今天有人一起刷动态规划吗？',
-          'created_at': DateTime.now()
+          'content': '有人今晚一起做 15 分钟英文跟说吗？我想先从天气和近况两个话题热身。',
+          'created_at': _now
               .subtract(const Duration(minutes: 30))
               .toIso8601String(),
           'reactions': [
@@ -2595,11 +3099,11 @@ main  →  [A] → [B] → [C]
           'id': 'msg_2',
           'group_id': 'group_1',
           'sender_id': 'friend_2',
-          'sender_name': 'Bob_Dev',
+          'sender_name': 'Mori_Creative',
           'sender_avatar':
               'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
-          'content': '我来！正好要做背包问题的练习',
-          'created_at': DateTime.now()
+          'content': '我来，今天白天太耗脑了，晚上只想做一点轻输出，正合适。',
+          'created_at': _now
               .subtract(const Duration(minutes: 25))
               .toIso8601String(),
           'reactions': [
@@ -2610,20 +3114,25 @@ main  →  [A] → [B] → [C]
           'id': 'msg_3',
           'group_id': 'group_1',
           'sender_id': 'friend_3',
-          'sender_name': 'Carol_学习',
+          'sender_name': 'Nora_Reset',
           'sender_avatar':
               'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
-          'content': '加油！动态规划确实需要多练 💯',
-          'created_at': DateTime.now()
+          'content': '加油，今天如果脑子有点钝也没关系，先张嘴比说得完美更重要。',
+          'created_at': _now
               .subtract(const Duration(minutes: 20))
               .toIso8601String(),
           'reactions': <Map<String, dynamic>>[],
         },
       ];
+    return _demoGroupMessagesCache!;
+  }
 
   // --- 📊 责任伙伴打卡热力图 Data ---
   List<Map<String, dynamic>> get demoAccountabilityHeatmap {
-    final now = DateTime.now();
+    if (_demoAccountabilityHeatmapCache != null) {
+      return _demoAccountabilityHeatmapCache!;
+    }
+    final now = _now;
     final heatmap = <Map<String, dynamic>>[];
 
     // 生成过去365天的模拟数据
@@ -2643,39 +3152,46 @@ main  →  [A] → [B] → [C]
             : <Map<String, dynamic>>[],
       });
     }
+    _demoAccountabilityHeatmapCache = heatmap;
     return heatmap;
   }
 
   // --- 🔥 打卡记录 Data ---
-  List<Map<String, dynamic>> get demoCheckins => [
+  List<Map<String, dynamic>> get demoCheckins {
+    if (_demoCheckinsCache != null) return _demoCheckinsCache!;
+    _demoCheckinsCache = [
         {
           'id': 'checkin_1',
           'partnership_id': 'partner_1',
-          'user_id': 'CS_Sophomore_12345',
-          'content': '今天完成了算法 chapter 3 的学习，理解了递归的核心思想！',
-          'created_at': DateTime.now()
+          'user_id': demoUserId,
+          'content': '今天先完成了积分换元复盘，晚上又补了 12 分钟口语跟说，虽然都不长，但节奏比前几天稳很多。',
+          'created_at': _now
               .subtract(const Duration(hours: 3))
               .toIso8601String(),
           'likes_count': 2,
           'encouragements': [
-            {'user_id': 'friend_1', 'message': '太棒了！递归确实需要多练习 💪'},
+            {'user_id': 'friend_1', 'message': '这个节奏很真实，稳下来比一口气冲太猛更厉害。'},
           ],
         },
         {
           'id': 'checkin_2',
           'partnership_id': 'partner_1',
           'user_id': 'friend_1',
-          'content': '早起完成了 React Hooks 的复习，感觉理解更深了',
-          'created_at': DateTime.now()
+          'content': '我今天把英语自我介绍改短了一版，终于不像背模板了，晚上准备再录一次。',
+          'created_at': _now
               .subtract(const Duration(hours: 5))
               .toIso8601String(),
           'likes_count': 3,
           'encouragements': <Map<String, dynamic>>[],
         },
       ];
+    return _demoCheckinsCache!;
+  }
 
   // --- 🎯 视觉元素 Data ---
-  List<Map<String, dynamic>> get demoVisualElements => [
+  List<Map<String, dynamic>> get demoVisualElements {
+    if (_demoVisualElementsCache != null) return _demoVisualElementsCache!;
+    _demoVisualElementsCache = [
         {
           'id': 've_bg_1',
           'name': '星空背景',
@@ -2752,9 +3268,15 @@ main  →  [A] → [B] → [C]
           'preview_url': null,
         },
       ];
+    return _demoVisualElementsCache!;
+  }
 
   // --- 🏆 成就系统扩展 Data ---
-  List<Map<String, dynamic>> get demoAchievementDetails => [
+  List<Map<String, dynamic>> get demoAchievementDetails {
+    if (_demoAchievementDetailsCache != null) {
+      return _demoAchievementDetailsCache!;
+    }
+    _demoAchievementDetailsCache = [
         {
           'id': 'achv_1',
           'name': '初出茅庐',
@@ -2802,6 +3324,8 @@ main  →  [A] → [B] → [C]
           'progress': {'current': 78, 'target': 100},
         },
       ];
+    return _demoAchievementDetailsCache!;
+  }
 }
 
 /// Provider for DemoDataService

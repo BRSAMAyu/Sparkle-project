@@ -283,6 +283,64 @@ void main() {
     expect(find.text('Reset'), findsOneWidget);
   });
 
+  testWidgets('persona readable summary uses normalized rich-text pipeline',
+      (WidgetTester tester) async {
+    final repository = _FakeUserRepository(
+      transparentProfile: <String, dynamic>{
+        'layer_1': {
+          'preferences': [
+            {
+              'key': 'learning_style',
+              'value': '图文混合\u200B',
+              'metadata': {'level': 'editable', 'reason': 'user choice'},
+            },
+            {
+              'key': 'depth_preference',
+              'value': '深入\uFFFD分析',
+              'metadata': {'level': 'editable', 'reason': 'user choice'},
+            },
+          ],
+          'goals': [
+            {
+              'id': 'goal_1',
+              'title': '掌握概\uFFFD率论',
+              'status': 'active',
+              'metadata': {'level': 'editable', 'reason': 'current goal'},
+            },
+          ],
+        },
+        'layer_2': {
+          'persona': {
+            'tags': ['deep-thinker'],
+            'capabilities': {'mastery_avg': 0.72},
+          },
+        },
+        'layer_3': {
+          'patterns': [
+            {
+              'name': 'Planning Loop',
+              'metadata': {'level': 'readonly'},
+            },
+          ],
+          'fragments': [
+            {
+              'content': '喜欢先拆框架再执行',
+              'metadata': {'level': 'readonly'},
+            },
+          ],
+        },
+      },
+    );
+
+    await tester.pumpWidget(_buildTestApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('掌握概率论'), findsOneWidget);
+    expect(find.textContaining('图文混合'), findsOneWidget);
+    expect(find.textContaining('深入分析'), findsOneWidget);
+    expect(find.textContaining('�'), findsNothing);
+  });
+
   testWidgets(
       'persona screen shows section error instead of silent empty state',
       (WidgetTester tester) async {

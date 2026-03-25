@@ -19,8 +19,8 @@ INITIAL_ACHIEVEMENTS = [
         "visual_effect_type": "none",
         "reward_config": [
             {"type": "photon", "quantity": 50},
-            {"type": "title", "value": "streak_7", "display": "一周坚持"}
-        ]
+            {"type": "title", "value": "streak_7", "display": "一周坚持"},
+        ],
     },
     {
         "id": "streak_30",
@@ -35,15 +35,11 @@ INITIAL_ACHIEVEMENTS = [
         "category": "streak",
         "sort_order": 2,
         "visual_effect_type": "gravity_wave",
-        "visual_config": {
-            "color": "#FFD700",
-            "amplitude": 15,
-            "frequency": 1.5
-        },
+        "visual_config": {"color": "#FFD700", "amplitude": 15, "frequency": 1.5},
         "reward_config": [
             {"type": "photon", "quantity": 200},
-            {"type": "title", "value": "monthly_champion", "display": "月度冠军"}
-        ]
+            {"type": "title", "value": "monthly_champion", "display": "月度冠军"},
+        ],
     },
     {
         "id": "streak_100",
@@ -58,16 +54,12 @@ INITIAL_ACHIEVEMENTS = [
         "category": "streak",
         "sort_order": 3,
         "visual_effect_type": "supernova",
-        "visual_config": {
-            "target_node_id": "core_star",
-            "brightness": 2.5,
-            "particle_count": 150
-        },
+        "visual_config": {"target_node_id": "core_star", "brightness": 2.5, "particle_count": 150},
         "reward_config": [
             {"type": "photon", "quantity": 500},
             {"type": "title", "value": "hundred_day_conqueror", "display": "百日征服"},
-            {"type": "freeze_charge", "quantity": 1}
-        ]
+            {"type": "freeze_charge", "quantity": 1},
+        ],
     },
     {
         "id": "streak_365",
@@ -86,16 +78,15 @@ INITIAL_ACHIEVEMENTS = [
             "target_node_id": "core_star",
             "event_horizon_color": "#000000",
             "accretion_disk_colors": ["#FF6B00", "#FFD700", "#FFFFFF"],
-            "glow_intensity": 3.0
+            "glow_intensity": 3.0,
         },
         "reward_config": [
             {"type": "photon", "quantity": 2000},
             {"type": "title", "value": "yearly_legend", "display": "年度传说"},
             {"type": "freeze_charge", "quantity": 3},
-            {"type": "galaxy_skin", "skin_id": "legendary_anniversary"}
-        ]
+            {"type": "galaxy_skin", "skin_id": "legendary_anniversary"},
+        ],
     },
-
     # ========== 知识探索系列 ==========
     {
         "id": "first_light",
@@ -111,7 +102,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 10},
             {"type": "title", "value": "first_light", "display": "初次点亮"},
-        ]
+        ],
     },
     {
         "id": "nodes_10",
@@ -128,7 +119,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 30},
             {"type": "title", "value": "spark_scout", "display": "星火侦察兵"},
-        ]
+        ],
     },
     {
         "id": "nodes_50",
@@ -145,7 +136,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 100},
             {"type": "title", "value": "galaxy_riser", "display": "星图新秀"},
-        ]
+        ],
     },
     {
         "id": "nodes_100",
@@ -163,7 +154,7 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "photon", "quantity": 200},
             {"type": "title", "value": "galaxy_explorer", "display": "星图探索者"},
             {"type": "visual_element", "element_id": "bundle_explorer_command"},
-        ]
+        ],
     },
     {
         "id": "nodes_500",
@@ -178,15 +169,12 @@ INITIAL_ACHIEVEMENTS = [
         "category": "exploration",
         "sort_order": 14,
         "visual_effect_type": "nebula_transform",
-        "visual_config": {
-            "skin_id": "explorer_nebula",
-            "colors": ["#00BFFF", "#1E90FF", "#4169E1"]
-        },
+        "visual_config": {"skin_id": "explorer_nebula", "colors": ["#00BFFF", "#1E90FF", "#4169E1"]},
         "reward_config": [
             {"type": "photon", "quantity": 1000},
             {"type": "title", "value": "knowledge_navigator", "display": "知识领航员"},
             {"type": "visual_element", "element_id": "effect_explorer_orbit"},
-        ]
+        ],
     },
     {
         "id": "all_sectors",
@@ -204,14 +192,13 @@ INITIAL_ACHIEVEMENTS = [
             "skin_id": "full_mastery_galaxy",
             "background_gradient": ["#0A0A23", "#1A1A4A", "#2D1B69"],
             "star_colors": ["#00FFFF", "#FF00FF", "#FFFF00"],
-            "glow_color": "#FFFFFF"
+            "glow_color": "#FFFFFF",
         },
         "reward_config": [
             {"type": "photon", "quantity": 5000},
-            {"type": "title", "value": "omniscient", "display": "博学之士"}
-        ]
+            {"type": "title", "value": "omniscient", "display": "博学之士"},
+        ],
     },
-
     # ========== 领域精通系列 ==========
     {
         "id": "math_master",
@@ -224,9 +211,7 @@ INITIAL_ACHIEVEMENTS = [
         "trigger_config": {"sector": "math", "percent": 80, "count": 20},
         "category": "mastery",
         "sort_order": 20,
-        "reward_config": [
-            {"type": "title", "value": "math_master", "display": "数学大师"}
-        ]
+        "reward_config": [{"type": "title", "value": "math_master", "display": "数学大师"}],
     },
     {
         "id": "physics_master",
@@ -239,11 +224,8 @@ INITIAL_ACHIEVEMENTS = [
         "trigger_config": {"sector": "physics", "percent": 80, "count": 20},
         "category": "mastery",
         "sort_order": 21,
-        "reward_config": [
-            {"type": "title", "value": "physics_master", "display": "物理大师"}
-        ]
+        "reward_config": [{"type": "title", "value": "physics_master", "display": "物理大师"}],
     },
-
     # ========== 学习时长系列 ==========
     {
         "id": "study_1hour",
@@ -257,9 +239,9 @@ INITIAL_ACHIEVEMENTS = [
         "category": "study_time",
         "sort_order": 30,
         "reward_config": [
-            {"type": "photon", "quantity": 20}
-            ,{"type": "title", "value": "one_hour_learner", "display": "一小时学者"}
-        ]
+            {"type": "photon", "quantity": 20},
+            {"type": "title", "value": "one_hour_learner", "display": "一小时学者"},
+        ],
     },
     {
         "id": "study_10hours",
@@ -276,7 +258,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 100},
             {"type": "title", "value": "ten_hour_focus", "display": "十小时专注者"},
-        ]
+        ],
     },
     {
         "id": "study_100hours",
@@ -294,7 +276,7 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "photon", "quantity": 500},
             {"type": "title", "value": "dedicated_learner", "display": "勤奋学习者"},
             {"type": "visual_element", "element_id": "background_mastery_halo"},
-        ]
+        ],
     },
     {
         "id": "study_1000hours",
@@ -313,9 +295,8 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "photon", "quantity": 5000},
             {"type": "title", "value": "thousand_hour_master", "display": "千小时大师"},
             {"type": "visual_element", "element_id": "bundle_legendary_ascension"},
-        ]
+        ],
     },
-
     # ========== 任务完成系列 ==========
     {
         "id": "tasks_1",
@@ -331,7 +312,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 10},
             {"type": "title", "value": "task_rookie", "display": "任务新兵"},
-        ]
+        ],
     },
     {
         "id": "tasks_10",
@@ -348,7 +329,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 50},
             {"type": "title", "value": "task_runner", "display": "任务执行者"},
-        ]
+        ],
     },
     {
         "id": "tasks_100",
@@ -366,9 +347,8 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "photon", "quantity": 300},
             {"type": "title", "value": "task_expert", "display": "任务专家"},
             {"type": "visual_element", "element_id": "effect_mastery_crown"},
-        ]
+        ],
     },
-
     # ========== 隐藏成就 ==========
     {
         "id": "night_owl",
@@ -386,7 +366,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "title", "value": "night_owl", "display": "深夜学者"},
             {"type": "visual_element", "element_id": "effect_hidden_hunter_mask"},
-        ]
+        ],
     },
     {
         "id": "early_bird",
@@ -404,7 +384,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "title", "value": "early_bird", "display": "早起鸟儿"},
             {"type": "visual_element", "element_id": "particle_streak_embers"},
-        ]
+        ],
     },
     {
         "id": "perfectionist",
@@ -419,9 +399,7 @@ INITIAL_ACHIEVEMENTS = [
         "trigger_config": {"mastery": 100},
         "category": "hidden",
         "sort_order": 102,
-        "reward_config": [
-            {"type": "title", "value": "perfectionist", "display": "完美主义者"}
-        ]
+        "reward_config": [{"type": "title", "value": "perfectionist", "display": "完美主义者"}],
     },
     {
         "id": "speed_learner",
@@ -437,14 +415,11 @@ INITIAL_ACHIEVEMENTS = [
         "category": "hidden",
         "sort_order": 103,
         "visual_effect_type": "supernova",
-        "visual_config": {
-            "particle_count": 100,
-            "expansion_speed": 2.0
-        },
+        "visual_config": {"particle_count": 100, "expansion_speed": 2.0},
         "reward_config": [
             {"type": "title", "value": "speed_learner", "display": "速通大师"},
             {"type": "visual_element", "element_id": "bundle_hidden_hunter"},
-        ]
+        ],
     },
     {
         "id": "weekend_warrior",
@@ -459,11 +434,8 @@ INITIAL_ACHIEVEMENTS = [
         "trigger_config": {"consecutive_weekends": 4},
         "category": "hidden",
         "sort_order": 104,
-        "reward_config": [
-            {"type": "title", "value": "weekend_warrior", "display": "周末战士"}
-        ]
+        "reward_config": [{"type": "title", "value": "weekend_warrior", "display": "周末战士"}],
     },
-
     # ========== 冲刺成就系列 ==========
     {
         "id": "sprint_first",
@@ -478,8 +450,8 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 50,
         "reward_config": [
             {"type": "photon", "quantity": 50},
-            {"type": "title", "value": "sprint_first", "display": "初出茅庐"}
-        ]
+            {"type": "title", "value": "sprint_first", "display": "初出茅庐"},
+        ],
     },
     {
         "id": "sprint_5",
@@ -496,7 +468,7 @@ INITIAL_ACHIEVEMENTS = [
         "reward_config": [
             {"type": "photon", "quantity": 100},
             {"type": "title", "value": "sprint_runner", "display": "冲刺执行者"},
-        ]
+        ],
     },
     {
         "id": "sprint_10",
@@ -511,16 +483,12 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 52,
         "visual_effect_type": "gravity_wave",
-        "visual_config": {
-            "color": "#FFD700",
-            "amplitude": 15,
-            "frequency": 1.5
-        },
+        "visual_config": {"color": "#FFD700", "amplitude": 15, "frequency": 1.5},
         "reward_config": [
             {"type": "photon", "quantity": 200},
             {"type": "title", "value": "sprint_master", "display": "冲刺大师"},
             {"type": "visual_element", "element_id": "bundle_sprint_elite"},
-        ]
+        ],
     },
     {
         "id": "sprint_perfect_1",
@@ -534,14 +502,11 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 53,
         "visual_effect_type": "supernova",
-        "visual_config": {
-            "particle_count": 50,
-            "expansion_speed": 1.5
-        },
+        "visual_config": {"particle_count": 50, "expansion_speed": 1.5},
         "reward_config": [
             {"type": "photon", "quantity": 150},
-            {"type": "title", "value": "perfect_debut", "display": "完美首秀"}
-        ]
+            {"type": "title", "value": "perfect_debut", "display": "完美首秀"},
+        ],
     },
     {
         "id": "sprint_perfect_5",
@@ -556,16 +521,13 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 54,
         "visual_effect_type": "nebula_transform",
-        "visual_config": {
-            "skin_id": "perfect_nebula",
-            "colors": ["#FFD700", "#FFA500", "#FF8C00"]
-        },
+        "visual_config": {"skin_id": "perfect_nebula", "colors": ["#FFD700", "#FFA500", "#FF8C00"]},
         "reward_config": [
             {"type": "photon", "quantity": 500},
             {"type": "title", "value": "perfectionist", "display": "完美主义者"},
             {"type": "freeze_charge", "quantity": 1},
             {"type": "visual_element", "element_id": "effect_sprint_victory_frame"},
-        ]
+        ],
     },
     {
         "id": "sprint_streak_3",
@@ -579,15 +541,11 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 55,
         "visual_effect_type": "gravity_wave",
-        "visual_config": {
-            "color": "#00BFFF",
-            "amplitude": 20,
-            "frequency": 2.0
-        },
+        "visual_config": {"color": "#00BFFF", "amplitude": 20, "frequency": 2.0},
         "reward_config": [
             {"type": "photon", "quantity": 200},
-            {"type": "title", "value": "triple_winner", "display": "三连胜"}
-        ]
+            {"type": "title", "value": "triple_winner", "display": "三连胜"},
+        ],
     },
     {
         "id": "sprint_streak_10",
@@ -606,14 +564,14 @@ INITIAL_ACHIEVEMENTS = [
             "target_node_id": "sprint_core",
             "event_horizon_color": "#000000",
             "accretion_disk_colors": ["#FF4500", "#FFD700", "#FFFFFF"],
-            "glow_intensity": 3.0
+            "glow_intensity": 3.0,
         },
         "reward_config": [
             {"type": "photon", "quantity": 2000},
             {"type": "title", "value": "sprint_legend", "display": "冲刺传奇"},
             {"type": "freeze_charge", "quantity": 3},
             {"type": "visual_element", "element_id": "bundle_legendary_ascension"},
-        ]
+        ],
     },
     {
         "id": "sprint_ahead",
@@ -627,15 +585,12 @@ INITIAL_ACHIEVEMENTS = [
         "category": "sprint",
         "sort_order": 57,
         "visual_effect_type": "supernova",
-        "visual_config": {
-            "particle_count": 100,
-            "expansion_speed": 2.5
-        },
+        "visual_config": {"particle_count": 100, "expansion_speed": 2.5},
         "reward_config": [
             {"type": "photon", "quantity": 300},
             {"type": "title", "value": "ahead_runner", "display": "领跑者"},
             {"type": "visual_element", "element_id": "particle_sprint_velocity"},
-        ]
+        ],
     },
 ]
 
@@ -652,8 +607,8 @@ INITIAL_GALAXY_SKINS = [
             "background_gradient": ["#0A0A1A", "#1A1A3A", "#2A2A4A"],
             "star_colors": ["#FFFFFF", "#FFFFF0", "#F0F0FF"],
             "glow_color": "#FFFFFF",
-            "grid_style": "circular"
-        }
+            "grid_style": "circular",
+        },
     },
     {
         "id": "nebula_purple",
@@ -667,8 +622,8 @@ INITIAL_GALAXY_SKINS = [
             "background_gradient": ["#1A0A2E", "#2D1B69", "#4B2B8A"],
             "star_colors": ["#DDA0DD", "#DA70D6", "#FF00FF"],
             "glow_color": "#DDA0DD",
-            "grid_style": "hexagonal"
-        }
+            "grid_style": "hexagonal",
+        },
     },
     {
         "id": "golden_galaxy",
@@ -682,8 +637,8 @@ INITIAL_GALAXY_SKINS = [
             "background_gradient": ["#1A1A0A", "#3A3A1A", "#4A4A2A"],
             "star_colors": ["#FFD700", "FFA500", "#FF8C00"],
             "glow_color": "#FFD700",
-            "grid_style": "radial"
-        }
+            "grid_style": "radial",
+        },
     },
     {
         "id": "cyberpunk",
@@ -698,8 +653,8 @@ INITIAL_GALAXY_SKINS = [
             "star_colors": ["#00FFFF", "#FF00FF", "#FFFF00"],
             "glow_color": "#00FFFF",
             "grid_style": "hexagonal",
-            "particle_texture": "digital_rain"
-        }
+            "particle_texture": "digital_rain",
+        },
     },
     {
         "id": "explorer_nebula",
@@ -713,8 +668,8 @@ INITIAL_GALAXY_SKINS = [
             "background_gradient": ["#0A0A1A", "#1E3A5F", "#2D5A7F"],
             "star_colors": ["#00BFFF", "#1E90FF", "#4169E1"],
             "glow_color": "#00BFFF",
-            "grid_style": "spiral"
-        }
+            "grid_style": "spiral",
+        },
     },
     {
         "id": "legendary_anniversary",
@@ -729,8 +684,8 @@ INITIAL_GALAXY_SKINS = [
             "star_colors": ["#FF4500", "#FF6347", "#FFD700"],
             "glow_color": "#FFD700",
             "grid_style": "circular",
-            "special_effects": ["anniversary_confetti", "rainbow_trail"]
-        }
+            "special_effects": ["anniversary_confetti", "rainbow_trail"],
+        },
     },
 ]
 
@@ -1242,6 +1197,274 @@ INITIAL_VISUAL_ELEMENTS = [
             "set_id": "legendary_ascension",
             "visibility_weight": 100,
             "prestige_label": "传奇登阶套装",
+        },
+    },
+    {
+        "id": "background_celestial_sovereign",
+        "name": "星穹御座",
+        "description": "全域征服者专属的高亮星穹横幅。",
+        "element_type": "background",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 70,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "all_sectors"},
+        "config": {
+            "gradient": ["#060B1F", "#102A5E", "#1D7CB8"],
+            "aurora_colors": ["#8BE9FD", "#7FDBFF", "#F9ED69"],
+            "texture": "grid",
+            "display_slot": "home_ambience",
+            "set_id": "celestial_sovereign",
+            "visibility_weight": 96,
+            "prestige_label": "星穹御座",
+        },
+    },
+    {
+        "id": "particle_celestial_glyphs",
+        "name": "星域铭文",
+        "description": "成列星辉与铭文粒子持续划过主页。",
+        "element_type": "particle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 71,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "all_sectors"},
+        "config": {
+            "count": 42,
+            "shape": "diamond",
+            "colors": ["#AEEFFF", "#67D5FF", "#FFE38C"],
+            "twinkle": True,
+            "drift": True,
+            "speed": 1.18,
+            "display_slot": "star_map_effect",
+            "set_id": "celestial_sovereign",
+            "visibility_weight": 91,
+            "prestige_label": "星域铭文",
+        },
+    },
+    {
+        "id": "effect_celestial_diadem",
+        "name": "穹顶冠冕",
+        "description": "双层穹顶光环，用于宣告征服者身份。",
+        "element_type": "effect",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 72,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "all_sectors"},
+        "config": {
+            "effect_type": "dual_ring",
+            "intensity": 0.94,
+            "speed": 1.05,
+            "color": "#8BE9FD",
+            "position": "center",
+            "display_slot": "avatar_frame",
+            "set_id": "celestial_sovereign",
+            "visibility_weight": 98,
+            "prestige_label": "穹顶冠冕",
+        },
+    },
+    {
+        "id": "bundle_celestial_sovereign",
+        "name": "星穹主宰套装",
+        "description": "把全域征服者的氛围、粒子和冠冕一次穿满。",
+        "element_type": "bundle",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 73,
+        "category": "prestige",
+        "unlock_requirement": {"achievement_id": "all_sectors"},
+        "config": {
+            "background_id": "background_celestial_sovereign",
+            "particle_id": "particle_celestial_glyphs",
+            "effect_id": "effect_celestial_diadem",
+            "display_slot": "prestige_bundle",
+            "set_id": "celestial_sovereign",
+            "visibility_weight": 99,
+            "prestige_label": "星穹主宰套装",
+        },
+    },
+    {
+        "id": "background_midnight_regalia",
+        "name": "午夜御幕",
+        "description": "夜行学习者专属的深夜仪式横幅。",
+        "element_type": "background",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 80,
+        "category": "persona",
+        "unlock_requirement": {"achievement_id": "night_owl"},
+        "config": {
+            "gradient": ["#050816", "#1B1736", "#40215B"],
+            "nebula_colors": ["#764AF1", "#B06AB3", "#5FFBF1"],
+            "texture": "mesh",
+            "display_slot": "profile_banner",
+            "set_id": "midnight_regalia",
+            "visibility_weight": 85,
+            "prestige_label": "午夜御幕",
+        },
+    },
+    {
+        "id": "particle_midnight_comets",
+        "name": "夜巡彗尾",
+        "description": "冷色拖尾划过主页，强化深夜掌控感。",
+        "element_type": "particle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 81,
+        "category": "persona",
+        "unlock_requirement": {"achievement_id": "night_owl"},
+        "config": {
+            "count": 34,
+            "shape": "trail",
+            "colors": ["#B388FF", "#7F7FD5", "#5FFBF1"],
+            "twinkle": True,
+            "speed": 1.1,
+            "display_slot": "conquest_trail",
+            "set_id": "midnight_regalia",
+            "visibility_weight": 83,
+            "prestige_label": "夜巡彗尾",
+        },
+    },
+    {
+        "id": "effect_midnight_mooncrest",
+        "name": "月冕光印",
+        "description": "顶部半环与柔光脉冲组成的夜行徽记。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 82,
+        "category": "persona",
+        "unlock_requirement": {"achievement_id": "study_1000hours"},
+        "config": {
+            "effect_type": "pulse_ring",
+            "intensity": 0.82,
+            "speed": 0.9,
+            "color": "#C3B1FF",
+            "position": "top-right",
+            "radius": 220,
+            "display_slot": "avatar_frame",
+            "set_id": "midnight_regalia",
+            "visibility_weight": 89,
+            "prestige_label": "月冕光印",
+        },
+    },
+    {
+        "id": "bundle_midnight_regalia",
+        "name": "午夜君主套装",
+        "description": "把深夜努力者的神秘与统治感直接穿在首页。",
+        "element_type": "bundle",
+        "rarity": "legendary",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 83,
+        "category": "persona",
+        "unlock_requirement": {"achievement_id": "study_1000hours"},
+        "config": {
+            "background_id": "background_midnight_regalia",
+            "particle_id": "particle_midnight_comets",
+            "effect_id": "effect_midnight_mooncrest",
+            "display_slot": "prestige_bundle",
+            "set_id": "midnight_regalia",
+            "visibility_weight": 95,
+            "prestige_label": "午夜君主套装",
+        },
+    },
+    {
+        "id": "background_precision_grid",
+        "name": "精度矩阵",
+        "description": "为高完成率与完美主义者打造的冷感控制横幅。",
+        "element_type": "background",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 90,
+        "category": "performance",
+        "unlock_requirement": {"achievement_id": "perfectionist"},
+        "config": {
+            "gradient": ["#08121D", "#17324D", "#224D76"],
+            "neon_colors": ["#72F1FF", "#8AF6C1", "#DAFF7D"],
+            "texture": "grid",
+            "display_slot": "achievement_frame",
+            "set_id": "precision_architect",
+            "visibility_weight": 86,
+            "prestige_label": "精度矩阵",
+        },
+    },
+    {
+        "id": "particle_precision_nodes",
+        "name": "校准节点",
+        "description": "高密度节点粒子强化结构感与控制力。",
+        "element_type": "particle",
+        "rarity": "rare",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 91,
+        "category": "performance",
+        "unlock_requirement": {"achievement_id": "tasks_100"},
+        "config": {
+            "count": 46,
+            "shape": "square",
+            "colors": ["#B8F2E6", "#72EFDD", "#90E0EF"],
+            "drift": False,
+            "twinkle": True,
+            "speed": 0.78,
+            "display_slot": "display_pedestal",
+            "set_id": "precision_architect",
+            "visibility_weight": 81,
+            "prestige_label": "校准节点",
+        },
+    },
+    {
+        "id": "effect_precision_crown",
+        "name": "统御准星",
+        "description": "精确环与中心锁定光斑，适合高完成率玩家。",
+        "element_type": "effect",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 92,
+        "category": "performance",
+        "unlock_requirement": {"achievement_id": "perfectionist"},
+        "config": {
+            "effect_type": "gravity_wave",
+            "intensity": 0.78,
+            "speed": 1.12,
+            "color": "#72F1FF",
+            "position": "center",
+            "wave_count": 4,
+            "display_slot": "title_bar",
+            "set_id": "precision_architect",
+            "visibility_weight": 87,
+            "prestige_label": "统御准星",
+        },
+    },
+    {
+        "id": "bundle_precision_architect",
+        "name": "精度构筑套装",
+        "description": "完美主义者的控制力与冷峻秩序感完整成型。",
+        "element_type": "bundle",
+        "rarity": "epic",
+        "unlock_source": "achievement",
+        "is_default": False,
+        "sort_order": 93,
+        "category": "performance",
+        "unlock_requirement": {"achievement_id": "perfectionist"},
+        "config": {
+            "background_id": "background_precision_grid",
+            "particle_id": "particle_precision_nodes",
+            "effect_id": "effect_precision_crown",
+            "display_slot": "prestige_bundle",
+            "set_id": "precision_architect",
+            "visibility_weight": 94,
+            "prestige_label": "精度构筑套装",
         },
     },
 ]

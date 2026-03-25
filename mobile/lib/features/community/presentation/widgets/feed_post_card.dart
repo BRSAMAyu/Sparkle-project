@@ -41,42 +41,56 @@ class FeedPostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: DS.avatarFallbackBackground,
-                  backgroundImage: post.user.avatarUrl != null
-                      ? NetworkImage(post.user.avatarUrl!)
-                      : null,
-                  child: post.user.avatarUrl == null
-                      ? Text(
-                          post.user.username[0].toUpperCase(),
-                          style: TextStyle(color: DS.avatarFallbackForeground),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: DS.md),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.user.username,
-                      style: TextStyle(
-                        color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: DS.avatarFallbackBackground,
+                        backgroundImage: post.user.avatarUrl != null
+                            ? NetworkImage(post.user.avatarUrl!)
+                            : null,
+                        child: post.user.avatarUrl == null
+                            ? Text(
+                                post.user.username[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: DS.avatarFallbackForeground,
+                                ),
+                              )
+                            : null,
                       ),
-                    ),
-                    Text(
-                      timeago.format(post.createdAt),
-                      style: TextStyle(
-                        color: DS.textSecondary,
-                        fontSize: 12,
+                      const SizedBox(width: DS.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post.user.username,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: DS.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              timeago.format(post.createdAt),
+                              style: TextStyle(
+                                color: DS.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: DS.sm),
                 if (post.isOptimistic)
                   Container(
                     padding:
@@ -129,19 +143,20 @@ class FeedPostCard extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: DS.lg),
-            Row(
+            Wrap(
+              spacing: DS.lg,
+              runSpacing: DS.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _ActionButton(
                   icon: Icons.favorite_border,
                   label: '${post.likeCount}',
                   onTap: onLike,
                 ),
-                const SizedBox(width: DS.xl),
                 const _ActionButton(
                   icon: Icons.chat_bubble_outline,
                   label: 'Comment',
                 ),
-                const Spacer(),
                 if (post.topic != null)
                   Container(
                     padding:
@@ -155,6 +170,8 @@ class FeedPostCard extends StatelessWidget {
                     ),
                     child: Text(
                       '#${post.topic}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: DS.secondaryBase,
                         fontSize: 12,

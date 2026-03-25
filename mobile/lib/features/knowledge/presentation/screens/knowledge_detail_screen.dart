@@ -258,6 +258,37 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
             ),
 
+          SliverToBoxAdapter(
+            child: ContentConstraint(
+              child: SparkleStaggerItem(
+                index: 3,
+                child: _SectionCard(
+                  title: 'AI 拓展相关节点',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '基于当前节点生成 3 个候选相关节点。你可以不选，也可以任选 1 到 3 个真正写入知识星图。',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.sm),
+                      SparkleButton(
+                        label: '生成候选节点',
+                        icon: const Icon(Icons.auto_awesome),
+                        expand: true,
+                        onPressed: () => unawaited(
+                          _showExpansionSheet(context, ref, detail),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // Related Knowledge Nodes
           if (detail.relations.isNotEmpty)
             SliverToBoxAdapter(
@@ -471,6 +502,30 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _showExpansionSheet(
+    BuildContext context,
+    WidgetRef ref,
+    KnowledgeDetailResponse detail,
+  ) async {
+    await showSensoryModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (context) => GraphiteModalSurface(
+        title: 'AI 拓展相关节点',
+        child: _NodeExpansionSheet(
+          nodeId: nodeId,
+          nodeName: detail.node.name,
+          onApplied: () {
+            ref.invalidate(knowledgeDetailProvider(nodeId));
+            ref.invalidate(enhancedGalaxyRepositoryProvider);
+          },
+        ),
+      ),
+    );
+  }
+
   IconData _getRelationIcon(String relationType) {
     switch (relationType) {
       case 'prerequisite':
@@ -679,6 +734,251 @@ class _SectionCard extends StatelessWidget {
               child,
             ],
           ),
+        ),
+      );
+}
+
+class _NodeExpansionSheet extends ConsumerStatefulWidget {
+  const _NodeExpansionSheet({
+    required this.nodeId,
+    required this.nodeName,
+    required this.onApplied,
+  });
+
+  final String nodeId;
+  final String nodeName;
+  final VoidCallback onApplied;
+
+  @override
+  ConsumerState<_NodeExpansionSheet> createState() => _NodeExpansionSheetState();
+}
+
+class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
+  bool _isGenerating = false;
+  bool _isApplying = false;
+  String? _error;
+  String? _promptVersion;
+  List<NodeExpansionCandidate> _candidates = const <NodeExpansionCandidate>[];
+  final Set<String> _selectedIds = <String>{};
+
+  Future<void> _generateCandidates() async {
+    setState(() {
+      _isGenerating = true;
+      _error = null;
+    });
+    try {
+      final response = await ref
+          .read(galaxyRepositoryProvider)
+          .generateExpansionCandidates(widget.nodeId);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _promptVersion = response.promptVersion;
+        _candidates = response.candidates;
+        _selectedIds
+          ..clear()
+          ..addAll(response.candidates.map((item) => item.candidateId));
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '').trim();
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
+    }
+  }
+
+  Future<void> _applySelected() async {
+    final selected = _candidates
+        .where((item) => _selectedIds.contains(item.candidateId))
+        .toList(growable: false);
+    if (selected.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() {
+      _isApplying = true;
+      _error = null;
+    });
+    try {
+      final created = await ref.read(galaxyRepositoryProvider).applyExpansionCandidates(
+            widget.nodeId,
+            promptVersion: _promptVersion ?? 'v1',
+            candidates: selected,
+          );
+      if (!mounted) {
+        return;
+      }
+      widget.onApplied();
+      Navigator.of(context).pop();
+      AppFeedback.success(
+        context,
+        created.isEmpty ? '候选节点已处理。' : '已将 ${created.length} 个节点纳入星图。',
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '').trim();
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isApplying = false);
+      }
+    }
+  }
+
+  String _relationLabel(String relation) {
+    switch (relation) {
+      case 'prerequisite':
+        return '前置';
+      case 'application':
+        return '应用';
+      case 'evolution':
+        return '进阶';
+      default:
+        return '相关';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '围绕“${widget.nodeName}”生成 3 个候选节点，再由你决定哪些真正写入知识星图。',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: DS.md),
+          if (_candidates.isEmpty && !_isGenerating)
+            SparkleButton(
+              label: '生成 3 个候选节点',
+              icon: const Icon(Icons.auto_awesome),
+              expand: true,
+              onPressed: _generateCandidates,
+            ),
+          if (_isGenerating)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.error,
+                  ),
+            ),
+            const SizedBox(height: DS.sm),
+          ],
+          if (_candidates.isNotEmpty) ...[
+            ..._candidates.map(
+              (candidate) => Container(
+                margin: const EdgeInsets.only(bottom: DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.surfacePanel,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _selectedIds.contains(candidate.candidateId)
+                        ? DS.brandPrimary.withValues(alpha: 0.28)
+                        : DS.neutral200,
+                  ),
+                ),
+                child: CheckboxListTile(
+                  value: _selectedIds.contains(candidate.candidateId),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(candidate.name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: DS.xs),
+                      Text(candidate.description),
+                      const SizedBox(height: DS.xs),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          _CandidateMetaChip(_relationLabel(candidate.relationToTrigger)),
+                          _CandidateMetaChip('重要度 ${candidate.importanceLevel}'),
+                          ...candidate.keywords.take(2).map(_CandidateMetaChip.new),
+                        ],
+                      ),
+                    ],
+                  ),
+                  onChanged: _isApplying
+                      ? null
+                      : (selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _selectedIds.add(candidate.candidateId);
+                            } else {
+                              _selectedIds.remove(candidate.candidateId);
+                            }
+                          });
+                        },
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                SparkleButton(
+                  label: '重新生成',
+                  variant: ButtonVariant.secondary,
+                  onPressed: _isApplying ? null : _generateCandidates,
+                ),
+                SparkleButton(
+                  label: _selectedIds.isEmpty ? '本次不纳入' : '纳入星图',
+                  icon: _isApplying
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.hub_outlined),
+                  loading: _isApplying,
+                  onPressed: _isApplying ? null : _applySelected,
+                ),
+              ],
+            ),
+          ],
+        ],
+      );
+}
+
+class _CandidateMetaChip extends StatelessWidget {
+  const _CandidateMetaChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: DS.brandPrimary,
+                fontWeight: FontWeight.w700,
+              ),
         ),
       );
 }

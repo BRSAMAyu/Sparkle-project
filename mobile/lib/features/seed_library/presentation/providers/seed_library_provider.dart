@@ -164,31 +164,60 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   final SeedLibraryRepository _repository;
   final String libraryId;
 
+  String _friendlyError(Object error, String fallback) {
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
+      return fallback;
+    }
+    return raw;
+  }
+
   Future<void> loadLibrary() async {
-    state = state.copyWith(isLoadingLibrary: true);
+    state = state.copyWith(
+      isLoadingLibrary: true,
+      error: state.library == null ? null : state.error,
+    );
 
     try {
       final library = await _repository.getLibrary(libraryId);
-      final subscriptions = await _repository.getMySubscriptions();
-      final matchedSubscription = subscriptions.items.cast<UserLibrarySubscription?>().firstWhere(
-            (sub) => sub?.libraryId == libraryId,
-            orElse: () => null,
-          );
+      state = state.copyWith(
+        library: library,
+        isLoadingLibrary: false,
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingLibrary: false,
+        error: _friendlyError(e, '种子库详情加载失败，请稍后再试'),
+      );
+      return;
+    }
+
+    try {
+      final matchedSubscription =
+          await _repository.findMySubscriptionForLibrary(libraryId);
+      final subscriptions = await _repository.getMySubscriptions(
+        isEnabled: true,
+        pageSize: 100,
+      );
       final activeSubscriptions = subscriptions.items
           .where((sub) => sub.isEnabled)
           .toList()
         ..sort((a, b) => b.priority.compareTo(a.priority));
       state = state.copyWith(
-        library: library,
-        isLoadingLibrary: false,
         isSubscribed: matchedSubscription != null,
         subscription: matchedSubscription,
         activeSubscriptions: activeSubscriptions,
+        error: null,
       );
     } catch (e) {
       state = state.copyWith(
-        isLoadingLibrary: false,
-        error: e.toString(),
+        isSubscribed: false,
+        subscription: null,
+        activeSubscriptions: const [],
+        error: state.library == null
+            ? _friendlyError(e, '种子库状态加载失败，请稍后再试')
+            : null,
       );
     }
   }
@@ -245,26 +274,83 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   }
 
   Future<void> toggleApplied() async {
+    if (state.library == null) {
+      return;
+    }
     try {
-      if (!state.isSubscribed) {
+      await loadLibrary();
+      final current = state.subscription ??
+          await _repository.findMySubscriptionForLibrary(libraryId);
+      if (current == null) {
         final maxPriority = state.activeSubscriptions.isEmpty
             ? 100
             : state.activeSubscriptions.first.priority + 10;
-        await _repository.subscribeToLibrary(
+        final subscription = await _repository.subscribeToLibrary(
           libraryId,
           priority: maxPriority,
           notes: 'applied',
         );
+        state = state.copyWith(
+          subscription: subscription,
+          isSubscribed: true,
+          activeSubscriptions: [
+            subscription,
+            ...state.activeSubscriptions.where(
+              (item) => item.libraryId != subscription.libraryId,
+            ),
+          ]..sort((a, b) => b.priority.compareTo(a.priority)),
+          error: null,
+        );
       } else {
-        await _repository.updateSubscription(
+        final updated = await _repository.updateSubscription(
           libraryId,
           UpdateSubscriptionRequest(
-            isEnabled: !(state.subscription?.isEnabled ?? false),
+            isEnabled: !current.isEnabled,
           ),
         );
+        final refreshedSubscriptions = [
+          updated,
+          ...state.activeSubscriptions.where(
+            (item) => item.libraryId != updated.libraryId,
+          ),
+        ].where((item) => item.isEnabled).toList()
+          ..sort((a, b) => b.priority.compareTo(a.priority));
+        state = state.copyWith(
+          subscription: updated,
+          isSubscribed: true,
+          activeSubscriptions: refreshedSubscriptions,
+          error: null,
+        );
+      }
+    } catch (e) {
+      final raw = e.toString().toLowerCase();
+      if (raw.contains('already subscribe')) {
+        await loadLibrary();
+        final existing =
+            state.subscription ?? await _repository.findMySubscriptionForLibrary(libraryId);
+        if (existing != null) {
+          final updated = await _repository.updateSubscription(
+            libraryId,
+            UpdateSubscriptionRequest(
+              isEnabled: true,
+            ),
+          );
+          state = state.copyWith(
+            subscription: updated,
+            isSubscribed: true,
+            activeSubscriptions: [
+              updated,
+              ...state.activeSubscriptions.where(
+                (item) => item.libraryId != updated.libraryId,
+              ),
+            ].where((item) => item.isEnabled).toList()
+              ..sort((a, b) => b.priority.compareTo(a.priority)),
+            error: null,
+          );
+          return;
+        }
       }
       await loadLibrary();
-    } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;
     }
@@ -275,7 +361,9 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       final maxPriority = state.activeSubscriptions.isEmpty
           ? 100
           : state.activeSubscriptions.first.priority + 10;
-      if (!state.isSubscribed) {
+      final current = state.subscription ??
+          await _repository.findMySubscriptionForLibrary(libraryId);
+      if (current == null) {
         await _repository.subscribeToLibrary(
           libraryId,
           priority: maxPriority,

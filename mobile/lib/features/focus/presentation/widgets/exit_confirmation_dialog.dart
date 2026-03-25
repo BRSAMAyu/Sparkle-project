@@ -70,7 +70,10 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
           type: MaterialType.transparency,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: BoxConstraints(
+                maxWidth: 420,
+                maxHeight: MediaQuery.of(context).size.height - (DS.xl * 2),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(DS.xl),
                 child: ClipRRect(
@@ -91,50 +94,76 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildIcon(),
-                        const SizedBox(height: DS.lg),
-                        Text(
-                          _getTitle(),
-                          style: TextStyle(
-                            color: DS.brandPrimaryConst,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: DS.md),
-                        Text(
-                          _getMessage(),
-                          style: TextStyle(
-                            color: DS.brandPrimary.withValues(alpha: 0.78),
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: DS.xl),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CustomButton.secondary(
-                                text: _getCancelText(),
-                                onPressed: _cancel,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final stackActions = constraints.maxWidth < 340;
+                        return SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildIcon(),
+                              const SizedBox(height: DS.lg),
+                              Text(
+                                _getTitle(),
+                                style: TextStyle(
+                                  color: DS.brandPrimaryConst,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                            const SizedBox(width: DS.lg),
-                            Expanded(
-                              child: CustomButton.primary(
-                                text: _getConfirmText(),
-                                onPressed: _nextStep,
-                                customGradient: DS.errorGradient,
+                              const SizedBox(height: DS.md),
+                              Text(
+                                _getMessage(),
+                                style: TextStyle(
+                                  color:
+                                      DS.brandPrimary.withValues(alpha: 0.78),
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(height: DS.xl),
+                              if (stackActions) ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: CustomButton.primary(
+                                    text: _getConfirmText(),
+                                    onPressed: _nextStep,
+                                    customGradient: DS.errorGradient,
+                                  ),
+                                ),
+                                const SizedBox(height: DS.md),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: CustomButton.secondary(
+                                    text: _getCancelText(),
+                                    onPressed: _cancel,
+                                  ),
+                                ),
+                              ] else
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomButton.secondary(
+                                        text: _getCancelText(),
+                                        onPressed: _cancel,
+                                      ),
+                                    ),
+                                    const SizedBox(width: DS.lg),
+                                    Expanded(
+                                      child: CustomButton.primary(
+                                        text: _getConfirmText(),
+                                        onPressed: _nextStep,
+                                        customGradient: DS.errorGradient,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -145,17 +174,17 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
       );
 
   Widget _buildIcon() => Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        color: DS.warning.withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Icons.exit_to_app_rounded,
-        color: DS.warning,
-        size: 40,
-      ),
-    );
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.exit_to_app_rounded,
+          color: DS.warning,
+          size: 40,
+        ),
+      );
 
   String _getTitle() => context.l10n.focusExitTitleStep1;
 

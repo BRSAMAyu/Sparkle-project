@@ -7,6 +7,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_recommendation_provider.dart';
+import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_card.dart';
 import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
@@ -88,6 +89,29 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         );
   }
 
+  void _applyDisplaySlotFilter(String displaySlot) {
+    final nextOptions = _filterOptions.copyWith(
+      displaySlot: displaySlot,
+      showUnlockedOnly: false,
+      sortBy: VisualElementSortBy.prestige,
+    );
+    setState(() => _filterOptions = nextOptions);
+    ref.read(visualElementsNotifierProvider.notifier).setFilterOptions(
+          nextOptions,
+        );
+    if (_tabController.index == 0) {
+      _tabController.animateTo(1);
+    }
+  }
+
+  void _clearDisplaySlotFilter() {
+    final nextOptions = _filterOptions.copyWith(clearDisplaySlot: true);
+    setState(() => _filterOptions = nextOptions);
+    ref.read(visualElementsNotifierProvider.notifier).setFilterOptions(
+          nextOptions,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -114,8 +138,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementsState state,
   ) {
     final eventElements = state.allElements
-        .where((element) =>
-            element.unlockSource == VisualElementUnlockSource.event,)
+        .where(
+          (element) => element.unlockSource == VisualElementUnlockSource.event,
+        )
         .toList();
 
     return SliverToBoxAdapter(
@@ -149,8 +174,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 children: [
                   SparkleIconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () =>
-                        context.canPop() ? context.pop() : context.go('/profile/settings'),
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go('/profile/settings'),
                     variant: ButtonVariant.ghost,
                   ),
                   const SizedBox(width: DS.spacing8),
@@ -188,114 +214,115 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
-  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            DS.surfaceSecondary,
-            Color.lerp(DS.surfacePrimary, DS.info, 0.03) ?? DS.surfacePrimary,
+  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) =>
+      Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.surfaceSecondary,
+              Color.lerp(DS.surfacePrimary, DS.info, 0.03) ?? DS.surfacePrimary,
+            ],
+          ),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: DS.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: DS.textPrimary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Wrap(
-        spacing: DS.spacing12,
-        runSpacing: DS.spacing12,
-        children: [
-          SizedBox(
-            width: 212,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.visualElementsUnlockProgress,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    color: DS.textSecondary,
+        child: Wrap(
+          spacing: DS.spacing12,
+          runSpacing: DS.spacing12,
+          children: [
+            SizedBox(
+              width: 212,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.visualElementsUnlockProgress,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      color: DS.textSecondary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                ClipRRect(
-                  borderRadius: DS.borderRadius8,
-                  child: LinearProgressIndicator(
-                    value: stats.unlockProgress,
-                    backgroundColor: DS.surfaceTertiary,
-                    valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
-                    minHeight: 8,
+                  const SizedBox(height: DS.spacing8),
+                  ClipRRect(
+                    borderRadius: DS.borderRadius8,
+                    child: LinearProgressIndicator(
+                      value: stats.unlockProgress,
+                      backgroundColor: DS.surfaceTertiary,
+                      valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
+                      minHeight: 8,
+                    ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  '${stats.unlockedCount}/${stats.totalCount}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
-                    color: DS.textPrimary,
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    '${stats.unlockedCount}/${stats.totalCount}',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.textPrimary,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 96,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing12,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  DS.brandPrimary10,
-                  DS.info.withValues(alpha: 0.08),
                 ],
               ),
-              borderRadius: DS.borderRadius12,
-              border: Border.all(
-                color: DS.brandPrimary.withValues(alpha: 0.16),
+            ),
+            Container(
+              width: 96,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing12,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    DS.brandPrimary10,
+                    DS.info.withValues(alpha: 0.08),
+                  ],
+                ),
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: DS.brandPrimary.withValues(alpha: 0.16),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: DS.brandPrimary,
+                    size: DS.iconSizeMd,
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    '${stats.equippedCount}',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeLg,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.brandPrimary,
+                    ),
+                  ),
+                  Text(
+                    l10n.visualElementsEquipped,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.brandPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: DS.brandPrimary,
-                  size: DS.iconSizeMd,
-                ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  '${stats.equippedCount}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeLg,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimary,
-                  ),
-                ),
-                Text(
-                  l10n.visualElementsEquipped,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.brandPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildCurrentShowcase(VisualElementsState state) {
     final equipped = [
@@ -406,11 +433,14 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         itemBuilder: (context, index) {
           final element = bundles[index];
           final isUnlocked = state.unlockedIds.contains(element.id);
+          final isEquipped = _isElementEquipped(element, state);
+          final ownedCount = _bundleOwnedCount(element, state);
+          final totalCount = _bundleTotalCount(element);
           return GestureDetector(
             onTap: () => _showElementPreview(
               element,
               isUnlocked,
-              state.equippedIds.contains(element.id),
+              isEquipped,
             ),
             child: Container(
               width: 208,
@@ -437,6 +467,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         isUnlocked ? '已解锁' : '待征服',
                         isUnlocked ? DS.success : DS.warning,
                       ),
+                      if (totalCount > 0)
+                        _miniChip(
+                          '$ownedCount/$totalCount 已集齐',
+                          ownedCount == totalCount ? DS.success : DS.info,
+                        ),
                     ],
                   ),
                   const Spacer(),
@@ -472,23 +507,23 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   Widget _miniChip(String label, Color color) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: DS.fontSizeXs,
-          color: color,
-          fontWeight: DS.fontWeightMedium,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
         ),
-      ),
-    );
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
 
   Color _elementAccent(VisualElementModel element) {
     final gradient = element.config['gradient'] as List<dynamic>?;
@@ -502,40 +537,41 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return value == null ? DS.brandPrimary : Color(value);
   }
 
-  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) => SliverPersistentHeader(
-      pinned: true,
-      delegate: _StickyTabBarDelegate(
-        TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          indicatorSize: TabBarIndicatorSize.label,
-          indicator: BoxDecoration(
-            color: DS.brandPrimary,
-            borderRadius: DS.borderRadius8,
-          ),
-          indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-          labelColor: DS.textOnPrimary,
-          unselectedLabelColor: DS.textSecondary,
-          labelStyle: const TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightMedium,
-          ),
-          labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.auto_awesome),
-              text: l10n.visualElementsRecommended,
+  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) =>
+      SliverPersistentHeader(
+        pinned: true,
+        delegate: _StickyTabBarDelegate(
+          TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            indicatorSize: TabBarIndicatorSize.label,
+            indicator: BoxDecoration(
+              color: DS.brandPrimary,
+              borderRadius: DS.borderRadius8,
             ),
-            Tab(text: l10n.visualElementTabAll),
-            Tab(text: l10n.visualElementTabBackground),
-            Tab(text: l10n.visualElementTabParticle),
-            Tab(text: l10n.visualElementTabEffect),
-            Tab(text: l10n.visualElementTabUnlocked),
-          ],
+            indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+            labelColor: DS.textOnPrimary,
+            unselectedLabelColor: DS.textSecondary,
+            labelStyle: const TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightMedium,
+            ),
+            labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
+            tabs: [
+              Tab(
+                icon: const Icon(Icons.auto_awesome),
+                text: l10n.visualElementsRecommended,
+              ),
+              Tab(text: l10n.visualElementTabAll),
+              Tab(text: l10n.visualElementTabBackground),
+              Tab(text: l10n.visualElementTabParticle),
+              Tab(text: l10n.visualElementTabEffect),
+              Tab(text: l10n.visualElementTabUnlocked),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildBody(
     BuildContext context,
@@ -579,6 +615,12 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   _buildCurrentShowcase(state),
                   const SizedBox(height: DS.spacing12),
                   _buildPrestigeSetShowcase(state),
+                  const SizedBox(height: DS.spacing12),
+                  _buildStyleRunway(state),
+                  if (state.filterOptions.displaySlot != null) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildActiveDisplaySlotFilter(state),
+                  ],
                 ],
               ),
             ),
@@ -587,23 +629,23 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
               builder: (context, constraints) => SliverGrid(
-                  key: ValueKey(_filterOptions.hashCode),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _calculateCrossAxisCount(
-                      constraints.crossAxisExtent,
-                    ),
-                    mainAxisSpacing: DS.spacing12,
-                    crossAxisSpacing: DS.spacing12,
-                    mainAxisExtent: 184,
+                key: ValueKey(_filterOptions.hashCode),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _calculateCrossAxisCount(
+                    constraints.crossAxisExtent,
                   ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final element = filteredElements[index];
-                      return _buildElementCard(element, state, l10n);
-                    },
-                    childCount: filteredElements.length,
-                  ),
+                  mainAxisSpacing: DS.spacing12,
+                  crossAxisSpacing: DS.spacing12,
+                  mainAxisExtent: 220,
                 ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final element = filteredElements[index];
+                    return _buildElementCard(element, state);
+                  },
+                  childCount: filteredElements.length,
+                ),
+              ),
             ),
           ),
         ],
@@ -614,10 +656,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   Widget _buildElementCard(
     VisualElementModel element,
     VisualElementsState state,
-    AppLocalizations l10n,
   ) {
     final isUnlocked = state.unlockedIds.contains(element.id);
-    final isEquipped = state.equippedIds.contains(element.id);
+    final isEquipped = _isElementEquipped(element, state);
+    final bundleOwnedCount = _bundleOwnedCount(element, state);
+    final bundleTotalCount = _bundleTotalCount(element);
     final resolvedElement = element.copyWith(
       isUnlocked: isUnlocked,
       isEquipped: isEquipped,
@@ -625,6 +668,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     return _VisualElementCard(
       element: resolvedElement,
+      bundleOwnedCount: bundleOwnedCount,
+      bundleTotalCount: bundleTotalCount,
       onTap: () => _showElementPreview(element, isUnlocked, isEquipped),
       onLongPress:
           isUnlocked && !isEquipped ? () => _equipElement(element.id) : null,
@@ -641,12 +686,34 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       element: element,
       availableElements: ref.read(visualElementsNotifierProvider).allElements,
       baseConfig: ref.read(visualElementsNotifierProvider).config,
+      unlockedElementIds: ref.read(visualElementsNotifierProvider).unlockedIds,
       isUnlocked: isUnlocked,
       isEquipped: isEquipped,
       onEquip: isUnlocked ? () => _equipElement(element.id) : null,
-      onUnequip: isEquipped ? () => _unequipElement(element.elementType) : null,
+      onUnequip: isEquipped
+          ? () => element.isBundle
+              ? _unequipBundle(element)
+              : _unequipElement(element.elementType)
+          : null,
     );
   }
+
+  bool _isElementEquipped(
+          VisualElementModel element, VisualElementsState state) =>
+      element.matchesConfig(state.config);
+
+  int _bundleOwnedCount(
+    VisualElementModel element,
+    VisualElementsState state,
+  ) {
+    if (!element.isBundle) return 0;
+    return element.bundlePieceIds
+        .where((pieceId) => state.unlockedIds.contains(pieceId))
+        .length;
+  }
+
+  int _bundleTotalCount(VisualElementModel element) =>
+      element.isBundle ? element.bundlePieceIds.length : 0;
 
   Future<void> _equipElement(String elementId) async {
     final notifier = ref.read(visualElementsNotifierProvider.notifier);
@@ -694,136 +761,193 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     }
   }
 
-  Widget _buildErrorView(String error, AppLocalizations l10n) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: DS.semanticError,
-            ),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.loadingFailed,
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                color: DS.textSecondary,
-              ),
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              error,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textTertiary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.spacing16),
-            SparkleButton.primary(
-              label: l10n.retry,
-              onPressed: () {
-                ref.read(visualElementsNotifierProvider.notifier).loadAll();
-              },
-            ),
-          ],
+  Future<void> _unequipBundle(VisualElementModel bundle) async {
+    final notifier = ref.read(visualElementsNotifierProvider.notifier);
+    final tasks = <Future<bool>>[];
+
+    if (bundle.bundleBackgroundId != null) {
+      tasks.add(notifier.unequipElement(VisualElementType.background));
+    }
+    if (bundle.bundleParticleId != null) {
+      tasks.add(notifier.unequipElement(VisualElementType.particle));
+    }
+    if (bundle.bundleEffectId != null) {
+      tasks.add(notifier.unequipElement(VisualElementType.effect));
+    }
+
+    final results = await Future.wait(tasks);
+    final success = results.every((result) => result);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? '已卸下整套荣耀装扮' : '卸下套装时出现问题'),
+          backgroundColor: success ? DS.info : DS.error,
         ),
-      ),
-    );
+      );
+    }
+  }
+
+  Widget _buildErrorView(String error, AppLocalizations l10n) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: DS.semanticError,
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.loadingFailed,
+                style: TextStyle(
+                  fontSize: DS.fontSizeBase,
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                error,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textTertiary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.spacing16),
+              SparkleButton.primary(
+                label: l10n.retry,
+                onPressed: () {
+                  ref.read(visualElementsNotifierProvider.notifier).loadAll();
+                },
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _buildEmptyView(AppLocalizations l10n) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.palette_outlined,
-              size: 64,
-              color: DS.textTertiary,
-            ),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.visualElementEmpty,
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                color: DS.textSecondary,
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.palette_outlined,
+                size: 64,
+                color: DS.textTertiary,
               ),
-            ),
-          ],
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.visualElementEmpty,
+                style: TextStyle(
+                  fontSize: DS.fontSizeBase,
+                  color: DS.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildRecommendationBody(
     BuildContext context,
     AppLocalizations l10n,
     VisualElementsState state,
     AsyncValue<List<VisualRecommendation>> recommendationsValue,
-  ) => recommendationsValue.when(
-      data: (recommendations) {
-        if (recommendations.isEmpty) {
-          return _buildEmptyView(l10n);
-        }
+  ) =>
+      recommendationsValue.when(
+        data: (recommendations) {
+          if (recommendations.isEmpty) {
+            return _buildEmptyView(l10n);
+          }
 
-        return RefreshIndicator(
-          onRefresh: () =>
-              ref.read(visualElementsNotifierProvider.notifier).refresh(),
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.all(DS.spacing16),
-                sliver: SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _calculateCrossAxisCount(
-                      MediaQuery.of(context).size.width,
+          return RefreshIndicator(
+            onRefresh: () =>
+                ref.read(visualElementsNotifierProvider.notifier).refresh(),
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DS.spacing16,
+                      DS.spacing16,
+                      DS.spacing16,
+                      0,
                     ),
-                    mainAxisSpacing: DS.spacing12,
-                    crossAxisSpacing: DS.spacing12,
-                    mainAxisExtent: 188,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final recommendation = recommendations[index];
-                      final element = recommendation.element;
-                      final isUnlocked = state.unlockedIds.contains(element.id);
-                      final isEquipped = state.equippedIds.contains(element.id);
-                      final resolvedElement = element.copyWith(
-                        isUnlocked: isUnlocked,
-                        isEquipped: isEquipped,
-                      );
-
-                      return _RecommendationCard(
-                        element: resolvedElement,
-                        reason: recommendation.reason,
-                        reasonText: _recommendationReasonText(
-                          l10n,
-                          recommendation.reason,
-                        ),
-                        onTap: () => _showElementPreview(
-                          element,
-                          isUnlocked,
-                          isEquipped,
-                        ),
-                        onEquip: isUnlocked && !isEquipped
-                            ? () => _equipElement(element.id)
-                            : null,
-                      );
-                    },
-                    childCount: recommendations.length,
+                    child: Column(
+                      children: [
+                        _buildCurrentShowcase(state),
+                        const SizedBox(height: DS.spacing12),
+                        _buildStyleRunway(state),
+                        if (state.filterOptions.displaySlot != null) ...[
+                          const SizedBox(height: DS.spacing12),
+                          _buildActiveDisplaySlotFilter(state),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => _buildErrorView(err.toString(), l10n),
-    );
+                SliverPadding(
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _calculateCrossAxisCount(
+                        MediaQuery.of(context).size.width,
+                      ),
+                      mainAxisSpacing: DS.spacing12,
+                      crossAxisSpacing: DS.spacing12,
+                      mainAxisExtent: 228,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final recommendation = recommendations[index];
+                        final element = recommendation.element;
+                        final isUnlocked =
+                            state.unlockedIds.contains(element.id);
+                        final isEquipped = _isElementEquipped(element, state);
+                        final bundleOwnedCount = _bundleOwnedCount(
+                          element,
+                          state,
+                        );
+                        final bundleTotalCount = _bundleTotalCount(element);
+                        final resolvedElement = element.copyWith(
+                          isUnlocked: isUnlocked,
+                          isEquipped: isEquipped,
+                        );
+
+                        return _RecommendationCard(
+                          element: resolvedElement,
+                          bundleOwnedCount: bundleOwnedCount,
+                          bundleTotalCount: bundleTotalCount,
+                          reason: recommendation.reason,
+                          reasonText: _recommendationReasonText(
+                            l10n,
+                            recommendation.reason,
+                          ),
+                          onTap: () => _showElementPreview(
+                            element,
+                            isUnlocked,
+                            isEquipped,
+                          ),
+                          onEquip: isUnlocked && !isEquipped
+                              ? () => _equipElement(element.id)
+                              : null,
+                        );
+                      },
+                      childCount: recommendations.length,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => _buildErrorView(err.toString(), l10n),
+      );
 
   String _recommendationReasonText(
     AppLocalizations l10n,
@@ -946,7 +1070,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 final element = eventElements[index];
                 final resolvedElement = element.copyWith(
                   isUnlocked: state.unlockedIds.contains(element.id),
-                  isEquipped: state.equippedIds.contains(element.id),
+                  isEquipped: _isElementEquipped(element, state),
                 );
                 return SizedBox(
                   width: 160,
@@ -955,7 +1079,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     onTap: () => _showElementPreview(
                       element,
                       state.unlockedIds.contains(element.id),
-                      state.equippedIds.contains(element.id),
+                      _isElementEquipped(element, state),
                     ),
                   ),
                 );
@@ -1023,6 +1147,175 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       l10n.visualElementEventCountdownMinutes(minutes),
     );
   }
+
+  Widget _buildStyleRunway(VisualElementsState state) {
+    final bySlot = <String, List<VisualElementModel>>{};
+    for (final element in state.allElements) {
+      bySlot.putIfAbsent(element.displaySlot, () => []).add(element);
+    }
+
+    final entries = bySlot.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 132,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          final elements = [...entry.value]
+            ..sort((a, b) => b.visibilityWeight.compareTo(a.visibilityWeight));
+          final lead = elements.first;
+          final unlockedCount = elements
+              .where((element) => state.unlockedIds.contains(element.id))
+              .length;
+          final accent = _elementAccent(lead);
+
+          return GestureDetector(
+            onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
+            child: Container(
+              width: 208,
+              padding: const EdgeInsets.all(DS.spacing16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accent.withValues(alpha: 0.18),
+                    DS.surfaceSecondary,
+                  ],
+                ),
+                borderRadius: DS.borderRadius16,
+                border: Border.all(color: accent.withValues(alpha: 0.26)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _miniChip(lead.displaySlotLabel, accent),
+                  const Spacer(),
+                  Text(
+                    '${elements.length} 种风格',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeLg,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    '已拥有 $unlockedCount / ${elements.length}',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    elements.take(2).map((element) => element.name).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: accent,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActiveDisplaySlotFilter(VisualElementsState state) {
+    final slot = state.filterOptions.displaySlot;
+    if (slot == null) {
+      return const SizedBox.shrink();
+    }
+
+    final label = _displaySlotLabel(slot);
+    final matchedCount = state.filteredElements.length;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '当前查看: $label',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  '已切换到该槽位，共 $matchedCount 个可选样式',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          TextButton(
+            onPressed: _clearDisplaySlotFilter,
+            child: const Text('清除筛选'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _displaySlotLabel(String slot) {
+    switch (slot) {
+      case 'avatar_border':
+        return '头像边框';
+      case 'title_bar':
+        return '称号条';
+      case 'profile_banner':
+        return '主页横幅';
+      case 'achievement_frame':
+        return '成就主题框';
+      case 'home_ambience':
+        return '首页氛围';
+      case 'star_map_effect':
+        return '星图征服特效';
+      case 'streak_flame':
+        return '连胜火焰';
+      case 'display_pedestal':
+        return '陈列台座';
+      case 'background':
+        return '背景';
+      case 'particle':
+        return '粒子';
+      case 'effect':
+        return '特效';
+      case 'bundle':
+        return '套装';
+      default:
+        return slot;
+    }
+  }
 }
 
 /// 粘性 TabBar 代理
@@ -1042,13 +1335,15 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     BuildContext context,
     double shrinkOffset,
     bool overlapsContent,
-  ) => Container(
-      color: DS.surfacePrimary,
-      child: tabBar,
-    );
+  ) =>
+      Container(
+        color: DS.surfacePrimary,
+        child: tabBar,
+      );
 
   @override
-  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) => tabBar != oldDelegate.tabBar;
+  bool shouldRebuild(_StickyTabBarDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar;
 }
 
 /// 筛选面板
@@ -1150,197 +1445,198 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   Widget _buildStatusFilter(AppLocalizations l10n) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.visualElementStatus,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.visualElementStatus,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: [
-            _buildFilterChip(
-              l10n.visualElementUnlocked,
-              _options.showUnlockedOnly,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    showUnlockedOnly: !_options.showUnlockedOnly,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              l10n.visualElementEquipped,
-              _options.showEquippedOnly,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    showEquippedOnly: !_options.showEquippedOnly,
-                  );
-                });
-              },
-            ),
-          ],
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildFilterChip(
+                l10n.visualElementUnlocked,
+                _options.showUnlockedOnly,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      showUnlockedOnly: !_options.showUnlockedOnly,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                l10n.visualElementEquipped,
+                _options.showEquippedOnly,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      showEquippedOnly: !_options.showEquippedOnly,
+                    );
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      );
 
   Widget _buildSortFilter(AppLocalizations l10n) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.visualElementSort,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.visualElementSort,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: [
-            _buildFilterChip(
-              '最值得炫耀',
-              _options.sortBy == VisualElementSortBy.prestige,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.prestige,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              '按套装',
-              _options.sortBy == VisualElementSortBy.set,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.set,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              l10n.visualElementSortDefault,
-              _options.sortBy == VisualElementSortBy.sortOrder,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.sortOrder,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              l10n.visualElementSortName,
-              _options.sortBy == VisualElementSortBy.name,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.name,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              l10n.visualElementSortRarity,
-              _options.sortBy == VisualElementSortBy.rarity,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.rarity,
-                  );
-                });
-              },
-            ),
-            _buildFilterChip(
-              l10n.visualElementSortUnlockDate,
-              _options.sortBy == VisualElementSortBy.unlockDate,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    sortBy: VisualElementSortBy.unlockDate,
-                  );
-                });
-              },
-            ),
-          ],
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildFilterChip(
+                '最值得炫耀',
+                _options.sortBy == VisualElementSortBy.prestige,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.prestige,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                '按套装',
+                _options.sortBy == VisualElementSortBy.set,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.set,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                l10n.visualElementSortDefault,
+                _options.sortBy == VisualElementSortBy.sortOrder,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.sortOrder,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                l10n.visualElementSortName,
+                _options.sortBy == VisualElementSortBy.name,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.name,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                l10n.visualElementSortRarity,
+                _options.sortBy == VisualElementSortBy.rarity,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.rarity,
+                    );
+                  });
+                },
+              ),
+              _buildFilterChip(
+                l10n.visualElementSortUnlockDate,
+                _options.sortBy == VisualElementSortBy.unlockDate,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      sortBy: VisualElementSortBy.unlockDate,
+                    );
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      );
 
   Widget _buildRarityFilter(AppLocalizations l10n) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.achievementRarity,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.achievementRarity,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: VisualElementRarity.values.map((rarity) {
-            final isSelected = _options.rarity == rarity;
-            return _buildFilterChip(
-              _getRarityName(rarity, l10n),
-              isSelected,
-              onTap: () {
-                setState(() {
-                  _options = _options.copyWith(
-                    rarity: _options.rarity == rarity ? null : rarity,
-                  );
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: VisualElementRarity.values.map((rarity) {
+              final isSelected = _options.rarity == rarity;
+              return _buildFilterChip(
+                _getRarityName(rarity, l10n),
+                isSelected,
+                onTap: () {
+                  setState(() {
+                    _options = _options.copyWith(
+                      rarity: _options.rarity == rarity ? null : rarity,
+                    );
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
 
   Widget _buildFilterChip(
     String label,
     bool isSelected, {
     VoidCallback? onTap,
-  }) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? DS.brandPrimary.withValues(alpha: 0.1)
-              : DS.surfaceSecondary,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(
-            color: isSelected ? DS.brandPrimary : DS.border,
+  }) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? DS.brandPrimary.withValues(alpha: 0.1)
+                : DS.surfaceSecondary,
+            borderRadius: DS.borderRadiusFull,
+            border: Border.all(
+              color: isSelected ? DS.brandPrimary : DS.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: isSelected ? DS.brandPrimary : DS.textSecondary,
+            ),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            color: isSelected ? DS.brandPrimary : DS.textSecondary,
-          ),
-        ),
-      ),
-    );
+      );
 
   String _getRarityName(VisualElementRarity rarity, AppLocalizations l10n) {
     switch (rarity) {
@@ -1362,212 +1658,25 @@ class _VisualElementCard extends StatelessWidget {
     required this.element,
     this.onTap,
     this.onLongPress,
+    this.bundleOwnedCount = 0,
+    this.bundleTotalCount = 0,
   });
 
   final VisualElementModel element;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final int bundleOwnedCount;
+  final int bundleTotalCount;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = _getRarityColors(element.rarity);
-
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius16,
-          border: Border.all(
-            color: element.isEquipped
-                ? colors.border
-                : DS.border.withValues(alpha: 0.5),
-            width: element.isEquipped ? 2 : 1,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // 内容
-            Padding(
-              padding: const EdgeInsets.all(DS.spacing12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 类型图标
-                  Container(
-                    padding: const EdgeInsets.all(DS.spacing6),
-                    decoration: BoxDecoration(
-                      color: DS.surfacePrimary.withValues(alpha: 0.8),
-                      borderRadius: DS.borderRadius8,
-                    ),
-                    child: Icon(
-                      _getTypeIcon(element.elementType),
-                      size: DS.iconSizeSm,
-                      color: DS.textSecondary,
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // 名称
-                  Text(
-                    element.name,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.textPrimary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: DS.spacing4),
-
-                  Wrap(
-                    spacing: DS.spacing6,
-                    runSpacing: DS.spacing6,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing6,
-                          vertical: DS.spacing2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.background,
-                          borderRadius: DS.borderRadius6,
-                        ),
-                        child: Icon(
-                          _getRarityIcon(element.rarity),
-                          size: 10,
-                          color: colors.text,
-                        ),
-                      ),
-                      if (element.prestigeLabel != null &&
-                          element.prestigeLabel!.isNotEmpty)
-                        Container(
-                          constraints: const BoxConstraints(maxWidth: 120),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing6,
-                            vertical: DS.spacing2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: DS.brandPrimary10,
-                            borderRadius: DS.borderRadius6,
-                          ),
-                          child: Text(
-                            element.prestigeLabel!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeXs,
-                              color: DS.brandPrimary,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // 装备状态
-            if (element.isEquipped)
-              Positioned(
-                top: DS.spacing8,
-                right: DS.spacing8,
-                child: Container(
-                  padding: const EdgeInsets.all(DS.spacing4),
-                  decoration: BoxDecoration(
-                    color: DS.success,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-
-            // 锁定遮罩
-            if (!element.isUnlocked)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.7),
-                    borderRadius: DS.borderRadius16,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.lock,
-                      size: DS.iconSizeMd,
-                      color: DS.textTertiary,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  _RarityColors _getRarityColors(VisualElementRarity rarity) {
-    switch (rarity) {
-      case VisualElementRarity.common:
-        return _RarityColors(
-          background: DS.rarityCommonBg,
-          border: DS.rarityCommon,
-          text: DS.rarityCommonText,
-        );
-      case VisualElementRarity.rare:
-        return _RarityColors(
-          background: DS.rarityRareBg,
-          border: DS.rarityRare,
-          text: DS.rarityRareText,
-        );
-      case VisualElementRarity.epic:
-        return _RarityColors(
-          background: DS.rarityEpicBg,
-          border: DS.rarityEpic,
-          text: DS.rarityEpicText,
-        );
-      case VisualElementRarity.legendary:
-        return _RarityColors(
-          background: DS.rarityLegendaryBg,
-          border: DS.rarityLegendary,
-          text: DS.rarityLegendaryText,
-        );
-    }
-  }
-
-  IconData _getTypeIcon(VisualElementType type) {
-    switch (type) {
-      case VisualElementType.background:
-        return Icons.gradient;
-      case VisualElementType.particle:
-        return Icons.auto_awesome;
-      case VisualElementType.effect:
-        return Icons.blur_on;
-      case VisualElementType.bundle:
-        return Icons.inventory_2;
-    }
-  }
-
-  IconData _getRarityIcon(VisualElementRarity rarity) {
-    switch (rarity) {
-      case VisualElementRarity.common:
-        return Icons.circle_outlined;
-      case VisualElementRarity.rare:
-        return Icons.star_border;
-      case VisualElementRarity.epic:
-        return Icons.auto_awesome;
-      case VisualElementRarity.legendary:
-        return Icons.diamond_outlined;
-    }
-  }
+  Widget build(BuildContext context) => VisualElementCard(
+        element: element,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        isCompact: true,
+        bundleOwnedCount: bundleOwnedCount,
+        bundleTotalCount: bundleTotalCount,
+      );
 }
 
 class _RecommendationCard extends StatelessWidget {
@@ -1577,6 +1686,8 @@ class _RecommendationCard extends StatelessWidget {
     required this.reasonText,
     this.onTap,
     this.onEquip,
+    this.bundleOwnedCount = 0,
+    this.bundleTotalCount = 0,
   });
 
   final VisualElementModel element;
@@ -1584,6 +1695,8 @@ class _RecommendationCard extends StatelessWidget {
   final String reasonText;
   final VoidCallback? onTap;
   final VoidCallback? onEquip;
+  final int bundleOwnedCount;
+  final int bundleTotalCount;
 
   @override
   Widget build(BuildContext context) {
@@ -1643,15 +1756,44 @@ class _RecommendationCard extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        element.name,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          fontWeight: DS.fontWeightSemibold,
-                          color: DS.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            element.name,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: DS.spacing6),
+                          Wrap(
+                            spacing: DS.spacing6,
+                            runSpacing: DS.spacing6,
+                            children: [
+                              if (element.prestigeLabel != null)
+                                _miniInfoChip(
+                                  element.prestigeLabel!,
+                                  DS.brandPrimary,
+                                ),
+                              _miniInfoChip(
+                                element.displaySlotLabel,
+                                colors.text,
+                              ),
+                              if (element.isBundle && bundleTotalCount > 0)
+                                _miniInfoChip(
+                                  '$bundleOwnedCount/$bundleTotalCount 已集齐',
+                                  bundleOwnedCount == bundleTotalCount
+                                      ? DS.success
+                                      : DS.info,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1687,7 +1829,9 @@ class _RecommendationCard extends StatelessWidget {
                               borderRadius: DS.borderRadius8,
                             ),
                             child: Text(
-                              context.l10n.visualElementEquip,
+                              element.isBundle
+                                  ? '一键穿戴'
+                                  : context.l10n.visualElementEquip,
                               style: TextStyle(
                                 fontSize: DS.fontSizeXs,
                                 color: DS.textOnPrimary,
@@ -1779,6 +1923,28 @@ class _RecommendationCard extends StatelessWidget {
         return Icons.local_fire_department;
     }
   }
+
+  Widget _miniInfoChip(String label, Color color) => Container(
+        constraints: const BoxConstraints(maxWidth: 112),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing6,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadius8,
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
 }
 
 class _RarityColors {

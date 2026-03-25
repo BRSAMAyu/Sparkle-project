@@ -337,7 +337,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(
-                                        _formatBytes(package.sizeBytes!),),
+                                      _formatBytes(package.sizeBytes!),
+                                    ),
                                   if (installed != null)
                                     _buildMetaChip(
                                       '安装于 ${_formatInstalledAt(installed.installedAt)}',
@@ -377,10 +378,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         onPressed: () async {
                                           Navigator.of(context).pop();
                                           await _removeDictionaryPackage(
-                                              package.id,);
+                                            package.id,
+                                          );
                                         },
                                         icon: const Icon(
-                                            Icons.delete_outline_rounded,),
+                                          Icons.delete_outline_rounded,
+                                        ),
                                         expand: true,
                                       ),
                                     ),
@@ -658,15 +661,33 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                     padding: const EdgeInsets.only(
                                       bottom: DS.spacing8,
                                     ),
-                                    child: Text(
-                                      '• $example',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          width: 5,
+                                          height: 5,
+                                          margin: const EdgeInsets.only(
+                                              top: 8, right: 8),
+                                          decoration: BoxDecoration(
                                             color: DS.textSecondary,
-                                            height: 1.55,
+                                            shape: BoxShape.circle,
                                           ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            example.toString(),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: DS.textSecondary,
+                                                  height: 1.55,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),

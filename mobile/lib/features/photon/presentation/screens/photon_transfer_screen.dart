@@ -60,7 +60,8 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   decoration: BoxDecoration(
                     color: DS.warningLight,
                     borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                    border: Border.all(color: DS.warning.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: DS.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -82,35 +83,35 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 child: GraphiteCardSurface(
                   surfaceRole: SparkleSurfaceRole.accent,
                   child: Row(
-                  children: [
-                    Icon(
-                      Icons.flash_on_rounded,
-                      color: DS.neutral0,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '当前余额',
-                          style: TextStyle(
-                            color: DS.neutral0.withValues(alpha: 0.9),
-                            fontSize: 14,
+                    children: [
+                      Icon(
+                        Icons.flash_on_rounded,
+                        color: DS.neutral0,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '当前余额',
+                            style: TextStyle(
+                              color: DS.neutral0.withValues(alpha: 0.9),
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$currentBalance',
-                          style: TextStyle(
-                            color: DS.neutral0,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 4),
+                          Text(
+                            '$currentBalance',
+                            style: TextStyle(
+                              color: DS.neutral0,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -264,11 +265,54 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               const SizedBox(height: 16),
 
               // Info Text
-              Text(
-                '• 转账后无法撤销\n• 单次转账上限10000光子\n• 请确认接收人ID正确',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                    ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: DS.textSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const Expanded(child: Text('转账后无法撤销')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: DS.textSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const Expanded(child: Text('单次转账上限10000光子')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: DS.textSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const Expanded(child: Text('请确认接收人ID正确')),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

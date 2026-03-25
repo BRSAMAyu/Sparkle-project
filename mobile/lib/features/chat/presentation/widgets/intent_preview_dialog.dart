@@ -40,35 +40,42 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DS.surfacePrimary,
-              Color.alphaBlend(
-                DS.info.withValues(alpha: 0.03),
-                DS.surfaceSecondary,
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                DS.surfacePrimary,
+                Color.alphaBlend(
+                  DS.info.withValues(alpha: 0.03),
+                  DS.surfaceSecondary,
+                ),
+              ],
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              _buildHeader(context),
+
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  child: _buildContent(context),
+                ),
               ),
+
+              // Actions
+              _buildActions(context),
             ],
           ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            _buildHeader(context),
-
-            // Content
-            Flexible(
-              child: _buildContent(context),
-            ),
-
-            // Actions
-            _buildActions(context),
-          ],
         ),
       );
 
@@ -183,7 +190,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
       );
     }
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(DS.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,6 +301,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             if (intent.agentRole != null) ...[
               const SizedBox(height: DS.xs),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.person,
@@ -301,13 +309,15 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                     color: DS.textSecondary,
                   ),
                   const SizedBox(width: DS.xs),
-                  Text(
-                    context.l10n.intentPreviewAssistantRole(
-                      _getAgentRoleLabel(intent.agentRole!),
-                    ),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: DS.textSecondary,
+                  Expanded(
+                    child: Text(
+                      context.l10n.intentPreviewAssistantRole(
+                        _getAgentRoleLabel(intent.agentRole!),
+                      ),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: DS.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -339,11 +349,13 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             children: [
               Icon(Icons.schedule, size: 16, color: DS.info),
               const SizedBox(width: DS.sm),
-              Text(
-                title,
-                style: TextStyle(
-                  color: DS.info,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: DS.info,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],

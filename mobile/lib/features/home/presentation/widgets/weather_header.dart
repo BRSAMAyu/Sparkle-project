@@ -48,52 +48,68 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     )..repeat();
 
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _mainAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _mainAnimationController, curve: Curves.easeInOut),
     );
   }
 
   void _initParticles() {
     // Initialize stars (shared across weather types)
-    _stars = List.generate(20, (i) => _Star(
+    _stars = List.generate(
+      20,
+      (i) => _Star(
         x: _random.nextDouble(),
         y: _random.nextDouble() * 0.5,
         size: 0.5 + _random.nextDouble() * 1.5,
         baseOpacity: 0.2 + _random.nextDouble() * 0.3,
         twinkleSpeed: 0.5 + _random.nextDouble() * 1.5,
-      ),);
+      ),
+    );
 
     // Initialize particles for sunny weather (sun rays)
-    _particles = List.generate(8, (i) => _Particle(
+    _particles = List.generate(
+      8,
+      (i) => _Particle(
         angle: (i * pi / 4),
         baseRadius: 30.0 + i * 15.0,
-      ),);
+      ),
+    );
 
     // Initialize clouds for cloudy weather
-    _clouds = List.generate(5, (i) => _Cloud(
+    _clouds = List.generate(
+      5,
+      (i) => _Cloud(
         x: _random.nextDouble(),
         y: 0.05 + _random.nextDouble() * 0.25,
         size: 40 + _random.nextDouble() * 60,
         speed: 0.1 + _random.nextDouble() * 0.2,
         opacity: 0.03 + _random.nextDouble() * 0.05,
-      ),);
+      ),
+    );
 
     // Initialize rain drops for rainy weather
-    _rainDrops = List.generate(40, (i) => _RainDrop(
+    _rainDrops = List.generate(
+      40,
+      (i) => _RainDrop(
         x: _random.nextDouble(),
         startY: -0.1 - _random.nextDouble() * 0.5,
         speed: 0.8 + _random.nextDouble() * 0.4,
         length: 10 + _random.nextDouble() * 15,
         opacity: 0.1 + _random.nextDouble() * 0.15,
-      ),);
+      ),
+    );
 
     // Initialize meteors for meteor weather
-    _meteors = List.generate(6, (i) => _Meteor(
+    _meteors = List.generate(
+      6,
+      (i) => _Meteor(
         startX: 0.2 + _random.nextDouble() * 0.6,
         startY: _random.nextDouble() * 0.2,
         length: 30 + _random.nextDouble() * 50,
         speed: 1.5 + _random.nextDouble() * 1.0,
         delay: i * 0.15,
-      ),);
+      ),
+    );
   }
 
   @override
@@ -128,6 +144,15 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         ),
         child: Stack(
           children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _buildAtmosphereVeil(
+                  weatherType,
+                  dashboardState.weather.condition,
+                ),
+              ),
+            ),
+
             // Animated star field (always present, intensity varies)
             _buildAnimatedStarField(weatherType),
 
@@ -162,14 +187,14 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     return AnimatedBuilder(
       animation: _mainAnimationController,
       builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _AnimatedStarPainter(
-            stars: _stars,
-            animationValue: _mainAnimationController.value,
-            color: DS.brandPrimary,
-            intensity: starIntensity,
-          ),
+        size: Size.infinite,
+        painter: _AnimatedStarPainter(
+          stars: _stars,
+          animationValue: _mainAnimationController.value,
+          color: DS.brandPrimary,
+          intensity: starIntensity,
         ),
+      ),
     );
   }
 
@@ -188,16 +213,103 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     }
   }
 
+  Widget _buildAtmosphereVeil(String type, String condition) {
+    final accent = _weatherAccent(type);
+    final secondary = Color.lerp(accent, Colors.white, 0.58) ?? Colors.white;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        _mainAnimationController,
+        _particleController,
+      ]),
+      builder: (context, child) {
+        final pulse = 0.88 + sin(_mainAnimationController.value * 2 * pi) * 0.1;
+        final drift = sin(_particleController.value * 2 * pi) * 18;
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      accent.withValues(alpha: 0.08 * pulse),
+                      secondary.withValues(alpha: 0.04 * pulse),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.38, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -24 + drift,
+              right: -24,
+              bottom: -32,
+              child: IgnorePointer(
+                child: Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.0, 1.0),
+                      radius: 1.25,
+                      colors: [
+                        accent.withValues(alpha: 0.12),
+                        accent.withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (condition.isNotEmpty)
+              Positioned(
+                left: 20,
+                bottom: 28,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary.withValues(alpha: 0.58),
+                    borderRadius: DS.borderRadiusFull,
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    _getWeatherAmbientLine(type),
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: accent,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(delay: 200.ms, duration: 500.ms)
+                    .moveY(begin: 8, end: 0),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   /// Sunny: Pulsing sun rays with glow effect
   Widget _buildSunnyEffects(Color accentColor) => Stack(
-      children: [
-        // Central sun glow
-        Positioned(
-          right: -50,
-          top: -30,
-          child: AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) => Container(
+        children: [
+          // Central sun glow
+          Positioned(
+            right: -50,
+            top: -30,
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) => Container(
                 width: 200 * _pulseAnimation.value,
                 height: 200 * _pulseAnimation.value,
                 decoration: BoxDecoration(
@@ -211,12 +323,12 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                   ),
                 ),
               ),
+            ),
           ),
-        ),
-        // Sun rays (expanding rings)
-        AnimatedBuilder(
-          animation: _mainAnimationController,
-          builder: (context, child) => CustomPaint(
+          // Sun rays (expanding rings)
+          AnimatedBuilder(
+            animation: _mainAnimationController,
+            builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _SunRayPainter(
                 particles: _particles,
@@ -224,14 +336,14 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 accentColor: accentColor,
               ),
             ),
-        ),
-      ],
-    );
+          ),
+        ],
+      );
 
   /// Cloudy: Drifting clouds with breathing opacity
   Widget _buildCloudyEffects(Color accentColor) => AnimatedBuilder(
-      animation: _particleController,
-      builder: (context, child) => CustomPaint(
+        animation: _particleController,
+        builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _CloudPainter(
             clouds: _clouds,
@@ -240,30 +352,30 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
             breathingValue: _mainAnimationController.value,
           ),
         ),
-    );
+      );
 
   /// Rainy: Falling rain drops with splash effect
   Widget _buildRainyEffects(Color accentColor) => Stack(
-      children: [
-        // Dark overlay for rainy mood
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  accentColor.withValues(alpha: 0.02),
-                  Colors.transparent,
-                ],
+        children: [
+          // Dark overlay for rainy mood
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accentColor.withValues(alpha: 0.02),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        // Rain drops
-        AnimatedBuilder(
-          animation: _particleController,
-          builder: (context, child) => CustomPaint(
+          // Rain drops
+          AnimatedBuilder(
+            animation: _particleController,
+            builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _RainPainter(
                 rainDrops: _rainDrops,
@@ -271,28 +383,28 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 accentColor: accentColor,
               ),
             ),
-        ),
-      ],
-    );
+          ),
+        ],
+      );
 
   /// Meteor: Shooting stars with trails and twinkling energy particles
   Widget _buildMeteorEffects(Color accentColor) => Stack(
-      children: [
-        // Energy particles floating
-        AnimatedBuilder(
-          animation: _mainAnimationController,
-          builder: (context, child) => CustomPaint(
+        children: [
+          // Energy particles floating
+          AnimatedBuilder(
+            animation: _mainAnimationController,
+            builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _EnergyParticlePainter(
                 animationValue: _mainAnimationController.value,
                 accentColor: accentColor,
               ),
             ),
-        ),
-        // Shooting meteors
-        AnimatedBuilder(
-          animation: _particleController,
-          builder: (context, child) => CustomPaint(
+          ),
+          // Shooting meteors
+          AnimatedBuilder(
+            animation: _particleController,
+            builder: (context, child) => CustomPaint(
               size: Size.infinite,
               painter: _MeteorPainter(
                 meteors: _meteors,
@@ -300,44 +412,117 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 accentColor: accentColor,
               ),
             ),
-        ),
-      ],
-    );
+          ),
+        ],
+      );
 
-  Widget _buildWeatherStatus(String type, String condition) => Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _getWeatherTitle(type),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: DS.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 6),
-            _buildWeatherIcon(type),
+  Widget _buildWeatherStatus(String type, String condition) {
+    final accent = _weatherAccent(type);
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 196),
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withValues(alpha: 0.16),
+            DS.surfacePrimary.withValues(alpha: 0.82),
+            DS.surfaceSecondary.withValues(alpha: 0.74),
           ],
-        )
-            .animate(onPlay: (controller) => controller.repeat(reverse: true))
-            .fadeIn(duration: 2000.ms)
-            .scale(
-              begin: const Offset(0.95, 0.95),
-              end: const Offset(1.0, 1.0),
-              duration: 2000.ms,
-            ),
-        Text(
-          condition,
+          stops: const [0.0, 0.36, 1.0],
+        ),
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.14),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getWeatherTitle(type),
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing2),
+                    Text(
+                      _getWeatherSubtitle(type),
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: DS.spacing8),
+              _buildWeatherIcon(type),
+            ],
+          )
+              .animate(onPlay: (controller) => controller.repeat(reverse: true))
+              .fadeIn(duration: 2000.ms)
+              .scale(
+                begin: const Offset(0.97, 0.97),
+                end: const Offset(1.0, 1.0),
+                duration: 2000.ms,
+              ),
+          const SizedBox(height: DS.spacing10),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing6,
+            children: [
+              _buildWeatherChip(_getWeatherRhythm(type), accent),
+              _buildWeatherChip(
+                condition.isNotEmpty ? condition : _getWeatherCue(type),
+                Color.lerp(accent, DS.info, 0.35) ?? DS.info,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeatherChip(String label, Color color) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 10,
-            color: DS.textSecondary.withValues(alpha: 0.7),
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
-      ],
-    );
+      );
 
   Widget _buildWeatherIcon(String type) {
     IconData icon;
@@ -353,9 +538,22 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Icon(icon, color: DS.brandPrimaryConst, size: 18)
-        .animate(onPlay: (controller) => controller.repeat(reverse: true))
-        .scale(
+    final accent = _weatherAccent(type);
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            accent.withValues(alpha: 0.24),
+            accent.withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: Icon(icon, color: accent, size: 18),
+    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
           begin: const Offset(0.9, 0.9),
           end: const Offset(1.1, 1.1),
           duration: 1500.ms,
@@ -368,32 +566,64 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
       case 'sunny':
         return LinearGradient(
           colors: isDark
-              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
-              : [DS.neutral50, DS.neutral100, DS.neutral200],
+              ? [
+                  const Color(0xFF1A2338),
+                  DS.surfacePrimary,
+                  const Color(0xFF2E3A5C),
+                ]
+              : [
+                  const Color(0xFFFFF6DD),
+                  const Color(0xFFF9ECD1),
+                  const Color(0xFFEAD9B8),
+                ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'cloudy':
         return LinearGradient(
           colors: isDark
-              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
-              : [DS.neutral100, DS.neutral200, DS.neutral300],
+              ? [
+                  const Color(0xFF1A2333),
+                  const Color(0xFF243248),
+                  const Color(0xFF31445E),
+                ]
+              : [
+                  const Color(0xFFF1F4FA),
+                  const Color(0xFFE2E8F1),
+                  const Color(0xFFD0D9E6),
+                ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'rainy':
         return LinearGradient(
           colors: isDark
-              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
-              : [DS.neutral100, DS.neutral200, DS.neutral300],
+              ? [
+                  const Color(0xFF101C2B),
+                  const Color(0xFF16283A),
+                  const Color(0xFF23405E),
+                ]
+              : [
+                  const Color(0xFFE7EEF6),
+                  const Color(0xFFD3E1EF),
+                  const Color(0xFFB7CBDF),
+                ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'meteor':
         return LinearGradient(
           colors: isDark
-              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.galaxyBackground]
-              : [DS.neutral100, DS.neutral200, DS.neutral300],
+              ? [
+                  const Color(0xFF120E25),
+                  const Color(0xFF1D1737),
+                  DS.galaxyBackground,
+                ]
+              : [
+                  const Color(0xFFF3EDFF),
+                  const Color(0xFFE4DCF9),
+                  const Color(0xFFD1C5F1),
+                ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
@@ -420,6 +650,81 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         return '繁星入梦';
       default:
         return '晴空万里';
+    }
+  }
+
+  Color _weatherAccent(String type) {
+    switch (type) {
+      case 'sunny':
+        return const Color(0xFFFFC857);
+      case 'cloudy':
+        return const Color(0xFF8BA3C7);
+      case 'rainy':
+        return const Color(0xFF66C7F4);
+      case 'meteor':
+        return const Color(0xFFB78CFF);
+      default:
+        return DS.brandPrimaryConst;
+    }
+  }
+
+  String _getWeatherSubtitle(String type) {
+    switch (type) {
+      case 'sunny':
+        return '光感上扬，今天适合持续推进。';
+      case 'cloudy':
+        return '边界变柔，适合整理与留白。';
+      case 'rainy':
+        return '环境收拢，适合沉浸专注。';
+      case 'meteor':
+        return '灵感升空，适合冲刺与突破。';
+      default:
+        return '今天的气氛已经就位。';
+    }
+  }
+
+  String _getWeatherRhythm(String type) {
+    switch (type) {
+      case 'sunny':
+        return '节奏: 明亮推进';
+      case 'cloudy':
+        return '节奏: 柔和过渡';
+      case 'rainy':
+        return '节奏: 深潜聚焦';
+      case 'meteor':
+        return '节奏: 高光冲刺';
+      default:
+        return '节奏: 平稳展开';
+    }
+  }
+
+  String _getWeatherCue(String type) {
+    switch (type) {
+      case 'sunny':
+        return '保持出发感';
+      case 'cloudy':
+        return '给思路留白';
+      case 'rainy':
+        return '收拢注意力';
+      case 'meteor':
+        return '抓住灵感窗口';
+      default:
+        return '维持流动状态';
+    }
+  }
+
+  String _getWeatherAmbientLine(String type) {
+    switch (type) {
+      case 'sunny':
+        return '空气偏亮，视野与动机同时抬升';
+      case 'cloudy':
+        return '云层压低了噪声，画面更柔和';
+      case 'rainy':
+        return '雨幕正在帮你屏蔽外界干扰';
+      case 'meteor':
+        return '星迹正在提醒你记录高光时刻';
+      default:
+        return '天气正在为今天的节奏定调';
     }
   }
 }
@@ -518,7 +823,8 @@ class _AnimatedStarPainter extends CustomPainter {
 
     for (final star in stars) {
       // Calculate twinkle effect
-      final twinkle = sin(animationValue * 2 * pi * star.twinkleSpeed) * 0.3 + 0.7;
+      final twinkle =
+          sin(animationValue * 2 * pi * star.twinkleSpeed) * 0.3 + 0.7;
       final opacity = star.baseOpacity * twinkle * intensity;
 
       paint.color = color.withValues(alpha: opacity);
@@ -533,8 +839,9 @@ class _AnimatedStarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AnimatedStarPainter oldDelegate) => animationValue != oldDelegate.animationValue ||
-        intensity != oldDelegate.intensity;
+  bool shouldRepaint(covariant _AnimatedStarPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue ||
+      intensity != oldDelegate.intensity;
 }
 
 class _SunRayPainter extends CustomPainter {
@@ -563,7 +870,8 @@ class _SunRayPainter extends CustomPainter {
       final radius = particle.baseRadius * pulse;
 
       // Fade out as rings expand
-      final opacity = 0.08 * (1 - i / particles.length) * (1 - animationValue * 0.3);
+      final opacity =
+          0.08 * (1 - i / particles.length) * (1 - animationValue * 0.3);
       paint.color = accentColor.withValues(alpha: opacity);
 
       canvas.drawCircle(center, radius, paint);
@@ -591,7 +899,8 @@ class _SunRayPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SunRayPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _SunRayPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _CloudPainter extends CustomPainter {
@@ -630,13 +939,16 @@ class _CloudPainter extends CustomPainter {
 
   void _drawCloudShape(Canvas canvas, Paint paint, Offset center, double size) {
     canvas.drawCircle(center, size, paint);
-    canvas.drawCircle(Offset(center.dx - size * 0.6, center.dy + size * 0.2), size * 0.7, paint);
-    canvas.drawCircle(Offset(center.dx + size * 0.5, center.dy + size * 0.1), size * 0.6, paint);
+    canvas.drawCircle(Offset(center.dx - size * 0.6, center.dy + size * 0.2),
+        size * 0.7, paint);
+    canvas.drawCircle(Offset(center.dx + size * 0.5, center.dy + size * 0.1),
+        size * 0.6, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _CloudPainter oldDelegate) => animationValue != oldDelegate.animationValue ||
-        breathingValue != oldDelegate.breathingValue;
+  bool shouldRepaint(covariant _CloudPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue ||
+      breathingValue != oldDelegate.breathingValue;
 }
 
 class _RainPainter extends CustomPainter {
@@ -692,7 +1004,8 @@ class _RainPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RainPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _RainPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _MeteorPainter extends CustomPainter {
@@ -742,7 +1055,8 @@ class _MeteorPainter extends CustomPainter {
         final segmentStartY = tailY + (endY - tailY) * (t + 0.2);
 
         paint.strokeWidth = 1.5 * (1 - t * 0.5);
-        paint.color = accentColor.withValues(alpha: 0.3 * (1 - t) * (1 - progress));
+        paint.color =
+            accentColor.withValues(alpha: 0.3 * (1 - t) * (1 - progress));
 
         canvas.drawLine(
           Offset(segmentStartX, segmentStartY),
@@ -760,7 +1074,8 @@ class _MeteorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MeteorPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _MeteorPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _EnergyParticlePainter extends CustomPainter {
@@ -801,5 +1116,6 @@ class _EnergyParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }

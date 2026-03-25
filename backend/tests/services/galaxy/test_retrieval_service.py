@@ -7,9 +7,10 @@ import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 from dataclasses import dataclass
+from datetime import datetime, UTC
 
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService, DocumentChunkResult
-from app.schemas.galaxy import SectorCode
+from app.schemas.galaxy import NodeWithStatus, SectorCode
 
 
 class TestHybridSearchLogic:
@@ -228,3 +229,42 @@ class TestDocumentChunkResult:
         assert 'chunk' in field_names
         assert 'file_name' in field_names
         assert 'score' in field_names
+
+
+class TestGalaxySchemaMapping:
+    def test_node_with_status_preserves_first_unlock_at(self):
+        node = MagicMock()
+        node.id = uuid4()
+        node.parent_id = None
+        node.name = "Linear Algebra"
+        node.name_en = "Linear Algebra"
+        node.description = "Matrices and vector spaces"
+        node.importance_level = 4
+        node.is_seed = True
+        node.global_spark_count = 0
+        node.keywords = ["math", "matrix"]
+        node.position_x = 120.0
+        node.position_y = -48.0
+        node.parent = None
+        node.subject = MagicMock()
+        node.subject.sector_code = "TECH"
+        node.subject.position_angle = 35.0
+        node.subject.hex_color = "#5AB8CC"
+        node.subject.glow_color = "#92E1E9"
+
+        status = MagicMock()
+        status.mastery_score = 72.0
+        status.total_study_minutes = 180
+        status.study_count = 6
+        status.is_unlocked = True
+        status.is_collapsed = False
+        status.is_favorite = False
+        status.first_unlock_at = datetime(2026, 3, 20, 9, 30, tzinfo=UTC)
+        status.last_study_at = datetime(2026, 3, 24, 21, 0, tzinfo=UTC)
+        status.next_review_at = None
+        status.decay_paused = False
+
+        mapped = NodeWithStatus.from_models(node, status)
+
+        assert mapped.user_status is not None
+        assert mapped.user_status.first_unlock_at == status.first_unlock_at

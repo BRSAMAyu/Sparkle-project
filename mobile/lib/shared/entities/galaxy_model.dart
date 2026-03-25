@@ -147,6 +147,7 @@ class GalaxyNodeModel {
     required this.isUnlocked,
     required this.masteryScore,
     this.studyCount = 0,
+    this.firstUnlockAt,
     this.parentId,
     this.baseColor,
     this.tags,
@@ -185,6 +186,9 @@ class GalaxyNodeModel {
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
+      firstUnlockAt: GalaxyNodeModel._readDateTime(
+        json['first_unlock_at'] ?? userStatus?['first_unlock_at'],
+      ),
       tags: ((json['auto_tags'] ?? json['tags'] ?? json['keywords'])
               as List<dynamic>?)
           ?.map((e) => e.toString())
@@ -230,6 +234,9 @@ class GalaxyNodeModel {
   @JsonKey(name: 'study_count', readValue: _readStudyCount, defaultValue: 0)
   final int studyCount;
 
+  @JsonKey(name: 'first_unlock_at')
+  final DateTime? firstUnlockAt;
+
   /// 节点标签
   final List<String>? tags;
 
@@ -262,6 +269,16 @@ class GalaxyNodeModel {
       return (json['user_status'] as Map)['study_count'];
     }
     return 0;
+  }
+
+  static DateTime? _readDateTime(Object? raw) {
+    if (raw is DateTime) {
+      return raw;
+    }
+    if (raw is String) {
+      return DateTime.tryParse(raw);
+    }
+    return null;
   }
 
   /// 节点半径（基于重要程度）
@@ -299,6 +316,7 @@ class GalaxyNodeModel {
     bool? isUnlocked,
     int? masteryScore,
     int? studyCount,
+    DateTime? firstUnlockAt,
     List<String>? tags,
     String? description,
     NodePositionHint? positionHint,
@@ -317,6 +335,7 @@ class GalaxyNodeModel {
         isUnlocked: isUnlocked ?? this.isUnlocked,
         masteryScore: masteryScore ?? this.masteryScore,
         studyCount: studyCount ?? this.studyCount,
+        firstUnlockAt: firstUnlockAt ?? this.firstUnlockAt,
         tags: tags ?? this.tags,
         description: description ?? this.description,
         positionHint: positionHint ?? this.positionHint,

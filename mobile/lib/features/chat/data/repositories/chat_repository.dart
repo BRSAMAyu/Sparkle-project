@@ -112,13 +112,36 @@ class ChatRepository {
   /// 获取最近对话列表
   Future<List<Map<String, dynamic>>> getRecentConversations() async {
     if (DemoDataService.isDemoMode) {
-      return [
+      final conversations = <Map<String, dynamic>>[
         {
           'id': 'demo_conv_1',
-          'title': '关于数学复习的建议',
-          'updated_at': DateTime.now().toIso8601String(),
+          'title': '学习效率与链表复习',
+          'updated_at': DemoDataService().demoChatHistory
+              .where((message) => message.conversationId == 'demo_conv_1')
+              .map((message) => message.createdAt)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .toIso8601String(),
+        },
+        {
+          'id': 'demo_conv_2',
+          'title': '动态规划状态转移',
+          'updated_at': DemoDataService().demoChatHistory
+              .where((message) => message.conversationId == 'demo_conv_2')
+              .map((message) => message.createdAt)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .toIso8601String(),
+        },
+        {
+          'id': 'demo_conv_3',
+          'title': '计算机网络学习路线',
+          'updated_at': DemoDataService().demoChatHistory
+              .where((message) => message.conversationId == 'demo_conv_3')
+              .map((message) => message.createdAt)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .toIso8601String(),
         },
       ];
+      return conversations;
     }
     final response = await _dio.get<dynamic>('/chat/sessions');
     final data = ApiResponseParser.unwrapList(response.data,

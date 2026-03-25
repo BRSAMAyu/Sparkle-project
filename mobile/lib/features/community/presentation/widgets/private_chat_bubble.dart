@@ -201,25 +201,35 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     required bool isMe,
     required Widget child,
     VoidCallback? onTap,
-  }) =>
-      SparkleTappable(
+  }) {
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+    final wrapperColor = isLightMode
+        ? Colors.transparent
+        : (isMe ? DS.chatBubbleUser : DS.chatBubbleOther);
+    final wrapperShadow = isLightMode
+        ? const <BoxShadow>[]
+        : (isMe
+            ? [
+                BoxShadow(
+                  color: DS.chatBubbleUser.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : DS.shadowSm);
+
+    return SparkleTappable(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 260),
           decoration: BoxDecoration(
-            color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
+            color: wrapperColor,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: isMe
-                ? [
-                    BoxShadow(
-                      color: DS.chatBubbleUser.withValues(alpha: 0.24),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : DS.shadowSm,
-            border: isMe ? null : Border.all(color: DS.borderSubtle),
+            boxShadow: wrapperShadow,
+            border: isLightMode || isMe
+                ? null
+                : Border.all(color: DS.borderSubtle),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -227,6 +237,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
           ),
         ),
       );
+  }
 
   void _handleSharedResourceTap(UniversalSharePayload payload) {
     final deepLink = payload.deepLink;

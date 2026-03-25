@@ -17,6 +17,8 @@ class VisualElementCard extends StatefulWidget {
     this.onLongPress,
     this.isCompact = false,
     this.showStatus = true,
+    this.bundleOwnedCount = 0,
+    this.bundleTotalCount = 0,
   });
 
   final VisualElementModel element;
@@ -24,6 +26,8 @@ class VisualElementCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final bool isCompact;
   final bool showStatus;
+  final int bundleOwnedCount;
+  final int bundleTotalCount;
 
   @override
   State<VisualElementCard> createState() => _VisualElementCardState();
@@ -80,6 +84,8 @@ class _VisualElementCardState extends State<VisualElementCard>
     final colors = _getRarityColors(widget.element.rarity);
     final borderRadius =
         widget.isCompact ? DS.borderRadius12 : DS.borderRadius16;
+    final accent =
+        Color.lerp(colors.border, colors.text, 0.35) ?? colors.border;
 
     // Determine if we should show rarity effects
     final shouldShimmer = widget.element.isUnlocked &&
@@ -132,6 +138,24 @@ class _VisualElementCardState extends State<VisualElementCard>
                 child: Stack(
                   children: [
                     _buildPreviewBackground(colors),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [
+                                accent.withValues(alpha: 0.18),
+                                Colors.transparent,
+                                accent.withValues(alpha: 0.08),
+                              ],
+                              stops: const [0.0, 0.38, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     Padding(
                       padding: EdgeInsets.all(
                         widget.isCompact ? DS.spacing8 : DS.spacing12,
@@ -144,6 +168,23 @@ class _VisualElementCardState extends State<VisualElementCard>
                             children: [
                               _buildTypeIcon(),
                               _buildRarityBadge(colors, l10n),
+                            ],
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing6,
+                            runSpacing: DS.spacing6,
+                            children: [
+                              _buildMetaChip(
+                                widget.element.displaySlotLabel,
+                                accent,
+                              ),
+                              if (!widget.isCompact &&
+                                  widget.element.prestigeLabel != null)
+                                _buildMetaChip(
+                                  widget.element.prestigeLabel!,
+                                  colors.text,
+                                ),
                             ],
                           ),
                           const Spacer(),
@@ -174,6 +215,28 @@ class _VisualElementCardState extends State<VisualElementCard>
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                              ],
+                              const SizedBox(height: DS.spacing6),
+                              Wrap(
+                                spacing: DS.spacing6,
+                                runSpacing: DS.spacing6,
+                                children: [
+                                  _buildMetaChip(
+                                    widget.element.unlockSourceLabel,
+                                    accent,
+                                  ),
+                                  if (widget.element.setId != null &&
+                                      !widget.isCompact)
+                                    _buildMetaChip(
+                                      widget.element.setId!,
+                                      colors.border,
+                                    ),
+                                ],
+                              ),
+                              if (widget.element.isBundle &&
+                                  widget.bundleTotalCount > 0) ...[
+                                const SizedBox(height: DS.spacing6),
+                                _buildBundleProgressChip(colors),
                               ],
                               if (widget.showStatus) ...[
                                 const SizedBox(height: DS.spacing8),
@@ -209,9 +272,10 @@ class _VisualElementCardState extends State<VisualElementCard>
     );
   }
 
-  bool _shouldShimmerForRarity(VisualElementRarity rarity) => rarity == VisualElementRarity.rare ||
-        rarity == VisualElementRarity.epic ||
-        rarity == VisualElementRarity.legendary;
+  bool _shouldShimmerForRarity(VisualElementRarity rarity) =>
+      rarity == VisualElementRarity.rare ||
+      rarity == VisualElementRarity.epic ||
+      rarity == VisualElementRarity.legendary;
 
   bool get _isElementNewlyUnlocked {
     final unlockedAt = widget.element.unlockedAt;
@@ -234,6 +298,7 @@ class _VisualElementCardState extends State<VisualElementCard>
           children: [
             CustomPaint(
               painter: _ElementPreviewPainter(
+                element: widget.element,
                 elementType: widget.element.elementType,
                 config: widget.element.config,
                 seed: widget.element.id.hashCode,
@@ -378,38 +443,39 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
   }
 
-  Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) => Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: DS.borderRadius8,
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _getRarityIcon(widget.element.rarity),
-            size: widget.isCompact ? 10 : DS.iconSizeXs,
-            color: colors.text,
-          ),
-          if (!widget.isCompact) ...[
-            const SizedBox(width: DS.spacing4),
-            Text(
-              _getRarityName(widget.element.rarity, l10n),
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                fontWeight: DS.fontWeightMedium,
-                color: colors.text,
-              ),
+  Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getRarityIcon(widget.element.rarity),
+              size: widget.isCompact ? 10 : DS.iconSizeXs,
+              color: colors.text,
             ),
+            if (!widget.isCompact) ...[
+              const SizedBox(width: DS.spacing4),
+              Text(
+                _getRarityName(widget.element.rarity, l10n),
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightMedium,
+                  color: colors.text,
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -479,6 +545,62 @@ class _VisualElementCardState extends State<VisualElementCard>
     );
   }
 
+  Widget _buildMetaChip(String label, Color color) => Container(
+        constraints: BoxConstraints(
+          maxWidth: widget.isCompact ? 96 : 136,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
+
+  Widget _buildBundleProgressChip(_RarityColors colors) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: colors.border.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: colors.border.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inventory_2_rounded,
+              size: DS.iconSizeXs,
+              color: colors.text,
+            ),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              '${widget.bundleOwnedCount}/${widget.bundleTotalCount} 已集齐',
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: colors.text,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      );
+
   String _getUnlockSourceText(AppLocalizations l10n) {
     switch (widget.element.unlockSource) {
       case VisualElementUnlockSource.system:
@@ -495,48 +617,50 @@ class _VisualElementCardState extends State<VisualElementCard>
   }
 
   /// 磨砂玻璃锁定遮罩
-  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) => Positioned.fill(
-      child: ClipRRect(
-        borderRadius: widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
-        child: Stack(
-          children: [
-            // 磨砂玻璃背景
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-              child: Container(
-                color: DS.surfacePrimary.withValues(alpha: 0.85),
+  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) =>
+      Positioned.fill(
+        child: ClipRRect(
+          borderRadius:
+              widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+          child: Stack(
+            children: [
+              // 磨砂玻璃背景
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+                child: Container(
+                  color: DS.surfacePrimary.withValues(alpha: 0.85),
+                ),
               ),
-            ),
-            // 内容
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: widget.isCompact ? DS.iconSizeMd : DS.iconSizeLg,
-                    color: DS.textTertiary,
-                  ),
-                  if (!widget.isCompact) ...[
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      _getUnlockConditionSummary(l10n),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textTertiary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+              // 内容
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: widget.isCompact ? DS.iconSizeMd : DS.iconSizeLg,
+                      color: DS.textTertiary,
                     ),
+                    if (!widget.isCompact) ...[
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        _getUnlockConditionSummary(l10n),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textTertiary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   String _getUnlockConditionSummary(AppLocalizations l10n) {
     switch (widget.element.unlockSource) {
@@ -631,18 +755,21 @@ class _BreathingBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) => animation.value != oldDelegate.animation.value;
+  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) =>
+      animation.value != oldDelegate.animation.value;
 }
 
 /// 元素预览画笔
 class _ElementPreviewPainter extends CustomPainter {
   _ElementPreviewPainter({
+    required this.element,
     required this.elementType,
     required this.config,
     required this.seed,
     required this.colors,
   });
 
+  final VisualElementModel element;
   final VisualElementType elementType;
   final Map<String, dynamic> config;
   final int seed;
@@ -681,6 +808,8 @@ class _ElementPreviewPainter extends CustomPainter {
       ..shader = gradient.createShader(rect)
       ..style = PaintingStyle.fill;
     canvas.drawRect(rect, paint);
+    _drawAuroraBands(canvas, size, colors.border);
+    _drawConstellation(canvas, size, colors.text.withValues(alpha: 0.55));
   }
 
   void _drawParticlePreview(Canvas canvas, Size size) {
@@ -703,6 +832,7 @@ class _ElementPreviewPainter extends CustomPainter {
 
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
+    _drawSparkStreaks(canvas, size, colors.border);
   }
 
   void _drawEffectPreview(Canvas canvas, Size size) {
@@ -721,12 +851,108 @@ class _ElementPreviewPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(center, size.width / 2.5, paint);
+    _drawOrbitRings(canvas, size, color);
   }
 
   void _drawBundlePreview(Canvas canvas, Size size) {
     // 绘制套装效果
     _drawBackgroundPreview(canvas, size);
     _drawParticlePreview(canvas, size);
+    _drawEffectPreview(canvas, size);
+  }
+
+  void _drawAuroraBands(Canvas canvas, Size size, Color color) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round
+      ..color = color.withValues(alpha: 0.18);
+
+    final path = Path()
+      ..moveTo(-size.width * 0.1, size.height * 0.72)
+      ..quadraticBezierTo(
+        size.width * 0.28,
+        size.height * 0.48,
+        size.width * 0.62,
+        size.height * 0.68,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.86,
+        size.height * 0.82,
+        size.width * 1.1,
+        size.height * 0.42,
+      );
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawConstellation(Canvas canvas, Size size, Color color) {
+    final random = _SeededRandom(seed + 11);
+    final stars = <Offset>[];
+    for (var i = 0; i < 6; i++) {
+      stars.add(
+        Offset(
+          random.nextDouble() * size.width,
+          random.nextDouble() * size.height * 0.72,
+        ),
+      );
+    }
+
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..strokeWidth = 1.2;
+    for (var i = 0; i < stars.length - 1; i++) {
+      canvas.drawLine(stars[i], stars[i + 1], linePaint);
+    }
+
+    final starPaint = Paint()..color = color;
+    for (final star in stars) {
+      canvas.drawCircle(star, 1.8, starPaint);
+    }
+  }
+
+  void _drawSparkStreaks(Canvas canvas, Size size, Color color) {
+    final random = _SeededRandom(seed + 29);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.24)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 5; i++) {
+      final start = Offset(
+        random.nextDouble() * size.width,
+        random.nextDouble() * size.height,
+      );
+      final end = Offset(
+        start.dx + 12 + random.nextDouble() * 20,
+        start.dy - 6 - random.nextDouble() * 16,
+      );
+      canvas.drawLine(start, end, paint);
+    }
+  }
+
+  void _drawOrbitRings(Canvas canvas, Size size, Color color) {
+    final center = Offset(size.width * 0.72, size.height * 0.3);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: size.width * 0.46,
+        height: size.height * 0.18,
+      ),
+      paint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(-10, 12),
+        width: size.width * 0.3,
+        height: size.height * 0.12,
+      ),
+      paint..color = color.withValues(alpha: 0.14),
+    );
   }
 
   Color _parseColor(String hexColor) {
@@ -742,8 +968,10 @@ class _ElementPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ElementPreviewPainter oldDelegate) => elementType != oldDelegate.elementType ||
-        config != oldDelegate.config;
+  bool shouldRepaint(covariant _ElementPreviewPainter oldDelegate) =>
+      elementType != oldDelegate.elementType ||
+      config != oldDelegate.config ||
+      element.id != oldDelegate.element.id;
 }
 
 /// 确定性随机数生成器（用于预览）

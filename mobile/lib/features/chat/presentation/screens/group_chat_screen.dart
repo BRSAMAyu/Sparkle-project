@@ -33,6 +33,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   MessageInfo? _quotedMessage;
   bool _agentMode = false;
   late final ScrollController _scrollController;
+  String? _lastNewestMessageId;
 
   @override
   void initState() {
@@ -58,6 +59,27 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages(),
       );
     }
+  }
+
+  void _scheduleScrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      final target = 0.0;
+      final position = _scrollController.position;
+      if ((position.pixels - target).abs() < 8) {
+        _scrollController.jumpTo(target);
+        return;
+      }
+      unawaited(
+        _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
   }
 
   void _handleFavorite(MessageInfo msg) {
@@ -410,6 +432,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               child: chatState.when(
                 data: (messages) {
                   final mergedMessages = _mergeMessages(messages, agentState);
+                  final newestMessageId =
+                      mergedMessages.isEmpty ? null : mergedMessages.first.id;
+                  if (newestMessageId != null &&
+                      newestMessageId != _lastNewestMessageId) {
+                    _lastNewestMessageId = newestMessageId;
+                    _scheduleScrollToLatest();
+                  }
                   final showAgentStatus = agentState.isSending &&
                       agentState.streamingContent.isEmpty;
 

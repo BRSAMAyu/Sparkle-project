@@ -36,44 +36,44 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
 
   @override
   Widget build(BuildContext context) => SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        leading: SparkleIconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(widget.displayName ?? '好友详情'),
         ),
-        title: Text(widget.displayName ?? '好友详情'),
-      ),
-      child: FutureBuilder<FriendProfileDetail>(
-        future: _profileFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _buildContent(
-              context,
-              FriendProfileDetail(
-                user: UserBrief(
-                  id: widget.userId,
-                  username: widget.displayName ?? '好友',
-                  nickname: widget.displayName,
+        child: FutureBuilder<FriendProfileDetail>(
+          future: _profileFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return _buildContent(
+                context,
+                FriendProfileDetail(
+                  user: UserBrief(
+                    id: widget.userId,
+                    username: widget.displayName ?? '好友',
+                    nickname: widget.displayName,
+                  ),
+                  friendship: const <String, dynamic>{},
+                  quickActions: const {
+                    'can_invite_accountability': false,
+                    'can_open_dashboard': false,
+                    'can_chat': true,
+                    'can_share': false,
+                  },
                 ),
-                friendship: const <String, dynamic>{},
-                quickActions: const {
-                  'can_invite_accountability': false,
-                  'can_open_dashboard': false,
-                  'can_chat': true,
-                  'can_share': false,
-                },
-              ),
-            );
-          }
-          final profile = snapshot.data!;
-          return _buildContent(context, profile);
-        },
-      ),
-    );
+              );
+            }
+            final profile = snapshot.data!;
+            return _buildContent(context, profile);
+          },
+        ),
+      );
 
   Widget _buildContent(BuildContext context, FriendProfileDetail profile) {
     final theme = Theme.of(context);
@@ -249,7 +249,8 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                   final id = partnershipId;
                   if (id == null) return;
                   context.push(
-                    CommunityRoutes.accountabilityDetail.replaceFirst(':id', id),
+                    CommunityRoutes.accountabilityDetail
+                        .replaceFirst(':id', id),
                   );
                 },
               ),
@@ -363,90 +364,108 @@ class _RelationshipPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: DS.brandPrimary.withValues(alpha: 0.18),
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: DS.brandPrimary.withValues(alpha: 0.18),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                hasAccountability
-                    ? Icons.handshake_outlined
-                    : Icons.people_outline,
-                color: DS.brandPrimary,
-              ),
-              const SizedBox(width: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  hasAccountability
+                      ? Icons.handshake_outlined
+                      : Icons.people_outline,
+                  color: DS.brandPrimary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  hasAccountability ? '责任伙伴关系' : '好友关系',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
+                _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
+                _InfoChip(
+                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天',
+                ),
+              ],
+            ),
+            if (achievementsSummary.isNotEmpty) ...[
+              const SizedBox(height: 14),
               Text(
-                hasAccountability ? '责任伙伴关系' : '好友关系',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                '伙伴共成长',
+                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '我解锁了 ${achievementsSummary['my_total_unlocked'] ?? 0} 个责任伙伴成就，TA 解锁了 ${achievementsSummary['partner_total_unlocked'] ?? 0} 个。',
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
-              _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
-              _InfoChip(
-                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天',),
+            if (leaderboardSummary.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                '激励摘要',
+                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '连续打卡榜：你第 ${(leaderboardSummary['streak'] as Map?)?['my_rank'] ?? '-'}，TA 第 ${(leaderboardSummary['streak'] as Map?)?['partner_rank'] ?? '-'}。',
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+              ),
             ],
-          ),
-          if (achievementsSummary.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              '伙伴共成长',
-              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '我解锁了 ${achievementsSummary['my_total_unlocked'] ?? 0} 个责任伙伴成就，TA 解锁了 ${achievementsSummary['partner_total_unlocked'] ?? 0} 个。',
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            ),
-          ],
-          if (leaderboardSummary.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              '激励摘要',
-              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '连续打卡榜：你第 ${(leaderboardSummary['streak'] as Map?)?['my_rank'] ?? '-'}，TA 第 ${(leaderboardSummary['streak'] as Map?)?['partner_rank'] ?? '-'}。',
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            ),
-          ],
-          if (recentShares.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              '最近共享',
-              style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            ...recentShares.take(2).map(
-                  (share) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      '• ${share['title'] ?? '已分享内容'}',
-                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            if (recentShares.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                '最近共享',
+                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              ...recentShares.take(2).map(
+                    (share) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(top: 7, right: 8),
+                            decoration: BoxDecoration(
+                              color: DS.textSecondary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              share['title']?.toString() ?? '已分享内容',
+                              style: DS.bodySmall
+                                  .copyWith(color: DS.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 }
 
 class _SimplePanel extends StatelessWidget {
@@ -462,33 +481,33 @@ class _SimplePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: DS.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: DS.brandPrimary),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          body,
-        ],
-      ),
-    );
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: DS.brandPrimary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            body,
+          ],
+        ),
+      );
 }
 
 class _InfoChip extends StatelessWidget {
@@ -498,17 +517,17 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(
-          color: DS.brandPrimary,
-          fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
         ),
-      ),
-    );
+        child: Text(
+          label,
+          style: DS.labelSmall.copyWith(
+            color: DS.brandPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
 }

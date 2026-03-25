@@ -210,7 +210,7 @@ class _AccountabilityDetailScreenState
             '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。',
           );
         } else {
-          AppFeedback.error(context, '提醒失败: $e');
+          AppFeedback.error(context, '提醒发送失败，请稍后再试');
         }
       }
     }
@@ -1123,7 +1123,7 @@ class _AccountabilityCheckinSheetState
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.only(
             left: DS.spacing16,
             right: DS.spacing16,
@@ -1158,38 +1158,37 @@ class _AccountabilityCheckinSheetState
               ),
               const SizedBox(height: DS.sm),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(5, (i) {
                   final selected = _mood == i + 1;
                   return GestureDetector(
                     onTap: () => setState(() => _mood = i + 1),
-                    child: Container(
-                      padding: const EdgeInsets.all(DS.sm),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: selected
                             ? DS.brandPrimary.withValues(alpha: 0.15)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                         border: selected
-                            ? Border.all(color: DS.brandPrimary)
-                            : null,
+                            ? Border.all(color: DS.brandPrimary, width: 2)
+                            : Border.all(color: Colors.transparent),
                       ),
                       child: Text(
                         moodEmojis[i],
-                        style: const TextStyle(fontSize: 28),
+                        style: const TextStyle(fontSize: 24),
                       ),
                     ),
                   );
                 }),
               ),
               const SizedBox(height: DS.spacing16),
-              Row(
-                children: [
-                  Text(
-                    '投入时长: $_minutes 分钟',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Text(
+                '投入时长: $_minutes 分钟',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
                 value: _minutes.toDouble(),

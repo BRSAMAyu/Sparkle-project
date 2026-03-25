@@ -20,6 +20,7 @@ class VisualElementFilterOptions {
     this.type,
     this.rarity,
     this.category,
+    this.displaySlot,
     this.showUnlockedOnly = false,
     this.showEquippedOnly = false,
     this.sortBy = VisualElementSortBy.sortOrder,
@@ -28,6 +29,7 @@ class VisualElementFilterOptions {
   final VisualElementType? type;
   final VisualElementRarity? rarity;
   final String? category;
+  final String? displaySlot;
   final bool showUnlockedOnly;
   final bool showEquippedOnly;
   final VisualElementSortBy sortBy;
@@ -36,6 +38,8 @@ class VisualElementFilterOptions {
     VisualElementType? type,
     VisualElementRarity? rarity,
     String? category,
+    String? displaySlot,
+    bool clearDisplaySlot = false,
     bool? showUnlockedOnly,
     bool? showEquippedOnly,
     VisualElementSortBy? sortBy,
@@ -44,6 +48,7 @@ class VisualElementFilterOptions {
         type: type ?? this.type,
         rarity: rarity ?? this.rarity,
         category: category ?? this.category,
+        displaySlot: clearDisplaySlot ? null : displaySlot ?? this.displaySlot,
         showUnlockedOnly: showUnlockedOnly ?? this.showUnlockedOnly,
         showEquippedOnly: showEquippedOnly ?? this.showEquippedOnly,
         sortBy: sortBy ?? this.sortBy,
@@ -53,6 +58,7 @@ class VisualElementFilterOptions {
       type != null ||
       rarity != null ||
       category != null ||
+      displaySlot != null ||
       showUnlockedOnly ||
       showEquippedOnly;
 }
@@ -148,6 +154,12 @@ class VisualElementsState {
     if (filterOptions.category != null) {
       filtered =
           filtered.where((e) => e.category == filterOptions.category).toList();
+    }
+
+    if (filterOptions.displaySlot != null) {
+      filtered = filtered
+          .where((e) => e.displaySlot == filterOptions.displaySlot)
+          .toList();
     }
 
     if (filterOptions.showUnlockedOnly) {

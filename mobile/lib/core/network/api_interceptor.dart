@@ -116,6 +116,7 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final path = err.requestOptions.path;
+    final isTelemetryPath = path.contains('/client-telemetry');
 
     // 🎭 演示模式：仅在特定的演示API路径上忽略401
     // 更严格的条件，避免在真实API上忽略认证错误
@@ -130,12 +131,21 @@ class AuthInterceptor extends Interceptor {
     // is itself an auth request (login, register, refresh, etc.)
     if (path.contains('/auth') ||
         path.contains('login') ||
-        path.contains('refresh')) {
+        path.contains('refresh') ||
+        isTelemetryPath) {
       return super.onError(err, handler);
     }
 
     if (err.response?.statusCode == 401) {
       try {
+        final authRepo = _ref.read(authRepositoryProvider);
+        final refreshToken = await authRepo.getRefreshToken();
+        if (refreshToken == null || refreshToken.isEmpty) {
+          // Unauthenticated requests can legitimately receive 401 before login.
+          // Do not force a logout loop when the client has no session to refresh.
+          return super.onError(err, handler);
+        }
+
         // Check if there's already a refresh in progress
         if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
           try {
@@ -154,7 +164,6 @@ class AuthInterceptor extends Interceptor {
         // Start a new refresh operation
         _refreshCompleter = Completer<String>();
         try {
-          final authRepo = _ref.read(authRepositoryProvider);
           final newToken = await authRepo.refreshToken();
           _refreshCompleter!.complete(newToken.accessToken);
 

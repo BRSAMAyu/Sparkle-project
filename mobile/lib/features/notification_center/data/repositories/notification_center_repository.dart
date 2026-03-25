@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_redundant_argument_values
+
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -24,29 +26,16 @@ class NotificationCenterRepository {
     String? sourceType,
   }) async {
     if (DemoDataService.isDemoMode) {
-      // Return mock notifications for demo mode
-      return [
-        UnifiedNotification(
-          id: 'demo-1',
-          sourceType: 'system',
-          title: '欢迎使用星火AI学习助手',
-          content: '开始您的学习之旅吧！',
-          priority: 'medium',
-          isRead: false,
-          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-          type: 'system',
-        ),
-        UnifiedNotification(
-          id: 'demo-2',
-          sourceType: 'intervention',
-          title: '休息提醒',
-          content: '您已经连续工作45分钟，建议休息一下',
-          priority: 'high',
-          isRead: false,
-          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-          type: 'intervention',
-        ),
-      ];
+      final notifications = _demoNotifications();
+      return notifications.where((item) {
+        if (unreadOnly && item.isRead) {
+          return false;
+        }
+        if (sourceType != null && item.sourceType != sourceType) {
+          return false;
+        }
+        return true;
+      }).skip(skip).take(limit).toList();
     }
 
     try {
@@ -74,7 +63,15 @@ class NotificationCenterRepository {
   /// Mark a notification as read
   Future<void> markAsRead(String notificationId, String type) async {
     if (DemoDataService.isDemoMode) {
-      // No-op in demo mode
+      final items = DemoDataService().demoNotifications;
+      final index = items.indexWhere((item) => item['id'] == notificationId);
+      if (index != -1) {
+        items[index] = {
+          ...items[index],
+          'is_read': true,
+          'read_at': DateTime.now().toIso8601String(),
+        };
+      }
       return;
     }
     try {
@@ -90,8 +87,19 @@ class NotificationCenterRepository {
   /// Mark all notifications as read
   Future<int> markAllAsRead() async {
     if (DemoDataService.isDemoMode) {
-      // Return mock count for demo mode
-      return 2;
+      final items = DemoDataService().demoNotifications;
+      var updated = 0;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i]['is_read'] != true) {
+          items[i] = {
+            ...items[i],
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          };
+          updated++;
+        }
+      }
+      return updated;
     }
     try {
       final response = await _client.put<Map<String, dynamic>>(
@@ -108,7 +116,7 @@ class NotificationCenterRepository {
   /// Delete a notification
   Future<void> deleteNotification(String notificationId, String type) async {
     if (DemoDataService.isDemoMode) {
-      // No-op in demo mode
+      DemoDataService().demoNotifications.removeWhere((item) => item['id'] == notificationId);
       return;
     }
     try {
@@ -124,8 +132,10 @@ class NotificationCenterRepository {
   /// Clear all read notifications
   Future<int> clearReadNotifications() async {
     if (DemoDataService.isDemoMode) {
-      // Return mock count for demo mode
-      return 1;
+      final items = DemoDataService().demoNotifications;
+      final before = items.length;
+      items.removeWhere((item) => item['is_read'] == true);
+      return before - items.length;
     }
     try {
       final response = await _client.delete<Map<String, dynamic>>(
@@ -149,24 +159,24 @@ class NotificationCenterRepository {
     String? search,
   }) async {
     if (DemoDataService.isDemoMode) {
-      // Return mock history for demo mode
+      final all = _demoNotifications();
+      final filtered = all.where((item) {
+        if (type != null && item.type != type) return false;
+        if (startDate != null && item.createdAt.isBefore(startDate)) return false;
+        if (endDate != null && item.createdAt.isAfter(endDate)) return false;
+        if (search != null && search.isNotEmpty) {
+          final keyword = search.toLowerCase();
+          return item.title.toLowerCase().contains(keyword) ||
+              item.content.toLowerCase().contains(keyword);
+        }
+        return true;
+      }).toList();
       return {
-        'items': [
-          UnifiedNotification(
-            id: 'demo-history-1',
-            sourceType: 'system',
-            title: '历史通知1',
-            content: '这是一条历史通知',
-            priority: 'low',
-            isRead: true,
-            createdAt: DateTime.now().subtract(const Duration(days: 2)),
-            type: 'system',
-          ),
-        ],
-        'total': 1,
+        'items': filtered.skip((page - 1) * pageSize).take(pageSize).toList(),
+        'total': filtered.length,
         'page': page,
         'page_size': pageSize,
-        'total_pages': 1,
+        'total_pages': (filtered.length / pageSize).ceil(),
       };
     }
 
@@ -217,36 +227,65 @@ class NotificationCenterRepository {
   /// Get notification analytics
   Future<NotificationAnalytics> getAnalytics(String period) async {
     if (DemoDataService.isDemoMode) {
-      // Return mock analytics for demo mode
+      final notifications = _demoNotifications();
+      final totalSent = notifications.length;
+      final totalViewed = notifications.where((item) => item.isRead).length;
+      final totalClicked = notifications.where((item) => item.priority == 'high').length;
+      final hourlyDistribution = List<int>.generate(24, (hour) {
+        if (hour >= 8 && hour <= 10) return 3;
+        if (hour >= 12 && hour <= 14) return 2;
+        if (hour >= 15 && hour <= 17) return 4;
+        if (hour >= 20 && hour <= 22) return 1;
+        return 0;
+      });
       return NotificationAnalytics(
         summary: NotificationAnalyticsSummary(
-          totalSent: 50,
-          totalViewed: 45,
-          totalClicked: 30,
-          viewRate: 0.9,
-          clickRate: 0.6,
-          avgTimeToAction: 300.0,
+          totalSent: totalSent,
+          totalViewed: totalViewed,
+          totalClicked: totalClicked,
+          viewRate: totalSent == 0 ? 0 : totalViewed / totalSent,
+          clickRate: totalSent == 0 ? 0 : totalClicked / totalSent,
+          avgTimeToAction: 240.0,
         ),
         byType: {
           'system': NotificationTypeStats(
             type: 'system',
-            sent: 30,
-            viewed: 27,
-            clicked: 18,
+            sent: notifications.where((item) => item.sourceType == 'system').length,
+            viewed: notifications.where((item) => item.sourceType == 'system' && item.isRead).length,
+            clicked: notifications.where((item) => item.sourceType == 'system' && item.priority == 'high').length,
             viewRate: 0.9,
-            clickRate: 0.6,
+            clickRate: 0.55,
           ),
           'intervention': NotificationTypeStats(
             type: 'intervention',
-            sent: 20,
-            viewed: 18,
-            clicked: 12,
-            viewRate: 0.9,
-            clickRate: 0.6,
+            sent: notifications.where((item) => item.sourceType == 'intervention').length,
+            viewed: notifications.where((item) => item.sourceType == 'intervention' && item.isRead).length,
+            clicked: notifications.where((item) => item.sourceType == 'intervention' && item.priority == 'high').length,
+            viewRate: 0.88,
+            clickRate: 0.62,
           ),
         },
-        trends: [],
-        hourlyDistribution: List.generate(24, (i) => i * 2),
+        trends: [
+          NotificationTrendData(
+            date: DateTime.now().subtract(const Duration(days: 2)).toIso8601String().split('T').first,
+            sent: 7,
+            viewed: 6,
+            clicked: 4,
+          ),
+          NotificationTrendData(
+            date: DateTime.now().subtract(const Duration(days: 1)).toIso8601String().split('T').first,
+            sent: 8,
+            viewed: 7,
+            clicked: 5,
+          ),
+          NotificationTrendData(
+            date: DateTime.now().toIso8601String().split('T').first,
+            sent: 5,
+            viewed: 4,
+            clicked: 2,
+          ),
+        ],
+        hourlyDistribution: hourlyDistribution,
       );
     }
 
@@ -319,10 +358,43 @@ class NotificationCenterRepository {
     }
   }
 
+  List<UnifiedNotification> _demoNotifications() => DemoDataService()
+      .demoNotifications
+      .map(
+        (item) => UnifiedNotification(
+          id: item['id'] as String,
+          sourceType: item['type'] == 'achievement' ||
+                  item['type'] == 'plan_progress' ||
+                  item['type'] == 'task_reminder' ||
+                  item['type'] == 'cognitive_insight'
+              ? 'system'
+              : 'intervention',
+          title: item['title'] as String,
+          content: item['message'] as String,
+          type: item['type'] as String?,
+          priority: item['type'] == 'achievement' ||
+                  item['type'] == 'task_reminder'
+              ? 'high'
+              : item['type'] == 'plan_progress'
+                  ? 'medium'
+                  : 'low',
+          isRead: item['is_read'] as bool? ?? false,
+          createdAt: DateTime.parse(item['created_at'] as String),
+          readAt: item['read_at'] == null
+              ? null
+              : DateTime.parse(item['read_at'] as String),
+          metadata: const {},
+        ),
+      )
+      .toList();
+
   Exception _handleError(DioException e) {
     if (e.response != null) {
       final statusCode = e.response?.statusCode;
-      final message = e.response?.data?['message'] ?? 'Unknown error';
+      final responseData = e.response?.data;
+      final message = responseData is Map<String, dynamic>
+          ? responseData['message'] ?? 'Unknown error'
+          : 'Unknown error';
 
       switch (statusCode) {
         case 400:

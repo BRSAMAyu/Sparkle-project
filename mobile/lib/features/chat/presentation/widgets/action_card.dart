@@ -216,8 +216,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             toolResultId != null && toolResultId.trim().isNotEmpty;
         final detailRoute = entity.detailRoute;
         final share = entity.share;
-        final canShareTask =
-            isServerTaskId(task.id) && ((share?.resourceId ?? task.id).isNotEmpty);
+        final canShareTask = isServerTaskId(task.id) &&
+            ((share?.resourceId ?? task.id).isNotEmpty);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -848,9 +848,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           LayoutBuilder(
             builder: (context, constraints) {
               final entries = _buildVisibleGenericEntries(action);
-              final maxChipWidth = constraints.maxWidth > 220
-                  ? 220.0
-                  : constraints.maxWidth;
+              final maxChipWidth =
+                  constraints.maxWidth > 220 ? 220.0 : constraints.maxWidth;
               return Wrap(
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
@@ -1204,9 +1203,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (value is List) {
       final scalarItems = value
-          .map((item) => item is String || item is num || item is bool
-              ? item.toString().trim()
-              : '',)
+          .map(
+            (item) => item is String || item is num || item is bool
+                ? item.toString().trim()
+                : '',
+          )
           .where((item) => item.isNotEmpty)
           .take(3)
           .toList();
@@ -1222,7 +1223,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final l10n = context.l10n;
     final tasks = action.data['tasks'] as List<dynamic>? ?? [];
     if (tasks.isEmpty) return const SizedBox.shrink();
-    final entity = EntityCardPayload.fromRaw(action.data, fallbackType: 'task_list');
+    final entity =
+        EntityCardPayload.fromRaw(action.data, fallbackType: 'task_list');
 
     final toolResultId = entity.toolResultId ??
         action.data['tool_result_id']?.toString() ??
@@ -1280,7 +1282,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 child: Row(
                   children: [
                     Expanded(
-                    child: SparkleButton(
+                      child: SparkleButton(
                         label: '打开',
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.open_in_new_rounded),
@@ -1391,12 +1393,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               _shareResource(
                                 resourceType:
                                     entity.share?.resourceType ?? 'plan',
-                                resourceId:
-                                    entity.share?.resourceId ?? planId,
-                                title:
-                                    entity.share?.title ?? (planTitle ?? '学习计划'),
-                                subtitle: entity.share?.subtitle ??
-                                    '由 AI 生成的任务计划',
+                                resourceId: entity.share?.resourceId ?? planId,
+                                title: entity.share?.title ??
+                                    (planTitle ?? '学习计划'),
+                                subtitle:
+                                    entity.share?.subtitle ?? '由 AI 生成的任务计划',
                               ),
                             )
                         : () {},
@@ -1453,7 +1454,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           onTap: planId == null
               ? null
               : () {
-                  unawaited(context.push(entity.detailRoute ?? '/plans/$planId'));
+                  unawaited(
+                      context.push(entity.detailRoute ?? '/plans/$planId'));
                   widget.onPlanNavigation?.call(planId);
                 },
           onShare: planId == null
@@ -1909,11 +1911,27 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ...memoryUpdates.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing4),
-              child: Text(
-                '• $item',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    margin: const EdgeInsets.only(top: 7, right: 8),
+                    decoration: BoxDecoration(
                       color: DS.neutral600,
+                      shape: BoxShape.circle,
                     ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.neutral600,
+                          ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -2076,7 +2094,23 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ...topLearnings.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing6),
-                child: Text('• $item'),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(top: 8, right: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? DS.neutral200
+                            : DS.neutral800,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(child: Text(item)),
+                  ],
+                ),
               ),
             ),
           ],
@@ -2278,12 +2312,29 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ...highlights.take(3).map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: DS.spacing8),
-                  child: Text(
-                    '• $item',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(top: 8, right: 8),
+                        decoration: BoxDecoration(
                           color: DS.neutral900,
-                          fontWeight: DS.fontWeightSemibold,
+                          shape: BoxShape.circle,
                         ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          item,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DS.neutral900,
+                                    fontWeight: DS.fontWeightSemibold,
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2475,13 +2526,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final reason = action.data['reason']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
-        .map((e) => e is Map
-            ? Map<String, dynamic>.from(e)
-            : {
-                'label': '$e',
-                'type': 'prompt',
-                'payload': {'prompt': '$e'},
-              },
+        .map(
+          (e) => e is Map
+              ? Map<String, dynamic>.from(e)
+              : {
+                  'label': '$e',
+                  'type': 'prompt',
+                  'payload': {'prompt': '$e'},
+                },
         )
         .where((e) => (e['label']?.toString() ?? '').isNotEmpty)
         .toList();

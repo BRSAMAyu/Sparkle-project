@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
@@ -37,23 +38,48 @@ class PrivateChatScreen extends ConsumerStatefulWidget {
 class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   final TextEditingController _composerController = TextEditingController();
   final FocusNode _composerFocusNode = FocusNode();
+  late final ScrollController _scrollController;
   String? _displayName;
   String? _avatarUrl;
   bool _isSharing = false;
   bool _agentMode = false;
   String? _assistantOriginalDraft;
+  String? _lastNewestMessageId;
 
   @override
   void initState() {
     super.initState();
     _displayName = widget.friendName;
+    _scrollController = ScrollController();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _composerController.dispose();
     _composerFocusNode.dispose();
     super.dispose();
+  }
+
+  void _scheduleScrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      final target = 0.0;
+      final position = _scrollController.position;
+      if ((position.pixels - target).abs() < 8) {
+        _scrollController.jumpTo(target);
+        return;
+      }
+      unawaited(
+        _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
   }
 
   @override
@@ -110,6 +136,20 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 data: (messages) {
                   final mergedMessages =
                       _mergeMessages(messages, agentState, currentUser);
+                  final newestMessageId =
+                      mergedMessages.isEmpty ? null : mergedMessages.first.id;
+                  String? latestAssistantMessageId;
+                  for (final message in mergedMessages) {
+                    if (isPrivateAgentMessage(message)) {
+                      latestAssistantMessageId = message.id;
+                      break;
+                    }
+                  }
+                  if (newestMessageId != null &&
+                      newestMessageId != _lastNewestMessageId) {
+                    _lastNewestMessageId = newestMessageId;
+                    _scheduleScrollToLatest();
+                  }
                   final showAgentStatus = agentState.isSending;
                   if (mergedMessages.isEmpty) {
                     return Center(
@@ -136,39 +176,61 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   return Align(
                     alignment: Alignment.topCenter,
                     child: ListView.builder(
+                      controller: _scrollController,
                       reverse: true,
                       shrinkWrap: true,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing8, vertical: DS.spacing16,),
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing16,
+                      ),
                       itemCount:
                           mergedMessages.length + (showAgentStatus ? 1 : 0),
                       itemBuilder: (context, index) {
-                      if (showAgentStatus && index == 0) {
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: DS.spacing16),
-                          child: AiStatusIndicator(
-                            status: 'THINKING',
-                            details: '思考中...',
-                            enableStatusTrack: false,
-                          ),
-                        );
-                      }
+                        if (showAgentStatus && index == 0) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: DS.spacing16),
+                            child: AiStatusIndicator(
+                              status: 'THINKING',
+                              details: '思考中...',
+                              enableStatusTrack: false,
+                            ),
+                          );
+                        }
 
-                      final messageIndex = showAgentStatus ? index - 1 : index;
-                      final message = mergedMessages[messageIndex];
-                      return ChatBubble(
-                        message: message,
-                        currentUserId: currentUser?.id,
-                        onQuote: isPrivateAgentMessage(message)
-                            ? null
-                            : (msg) => setState(() =>
-                                notifier.setQuote(msg as PrivateMessageInfo?),),
-                        onRevoke: isPrivateAgentMessage(message)
-                            ? null
-                            : (msg) => notifier
-                                .revokeMessage((msg as PrivateMessageInfo).id),
-                      );
-                    },
+                        final messageIndex =
+                            showAgentStatus ? index - 1 : index;
+                        final message = mergedMessages[messageIndex];
+                        return ChatBubble(
+                          message: message,
+                          currentUserId: currentUser?.id,
+                          isLatestAssistantMessage:
+                              latestAssistantMessageId != null &&
+                                  message.id == latestAssistantMessageId,
+                          onQuote: isPrivateAgentMessage(message)
+                              ? null
+                              : (msg) => setState(
+                                    () => notifier
+                                        .setQuote(msg as PrivateMessageInfo?),
+                                  ),
+                          onRevoke: isPrivateAgentMessage(message)
+                              ? (msg) => ref
+                                  .read(
+                                    privateChatAgentProvider(widget.friendId)
+                                        .notifier,
+                                  )
+                                  .removeLocalDraft(
+                                    (msg as PrivateMessageInfo).id,
+                                  )
+                              : (msg) => notifier.revokeMessage(
+                                  (msg as PrivateMessageInfo).id),
+                          onPromoteSelfVisibleDraft:
+                              isPrivateAgentMessage(message)
+                                  ? (msg) => _promoteAgentDraftToComposer(
+                                        msg as PrivateMessageInfo,
+                                      )
+                                  : null,
+                        );
+                      },
                     ),
                   );
                 },
@@ -186,7 +248,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  DS.spacing16, DS.spacing8, DS.spacing16, 0,),
+                DS.spacing16,
+                DS.spacing8,
+                DS.spacing16,
+                0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -224,21 +290,24 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             label: '润色回复',
                             onTap: () => _runAssistantPreset(
                               preset: 'polish_reply',
-                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
+                              sendStyle:
+                                  _PrivateAssistantSendStyle.replaceInput,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '温和提醒',
                             onTap: () => _runAssistantPreset(
                               preset: 'gentle_reminder',
-                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
+                              sendStyle:
+                                  _PrivateAssistantSendStyle.replaceInput,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '协调时间',
                             onTap: () => _runAssistantPreset(
                               preset: 'schedule_sync',
-                              sendStyle: _PrivateAssistantSendStyle.replaceInput,
+                              sendStyle:
+                                  _PrivateAssistantSendStyle.replaceInput,
                               reasoningMode: 'balanced',
                             ),
                           ),
@@ -246,14 +315,16 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             label: '快速总结',
                             onTap: () => _runAssistantPreset(
                               preset: 'summary',
-                              sendStyle: _PrivateAssistantSendStyle.visibilityChoice,
+                              sendStyle:
+                                  _PrivateAssistantSendStyle.visibilityChoice,
                             ),
                           ),
                           _PrivateAgentQuickChip(
                             label: '提炼下一步',
                             onTap: () => _runAssistantPreset(
                               preset: 'next_step',
-                              sendStyle: _PrivateAssistantSendStyle.visibilityChoice,
+                              sendStyle:
+                                  _PrivateAssistantSendStyle.visibilityChoice,
                             ),
                           ),
                         ],
@@ -357,7 +428,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       preset,
       composerText: composerText,
     );
-    final notifier = ref.read(privateChatAgentProvider(widget.friendId).notifier);
+    final notifier =
+        ref.read(privateChatAgentProvider(widget.friendId).notifier);
     final draft = await notifier.composeDraft(
       prompt: prompt,
       friendName: _displayName ?? widget.friendName,
@@ -446,12 +518,12 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   ),
                 ),
                 child: SingleChildScrollView(
-                  child: SelectableText(
-                    draft,
-                    style: const TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      height: 1.6,
-                    ),
+                  child: SparkleMarkdown(
+                    content: draft,
+                    textColor: DS.textPrimary,
+                    codeBackgroundColor: DS.surfaceSecondary,
+                    linkColor: DS.brandPrimary,
+                    contentRole: SparkleMarkdownRole.chatBubble,
                   ),
                 ),
               ),
@@ -466,7 +538,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       onTap: () async {
                         Navigator.of(sheetContext).pop();
                         await ref
-                            .read(privateChatAgentProvider(widget.friendId).notifier)
+                            .read(privateChatAgentProvider(widget.friendId)
+                                .notifier)
                             .saveSelfVisibleDraft(content: draft);
                         if (!mounted) return;
                         AppFeedback.success(context, '已保存为仅自己可见。');
@@ -554,6 +627,21 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     });
     _composerFocusNode.requestFocus();
     AppFeedback.info(context, '已恢复你原本的输入。');
+  }
+
+  void _promoteAgentDraftToComposer(PrivateMessageInfo message) {
+    final draft = (message.content ?? '').trim();
+    if (draft.isEmpty) {
+      return;
+    }
+    ref
+        .read(privateChatAgentProvider(widget.friendId).notifier)
+        .removeLocalDraft(message.id);
+    _applyDraftToComposer(
+      draft,
+      originalText: _composerController.text.trim(),
+    );
+    AppFeedback.info(context, '已切换为双方可见，请确认后发送。');
   }
 
   Future<void> _handleQuickShare(UniversalSharePayload payload) async {

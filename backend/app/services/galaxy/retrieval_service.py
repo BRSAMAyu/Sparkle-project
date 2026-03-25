@@ -573,6 +573,7 @@ class KnowledgeRetrievalService:
                 is_unlocked=status.is_unlocked,
                 is_collapsed=status.is_collapsed,
                 is_favorite=status.is_favorite,
+                first_unlock_at=status.first_unlock_at,
                 last_study_at=status.last_study_at,
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,

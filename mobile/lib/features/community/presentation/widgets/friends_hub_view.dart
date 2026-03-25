@@ -63,10 +63,12 @@ class FriendsHubView extends ConsumerWidget {
           else if (friends.isEmpty)
             _EmptyFriendsCard(overview: overview)
           else
-            ...friends.map((friendship) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _FriendCard(friendship: friendship, overview: overview),
-                ),),
+            ...friends.map(
+              (friendship) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _FriendCard(friendship: friendship, overview: overview),
+              ),
+            ),
         ],
       ),
     );
@@ -142,11 +144,10 @@ class _PartnerHero extends ConsumerWidget {
       );
     }
 
-    final partnerDisplay =
-        relationshipSummary?['partner_name']?.toString() ??
-            active.partner?.displayName ??
-            active.initiator?.displayName ??
-            '责任伙伴';
+    final partnerDisplay = relationshipSummary?['partner_name']?.toString() ??
+        active.partner?.displayName ??
+        active.initiator?.displayName ??
+        '责任伙伴';
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(18),
@@ -176,7 +177,9 @@ class _PartnerHero extends ConsumerWidget {
                     radius: 24,
                     backgroundColor: DS.brandPrimary.withValues(alpha: 0.14),
                     child: Text(
-                      partnerDisplay.isEmpty ? '伙' : partnerDisplay.characters.first,
+                      partnerDisplay.isEmpty
+                          ? '伙'
+                          : partnerDisplay.characters.first,
                       style: TextStyle(
                         color: DS.brandPrimary,
                         fontWeight: FontWeight.bold,
@@ -188,15 +191,22 @@ class _PartnerHero extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text(
-                              partnerDisplay,
-                              style: DS.titleLarge.copyWith(
-                                fontWeight: FontWeight.bold,
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 180),
+                              child: Text(
+                                partnerDisplay,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: DS.titleLarge.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 8),
                             _Pill(
                               label: '核心伙伴',
                               color: DS.brandPrimary,
@@ -226,7 +236,8 @@ class _PartnerHero extends ConsumerWidget {
                   ),
                   _MetricChip(
                     label: 'TA',
-                    value: '${relationshipSummary?['partner_streak_days'] ?? 0} 天连胜',
+                    value:
+                        '${relationshipSummary?['partner_streak_days'] ?? 0} 天连胜',
                   ),
                   _MetricChip(
                     label: '总打卡',
@@ -307,23 +318,23 @@ class _PendingInviteBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      child: Row(
-        children: [
-          Icon(Icons.mark_email_unread_outlined, color: DS.warning),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$count 条责任伙伴/好友请求待处理',
-              style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        child: Row(
+          children: [
+            Icon(Icons.mark_email_unread_outlined, color: DS.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$count 条责任伙伴/好友请求待处理',
+                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
-          ),
-          SparkleButton.ghost(
-            label: '查看',
-            onPressed: () => context.pushNamed('friendRequests'),
-          ),
-        ],
-      ),
-    );
+            SparkleButton.ghost(
+              label: '查看',
+              onPressed: () => context.pushNamed('friendRequests'),
+            ),
+          ],
+        ),
+      );
 }
 
 class _FriendCard extends StatelessWidget {
@@ -341,8 +352,7 @@ class _FriendCard extends StatelessWidget {
     final accountability = friendship.accountability;
     final isDemoMode = DemoDataService.isDemoMode;
     final isCorePartner = accountability?.status == 'active' &&
-        accountability?.partnershipId ==
-            overview?.activePartnership?.id;
+        accountability?.partnershipId == overview?.activePartnership?.id;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -378,9 +388,12 @@ class _FriendCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage:
-                  friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
-              child: friend.avatarUrl == null ? Text(friend.displayName.characters.first) : null,
+              backgroundImage: friend.avatarUrl != null
+                  ? NetworkImage(friend.avatarUrl!)
+                  : null,
+              child: friend.avatarUrl == null
+                  ? Text(friend.displayName.characters.first)
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -425,7 +438,9 @@ class _FriendCard extends StatelessWidget {
                             ? (friend.status == UserStatus.online
                                 ? '演示在线'
                                 : '演示离线')
-                            : (friend.status == UserStatus.online ? '在线' : '离线'),
+                            : (friend.status == UserStatus.online
+                                ? '在线'
+                                : '离线'),
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
                       const SizedBox(width: 10),
@@ -525,25 +540,25 @@ class _MetricChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label · ',
-            style: DS.labelSmall.copyWith(color: DS.textSecondary),
-          ),
-          Text(
-            value,
-            style: DS.bodySmall.copyWith(fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                '$label · $value',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DS.bodySmall.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _TinyMetric extends StatelessWidget {
@@ -553,16 +568,16 @@ class _TinyMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(color: DS.textSecondary),
-      ),
-    );
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+        ),
+      );
 }
 
 class _Pill extends StatelessWidget {
@@ -576,19 +591,21 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
         ),
-      ),
-    );
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DS.labelSmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
 }
 
 class _InlineError extends StatelessWidget {
@@ -598,11 +615,11 @@ class _InlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      child: Text(
-        message,
-        style: DS.bodySmall.copyWith(color: DS.error),
-      ),
-    );
+        child: Text(
+          message,
+          style: DS.bodySmall.copyWith(color: DS.error),
+        ),
+      );
 }
 
 class _EmptyFriendsCard extends StatelessWidget {

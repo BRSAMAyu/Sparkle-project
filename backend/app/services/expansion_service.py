@@ -5,6 +5,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import re
 from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
@@ -178,11 +179,10 @@ class ExpansionService:
             # 3. 调用 LLM
             prompt = self._build_expansion_prompt(queue_item.expansion_context, queue_item.prompt_version)
             model_name = settings.DEEPSEEK_CHAT_MODEL if settings.LLM_PROVIDER == "deepseek" else settings.LLM_MODEL_NAME
-            response = await llm_client.chat_completion(
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"},
+            response = await self._request_expansion_json(
+                prompt,
+                model_name=model_name,
                 temperature=0.7,
-                model=model_name
             )
             queue_item.model_name = model_name
 
@@ -212,7 +212,61 @@ class ExpansionService:
             await self.db.commit()
             raise
 
-    def _build_expansion_prompt(self, context_json: str, prompt_version: str | None = None) -> str:
+    async def preview_expansion_candidates(
+        self,
+        trigger_node_id: UUID,
+        user_id: UUID,
+        *,
+        count: int = 3,
+    ) -> tuple[list[dict], str]:
+        context = await self._build_expansion_context(trigger_node_id, user_id)
+        prompt_version = await self._select_prompt_version(trigger_node_id)
+        requested_count = max(1, min(3, count))
+        try:
+            prompt = self._build_expansion_prompt(
+                context,
+                prompt_version=prompt_version,
+                count=requested_count,
+                preview_only=True,
+            )
+            model_name = settings.DEEPSEEK_CHAT_MODEL if settings.LLM_PROVIDER == "deepseek" else settings.LLM_MODEL_NAME
+            response = await self._request_expansion_json(
+                prompt,
+                model_name=model_name,
+                temperature=0.65,
+            )
+            expanded_data = self._parse_expansion_response(response)
+            candidates = self._normalize_candidates(expanded_data, count=requested_count)
+        except Exception as exc:
+            logger.warning("Expansion candidate preview fell back to deterministic suggestions: {}", exc)
+            candidates = self._fallback_candidates(context, count=requested_count)
+        return candidates, prompt_version
+
+    async def apply_expansion_candidates(
+        self,
+        trigger_node_id: UUID,
+        user_id: UUID,
+        *,
+        candidates: list[dict],
+    ) -> list[KnowledgeNode]:
+        normalized = self._normalize_candidates(
+            {"expanded_nodes": candidates},
+            count=min(len(candidates), self.MAX_EXPANDED_NODES_PER_REQUEST),
+        )
+        return await self._create_expanded_nodes(
+            {"expanded_nodes": normalized},
+            trigger_node_id=trigger_node_id,
+            user_id=user_id,
+        )
+
+    def _build_expansion_prompt(
+        self,
+        context_json: str,
+        prompt_version: str | None = None,
+        *,
+        count: int = 3,
+        preview_only: bool = False,
+    ) -> str:
         """构建拓展 Prompt"""
         context = json.loads(context_json)
 
@@ -231,13 +285,16 @@ class ExpansionService:
 {', '.join(context['already_learned'][:20]) if context['already_learned'] else "暂无"}
 
 ## 任务
-请推荐 3-5 个与"{context['trigger_node']['name']}"相关的、用户可能感兴趣的知识点。
+请推荐 {count} 个与"{context['trigger_node']['name']}"相关的、用户可能感兴趣的知识点。
 
 要求：
 1. 不要推荐用户已学习的知识点
 2. 推荐的知识点应该是渐进式的，从简单到复杂
 3. 包含理论深化和实际应用两个方向
 4. 每个知识点需要说明与触发知识点的关系
+5. 节点名称必须可读，禁止乱码、占位词、null、N/A
+6. 每个候选节点必须足够具体，适合直接显示给用户选择
+7. 如果 preview_only 为真，请只输出候选项，不要解释
 
 ## 输出格式 (JSON)
 ```json
@@ -438,15 +495,143 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         result = await self.db.execute(query)
         existing_relation = result.scalar_one_or_none()
 
-        if not existing_relation:
-            relation = NodeRelation(
-                source_node_id=source_id,
-                target_node_id=target_id,
-                relation_type=item.get('relation_to_trigger', 'related'),
-                strength=item.get('relation_strength', 0.7)
+        if existing_relation:
+            return existing_relation
+
+        relation = NodeRelation(
+            source_node_id=source_id,
+            target_node_id=target_id,
+            relation_type=item.get('relation_to_trigger', 'related'),
+            strength=item.get('relation_strength', 0.7),
+        )
+        self.db.add(relation)
+        await self.db.commit()
+        return relation
+
+    def _normalize_candidates(self, expanded_data: dict, *, count: int) -> list[dict]:
+        normalized: list[dict] = []
+        for index, raw_item in enumerate(expanded_data.get("expanded_nodes", [])[:count]):
+            if not isinstance(raw_item, dict):
+                continue
+            name = self._sanitize_text(raw_item.get("name"))
+            if not name:
+                continue
+            relation = self._normalize_relation_type(raw_item.get("relation_to_trigger"))
+            description = self._sanitize_text(raw_item.get("description")) or f"围绕{name}补充一个更完整的学习节点。"
+            keywords = [
+                keyword
+                for keyword in (
+                    self._sanitize_text(item) for item in (raw_item.get("keywords") or [])
+                )
+                if keyword
+            ][:6]
+            normalized.append(
+                {
+                    "candidate_id": self._sanitize_text(raw_item.get("candidate_id"))
+                    or f"{name}_{index + 1}",
+                    "name": name,
+                    "name_en": self._sanitize_text(raw_item.get("name_en")),
+                    "description": description[:120],
+                    "importance_level": max(1, min(5, int(raw_item.get("importance_level") or 3))),
+                    "relation_to_trigger": relation,
+                    "relation_strength": max(0.0, min(1.0, float(raw_item.get("relation_strength") or 0.7))),
+                    "keywords": keywords,
+                }
             )
-            self.db.add(relation)
-            await self.db.commit()
+        return normalized
+
+    def _sanitize_text(self, value: object) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if lowered in {"null", "none", "n/a", "unknown", "undefined"}:
+            return None
+        if "�" in text:
+            return None
+        if not re.search(r"[A-Za-z0-9\u4e00-\u9fff]", text):
+            return None
+        if len(text) > 40:
+            text = text[:40].rstrip()
+        return text
+
+    def _normalize_relation_type(self, raw: object) -> str:
+        relation = str(raw or "related").strip().lower()
+        mapping = {
+            "prerequisite": "prerequisite",
+            "related": "related",
+            "application": "application",
+            "evolution": "evolution",
+            "derived": "evolution",
+            "similar": "related",
+        }
+        return mapping.get(relation, "related")
+
+    def _fallback_candidates(self, context_json: str, *, count: int) -> list[dict]:
+        context = json.loads(context_json)
+        trigger = self._sanitize_text(context.get("trigger_node", {}).get("name")) or "当前主题"
+        neighbor_names = [
+            self._sanitize_text(item.get("name"))
+            for item in context.get("neighbor_nodes", [])
+            if isinstance(item, dict)
+        ]
+        neighbor_names = [item for item in neighbor_names if item]
+
+        templates = [
+            {
+                "candidate_id": f"{trigger}_foundation",
+                "name": neighbor_names[0] if neighbor_names else f"{trigger}基础框架",
+                "description": f"补齐 {trigger} 的核心基础脉络，避免后续学习只停留在表层概念。",
+                "importance_level": 3,
+                "relation_to_trigger": "prerequisite",
+                "relation_strength": 0.82,
+                "keywords": [trigger, "基础", "框架"],
+            },
+            {
+                "candidate_id": f"{trigger}_application",
+                "name": f"{trigger}应用场景",
+                "description": f"围绕 {trigger} 增加一个更贴近真实任务或问题解决的应用节点。",
+                "importance_level": 3,
+                "relation_to_trigger": "application",
+                "relation_strength": 0.75,
+                "keywords": [trigger, "应用", "实践"],
+            },
+            {
+                "candidate_id": f"{trigger}_advanced",
+                "name": f"{trigger}进阶专题",
+                "description": f"把 {trigger} 向更系统化、更深入的方向延展，形成下一步学习入口。",
+                "importance_level": 4,
+                "relation_to_trigger": "evolution",
+                "relation_strength": 0.7,
+                "keywords": [trigger, "进阶", "专题"],
+            },
+        ]
+        return templates[:count]
+
+    async def _request_expansion_json(
+        self,
+        prompt: str,
+        *,
+        model_name: str,
+        temperature: float,
+    ) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            return await llm_client.chat_completion(
+                messages=messages,
+                response_format={"type": "json_object"},
+                temperature=temperature,
+                model=model_name,
+            )
+        except Exception as exc:
+            logger.warning("Expansion LLM json mode failed, falling back to plain text parsing: {}", exc)
+            return await llm_client.chat_completion(
+                messages=messages,
+                temperature=temperature,
+                model=model_name,
+            )
 
     async def auto_link_nodes(self, node_id: UUID, limit: int = 50) -> int:
         """

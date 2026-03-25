@@ -80,54 +80,90 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
   Future<void> _unlink(String provider) async {
     final confirmed = await showSensoryDialog<bool>(
           context: context,
-          builder: (dialogContext) => Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: GraphiteModalSurface(
-              title: context.l10n.socialAccountsUnlinkTitle(
-                _providerLabel(provider),
-              ),
-              showHandle: false,
-              borderRadius: BorderRadius.circular(28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.socialAccountsUnlinkMessage,
-                    style:
-                        Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.45,
+          builder: (dialogContext) {
+            final media = MediaQuery.of(dialogContext);
+            final stackActions = media.size.width < 360;
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 460,
+                  maxHeight: media.size.height * 0.85,
+                ),
+                child: GraphiteModalSurface(
+                  title: context.l10n.socialAccountsUnlinkTitle(
+                    _providerLabel(provider),
+                  ),
+                  showHandle: false,
+                  borderRadius: BorderRadius.circular(28),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.socialAccountsUnlinkMessage,
+                          style: Theme.of(dialogContext)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.45,
+                              ),
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        if (stackActions) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: SparkleButton.outline(
+                              label: context.l10n.socialAccountsUnlinkConfirm,
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              expand: true,
                             ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SparkleButton.ghost(
+                              label: context.l10n.cancel,
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              expand: true,
+                            ),
+                          ),
+                        ] else
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SparkleButton.ghost(
+                                  label: context.l10n.cancel,
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(false),
+                                  expand: true,
+                                ),
+                              ),
+                              const SizedBox(width: DS.spacing12),
+                              Expanded(
+                                child: SparkleButton.outline(
+                                  label:
+                                      context.l10n.socialAccountsUnlinkConfirm,
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(true),
+                                  expand: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: DS.spacing16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SparkleButton.ghost(
-                          label: context.l10n.cancel,
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(false),
-                          expand: true,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: SparkleButton.outline(
-                          label: context.l10n.socialAccountsUnlinkConfirm,
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(true),
-                          expand: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ) ??
         false;
 

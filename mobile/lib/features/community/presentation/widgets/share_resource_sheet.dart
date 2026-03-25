@@ -63,6 +63,14 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
   String? _autoSelectedPartnerId;
   bool _isSharing = false;
 
+  String _shareErrorMessage(Object error) {
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
+      return '分享失败，请稍后再试';
+    }
+    return raw;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -419,7 +427,9 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
       if (!mounted) return;
       final messengerContext = widget.feedbackContext ?? context;
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       if (messengerContext.mounted) {
         AppFeedback.success(
           messengerContext,
@@ -428,7 +438,10 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
       }
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, context.l10n.shareResourceFailed(e));
+      AppFeedback.error(
+        widget.feedbackContext ?? context,
+        context.l10n.shareResourceFailed(_shareErrorMessage(e)),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSharing = false);

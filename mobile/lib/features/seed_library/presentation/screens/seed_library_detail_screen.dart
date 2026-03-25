@@ -32,6 +32,14 @@ class SeedLibraryDetailScreen extends ConsumerStatefulWidget {
 
 class _SeedLibraryDetailScreenState
     extends ConsumerState<SeedLibraryDetailScreen> {
+  String _friendlyActionError(Object error) {
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
+      return '系统暂时没能完成这次应用，请稍后再试';
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(seedLibraryDetailProvider(widget.libraryId));
@@ -274,17 +282,32 @@ class _SeedLibraryDetailScreenState
                               SparkleButton(
                                 onPressed: () async {
                                   try {
+                                    final wasEnabled =
+                                        state.subscription?.isEnabled ?? false;
                                     await ref
                                         .read(seedLibraryDetailProvider(widget.libraryId).notifier)
                                         .toggleApplied();
                                     if (!context.mounted) return;
+                                    final refreshedState = ref.read(
+                                      seedLibraryDetailProvider(widget.libraryId),
+                                    );
+                                    final isNowEnabled =
+                                        refreshedState.subscription?.isEnabled ??
+                                            false;
                                     AppFeedback.success(
                                       context,
-                                      (state.subscription?.isEnabled ?? false) ? '已暂停使用该种子库' : '已应用到系统',
+                                      isNowEnabled && !wasEnabled
+                                          ? '已应用到系统'
+                                          : !isNowEnabled && wasEnabled
+                                              ? '已暂停使用该种子库'
+                                              : '种子库状态已更新',
                                     );
                                   } catch (e) {
                                     if (!context.mounted) return;
-                                    AppFeedback.error(context, '应用失败：$e');
+                                    AppFeedback.error(
+                                      context,
+                                      '应用失败：${_friendlyActionError(e)}',
+                                    );
                                   }
                                 },
                                 label: (state.subscription?.isEnabled ?? false) ? '暂停使用' : '应用种子库',

@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations, prefer_expression_function_bodies, unnecessary_breaks, unnecessary_lambdas, prefer_null_aware_operators
+
 import 'dart:async';
 
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -11,42 +13,42 @@ class MockCommunityRepository implements CommunityRepository {
   MockCommunityRepository._init() {
     // Create current user matching DemoDataService
     final me = _createUser(
-      'AI_Learner_02',
+      'Mika',
       15,
       UserStatus.online,
       id: currentUserId,
       avatarSeed: 'AI_Learner_02',
     );
     final alice = _createUser(
-      'Alice',
+      'Lena',
       8,
       UserStatus.online,
       id: 'user_alice',
       avatarSeed: 'alice_seed',
     );
     final bob = _createUser(
-      'Bob',
+      'Mori',
       5,
       UserStatus.offline,
       id: 'user_bob',
       avatarSeed: 'bob_seed',
     );
     final charlie = _createUser(
-      'Charlie',
+      'Nora',
       12,
       UserStatus.online,
       id: 'user_charlie',
       avatarSeed: 'charlie_seed',
     );
     final diana = _createUser(
-      'Diana',
+      'Owen',
       9,
       UserStatus.online,
       id: 'user_diana',
       avatarSeed: 'diana_seed',
     );
     final eva = _createUser(
-      'Eva',
+      'Rina',
       6,
       UserStatus.offline,
       id: 'user_eva',
@@ -72,7 +74,7 @@ class MockCommunityRepository implements CommunityRepository {
           myStreakDays: 7,
           partnerStreakDays: 5,
           lastCheckinAt: DateTime.now().subtract(const Duration(hours: 2)),
-          goalPreview: '每天完成 45 分钟深度学习并同步进展',
+          goalPreview: '每天同步一个主任务和一个轻复盘动作',
         ),
       ),
       FriendshipInfo(
@@ -90,7 +92,7 @@ class MockCommunityRepository implements CommunityRepository {
           partnerCheckedInToday: false,
           myStreakDays: 0,
           partnerStreakDays: 0,
-          goalPreview: '一起复盘算法错题',
+          goalPreview: '一起把周末节律和复盘稳定下来',
         ),
       ),
       FriendshipInfo(
@@ -114,10 +116,10 @@ class MockCommunityRepository implements CommunityRepository {
     // Restore Groups
     final sprintGroup = GroupInfo(
       id: 'group_sprint_001',
-      name: 'CET-6 30天冲刺',
-      description: '30天打卡冲刺英语六级，适合想找节奏感和同伴监督的同学。',
+      name: '晚间语言复盘屋',
+      description: '下班下课后一起做精读、跟说和短复盘，适合想慢慢找回表达节奏的人。',
       type: GroupType.sprint,
-      focusTags: ['English'],
+      focusTags: ['Language', 'English', 'Speaking'],
       memberCount: 45,
       totalFlamePower: 12500,
       todayCheckinCount: 32,
@@ -132,10 +134,10 @@ class MockCommunityRepository implements CommunityRepository {
 
     final studyGroup = GroupInfo(
       id: 'group_study_001',
-      name: '数据结构互助组',
-      description: '每周刷题、答疑和知识点串讲，适合期中期末前一起抱团推进。',
+      name: '理工理解力自习组',
+      description: '一起复盘课堂概念、错题和公式，不求卷时长，先把理解说清楚。',
       type: GroupType.squad,
-      focusTags: ['CS', 'Data Structure'],
+      focusTags: ['Academic', 'Math', 'Science'],
       memberCount: 28,
       totalFlamePower: 5600,
       todayCheckinCount: 15,
@@ -149,10 +151,10 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final aiGroup = GroupInfo(
       id: 'group_ai_001',
-      name: 'AI 论文共读社',
-      description: '每周一篇经典论文，从模型结构到实验设计一起拆解。',
+      name: '作品集慢慢长出来',
+      description: '给跨领域学习者一个稳定更新作品集、表达方向和互相看初稿的空间。',
       type: GroupType.squad,
-      focusTags: ['AI', 'Paper', 'ML'],
+      focusTags: ['Career', 'Portfolio', 'Creative'],
       memberCount: 33,
       totalFlamePower: 7800,
       todayCheckinCount: 11,
@@ -165,10 +167,10 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final mathGroup = GroupInfo(
       id: 'group_math_001',
-      name: '高数夜航船',
-      description: '晚间固定自习和题目互助，适合一起稳步补基础。',
+      name: '周末恢复实验室',
+      description: '一起讨论睡眠、运动和如何避免周末散掉，帮自己把节律重新接上。',
       type: GroupType.sprint,
-      focusTags: ['Math', 'Calculus', 'Exam'],
+      focusTags: ['Wellness', 'Recovery', 'Habit'],
       memberCount: 19,
       totalFlamePower: 2600,
       todayCheckinCount: 8,
@@ -179,7 +181,7 @@ class MockCommunityRepository implements CommunityRepository {
       createdAt: DateTime.now().subtract(const Duration(days: 6)),
       updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
       deadline: DateTime.now().add(const Duration(days: 24)),
-      sprintGoal: '一起完成高数期中复习',
+      sprintGoal: '一起完成周末节律重置',
     );
     _mockGroups = [sprintGroup, studyGroup, aiGroup, mathGroup];
 
@@ -190,7 +192,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '冲冲冲！',
+          content: '今晚先从 10 分钟轻输出开始，谁也不用一上来就满电。',
           createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, charlie.id, diana.id, bob.id, eva.id],
@@ -204,14 +206,14 @@ class MockCommunityRepository implements CommunityRepository {
           updatedAt: DateTime.now(),
           contentData: {
             'resource_type': 'plan',
-            'resource_title': 'CET-6 冲刺计划',
-            'resource_summary': '每日阅读+听力+背词节奏',
+            'resource_title': '晚间语言复盘计划',
+            'resource_summary': '精读 + 跟说 + 5 分钟短复盘',
             'resource_meta': {
               'progress': 0.42,
               'target_date': DateTime.now()
                   .add(const Duration(days: 20))
                   .toIso8601String(),
-              'subject': 'English',
+              'subject': 'Language',
             },
             'comment': '需要的话一起进度对齐',
           },
@@ -221,7 +223,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: charlie,
-          content: '今天做完了阅读理解，感觉题目变简单了',
+          content: '今天终于开口录完一版英文自我介绍，虽然还磕巴，但没有逃掉。',
           createdAt: DateTime.now().subtract(const Duration(minutes: 25)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, diana.id, bob.id],
@@ -230,7 +232,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: me,
-          content: '我也感觉进步了，大家一起加油！',
+          content: '我今晚也先从低门槛版本开始，感觉这样更能坚持。',
           createdAt: DateTime.now().subtract(const Duration(minutes: 20)),
           updatedAt: DateTime.now(),
           readBy: [
@@ -247,7 +249,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.checkin,
           sender: diana,
-          content: '完成今日单词打卡',
+          content: '完成今日语言打卡',
           createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
           updatedAt: DateTime.now(),
           contentData: {'flame_power': 120, 'today_duration': 60, 'streak': 7},
@@ -257,7 +259,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '厉害！连续7天了',
+          content: '厉害，连续把节奏接住最不容易。',
           createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
           updatedAt: DateTime.now(),
           readBy: [diana.id],
@@ -268,7 +270,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: charlie,
-          content: '有人能解释一下红黑树的平衡操作吗？',
+          content: '有人愿意一起对一题统计学错题吗？我老是把“样本量不够”和“样本偏差”混在一起。',
           createdAt: DateTime.now().subtract(const Duration(hours: 2)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, me.id],
@@ -283,10 +285,10 @@ class MockCommunityRepository implements CommunityRepository {
           updatedAt: DateTime.now(),
           contentData: {
             'resource_type': 'curiosity_capsule',
-            'resource_title': '图灵测试为什么仍然有趣',
-            'resource_summary': '从哲学到工程，图灵测试仍是理解智能边界的一扇窗...',
-            'resource_meta': {'related_subject': 'AI'},
-            'comment': '这段可以当作读书会材料',
+            'resource_title': '为什么“回忆”比反复重读更能记住内容',
+            'resource_summary': '主动检索比重复看起来更费力，但正因为费力才更能留下记忆...',
+            'resource_meta': {'related_subject': '学习策略'},
+            'comment': '我觉得这条很适合理工错题回看时用',
           },
           readBy: [charlie.id],
         ),
@@ -294,7 +296,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: me,
-          content: '红黑树的平衡主要通过旋转和变色来维护，左旋和右旋是基本操作',
+          content: '我最近的做法是先问“这个结论为什么不能代表总体”，这样就不容易只盯着数量了。',
           createdAt:
               DateTime.now().subtract(const Duration(hours: 1, minutes: 50)),
           updatedAt: DateTime.now(),
@@ -304,7 +306,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '我找到一个不错的视频教程，分享给大家',
+          content: '我刚好有一张“抽样偏差 vs 样本量”的对照图，整理完发群里。',
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
           updatedAt: DateTime.now(),
           readBy: [charlie.id, me.id, diana.id],
@@ -324,7 +326,7 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 8)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
           updatedAt: DateTime.now(),
-          content: '今天也要加油学习呀！',
+          content: '今晚只求先开口，不求一上来就完整。',
         ),
         PrivateMessageInfo(
           id: 'pm_alice_2',
@@ -335,7 +337,7 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 5)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 8)),
           updatedAt: DateTime.now(),
-          content: '好的，我正在复习数据结构',
+          content: '收到，我先做 10 分钟跟说，再看看要不要补一小段复盘。',
         ),
         PrivateMessageInfo(
           id: 'pm_alice_3',
@@ -346,7 +348,7 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 3)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
           updatedAt: DateTime.now(),
-          content: '需要帮忙可以找我哦',
+          content: '需要的话我可以帮你听第一版录音，不用等你准备得很完美。',
         ),
       ],
       charlie.id: [
@@ -358,7 +360,7 @@ class MockCommunityRepository implements CommunityRepository {
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
           updatedAt: DateTime.now(),
-          content: '明天一起去图书馆吗？',
+          content: '明天下午一起去图书馆吗？我想把作品集首页的第一屏重写一下。',
         ),
         PrivateMessageInfo(
           id: 'pm_charlie_2',
@@ -388,7 +390,7 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(days: 1)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
           updatedAt: DateTime.now(),
-          content: '上次的笔记整理好了',
+          content: '上次你提到的作品集结构，我帮你顺手整理成了一个提纲。',
         ),
         PrivateMessageInfo(
           id: 'pm_diana_2',

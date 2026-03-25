@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/galaxy/data/models/node_expansion_models.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -171,7 +172,120 @@ class GalaxyRepository {
     }
   }
 
+  Future<NodeExpansionCandidatesResponse> generateExpansionCandidates(
+    String nodeId, {
+    int count = 3,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return const NodeExpansionCandidatesResponse(
+        triggerNodeId: '',
+        promptVersion: 'demo',
+        candidates: <NodeExpansionCandidate>[
+          NodeExpansionCandidate(
+            candidateId: 'demo-1',
+            name: '相关基础概念',
+            description: '补充当前节点的基础前置知识，帮助建立更稳的理解框架。',
+            importanceLevel: 3,
+            relationToTrigger: 'prerequisite',
+            relationStrength: 0.78,
+          ),
+          NodeExpansionCandidate(
+            candidateId: 'demo-2',
+            name: '常见应用场景',
+            description: '围绕当前节点生成一个贴近日常使用的应用知识点。',
+            importanceLevel: 3,
+            relationToTrigger: 'application',
+            relationStrength: 0.72,
+          ),
+          NodeExpansionCandidate(
+            candidateId: 'demo-3',
+            name: '进阶延伸主题',
+            description: '从当前节点继续向上延展一个更值得深入学习的方向。',
+            importanceLevel: 4,
+            relationToTrigger: 'evolution',
+            relationStrength: 0.7,
+          ),
+        ],
+      );
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.galaxyNodeExpansionCandidates(nodeId),
+        data: {'count': count},
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Expansion candidates payload is missing');
+      }
+      return NodeExpansionCandidatesResponse.fromJson(payload);
+    } on DioException catch (e) {
+      throw Exception(
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to generate node expansion candidates',
+        ),
+      );
+    } catch (_) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
+  Future<List<NodeExpansionCandidate>> applyExpansionCandidates(
+    String nodeId, {
+    required String promptVersion,
+    required List<NodeExpansionCandidate> candidates,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return candidates;
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.galaxyNodeExpansionApply(nodeId),
+        data: {
+          'prompt_version': promptVersion,
+          'candidates': candidates
+              .map((candidate) => candidate.toJson())
+              .toList(growable: false),
+        },
+      );
+      final payload = response.data;
+      if (payload == null) {
+        return candidates;
+      }
+      final created = (payload['created_nodes'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => NodeExpansionCandidate(
+              candidateId: item['id']?.toString() ?? '',
+              name: item['name']?.toString() ?? '',
+              nameEn: item['name_en']?.toString(),
+              description: item['description']?.toString() ?? '',
+              importanceLevel: (item['importance_level'] as num?)?.toInt() ?? 3,
+              relationToTrigger: 'related',
+              relationStrength: 0.7,
+              keywords: ((item['tags'] as List<dynamic>?) ?? const <dynamic>[])
+                  .map((tag) => tag.toString())
+                  .toList(growable: false),
+            ),
+          )
+          .toList(growable: false);
+      return created.isEmpty ? candidates : created;
+    } on DioException catch (e) {
+      throw Exception(
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to apply node expansion candidates',
+        ),
+      );
+    } catch (_) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
   String _extractDetail(DioException exception, {required String defaultMessage}) {
+    if (exception.response?.statusCode == 404) {
+      return '当前节点不存在或已被清理，请返回星图后重试';
+    }
     final data = exception.response?.data;
     if (data is Map<String, dynamic>) {
       final detail = data['detail'];

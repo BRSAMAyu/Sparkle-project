@@ -109,29 +109,72 @@ class SparkleMarkdown extends StatelessWidget {
     }
 
     final prepared = _prepareContent(content, isStreaming: isStreaming);
+
+    // Split content into segments at fenced code block boundaries.
+    // This prevents flutter_markdown's `_inlines.isEmpty` assertion
+    // (builder.dart:207) which fires when fenced code blocks are
+    // processed through the inline builder pipeline.
+    final segments = _splitAtCodeFences(prepared);
+
+    Widget body;
+    if (segments.length == 1 && segments.first.isText) {
+      // Fast path: no fenced code blocks — render as single MarkdownBody.
+      body = _buildMarkdownBody(segments.first.content);
+    } else {
+      // Segment-based rendering: each text segment gets its own
+      // MarkdownBody, each code segment gets a direct _CodeBlockCard.
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final seg in segments)
+            if (seg.isText && seg.content.trim().isNotEmpty)
+              _buildMarkdownBody(seg.content)
+            else if (!seg.isText)
+              _CodeBlockCard(
+                content: seg.content,
+                language: seg.language,
+                textColor: textColor,
+                codeBackgroundColor: codeBackgroundColor,
+                accentColor: linkColor,
+              ),
+        ],
+      );
+    }
+
+    if (selectable) {
+      return SelectionArea(child: body);
+    }
+
+    return body;
+  }
+
+  Widget _buildMarkdownBody(String data) {
     final resolvedLineHeight =
         lineHeight ?? _defaultLineHeightForRole(contentRole);
-
-    // Build the MarkdownBody — always attempt markdown rendering.
-    // The normalization + completion pipeline ensures even plain text
-    // renders correctly through the markdown renderer.
-    final body = MarkdownBody(
-      data: prepared,
+    return MarkdownBody(
+      data: data,
       extensionSet: md.ExtensionSet.gitHubFlavored,
       listItemCrossAxisAlignment: MarkdownListItemCrossAxisAlignment.start,
       bulletBuilder: (index, style) {
-        final bullet =
-            style == BulletStyle.orderedList ? '${index + 1}.' : '•';
+        if (style == BulletStyle.orderedList) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8, top: 1),
+            child: Text(
+              '${index + 1}.',
+              style: TextStyle(
+                color: textColor,
+                fontSize: fontSize,
+                height: resolvedLineHeight,
+                fontFamilyFallback: sparkleFontFallback,
+              ),
+            ),
+          );
+        }
         return Padding(
           padding: const EdgeInsets.only(right: 8, top: 1),
-          child: Text(
-            bullet,
-            style: TextStyle(
-              color: textColor,
-              fontSize: fontSize,
-              height: resolvedLineHeight,
-              fontFamilyFallback: sparkleFontFallback,
-            ),
+          child: _SafeBulletDot(
+            color: textColor,
+            size: fontSize * 0.35,
           ),
         );
       },
@@ -151,12 +194,6 @@ class SparkleMarkdown extends StatelessWidget {
       },
       styleSheet: _buildStyleSheet(),
     );
-
-    if (selectable) {
-      return SelectionArea(child: body);
-    }
-
-    return body;
   }
 
   MarkdownStyleSheet _buildStyleSheet() {
@@ -217,7 +254,8 @@ class SparkleMarkdown extends StatelessWidget {
     );
   }
 
-  Future<void> _defaultLinkHandler(String text, String? href, String title) async {
+  Future<void> _defaultLinkHandler(
+      String text, String? href, String title) async {
     if (href == null) return;
     final uri = Uri.tryParse(href);
     if (uri == null) return;
@@ -351,7 +389,7 @@ class _CodeBlockCardState extends State<_CodeBlockCard> {
                         child: FadeTransition(opacity: animation, child: child),
                       ),
                       child: Icon(
-                        _copied ? Icons.check_rounded : Icons.copy_all_rounded,
+                        _copied ? Icons.check_rounded : Icons.copy_rounded,
                         key: ValueKey<bool>(_copied),
                         size: 18,
                       ),
@@ -442,6 +480,102 @@ class _MarkdownNetworkImage extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Segment-based rendering: split at fenced code blocks
+// ---------------------------------------------------------------------------
+
+class _ContentSegment {
+  const _ContentSegment.text(this.content)
+      : isText = true,
+        language = null;
+  const _ContentSegment.code(this.content, this.language) : isText = false;
+
+  final String content;
+  final bool isText;
+  final String? language;
+}
+
+/// Split markdown content at fenced code block boundaries (``` delimiters).
+///
+/// Returns a list of segments alternating between text and code blocks.
+/// This lets us render each segment independently, avoiding
+/// flutter_markdown's `_inlines.isEmpty` assertion.
+List<_ContentSegment> _splitAtCodeFences(String input) {
+  final segments = <_ContentSegment>[];
+  final fencePattern = RegExp(r'^(`{3,})([\w]*)\s*$', multiLine: true);
+  final matches = fencePattern.allMatches(input).toList();
+
+  if (matches.isEmpty) {
+    return [_ContentSegment.text(input)];
+  }
+
+  var pos = 0;
+  var i = 0;
+
+  while (i < matches.length) {
+    final openMatch = matches[i];
+    final backticks = openMatch.group(1)!;
+    final language = openMatch.group(2);
+
+    // Add text before this fence
+    if (openMatch.start > pos) {
+      segments.add(_ContentSegment.text(input.substring(pos, openMatch.start)));
+    }
+
+    // Find matching closing fence (same or more backticks)
+    int? closeEnd;
+    String codeContent;
+    final codeStart = openMatch.end;
+
+    for (var j = i + 1; j < matches.length; j++) {
+      final closeMatch = matches[j];
+      if (closeMatch.group(1)!.length >= backticks.length) {
+        codeContent = input.substring(codeStart, closeMatch.start);
+        // Trim leading/trailing newline from code content
+        if (codeContent.startsWith('\n')) {
+          codeContent = codeContent.substring(1);
+        }
+        if (codeContent.endsWith('\n')) {
+          codeContent = codeContent.substring(0, codeContent.length - 1);
+        }
+        segments.add(_ContentSegment.code(
+          codeContent,
+          language?.isNotEmpty == true ? language : null,
+        ));
+        closeEnd = closeMatch.end;
+        i = j + 1;
+        break;
+      }
+    }
+
+    if (closeEnd != null) {
+      pos = closeEnd;
+    } else {
+      // Unclosed fence — treat rest as code
+      codeContent = input.substring(codeStart);
+      if (codeContent.startsWith('\n')) {
+        codeContent = codeContent.substring(1);
+      }
+      segments.add(_ContentSegment.code(
+        codeContent,
+        language?.isNotEmpty == true ? language : null,
+      ));
+      pos = input.length;
+      break;
+    }
+  }
+
+  // Add trailing text after last fence
+  if (pos < input.length) {
+    final trailing = input.substring(pos);
+    if (trailing.trim().isNotEmpty) {
+      segments.add(_ContentSegment.text(trailing));
+    }
+  }
+
+  return segments.isEmpty ? [_ContentSegment.text(input)] : segments;
+}
+
+// ---------------------------------------------------------------------------
 // Content preparation pipeline
 // ---------------------------------------------------------------------------
 
@@ -464,9 +598,56 @@ String _prepareContent(String raw, {required bool isStreaming}) {
 /// - Chinese punctuation numbered lists (`1、` → `1.`)
 String _normalize(String raw) {
   var s = raw.replaceAll('\r\n', '\n');
-  // Remove zero-width chars and replacement character
-  s = s.replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '');
-  s = s.replaceAll('\uFFFD', '');
+  // Remove invisible / non-renderable Unicode characters that cause ❓ glyphs.
+  // Strategy: strip everything that isn't visible content, keeping only:
+  //   - U+200D (ZWJ) — compound emoji (👨‍💻, 👩‍🎓, flags)
+  //   - U+FE0F (Variation Selector-16) — color emoji presentation
+  //   - Normal whitespace (\n, \t, space, ideographic space U+3000)
+  final buf = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    final c = s.codeUnitAt(i);
+    // Fast path: printable ASCII
+    if (c >= 0x20 && c <= 0x7E) {
+      buf.writeCharCode(c);
+      continue;
+    }
+    // Whitespace: LF, CR, TAB
+    if (c == 0x0A || c == 0x0D || c == 0x09) {
+      buf.writeCharCode(c);
+      continue;
+    }
+    // ZWJ (compound emoji joiner) — always keep
+    if (c == 0x200D) {
+      buf.writeCharCode(c);
+      continue;
+    }
+    // Variation Selector-16 (color emoji) — always keep
+    if (c == 0xFE0F) {
+      buf.writeCharCode(c);
+      continue;
+    }
+    // CJK / general multilingual — keep everything above 0x00A0
+    // except known-invisible ranges
+    if (c >= 0x00A0) {
+      // Skip invisible formatting characters
+      if (c == 0x00AD) continue; // Soft hyphen
+      if (c >= 0x200B && c <= 0x200C) continue; // ZWSP, ZWNJ
+      if (c >= 0x200E && c <= 0x200F) continue; // Directional marks
+      if (c >= 0x2028 && c <= 0x2029) continue; // Line/paragraph separator
+      if (c >= 0x2060 && c <= 0x2064) continue; // Invisible operators
+      if (c == 0x2066 || c == 0x2067 || c == 0x2068 || c == 0x2069)
+        continue; // Bidi isolates
+      if (c == 0xFEFF) continue; // BOM
+      if (c == 0xFFFD) continue; // Replacement character
+      if (c >= 0xFFF0 && c <= 0xFFFC) continue; // Specials
+      if (c == 0xFE0E)
+        continue; // Variation Selector-15 (text presentation — causes ❓)
+      buf.writeCharCode(c);
+      continue;
+    }
+    // Control characters below 0x20 (except whitespace above) — skip
+  }
+  s = buf.toString();
 
   // Process line by line for bullet normalization
   final lines = s.split('\n');
@@ -510,37 +691,78 @@ String _normalize(String raw) {
 }
 
 /// Normalize a single line — convert Unicode bullets to standard `-`.
+///
+/// Only converts characters that are unambiguously used as list bullets
+/// (i.e. the character is followed by whitespace then content). Never
+/// strips question marks, emoji, or punctuation that could be legitimate.
 String _normalizeLine(String raw) {
   final trimmedLeft = raw.trimLeft();
   final leading = raw.substring(0, raw.length - trimmedLeft.length);
   if (trimmedLeft.isEmpty) return raw;
 
-  // Unicode bullet characters that AI models sometimes emit
+  // Unicode bullet characters that AI models sometimes emit.
+  // Only match when followed by a space — otherwise the character is
+  // likely part of normal content (e.g. "—— 引用" vs "— 列表项").
   const unicodeBullets = <String>{
-    '•', '●', '▪', '◦', '‣', '·', '◉', '○', '◆', '◇',
-    '▶', '▸', '－', '—', '–',
+    '•',
+    '●',
+    '▪',
+    '◦',
+    '‣',
+    '◉',
+    '○',
+    '◆',
+    '◇',
+    '▶',
+    '▸',
+    '❓',
+    '❔',
   };
 
   for (final bullet in unicodeBullets) {
     if (trimmedLeft.startsWith(bullet)) {
-      final rest = trimmedLeft.substring(bullet.length).trimLeft();
-      return '$leading- $rest';
+      final after = trimmedLeft.substring(bullet.length);
+      // Only convert if followed by whitespace (it's being used as a bullet)
+      if (after.isEmpty || after.startsWith(RegExp(r'[\s\u3000]'))) {
+        final rest = after.trimLeft();
+        if (rest.isNotEmpty) {
+          return '$leading- $rest';
+        }
+      }
     }
   }
 
-  // Lines starting with ? or replacement chars followed by content → `-`
-  final suspiciousMatch = RegExp(
-    r'^[?？�]+[\s\u3000]*',
+  // Ambiguous placeholder bullets that occasionally survive copy / streaming
+  // as question marks. Only normalize when they look exactly like a list item,
+  // e.g. `? **标题**` or `？ 普通条目`, to avoid rewriting legitimate questions.
+  final ambiguousBulletMatch = RegExp(
+    r'^[?？]\s+(?=(\*\*|__|[A-Za-z0-9\u4E00-\u9FFF]))',
   ).firstMatch(trimmedLeft);
-  if (suspiciousMatch != null) {
-    final rest = trimmedLeft.substring(suspiciousMatch.end).trimLeft();
+  if (ambiguousBulletMatch != null) {
+    final rest = trimmedLeft.substring(ambiguousBulletMatch.end).trimLeft();
     if (rest.isNotEmpty) {
       return '$leading- $rest';
     }
   }
 
-  // Parenthesized numbers: (1) or （1） → 1.
-  final numberedMatch = RegExp(r'^[(（]?(\d+)[)）][\s\u3000]*').firstMatch(
+  // Full-width hyphen used as bullet: `－ text` → `- text`
+  if (trimmedLeft.startsWith('－') &&
+      trimmedLeft.length > 1 &&
+      trimmedLeft[1] == ' ') {
+    return '$leading- ${trimmedLeft.substring(2)}';
+  }
+
+  const dashBullets = <String>{'—', '–', '―'};
+  for (final dash in dashBullets) {
+    if (trimmedLeft.startsWith(dash) &&
+        trimmedLeft.length > 1 &&
+        RegExp(r'[\s\u3000]').hasMatch(trimmedLeft[1])) {
+      return '$leading- ${trimmedLeft.substring(2).trimLeft()}';
+    }
+  }
+
+  // Parenthesized numbers: (1) or （1） → 1.  — only with closing paren
+  final numberedMatch = RegExp(r'^[(（](\d+)[)）][\s\u3000]+').firstMatch(
     trimmedLeft,
   );
   if (numberedMatch != null) {
@@ -612,4 +834,57 @@ String _completePartialMarkdown(String content) {
   }
 
   return result;
+}
+
+/// Public API: Normalize AI-generated rich text to standard form.
+///
+/// This function should be called for any AI-generated text before display,
+/// even when not using SparkleMarkdown directly. It handles:
+/// - CRLF → LF normalization
+/// - Zero-width / replacement character removal
+/// - Unicode bullet normalization to standard `-`
+/// - Missing spaces after markdown markers
+/// - Chinese punctuation numbered lists
+///
+/// Usage:
+/// ```dart
+/// final normalizedText = normalizeRichText(aiGeneratedText);
+/// Text(normalizedText);  // Safe to display
+/// ```
+String normalizeRichText(String raw) => _normalize(raw);
+
+/// Prepare AI-generated rich text with the full shared pipeline.
+///
+/// Unlike [normalizeRichText], this also optionally closes partial markdown
+/// when content is still streaming.
+String prepareAiRichText(String raw, {bool isStreaming = false}) =>
+    _prepareContent(raw, isStreaming: isStreaming);
+
+/// A safe bullet dot widget that renders correctly across all fonts and devices.
+///
+/// Instead of relying on Unicode bullet characters (•) which may render as
+/// question marks on some font stacks, we use a Container with rounded corners
+/// to draw a solid dot. This guarantees consistent appearance everywhere.
+class _SafeBulletDot extends StatelessWidget {
+  const _SafeBulletDot({
+    required this.color,
+    required this.size,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        margin: EdgeInsets.only(
+          top: size * 1.2, // Vertically center with text
+          left: size * 0.3,
+        ),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
+      );
 }

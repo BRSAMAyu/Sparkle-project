@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 预测性服务 - 提供API集成和降级策略
 class PredictiveService {
@@ -82,86 +83,127 @@ class PredictiveService {
   }
 
   /// 模拟学习预测数据
-  Map<String, dynamic> _getMockLearningForecast() => {
-        'predictedMastery': 0.75,
-        'confidenceInterval': [0.65, 0.85],
-        'nextBestActions': [
-          {
-            'type': 'review',
-            'priority': 'high',
-            'description': '复习昨天的学习内容',
-            'estimatedTime': 30,
-          },
-          {
-            'type': 'practice',
-            'priority': 'medium',
-            'description': '完成练习题',
-            'estimatedTime': 45,
-          },
-        ],
-        'riskFactors': [
-          {
-            'factor': '注意力分散',
-            'severity': 'medium',
-            'suggestion': '尝试专注模式',
-          },
-        ],
-        'timestamp': DateTime.now().toIso8601String(),
-        'isMockData': true, // 标记为模拟数据
-      };
+  Map<String, dynamic> _getMockLearningForecast() {
+    final demoTasks = _demoDataService.demoTasks;
+    final afternoonTask = demoTasks.firstWhere(
+      (task) => task.status == TaskStatus.inProgress,
+      orElse: () => demoTasks.first,
+    );
+    return {
+      'predictedMastery': 0.78,
+      'confidenceInterval': [0.68, 0.87],
+      'nextBestActions': [
+        {
+          'type': 'review',
+          'priority': 'high',
+          'description': '先复习《理工课复盘 - 用自己的话讲清楚积分换元》，再口头复述一遍关键步骤',
+          'estimatedTime': 25,
+        },
+        {
+          'type': 'practice',
+          'priority': 'medium',
+          'description': '晚上安排一轮《语言输出 - 口语话题卡 2 轮跟说》，把开口门槛降下来',
+          'estimatedTime': 35,
+        },
+        {
+          'type': 'reflect',
+          'priority': 'low',
+          'description': '在晚间复盘里记录今天学习节奏和分心点',
+          'estimatedTime': 15,
+        },
+      ],
+      'riskFactors': [
+        {
+          'factor': '周末动力下降',
+          'severity': 'medium',
+          'suggestion': '把周末早晨安排成低门槛复习时段',
+        },
+        {
+          'factor': '连续高强度学习',
+          'severity': 'low',
+          'suggestion': '每 90 分钟安排一次 10 分钟离屏休息',
+        },
+      ],
+      'timestamp': DateTime.now().toIso8601String(),
+      'isMockData': true,
+      'focusWindow': {
+        'bestTime': '15:00-17:00',
+        'reason': '历史上深度学习会话在下午最稳定',
+      },
+      'activeTask': {
+        'id': afternoonTask.id,
+        'title': afternoonTask.title,
+        'estimatedMinutes': afternoonTask.estimatedMinutes,
+      },
+    };
+  }
 
   /// 模拟仪表板数据
-  Map<String, dynamic> _getMockDashboardData() => {
-        'dailyStats': {
-          'tasksCompleted': 8,
-          'focusTime': 120, // 分钟
-          'learningProgress': 0.65,
-        },
-        'weeklyTrend': [0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75],
-        'upcomingDeadlines': [
-          {
-            'title': '数学期末考试',
-            'dueDate': '2025-01-15',
-            'priority': 'high',
-          },
-          {
-            'title': '项目报告',
-            'dueDate': '2025-01-20',
-            'priority': 'medium',
-          },
-        ],
-        'recommendations': [
-          '今天适合复习数学',
-          '建议安排45分钟专注学习',
-          '检测到注意力下降趋势',
-        ],
-        'isMockData': true,
-      };
+  Map<String, dynamic> _getMockDashboardData() {
+    final dashboard = _demoDataService.demoDashboard;
+    final tasks = _demoDataService.demoTasks;
+    final focusSessions = _demoDataService.demoFocusSessions;
+    final flame = dashboard['flame'] as Map<String, dynamic>;
+    final growth = dashboard['growth'] as Map<String, dynamic>;
+    return {
+      'dailyStats': {
+        'tasksCompleted': flame['tasks_completed'],
+        'focusTime': flame['today_focus_minutes'],
+        'learningProgress': growth['progress'],
+      },
+      'weeklyTrend': [0.46, 0.49, 0.53, 0.6, 0.66, 0.71, 0.74],
+      'upcomingDeadlines': tasks
+          .where((task) => task.dueDate != null && task.status != TaskStatus.completed)
+          .take(3)
+          .map(
+            (task) => {
+              'title': task.title,
+              'dueDate': task.dueDate!.toIso8601String().split('T').first,
+              'priority': task.priority >= 3 ? 'high' : 'medium',
+            },
+          )
+          .toList(),
+      'recentFocusSessions': focusSessions.take(3).toList(),
+      'recommendations': [
+        '今天下午最适合推进高认知任务，比如理工复盘或作品集重写',
+        '先用 25 分钟清掉一个小任务，再进入深度工作',
+        '晚上更适合语言复盘、阅读整理和轻量恢复动作',
+      ],
+      'isMockData': true,
+    };
+  }
 
   /// 模拟用户洞察数据
-  Map<String, dynamic> _getMockUserInsights() => {
-        'learningPatterns': {
-          'bestTime': 'morning',
-          'preferredSubject': 'mathematics',
-          'averageSessionLength': 45,
-        },
-        'strengths': [
-          '逻辑推理能力强',
-          '记忆力优秀',
-          '专注力持久',
-        ],
-        'areasForImprovement': [
-          '需要提高写作速度',
-          '可以尝试更多实践练习',
-          '建议增加休息频率',
-        ],
-        'personalizedTips': [
-          '根据你的学习模式，建议早上学习数学',
-          '检测到下午注意力下降，建议安排轻松任务',
-          '你的最佳学习时长是45分钟，建议设置番茄钟',
-        ],
-        'isMockData': true,
-      };
+  Map<String, dynamic> _getMockUserInsights() {
+    final behaviorPatterns = _demoDataService.demoBehaviorPatterns;
+    final capsules = _demoDataService.demoCuriosityCapsules;
+    return {
+      'learningPatterns': {
+        'bestTime': 'afternoon',
+        'preferredSubject': 'multi_domain_growth',
+        'averageSessionLength': 58,
+        'weekendDrop': 0.35,
+      },
+      'strengths': [
+        '会把不同领域的学习痕迹都留下来',
+        '遇到卡点时愿意回到前置知识和更小的下一步',
+        '对长期成长型任务有持续投入能力',
+      ],
+      'areasForImprovement': [
+        '周末容易进入低动能状态',
+        '有时会把复盘拖到太晚',
+        '需要减少任务之间的切换成本',
+      ],
+      'personalizedTips': [
+        '把下午 3 点后的时间留给理工课程、作品集重写和需要判断力的任务',
+        '当你开始分心时，先完成一个 15 分钟的低门槛任务',
+        '把每周复盘和错题回看固定到周日晚间，形成跨领域闭环',
+      ],
+      'behaviorPatterns': behaviorPatterns.map((item) => item.toJson()).toList(),
+      'curiosityCapsules': capsules.take(3).map((item) => item.toJson()).toList(),
+      'isMockData': true,
+    };
+  }
 
   /// 检查API可用性
   Future<bool> checkApiAvailability() async {

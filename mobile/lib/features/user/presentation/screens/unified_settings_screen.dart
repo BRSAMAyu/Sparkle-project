@@ -35,6 +35,10 @@ class UnifiedSettingsScreen extends ConsumerStatefulWidget {
 class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _isGenerating = false;
   bool _weeklyAgendaExpanded = false;
+  bool _sensoryExpanded = false;
+  bool _learningExpanded = false;
+  bool _bgmExpanded = false;
+  bool _themeExpanded = false;
   bool _bgmEnabled = true;
   bool _bgmReady = false;
   double _bgmVolume = 0.85;
@@ -131,6 +135,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() => _previewingPalette = palette);
     try {
       await BgmService.previewPalette(palette);
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '试听失败，请检查音频文件');
+      }
     } finally {
       if (mounted) {
         setState(() => _previewingPalette = null);
@@ -247,14 +255,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.tune_rounded),
-                      title: const Text('感官反馈'),
-                      subtitle: Text(
-                        _sensoryReady ? '统一控制操作音效、成就反馈和触觉回馈' : '正在读取感官反馈偏好...',
-                      ),
+                    _buildCollapsibleHeader(
+                      icon: Icons.tune_rounded,
+                      title: '感官反馈',
+                      subtitle: _sensoryReady
+                          ? '统一控制操作音效、成就反馈和触觉回馈'
+                          : '正在读取感官反馈偏好...',
+                      expanded: _sensoryExpanded,
+                      onToggle: () =>
+                          setState(() => _sensoryExpanded = !_sensoryExpanded),
                     ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('音效反馈'),
@@ -320,6 +335,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         const Icon(Icons.surround_sound_rounded, size: 18),
                       ],
                     ),
+                        ],
+                      ),
+                      crossFadeState: _sensoryExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
+                    ),
                   ],
                 ),
               ),
@@ -328,7 +350,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader(Icons.psychology, l10n.learningMode),
+                    _buildCollapsibleHeader(
+                      icon: Icons.psychology,
+                      title: l10n.learningMode,
+                      subtitle: '调整深度与好奇心偏好',
+                      expanded: _learningExpanded,
+                      onToggle: () =>
+                          setState(() => _learningExpanded = !_learningExpanded),
+                    ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     const SizedBox(height: DS.spacing12),
                     Text(
                       l10n.dragToAdjust,
@@ -380,6 +414,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       l10n,
                       weeklyAgenda,
                     ),
+                        ],
+                      ),
+                      crossFadeState: _learningExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
+                    ),
                   ],
                 ),
               ),
@@ -399,16 +440,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.music_note_rounded),
-                      title: const Text('背景音乐'),
-                      subtitle: Text(
-                        _bgmReady
-                            ? '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'
-                            : '正在读取音乐偏好...',
-                      ),
+                    _buildCollapsibleHeader(
+                      icon: Icons.music_note_rounded,
+                      title: '背景音乐',
+                      subtitle: _bgmReady
+                          ? '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'
+                          : '正在读取音乐偏好...',
+                      expanded: _bgmExpanded,
+                      onToggle: () =>
+                          setState(() => _bgmExpanded = !_bgmExpanded),
                     ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('启用背景音乐'),
@@ -600,6 +646,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ),
                       ),
                     ),
+                        ],
+                      ),
+                      crossFadeState: _bgmExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
+                    ),
                   ],
                 ),
               ),
@@ -607,12 +660,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               GraphiteCardSurface(
                 child: Column(
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.brightness_6_outlined),
-                      title: Text(l10n.theme),
-                      subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
+                    _buildCollapsibleHeader(
+                      icon: Icons.brightness_6_outlined,
+                      title: '${l10n.theme} & AI',
+                      subtitle: '主题、对话选项、AI 档位与动效强度',
+                      expanded: _themeExpanded,
+                      onToggle: () =>
+                          setState(() => _themeExpanded = !_themeExpanded),
                     ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     _buildSettingsDropdownField<AppThemeMode>(
                       value: ref.watch(appThemeModeProvider),
                       items: [
@@ -805,6 +865,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。',
                         ),
                       ),
+                    ),
+                        ],
+                      ),
+                      crossFadeState: _themeExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
                     ),
                   ],
                 ),
@@ -1178,6 +1245,33 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 color: selected ? DS.primaryBase : DS.textSecondary,
               ),
             ],
+          ),
+        ),
+      );
+
+  Widget _buildCollapsibleHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool expanded,
+    required VoidCallback onToggle,
+  }) =>
+      InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon),
+          title: Text(title),
+          subtitle: Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: AnimatedRotation(
+            turns: expanded ? 0.5 : 0,
+            duration: const Duration(milliseconds: 250),
+            child: const Icon(Icons.expand_more),
           ),
         ),
       );

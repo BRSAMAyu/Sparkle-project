@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
@@ -207,8 +208,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                             l10n: l10n,
                             label: item['value']?.toString() ?? '',
                             metadata:
-                                item['metadata'] as Map<String, dynamic>? ??
-                                    {},
+                                item['metadata'] as Map<String, dynamic>? ?? {},
                             targetType: 'persona_tag',
                           ),
                         )
@@ -225,8 +225,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                             l10n: l10n,
                             label: '${item['key']}: ${item['value']}',
                             metadata:
-                                item['metadata'] as Map<String, dynamic>? ??
-                                    {},
+                                item['metadata'] as Map<String, dynamic>? ?? {},
                             targetType: 'persona_capability',
                             fieldName: item['key']?.toString(),
                           ),
@@ -249,8 +248,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                     title: 'Inferred Preferences',
                     asyncValue: inferredPreferencesAsync,
                     builder: (items) => items
-                        .map((item) =>
-                            _inferredPreferenceRow(ref, context, l10n, item),)
+                        .map(
+                          (item) =>
+                              _inferredPreferenceRow(ref, context, l10n, item),
+                        )
                         .toList(),
                     onRetry: () => ref.invalidate(inferredPreferencesProvider),
                   ),
@@ -387,7 +388,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           activeGoal['value']?.toString() ??
           '';
       if (goalTitle.isNotEmpty) {
-        lines.add('你当前最明确的目标是：$goalTitle。');
+        lines.add(normalizeRichText('你当前最明确的目标是：$goalTitle。'));
       }
     }
 
@@ -404,7 +405,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     }
     if (learningStyle != null || responseDepth != null) {
       lines.add(
-        '你的学习偏好更接近${learningStyle ?? '当前未明确'}，系统回答深度倾向${responseDepth ?? '自适应'}。',
+        normalizeRichText(
+          '你的学习偏好更接近${learningStyle ?? '当前未明确'}，系统回答深度倾向${responseDepth ?? '自适应'}。',
+        ),
       );
     }
 
@@ -414,20 +417,29 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             patterns.first['content']?.toString())
         : null;
     if (firstPattern != null && firstPattern.isNotEmpty) {
-      lines.add('系统最近观察到的主要模式是：$firstPattern。');
+      lines.add(normalizeRichText('系统最近观察到的主要模式是：$firstPattern。'));
     }
 
     if (fragments.isNotEmpty) {
-      lines.add('画像里已积累 ${fragments.length} 条可用于个性化推荐的认知线索。');
+      lines.add(
+        normalizeRichText('画像里已积累 ${fragments.length} 条可用于个性化推荐的认知线索。'),
+      );
     }
 
     if (lines.isEmpty) {
-      lines.add('当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。');
+      lines.add(
+        normalizeRichText('当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。'),
+      );
     }
     return lines;
   }
 
-  Widget _buildReadableSummaryCard(List<String> summaryLines) => Column(
+  Widget _buildReadableSummaryCard(List<String> summaryLines) {
+    final summaryMarkdown = summaryLines
+        .map((line) => '- ${normalizeRichText(line).trim()}')
+        .join('\n');
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -438,20 +450,17 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ),
         ),
         const SizedBox(height: DS.spacing8),
-        ...summaryLines.map(
-          (line) => Padding(
-            padding: const EdgeInsets.only(bottom: DS.spacing6),
-            child: Text(
-              '• $line',
-              style: TextStyle(
-                color: DS.textSecondary,
-                height: 1.45,
-              ),
-            ),
-          ),
+        SparkleMarkdown(
+          content: summaryMarkdown,
+          textColor: DS.textSecondary,
+          codeBackgroundColor: DS.surfaceSecondary,
+          linkColor: DS.brandPrimary,
+          fontSize: DS.fontSizeBase,
+          contentRole: SparkleMarkdownRole.knowledgeSummary,
         ),
       ],
     );
+  }
 
   Widget _buildAsyncSection<T>(
     WidgetRef ref,
@@ -738,7 +747,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         return;
       }
       await _openOverrideInferredDialog(
-          ref, context, key, matchedItem['value'],);
+        ref,
+        context,
+        key,
+        matchedItem['value'],
+      );
     });
   }
 
@@ -760,7 +773,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _buildOnboardingBanner(
-          BuildContext context, AppLocalizations l10n, bool completed,) =>
+    BuildContext context,
+    AppLocalizations l10n,
+    bool completed,
+  ) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -794,7 +810,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       );
 
   Widget _subSectionList(
-          String title, List<Widget> items, AppLocalizations l10n,) =>
+    String title,
+    List<Widget> items,
+    AppLocalizations l10n,
+  ) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
         child: GraphiteCardSurface(
@@ -955,7 +974,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _metadataRow(
-      AppLocalizations l10n, String label, Map<String, dynamic> metadata,) {
+    AppLocalizations l10n,
+    String label,
+    Map<String, dynamic> metadata,
+  ) {
     final reason = metadata['reason']?.toString() ?? '';
     final level = metadata['level']?.toString() ?? 'readonly';
     final confidence = metadata['confidence'];
@@ -970,9 +992,17 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 5,
+                height: 5,
+                margin: const EdgeInsets.only(top: 8, right: 8),
+                decoration: BoxDecoration(
+                  color: DS.textPrimary,
+                  shape: BoxShape.circle,
+                ),
+              ),
               Expanded(
-                child:
-                    Text('• $label', style: TextStyle(color: DS.textPrimary)),
+                child: Text(label, style: TextStyle(color: DS.textPrimary)),
               ),
               _levelChip(l10n, level),
             ],
@@ -1253,12 +1283,17 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 decoration: InputDecoration(labelText: l10n.personaGoalStatus),
                 items: [
                   DropdownMenuItem(
-                      value: 'active', child: Text(l10n.personaStatusActive),),
+                    value: 'active',
+                    child: Text(l10n.personaStatusActive),
+                  ),
                   DropdownMenuItem(
-                      value: 'completed',
-                      child: Text(l10n.personaStatusCompleted),),
+                    value: 'completed',
+                    child: Text(l10n.personaStatusCompleted),
+                  ),
                   DropdownMenuItem(
-                      value: 'paused', child: Text(l10n.personaStatusPaused),),
+                    value: 'paused',
+                    child: Text(l10n.personaStatusPaused),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -1300,7 +1335,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 } catch (error) {
                   if (context.mounted) {
                     AppFeedback.error(
-                        context, '目标更新失败：${_friendlyError(error)}',);
+                      context,
+                      '目标更新失败：${_friendlyError(error)}',
+                    );
                   }
                 }
               },
@@ -1380,7 +1417,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               if (nextValue.isEmpty) {
                 if (context.mounted) {
                   AppFeedback.info(
-                      context, context.l10n.personaPleaseEnterValue,);
+                    context,
+                    context.l10n.personaPleaseEnterValue,
+                  );
                 }
                 return;
               }

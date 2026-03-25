@@ -29,20 +29,20 @@ class AccountabilityRepository {
     final now = DateTime.now();
     final alice = UserBrief(
       id: 'user_alice',
-      username: 'Alice',
-      nickname: 'Alice',
+      username: 'Lena',
+      nickname: 'Lena',
       flameLevel: 8,
     );
     final charlie = UserBrief(
       id: 'user_charlie',
-      username: 'Charlie',
-      nickname: 'Charlie',
+      username: 'Nora',
+      nickname: 'Nora',
       flameLevel: 12,
     );
     final me = UserBrief(
       id: _demoCurrentUserId,
       username: 'AI_Learner_02',
-      nickname: 'AI_Learner_02',
+      nickname: 'Mika',
       flameLevel: 15,
     );
 
@@ -50,8 +50,8 @@ class AccountabilityRepository {
       id: 'demo_core_partner',
       initiatorId: _demoCurrentUserId,
       partnerId: alice.id,
-      initiatorGoal: '每天完成 45 分钟深度学习并同步进展',
-      partnerGoal: '每天复盘并给伙伴一句具体反馈',
+      initiatorGoal: '每天同步一个主任务和一个轻复盘动作',
+      partnerGoal: '每天给伙伴一句具体反馈，帮助对方稳住节奏',
       checkInDays: 1,
       status: AccountabilityStatus.active,
       createdAt: now.subtract(const Duration(days: 18)),
@@ -68,7 +68,7 @@ class AccountabilityRepository {
       id: 'demo_pending_partner',
       initiatorId: charlie.id,
       partnerId: _demoCurrentUserId,
-      initiatorGoal: '一起复盘算法错题',
+      initiatorGoal: '一起把周末节律和复盘稳定下来',
       checkInDays: 2,
       status: AccountabilityStatus.pending,
       createdAt: now.subtract(const Duration(days: 1)),
@@ -83,7 +83,7 @@ class AccountabilityRepository {
           id: 'demo_checkin_partner',
           partnershipId: activePartnership.id,
           userId: alice.id,
-          content: '上午把 React Hooks 复盘完了，顺手把你昨天提到的知识点做成了卡片。',
+          content: '上午把英语自我介绍改短了一版，顺手把你昨天说的“关键词提纲”做成了卡片。',
           mood: 5,
           minutes: 50,
           createdAt: now.subtract(const Duration(hours: 2)),
@@ -102,7 +102,7 @@ class AccountabilityRepository {
           id: 'demo_checkin_me',
           partnershipId: activePartnership.id,
           userId: _demoCurrentUserId,
-          content: '完成了英语精读和一道算法题，今天节奏比较稳。',
+          content: '完成了积分换元复盘和一轮英语跟说，今天没有追求做很多，但节奏比较稳。',
           mood: 4,
           minutes: 65,
           createdAt: now.subtract(const Duration(hours: 5)),
@@ -455,7 +455,7 @@ class AccountabilityRepository {
         throw Exception('Demo partnership not found');
       }
       final partnership = _demoPartnerships![partnershipIndex];
-      if (partnership.myCheckedInToday == true) {
+      if (partnership.myCheckedInToday ?? false) {
         throw Exception('You have already checked in today');
       }
       final now = DateTime.now();
@@ -664,13 +664,14 @@ class AccountabilityRepository {
     String? message,
   }) async {
     if (DemoDataService.isDemoMode) {
+      final trimmedMessage = message?.trim();
       return {
         'success': true,
         'partnership_id': partnershipId,
         'partner_id': 'user_alice',
         'cooldown_seconds': 7200,
-        'message': message?.trim().isNotEmpty == true
-            ? '已提醒伙伴：${message!.trim()}'
+        'message': trimmedMessage?.isNotEmpty ?? false
+            ? '已提醒伙伴：$trimmedMessage'
             : '已提醒伙伴查看今天的目标',
       };
     }

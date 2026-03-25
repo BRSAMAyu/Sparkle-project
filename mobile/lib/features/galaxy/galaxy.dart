@@ -2,6 +2,8 @@ export 'package:sparkle/shared/entities/galaxy_model.dart';
 
 export 'data/repositories/enhanced_galaxy_repository.dart';
 export 'data/repositories/galaxy_repository.dart';
+export 'data/models/node_expansion_models.dart';
+export 'data/models/galaxy_build_playback_plan.dart';
 export 'data/services/galaxy_accessibility_service.dart';
 export 'data/services/galaxy_edge_animation.dart';
 export 'data/services/galaxy_force_engine.dart';

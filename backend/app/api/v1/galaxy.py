@@ -18,9 +18,15 @@ from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
 from app.schemas.galaxy import (
+    ApplyNodeExpansionRequest,
+    ApplyNodeExpansionResponse,
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
     GalaxyGraphResponse,
+    NodeBase,
+    NodeExpansionCandidate,
+    NodeExpansionCandidateRequest,
+    NodeExpansionCandidatesResponse,
     NodeDetailResponse,
     NodeRelationInfo,
     ReviewSuggestion,
@@ -32,6 +38,7 @@ from app.schemas.galaxy import (
     SparkResult,
 )
 from app.services.decay_service import DecayService
+from app.services.expansion_service import ExpansionService
 from app.services.galaxy_service import GalaxyService
 from app.services.knowledge_integration_service import KnowledgeIntegrationService
 
@@ -351,6 +358,73 @@ async def get_node_detail(
         ],
         "learningPathSnapshot": user_status.learning_path_snapshot if user_status else None,
     }
+
+
+@router.post("/node/{node_id}/expansion/candidates", response_model=NodeExpansionCandidatesResponse)
+async def generate_node_expansion_candidates(
+    node_id: UUID,
+    request: NodeExpansionCandidateRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    node = await db.get(KnowledgeNode, node_id)
+    if not node:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
+
+    expansion_service = ExpansionService(db)
+    candidates, prompt_version = await expansion_service.preview_expansion_candidates(
+        node_id,
+        UUID(user_id),
+        count=request.count,
+    )
+    return NodeExpansionCandidatesResponse(
+        trigger_node_id=node_id,
+        prompt_version=prompt_version,
+        candidates=[NodeExpansionCandidate(**candidate) for candidate in candidates],
+    )
+
+
+@router.post("/node/{node_id}/expansion/apply", response_model=ApplyNodeExpansionResponse)
+async def apply_node_expansion_candidates(
+    node_id: UUID,
+    request: ApplyNodeExpansionRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    node = await db.get(KnowledgeNode, node_id)
+    if not node:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
+    if not request.candidates:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="No candidates selected")
+
+    expansion_service = ExpansionService(db)
+    created_nodes = await expansion_service.apply_expansion_candidates(
+        node_id,
+        UUID(user_id),
+        candidates=[candidate.model_dump() for candidate in request.candidates],
+    )
+    sector_code = SectorCode.VOID
+    created = [
+        NodeBase(
+            id=created_node.id,
+            name=created_node.name,
+            name_en=created_node.name_en,
+            description=created_node.description,
+            importance_level=created_node.importance_level,
+            sector_code=sector_code,
+            is_seed=bool(created_node.is_seed),
+            parent_id=created_node.parent_id,
+            parent_name=node.name,
+            tags=list(created_node.keywords or []),
+            global_spark_count=int(getattr(created_node, "global_spark_count", 0) or 0),
+        )
+        for created_node in created_nodes
+    ]
+    return ApplyNodeExpansionResponse(
+        success=True,
+        created_count=len(created),
+        created_nodes=created,
+    )
 
 
 @router.post("/search", response_model=SearchResponse)

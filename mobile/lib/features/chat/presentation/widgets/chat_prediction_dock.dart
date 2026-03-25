@@ -155,7 +155,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
                   compactHeadline,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: DS.labelLarge.copyWith(
+                  style: DS.labelSmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -356,7 +356,7 @@ class _CollapsedDock extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: DS.labelLarge.copyWith(
+                  style: DS.labelSmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -468,7 +468,8 @@ class _DockActionChipState extends State<_DockActionChip> {
                   widget.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: DS.bodySmall.copyWith(
+                  style: DS.labelSmall.copyWith(
+                    fontSize: 12,
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightMedium,
                   ),

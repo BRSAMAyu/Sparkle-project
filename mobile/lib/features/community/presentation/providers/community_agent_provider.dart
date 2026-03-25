@@ -602,6 +602,14 @@ class PrivateAgentChatNotifier
     );
   }
 
+  void removeLocalDraft(String messageId) {
+    state = state.copyWith(
+      messages: state.messages
+          .where((message) => message.id != messageId)
+          .toList(growable: false),
+    );
+  }
+
   Future<void> sendAgentMessage({
     required String prompt,
     String? friendName,

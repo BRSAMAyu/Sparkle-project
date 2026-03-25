@@ -23,6 +23,7 @@ void main() {
             'is_unlocked': true,
             'mastery_score': 76,
             'study_count': 9,
+            'first_unlock_at': '2026-03-20T09:30:00Z',
           },
         },
       ],
@@ -45,6 +46,7 @@ void main() {
     expect(node.isUnlocked, isTrue);
     expect(node.masteryScore, 76);
     expect(node.studyCount, 9);
+    expect(node.firstUnlockAt, DateTime.parse('2026-03-20T09:30:00Z'));
     expect(node.positionX, 128.5);
     expect(node.positionY, -64.25);
     expect(node.hasStablePosition, isTrue);

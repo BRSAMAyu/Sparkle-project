@@ -437,10 +437,9 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                   fontSize: 10,
                 ),
           ),
-          const SizedBox(height: DS.spacing6),
+          const SizedBox(height: DS.spacing4),
           // Today summary — flexible
           Flexible(
-            flex: 2,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
@@ -463,17 +462,17 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                     ? todayAggregate.summaryText
                     : '今天还没有密集安排',
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                   color: hasActivity ? DS.brandPrimary : DS.textSecondary,
-                  height: 1.3,
+                  height: 1.35,
                 ),
-                maxLines: dense ? 2 : 3,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
-          const SizedBox(height: DS.spacing6),
+          const SizedBox(height: DS.spacing4),
           // Stat chips — each is a compact row
           _StatChip(label: '总量', value: '$totalTasks'),
           const SizedBox(height: DS.spacing4),

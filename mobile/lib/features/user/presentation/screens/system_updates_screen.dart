@@ -105,14 +105,14 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             )
           else
             ...filtered.asMap().entries.map(
-              (entry) => SparkleStaggerItem(
-                index: entry.key,
-                child: Padding(
-                padding: const EdgeInsets.only(bottom: DS.spacing12),
-                child: _buildUpdateCard(entry.value),
-              ),
-              ),
-            ),
+                  (entry) => SparkleStaggerItem(
+                    index: entry.key,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: DS.spacing12),
+                      child: _buildUpdateCard(entry.value),
+                    ),
+                  ),
+                ),
         ],
       ),
     );
@@ -298,7 +298,23 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           ...learnings.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing6),
-              child: Text('• $item', style: TextStyle(color: DS.textPrimary)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    margin: const EdgeInsets.only(top: 8, right: 8),
+                    decoration: BoxDecoration(
+                      color: DS.textPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(item, style: TextStyle(color: DS.textPrimary)),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -424,12 +440,28 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
           ...reasoningDetails.map(
             (detail) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
-              child: Text(
-                '• ${detail['label'] ?? ''}：${detail['evidence'] ?? ''}',
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: DS.fontSizeSm,
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    margin: const EdgeInsets.only(top: 7, right: 8),
+                    decoration: BoxDecoration(
+                      color: DS.textSecondary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${detail['label'] ?? ''}：${detail['evidence'] ?? ''}',
+                      style: TextStyle(
+                        color: DS.textSecondary,
+                        fontSize: DS.fontSizeSm,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -24,10 +24,8 @@ class ApiResponseParser {
           return data;
         }
       }
-      // 直接格式
-      if (!response.containsKey('success')) {
-        return response;
-      }
+      // 直接格式：无论是否带 success 字段，都把整个对象视为合法响应
+      return response;
     }
 
     throw Exception(

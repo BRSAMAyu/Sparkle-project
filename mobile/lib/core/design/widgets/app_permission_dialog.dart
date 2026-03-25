@@ -89,67 +89,104 @@ extension AppPermissionKindX on AppPermissionKind {
 Future<void> showAppPermissionDialog(
   BuildContext context, {
   required AppPermissionKind permission,
-}) => showDialog<void>(
-    context: context,
-    builder: (dialogContext) => Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: GraphiteModalSurface(
-        title: permission.title(dialogContext),
-        showHandle: false,
-        borderRadius: BorderRadius.circular(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: DS.surfaceTertiary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(permission.icon, color: DS.primaryBase),
-                ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: Text(
-                    permission.description(dialogContext),
-                    style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                  ),
-                ),
-              ],
+}) =>
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final media = MediaQuery.of(dialogContext);
+        final stackActions = media.size.width < 360;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 460,
+              maxHeight: media.size.height * 0.85,
             ),
-            const SizedBox(height: DS.md),
-            Text(
-              permission.settingsHint(),
-              style: DS.labelSmall.copyWith(color: DS.textTertiary),
-            ),
-            const SizedBox(height: DS.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: SparkleButton.ghost(
-                    label: dialogContext.l10n.cancel,
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                  ),
+            child: GraphiteModalSurface(
+              title: permission.title(dialogContext),
+              showHandle: false,
+              borderRadius: BorderRadius.circular(28),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: DS.surfaceTertiary,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(permission.icon, color: DS.primaryBase),
+                        ),
+                        const SizedBox(width: DS.md),
+                        Expanded(
+                          child: Text(
+                            permission.description(dialogContext),
+                            style:
+                                DS.bodyMedium.copyWith(color: DS.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.md),
+                    Text(
+                      permission.settingsHint(),
+                      style: DS.labelSmall.copyWith(color: DS.textTertiary),
+                    ),
+                    const SizedBox(height: DS.lg),
+                    if (stackActions) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: SparkleButton.primary(
+                          label: dialogContext.l10n.voiceInputOpenSettings,
+                          onPressed: () async {
+                            Navigator.of(dialogContext).pop();
+                            await openAppSettings();
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: DS.sm),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SparkleButton.ghost(
+                          label: dialogContext.l10n.cancel,
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                        ),
+                      ),
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SparkleButton.ghost(
+                              label: dialogContext.l10n.cancel,
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: DS.sm),
+                          Expanded(
+                            child: SparkleButton.primary(
+                              label: dialogContext.l10n.voiceInputOpenSettings,
+                              onPressed: () async {
+                                Navigator.of(dialogContext).pop();
+                                await openAppSettings();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
-                const SizedBox(width: DS.sm),
-                Expanded(
-                  child: SparkleButton.primary(
-                    label: dialogContext.l10n.voiceInputOpenSettings,
-                    onPressed: () async {
-                      Navigator.of(dialogContext).pop();
-                      await openAppSettings();
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
-          ],
-        ),
-      ),
-    ),
-  );
+          ),
+        );
+      },
+    );

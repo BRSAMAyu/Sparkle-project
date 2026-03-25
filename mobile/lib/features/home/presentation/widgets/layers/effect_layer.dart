@@ -49,31 +49,33 @@ class EffectLayer extends StatelessWidget {
   }
 
   Widget _buildDefaultEffect() => RepaintBoundary(
-      child: AnimatedBuilder(
-      animation: mainAnimation,
-      builder: (context, child) => Stack(
-          children: [
-            CustomPaint(
-              size: Size.infinite,
-              painter: _PulseGlowPainter(
-                intensity: 0.3,
-                color: const Color(0xFFFFFFFF),
-                position: 'center',
-                radius: 200,
-                animationValue: mainAnimation.value,
+        child: AnimatedBuilder(
+          animation: mainAnimation,
+          builder: (context, child) => Stack(
+            children: [
+              CustomPaint(
+                size: Size.infinite,
+                painter: _PulseGlowPainter(
+                  intensity: 0.3,
+                  color: const Color(0xFFFFFFFF),
+                  position: 'center',
+                  radius: 200,
+                  animationValue: mainAnimation.value,
+                ),
               ),
-            ),
-            CustomPaint(
-              size: Size.infinite,
-              painter: _AmbientVignettePainter(
-                animationValue: mainAnimation.value,
+              CustomPaint(
+                size: Size.infinite,
+                painter: _AmbientVignettePainter(
+                  animationValue: mainAnimation.value,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-    ),);
+      );
 
-  CustomPainter _getEffectPainter(String effectType, Map<String, dynamic> config) {
+  CustomPainter _getEffectPainter(
+      String effectType, Map<String, dynamic> config) {
     final intensity = (config['intensity'] as num?)?.toDouble() ?? 0.5;
     final speed = (config['speed'] as num?)?.toDouble() ?? 1.0;
     final color = _parseColor(config['color'] as String? ?? '#FFFFFF');
@@ -83,6 +85,14 @@ class EffectLayer extends StatelessWidget {
     final animatedValue = (mainAnimation.value * speed) % 1.0;
 
     switch (effectType) {
+      case 'dual_ring':
+        return _DualRingPainter(
+          intensity: intensity,
+          color: color,
+          position: position,
+          radius: radius,
+          animationValue: animatedValue,
+        );
       case 'pulse_ring':
         return _PulseRingPainter(
           intensity: intensity,
@@ -172,16 +182,17 @@ class _PulseGlowPainter extends CustomPainter {
   }
 
   Offset _getPosition(Size size) => switch (position) {
-      'top-right' => Offset(size.width * 0.8, size.height * 0.2),
-      'top-left' => Offset(size.width * 0.2, size.height * 0.2),
-      'bottom-right' => Offset(size.width * 0.8, size.height * 0.8),
-      'bottom-left' => Offset(size.width * 0.2, size.height * 0.8),
-      'center' => Offset(size.width / 2, size.height / 2),
-      _ => Offset(size.width / 2, size.height / 2),
-    };
+        'top-right' => Offset(size.width * 0.8, size.height * 0.2),
+        'top-left' => Offset(size.width * 0.2, size.height * 0.2),
+        'bottom-right' => Offset(size.width * 0.8, size.height * 0.8),
+        'bottom-left' => Offset(size.width * 0.2, size.height * 0.8),
+        'center' => Offset(size.width / 2, size.height / 2),
+        _ => Offset(size.width / 2, size.height / 2),
+      };
 
   @override
-  bool shouldRepaint(covariant _PulseGlowPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _PulseGlowPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _PulseRingPainter extends CustomPainter {
@@ -220,13 +231,72 @@ class _PulseRingPainter extends CustomPainter {
   }
 
   Offset _getPosition(Size size) => switch (position) {
-      'top-right' => Offset(size.width * 0.8, size.height * 0.2),
-      'center' => Offset(size.width / 2, size.height / 2),
-      _ => Offset(size.width / 2, size.height / 2),
-    };
+        'top-right' => Offset(size.width * 0.8, size.height * 0.2),
+        'center' => Offset(size.width / 2, size.height / 2),
+        _ => Offset(size.width / 2, size.height / 2),
+      };
 
   @override
-  bool shouldRepaint(covariant _PulseRingPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _PulseRingPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
+}
+
+class _DualRingPainter extends CustomPainter {
+  _DualRingPainter({
+    required this.intensity,
+    required this.color,
+    required this.position,
+    required this.radius,
+    required this.animationValue,
+  });
+
+  final double intensity;
+  final Color color;
+  final String position;
+  final double radius;
+  final double animationValue;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = _getPosition(size);
+    final outerRadius = radius * (0.82 + animationValue * 0.24);
+    final innerRadius = radius * (0.48 + animationValue * 0.1);
+
+    final outerPaint = Paint()
+      ..color = color.withValues(alpha: intensity * 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4;
+    final innerPaint = Paint()
+      ..color = color.withValues(alpha: intensity * 0.34)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final bloomPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: intensity * 0.18),
+          color.withValues(alpha: intensity * 0.07),
+          color.withValues(alpha: 0.0),
+        ],
+      ).createShader(
+          Rect.fromCircle(center: center, radius: outerRadius * 1.2));
+
+    canvas.drawCircle(center, outerRadius, outerPaint);
+    canvas.drawCircle(center, innerRadius, innerPaint);
+    canvas.drawRect(Offset.zero & size, bloomPaint);
+  }
+
+  Offset _getPosition(Size size) => switch (position) {
+        'top-right' => Offset(size.width * 0.76, size.height * 0.24),
+        'top-left' => Offset(size.width * 0.24, size.height * 0.24),
+        'bottom-right' => Offset(size.width * 0.76, size.height * 0.74),
+        'bottom-left' => Offset(size.width * 0.24, size.height * 0.74),
+        'center' => Offset(size.width / 2, size.height / 2),
+        _ => Offset(size.width / 2, size.height / 2),
+      };
+
+  @override
+  bool shouldRepaint(covariant _DualRingPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _GravityWavePainter extends CustomPainter {
@@ -252,7 +322,8 @@ class _GravityWavePainter extends CustomPainter {
     final maxRadius = size.width * 0.6;
 
     for (var i = 0; i < waveCount; i++) {
-      final waveProgress = (animationValue * waveInterval + i / waveCount) % 1.0;
+      final waveProgress =
+          (animationValue * waveInterval + i / waveCount) % 1.0;
       final waveRadius = maxRadius * waveProgress;
       final alpha = intensity * (1.0 - waveProgress) * 0.15;
 
@@ -266,7 +337,8 @@ class _GravityWavePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _GravityWavePainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _GravityWavePainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _SupernovaPainter extends CustomPainter {
@@ -294,10 +366,12 @@ class _SupernovaPainter extends CustomPainter {
           color.withValues(alpha: intensity * 0.2),
           color.withValues(alpha: 0.0),
         ],
-      ).createShader(Rect.fromCircle(
-        center: center,
-        radius: 100 + animationValue * 50,
-      ),);
+      ).createShader(
+        Rect.fromCircle(
+          center: center,
+          radius: 100 + animationValue * 50,
+        ),
+      );
 
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
@@ -326,7 +400,8 @@ class _SupernovaPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SupernovaPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _SupernovaPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _AmbientVignettePainter extends CustomPainter {
@@ -358,5 +433,6 @@ class _AmbientVignettePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AmbientVignettePainter oldDelegate) =>
-      animationValue != oldDelegate.animationValue || color != oldDelegate.color;
+      animationValue != oldDelegate.animationValue ||
+      color != oldDelegate.color;
 }

@@ -36,43 +36,43 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
               SparkleStaggerItem(
                 index: 1,
                 child: capacityAsync.when(
-                data: _buildCapacityPanel,
-                loading: () => const GraphiteCardSurface(
-                  child: LinearProgressIndicator(minHeight: 3),
+                  data: _buildCapacityPanel,
+                  loading: () => const GraphiteCardSurface(
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
+                  error: (error, _) => _buildErrorCard(
+                    '容量面板加载失败',
+                    '$error',
+                  ),
                 ),
-                error: (error, _) => _buildErrorCard(
-                  '容量面板加载失败',
-                  '$error',
-                ),
-              ),
               ),
               const SizedBox(height: DS.spacing16),
               SparkleStaggerItem(
                 index: 2,
                 child: alertsAsync.when(
-                data: _buildAlertsPanel,
-                loading: () => const GraphiteCardSurface(
-                  child: LinearProgressIndicator(minHeight: 3),
+                  data: _buildAlertsPanel,
+                  loading: () => const GraphiteCardSurface(
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
+                  error: (error, _) => _buildErrorCard(
+                    '告警面板加载失败',
+                    '$error',
+                  ),
                 ),
-                error: (error, _) => _buildErrorCard(
-                  '告警面板加载失败',
-                  '$error',
-                ),
-              ),
               ),
               const SizedBox(height: DS.spacing16),
               SparkleStaggerItem(
                 index: 3,
                 child: telemetryAsync.when(
-                data: _buildTelemetryPanel,
-                loading: () => const GraphiteCardSurface(
-                  child: LinearProgressIndicator(minHeight: 3),
+                  data: _buildTelemetryPanel,
+                  loading: () => const GraphiteCardSurface(
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
+                  error: (error, _) => _buildErrorCard(
+                    '客户端观测加载失败',
+                    '$error',
+                  ),
                 ),
-                error: (error, _) => _buildErrorCard(
-                  '客户端观测加载失败',
-                  '$error',
-                ),
-              ),
               ),
             ],
           ),
@@ -117,12 +117,12 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
       );
 
   Widget _buildCapacityPanel(Map<String, dynamic> payload) {
-    final database =
-        (payload['database'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    final redis =
-        (payload['redis'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    final queues =
-        (payload['queues'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final database = (payload['database'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
+    final redis = (payload['redis'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
+    final queues = (payload['queues'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final disk =
         (payload['disk'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
     final recommendations =
@@ -171,9 +171,26 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             ...recommendations.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  '• $item',
-                  style: Theme.of(context).textTheme.bodySmall,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(top: 7, right: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).textTheme.bodySmall?.color ??
+                            DS.textPrimary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -281,8 +298,8 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
   }
 
   Widget _buildTelemetryPanel(Map<String, dynamic> payload) {
-    final overall =
-        (payload['overall'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final overall = (payload['overall'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final byEventType =
         (payload['by_event_type'] as List<dynamic>? ?? const <dynamic>[])
             .whereType<Map<String, dynamic>>()
@@ -344,19 +361,19 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             ),
             const SizedBox(height: DS.spacing8),
             ...byEventType.take(5).map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _ServiceDetailTile(
-                  title: item['event_type']?.toString() ?? 'unknown',
-                  lines: [
-                    '总量 ${item['count'] ?? 0}',
-                    '错误 ${item['error_count'] ?? 0} / 崩溃 ${item['crash_count'] ?? 0}',
-                    '成功率 ${item['success_rate_percent'] ?? 0}%',
-                    '平均耗时 ${item['avg_duration_ms'] ?? 0}ms',
-                  ],
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ServiceDetailTile(
+                      title: item['event_type']?.toString() ?? 'unknown',
+                      lines: [
+                        '总量 ${item['count'] ?? 0}',
+                        '错误 ${item['error_count'] ?? 0} / 崩溃 ${item['crash_count'] ?? 0}',
+                        '成功率 ${item['success_rate_percent'] ?? 0}%',
+                        '平均耗时 ${item['avg_duration_ms'] ?? 0}ms',
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ],
           if (recentEvents.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
@@ -368,16 +385,16 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             ),
             const SizedBox(height: DS.spacing8),
             ...recentEvents.take(4).map(
-              (event) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  '${event['event_type']} · ${event['status']} · ${event['route'] ?? '-'}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textSecondary,
-                      ),
+                  (event) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      '${event['event_type']} · ${event['status']} · ${event['route'] ?? '-'}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ],
         ],
       ),

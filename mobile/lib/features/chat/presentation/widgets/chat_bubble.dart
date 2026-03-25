@@ -45,6 +45,7 @@ class ChatBubble extends ConsumerStatefulWidget {
     this.onActionDismiss,
     this.onResponseFeedback,
     this.onWidgetAction,
+    this.onPromoteSelfVisibleDraft,
     this.isLatestAssistantMessage = false,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
@@ -58,6 +59,7 @@ class ChatBubble extends ConsumerStatefulWidget {
       onResponseFeedback;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
+  final void Function(dynamic message)? onPromoteSelfVisibleDraft;
   final bool isLatestAssistantMessage;
 
   @override
@@ -310,10 +312,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   void _showContextMenu(BuildContext context) {
     if (_isRevoked || !mounted) return;
+    final isSelfVisibleAgentDraft = widget.message is PrivateMessageInfo &&
+        isPrivateAgentMessage(widget.message as PrivateMessageInfo) &&
+        ((widget.message as PrivateMessageInfo)
+                .contentData?[kAgentVisibilityKey]
+                ?.toString() ==
+            kAgentVisibilitySelf);
 
     // Allow revocation within 24 hours for user messages
-    final canRevoke =
-        _isUser && DateTime.now().difference(_createdAt).inHours < 24;
+    final canRevoke = (_isUser || isSelfVisibleAgentDraft) &&
+        DateTime.now().difference(_createdAt).inHours < 24;
 
     unawaited(
       showSensoryModalBottomSheet<void>(
@@ -328,6 +336,24 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (isSelfVisibleAgentDraft)
+                  ListTile(
+                    leading: const Icon(Icons.visibility_off_outlined),
+                    title: const Text('仅自己可见'),
+                    subtitle: const Text('这条 AI 草稿只保存在你的当前私聊视图里。'),
+                    onTap: () => Navigator.pop(context),
+                  ),
+                if (isSelfVisibleAgentDraft &&
+                    widget.onPromoteSelfVisibleDraft != null)
+                  ListTile(
+                    leading: const Icon(Icons.visibility_outlined),
+                    title: const Text('改为双方都可见'),
+                    subtitle: const Text('把这条草稿放回输入框，由你确认后发送给对方。'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onPromoteSelfVisibleDraft!(widget.message);
+                    },
+                  ),
                 if (!_isUser &&
                     _responseId != null &&
                     _responseId!.isNotEmpty &&
@@ -1408,6 +1434,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     String sharedResourceId,
     String resourceType,
   ) async {
+    if (sharedResourceId.trim().isEmpty) {
+      AppFeedback.error(context, '分享资源 ID 无效，无法采纳');
+      return;
+    }
     try {
       final result = await ref
           .read(communityShareRepositoryProvider)

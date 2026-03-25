@@ -105,15 +105,17 @@ class VisualElementModel {
           parseUnlockSource(json['unlockSource']) ??
           VisualElementUnlockSource.system,
       isDefault: (json['is_default'] ?? json['isDefault'] ?? false) as bool,
-      sortOrder: ((json['sort_order'] ?? json['sortOrder'] ?? 0) as num).toInt(),
-      previewUrl: json['preview_url'] as String? ?? json['previewUrl'] as String?,
+      sortOrder:
+          ((json['sort_order'] ?? json['sortOrder'] ?? 0) as num).toInt(),
+      previewUrl:
+          json['preview_url'] as String? ?? json['previewUrl'] as String?,
       iconUrl: json['icon_url'] as String? ?? json['iconUrl'] as String?,
       category: json['category'] as String?,
       config: Map<String, dynamic>.from(
         (json['config'] as Map?) ?? const <String, dynamic>{},
       ),
-      unlockRequirement: (json['unlock_requirement'] ?? json['unlockRequirement'])
-              is Map
+      unlockRequirement: (json['unlock_requirement'] ??
+              json['unlockRequirement']) is Map
           ? Map<String, dynamic>.from(
               (json['unlock_requirement'] ?? json['unlockRequirement']) as Map,
             )
@@ -146,6 +148,37 @@ class VisualElementModel {
   String get displaySlot =>
       config['display_slot']?.toString() ?? elementType.name;
 
+  String get displaySlotLabel {
+    switch (displaySlot) {
+      case 'avatar_border':
+        return '头像边框';
+      case 'title_bar':
+        return '称号条';
+      case 'profile_banner':
+        return '主页横幅';
+      case 'achievement_frame':
+        return '成就主题框';
+      case 'home_ambience':
+        return '首页氛围';
+      case 'star_map_effect':
+        return '星图征服特效';
+      case 'streak_flame':
+        return '连胜火焰';
+      case 'display_pedestal':
+        return '陈列台座';
+      case 'background':
+        return '背景';
+      case 'particle':
+        return '粒子';
+      case 'effect':
+        return '特效';
+      case 'bundle':
+        return '套装';
+      default:
+        return displaySlot;
+    }
+  }
+
   String? get setId => config['set_id']?.toString();
 
   int get visibilityWeight =>
@@ -157,9 +190,100 @@ class VisualElementModel {
       unlockRequirement?['achievement_id']?.toString() ??
       config['source_achievement_id']?.toString();
 
+  String get unlockSourceLabel {
+    switch (unlockSource) {
+      case VisualElementUnlockSource.system:
+        return '系统提供';
+      case VisualElementUnlockSource.achievement:
+        return '成就解锁';
+      case VisualElementUnlockSource.shop:
+        return '商店获取';
+      case VisualElementUnlockSource.event:
+        return '活动限定';
+      case VisualElementUnlockSource.season:
+        return '赛季奖励';
+    }
+  }
+
+  String get styleFamily =>
+      config['style_family']?.toString() ??
+      prestigeLabel ??
+      category ??
+      displaySlotLabel;
+
+  String? get bundleBackgroundId => config['background_id']?.toString();
+
+  String? get bundleParticleId => config['particle_id']?.toString();
+
+  String? get bundleEffectId => config['effect_id']?.toString();
+
+  List<String> get bundlePieceIds => [
+        if (bundleBackgroundId != null) bundleBackgroundId!,
+        if (bundleParticleId != null) bundleParticleId!,
+        if (bundleEffectId != null) bundleEffectId!,
+      ];
+
   bool get isBundle => elementType == VisualElementType.bundle;
 
   bool get isPrestigeHighlight => visibilityWeight >= 85;
+
+  List<String> get affectedSurfaceLabels {
+    if (isBundle) {
+      return [
+        if (bundleBackgroundId != null) '首页氛围',
+        if (bundleParticleId != null) '粒子轨迹',
+        if (bundleEffectId != null) '荣耀特效',
+      ];
+    }
+
+    switch (displaySlot) {
+      case 'profile_banner':
+        return ['个人主页', '成就页头图'];
+      case 'home_ambience':
+        return ['首页氛围', '个人主页'];
+      case 'achievement_frame':
+        return ['成就页', '详情弹窗'];
+      case 'avatar_frame':
+      case 'avatar_border':
+        return ['头像身份区', '个人主页'];
+      case 'title_bar':
+        return ['昵称称号条', '个人主页'];
+      case 'display_pedestal':
+        return ['陈列区', '荣耀柜台'];
+      case 'star_map_effect':
+        return ['星图页', '首页氛围'];
+      case 'streak_flame':
+        return ['连胜展示', '首页氛围'];
+      case 'conquest_trail':
+      case 'home_particle':
+        return ['首页氛围', '个人主页'];
+      default:
+        return [displaySlotLabel];
+    }
+  }
+
+  bool matchesConfig(UserVisualConfig? config) {
+    if (config == null) return false;
+    if (isBundle) {
+      return (bundleBackgroundId == null ||
+              config.equippedBackground?.id == bundleBackgroundId) &&
+          (bundleParticleId == null ||
+              config.equippedParticle?.id == bundleParticleId) &&
+          (bundleEffectId == null ||
+              config.equippedEffect?.id == bundleEffectId);
+    }
+
+    switch (elementType) {
+      case VisualElementType.background:
+        return config.equippedBackground?.id == id;
+      case VisualElementType.particle:
+        return config.equippedParticle?.id == id;
+      case VisualElementType.effect:
+        return config.equippedEffect?.id == id;
+      case VisualElementType.bundle:
+        return false;
+    }
+  }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
@@ -199,24 +323,25 @@ class VisualElementModel {
     bool? isUnlocked,
     DateTime? unlockedAt,
     bool? isEquipped,
-  }) => VisualElementModel(
-      id: id,
-      name: name,
-      description: description,
-      elementType: elementType,
-      rarity: rarity,
-      unlockSource: unlockSource,
-      isDefault: isDefault,
-      sortOrder: sortOrder,
-      previewUrl: previewUrl,
-      iconUrl: iconUrl,
-      category: category,
-      config: config,
-      unlockRequirement: unlockRequirement,
-      isUnlocked: isUnlocked ?? this.isUnlocked,
-      unlockedAt: unlockedAt ?? this.unlockedAt,
-      isEquipped: isEquipped ?? this.isEquipped,
-    );
+  }) =>
+      VisualElementModel(
+        id: id,
+        name: name,
+        description: description,
+        elementType: elementType,
+        rarity: rarity,
+        unlockSource: unlockSource,
+        isDefault: isDefault,
+        sortOrder: sortOrder,
+        previewUrl: previewUrl,
+        iconUrl: iconUrl,
+        category: category,
+        config: config,
+        unlockRequirement: unlockRequirement,
+        isUnlocked: isUnlocked ?? this.isUnlocked,
+        unlockedAt: unlockedAt ?? this.unlockedAt,
+        isEquipped: isEquipped ?? this.isEquipped,
+      );
 }
 
 // ========== 用户视觉配置 ==========
@@ -235,21 +360,19 @@ class UserVisualConfig {
   factory UserVisualConfig.fromJson(Map<String, dynamic> json) =>
       UserVisualConfig(
         equippedBackground: (json['equipped_background'] ??
-                    json['equippedBackground'])
-                is Map<String, dynamic>
+                json['equippedBackground']) is Map<String, dynamic>
             ? VisualElementModel.fromJson(
                 (json['equipped_background'] ?? json['equippedBackground'])
                     as Map<String, dynamic>,
               )
             : null,
-        equippedParticle:
-            (json['equipped_particle'] ?? json['equippedParticle'])
-                    is Map<String, dynamic>
-                ? VisualElementModel.fromJson(
-                    (json['equipped_particle'] ?? json['equippedParticle'])
-                        as Map<String, dynamic>,
-                  )
-                : null,
+        equippedParticle: (json['equipped_particle'] ??
+                json['equippedParticle']) is Map<String, dynamic>
+            ? VisualElementModel.fromJson(
+                (json['equipped_particle'] ?? json['equippedParticle'])
+                    as Map<String, dynamic>,
+              )
+            : null,
         equippedEffect: (json['equipped_effect'] ?? json['equippedEffect'])
                 is Map<String, dynamic>
             ? VisualElementModel.fromJson(
@@ -358,8 +481,7 @@ class EquipElementResponseExtended {
           (json['config'] as Map<String, dynamic>?) ?? const {},
         ),
         unlockedElements: (json['unlocked_elements'] ??
-                    json['unlockedElements'])
-                is List<dynamic>
+                json['unlockedElements']) is List<dynamic>
             ? ((json['unlocked_elements'] ?? json['unlockedElements'])
                     as List<dynamic>)
                 .whereType<Map<String, dynamic>>()

@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations, unnecessary_lambdas
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,9 +39,21 @@ class FocusRepository {
     String? whiteNoiseType,
   }) async {
     if (DemoDataService.isDemoMode) {
+      final now = DateTime.now();
+      final sessions = DemoDataService().demoFocusSessions;
+      sessions.add({
+        'id': 'mock-session-${now.millisecondsSinceEpoch}',
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime.toIso8601String(),
+        'duration_minutes': durationMinutes,
+        'focus_type': focusType,
+        'status': status,
+        if (taskId != null) 'task_id': taskId,
+        if (whiteNoiseType != null) 'white_noise_type': whiteNoiseType,
+      });
       return LoggedFocusSession(
         response: FocusSessionResponse(
-          id: 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
+          id: 'mock-session-${now.millisecondsSinceEpoch}',
           success: true,
           rewards: const FocusSessionRewards(
             flameEarned: 10,
@@ -97,9 +111,11 @@ class FocusRepository {
   /// Get today's focus statistics
   Future<FocusStatsResponse> getFocusStats() async {
     if (DemoDataService.isDemoMode) {
+      final sessions = DemoDataService().demoFocusSessions;
+      final totalMinutes = sessions.fold<int>(0, (sum, item) => sum + (item['duration_minutes'] as int? ?? 0));
       return FocusStatsResponse(
-        totalMinutes: 120,
-        pomodoroCount: 4,
+        totalMinutes: totalMinutes,
+        pomodoroCount: sessions.where((item) => item['focus_type'] == 'pomodoro').length,
         todayDate: DateTime.now().toIso8601String().split('T')[0],
       );
     }
@@ -179,19 +195,23 @@ class FocusRepository {
   Future<FocusWeeklyStatsResponse> getWeeklyStats() async {
     if (DemoDataService.isDemoMode) {
       final now = DateTime.now();
+      final sessions = DemoDataService().demoFocusSessions;
       return FocusWeeklyStatsResponse(
         periodStart: now.subtract(const Duration(days: 6)).toIso8601String().split('T')[0],
         periodEnd: now.toIso8601String().split('T')[0],
-        totalMinutes: 840,
-        sessionCount: 7,
-        avgDuration: 120,
+        totalMinutes: sessions.fold<int>(0, (sum, item) => sum + (item['duration_minutes'] as int? ?? 0)),
+        sessionCount: sessions.length,
+        avgDuration: sessions.isEmpty ? 0 : sessions.fold<int>(0, (sum, item) => sum + (item['duration_minutes'] as int? ?? 0)) ~/ sessions.length,
         dailyBreakdown: {
           for (int i = 0; i < 7; i++)
             DateTime.now().subtract(Duration(days: 6-i)).toIso8601String().split('T')[0]:
-            (60 + (i * 15) % 120),
+            (50 + (i * 20) % 110),
         },
-        focusTypeDistribution: {'pomodoro': 5, 'deep_work': 2},
-        streakDays: 3,
+        focusTypeDistribution: {
+          'pomodoro': sessions.where((item) => item['focus_type'] == 'pomodoro').length,
+          'deep_work': sessions.where((item) => item['focus_type'] == 'deep_work').length,
+        },
+        streakDays: 4,
         longestStreak: 7,
       );
     }
@@ -213,15 +233,20 @@ class FocusRepository {
   Future<FocusMonthlyStatsResponse> getMonthlyStats() async {
     if (DemoDataService.isDemoMode) {
       final now = DateTime.now();
+      final sessions = DemoDataService().demoFocusSessions;
+      final totalMinutes = sessions.fold<int>(0, (sum, item) => sum + (item['duration_minutes'] as int? ?? 0));
       return FocusMonthlyStatsResponse(
         periodStart: DateTime(now.year, now.month).toIso8601String().split('T')[0],
         periodEnd: now.toIso8601String().split('T')[0],
-        totalMinutes: 3240,
-        sessionCount: 27,
-        avgDuration: 120,
+        totalMinutes: totalMinutes,
+        sessionCount: sessions.length,
+        avgDuration: sessions.isEmpty ? 0 : totalMinutes ~/ sessions.length,
         dailyBreakdown: {},
-        weeklyBreakdown: {'week-1': 720, 'week-2': 840, 'week-3': 900, 'week-4': 780},
-        focusTypeDistribution: {'pomodoro': 20, 'deep_work': 7},
+        weeklyBreakdown: {'week-1': 480, 'week-2': 540, 'week-3': 600, 'week-4': 720},
+        focusTypeDistribution: {
+          'pomodoro': sessions.where((item) => item['focus_type'] == 'pomodoro').length,
+          'deep_work': sessions.where((item) => item['focus_type'] == 'deep_work').length,
+        },
         streakDays: 5,
         longestStreak: 10,
       );
@@ -246,20 +271,29 @@ class FocusRepository {
     int offset = 0,
   }) async {
     if (DemoDataService.isDemoMode) {
+      final sessions = DemoDataService().demoFocusSessions;
       return FocusSessionHistoryResponse(
-        sessions: List.generate(5, (i) => FocusSessionDetail(
-          id: 'mock-session-$i',
-          startTime: DateTime.now().subtract(Duration(days: i, hours: 2)),
-          endTime: DateTime.now().subtract(Duration(days: i, hours: 1)),
-          durationMinutes: 25 + (i * 5),
-          focusType: i % 3 == 0 ? 'deep_work' : 'pomodoro',
-          status: 'completed',
-          taskId: 'mock-task-$i',
-          taskTitle: 'Mock Focus Task $i',
-        ),),
-        totalCount: 5,
-        limit: 20,
-        offset: 0,
+        sessions: sessions.skip(offset).take(limit).map((item) => FocusSessionDetail(
+          id: item['id'] as String,
+          startTime: DateTime.parse(item['start_time'] as String),
+          endTime: DateTime.parse(item['end_time'] as String),
+          durationMinutes: item['duration_minutes'] as int,
+          focusType: item['focus_type'] as String,
+          status: item['status'] as String,
+          taskId: item['task_id'] as String?,
+          taskTitle: item['task_id'] == null
+              ? null
+              : DemoDataService()
+                  .demoTasks
+                  .firstWhere(
+                    (task) => task.id == item['task_id'],
+                    orElse: () => DemoDataService().demoTasks.first,
+                  )
+                  .title,
+        ),).toList(),
+        totalCount: sessions.length,
+        limit: limit,
+        offset: offset,
       );
     }
 
@@ -284,10 +318,10 @@ class FocusRepository {
   Future<Map<String, double>> getHeatmapData({int days = 90}) async {
     if (DemoDataService.isDemoMode) {
       final heatmap = <String, double>{};
-      for (var i = 0; i < 30; i++) {
-        final date = DateTime.now().subtract(Duration(days: i));
-        final key = date.toIso8601String().split('T')[0];
-        heatmap[key] = 30.0 + (i % 10) * 15.0;
+      for (final session in DemoDataService().demoFocusSessions) {
+        final start = DateTime.parse(session['start_time'] as String);
+        final key = start.toIso8601String().split('T')[0];
+        heatmap[key] = (heatmap[key] ?? 0) + (session['duration_minutes'] as num).toDouble();
       }
       return heatmap;
     }

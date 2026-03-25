@@ -54,6 +54,38 @@ class ExpansionFeedbackRequest(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class NodeExpansionCandidateRequest(BaseModel):
+    count: int = Field(3, ge=1, le=3)
+
+
+class NodeExpansionCandidate(BaseModel):
+    candidate_id: str
+    name: str
+    name_en: str | None = None
+    description: str
+    importance_level: int = Field(3, ge=1, le=5)
+    relation_to_trigger: str = "related"
+    relation_strength: float = Field(0.7, ge=0.0, le=1.0)
+    keywords: list[str] = Field(default_factory=list)
+
+
+class NodeExpansionCandidatesResponse(BaseModel):
+    trigger_node_id: UUID
+    prompt_version: str
+    candidates: list[NodeExpansionCandidate]
+
+
+class ApplyNodeExpansionRequest(BaseModel):
+    prompt_version: str | None = None
+    candidates: list[NodeExpansionCandidate] = Field(default_factory=list)
+
+
+class ApplyNodeExpansionResponse(BaseModel):
+    success: bool = True
+    created_count: int = 0
+    created_nodes: list[NodeBase] = Field(default_factory=list)
+
+
 # ==========================================
 # 响应模型
 # ==========================================
@@ -82,6 +114,7 @@ class UserStatusInfo(BaseModel):
     is_unlocked: bool
     is_collapsed: bool
     is_favorite: bool
+    first_unlock_at: datetime | None = None
     last_study_at: datetime | None = None
     next_review_at: datetime | None = None
     decay_paused: bool
@@ -117,6 +150,7 @@ class NodeWithStatus(NodeBase):
                 is_unlocked=status.is_unlocked,
                 is_collapsed=status.is_collapsed,
                 is_favorite=status.is_favorite,
+                first_unlock_at=status.first_unlock_at,
                 last_study_at=status.last_study_at,
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,

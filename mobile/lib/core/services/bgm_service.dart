@@ -101,26 +101,26 @@ class _ResolvedBgmSource {
 class BgmService {
   BgmService._();
 
-  static const _fallbackBgmAssetPath = 'audio/bgm/calm_track_loop.ogg';
-  static const _dashboardAsset = 'audio/bgm/relax_background1.ogg';
-  static const _communityAsset = 'audio/bgm/loop_city.ogg';
-  static const _warmAsset = 'audio/bgm/sunset_walk.ogg';
-  static const _airyAsset = 'audio/bgm/oceanic_drift.ogg';
-  static const _pianoAsset = 'audio/bgm/classical_piano_loop.ogg';
-  static const _celebrationAsset = 'audio/bgm/heavenly_loop.ogg';
-  static const _homeMorningAsset = 'audio/bgm/home_morning.ogg';
-  static const _chatAmbientAsset = 'audio/bgm/chat_ambient.ogg';
-  static const _taskFlowAsset = 'audio/bgm/task_flow.ogg';
-  static const _focusDeepAsset = 'audio/bgm/focus_deep.ogg';
-  static const _focusBinauralAsset = 'audio/bgm/focus_binaural.ogg';
-  static const _galaxySpaceAsset = 'audio/bgm/galaxy_space.ogg';
-  static const _achievementWarmAsset = 'audio/bgm/achievement_warm.ogg';
-  static const _communityJazzAsset = 'audio/bgm/community_jazz.ogg';
-  static const _calendarPlanAsset = 'audio/bgm/calendar_plan.ogg';
-  static const _insightsHarpAsset = 'audio/bgm/insights_harp.ogg';
-  static const _seedsNatureAsset = 'audio/bgm/seeds_nature.ogg';
-  static const _profileReflectAsset = 'audio/bgm/profile_reflect.ogg';
-  static const _thinkingAsset = 'audio/bgm/thinking.ogg';
+  static const _fallbackBgmAssetPath = 'audio/bgm/calm_track_loop.m4a';
+  static const _dashboardAsset = 'audio/bgm/relax_background1.m4a';
+  static const _communityAsset = 'audio/bgm/loop_city.m4a';
+  static const _warmAsset = 'audio/bgm/sunset_walk.m4a';
+  static const _airyAsset = 'audio/bgm/oceanic_drift.m4a';
+  static const _pianoAsset = 'audio/bgm/classical_piano_loop.m4a';
+  static const _celebrationAsset = 'audio/bgm/heavenly_loop.m4a';
+  static const _homeMorningAsset = 'audio/bgm/home_morning.m4a';
+  static const _chatAmbientAsset = 'audio/bgm/chat_ambient.m4a';
+  static const _taskFlowAsset = 'audio/bgm/task_flow.m4a';
+  static const _focusDeepAsset = 'audio/bgm/focus_deep.m4a';
+  static const _focusBinauralAsset = 'audio/bgm/focus_binaural.m4a';
+  static const _galaxySpaceAsset = 'audio/bgm/galaxy_space.m4a';
+  static const _achievementWarmAsset = 'audio/bgm/achievement_warm.m4a';
+  static const _communityJazzAsset = 'audio/bgm/community_jazz.m4a';
+  static const _calendarPlanAsset = 'audio/bgm/calendar_plan.m4a';
+  static const _insightsHarpAsset = 'audio/bgm/insights_harp.m4a';
+  static const _seedsNatureAsset = 'audio/bgm/seeds_nature.m4a';
+  static const _profileReflectAsset = 'audio/bgm/profile_reflect.m4a';
+  static const _thinkingAsset = 'audio/bgm/thinking.m4a';
   static const _localOverrideRoot = String.fromEnvironment(
     'SPARKLE_LOCAL_BGM_DIR',
     defaultValue:
@@ -149,36 +149,140 @@ class BgmService {
   static double _currentOutputVolume = 0;
   static double _persistentDuckFactor = 1.0;
   static final Set<String> _missingAssetPaths = <String>{};
+  static final Map<String, Duration> _savedPositions = <String, Duration>{};
+  static final Map<BgmTrack, int> _trackPlaylistIndices = <BgmTrack, int>{};
   static final Map<BgmTrack, String> _adaptiveLocalOverrideFiles =
       <BgmTrack, String>{
-        BgmTrack.dashboard: 'home_morning.ogg',
-        BgmTrack.chat: 'chat_ambient.ogg',
-        BgmTrack.task: 'task_flow.ogg',
-        BgmTrack.calendar: 'calendar_plan.ogg',
-        BgmTrack.plan: 'calendar_plan.ogg',
-        BgmTrack.focusStart: 'focus_deep.ogg',
-        BgmTrack.focus: 'focus_binaural.ogg',
-        BgmTrack.focusDeep: 'focus_deep.ogg',
-        BgmTrack.galaxy: 'galaxy_space.ogg',
-        BgmTrack.insights: 'insights_harp.ogg',
-        BgmTrack.seeds: 'seeds_nature.ogg',
-        BgmTrack.community: 'community_jazz.ogg',
-        BgmTrack.achievement: 'achievement_warm.ogg',
-        BgmTrack.celebration: 'achievement_warm.ogg',
-        BgmTrack.visualUnlock: 'achievement_warm.ogg',
-        BgmTrack.profile: 'profile_reflect.ogg',
-        BgmTrack.thinking: 'thinking.ogg',
-        BgmTrack.tools: 'calendar_plan.ogg',
+        BgmTrack.dashboard: 'home_morning.m4a',
+        BgmTrack.chat: 'chat_ambient.m4a',
+        BgmTrack.task: 'task_flow.m4a',
+        BgmTrack.calendar: 'calendar_plan.m4a',
+        BgmTrack.plan: 'calendar_plan.m4a',
+        BgmTrack.focusStart: 'focus_deep.m4a',
+        BgmTrack.focus: 'focus_binaural.m4a',
+        BgmTrack.focusDeep: 'focus_deep.m4a',
+        BgmTrack.galaxy: 'galaxy_space.m4a',
+        BgmTrack.insights: 'insights_harp.m4a',
+        BgmTrack.seeds: 'seeds_nature.m4a',
+        BgmTrack.community: 'community_jazz.m4a',
+        BgmTrack.achievement: 'achievement_warm.m4a',
+        BgmTrack.celebration: 'achievement_warm.m4a',
+        BgmTrack.visualUnlock: 'achievement_warm.m4a',
+        BgmTrack.profile: 'profile_reflect.m4a',
+        BgmTrack.thinking: 'thinking.m4a',
+        BgmTrack.tools: 'calendar_plan.m4a',
       };
+  static const Map<BgmTrack, List<String>> _classicalAssetPlaylists =
+      <BgmTrack, List<String>>{
+        BgmTrack.dashboard: <String>[
+          _homeMorningAsset,
+          _dashboardAsset,
+          _warmAsset,
+        ],
+        BgmTrack.chat: <String>[
+          _chatAmbientAsset,
+          _thinkingAsset,
+          _profileReflectAsset,
+        ],
+        BgmTrack.plan: <String>[
+          _calendarPlanAsset,
+          _taskFlowAsset,
+          _profileReflectAsset,
+        ],
+        BgmTrack.task: <String>[
+          _taskFlowAsset,
+          _calendarPlanAsset,
+          _pianoAsset,
+        ],
+        BgmTrack.calendar: <String>[
+          _calendarPlanAsset,
+          _taskFlowAsset,
+          _pianoAsset,
+        ],
+        BgmTrack.community: <String>[
+          _communityJazzAsset,
+          _dashboardAsset,
+          _warmAsset,
+        ],
+        BgmTrack.achievement: <String>[
+          _achievementWarmAsset,
+          _celebrationAsset,
+          _warmAsset,
+        ],
+        BgmTrack.galaxy: <String>[
+          _galaxySpaceAsset,
+          _insightsHarpAsset,
+          _airyAsset,
+        ],
+        BgmTrack.insights: <String>[
+          _insightsHarpAsset,
+          _thinkingAsset,
+          _profileReflectAsset,
+        ],
+        BgmTrack.seeds: <String>[
+          _seedsNatureAsset,
+          _calendarPlanAsset,
+          _profileReflectAsset,
+        ],
+        BgmTrack.tools: <String>[
+          _calendarPlanAsset,
+          _taskFlowAsset,
+          _pianoAsset,
+        ],
+        BgmTrack.profile: <String>[
+          _profileReflectAsset,
+          _chatAmbientAsset,
+          _insightsHarpAsset,
+        ],
+        BgmTrack.focusStart: <String>[
+          _focusDeepAsset,
+          _focusBinauralAsset,
+        ],
+        BgmTrack.focus: <String>[
+          _focusBinauralAsset,
+          _focusDeepAsset,
+        ],
+        BgmTrack.focusDeep: <String>[
+          _focusDeepAsset,
+          _focusBinauralAsset,
+        ],
+        BgmTrack.thinking: <String>[
+          _thinkingAsset,
+          _chatAmbientAsset,
+          _insightsHarpAsset,
+        ],
+        BgmTrack.celebration: <String>[
+          _achievementWarmAsset,
+          _celebrationAsset,
+          _warmAsset,
+        ],
+        BgmTrack.visualUnlock: <String>[
+          _achievementWarmAsset,
+          _celebrationAsset,
+          _warmAsset,
+        ],
+      };
+  static StreamSubscription<void>? _playerCompletionSubscription;
+  static StreamSubscription<void>? _preloadCompletionSubscription;
 
   static Future<void> init() async {
     if (_player != null) {
       return;
     }
     _player = AudioPlayer();
-    await _player!.setReleaseMode(ReleaseMode.loop);
+    await _player!.setReleaseMode(ReleaseMode.release);
     _preloadPlayer = AudioPlayer();
     await _preloadPlayer!.setReleaseMode(ReleaseMode.stop);
+    final primaryPlayer = _player!;
+    final standbyPlayer = _preloadPlayer!;
+    _playerCompletionSubscription?.cancel();
+    _preloadCompletionSubscription?.cancel();
+    _playerCompletionSubscription = primaryPlayer.onPlayerComplete.listen((_) {
+      unawaited(_handleTrackCompletion(primaryPlayer));
+    });
+    _preloadCompletionSubscription = standbyPlayer.onPlayerComplete.listen((_) {
+      unawaited(_handleTrackCompletion(standbyPlayer));
+    });
     if (!_observerRegistered) {
       WidgetsBinding.instance.addObserver(_lifecycleObserver);
       _observerRegistered = true;
@@ -291,7 +395,10 @@ class BgmService {
     await _refreshPlayback();
   }
 
-  static Future<void> pause() async => _player?.pause();
+  static Future<void> pause() async {
+    await _captureCurrentPlaybackPosition();
+    await _player?.pause();
+  }
 
   static Future<void> resume() async {
     if (!await isEnabled()) {
@@ -304,6 +411,7 @@ class BgmService {
   }
 
   static Future<void> stop() async {
+    await _captureCurrentPlaybackPosition();
     _registrations.clear();
     await _refreshPlayback(force: true);
   }
@@ -414,12 +522,17 @@ class BgmService {
 
   static Future<void> dispose() async {
     _registrations.clear();
+    await _captureCurrentPlaybackPosition();
     if (_observerRegistered) {
       WidgetsBinding.instance.removeObserver(_lifecycleObserver);
       _observerRegistered = false;
     }
     await _player?.dispose();
     await _preloadPlayer?.dispose();
+    await _playerCompletionSubscription?.cancel();
+    await _preloadCompletionSubscription?.cancel();
+    _playerCompletionSubscription = null;
+    _preloadCompletionSubscription = null;
     _player = null;
     _preloadPlayer = null;
     _currentTrack = null;
@@ -532,12 +645,17 @@ class BgmService {
     }
 
     try {
-      await standbyPlayer.setReleaseMode(ReleaseMode.loop);
+      await _captureCurrentPlaybackPosition();
+      await standbyPlayer.setReleaseMode(ReleaseMode.release);
       await standbyPlayer.play(
         resolvedSource.source,
         volume: 0,
         mode: PlayerMode.mediaPlayer,
       );
+      final savedPosition = _savedPositions[resolvedSource.cacheKey];
+      if (savedPosition != null && savedPosition > Duration.zero) {
+        await standbyPlayer.seek(savedPosition);
+      }
       final nextTargetVolume = await _targetVolume(track);
       _currentTrack = track;
       _currentPriority = registration?.priority;
@@ -647,12 +765,119 @@ class BgmService {
   static Future<double> _targetVolume(BgmTrack track) async =>
       (await getVolume()) * track.mixVolume * _persistentDuckFactor;
 
+  static Future<void> _captureCurrentPlaybackPosition() async {
+    final player = _player;
+    final sourceKey = _currentSourceKey;
+    if (player == null || sourceKey == null) {
+      return;
+    }
+    try {
+      final position = await player.getCurrentPosition();
+      if (position != null && position > Duration.zero) {
+        _savedPositions[sourceKey] = position;
+      }
+    } catch (_) {
+      // Ignore progress snapshot failures and keep playback flowing.
+    }
+  }
+
   static Future<_ResolvedBgmSource> _resolvePlayableSource(BgmTrack track) async {
+    final localPlaylist = await _resolveLocalOverridePlaylist(track);
+    if (localPlaylist.isNotEmpty) {
+      final fileName = _selectPlaylistEntry(track, localPlaylist);
+      final file = File('$_localOverrideRoot/$fileName');
+      if (await file.exists()) {
+        return _ResolvedBgmSource.device(file.path);
+      }
+    }
     final localOverride = await _resolveLocalOverride(track);
     if (localOverride != null) {
       return localOverride;
     }
+    final assetPlaylist = await _resolveAssetPlaylist(track);
+    if (assetPlaylist.isNotEmpty) {
+      final assetPath = _selectPlaylistEntry(track, assetPlaylist);
+      if (!_missingAssetPaths.contains(assetPath)) {
+        return _ResolvedBgmSource.asset(assetPath);
+      }
+    }
     return _ResolvedBgmSource.asset(await _resolvePlayableAssetPath(track));
+  }
+
+  static Future<void> _handleTrackCompletion(AudioPlayer player) async {
+    if (!identical(player, _player) || _isRefreshing) {
+      return;
+    }
+    final currentTrack = _currentTrack;
+    if (currentTrack == null) {
+      return;
+    }
+    final playlist = await _resolveEffectivePlaylist(currentTrack);
+    if (playlist.length <= 1) {
+      try {
+        await player.seek(Duration.zero);
+        await player.resume();
+      } catch (_) {}
+      return;
+    }
+    final currentIndex = _trackPlaylistIndices[currentTrack] ?? 0;
+    _trackPlaylistIndices[currentTrack] = (currentIndex + 1) % playlist.length;
+    await _refreshPlayback(force: true);
+  }
+
+  static String _selectPlaylistEntry(BgmTrack track, List<String> entries) {
+    final index = _trackPlaylistIndices[track] ?? 0;
+    final normalizedIndex = entries.isEmpty ? 0 : index % entries.length;
+    _trackPlaylistIndices[track] = normalizedIndex;
+    return entries[normalizedIndex];
+  }
+
+  static Future<List<String>> _resolveEffectivePlaylist(BgmTrack track) async {
+    final localPlaylist = await _resolveLocalOverridePlaylist(track);
+    if (localPlaylist.isNotEmpty) {
+      return localPlaylist;
+    }
+    final assetPlaylist = await _resolveAssetPlaylist(track);
+    if (assetPlaylist.isNotEmpty) {
+      return assetPlaylist;
+    }
+    return <String>[await _resolvePlayableAssetPath(track)];
+  }
+
+  static Future<List<String>> _resolveLocalOverridePlaylist(BgmTrack track) async {
+    if (!kDebugMode || _localOverrideRoot.isEmpty) {
+      return const <String>[];
+    }
+    final palette = await getPalette();
+    if (palette != BgmPalette.adaptive && palette != BgmPalette.classical) {
+      return const <String>[];
+    }
+    final names = <String>{
+      if (_adaptiveLocalOverrideFiles[track] case final String primary) primary,
+      ...?_classicalAssetPlaylists[track]
+          ?.map((assetPath) => assetPath.split('/').last),
+    }.toList();
+    final available = <String>[];
+    for (final name in names) {
+      final file = File('$_localOverrideRoot/$name');
+      if (await file.exists()) {
+        available.add(name);
+      }
+    }
+    return available;
+  }
+
+  static Future<List<String>> _resolveAssetPlaylist(BgmTrack track) async {
+    final palette = await getPalette();
+    switch (palette) {
+      case BgmPalette.classical:
+      case BgmPalette.adaptive:
+        return _classicalAssetPlaylists[track] ?? const <String>[];
+      case BgmPalette.piano:
+      case BgmPalette.airy:
+      case BgmPalette.warm:
+        return const <String>[];
+    }
   }
 
   static Future<_ResolvedBgmSource?> _resolveLocalOverride(BgmTrack track) async {
@@ -839,8 +1064,8 @@ class BgmService {
   ) async {
     if (palette == BgmPalette.adaptive || palette == BgmPalette.classical) {
       final previewFile = palette == BgmPalette.classical
-          ? 'chat_ambient.ogg'
-          : 'home_morning.ogg';
+          ? 'chat_ambient.m4a'
+          : 'home_morning.m4a';
       final file = File('$_localOverrideRoot/$previewFile');
       if (kDebugMode && await file.exists()) {
         return _ResolvedBgmSource.device(file.path);
@@ -868,8 +1093,8 @@ class BgmService {
 
   static Future<void> _fadeTo(
     double target, {
-    Duration duration = const Duration(milliseconds: 420),
-    int steps = 8,
+    Duration duration = const Duration(milliseconds: 520),
+    int steps = 12,
   }) async {
     final player = _player;
     if (player == null) {
@@ -878,7 +1103,7 @@ class BgmService {
 
     final current = _currentOutputVolume;
     for (var i = 1; i <= steps; i++) {
-      final t = i / steps;
+      final t = Curves.easeInOutCubic.transform(i / steps);
       final next = current + (target - current) * t;
       await player.setVolume(next.clamp(0.0, 1.0));
       _currentOutputVolume = next.clamp(0.0, 1.0);
@@ -890,11 +1115,11 @@ class BgmService {
     AudioPlayer player, {
     required double from,
     required double to,
-    Duration duration = const Duration(milliseconds: 420),
-    int steps = 8,
+    Duration duration = const Duration(milliseconds: 520),
+    int steps = 12,
   }) async {
     for (var i = 1; i <= steps; i++) {
-      final t = i / steps;
+      final t = Curves.easeInOutCubic.transform(i / steps);
       final next = from + (to - from) * t;
       await player.setVolume(next.clamp(0.0, 1.0));
       await Future<void>.delayed(duration ~/ steps);

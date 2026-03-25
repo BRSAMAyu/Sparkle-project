@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_message_renderer.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/task/data/repositories/subtask_repository.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -144,7 +145,87 @@ print(x);
       expect(find.textContaining('今日总结'), findsOneWidget);
       expect(find.textContaining('先做 25 分钟专注'), findsOneWidget);
       expect(find.textContaining('TCP 三次握手'), findsOneWidget);
-      expect(find.byIcon(Icons.copy_all_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
+      expect(find.textContaining('�'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('chat bubble normalizes question-mark bullets into markdown list',
+        (tester) async {
+      final message = ChatMessageModel(
+        conversationId: 'j1-bullets',
+        role: MessageRole.assistant,
+        content: '''
+好的，我们来练习英语。你可以先告诉我一个话题，或者我来提供一些选项。
+
+? **日常话题**：天气、爱好、周末计划
+? **情景对话**：点餐、问路、购物
+? **观点讨论**：喜欢的电影、对某件事的看法
+''',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppThemes.lightTheme,
+            darkTheme: AppThemes.darkTheme,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ChatBubble(
+                message: message,
+                currentUserId: 'me',
+                isLatestAssistantMessage: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
+
+      expect(find.textContaining('日常话题'), findsOneWidget);
+      expect(find.textContaining('情景对话'), findsOneWidget);
+      expect(find.textContaining('观点讨论'), findsOneWidget);
+      expect(find.textContaining('? **'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('agent message renderer uses the same markdown pipeline',
+        (tester) async {
+      final message = ChatMessageModel(
+        conversationId: 'j1-agent-renderer',
+        role: MessageRole.assistant,
+        content: '''
+好的，我们来练习英语。你可以先告诉我一个话题，或者我来提供一些选项。
+
+? **日常话题**：天气、爱好、周末计划
+❓ **情景对话**：点餐、问路、购物
+— **观点讨论**：喜欢的电影、对某件事的看法
+''',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppThemes.lightTheme,
+          darkTheme: AppThemes.darkTheme,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: AgentMessageRenderer(message: message),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
+
+      expect(find.textContaining('日常话题'), findsOneWidget);
+      expect(find.textContaining('情景对话'), findsOneWidget);
+      expect(find.textContaining('观点讨论'), findsOneWidget);
+      expect(find.textContaining('? **'), findsNothing);
+      expect(find.textContaining('❓'), findsNothing);
       expect(find.textContaining('�'), findsNothing);
       expect(tester.takeException(), isNull);
     });

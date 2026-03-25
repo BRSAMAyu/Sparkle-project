@@ -99,6 +99,29 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets(
+      'seed library detail still renders when subscription fetch fails',
+      (tester) async {
+        final repo = _SeedLibraryRepositoryWithBrokenSubscriptions();
+
+        await _pumpApp(
+          tester,
+          child: const SeedLibraryDetailScreen(libraryId: 'seed-lib-1'),
+          overrides: [
+            seedLibraryRepositoryProvider.overrideWithValue(repo),
+          ],
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('验收知识库'), findsOneWidget);
+        expect(find.text('用于验证种子库详情与正文显示'), findsOneWidget);
+        expect(find.text('应用种子库'), findsOneWidget);
+        expect(find.textContaining('null'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets('visual element preview handles long content without overflow',
         (tester) async {
       var equipCount = 0;
@@ -273,6 +296,18 @@ class _FakeSeedLibraryRepository extends SeedLibraryRepository {
         pageSize: 20,
         totalPages: 1,
       );
+}
+
+class _SeedLibraryRepositoryWithBrokenSubscriptions
+    extends _FakeSeedLibraryRepository {
+  @override
+  Future<PaginatedResponse<UserLibrarySubscription>> getMySubscriptions({
+    int page = 1,
+    int pageSize = 20,
+    bool? isEnabled,
+  }) async {
+    throw Exception('null');
+  }
 }
 
 class _FakeAchievementRepository extends AchievementRepository {

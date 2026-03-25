@@ -208,8 +208,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           SparkleButton(
                             label: '重试',
                             onPressed: () => ref
-                                .read(groupMembersProvider(widget.groupId)
-                                    .notifier,)
+                                .read(
+                                  groupMembersProvider(widget.groupId).notifier,
+                                )
                                 .refresh(),
                           ),
                         ],
@@ -298,7 +299,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               trailing: Text(
                 value(m),
                 style: TextStyle(
-                    fontWeight: FontWeight.bold, color: DS.brandPrimary,),
+                  fontWeight: FontWeight.bold,
+                  color: DS.brandPrimary,
+                ),
               ),
             ),
           );
@@ -366,6 +369,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           ],
         ),
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Flexible(
               child: Text(
@@ -419,13 +423,17 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           children: [
             Text(
               '@${member.user.username}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: DS.neutral500),
             ),
             const SizedBox(height: DS.xs),
-            Row(
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Icon(Icons.local_fire_department, size: 14, color: DS.warning),
-                const SizedBox(width: 4),
                 Text(
                   '${member.flameContribution} flame · ${member.tasksCompleted} tasks · ${member.checkinStreak} day streak',
                   style: TextStyle(fontSize: 11, color: DS.neutral600),

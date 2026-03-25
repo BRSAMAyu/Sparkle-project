@@ -176,7 +176,13 @@ class AuthRepository {
     }
     // Attempt server-side logout (token revocation), but always clear local tokens.
     try {
+      final accessToken = await getAccessToken();
       final refreshToken = await getRefreshToken();
+      if ((accessToken == null || accessToken.isEmpty) &&
+          (refreshToken == null || refreshToken.isEmpty)) {
+        await clearTokens();
+        return;
+      }
       await _apiClient.post<dynamic>(
         ApiEndpoints.logout,
         data: {

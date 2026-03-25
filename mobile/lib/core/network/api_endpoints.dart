@@ -112,6 +112,10 @@ class ApiEndpoints {
   static const String galaxyEvents = '/galaxy/events';
   static String galaxyNodeDetail(String id) => '/galaxy/node/$id';
   static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
+  static String galaxyNodeExpansionCandidates(String id) =>
+      '/galaxy/node/$id/expansion/candidates';
+  static String galaxyNodeExpansionApply(String id) =>
+      '/galaxy/node/$id/expansion/apply';
   static String galaxyNodeDecayPause(String id) =>
       '/galaxy/node/$id/decay/pause';
 

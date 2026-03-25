@@ -53,15 +53,15 @@ class _ParticleLayerState extends State<ParticleLayer>
 
     final config = widget.element!.config;
     final baseCount = config['count'] as int? ?? 50;
-    final count = (baseCount * widget.density)
-        .round()
-        .clamp(0, baseCount * 2)
-        .toInt();
+    final count =
+        (baseCount * widget.density).round().clamp(0, baseCount * 2).toInt();
     final minSize = (config['min_size'] as num?)?.toDouble() ?? 1.0;
     final maxSize = (config['max_size'] as num?)?.toDouble() ?? 3.0;
     final fallDirection = config['fall_direction'] as String?;
 
-    _particles = List.generate(count, (i) => _Particle(
+    _particles = List.generate(
+      count,
+      (i) => _Particle(
         x: _random.nextDouble(),
         y: _random.nextDouble(),
         size: minSize + _random.nextDouble() * (maxSize - minSize),
@@ -72,7 +72,8 @@ class _ParticleLayerState extends State<ParticleLayer>
         twinkleOffset: _random.nextDouble() * 2 * pi,
         rotation: _random.nextDouble() * 2 * pi,
         fallDirection: fallDirection,
-      ),);
+      ),
+    );
   }
 
   void _registerLifecycleControllers() {
@@ -211,8 +212,9 @@ class _ParticlePainter extends CustomPainter {
 
       // 应用漂移
       if (drift) {
-        x +=
-            particle.drift * 30 * sin(particleValue * speedMultiplier * 2 * pi + i);
+        x += particle.drift *
+            30 *
+            sin(particleValue * speedMultiplier * 2 * pi + i);
       }
 
       // 应用下落/上升方向
@@ -251,13 +253,31 @@ class _ParticlePainter extends CustomPainter {
 
       // 绘制不同形状
       switch (shape) {
+        case 'trail':
+          canvas.drawCircle(Offset(x, y), particle.size * 2.2, glowPaint);
+          _drawTrail(
+              canvas, Offset(x, y), particle.size, paint, particle.rotation);
+          break;
+        case 'ember':
+          canvas.drawCircle(Offset(x, y), particle.size * 2.0, glowPaint);
+          _drawEmber(canvas, Offset(x, y), particle.size, paint);
+          break;
+        case 'diamond':
+          canvas.drawCircle(Offset(x, y), particle.size * 1.8, glowPaint);
+          _drawDiamond(canvas, Offset(x, y), particle.size, paint);
+          break;
+        case 'burst':
+          canvas.drawCircle(Offset(x, y), particle.size * 2.0, glowPaint);
+          _drawBurst(canvas, Offset(x, y), particle.size, paint);
+          break;
         case 'star':
           canvas.drawCircle(Offset(x, y), particle.size * 1.8, glowPaint);
           _drawStar(canvas, Offset(x, y), particle.size, paint);
           break;
         case 'petal':
           canvas.drawCircle(Offset(x, y), particle.size * 1.6, glowPaint);
-          _drawPetal(canvas, Offset(x, y), particle.size, paint, particle.rotation);
+          _drawPetal(
+              canvas, Offset(x, y), particle.size, paint, particle.rotation);
           break;
         case 'snowflake':
           canvas.drawCircle(Offset(x, y), particle.size * 1.7, glowPaint);
@@ -304,7 +324,8 @@ class _ParticlePainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
-  void _drawPetal(Canvas canvas, Offset center, double size, Paint paint, double rotation) {
+  void _drawPetal(
+      Canvas canvas, Offset center, double size, Paint paint, double rotation) {
     final path = Path();
     final angle = rotation;
 
@@ -335,14 +356,81 @@ class _ParticlePainter extends CustomPainter {
     }
   }
 
+  void _drawTrail(
+    Canvas canvas,
+    Offset center,
+    double size,
+    Paint paint,
+    double rotation,
+  ) {
+    final end = Offset(
+      center.dx - cos(rotation) * size * 3.2,
+      center.dy - sin(rotation) * size * 3.2,
+    );
+    final trailPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          paint.color,
+          paint.color.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromPoints(center, end))
+      ..strokeWidth = size
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(center, end, trailPaint);
+    canvas.drawCircle(center, size * 0.75, paint);
+  }
+
+  void _drawEmber(Canvas canvas, Offset center, double size, Paint paint) {
+    final rect = Rect.fromCenter(
+      center: center,
+      width: size * 1.2,
+      height: size * 1.8,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(size * 0.5)),
+      paint,
+    );
+  }
+
+  void _drawDiamond(Canvas canvas, Offset center, double size, Paint paint) {
+    final path = Path()
+      ..moveTo(center.dx, center.dy - size)
+      ..lineTo(center.dx + size * 0.85, center.dy)
+      ..lineTo(center.dx, center.dy + size)
+      ..lineTo(center.dx - size * 0.85, center.dy)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawBurst(Canvas canvas, Offset center, double size, Paint paint) {
+    final rayPaint = Paint()
+      ..color = paint.color
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 8; i++) {
+      final angle = i * pi / 4;
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx + cos(angle) * size * 2,
+          center.dy + sin(angle) * size * 2,
+        ),
+        rayPaint,
+      );
+    }
+    canvas.drawCircle(center, size * 0.7, paint);
+  }
+
   @override
-  bool shouldRepaint(covariant _ParticlePainter oldDelegate) => particleValue != oldDelegate.particleValue ||
-        mainValue != oldDelegate.mainValue ||
-        speedMultiplier != oldDelegate.speedMultiplier ||
-        twinkle != oldDelegate.twinkle ||
-        drift != oldDelegate.drift ||
-        shape != oldDelegate.shape ||
-        speed != oldDelegate.speed ||
-        particles != oldDelegate.particles ||
-        colors.length != oldDelegate.colors.length;
+  bool shouldRepaint(covariant _ParticlePainter oldDelegate) =>
+      particleValue != oldDelegate.particleValue ||
+      mainValue != oldDelegate.mainValue ||
+      speedMultiplier != oldDelegate.speedMultiplier ||
+      twinkle != oldDelegate.twinkle ||
+      drift != oldDelegate.drift ||
+      shape != oldDelegate.shape ||
+      speed != oldDelegate.speed ||
+      particles != oldDelegate.particles ||
+      colors.length != oldDelegate.colors.length;
 }

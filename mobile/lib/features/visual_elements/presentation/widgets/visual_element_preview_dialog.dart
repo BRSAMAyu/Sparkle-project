@@ -23,6 +23,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
     required this.element,
     super.key,
     this.availableElements = const <VisualElementModel>[],
+    this.unlockedElementIds = const <String>{},
     this.baseConfig,
     this.onEquip,
     this.onUnequip,
@@ -32,6 +33,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
 
   final VisualElementModel element;
   final List<VisualElementModel> availableElements;
+  final Set<String> unlockedElementIds;
   final UserVisualConfig? baseConfig;
   final VoidCallback? onEquip;
   final VoidCallback? onUnequip;
@@ -42,38 +44,40 @@ class VisualElementPreviewDialog extends StatefulWidget {
     BuildContext context, {
     required VisualElementModel element,
     List<VisualElementModel> availableElements = const <VisualElementModel>[],
+    Set<String> unlockedElementIds = const <String>{},
     UserVisualConfig? baseConfig,
     VoidCallback? onEquip,
     VoidCallback? onUnequip,
     bool isEquipped = false,
     bool isUnlocked = false,
-  }) => showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.72,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => VisualElementPreviewDialog(
-          element: element,
-          availableElements: availableElements,
-          baseConfig: baseConfig,
-          onEquip: onEquip,
-          onUnequip: onUnequip,
-          isEquipped: isEquipped,
-          isUnlocked: isUnlocked,
+  }) =>
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.72,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) => VisualElementPreviewDialog(
+            element: element,
+            availableElements: availableElements,
+            unlockedElementIds: unlockedElementIds,
+            baseConfig: baseConfig,
+            onEquip: onEquip,
+            onUnequip: onUnequip,
+            isEquipped: isEquipped,
+            isUnlocked: isUnlocked,
+          ),
         ),
-      ),
-    );
+      );
 
   @override
   State<VisualElementPreviewDialog> createState() =>
       _VisualElementPreviewDialogState();
 }
 
-class _VisualElementPreviewDialogState
-    extends State<VisualElementPreviewDialog>
+class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
     with SingleTickerProviderStateMixin {
   final GlobalKey _previewKey = GlobalKey();
   bool _isPreviewing = true;
@@ -237,6 +241,27 @@ class _VisualElementPreviewDialogState
                               ),
                             ],
 
+                            const SizedBox(height: DS.spacing12),
+                            Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: [
+                                _MetaChip(
+                                  label: widget.element.displaySlotLabel,
+                                  color: colors.text,
+                                ),
+                                _MetaChip(
+                                  label: widget.element.unlockSourceLabel,
+                                  color: colors.border,
+                                ),
+                                if (widget.element.setId != null)
+                                  _MetaChip(
+                                    label: widget.element.setId!,
+                                    color: DS.brandPrimary,
+                                  ),
+                              ],
+                            ),
+
                             const SizedBox(height: DS.spacing16),
                             const Divider(),
                             const SizedBox(height: DS.spacing16),
@@ -264,6 +289,23 @@ class _VisualElementPreviewDialogState
                                 l10n,
                               ),
                             ),
+                            _InfoRow(
+                              label: '影响场景',
+                              value: widget.element.affectedSurfaceLabels
+                                  .join(' · '),
+                            ),
+                            if (widget.element.isBundle &&
+                                widget.element.bundlePieceIds.isNotEmpty)
+                              _InfoRow(
+                                label: '收藏进度',
+                                value: _bundleCompletionText(),
+                              ),
+                            if (widget.element.isBundle &&
+                                widget.element.bundlePieceIds.isNotEmpty)
+                              _InfoRow(
+                                label: '套装部件',
+                                value: _bundlePieceLabels().join(' · '),
+                              ),
 
                             const SizedBox(height: DS.spacing24),
 
@@ -311,131 +353,140 @@ class _VisualElementPreviewDialogState
   }
 
   Widget _buildActionButtons(AppLocalizations l10n) => Container(
-      padding: EdgeInsets.fromLTRB(
-        DS.spacing16,
-        DS.spacing12,
-        DS.spacing16,
-        MediaQuery.of(context).padding.bottom + DS.spacing12,
-      ),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary,
-        border: Border(
-          top: BorderSide(color: DS.border.withValues(alpha: 0.5)),
+        padding: EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing12,
+          DS.spacing16,
+          MediaQuery.of(context).padding.bottom + DS.spacing12,
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final actionWidth = constraints.maxWidth > 420
-                ? constraints.maxWidth - 152
-                : constraints.maxWidth;
-            return Wrap(
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing12,
-              children: [
-                SizedBox(
-                  width: constraints.maxWidth > 420 ? 140 : constraints.maxWidth,
-                  child: _buildShareButton(l10n),
-                ),
-                SizedBox(
-                  width: actionWidth,
-                  child: widget.isEquipped
-                      ? _buildUnequipButton(l10n)
-                      : widget.isUnlocked
-                          ? _buildEquipButton(l10n)
-                          : _buildLockedButton(l10n),
-                ),
-              ],
-            );
-          },
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          border: Border(
+            top: BorderSide(color: DS.border.withValues(alpha: 0.5)),
+          ),
         ),
-      ),
-    );
+        child: SafeArea(
+          top: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final actionWidth = constraints.maxWidth > 420
+                  ? constraints.maxWidth - 152
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing12,
+                children: [
+                  SizedBox(
+                    width:
+                        constraints.maxWidth > 420 ? 140 : constraints.maxWidth,
+                    child: _buildShareButton(l10n),
+                  ),
+                  SizedBox(
+                    width: actionWidth,
+                    child: widget.isEquipped
+                        ? _buildUnequipButton(l10n)
+                        : widget.isUnlocked
+                            ? _buildEquipButton(l10n)
+                            : _buildLockedButton(l10n),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
 
   Widget _buildShareButton(AppLocalizations l10n) => SizedBox(
-      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: _isSharing ? null : _sharePreview,
-        icon: _isSharing
-            ? SizedBox(
-                width: DS.iconSizeSm,
-                height: DS.iconSizeSm,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
-                ),
-              )
-            : const Icon(Icons.share_outlined),
-                        label: Text(
-                          l10n.visualElementShare,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: OutlinedButton.styleFrom(
-          foregroundColor: DS.textSecondary,
-          side: BorderSide(color: DS.border),
-          shape: const RoundedRectangleBorder(
-            borderRadius: DS.borderRadius12,
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: _isSharing ? null : _sharePreview,
+          icon: _isSharing
+              ? SizedBox(
+                  width: DS.iconSizeSm,
+                  height: DS.iconSizeSm,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
+                  ),
+                )
+              : const Icon(Icons.share_outlined),
+          label: Text(
+            l10n.visualElementShare,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: DS.textSecondary,
+            side: BorderSide(color: DS.border),
+            shape: const RoundedRectangleBorder(
+              borderRadius: DS.borderRadius12,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildEquipButton(AppLocalizations l10n) => SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton.icon(
-        onPressed: _handleEquip,
-        icon: const Icon(Icons.check_circle_outline),
-        label: Text(l10n.visualElementEquip),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: DS.brandPrimary,
-          foregroundColor: DS.textOnPrimary,
-          shape: const RoundedRectangleBorder(
-            borderRadius: DS.borderRadius12,
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: _handleEquip,
+          icon: Icon(
+            widget.element.isBundle
+                ? Icons.auto_awesome_rounded
+                : Icons.check_circle_outline,
+          ),
+          label: Text(
+            widget.element.isBundle ? '一键装备套装' : l10n.visualElementEquip,
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: DS.brandPrimary,
+            foregroundColor: DS.textOnPrimary,
+            shape: const RoundedRectangleBorder(
+              borderRadius: DS.borderRadius12,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildUnequipButton(AppLocalizations l10n) => SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: widget.onUnequip,
-        icon: const Icon(Icons.remove_circle_outline),
-        label: Text(l10n.visualElementUnequip),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: DS.textSecondary,
-          side: BorderSide(color: DS.border),
-          shape: const RoundedRectangleBorder(
-            borderRadius: DS.borderRadius12,
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: widget.onUnequip,
+          icon: const Icon(Icons.remove_circle_outline),
+          label: Text(
+            widget.element.isBundle ? '卸下整套' : l10n.visualElementUnequip,
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: DS.textSecondary,
+            side: BorderSide(color: DS.border),
+            shape: const RoundedRectangleBorder(
+              borderRadius: DS.borderRadius12,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildLockedButton(AppLocalizations l10n) => SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.lock_outline),
-        label: Text(l10n.visualElementLocked),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: DS.surfaceTertiary,
-          foregroundColor: DS.textTertiary,
-          shape: const RoundedRectangleBorder(
-            borderRadius: DS.borderRadius12,
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: null,
+          icon: const Icon(Icons.lock_outline),
+          label: Text(l10n.visualElementLocked),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: DS.surfaceTertiary,
+            foregroundColor: DS.textTertiary,
+            shape: const RoundedRectangleBorder(
+              borderRadius: DS.borderRadius12,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Future<void> _sharePreview() async {
-    final boundary =
-        _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final boundary = _previewKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
     if (boundary == null) {
       AppFeedback.error(
         context,
@@ -554,6 +605,60 @@ class _VisualElementPreviewDialogState
         return l10n.visualElementUnlockSeason;
     }
   }
+
+  List<String> _bundlePieceLabels() {
+    if (!widget.element.isBundle) return const [];
+    final byId = <String, VisualElementModel>{
+      for (final element in widget.availableElements) element.id: element,
+    };
+
+    return widget.element.bundlePieceIds
+        .map((id) => byId[id]?.name ?? id)
+        .toList();
+  }
+
+  String _bundleCompletionText() {
+    if (!widget.element.isBundle) return '0 / 0 已集齐';
+    final total = widget.element.bundlePieceIds.length;
+    final owned = widget.element.bundlePieceIds
+        .where((id) => widget.unlockedElementIds.contains(id))
+        .length;
+    return '$owned / $total 已集齐';
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(maxWidth: 160),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: color.withValues(alpha: 0.22)),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
 }
 
 /// 预览区域
@@ -704,8 +809,8 @@ class _PreviewAreaState extends State<_PreviewArea>
     return UserVisualConfig(
       equippedBackground: byId[widget.element.config['background_id']] ??
           base?.equippedBackground,
-      equippedParticle: byId[widget.element.config['particle_id']] ??
-          base?.equippedParticle,
+      equippedParticle:
+          byId[widget.element.config['particle_id']] ?? base?.equippedParticle,
       equippedEffect:
           byId[widget.element.config['effect_id']] ?? base?.equippedEffect,
     );
@@ -828,23 +933,23 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
   }
 
   Widget _buildPreviewLayers(UserVisualConfig config) => Stack(
-      fit: StackFit.expand,
-      children: [
-        BackgroundLayer(
-          element: config.equippedBackground,
-          mainAnimation: _mainController,
-        ),
-        ParticleLayer(
-          element: config.equippedParticle,
-          particleAnimation: _particleController,
-          mainAnimation: _mainController,
-        ),
-        EffectLayer(
-          element: config.equippedEffect,
-          mainAnimation: _mainController,
-        ),
-      ],
-    );
+        fit: StackFit.expand,
+        children: [
+          BackgroundLayer(
+            element: config.equippedBackground,
+            mainAnimation: _mainController,
+          ),
+          ParticleLayer(
+            element: config.equippedParticle,
+            particleAnimation: _particleController,
+            mainAnimation: _mainController,
+          ),
+          EffectLayer(
+            element: config.equippedEffect,
+            mainAnimation: _mainController,
+          ),
+        ],
+      );
 
   UserVisualConfig _resolvePreviewConfig(bool isPreviewing) {
     final base = widget.baseConfig;
@@ -883,8 +988,8 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
     return UserVisualConfig(
       equippedBackground: byId[widget.element.config['background_id']] ??
           base?.equippedBackground,
-      equippedParticle: byId[widget.element.config['particle_id']] ??
-          base?.equippedParticle,
+      equippedParticle:
+          byId[widget.element.config['particle_id']] ?? base?.equippedParticle,
       equippedEffect:
           byId[widget.element.config['effect_id']] ?? base?.equippedEffect,
     );
@@ -905,35 +1010,35 @@ class _RarityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: DS.borderRadius8,
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _getRarityIcon(rarity),
-            size: DS.iconSizeXs,
-            color: colors.text,
-          ),
-          const SizedBox(width: DS.spacing4),
-          Text(
-            _getRarityName(rarity),
-            style: TextStyle(
-              fontSize: DS.fontSizeXs,
-              fontWeight: DS.fontWeightMedium,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getRarityIcon(rarity),
+              size: DS.iconSizeXs,
               color: colors.text,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.spacing4),
+            Text(
+              _getRarityName(rarity),
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                fontWeight: DS.fontWeightMedium,
+                color: colors.text,
+              ),
+            ),
+          ],
+        ),
+      );
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -974,37 +1079,37 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textSecondary,
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textSecondary,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            flex: 6,
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              softWrap: true,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                fontWeight: DS.fontWeightMedium,
-                color: DS.textPrimary,
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              flex: 6,
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                softWrap: true,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightMedium,
+                  color: DS.textPrimary,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }
 
 /// 解锁条件显示
@@ -1019,32 +1124,32 @@ class _UnlockRequirement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.border.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.lock_outline,
-            size: DS.iconSizeSm,
-            color: DS.textTertiary,
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: Text(
-              _getRequirementText(),
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textSecondary,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.lock_outline,
+              size: DS.iconSizeSm,
+              color: DS.textTertiary,
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Text(
+                _getRequirementText(),
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  color: DS.textSecondary,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   String _getRequirementText() {
     switch (element.unlockSource) {
@@ -1053,7 +1158,8 @@ class _UnlockRequirement extends StatelessWidget {
       case VisualElementUnlockSource.achievement:
         final achievementId = element.unlockRequirement?['achievement_id'];
         if (achievementId != null) {
-          return l10n.visualElementUnlockHintAchievement(achievementId as Object);
+          return l10n
+              .visualElementUnlockHintAchievement(achievementId as Object);
         }
         return l10n.visualElementUnlockHintAchievementDefault;
       case VisualElementUnlockSource.shop:

@@ -12,6 +12,27 @@ class SeedLibraryRepository {
 
   final ApiClient _apiClient;
 
+  String _extractError(
+    DioException error, {
+    required String fallback,
+  }) {
+    final payload = error.response?.data;
+    if (payload is Map<String, dynamic>) {
+      final detail = payload['detail'];
+      if (detail is String && detail.trim().isNotEmpty && detail.trim().toLowerCase() != 'null') {
+        return detail.trim();
+      }
+      final message = payload['message'];
+      if (message is String && message.trim().isNotEmpty && message.trim().toLowerCase() != 'null') {
+        return message.trim();
+      }
+    }
+    if (payload is String && payload.trim().isNotEmpty && payload.trim().toLowerCase() != 'null') {
+      return payload.trim();
+    }
+    return fallback;
+  }
+
   /// List libraries with optional filtering
   Future<PaginatedResponse<SeedLibrary>> listLibraries({
     LibraryCategory? category,
@@ -77,8 +98,9 @@ class SeedLibraryRepository {
         totalPages: (meta['total_pages'] as num?)?.toInt() ?? 1,
       );
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to load libraries';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to load libraries'),
+      );
     }
   }
 
@@ -93,8 +115,9 @@ class SeedLibraryRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'getLibrary');
       return SeedLibrary.fromJson(data);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to load library';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to load library'),
+      );
     }
   }
 
@@ -110,8 +133,9 @@ class SeedLibraryRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'createLibrary');
       return SeedLibrary.fromJson(data);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to create library';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to create library'),
+      );
     }
   }
 
@@ -130,8 +154,9 @@ class SeedLibraryRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'updateLibrary');
       return SeedLibrary.fromJson(data);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to update library';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to update library'),
+      );
     }
   }
 
@@ -140,8 +165,9 @@ class SeedLibraryRepository {
     try {
       await _apiClient.delete<dynamic>(ApiEndpoints.seedLibrary(id));
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to delete library';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to delete library'),
+      );
     }
   }
 
@@ -195,8 +221,9 @@ class SeedLibraryRepository {
         totalPages: (meta['total_pages'] as num?)?.toInt() ?? 1,
       );
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to load items';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to load items'),
+      );
     }
   }
 
@@ -233,8 +260,9 @@ class SeedLibraryRepository {
       final payload = ApiResponseParser.unwrapMap(response.data, action: 'addItem');
       return SeedItem.fromJson(payload);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to add item';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to add item'),
+      );
     }
   }
 
@@ -271,8 +299,9 @@ class SeedLibraryRepository {
       final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateItem');
       return SeedItem.fromJson(payload);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to update item';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to update item'),
+      );
     }
   }
 
@@ -283,8 +312,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraryItem(libraryId, itemId),
       );
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to delete item';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to delete item'),
+      );
     }
   }
 
@@ -310,8 +340,9 @@ class SeedLibraryRepository {
       );
       return UserLibrarySubscription.fromJson(payload);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to subscribe';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to subscribe'),
+      );
     }
   }
 
@@ -322,8 +353,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraryUnsubscribe(libraryId),
       );
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to unsubscribe';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to unsubscribe'),
+      );
     }
   }
 
@@ -342,9 +374,9 @@ class SeedLibraryRepository {
       );
       return UserLibrarySubscription.fromJson(payload);
     } on DioException catch (e) {
-      final error =
-          e.response?.data?['detail'] ?? 'Failed to update subscription';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to update subscription'),
+      );
     }
   }
 
@@ -361,8 +393,9 @@ class SeedLibraryRepository {
           ApiResponseParser.unwrapMap(response.data, action: 'rateLibrary');
       return SeedLibrary.fromJson(data);
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to rate library';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to rate library'),
+      );
     }
   }
 
@@ -407,9 +440,32 @@ class SeedLibraryRepository {
         totalPages: (meta['total_pages'] as num?)?.toInt() ?? 1,
       );
     } on DioException catch (e) {
-      final error =
-          e.response?.data?['detail'] ?? 'Failed to load subscriptions';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to load subscriptions'),
+      );
+    }
+  }
+
+  Future<UserLibrarySubscription?> findMySubscriptionForLibrary(
+    String libraryId,
+  ) async {
+    var page = 1;
+    const pageSize = 100;
+
+    while (true) {
+      final response = await getMySubscriptions(
+        page: page,
+        pageSize: pageSize,
+      );
+      for (final subscription in response.items) {
+        if (subscription.libraryId == libraryId) {
+          return subscription;
+        }
+      }
+      if (page >= response.totalPages) {
+        return null;
+      }
+      page += 1;
     }
   }
 
@@ -460,8 +516,9 @@ class SeedLibraryRepository {
             .toList(),
       };
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Query failed';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Query failed'),
+      );
     }
   }
 
@@ -488,9 +545,9 @@ class SeedLibraryRepository {
           .whereType<Map<String, dynamic>>()
           .toList();
     } on DioException catch (e) {
-      final error =
-          e.response?.data?['detail'] ?? 'Failed to get examples';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to get examples'),
+      );
     }
   }
 
@@ -509,8 +566,9 @@ class SeedLibraryRepository {
       );
       return response.data ?? const <String, dynamic>{};
     } on DioException catch (e) {
-      final error = e.response?.data?['detail'] ?? 'Failed to import items';
-      throw Exception(error.toString());
+      throw Exception(
+        _extractError(e, fallback: 'Failed to import items'),
+      );
     }
   }
 }

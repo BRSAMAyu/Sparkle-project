@@ -30,8 +30,7 @@ class _WeatherLayerState extends State<WeatherLayer> {
   late List<_WeatherParticle> _particles;
   final Random _random = Random(42);
 
-  double get _density =>
-      widget.blendParams.particleDensity.clamp(0.2, 1.0);
+  double get _density => widget.blendParams.particleDensity.clamp(0.2, 1.0);
 
   double get _speedMultiplier =>
       widget.blendParams.animationSpeed.clamp(0.3, 1.8);
@@ -44,10 +43,11 @@ class _WeatherLayerState extends State<WeatherLayer> {
 
   Color get _accentColor {
     final baseColor = Color.lerp(
-      DS.brandPrimary,
-      widget.blendParams.primaryTint,
-      0.45,
-    ) ?? DS.brandPrimary;
+          DS.brandPrimary,
+          widget.blendParams.primaryTint,
+          0.45,
+        ) ??
+        DS.brandPrimary;
 
     // 浅色模式：增加对比度
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -60,8 +60,7 @@ class _WeatherLayerState extends State<WeatherLayer> {
   }
 
   double get _layerOpacity =>
-      (0.4 + widget.blendParams.backgroundOpacity * 0.6)
-          .clamp(0.35, 0.7);
+      (0.4 + widget.blendParams.backgroundOpacity * 0.6).clamp(0.35, 0.7);
 
   @override
   void initState() {
@@ -106,46 +105,58 @@ class _WeatherLayerState extends State<WeatherLayer> {
 
   List<_WeatherParticle> _initSunnyParticles() {
     final count = _scaledCount(8, min: 4);
-    return List.generate(count, (i) => _WeatherParticle(
+    return List.generate(
+      count,
+      (i) => _WeatherParticle(
         x: 0.8 + _random.nextDouble() * 0.2,
         y: 0.1 + _random.nextDouble() * 0.2,
         size: 30.0 + i * 15.0,
         angle: i * pi / 4,
         speed: 0.5 + _random.nextDouble() * 0.5,
-      ),);
+      ),
+    );
   }
 
   List<_WeatherParticle> _initCloudyParticles() {
     final count = _scaledCount(5, min: 3);
-    return List.generate(count, (i) => _WeatherParticle(
+    return List.generate(
+      count,
+      (i) => _WeatherParticle(
         x: _random.nextDouble(),
         y: 0.05 + _random.nextDouble() * 0.25,
         size: 40 + _random.nextDouble() * 60,
         speed: 0.1 + _random.nextDouble() * 0.2,
         opacity: 0.03 + _random.nextDouble() * 0.05,
-      ),);
+      ),
+    );
   }
 
   List<_WeatherParticle> _initRainyParticles() {
     final count = _scaledCount(40, min: 16);
-    return List.generate(count, (i) => _WeatherParticle(
+    return List.generate(
+      count,
+      (i) => _WeatherParticle(
         x: _random.nextDouble(),
         y: -0.1 - _random.nextDouble() * 0.5,
         size: 10 + _random.nextDouble() * 15,
         speed: 0.8 + _random.nextDouble() * 0.4,
         opacity: 0.1 + _random.nextDouble() * 0.15,
-      ),);
+      ),
+    );
   }
 
   List<_WeatherParticle> _initMeteorParticles() {
     final count = _scaledCount(6, min: 3);
-    return List.generate(count, (i) => _WeatherParticle(
+    return List.generate(
+      count,
+      (i) => _WeatherParticle(
         x: 0.2 + _random.nextDouble() * 0.6,
         y: _random.nextDouble() * 0.2,
         size: 30 + _random.nextDouble() * 50,
         speed: 1.5 + _random.nextDouble() * 1.0,
         delay: i * 0.15,
-      ),);
+      ),
+    );
   }
 
   @override
@@ -197,6 +208,24 @@ class _WeatherParticle {
   final double delay;
 }
 
+class _WeatherPalette {
+  _WeatherPalette({
+    required this.primary,
+    required this.secondary,
+    required this.highlight,
+    required this.skyColors,
+    required this.auraCenter,
+    required this.auraRadius,
+  });
+
+  final Color primary;
+  final Color secondary;
+  final Color highlight;
+  final List<Color> skyColors;
+  final Alignment auraCenter;
+  final double auraRadius;
+}
+
 class _WeatherPainter extends CustomPainter {
   _WeatherPainter({
     required this.weatherType,
@@ -218,6 +247,8 @@ class _WeatherPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    _paintAtmosphere(canvas, size);
+
     switch (weatherType) {
       case 'sunny':
         _paintSunny(canvas, size);
@@ -234,6 +265,70 @@ class _WeatherPainter extends CustomPainter {
       default:
         _paintSunny(canvas, size);
         break;
+    }
+
+    _paintForegroundVeil(canvas, size);
+  }
+
+  void _paintAtmosphere(Canvas canvas, Size size) {
+    final palette = _paletteForWeather();
+
+    final skyWash = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: palette.skyColors,
+        stops: const [0.0, 0.48, 1.0],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, skyWash);
+
+    final pulse = 0.88 + sin(mainValue * 2 * pi) * 0.12;
+    final auraPaint = Paint()
+      ..shader = RadialGradient(
+        center: palette.auraCenter,
+        radius: palette.auraRadius,
+        colors: [
+          palette.highlight.withValues(alpha: 0.18 * opacityScale * pulse),
+          palette.secondary.withValues(alpha: 0.1 * opacityScale),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.45, 1.0],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, auraPaint);
+  }
+
+  void _paintForegroundVeil(Canvas canvas, Size size) {
+    final palette = _paletteForWeather();
+    final veilPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          palette.secondary.withValues(alpha: 0.03 * opacityScale),
+          palette.primary.withValues(alpha: 0.1 * opacityScale),
+        ],
+        stops: const [0.0, 0.62, 1.0],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, veilPaint);
+
+    if (weatherType == 'rainy' || weatherType == 'cloudy') {
+      final horizonPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            palette.highlight.withValues(alpha: 0.02 * opacityScale),
+            palette.highlight.withValues(alpha: 0.1 * opacityScale),
+          ],
+        ).createShader(
+          Rect.fromLTWH(0, size.height * 0.62, size.width, size.height * 0.38),
+        );
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height * 0.62, size.width, size.height * 0.38),
+        horizonPaint,
+      );
     }
   }
 
@@ -279,16 +374,44 @@ class _WeatherPainter extends CustomPainter {
         rayPaint,
       );
     }
+
+    final pollenPaint = Paint()..style = PaintingStyle.fill;
+    for (var i = 0; i < 20; i++) {
+      final drift = (particleValue + i * 0.07) % 1.0;
+      final x = ((0.15 + i * 0.11) % 1.0) * size.width;
+      final y = (0.14 + drift * 0.74) * size.height;
+      final radius = 1.5 + (i % 3) * 0.8;
+      pollenPaint.color = accentColor.withValues(
+        alpha: (0.04 + (i % 4) * 0.015) * opacityScale,
+      );
+      canvas.drawCircle(
+        Offset(x + sin(drift * 2 * pi + i) * 8, y),
+        radius,
+        pollenPaint,
+      );
+    }
   }
 
   void _paintCloudy(Canvas canvas, Size size) {
     final mainPhase = (mainValue * speedMultiplier) % 1.0;
     final particlePhase = (particleValue * speedMultiplier) % 1.0;
+
+    final hazePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          accentColor.withValues(alpha: 0.04 * opacityScale),
+          Colors.transparent,
+          accentColor.withValues(alpha: 0.03 * opacityScale),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, hazePaint);
+
     for (final cloud in particles) {
       final x = (cloud.x + particlePhase * cloud.speed) % 1.2 - 0.1;
       final y = cloud.y;
-      final opacity =
-          cloud.opacity * (0.8 + mainPhase * 0.4) * opacityScale;
+      final opacity = cloud.opacity * (0.8 + mainPhase * 0.4) * opacityScale;
 
       final cloudPaint = Paint()
         ..color = accentColor.withValues(alpha: opacity)
@@ -298,14 +421,31 @@ class _WeatherPainter extends CustomPainter {
       final cloudCenter = Offset(x * size.width, y * size.height);
       canvas.drawCircle(cloudCenter, cloud.size, cloudPaint);
       canvas.drawCircle(
-        Offset(cloudCenter.dx - cloud.size * 0.6, cloudCenter.dy + cloud.size * 0.2),
+        Offset(cloudCenter.dx - cloud.size * 0.6,
+            cloudCenter.dy + cloud.size * 0.2),
         cloud.size * 0.7,
         cloudPaint,
       );
       canvas.drawCircle(
-        Offset(cloudCenter.dx + cloud.size * 0.5, cloudCenter.dy + cloud.size * 0.15),
+        Offset(cloudCenter.dx + cloud.size * 0.5,
+            cloudCenter.dy + cloud.size * 0.15),
         cloud.size * 0.6,
         cloudPaint,
+      );
+    }
+
+    final mistPaint = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24)
+      ..color = accentColor.withValues(alpha: 0.06 * opacityScale);
+    for (var i = 0; i < 4; i++) {
+      final y = size.height * (0.56 + i * 0.08);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(size.width * (0.25 + i * 0.18), y),
+          width: size.width * 0.62,
+          height: 44 + i * 12,
+        ),
+        mistPaint,
       );
     }
   }
@@ -313,6 +453,24 @@ class _WeatherPainter extends CustomPainter {
   void _paintRainy(Canvas canvas, Size size) {
     final particlePhase = (particleValue * speedMultiplier) % 1.0;
     final dropLengthScale = (0.7 + speedMultiplier * 0.5).clamp(0.6, 1.6);
+
+    final stormWash = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          accentColor.withValues(alpha: 0.14 * opacityScale),
+          accentColor.withValues(alpha: 0.05 * opacityScale),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromLTWH(0, 0, size.width, size.height * 0.55),
+      );
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height * 0.55),
+      stormWash,
+    );
+
     for (final drop in particles) {
       final x = drop.x * size.width;
       final y =
@@ -320,8 +478,7 @@ class _WeatherPainter extends CustomPainter {
       final dropLength = drop.size * dropLengthScale;
 
       final rainPaint = Paint()
-        ..color =
-            accentColor.withValues(alpha: drop.opacity * opacityScale)
+        ..color = accentColor.withValues(alpha: drop.opacity * opacityScale)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
 
@@ -332,11 +489,44 @@ class _WeatherPainter extends CustomPainter {
         rainPaint,
       );
     }
+
+    final ripplePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    for (var i = 0; i < 8; i++) {
+      final progress = (particleValue * 1.4 + i * 0.13) % 1.0;
+      final x = ((0.11 + i * 0.12) % 1.0) * size.width;
+      final y = size.height * (0.82 + (i % 3) * 0.045);
+      ripplePaint.color = accentColor.withValues(
+        alpha: (0.12 - progress * 0.1).clamp(0.0, 0.12) * opacityScale,
+      );
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(x, y),
+          width: 8 + progress * 26,
+          height: 3 + progress * 9,
+        ),
+        ripplePaint,
+      );
+    }
   }
 
   void _paintMeteor(Canvas canvas, Size size) {
     final particlePhase = (particleValue * speedMultiplier) % 1.0;
     final glowScale = (0.75 + speedMultiplier * 0.35).clamp(0.6, 1.4);
+
+    final nebulaPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.5, -0.2),
+        radius: 1.1,
+        colors: [
+          accentColor.withValues(alpha: 0.14 * opacityScale),
+          accentColor.withValues(alpha: 0.05 * opacityScale),
+          Colors.transparent,
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, nebulaPaint);
+
     for (final meteor in particles) {
       final progress = (particlePhase + meteor.delay) % 1.0;
       final x = (meteor.x - progress * 0.5) * size.width;
@@ -351,12 +541,14 @@ class _WeatherPainter extends CustomPainter {
             accentColor.withValues(alpha: 0.5 * glowScale * opacityScale),
             accentColor.withValues(alpha: 0.0),
           ],
-        ).createShader(Rect.fromLTWH(
-          x - meteor.size,
-          y - meteor.size * 0.5,
-          meteor.size,
-          meteor.size * 0.5,
-        ),);
+        ).createShader(
+          Rect.fromLTWH(
+            x - meteor.size,
+            y - meteor.size * 0.5,
+            meteor.size,
+            meteor.size * 0.5,
+          ),
+        );
 
       final path = Path();
       path.moveTo(x, y);
@@ -368,18 +560,107 @@ class _WeatherPainter extends CustomPainter {
 
       // 流星头部
       final headPaint = Paint()
-        ..color =
-            accentColor.withValues(alpha: 0.8 * glowScale * opacityScale);
+        ..color = accentColor.withValues(alpha: 0.8 * glowScale * opacityScale);
       canvas.drawCircle(Offset(x, y), 2, headPaint);
+    }
+
+    final sparkPaint = Paint()..style = PaintingStyle.fill;
+    for (var i = 0; i < 18; i++) {
+      final orbit = (particleValue + i * 0.09) % 1.0;
+      final x = ((0.08 + i * 0.17) % 1.0) * size.width;
+      final y = (0.12 + ((i % 6) * 0.11) + sin(orbit * 2 * pi + i) * 0.02) *
+          size.height;
+      sparkPaint.color = accentColor.withValues(
+        alpha: (0.06 + (i % 4) * 0.025) * opacityScale,
+      );
+      canvas.drawCircle(Offset(x, y), 1.2 + (i % 2) * 0.7, sparkPaint);
+    }
+  }
+
+  _WeatherPalette _paletteForWeather() {
+    switch (weatherType) {
+      case 'sunny':
+        return _WeatherPalette(
+          primary: accentColor,
+          secondary: Color.lerp(accentColor, const Color(0xFFFFF2C2), 0.55) ??
+              accentColor,
+          highlight:
+              Color.lerp(accentColor, Colors.white, 0.68) ?? Colors.white,
+          skyColors: [
+            accentColor.withValues(alpha: 0.1 * opacityScale),
+            const Color(0xFFFFF4D6).withValues(alpha: 0.06 * opacityScale),
+            Colors.transparent,
+          ],
+          auraCenter: const Alignment(0.82, -0.28),
+          auraRadius: 0.95,
+        );
+      case 'cloudy':
+        return _WeatherPalette(
+          primary: accentColor,
+          secondary: Color.lerp(accentColor, const Color(0xFFD7E0F0), 0.52) ??
+              accentColor,
+          highlight:
+              Color.lerp(accentColor, Colors.white, 0.56) ?? Colors.white,
+          skyColors: [
+            accentColor.withValues(alpha: 0.07 * opacityScale),
+            const Color(0xFFE6ECF5).withValues(alpha: 0.05 * opacityScale),
+            Colors.transparent,
+          ],
+          auraCenter: const Alignment(-0.45, -0.22),
+          auraRadius: 1.2,
+        );
+      case 'rainy':
+        return _WeatherPalette(
+          primary: accentColor,
+          secondary: Color.lerp(accentColor, const Color(0xFF93BCE7), 0.45) ??
+              accentColor,
+          highlight: Color.lerp(accentColor, Colors.white, 0.4) ?? Colors.white,
+          skyColors: [
+            accentColor.withValues(alpha: 0.12 * opacityScale),
+            const Color(0xFFB8D4EC).withValues(alpha: 0.05 * opacityScale),
+            Colors.transparent,
+          ],
+          auraCenter: const Alignment(0.0, -0.35),
+          auraRadius: 1.15,
+        );
+      case 'meteor':
+        return _WeatherPalette(
+          primary: accentColor,
+          secondary: Color.lerp(accentColor, const Color(0xFF6246EA), 0.5) ??
+              accentColor,
+          highlight:
+              Color.lerp(accentColor, Colors.white, 0.62) ?? Colors.white,
+          skyColors: [
+            accentColor.withValues(alpha: 0.13 * opacityScale),
+            const Color(0xFF1A1235).withValues(alpha: 0.08 * opacityScale),
+            Colors.transparent,
+          ],
+          auraCenter: const Alignment(0.0, -0.48),
+          auraRadius: 1.25,
+        );
+      default:
+        return _WeatherPalette(
+          primary: accentColor,
+          secondary: accentColor,
+          highlight: Colors.white,
+          skyColors: [
+            accentColor.withValues(alpha: 0.08 * opacityScale),
+            Colors.transparent,
+            Colors.transparent,
+          ],
+          auraCenter: const Alignment(0.82, -0.28),
+          auraRadius: 1.0,
+        );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WeatherPainter oldDelegate) => mainValue != oldDelegate.mainValue ||
-        particleValue != oldDelegate.particleValue ||
-        speedMultiplier != oldDelegate.speedMultiplier ||
-        opacityScale != oldDelegate.opacityScale ||
-        accentColor != oldDelegate.accentColor ||
-        weatherType != oldDelegate.weatherType ||
-        particles != oldDelegate.particles;
+  bool shouldRepaint(covariant _WeatherPainter oldDelegate) =>
+      mainValue != oldDelegate.mainValue ||
+      particleValue != oldDelegate.particleValue ||
+      speedMultiplier != oldDelegate.speedMultiplier ||
+      opacityScale != oldDelegate.opacityScale ||
+      accentColor != oldDelegate.accentColor ||
+      weatherType != oldDelegate.weatherType ||
+      particles != oldDelegate.particles;
 }

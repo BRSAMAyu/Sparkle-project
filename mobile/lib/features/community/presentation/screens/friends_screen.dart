@@ -72,8 +72,7 @@ class FriendRequestsScreen extends StatelessWidget {
               ? context.pop()
               : context.go(CommunityRoutes.home),
         ),
-        title:
-            Text(l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
+        title: Text(l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
       ),
       child: const ContentConstraint(
         child: SparkleStaggerItem(index: 0, child: _PendingRequestsTab()),
@@ -114,8 +113,8 @@ class _MyFriendsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
-    );
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+      );
 
   // ignore: unused_element
   void _showFriendContextMenu(
@@ -124,86 +123,88 @@ class _MyFriendsTab extends ConsumerWidget {
     FriendshipInfo friendInfo,
   ) {
     final friend = friendInfo.friend;
-    unawaited(showSensoryModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(ctx).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with user info
-              Padding(
-                padding: const EdgeInsets.all(DS.spacing16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: friend.avatarUrl != null
-                          ? NetworkImage(friend.avatarUrl!)
-                          : null,
-                      child: friend.avatarUrl == null
-                          ? Text(friend.displayName[0])
-                          : null,
-                    ),
-                    const SizedBox(width: DS.spacing12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            friend.displayName,
-                            style: DS.titleLarge
-                                .copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Lv.${friend.flameLevel}',
-                            style: DS.bodySmall
-                                .copyWith(color: DS.brandPrimaryConst),
-                          ),
-                        ],
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with user info
+                Padding(
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: friend.avatarUrl != null
+                            ? NetworkImage(friend.avatarUrl!)
+                            : null,
+                        child: friend.avatarUrl == null
+                            ? Text(friend.displayName[0])
+                            : null,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              friend.displayName,
+                              style: DS.titleLarge
+                                  .copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Lv.${friend.flameLevel}',
+                              style: DS.bodySmall
+                                  .copyWith(color: DS.brandPrimaryConst),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              // Delete friend option
-              ListTile(
-                leading: Icon(Icons.person_remove, color: DS.neutral600),
-                title: const Text('删除好友'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _handleDeleteFriend(context, ref, friendInfo);
-                },
-              ),
-              // Block user option
-              ListTile(
-                leading: Icon(Icons.block, color: DS.error),
-                title: Text('拉黑用户', style: TextStyle(color: DS.error)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _handleBlockUser(context, ref, friendInfo);
-                },
-              ),
-              // Blocked users management
-              ListTile(
-                leading: Icon(Icons.block_outlined, color: DS.neutral600),
-                title: const Text('黑名单管理'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(CommunityRoutes.blockedUsers);
-                },
-              ),
-              const SizedBox(height: DS.spacing8),
-            ],
+                const Divider(height: 1),
+                // Delete friend option
+                ListTile(
+                  leading: Icon(Icons.person_remove, color: DS.neutral600),
+                  title: const Text('删除好友'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleDeleteFriend(context, ref, friendInfo);
+                  },
+                ),
+                // Block user option
+                ListTile(
+                  leading: Icon(Icons.block, color: DS.error),
+                  title: Text('拉黑用户', style: TextStyle(color: DS.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleBlockUser(context, ref, friendInfo);
+                  },
+                ),
+                // Blocked users management
+                ListTile(
+                  leading: Icon(Icons.block_outlined, color: DS.neutral600),
+                  title: const Text('黑名单管理'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push(CommunityRoutes.blockedUsers);
+                  },
+                ),
+                const SizedBox(height: DS.spacing8),
+              ],
+            ),
           ),
         ),
       ),
-    ),);
+    );
   }
 
   Future<void> _handleDeleteFriend(
@@ -269,9 +270,50 @@ class _MyFriendsTab extends ConsumerWidget {
           children: [
             Text('拉黑 ${friendInfo.friend.displayName} 后:'),
             const SizedBox(height: 8),
-            const Text('• 从好友列表移除'),
-            const Text('• 无法发送消息给你'),
-            const Text('• 无法发送好友请求'),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const Expanded(child: Text('从好友列表移除')),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const Expanded(child: Text('无法发送消息给你')),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const Expanded(child: Text('无法发送好友请求')),
+              ],
+            ),
           ],
         ),
         actions: [
@@ -326,7 +368,8 @@ class _PendingRequestsTab extends ConsumerWidget {
     return requestsState.when(
       data: (requests) {
         final pendingPartnerships =
-            overviewAsync.valueOrNull?.pendingPartnerships ?? const <AccountabilityPartnershipInfo>[];
+            overviewAsync.valueOrNull?.pendingPartnerships ??
+                const <AccountabilityPartnershipInfo>[];
         if (requests.isEmpty && pendingPartnerships.isEmpty) {
           return const Center(child: Text('当前没有待处理的好友请求或伙伴邀请'));
         }
@@ -403,7 +446,8 @@ class _PendingRequestsTab extends ConsumerWidget {
                   ),
                 );
               }
-              final partnership = pendingPartnerships[index - requests.length - 2];
+              final partnership =
+                  pendingPartnerships[index - requests.length - 2];
               final partner = partnership.initiator ?? partnership.partner;
               return Card(
                 child: ListTile(
@@ -427,8 +471,11 @@ class _PendingRequestsTab extends ConsumerWidget {
                         onPressed: () async {
                           await ref
                               .read(accountabilityRepositoryProvider)
-                              .respondToPartnership(partnership.id, accept: true);
-                          await ref.read(myPartnershipsProvider.notifier).load();
+                              .respondToPartnership(partnership.id,
+                                  accept: true);
+                          await ref
+                              .read(myPartnershipsProvider.notifier)
+                              .load();
                           ref.invalidate(accountabilityOverviewProvider);
                         },
                       ),
@@ -439,8 +486,11 @@ class _PendingRequestsTab extends ConsumerWidget {
                         onPressed: () async {
                           await ref
                               .read(accountabilityRepositoryProvider)
-                              .respondToPartnership(partnership.id, accept: false);
-                          await ref.read(myPartnershipsProvider.notifier).load();
+                              .respondToPartnership(partnership.id,
+                                  accept: false);
+                          await ref
+                              .read(myPartnershipsProvider.notifier)
+                              .load();
                           ref.invalidate(accountabilityOverviewProvider);
                         },
                       ),
@@ -483,125 +533,122 @@ class _RecommendationsTab extends ConsumerWidget {
 
     return recommendationsState.when(
       data: (recommendations) => RefreshIndicator(
-          onRefresh: () =>
-              ref.read(friendRecommendationsProvider.notifier).refresh(),
-          child: ListView(
-            padding: const EdgeInsets.all(DS.lg),
-            children: [
+        onRefresh: () =>
+            ref.read(friendRecommendationsProvider.notifier).refresh(),
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            Text(
+              '责任伙伴匹配',
+              style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              '系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。',
+              style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.md),
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.sm,
+              children: FriendMatchStrategy.values.map((item) {
+                final selected = strategy == item;
+                return FilterChip(
+                  label: Text(_strategyLabel(item)),
+                  selected: selected,
+                  onSelected: (_) {
+                    ref
+                        .read(friendRecommendationStrategyProvider.notifier)
+                        .state = item;
+                    ref
+                        .read(friendRecommendationsProvider.notifier)
+                        .setStrategy(item);
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: DS.md),
+            Container(
+              padding: const EdgeInsets.all(DS.md),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+                border: Border.all(color: DS.neutral200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.privacy_tip_outlined,
+                    size: 18,
+                    color: DS.brandPrimaryConst,
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Expanded(
+                    child: Text(
+                      '仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。',
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (friendPrompts.isNotEmpty) ...[
+              const SizedBox(height: DS.md),
               Text(
-                '责任伙伴匹配',
+                '待你校准',
                 style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.xs),
               Text(
-                '系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。',
-                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                '分阶段反馈会直接调整你后续的好友与责任伙伴匹配。',
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
-              const SizedBox(height: DS.md),
-              Wrap(
-                spacing: DS.sm,
-                runSpacing: DS.sm,
-                children: FriendMatchStrategy.values.map((item) {
-                  final selected = strategy == item;
-                  return FilterChip(
-                    label: Text(_strategyLabel(item)),
-                    selected: selected,
-                    onSelected: (_) {
-                      ref
-                          .read(friendRecommendationStrategyProvider.notifier)
-                          .state = item;
-                      ref
-                          .read(friendRecommendationsProvider.notifier)
-                          .setStrategy(item);
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: DS.md),
-              Container(
-                padding: const EdgeInsets.all(DS.md),
-                decoration: BoxDecoration(
-                  color: DS.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(DS.borderRadiusLG),
-                  border: Border.all(color: DS.neutral200),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.privacy_tip_outlined,
-                      size: 18,
-                      color: DS.brandPrimaryConst,
-                    ),
-                    const SizedBox(width: DS.sm),
-                    Expanded(
-                      child: Text(
-                        '仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。',
-                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (friendPrompts.isNotEmpty) ...[
-                const SizedBox(height: DS.md),
-                Text(
-                  '待你校准',
-                  style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: DS.xs),
-                Text(
-                  '分阶段反馈会直接调整你后续的好友与责任伙伴匹配。',
-                  style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                ),
-                const SizedBox(height: DS.sm),
-                ...friendPrompts.take(2).map(
-                      (prompt) => Padding(
-                        padding: const EdgeInsets.only(bottom: DS.sm),
-                        child: RecommendationFeedbackPromptCard(
-                          prompt: prompt,
-                          onRespond: () => _handlePromptFeedback(
-                            context,
-                            ref,
-                            prompt,
-                          ),
+              const SizedBox(height: DS.sm),
+              ...friendPrompts.take(2).map(
+                    (prompt) => Padding(
+                      padding: const EdgeInsets.only(bottom: DS.sm),
+                      child: RecommendationFeedbackPromptCard(
+                        prompt: prompt,
+                        onRespond: () => _handlePromptFeedback(
+                          context,
+                          ref,
+                          prompt,
                         ),
                       ),
                     ),
-              ],
-              if (friendInsight != null &&
-                  friendInsight.recentFeedbackCount > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: DS.md),
-                  child: RecommendationFeedbackInsightCard(
-                    insight: friendInsight,
                   ),
-                ),
-              const SizedBox(height: DS.md),
-              if (recommendations.isEmpty)
-                const EmptyState(
-                  icon: Icons.people_outline,
-                  title: '暂时没有合适候选人',
-                  description: '换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。',
-                )
-              else
-                ...recommendations.map(
-                  (rec) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.md),
-                    child: _RecommendationCard(
-                      recommendation: rec,
-                      onPrimaryAction: () =>
-                          _handlePrimaryAction(context, ref, rec),
-                      onDismiss: () =>
-                          _dismissRecommendation(context, ref, rec),
-                      onFeedback: () =>
-                          _handleInlineFeedback(context, ref, rec),
-                    ),
-                  ),
-                ),
             ],
-          ),
+            if (friendInsight != null && friendInsight.recentFeedbackCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: DS.md),
+                child: RecommendationFeedbackInsightCard(
+                  insight: friendInsight,
+                ),
+              ),
+            const SizedBox(height: DS.md),
+            if (recommendations.isEmpty)
+              const EmptyState(
+                icon: Icons.people_outline,
+                title: '暂时没有合适候选人',
+                description: '换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。',
+              )
+            else
+              ...recommendations.map(
+                (rec) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.md),
+                  child: _RecommendationCard(
+                    recommendation: rec,
+                    onPrimaryAction: () =>
+                        _handlePrimaryAction(context, ref, rec),
+                    onDismiss: () => _dismissRecommendation(context, ref, rec),
+                    onFeedback: () => _handleInlineFeedback(context, ref, rec),
+                  ),
+                ),
+              ),
+          ],
         ),
+      ),
       loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(
         child: CustomErrorWidget.page(
@@ -871,15 +918,17 @@ class _RecommendationsTab extends ConsumerWidget {
     }
   }
 
-  FriendMatchStrategy _parseStrategy(String? raw) => FriendMatchStrategy.values.firstWhere(
-      (item) => item.name == raw,
-      orElse: () => FriendMatchStrategy.compatibility,
-    );
+  FriendMatchStrategy _parseStrategy(String? raw) =>
+      FriendMatchStrategy.values.firstWhere(
+        (item) => item.name == raw,
+        orElse: () => FriendMatchStrategy.compatibility,
+      );
 
-  FriendRecommendationTarget _parseTarget(String? raw) => FriendRecommendationTarget.values.firstWhere(
-      (item) => item.name == raw,
-      orElse: () => FriendRecommendationTarget.accountability,
-    );
+  FriendRecommendationTarget _parseTarget(String? raw) =>
+      FriendRecommendationTarget.values.firstWhere(
+        (item) => item.name == raw,
+        orElse: () => FriendRecommendationTarget.accountability,
+      );
 
   String _friendActionFromTrigger(String trigger) {
     if (trigger.contains('accountability_invite')) {
@@ -1086,22 +1135,22 @@ class _RecommendationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.sm,
-        vertical: DS.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: DS.borderRadiusFull,
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.sm,
+          vertical: DS.xs,
         ),
-      ),
-    );
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+        ),
+        child: Text(
+          label,
+          style: DS.labelSmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
 }
 
 /// 责任伙伴入口卡片（显示在好友列表顶部）
@@ -1113,68 +1162,69 @@ class _AccountabilityPartnersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => partnershipsState.when(
-      loading: _buildSkeleton,
-      error: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
-        child: Text(
-          '互督伙伴加载失败',
-          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
-        ),
-      ),
-      data: (partnerships) {
-        final activeCount = partnerships
-            .where((p) => p.status == AccountabilityStatus.active)
-            .length;
-        final pendingCount = partnerships
-            .where((p) => p.status == AccountabilityStatus.pending)
-            .length;
-
-        return GraphiteCardSurface(
-          surfaceRole: SparkleSurfaceRole.card,
-          margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
-          onTap: () => context.push(CommunityRoutes.accountability),
-          child: Row(
-            children: [
-              // 图标
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                ),
-                child: Icon(
-                  Icons.handshake_outlined,
-                  color: DS.brandPrimaryConst,
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              // 文字
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '我的责任伙伴',
-                      style: DS.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: DS.xs),
-                    Text(
-                      _buildSubtitle(activeCount, pendingCount),
-                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              // 箭头
-              Icon(Icons.chevron_right, color: DS.neutral400),
-            ],
+        loading: _buildSkeleton,
+        error: (_, __) => Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+          child: Text(
+            '互督伙伴加载失败',
+            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
           ),
-        );
-      },
-    );
+        ),
+        data: (partnerships) {
+          final activeCount = partnerships
+              .where((p) => p.status == AccountabilityStatus.active)
+              .length;
+          final pendingCount = partnerships
+              .where((p) => p.status == AccountabilityStatus.pending)
+              .length;
+
+          return GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+            onTap: () => context.push(CommunityRoutes.accountability),
+            child: Row(
+              children: [
+                // 图标
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                  ),
+                  child: Icon(
+                    Icons.handshake_outlined,
+                    color: DS.brandPrimaryConst,
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                // 文字
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '我的责任伙伴',
+                        style: DS.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: DS.xs),
+                      Text(
+                        _buildSubtitle(activeCount, pendingCount),
+                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                // 箭头
+                Icon(Icons.chevron_right, color: DS.neutral400),
+              ],
+            ),
+          );
+        },
+      );
 
   String _buildSubtitle(int active, int pending) {
     if (active == 0 && pending == 0) {

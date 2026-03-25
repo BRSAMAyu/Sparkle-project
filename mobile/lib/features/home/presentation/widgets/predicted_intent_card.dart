@@ -407,13 +407,32 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                           ...forecast.allExplanationLines.take(3).map(
                                 (line) => Padding(
                                   padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    '• $line',
-                                    style: context.sparkleTypography.bodyMedium
-                                        .copyWith(
-                                      color: DS.textSecondary,
-                                      height: 1.45,
-                                    ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 5,
+                                        height: 5,
+                                        margin: const EdgeInsets.only(
+                                            top: 8, right: 8),
+                                        decoration: BoxDecoration(
+                                          color: DS.textSecondary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          line,
+                                          style: context
+                                              .sparkleTypography.bodyMedium
+                                              .copyWith(
+                                            color: DS.textSecondary,
+                                            height: 1.45,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),

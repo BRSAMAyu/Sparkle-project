@@ -24,7 +24,7 @@ class BackgroundLayer extends StatelessWidget {
     }
 
     final config = element!.config;
-    return _applyTint(_buildBackgroundFromConfig(config));
+    return _applyTint(_buildBackgroundFromConfig(config, element!));
   }
 
   Widget _applyTint(Widget child) {
@@ -43,47 +43,51 @@ class BackgroundLayer extends StatelessWidget {
   }
 
   Widget _buildDefaultBackground() => Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF0A1024),
-                Color(0xFF171C38),
-                Color(0xFF1B2546),
-              ],
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(0.7, -0.4),
-                radius: 1.0,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF6B8CFF).withValues(alpha: 0.18),
-                  const Color(0xFF6B8CFF).withValues(alpha: 0.04),
-                  Colors.transparent,
+                  Color(0xFF0A1024),
+                  Color(0xFF171C38),
+                  Color(0xFF1B2546),
                 ],
-                stops: const [0.0, 0.45, 1.0],
               ),
             ),
           ),
-        ),
-        _buildTextureOverlay('mesh'),
-      ],
-    );
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(0.7, -0.4),
+                  radius: 1.0,
+                  colors: [
+                    const Color(0xFF6B8CFF).withValues(alpha: 0.18),
+                    const Color(0xFF6B8CFF).withValues(alpha: 0.04),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
+                ),
+              ),
+            ),
+          ),
+          _buildTextureOverlay('mesh'),
+        ],
+      );
 
-  Widget _buildBackgroundFromConfig(Map<String, dynamic> config) {
+  Widget _buildBackgroundFromConfig(
+    Map<String, dynamic> config,
+    VisualElementModel element,
+  ) {
     // 解析渐变配置
-    final gradientConfig = config['gradient'] as Map<String, dynamic>?;
+    final gradientConfig = config['gradient'];
     final texture = config['texture'] as String?;
     final auroraColors = config['aurora_colors'] as List<dynamic>?;
     final nebulaColors = config['nebula_colors'] as List<dynamic>?;
     final neonColors = config['neon_colors'] as List<dynamic>?;
+    final visibilityWeight = element.visibilityWeight;
 
     return Stack(
       children: [
@@ -109,17 +113,33 @@ class BackgroundLayer extends StatelessWidget {
 
         // 纹理叠加
         if (texture != null) _buildTextureOverlay(texture),
+
+        if (visibilityWeight >= 85)
+          _buildPrestigeBloom(
+            _resolveAccentColor(config),
+            visibilityWeight,
+          ),
       ],
     );
   }
 
-  LinearGradient _buildGradient(Map<String, dynamic> config) {
-    final colors = (config['colors'] as List<dynamic>)
-        .map((c) => _parseColor(c as String))
+  LinearGradient _buildGradient(dynamic config) {
+    if (config is List<dynamic>) {
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: config.map((c) => _parseColor(c.toString())).toList(),
+      );
+    }
+
+    final map = (config as Map<String, dynamic>?) ?? const {};
+    final colors = ((map['colors'] as List<dynamic>?) ??
+            const ['#0A1024', '#171C38', '#1B2546'])
+        .map((c) => _parseColor(c.toString()))
         .toList();
 
-    final begin = _parseAlignment(config['begin'] as String? ?? 'topCenter');
-    final end = _parseAlignment(config['end'] as String? ?? 'bottomCenter');
+    final begin = _parseAlignment(map['begin'] as String? ?? 'topCenter');
+    final end = _parseAlignment(map['end'] as String? ?? 'bottomCenter');
 
     return LinearGradient(
       begin: begin,
@@ -128,50 +148,118 @@ class BackgroundLayer extends StatelessWidget {
     );
   }
 
+  Widget _buildPrestigeBloom(Color accent, int visibilityWeight) =>
+      IgnorePointer(
+        child: AnimatedBuilder(
+          animation: mainAnimation,
+          builder: (context, child) {
+            final pulse = 0.82 + mainAnimation.value * 0.28;
+            final strength = (visibilityWeight / 100).clamp(0.0, 1.0);
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0.78, -0.32),
+                        radius: 1.0,
+                        colors: [
+                          accent.withValues(alpha: 0.16 * strength * pulse),
+                          accent.withValues(alpha: 0.06 * strength),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.42, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          accent.withValues(alpha: 0.08 * strength),
+                          Colors.transparent,
+                          accent.withValues(alpha: 0.12 * strength * pulse),
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+  Color _resolveAccentColor(Map<String, dynamic> config) {
+    final aurora = config['aurora_colors'] as List<dynamic>?;
+    final nebula = config['nebula_colors'] as List<dynamic>?;
+    final neon = config['neon_colors'] as List<dynamic>?;
+    final gradient = config['gradient'] as List<dynamic>?;
+    final source = (aurora != null && aurora.isNotEmpty
+            ? aurora.first
+            : nebula != null && nebula.isNotEmpty
+                ? nebula.first
+                : neon != null && neon.isNotEmpty
+                    ? neon.first
+                    : gradient != null && gradient.isNotEmpty
+                        ? gradient.last
+                        : null)
+        ?.toString();
+    return source == null ? const Color(0xFF8BE9FD) : _parseColor(source);
+  }
+
   Widget _buildAuroraEffect(List<dynamic> colors) => RepaintBoundary(
-      child: AnimatedBuilder(
-      animation: mainAnimation,
-      builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _AuroraPainter(
-            colors: colors.map((c) => _parseColor(c as String)).toList(),
-            animationValue: mainAnimation.value,
+        child: AnimatedBuilder(
+          animation: mainAnimation,
+          builder: (context, child) => CustomPaint(
+            size: Size.infinite,
+            painter: _AuroraPainter(
+              colors: colors.map((c) => _parseColor(c as String)).toList(),
+              animationValue: mainAnimation.value,
+            ),
           ),
         ),
-    ),);
+      );
 
   Widget _buildNebulaEffect(List<dynamic> colors) => RepaintBoundary(
-      child: AnimatedBuilder(
-      animation: mainAnimation,
-      builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _NebulaPainter(
-            colors: colors.map((c) => _parseColor(c as String)).toList(),
-            animationValue: mainAnimation.value,
+        child: AnimatedBuilder(
+          animation: mainAnimation,
+          builder: (context, child) => CustomPaint(
+            size: Size.infinite,
+            painter: _NebulaPainter(
+              colors: colors.map((c) => _parseColor(c as String)).toList(),
+              animationValue: mainAnimation.value,
+            ),
           ),
         ),
-    ),);
+      );
 
   Widget _buildNeonEffect(List<dynamic> colors) => RepaintBoundary(
-      child: AnimatedBuilder(
-      animation: mainAnimation,
-      builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _NeonPainter(
-            colors: colors.map((c) => _parseColor(c as String)).toList(),
-            animationValue: mainAnimation.value,
+        child: AnimatedBuilder(
+          animation: mainAnimation,
+          builder: (context, child) => CustomPaint(
+            size: Size.infinite,
+            painter: _NeonPainter(
+              colors: colors.map((c) => _parseColor(c as String)).toList(),
+              animationValue: mainAnimation.value,
+            ),
           ),
         ),
-    ),);
+      );
 
   Widget _buildTextureOverlay(String texture) => IgnorePointer(
-      child: RepaintBoundary(
-        child: CustomPaint(
-          size: Size.infinite,
-          painter: _TexturePainter(texture: texture),
+        child: RepaintBoundary(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _TexturePainter(texture: texture),
+          ),
         ),
-      ),
-    );
+      );
 
   Color _parseColor(String hexColor) {
     final buffer = StringBuffer();
@@ -183,17 +271,17 @@ class BackgroundLayer extends StatelessWidget {
   }
 
   Alignment _parseAlignment(String value) => switch (value) {
-      'topLeft' => Alignment.topLeft,
-      'topCenter' => Alignment.topCenter,
-      'topRight' => Alignment.topRight,
-      'centerLeft' => Alignment.centerLeft,
-      'center' => Alignment.center,
-      'centerRight' => Alignment.centerRight,
-      'bottomLeft' => Alignment.bottomLeft,
-      'bottomCenter' => Alignment.bottomCenter,
-      'bottomRight' => Alignment.bottomRight,
-      _ => Alignment.topCenter,
-    };
+        'topLeft' => Alignment.topLeft,
+        'topCenter' => Alignment.topCenter,
+        'topRight' => Alignment.topRight,
+        'centerLeft' => Alignment.centerLeft,
+        'center' => Alignment.center,
+        'centerRight' => Alignment.centerRight,
+        'bottomLeft' => Alignment.bottomLeft,
+        'bottomCenter' => Alignment.bottomCenter,
+        'bottomRight' => Alignment.bottomRight,
+        _ => Alignment.topCenter,
+      };
 }
 
 // ========== Custom Painters ==========
@@ -223,10 +311,12 @@ class _AuroraPainter extends CustomPainter {
           colors[i].withValues(alpha: 0.0),
         ],
         stops: const [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromCircle(
-        center: Offset(x, y),
-        radius: size.width * 0.4,
-      ),);
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(x, y),
+          radius: size.width * 0.4,
+        ),
+      );
 
       canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -236,7 +326,8 @@ class _AuroraPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AuroraPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _AuroraPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _NebulaPainter extends CustomPainter {
@@ -264,10 +355,12 @@ class _NebulaPainter extends CustomPainter {
           colors[i].withValues(alpha: 0.0),
         ],
         stops: const [0.0, 0.6, 1.0],
-      ).createShader(Rect.fromCircle(
-        center: Offset(x, y),
-        radius: size.width * 0.5,
-      ),);
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(x, y),
+          radius: size.width * 0.5,
+        ),
+      );
 
       canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
@@ -277,7 +370,8 @@ class _NebulaPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NebulaPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _NebulaPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _NeonPainter extends CustomPainter {
@@ -320,7 +414,8 @@ class _NeonPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NeonPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(covariant _NeonPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue;
 }
 
 class _TexturePainter extends CustomPainter {

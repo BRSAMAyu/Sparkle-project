@@ -91,6 +91,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                       // Title
                       Text(
                         notification.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: notification.isRead
@@ -114,24 +116,31 @@ class UnifiedNotificationCard extends StatelessWidget {
                       const SizedBox(height: DS.sm),
 
                       // Timestamp
-                      Row(
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: DS.textTertiary,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 12,
+                                color: DS.textTertiary,
+                              ),
+                              const SizedBox(width: DS.xs),
+                              Text(
+                                Formatters.formatRelativeTime(
+                                  notification.createdAt,
+                                ),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: DS.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: DS.xs),
-                          Text(
-                            Formatters.formatRelativeTime(
-                                notification.createdAt,),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: DS.textSecondary,
-                            ),
-                          ),
-                          const Spacer(),
-                          // Source type badge
                           _buildSourceBadge(context),
                         ],
                       ),
@@ -220,20 +229,22 @@ class UnifiedNotificationCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(notification.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(notification.content),
-            const SizedBox(height: 16),
-            Text(
-              Formatters.formatRelativeTime(notification.createdAt),
-              style: TextStyle(
-                fontSize: 12,
-                color: DS.textSecondary,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(notification.content),
+              const SizedBox(height: 16),
+              Text(
+                Formatters.formatRelativeTime(notification.createdAt),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: DS.textSecondary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           SparkleButton.outline(

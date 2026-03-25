@@ -56,8 +56,12 @@ class CommunityShareRepository {
   Future<Map<String, dynamic>> adoptResource({
     required String sharedResourceId,
   }) async {
+    final trimmedId = sharedResourceId.trim();
+    if (trimmedId.isEmpty) {
+      throw Exception('Shared resource id is empty');
+    }
     final response = await _apiClient.post<dynamic>(
-      ApiEndpoints.adoptSharedResource(sharedResourceId),
+      ApiEndpoints.adoptSharedResource(trimmedId),
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Failed to adopt shared resource');

@@ -73,7 +73,8 @@ class _NotificationAnalyticsScreenState
               ? _buildError(state.error!)
               : state.analytics == null
                   ? Center(
-                      child: Text(context.l10n.notificationAnalyticsNoData),)
+                      child: Text(context.l10n.notificationAnalyticsNoData),
+                    )
                   : _buildContent(state.analytics!),
     );
   }
@@ -133,46 +134,75 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          SparkleStaggerItem(
-            index: 0,
-            child: Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(
-                context.l10n.notificationAnalyticsTotalSent,
-                '${summary.totalSent}',
-                Icons.send,
-              ),),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                  child: _buildStatCard(
-                context.l10n.notificationAnalyticsTotalViewed,
-                '${summary.totalViewed}',
-                Icons.visibility,
-              ),),
-            ],
-          ),
-          ),
-          const SizedBox(height: DS.spacing12),
-          SparkleStaggerItem(
-            index: 1,
-            child: Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(
-                context.l10n.notificationAnalyticsTotalClicked,
-                '${summary.totalClicked}',
-                Icons.touch_app,
-              ),),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                  child: _buildStatCard(
-                context.l10n.notificationAnalyticsViewRate,
-                '${summary.viewRate.toStringAsFixed(1)}%',
-                Icons.pie_chart,
-              ),),
-            ],
-          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cards = [
+                _buildStatCard(
+                  context.l10n.notificationAnalyticsTotalSent,
+                  '${summary.totalSent}',
+                  Icons.send,
+                ),
+                _buildStatCard(
+                  context.l10n.notificationAnalyticsTotalViewed,
+                  '${summary.totalViewed}',
+                  Icons.visibility,
+                ),
+                _buildStatCard(
+                  context.l10n.notificationAnalyticsTotalClicked,
+                  '${summary.totalClicked}',
+                  Icons.touch_app,
+                ),
+                _buildStatCard(
+                  context.l10n.notificationAnalyticsViewRate,
+                  '${summary.viewRate.toStringAsFixed(1)}%',
+                  Icons.pie_chart,
+                ),
+              ];
+
+              if (constraints.maxWidth < 420) {
+                final tileWidth = (constraints.maxWidth - DS.spacing12) / 2;
+                return Wrap(
+                  spacing: DS.spacing12,
+                  runSpacing: DS.spacing12,
+                  children: [
+                    for (var i = 0; i < cards.length; i++)
+                      SizedBox(
+                        width: tileWidth,
+                        child: SparkleStaggerItem(
+                          index: i,
+                          child: cards[i],
+                        ),
+                      ),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Row(
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(child: cards[1]),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: Row(
+                      children: [
+                        Expanded(child: cards[2]),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(child: cards[3]),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       );
@@ -185,24 +215,39 @@ class _NotificationAnalyticsScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon,
-                    size: 20, color: Theme.of(context).colorScheme.primary,),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                      ),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: DS.spacing8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
             ),
           ],
         ),
@@ -219,11 +264,7 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          ...byType.entries
-              .toList()
-              .asMap()
-              .entries
-              .map((entry) {
+          ...byType.entries.toList().asMap().entries.map((entry) {
             final stats = entry.value.value;
             final typeKey = entry.value.key;
             return _buildTypeStatCard(
@@ -239,7 +280,11 @@ class _NotificationAnalyticsScreenState
       );
 
   Widget _buildTypeStatCard(
-          String title, int sent, int viewed, double viewRate,) =>
+    String title,
+    int sent,
+    int viewed,
+    double viewRate,
+  ) =>
       SparkleStaggerItem(
         index: sent,
         child: GraphiteCardSurface(
@@ -247,45 +292,45 @@ class _NotificationAnalyticsScreenState
           margin: const EdgeInsets.only(bottom: DS.spacing12),
           padding: const EdgeInsets.all(DS.spacing16),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: DS.spacing12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildProgressBar(
-                    context.l10n.notificationAnalyticsSent,
-                    sent,
-                    sent.toDouble(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: DS.spacing12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProgressBar(
+                      context.l10n.notificationAnalyticsSent,
+                      sent,
+                      sent.toDouble(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildProgressBar(
-                    context.l10n.notificationAnalyticsViewed,
-                    viewed,
-                    sent.toDouble(),
+                ],
+              ),
+              const SizedBox(height: DS.spacing8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProgressBar(
+                      context.l10n.notificationAnalyticsViewed,
+                      viewed,
+                      sent.toDouble(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              '${context.l10n.notificationAnalyticsViewRate}: ${viewRate.toStringAsFixed(1)}%',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-            ),
-          ],
-        ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                '${context.l10n.notificationAnalyticsViewRate}: ${viewRate.toStringAsFixed(1)}%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+            ],
+          ),
         ),
       );
 

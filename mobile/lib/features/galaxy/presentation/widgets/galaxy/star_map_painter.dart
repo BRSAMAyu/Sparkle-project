@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -229,7 +230,10 @@ class StarMapPainter extends CustomPainter {
     required this.isDarkMode,
     required this.worldBounds,
     required this.blendedColors,
-    required this.revealRanks,
+    required this.playbackPlan,
+    required this.playbackElapsedMs,
+    required this.preRevealedNodeIds,
+    required this.preRevealedEdgeIds,
     required this.nodeConnectionCounts,
     this.focusNodeIds = const <String>{},
     this.searchMatchedNodeIds = const <String>{},
@@ -244,7 +248,6 @@ class StarMapPainter extends CustomPainter {
     this.tapFeedbackProgress = 0,
     this.tapFeedbackPhase = 0,
     this.ambientPhase = 0,
-    this.buildRevealProgress = 1,
     this.isBuildAnimating = false,
   });
 
@@ -260,7 +263,10 @@ class StarMapPainter extends CustomPainter {
   final bool isDarkMode;
   final Rect worldBounds;
   final Map<String, Color> blendedColors;
-  final Map<String, int> revealRanks;
+  final GalaxyBuildPlaybackPlan? playbackPlan;
+  final int playbackElapsedMs;
+  final Set<String> preRevealedNodeIds;
+  final Set<String> preRevealedEdgeIds;
   final Map<String, int> nodeConnectionCounts;
   final Set<String> focusNodeIds;
   final Set<String> searchMatchedNodeIds;
@@ -275,7 +281,6 @@ class StarMapPainter extends CustomPainter {
   final double tapFeedbackProgress;
   final double tapFeedbackPhase;
   final double ambientPhase;
-  final double buildRevealProgress;
   final bool isBuildAnimating;
 
   static const int _nodeBudget = 500;
@@ -371,7 +376,10 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.isDarkMode != isDarkMode ||
       oldDelegate.worldBounds != worldBounds ||
       oldDelegate.blendedColors != blendedColors ||
-      oldDelegate.revealRanks != revealRanks ||
+      oldDelegate.playbackPlan != playbackPlan ||
+      oldDelegate.playbackElapsedMs != playbackElapsedMs ||
+      oldDelegate.preRevealedNodeIds != preRevealedNodeIds ||
+      oldDelegate.preRevealedEdgeIds != preRevealedEdgeIds ||
       oldDelegate.nodeConnectionCounts != nodeConnectionCounts ||
       oldDelegate.focusNodeIds != focusNodeIds ||
       oldDelegate.searchMatchedNodeIds != searchMatchedNodeIds ||
@@ -380,7 +388,6 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.celebrationNodeIds != celebrationNodeIds ||
       oldDelegate.performanceDegraded != performanceDegraded ||
       oldDelegate.ambientPhase != ambientPhase ||
-      oldDelegate.buildRevealProgress != buildRevealProgress ||
       oldDelegate.isBuildAnimating != isBuildAnimating;
 
   void _drawBackground(Canvas canvas, Size size) {
@@ -803,8 +810,7 @@ class StarMapPainter extends CustomPainter {
       final alpha = _nodeAlpha(node, lod) *
           reveal *
           _searchNodeVisibility(nodeId) *
-          _focusNodeVisibility(nodeId) *
-          buildRevealProgress;
+          _focusNodeVisibility(nodeId);
       if (alpha <= 0) {
         continue;
       }
@@ -863,7 +869,7 @@ class StarMapPainter extends CustomPainter {
     required Offset viewportCenter,
     required Set<String> visibleNodeIds,
   }) {
-    if (lod == GalaxyLod.l0 || edges.isEmpty) {
+    if (lod == GalaxyLod.l0) {
       return;
     }
 
@@ -918,9 +924,10 @@ class StarMapPainter extends CustomPainter {
         sourceColor: sourceColor,
         targetColor: targetColor,
       );
-      final reveal = math.min(
-        _buildRevealFor(edge.sourceId),
-        _buildRevealFor(edge.targetId),
+      final reveal = _edgeRevealFor(
+        edge,
+        sourceReveal: _buildRevealFor(edge.sourceId),
+        targetReveal: _buildRevealFor(edge.targetId),
       );
       final searchMultiplier = searchMatchedNodeIds.isEmpty
           ? 1.0
@@ -944,8 +951,7 @@ class StarMapPainter extends CustomPainter {
           reveal *
           networkFocusMultiplier *
           searchMultiplier *
-          selectionFocusMultiplier *
-          buildRevealProgress;
+          selectionFocusMultiplier;
       if (alpha <= 0) {
         continue;
       }
@@ -991,12 +997,119 @@ class StarMapPainter extends CustomPainter {
     );
 
     final result = <_PaintEdge>[...bothVisible, ...partiallyVisible];
+    final syntheticEdges = _buildSyntheticPlaybackEdges(
+      lod: lod,
+      viewport: viewport,
+      viewportCenter: viewportCenter,
+      visibleNodeIds: visibleNodeIds,
+    );
+    result.addAll(syntheticEdges);
     final budget = _edgeBudgetFor(lod);
     if (result.length > budget) {
       result.removeRange(budget, result.length);
     }
 
     return result;
+  }
+
+  double _edgeRevealFor(
+    GalaxyEdgeModel edge, {
+    required double sourceReveal,
+    required double targetReveal,
+  }) {
+    if (preRevealedEdgeIds.contains(edge.id)) {
+      return 1;
+    }
+    if (!isBuildAnimating || playbackPlan == null) {
+      return 1;
+    }
+    final step = playbackPlan!.edgeSteps[edge.id];
+    if (step != null) {
+      return playbackPlan!.edgeRevealAt(edge.id, playbackElapsedMs);
+    }
+    if (sourceReveal >= 0.999 && targetReveal >= 0.999) {
+      return 1;
+    }
+    return 0;
+  }
+
+  List<_PaintEdge> _buildSyntheticPlaybackEdges({
+    required GalaxyLod lod,
+    required Rect viewport,
+    required Offset viewportCenter,
+    required Set<String> visibleNodeIds,
+  }) {
+    final playbackPlan = this.playbackPlan;
+    if (!isBuildAnimating ||
+        playbackPlan == null ||
+        playbackPlan.edgeSteps.isEmpty) {
+      return const <_PaintEdge>[];
+    }
+
+    final edgesToDraw = <_PaintEdge>[];
+    for (final step in playbackPlan.edgeSteps.values) {
+      if (!step.isSynthetic) {
+        continue;
+      }
+      final reveal = playbackPlan.edgeRevealAt(step.id, playbackElapsedMs);
+      if (reveal <= 0) {
+        continue;
+      }
+      final source = _renderWorldPosition(step.sourceId);
+      final target = _renderWorldPosition(step.targetId);
+      final sourceNode = nodesById[step.sourceId];
+      final targetNode = nodesById[step.targetId];
+      if (source == null ||
+          target == null ||
+          sourceNode == null ||
+          targetNode == null) {
+        continue;
+      }
+
+      final sourceVisible = visibleNodeIds.contains(step.sourceId);
+      final targetVisible = visibleNodeIds.contains(step.targetId);
+      final intersectsViewport =
+          _segmentIntersectsRect(source, target, viewport);
+      if (!sourceVisible && !targetVisible && !intersectsViewport) {
+        continue;
+      }
+
+      final sourceColor =
+          _nodeCanvasColor(sourceNode).withValues(alpha: 0.42 * reveal);
+      final targetColor =
+          _nodeCanvasColor(targetNode).withValues(alpha: 0.42 * reveal);
+      final midX = (source.dx + target.dx) / 2;
+      final midY = (source.dy + target.dy) / 2;
+      edgesToDraw.add(
+        _PaintEdge(
+          sourceId: step.sourceId,
+          targetId: step.targetId,
+          start: source,
+          end: target,
+          distanceToViewportCenter:
+              (midX - viewportCenter.dx) * (midX - viewportCenter.dx) +
+                  (midY - viewportCenter.dy) * (midY - viewportCenter.dy),
+          color: Color.lerp(sourceColor, targetColor, 0.5)!,
+          sourceColor: sourceColor,
+          targetColor: targetColor,
+          strokeWidth: lod.index >= GalaxyLod.l3.index ? 1.2 : 1.0,
+          dashLength: 0,
+          gapLength: 0,
+          relationType: step.relationType,
+          strength: step.strength,
+          reveal: reveal,
+          curveDirection: _stableCurveDirection(step.sourceId, step.targetId),
+          sourceConnections: nodeConnectionCounts[step.sourceId] ?? 0,
+          targetConnections: nodeConnectionCounts[step.targetId] ?? 0,
+        ),
+      );
+    }
+
+    edgesToDraw.sort(
+      (left, right) => left.distanceToViewportCenter
+          .compareTo(right.distanceToViewportCenter),
+    );
+    return edgesToDraw;
   }
 
   void _drawEdgeList(Canvas canvas, List<_PaintEdge> edgesToDraw) {
@@ -1414,10 +1527,9 @@ class StarMapPainter extends CustomPainter {
     for (final item in nodes) {
       final node = item.node;
       final labelAlpha = _labelAlpha(node, lod) *
-          item.reveal *
+          _labelRevealFor(node.id) *
           _searchNodeVisibility(node.id) *
-          _focusNodeVisibility(node.id) *
-          buildRevealProgress;
+          _focusNodeVisibility(node.id);
       if (labelAlpha <= 0) {
         continue;
       }
@@ -2109,29 +2221,25 @@ class StarMapPainter extends CustomPainter {
   }
 
   double _buildRevealFor(String nodeId) {
-    if (!isBuildAnimating) {
+    if (preRevealedNodeIds.contains(nodeId)) {
       return 1;
     }
-
-    final rank = revealRanks[nodeId];
-    if (rank == null || revealRanks.isEmpty) {
-      return buildRevealProgress.clamp(0.0, 1.0);
-    }
-
-    final count = revealRanks.length;
-    final staggerSpan = count <= 1 ? 0.0 : 0.72;
-    const revealSpan = 0.18;
-    final start = count <= 1 ? 0.0 : (rank / (count - 1)) * staggerSpan;
-    final end = (start + revealSpan).clamp(0.0, 1.0);
-    if (buildRevealProgress <= start) {
-      return 0;
-    }
-    if (buildRevealProgress >= end) {
+    final playbackPlan = this.playbackPlan;
+    if (!isBuildAnimating || playbackPlan == null) {
       return 1;
     }
-    return Curves.easeOutCubic.transform(
-      ((buildRevealProgress - start) / (end - start)).clamp(0.0, 1.0),
-    );
+    return playbackPlan.nodeRevealAt(nodeId, playbackElapsedMs);
+  }
+
+  double _labelRevealFor(String nodeId) {
+    if (preRevealedNodeIds.contains(nodeId)) {
+      return 1;
+    }
+    final playbackPlan = this.playbackPlan;
+    if (!isBuildAnimating || playbackPlan == null) {
+      return 1;
+    }
+    return playbackPlan.labelRevealAt(nodeId, playbackElapsedMs);
   }
 
   double get _worldRadius {

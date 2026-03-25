@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collaboration_timeline.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/prism_behavior_card.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
-import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
+import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
@@ -58,14 +59,22 @@ class AgentMessageRenderer extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(text),
+        child: SparkleMarkdown(
+          content: text,
+          textColor: Theme.of(context).colorScheme.onSurface,
+          codeBackgroundColor:
+              Theme.of(context).colorScheme.surfaceContainerHigh,
+          linkColor: Theme.of(context).colorScheme.primary,
+          contentRole: SparkleMarkdownRole.chatBubble,
+        ),
       );
 
   Widget _buildWidget(BuildContext context, WidgetPayload widget) {
     switch (widget.type) {
       case 'task_card':
         try {
-          final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'task');
+          final entity =
+              EntityCardPayload.fromRaw(widget.data, fallbackType: 'task');
           final task = taskModelFromEntityPayload(widget.data);
           if (task == null) {
             throw StateError('Unable to parse task entity payload');
@@ -99,9 +108,9 @@ class AgentMessageRenderer extends StatelessWidget {
         );
 
       case 'plan_card':
-        final entity = EntityCardPayload.fromRaw(widget.data, fallbackType: 'plan');
-        final planId =
-            entity.entityId ??
+        final entity =
+            EntityCardPayload.fromRaw(widget.data, fallbackType: 'plan');
+        final planId = entity.entityId ??
             widget.data['id']?.toString() ??
             widget.data['plan_id']?.toString();
         return GestureDetector(
@@ -149,9 +158,30 @@ class AgentMessageRenderer extends StatelessWidget {
               ),
               const SizedBox(height: DS.sm),
               ...errors.map(
-                (e) => Text(
-                  '• ${e.message}',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                (e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(top: 7, right: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          e.message,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (errors.any((e) => e.suggestion != null))
@@ -159,7 +189,9 @@ class AgentMessageRenderer extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     context.l10n.chatActionErrorSuggestion(
-                      errors.firstWhere((e) => e.suggestion != null).suggestion!,
+                      errors
+                          .firstWhere((e) => e.suggestion != null)
+                          .suggestion!,
                     ),
                     style: Theme.of(context)
                         .textTheme
@@ -254,7 +286,8 @@ class AgentMessageRenderer extends StatelessWidget {
           (collaborationData['timeline'] as List<dynamic>?);
       final steps = stepsList
               ?.map(
-                  (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>),)
+                (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [];
 
@@ -275,12 +308,11 @@ class AgentMessageRenderer extends StatelessWidget {
           ...selectedExperts.map(
             (expert) => AgentTimelineStep.fromJson({
               'agent': expert,
-              'action':
-                  routingStrategy == null
-                      ? context.l10n.chatAgentRouting
-                      : context.l10n.chatAgentRoutingStrategy(
-                          routingStrategy,
-                        ),
+              'action': routingStrategy == null
+                  ? context.l10n.chatAgentRouting
+                  : context.l10n.chatAgentRoutingStrategy(
+                      routingStrategy,
+                    ),
             }),
           ),
         ];
@@ -288,8 +320,7 @@ class AgentMessageRenderer extends StatelessWidget {
           synthesized.add(
             AgentTimelineStep.fromJson({
               'agent': 'orchestrator',
-              'action':
-                  context.l10n.chatAgentRoutingFallback(fallbackReason),
+              'action': context.l10n.chatAgentRoutingFallback(fallbackReason),
             }),
           );
         }

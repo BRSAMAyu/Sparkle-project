@@ -67,6 +67,9 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
+      firstUnlockAt: json['first_unlock_at'] == null
+          ? null
+          : DateTime.parse(json['first_unlock_at'] as String),
       parentId: json['parent_id'] as String?,
       baseColor: json['base_color'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -96,6 +99,7 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'is_unlocked': instance.isUnlocked,
       'mastery_score': instance.masteryScore,
       'study_count': instance.studyCount,
+      'first_unlock_at': instance.firstUnlockAt?.toIso8601String(),
       'tags': instance.tags,
       'description': instance.description,
       'position_hint': instance.positionHint,
