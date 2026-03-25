@@ -146,16 +146,16 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<List<Map<String, dynamic>>> fetchSystemUpdates(
-          {int limit = 50, int offset = 0,}) async =>
+          {int limit = 50, int offset = 0}) async =>
       <Map<String, dynamic>>[];
 
   @override
   Future<void> updateTransparentPreference(
-      {required String prefKey, required value,}) async {}
+      {required String prefKey, required value}) async {}
 
   @override
   Future<void> updateGoal(
-      {required String goalId, String? title, String? status,}) async {}
+      {required String goalId, String? title, String? status}) async {}
 
   @override
   Future<Map<String, dynamic>> fetchUserSettings() async => <String, dynamic>{};
@@ -211,7 +211,7 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<UserModel> updateSchedulePreferences(
-      Map<String, dynamic> scheduleData,) {
+      Map<String, dynamic> scheduleData) {
     throw UnimplementedError();
   }
 }
@@ -228,6 +228,25 @@ Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
     ),
   );
 
+/// Helper to find the main ListView scrollable (skip nested ones).
+Finder _mainScrollable() => find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      description: 'main vertical scrollable',
+    );
+
+/// Expand a collapsed section by tapping its header title.
+Future<void> _expandSection(WidgetTester tester, String title) async {
+  await tester.scrollUntilVisible(
+    find.text(title),
+    300,
+    scrollable: _mainScrollable().first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(title));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -243,19 +262,24 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
-    expect(find.text('Context Snapshot'), findsOneWidget);
+    // "Context Snapshot" section is collapsed by default — expand it
+    await _expandSection(tester, 'Context Snapshot');
     expect(find.textContaining('Preference Version: 12'), findsOneWidget);
     expect(
-        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget,);
+        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget);
+
+    // "系统推断与策略" section is collapsed by default — expand it
+    await _expandSection(tester, '系统推断与策略');
+
     await tester.scrollUntilVisible(
       find.text('Inferred Preferences'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
     expect(find.text('Inferred Preferences'), findsOneWidget);
     expect(
-        find.textContaining('social_learning_preference: 0.2'), findsOneWidget,);
+        find.textContaining('social_learning_preference: 0.2'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
   });
 
@@ -269,10 +293,13 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
+    // Expand the "系统推断与策略" section to reveal "Inferred Preferences"
+    await _expandSection(tester, '系统推断与策略');
+
     await tester.scrollUntilVisible(
       find.text('Inferred Preferences'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
     expect(find.text('Inferred Preferences'), findsOneWidget);
@@ -287,10 +314,13 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
+    // Expand the "系统推断与策略" section to reveal "Reset" button
+    await _expandSection(tester, '系统推断与策略');
+
     await tester.scrollUntilVisible(
       find.text('Reset'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reset'));
@@ -298,7 +328,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-        repository.resetOverrideCalls, <String>['social_learning_preference'],);
+        repository.resetOverrideCalls, <String>['social_learning_preference']);
     expect(find.text('已恢复系统推断值'), findsOneWidget);
   });
 
@@ -311,10 +341,13 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
+    // Expand the "系统推断与策略" section to reveal "Reset" button
+    await _expandSection(tester, '系统推断与策略');
+
     await tester.scrollUntilVisible(
       find.text('Reset'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reset'));

@@ -1114,7 +1114,13 @@ class _AccountabilityPartnersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => partnershipsState.when(
       loading: _buildSkeleton,
-      error: (_, __) => const SizedBox.shrink(), // 静默失败，不影响好友列表
+      error: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+        child: Text(
+          '互督伙伴加载失败',
+          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
+        ),
+      ),
       data: (partnerships) {
         final activeCount = partnerships
             .where((p) => p.status == AccountabilityStatus.active)

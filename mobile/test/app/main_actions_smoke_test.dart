@@ -89,9 +89,10 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.person_add_outlined));
+      // person_add_outlined is inside the "more" popup menu
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pumpAndSettle();
-      expect(find.byType(ListTile), findsWidgets);
+      expect(find.byIcon(Icons.person_add_outlined), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

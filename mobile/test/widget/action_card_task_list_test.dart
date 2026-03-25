@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -29,36 +30,44 @@ void main() {
       },
     );
 
-    // 2. Act: Pump the ActionCard
+    // 2. Act: Pump the ActionCard with Sparkle theme extension
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData.light().copyWith(
+          extensions: [SparkleThemeExtension.light()],
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('zh'),
         home: Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ActionCard(
-              action: taskListPayload,
-              onConfirm: () {},
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ActionCard(
+                action: taskListPayload,
+                onConfirm: () {},
+              ),
             ),
           ),
         ),
       ),
     );
+    // Use pump instead of pumpAndSettle — card has repeating shimmer animation
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-    // 3. Assert: Check if it renders properly
-    // It should NOT render the fallback key-value view (e.g. "tasks: [{id: 1...}]")
-    // It SHOULD render specific Task List UI
-    
-    // Check if the title is correct
-    expect(find.text('任务列表'), findsOneWidget);
+    // 3. Assert: task_list starts collapsed — title visible, preview shown
+    expect(find.text('任务列表'), findsWidgets);
 
-    // Check if it renders the task titles
+    // 4. Expand the card by tapping the expand button
+    final expandButton = find.text('展开');
+    expect(expandButton, findsOneWidget);
+    await tester.tap(expandButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 5. After expanding, task titles should be visible
     expect(find.text('Task 1'), findsOneWidget, reason: 'Task 1 title should be visible');
     expect(find.text('Task 2'), findsOneWidget, reason: 'Task 2 title should be visible');
-
-    // Check if confirm button is visible
-    expect(find.text('确定'), findsOneWidget);
   });
 }

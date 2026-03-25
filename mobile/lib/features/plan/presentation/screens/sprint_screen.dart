@@ -163,7 +163,16 @@ class _ActiveSprintView extends ConsumerWidget {
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: DS.textSecondary),
+            const SizedBox(height: DS.spacing12),
+            Text('加载冲刺计划失败', style: TextStyle(color: DS.textSecondary)),
+          ],
+        ),
+      ),
     );
   }
 }

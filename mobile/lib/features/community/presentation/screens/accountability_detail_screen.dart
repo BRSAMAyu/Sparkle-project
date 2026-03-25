@@ -195,16 +195,20 @@ class _AccountabilityDetailScreenState
           .read(accountabilityActionsProvider)
           .nudgePartner(ref, partnershipId);
       if (mounted) {
-        AppFeedback.success(
-          context,
-          (result['message'] as String?) ?? '已提醒伙伴查看今天的目标',
-        );
+        final deliverySummary =
+            (result['delivery_summary'] as String?) ??
+                (result['message'] as String?) ??
+                '已通过站内提醒发送，对方在线时会实时看到';
+        AppFeedback.success(context, deliverySummary);
       }
     } catch (e) {
       if (mounted) {
         final message = e.toString();
         if (message.contains('429') || message.contains('cooldown')) {
-          AppFeedback.info(context, '刚提醒过，稍后再试');
+          AppFeedback.info(
+            context,
+            '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。',
+          );
         } else {
           AppFeedback.error(context, '提醒失败: $e');
         }
