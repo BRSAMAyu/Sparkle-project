@@ -125,7 +125,16 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           );
         },
         loading: () => const Center(child: LoadingIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search_off, size: 48, color: DS.textSecondary),
+              const SizedBox(height: DS.spacing12),
+              Text('搜索失败，请检查网络后重试', style: TextStyle(color: DS.textSecondary)),
+            ],
+          ),
+        ),
       ),
     );
   }

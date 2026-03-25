@@ -40,7 +40,16 @@ class NotificationListScreen extends ConsumerWidget {
           );
         },
         loading: () => Center(child: LoadingIndicator.circular()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.notifications_off_outlined, size: 48, color: DS.textSecondary),
+              const SizedBox(height: DS.spacing12),
+              Text('加载通知失败，请稍后重试', style: TextStyle(color: DS.textSecondary)),
+            ],
+          ),
+        ),
       ),
     );
   }

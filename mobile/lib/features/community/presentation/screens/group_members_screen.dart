@@ -223,8 +223,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             // ── Tab 2: Leaderboard ───────────────────────────────────────
             membersState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  Center(child: Text('$e', style: TextStyle(color: DS.error))),
+              error: (e, _) => Center(
+                child: Text('加载成员失败，请稍后重试',
+                    style: TextStyle(color: DS.textSecondary)),
+              ),
               data: (members) => _buildLeaderboard(members),
             ),
           ],

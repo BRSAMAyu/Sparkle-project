@@ -245,10 +245,10 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             children: [
               Icon(Icons.error_outline, size: 48, color: DS.error),
               const SizedBox(height: DS.lg),
-              Text('Error: $e'),
+              Text('搜索失败，请检查网络后重试', style: TextStyle(color: DS.textSecondary)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: 'Retry',
+                label: '重试',
                 onPressed: _handleSearch,
               ),
             ],

@@ -150,7 +150,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   SparkleIconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: () =>
-                        context.canPop() ? context.pop() : context.go('/settings'),
+                        context.canPop() ? context.pop() : context.go('/profile/settings'),
                     variant: ButtonVariant.ghost,
                   ),
                   const SizedBox(width: DS.spacing8),
