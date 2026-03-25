@@ -14,6 +14,8 @@ type FileStorageProvider interface {
 	PresignPost(ctx context.Context, objectKey string, contentType string, minSize int64, maxSize int64) (string, map[string]string, error)
 	PresignGet(ctx context.Context, objectKey string) (string, error)
 	PresignPut(ctx context.Context, objectKey string) (string, error)
+	PresignInternalGet(ctx context.Context, objectKey string) (string, error)
+	PresignInternalPut(ctx context.Context, objectKey string) (string, error)
 	DeleteObject(ctx context.Context, bucket string, objectKey string) error
 }
 

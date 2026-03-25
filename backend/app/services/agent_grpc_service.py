@@ -179,7 +179,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             logger.info(
                 f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}, "
-                f"chat_mode={chat_mode}, workflow={workflow_id}, prompt_version={prompt_version}"
+                f"chat_mode={chat_mode}, workflow={workflow_id}, prompt_version={prompt_version}, "
+                f"file_ids={len(list(request.file_ids or []))}, include_references={bool(request.include_references)}"
             )
 
             # Create a dedicated DB session for this stream

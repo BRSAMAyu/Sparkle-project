@@ -159,13 +159,30 @@ void main() {
     expect(generatedTasks, hasLength(2));
 
     final refreshed = await repository.getPlan(created.id);
-    expect(refreshed.tasks, isNotNull);
-    expect(refreshed.tasks!, hasLength(2));
+    final refreshedTasks = refreshed.tasks;
+    expect(refreshedTasks, isNotNull);
+    expect(refreshedTasks, hasLength(2));
 
     await repository.archivePlan(created.id);
     expect((await repository.getPlan(created.id)).isActive, isFalse);
 
     await repository.restorePlan(created.id);
     expect((await repository.getPlan(created.id)).isActive, isTrue);
+
+    final another = await repository.createPlan(
+      PlanCreate(
+        name: 'Demo 第二长期计划',
+        type: PlanType.growth,
+        dailyAvailableMinutes: 35,
+      ),
+    );
+
+    await repository.setPrimaryPlan(another.id);
+
+    final refreshedPlans = await repository.getPlans();
+    final primaryPlans =
+        refreshedPlans.where((plan) => plan.isPrimary).map((plan) => plan.id);
+
+    expect(primaryPlans, [another.id]);
   });
 }

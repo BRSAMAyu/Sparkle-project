@@ -80,6 +80,8 @@ class IngestionService:
                 return self._process_docx(file_path)
             elif ext == ".pptx":
                 return self._process_pptx(file_path)
+            elif ext in [".txt", ".md"]:
+                return self._process_text(file_path)
             elif ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
                 return self._process_image(file_path, options)
             else:
@@ -438,6 +440,31 @@ class IngestionService:
         except Exception as e:
             logger.error(f"Failed to process image {path}: {e}")
             raise
+
+    def _process_text(self, path: str) -> list[ExtractedChunk]:
+        """Process plain text-like files for lightweight attachment grounding."""
+        text = ""
+        for encoding in ("utf-8", "utf-8-sig", "gb18030", "latin-1"):
+            try:
+                with open(path, "r", encoding=encoding) as infile:
+                    text = infile.read()
+                break
+            except UnicodeDecodeError:
+                continue
+
+        clean_text = self._clean_text(text)
+        if len(clean_text) < 10:
+            return []
+
+        return [ExtractedChunk(
+            text=clean_text,
+            page_num=1,
+            source="text",
+            metadata={
+                "title": os.path.basename(path),
+                "encoding_hint": "plain_text",
+            },
+        )]
 
     def _clean_text(self, text: str) -> str:
         """

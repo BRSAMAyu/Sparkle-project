@@ -197,6 +197,77 @@ class TestDocumentVectorSearch:
 
         assert result == []
 
+    @pytest.mark.asyncio
+    async def test_falls_back_to_file_chunks_when_vector_runtime_unavailable(self):
+        """Explicit file attachments should still surface chunks without pgvector."""
+        mock_db = AsyncMock()
+        service = KnowledgeRetrievalService(mock_db)
+
+        mock_chunk = MagicMock()
+        mock_chunk.file_id = uuid4()
+        mock_chunk.chunk_index = 0
+        mock_chunk.content = "Binary search has logarithmic time complexity."
+
+        mock_result = MagicMock()
+        mock_result.all.return_value = [(mock_chunk, "note.txt")]
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        with patch.object(service, "_vector_runtime_available", new_callable=AsyncMock) as mock_runtime:
+            mock_runtime.return_value = False
+
+            result = await service.document_vector_search(
+                user_id=uuid4(),
+                query="请总结我上传的文件",
+                file_ids=[uuid4()],
+                limit=5,
+            )
+
+        assert len(result) == 1
+        assert result[0].file_name == "note.txt"
+        assert result[0].score == 0.51
+        assert result[0].chunk is mock_chunk
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_file_chunks_when_semantic_threshold_misses(self):
+        """If vector search returns only low-similarity rows, fallback should still ground files."""
+        mock_db = AsyncMock()
+        service = KnowledgeRetrievalService(mock_db)
+
+        file_id = uuid4()
+        weak_chunk = MagicMock()
+        weak_chunk.file_id = file_id
+        weak_chunk.chunk_index = 0
+        weak_chunk.content = "The array must be sorted before binary search."
+
+        fallback_chunk = MagicMock()
+        fallback_chunk.file_id = file_id
+        fallback_chunk.chunk_index = 0
+        fallback_chunk.content = weak_chunk.content
+
+        first_result = MagicMock()
+        first_result.all.return_value = [(weak_chunk, "note.txt", 0.92)]
+        second_result = MagicMock()
+        second_result.all.return_value = [(fallback_chunk, "note.txt")]
+        mock_db.execute = AsyncMock(side_effect=[first_result, second_result])
+
+        with patch.object(service, "_vector_runtime_available", new_callable=AsyncMock) as mock_runtime, \
+             patch("app.services.galaxy.retrieval_service.embedding_service.get_embedding", new_callable=AsyncMock) as mock_embed:
+            mock_runtime.return_value = True
+            mock_embed.return_value = [0.1] * 8
+
+            result = await service.document_vector_search(
+                user_id=uuid4(),
+                query="请总结我上传的文件",
+                file_ids=[file_id],
+                limit=5,
+                threshold=0.4,
+            )
+
+        assert len(result) == 1
+        assert result[0].file_name == "note.txt"
+        assert result[0].score == 0.51
+        assert result[0].chunk is fallback_chunk
+
 
 class TestDocumentChunkResult:
     """Tests for DocumentChunkResult dataclass."""

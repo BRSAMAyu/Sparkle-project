@@ -247,7 +247,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                               fontWeight: FontWeight.w600,
                             ),
                           )
-                        : friendship.accountability?.isPending == true
+                        : friendship.accountability?.isPending ?? false
                             ? Text(
                                 '责任伙伴邀请待确认',
                                 style: TextStyle(

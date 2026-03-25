@@ -112,11 +112,61 @@ class SparkleMarkdown extends StatelessWidget {
     final resolvedLineHeight =
         lineHeight ?? _defaultLineHeightForRole(contentRole);
 
-    // Build the MarkdownBody — always attempt markdown rendering.
-    // The normalization + completion pipeline ensures even plain text
-    // renders correctly through the markdown renderer.
-    final body = MarkdownBody(
-      data: prepared,
+    final body = _buildSegmentedBody(
+      prepared,
+      resolvedLineHeight: resolvedLineHeight,
+    );
+
+    if (selectable) {
+      return SelectionArea(child: body);
+    }
+
+    return body;
+  }
+
+  Widget _buildSegmentedBody(
+    String prepared, {
+    required double resolvedLineHeight,
+  }) {
+    final segments = _splitIntoSegments(prepared);
+    if (segments.length == 1 && segments.first.isMarkdown) {
+      return _buildMarkdownBody(
+        segments.first.content,
+        resolvedLineHeight: resolvedLineHeight,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final segment in segments)
+          if (segment.isMarkdown)
+            _buildMarkdownBody(
+              segment.content,
+              resolvedLineHeight: resolvedLineHeight,
+            )
+          else
+            _CodeBlockCard(
+              content: segment.content,
+              language: segment.language,
+              textColor: textColor,
+              codeBackgroundColor: codeBackgroundColor,
+              accentColor: linkColor,
+            ),
+      ],
+    );
+  }
+
+  Widget _buildMarkdownBody(
+    String markdown, {
+    required double resolvedLineHeight,
+  }) {
+    if (markdown.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return MarkdownBody(
+      data: markdown,
       extensionSet: md.ExtensionSet.gitHubFlavored,
       listItemCrossAxisAlignment: MarkdownListItemCrossAxisAlignment.start,
       bulletBuilder: (index, style) {
@@ -142,21 +192,8 @@ class SparkleMarkdown extends StatelessWidget {
         uri: uri,
         alt: alt,
       ),
-      builders: {
-        'pre': _CodeBlockBuilder(
-          textColor: textColor,
-          codeBackgroundColor: codeBackgroundColor,
-          accentColor: linkColor,
-        ),
-      },
       styleSheet: _buildStyleSheet(),
     );
-
-    if (selectable) {
-      return SelectionArea(child: body);
-    }
-
-    return body;
   }
 
   MarkdownStyleSheet _buildStyleSheet() {
@@ -228,41 +265,6 @@ class SparkleMarkdown extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {}
-  }
-}
-
-class _CodeBlockBuilder extends MarkdownElementBuilder {
-  _CodeBlockBuilder({
-    required this.textColor,
-    required this.codeBackgroundColor,
-    required this.accentColor,
-  });
-
-  final Color textColor;
-  final Color codeBackgroundColor;
-  final Color accentColor;
-
-  @override
-  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final codeElement = element.children
-        ?.whereType<md.Element>()
-        .cast<md.Element?>()
-        .firstWhere(
-          (child) => child?.tag == 'code',
-          orElse: () => null,
-        );
-    final className = codeElement?.attributes['class'] ?? '';
-    final language = className.startsWith('language-')
-        ? className.substring('language-'.length)
-        : null;
-    final code = codeElement?.textContent.trimRight() ?? element.textContent;
-    return _CodeBlockCard(
-      content: code,
-      language: language,
-      textColor: textColor,
-      codeBackgroundColor: codeBackgroundColor,
-      accentColor: accentColor,
-    );
   }
 }
 
@@ -441,6 +443,21 @@ class _MarkdownNetworkImage extends StatelessWidget {
       );
 }
 
+class _MarkdownSegment {
+  const _MarkdownSegment.markdown(this.content)
+      : isMarkdown = true,
+        language = null;
+
+  const _MarkdownSegment.code({
+    required this.content,
+    this.language,
+  }) : isMarkdown = false;
+
+  final bool isMarkdown;
+  final String content;
+  final String? language;
+}
+
 // ---------------------------------------------------------------------------
 // Content preparation pipeline
 // ---------------------------------------------------------------------------
@@ -452,6 +469,43 @@ String _prepareContent(String raw, {required bool isStreaming}) {
     text = _completePartialMarkdown(text);
   }
   return text;
+}
+
+List<_MarkdownSegment> _splitIntoSegments(String content) {
+  final pattern = RegExp(r'```([\w+-]*)\n([\s\S]*?)```');
+  final segments = <_MarkdownSegment>[];
+  var cursor = 0;
+
+  for (final match in pattern.allMatches(content)) {
+    if (match.start > cursor) {
+      final markdownPart = content.substring(cursor, match.start);
+      if (markdownPart.trim().isNotEmpty) {
+        segments.add(_MarkdownSegment.markdown(markdownPart));
+      }
+    }
+
+    final language = match.group(1)?.trim();
+    final code = (match.group(2) ?? '').trimRight();
+    segments.add(
+      _MarkdownSegment.code(
+        content: code,
+        language: language != null && language.isNotEmpty ? language : null,
+      ),
+    );
+    cursor = match.end;
+  }
+
+  if (cursor < content.length) {
+    final markdownPart = content.substring(cursor);
+    if (markdownPart.trim().isNotEmpty) {
+      segments.add(_MarkdownSegment.markdown(markdownPart));
+    }
+  }
+
+  if (segments.isEmpty) {
+    segments.add(_MarkdownSegment.markdown(content));
+  }
+  return segments;
 }
 
 /// Normalize AI-generated markdown to standard form.

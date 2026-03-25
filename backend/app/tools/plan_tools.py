@@ -44,6 +44,9 @@ class _LearningPathNodeRef(BaseModel):
     name: str
 
 
+_PLAN_QUOTA_FALLBACK_ID = "__task_path_fallback__"
+
+
 class CreatePlanTool(BaseTool):
     """创建学习计划"""
     name = "create_plan"
@@ -113,10 +116,35 @@ class CreatePlanTool(BaseTool):
                 ),
             )
         except Exception as e:
+            message = str(e)
+            if "计划数量上限" in message:
+                logger.warning(
+                    "Plan quota hit for user {}, degrading create_plan to task-only fallback",
+                    user_id,
+                )
+                return ToolResult(
+                    success=True,
+                    tool_name=self.name,
+                    data={
+                        "plan_id": _PLAN_QUOTA_FALLBACK_ID,
+                        "fallback_mode": "task_only",
+                        "fallback_reason": message,
+                    },
+                    widget_type="execution_summary",
+                    widget_data={
+                        "title": "计划额度已满，改为直接生成任务",
+                        "status": "fallback",
+                        "tool_name": self.name,
+                        "impact_summary": "本次不会新建计划，而是直接生成并落地一组任务。",
+                        "next_action": "继续执行任务生成",
+                        "error_message": message,
+                        "affected_objects": [],
+                    },
+                )
             return ToolResult(
                 success=False,
                 tool_name=self.name,
-                error_message=str(e),
+                error_message=message,
                 suggestion="请检查计划参数或稍后再试"
             )
 
@@ -158,25 +186,38 @@ class GenerateTasksForPlanTool(BaseTool):
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
-            plan_uuid = UUID(params.plan_id)
+            quota_fallback = params.plan_id == _PLAN_QUOTA_FALLBACK_ID
+            plan_uuid: UUID | None = None
 
-            # 第一步: 验证计划存在
-            plan = await PlanService.get_by_id(db_session, plan_uuid, user_uuid)
-            if not plan or plan.user_id != user_uuid:
-                return ToolResult(
-                    success=False,
-                    tool_name=self.name,
-                    error_message=f"计划 {params.plan_id} 不存在或无权访问",
-                    suggestion="请检查计划 ID 是否正确"
+            if quota_fallback:
+                plan_snapshot = SimpleNamespace(
+                    id=None,
+                    name=f"{params.topic}任务路径",
+                    description="计划额度已满，直接生成可执行任务路径",
+                    subject=None,
+                    source="quota_fallback",
+                    source_metadata={"reason": "plan_quota_exceeded"},
                 )
-            plan_snapshot = SimpleNamespace(
-                id=plan.id,
-                name=plan.name,
-                description=plan.description,
-                subject=getattr(plan, "subject", None),
-                source=getattr(plan, "source", None),
-                source_metadata=getattr(plan, "source_metadata", None),
-            )
+            else:
+                plan_uuid = UUID(params.plan_id)
+
+                # 第一步: 验证计划存在
+                plan = await PlanService.get_by_id(db_session, plan_uuid, user_uuid)
+                if not plan or plan.user_id != user_uuid:
+                    return ToolResult(
+                        success=False,
+                        tool_name=self.name,
+                        error_message=f"计划 {params.plan_id} 不存在或无权访问",
+                        suggestion="请检查计划 ID 是否正确"
+                    )
+                plan_snapshot = SimpleNamespace(
+                    id=plan.id,
+                    name=plan.name,
+                    description=plan.description,
+                    subject=getattr(plan, "subject", None),
+                    source=getattr(plan, "source", None),
+                    source_metadata=getattr(plan, "source_metadata", None),
+                )
 
             # 第二步: 获取知识图谱上下文 (GraphRAG)
             knowledge_context = ""
@@ -297,7 +338,11 @@ class GenerateTasksForPlanTool(BaseTool):
                         ),
                     })
 
-                    logger.debug(f"Created task: {task.id} for plan {plan_uuid}")
+                    logger.debug(
+                        "Created task {} for {}",
+                        task.id,
+                        f"plan {plan_uuid}" if plan_uuid else "quota fallback task path",
+                    )
 
                 except ValidationError as e:
                     logger.warning(f"Generated task failed schema validation: {e}")
@@ -315,14 +360,19 @@ class GenerateTasksForPlanTool(BaseTool):
                     suggestion="请检查计划信息并重试"
                 )
 
-            logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_uuid}")
+            logger.info(
+                "Generated {} tasks for {}",
+                len(created_tasks),
+                f"plan {plan_uuid}" if plan_uuid else "quota fallback task path",
+            )
 
             # 第五步: 返回卡片化结果
             task_list_payload = {
                 "tasks": created_tasks,
-                "plan_id": params.plan_id,
+                "plan_id": None if quota_fallback else params.plan_id,
                 "plan_title": plan_snapshot.name,
                 "source": "graph_augmented_ai" if knowledge_context else "ai_generated",
+                "fallback_mode": "task_only" if quota_fallback else None,
                 "rag_quality": rag_quality,
                 "persona_applied": True,
                 "persona_highlights": {
@@ -336,11 +386,13 @@ class GenerateTasksForPlanTool(BaseTool):
                 success=True,
                 tool_name=self.name,
                 data={
-                    "plan_id": params.plan_id,
+                    "plan_id": None if quota_fallback else params.plan_id,
                     "task_count": len(created_tasks),
+                    "task_ids": [task["id"] for task in created_tasks],
                     "tasks": created_tasks,
                     "has_context": bool(knowledge_context),
                     "rag_quality": rag_quality,
+                    "fallback_mode": "task_only" if quota_fallback else None,
                 },
                 widget_type="task_list",
                 widget_data=wrap_widget_payload(
@@ -350,7 +402,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         created_tasks,
                         tool_name=self.name,
                         tool_result_id=tool_call_id,
-                        plan_id=params.plan_id,
+                        plan_id=None if quota_fallback else params.plan_id,
                         plan_title=plan_snapshot.name,
                         rag_quality=rag_quality,
                     ),

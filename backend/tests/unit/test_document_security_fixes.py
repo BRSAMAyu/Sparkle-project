@@ -215,6 +215,21 @@ class TestMagicBytesValidation:
         _, call_kwargs = mock_api.call_args
         assert call_kwargs == {}
 
+    def test_process_plain_text_file(self):
+        """测试 txt 纯文本文件可以被 ingestion 提取"""
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write("Binary search has logarithmic time complexity.\nThe array must be sorted.")
+            f.flush()
+
+            chunks = self.ingestion_service.process_file(f.name)
+
+            assert len(chunks) == 1
+            assert chunks[0].source == "text"
+            assert "Binary search" in chunks[0].text
+            assert chunks[0].metadata["title"].endswith(".txt")
+
+            os.unlink(f.name)
+
 
 class Test10MBSizeLimit:
     """测试10MB清洗后大小限制"""

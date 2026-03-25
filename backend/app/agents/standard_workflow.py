@@ -106,6 +106,28 @@ def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, A
     return {key: user_context.get(key) for key in allowed_keys if key in user_context}
 
 
+def _first_document_page_number(chunk: Any) -> int | None:
+    """Return a stable first page number for document chunks.
+
+    Older call sites still expect ``page_number`` while the model stores
+    ``page_numbers`` as a JSON list for traceability.
+    """
+    page_number = getattr(chunk, "page_number", None)
+    if page_number is not None:
+        return int(page_number)
+
+    page_numbers = getattr(chunk, "page_numbers", None)
+    if isinstance(page_numbers, list):
+        for value in page_numbers:
+            if value is None:
+                continue
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
 def _resolve_generation_agent_role(state: WorkflowState) -> str:
     explicit_role = state.context_data.get("agent_role")
     if explicit_role:
@@ -959,6 +981,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
     document_context = ""
     citations = []
     if file_ids:
+        logger.info("Retrieval node received {} explicit file_ids for session {}", len(file_ids), state.context_data.get("session_id", ""))
         file_uuid_list = []
         for fid in file_ids:
             try:
@@ -991,8 +1014,9 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                         label_parts = [item.file_name]
                         if chunk.section_title:
                             label_parts.append(chunk.section_title)
-                        if chunk.page_number is not None:
-                            label_parts.append(f"p{chunk.page_number}")
+                        page_number = _first_document_page_number(chunk)
+                        if page_number is not None:
+                            label_parts.append(f"p{page_number}")
                         label_parts.append(f"#{chunk.chunk_index}")
                         label = " | ".join(label_parts)
                         lines.append(f"- [{label}] {snippet}")
@@ -1011,13 +1035,18 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                                     url="",
                                     score=item.score,
                                     file_id=str(chunk.file_id),
-                                    page_number=chunk.page_number or 0,
+                                    page_number=page_number or 0,
                                     chunk_index=chunk.chunk_index,
                                     section_title=chunk.section_title or "",
                                 )
                             )
 
                     document_context = "\n".join(lines)
+                    logger.info(
+                        "Retrieval node assembled {} document results for session {}",
+                        len(doc_results),
+                        state.context_data.get("session_id", ""),
+                    )
             except Exception as e:
                 logger.warning(f"Document retrieval failed: {e}")
 
@@ -1270,6 +1299,13 @@ Ask about their available time and current tasks if needed.
         system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
 
     raw_document_context = state.context_data.get("document_context") or ""
+    logger.info(
+        "Generation node file grounding: session={}, file_ids={}, slim_standard={}, document_context_chars={}",
+        state.context_data.get("session_id", ""),
+        len(list(state.context_data.get("file_ids") or [])),
+        use_slim_standard_context,
+        len(raw_document_context),
+    )
     document_context = (
         ""
         if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
@@ -2092,6 +2128,8 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
     context_data = state.context_data or {}
     chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
     if chat_mode not in {"standard", "chat"}:
+        return False
+    if context_data.get("file_ids"):
         return False
     if context_data.get("planned_tool_sequence"):
         return False

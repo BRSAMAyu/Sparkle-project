@@ -15,6 +15,7 @@ Sparkle Celery 应用配置
 import logging
 import os
 import asyncio
+from urllib.parse import urlsplit, urlunsplit
 
 from celery import Celery
 from celery.schedules import crontab
@@ -32,14 +33,24 @@ def _run_async(coro):
         asyncio.set_event_loop(_worker_event_loop)
     return _worker_event_loop.run_until_complete(coro)
 
+
+def _redis_url_with_db(redis_url: str, db_index: int) -> str:
+    """Derive a Redis URL with a different DB index while keeping auth/host intact."""
+    try:
+        parsed = urlsplit(redis_url)
+        path = f"/{db_index}"
+        return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
+    except Exception:
+        return redis_url
+
 # =============================================================================
 # Celery 配置
 # =============================================================================
 
 # 从环境变量读取配置
 REDIS_URL = str(settings.REDIS_URL or os.getenv("REDIS_URL") or "redis://localhost:6379/1")
-CELERY_BROKER_URL = str(os.getenv("CELERY_BROKER_URL") or REDIS_URL)
-CELERY_RESULT_BACKEND = str(os.getenv("CELERY_RESULT_BACKEND") or REDIS_URL)
+CELERY_BROKER_URL = str(os.getenv("CELERY_BROKER_URL") or _redis_url_with_db(REDIS_URL, 1))
+CELERY_RESULT_BACKEND = str(os.getenv("CELERY_RESULT_BACKEND") or _redis_url_with_db(REDIS_URL, 2))
 
 # Celery 应用实例
 celery_app = Celery(
@@ -75,6 +86,9 @@ celery_app.conf.update(
 
     # 任务名称配置（支持短名称和完整路径）
     task_create_missing_queues=True,
+    task_default_queue="default",
+    task_default_exchange="sparkle",
+    task_default_routing_key="default",
 
     # 队列配置
     task_queues={
@@ -106,6 +120,8 @@ celery_app.conf.update(
         "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
         "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
+        "process_stored_file": {"queue": "default"},
+        "app.core.celery_tasks.process_stored_file": {"queue": "default"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
         "daily_report": {"queue": "default"},

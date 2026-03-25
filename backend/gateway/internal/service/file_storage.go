@@ -120,19 +120,43 @@ func (s *FileStorageService) PresignPost(
 }
 
 func (s *FileStorageService) PresignGet(ctx context.Context, objectKey string) (string, error) {
+	url, err := s.PresignInternalGet(ctx, objectKey)
+	if err != nil {
+		return "", err
+	}
+	parsed, err := urlpkgParse(url)
+	if err != nil {
+		return url, nil
+	}
+	return s.rewritePresignedURL(parsed), nil
+}
+
+func (s *FileStorageService) PresignInternalGet(ctx context.Context, objectKey string) (string, error) {
 	url, err := s.client.PresignedGetObject(ctx, s.bucket, objectKey, s.presignExpiry, nil)
 	if err != nil {
 		return "", err
 	}
-	return s.rewritePresignedURL(url), nil
+	return url.String(), nil
 }
 
 func (s *FileStorageService) PresignPut(ctx context.Context, objectKey string) (string, error) {
+	url, err := s.PresignInternalPut(ctx, objectKey)
+	if err != nil {
+		return "", err
+	}
+	parsed, err := urlpkgParse(url)
+	if err != nil {
+		return url, nil
+	}
+	return s.rewritePresignedURL(parsed), nil
+}
+
+func (s *FileStorageService) PresignInternalPut(ctx context.Context, objectKey string) (string, error) {
 	url, err := s.client.PresignedPutObject(ctx, s.bucket, objectKey, s.presignExpiry)
 	if err != nil {
 		return "", err
 	}
-	return s.rewritePresignedURL(url), nil
+	return url.String(), nil
 }
 
 func (s *FileStorageService) DeleteObject(ctx context.Context, bucket string, objectKey string) error {
@@ -179,4 +203,8 @@ func (s *FileStorageService) rewritePresignedURL(signed *url.URL) string {
 	rewritten.Scheme = s.publicBaseURL.Scheme
 	rewritten.Host = s.publicBaseURL.Host
 	return rewritten.String()
+}
+
+func urlpkgParse(raw string) (*url.URL, error) {
+	return url.Parse(raw)
 }

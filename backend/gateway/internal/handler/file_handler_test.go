@@ -54,6 +54,16 @@ func (m *MockFileStorage) PresignPut(ctx context.Context, objectKey string) (str
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockFileStorage) PresignInternalGet(ctx context.Context, objectKey string) (string, error) {
+	args := m.Called(ctx, objectKey)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockFileStorage) PresignInternalPut(ctx context.Context, objectKey string) (string, error) {
+	args := m.Called(ctx, objectKey)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockFileStorage) DeleteObject(ctx context.Context, bucket string, objectKey string) error {
 	args := m.Called(ctx, bucket, objectKey)
 	return args.Error(0)
@@ -302,8 +312,8 @@ func TestCompleteUpload(t *testing.T) {
 		mockMetadata.On("UpdateFileStatus", mock.Anything, fileID, userID, "uploaded", "private").
 			Return(record, nil)
 
-		mockStorage.On("PresignGet", mock.Anything, record.ObjectKey).Return("https://download.url", nil)
-		mockStorage.On("PresignPut", mock.Anything, mock.Anything).Return("https://thumbnail.url", nil)
+		mockStorage.On("PresignInternalGet", mock.Anything, record.ObjectKey).Return("http://minio:9000/download.url", nil)
+		mockStorage.On("PresignInternalPut", mock.Anything, mock.Anything).Return("http://minio:9000/thumbnail.url", nil)
 
 		mockProcessor.On("TriggerProcessing", mock.Anything, mock.MatchedBy(func(req service.FileProcessingRequest) bool {
 			return req.FileID == fileID.String()

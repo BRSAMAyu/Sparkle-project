@@ -398,7 +398,7 @@ class KnowledgeRetrievalService:
         if not query or not file_ids:
             return []
         if not await self._vector_runtime_available():
-            return []
+            return await self._document_file_scope_fallback(user_id=user_id, file_ids=file_ids, limit=limit)
 
         actual_vector_text = vector_query if vector_query else query
         query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
@@ -434,7 +434,46 @@ class KnowledgeRetrievalService:
                 score = max(0.0, 1.0 - float(distance))
                 results.append(DocumentChunkResult(chunk=chunk, file_name=file_name, score=score))
 
-        return results[:limit]
+        if results:
+            return results[:limit]
+
+        return await self._document_file_scope_fallback(user_id=user_id, file_ids=file_ids, limit=limit)
+
+    async def _document_file_scope_fallback(
+        self,
+        user_id: UUID,
+        file_ids: list[UUID],
+        limit: int,
+    ) -> list["DocumentChunkResult"]:
+        """
+        File-scoped fallback for explicit attachments.
+
+        If the user explicitly attached files but semantic similarity misses,
+        we should still expose the leading chunks from those files so the model
+        can ground against the uploaded content instead of acting blind.
+        """
+        if not file_ids:
+            return []
+
+        stmt = (
+            select(DocumentChunk, StoredFile.file_name)
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .where(DocumentChunk.user_id == user_id)
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .order_by(DocumentChunk.file_id, DocumentChunk.chunk_index)
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        fallback_results: list[DocumentChunkResult] = []
+        for chunk, file_name in rows:
+            fallback_results.append(DocumentChunkResult(
+                chunk=chunk,
+                file_name=file_name,
+                score=0.51,
+            ))
+        return fallback_results
 
     async def semantic_search_nodes(
         self,

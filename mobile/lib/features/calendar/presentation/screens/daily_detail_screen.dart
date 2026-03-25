@@ -750,8 +750,8 @@ class DailyDetailScreen extends ConsumerWidget {
     final locationController = TextEditingController(
       text: event.location ?? '',
     );
-    var startTime = event.startTime;
-    var endTime = event.endTime;
+    final startTime = event.startTime;
+    final endTime = event.endTime;
     var isAllDay = event.isAllDay;
     var reminderMinutes = event.reminderMinutes.isNotEmpty
         ? event.reminderMinutes.first

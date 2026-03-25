@@ -262,10 +262,10 @@ func (h *FileHandler) CompleteUpload(c *gin.Context) {
 	}
 
 	if h.processor != nil {
-		downloadURL, err := h.storage.PresignGet(c.Request.Context(), record.ObjectKey)
+		downloadURL, err := h.storage.PresignInternalGet(c.Request.Context(), record.ObjectKey)
 		if err == nil {
 			thumbnailKey := fileID.String() + "/thumbnail.jpg"
-			thumbnailURL, thumbErr := h.storage.PresignPut(c.Request.Context(), thumbnailKey)
+			thumbnailURL, thumbErr := h.storage.PresignInternalPut(c.Request.Context(), thumbnailKey)
 			if thumbErr != nil {
 				thumbnailURL = ""
 			}

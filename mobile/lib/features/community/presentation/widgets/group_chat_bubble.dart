@@ -424,7 +424,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                           readerId: readBy[i],
                           readByUsers: readByUsers,
                         ),
-                        fit: BoxFit.cover,
                         width: 18,
                         height: 18,
                         errorWidget: Center(

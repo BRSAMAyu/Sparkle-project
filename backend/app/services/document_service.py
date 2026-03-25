@@ -864,4 +864,51 @@ def _resolve_allowed_path(file_path: str) -> str | None:
 
         return results
 
+async def _document_service_extract_vector_chunks(
+    self,
+    file_path: str,
+    chunk_size: int = 1200,
+    chunk_overlap: int = 200,
+) -> list[VectorChunk]:
+    """Compatibility binding for file vectorization entrypoint."""
+    chunks = await asyncio.to_thread(ingestion_service.process_file, file_path)
+    if not chunks:
+        return []
+
+    try:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=501,
+            detail="Vector chunking requires langchain-text-splitters (llm extras)."
+        ) from exc
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ". ", " ", ""],
+    )
+
+    results: list[VectorChunk] = []
+    for chunk in chunks:
+        text = (chunk.text or "").strip()
+        if not text:
+            continue
+        for piece in splitter.split_text(text):
+            content = piece.strip()
+            if len(content) < 20:
+                continue
+            results.append(VectorChunk(
+                content=content,
+                page_numbers=[chunk.page_num] if chunk.page_num else [],
+                section_title=chunk.metadata.get("title") if chunk.metadata else None,
+                ocr_confidence=chunk.ocr_confidence,
+            ))
+
+    return results
+
+
+if not hasattr(DocumentService, "extract_vector_chunks"):
+    DocumentService.extract_vector_chunks = _document_service_extract_vector_chunks
+
 document_service = DocumentService()
