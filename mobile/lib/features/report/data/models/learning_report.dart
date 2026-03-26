@@ -12,6 +12,11 @@ class LearningMasteryDatum {
 
   final String nodeName;
   final double masteryScore;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'node_name': nodeName,
+        'mastery_score': masteryScore,
+      };
 }
 
 class LearningReport {
@@ -38,4 +43,11 @@ class LearningReport {
   final String markdown;
   final List<String> sections;
   final List<LearningMasteryDatum> mastery;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'report_id': reportId,
+        'markdown': markdown,
+        'sections': sections,
+        'mastery': mastery.map((item) => item.toJson()).toList(),
+      };
 }

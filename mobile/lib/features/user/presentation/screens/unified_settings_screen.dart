@@ -38,15 +38,23 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _sensoryExpanded = false;
   bool _learningExpanded = false;
   bool _bgmExpanded = false;
+  bool _bgmAdvancedExpanded = false;
   bool _themeExpanded = false;
   bool _bgmEnabled = true;
   bool _bgmReady = false;
   double _bgmVolume = 0.85;
   BgmPalette _bgmPalette = BgmPalette.adaptive;
   BgmMode _bgmMode = BgmMode.adaptive;
+  BgmIntensity _bgmIntensity = BgmIntensity.gentle;
+  BgmVariety _bgmVariety = BgmVariety.balanced;
+  bool _bgmReadingProtection = true;
+  bool _bgmFocusPriority = true;
+  bool _bgmLockCurrentStyle = false;
   bool _localBgmOverridesEnabled = false;
   int _localBgmOverrideCount = 0;
   BgmPalette? _previewingPalette;
+  BgmTrack? _previewingSceneTrack;
+  BgmPlaybackSnapshot? _bgmPlaybackSnapshot;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _sensoryReady = false;
@@ -72,6 +80,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final volume = await BgmService.getVolume();
     final palette = await BgmService.getPalette();
     final mode = await BgmService.getMode();
+    final tuning = await BgmService.getUserTuning();
+    final snapshot = await BgmService.currentPlaybackSnapshot();
     final localOverrideCount = await BgmService.localAdaptiveOverrideCount();
     if (!mounted) {
       return;
@@ -81,10 +91,24 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _bgmVolume = volume;
       _bgmPalette = palette;
       _bgmMode = mode;
+      _bgmIntensity = tuning.intensity;
+      _bgmVariety = tuning.variety;
+      _bgmReadingProtection = tuning.readingProtection;
+      _bgmFocusPriority = tuning.focusPriority;
+      _bgmLockCurrentStyle = tuning.lockCurrentStyle;
+      _bgmPlaybackSnapshot = snapshot;
       _localBgmOverrideCount = localOverrideCount;
       _localBgmOverridesEnabled = localOverrideCount > 0;
       _bgmReady = true;
     });
+  }
+
+  Future<void> _refreshBgmPlaybackSnapshot() async {
+    final snapshot = await BgmService.currentPlaybackSnapshot();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _bgmPlaybackSnapshot = snapshot);
   }
 
   Future<void> _loadSensoryPreferences() async {
@@ -107,6 +131,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setBgmEnabled(bool value) async {
     setState(() => _bgmEnabled = value);
     await BgmService.setEnabled(value);
+    await _refreshBgmPlaybackSnapshot();
     if (value) {
       await SensoryFeedbackService.emit(
         SensoryFeedbackEvent.confirm,
@@ -118,11 +143,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setBgmVolume(double value) async {
     setState(() => _bgmVolume = value);
     await BgmService.setVolume(value);
+    await _refreshBgmPlaybackSnapshot();
   }
 
   Future<void> _setBgmPalette(BgmPalette palette) async {
     setState(() => _bgmPalette = palette);
     await BgmService.setPalette(palette);
+    await _refreshBgmPlaybackSnapshot();
     if (_bgmEnabled) {
       await SensoryFeedbackService.emit(
         SensoryFeedbackEvent.selection,
@@ -149,11 +176,61 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _setBgmMode(BgmMode mode) async {
     setState(() => _bgmMode = mode);
     await BgmService.setMode(mode);
+    await _refreshBgmPlaybackSnapshot();
     if (_bgmEnabled && mode != BgmMode.silent) {
       await SensoryFeedbackService.emit(
         SensoryFeedbackEvent.selection,
         enableHaptic: false,
       );
+    }
+  }
+
+  Future<void> _setBgmIntensity(BgmIntensity intensity) async {
+    setState(() => _bgmIntensity = intensity);
+    await BgmService.setIntensity(intensity);
+    await _refreshBgmPlaybackSnapshot();
+  }
+
+  Future<void> _setBgmVariety(BgmVariety variety) async {
+    setState(() => _bgmVariety = variety);
+    await BgmService.setVariety(variety);
+    await _refreshBgmPlaybackSnapshot();
+  }
+
+  Future<void> _setBgmReadingProtection(bool enabled) async {
+    setState(() => _bgmReadingProtection = enabled);
+    await BgmService.setReadingProtection(enabled);
+    await _refreshBgmPlaybackSnapshot();
+  }
+
+  Future<void> _setBgmFocusPriority(bool enabled) async {
+    setState(() => _bgmFocusPriority = enabled);
+    await BgmService.setFocusPriority(enabled);
+    await _refreshBgmPlaybackSnapshot();
+  }
+
+  Future<void> _setBgmLockCurrentStyle(bool enabled) async {
+    setState(() => _bgmLockCurrentStyle = enabled);
+    await BgmService.setLockCurrentStyle(enabled);
+    await _refreshBgmPlaybackSnapshot();
+  }
+
+  Future<void> _previewCurrentScene() async {
+    final track = _bgmPlaybackSnapshot?.track;
+    if (track == null) {
+      return;
+    }
+    setState(() => _previewingSceneTrack = track);
+    try {
+      await BgmService.previewSceneSample(track, palette: _bgmPalette);
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, '当前场景试听失败，请检查音频文件');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _previewingSceneTrack = null);
+      }
     }
   }
 
@@ -560,6 +637,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             ),
                           ),
                           const SizedBox(height: DS.spacing12),
+                          _buildBgmNowPlayingCard(),
+                          const SizedBox(height: DS.spacing12),
                           const SizedBox(height: DS.spacing8),
                           Text(
                             '音乐音量',
@@ -665,6 +744,68 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 height: 1.4,
                               ),
                             ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          InkWell(
+                            borderRadius: DS.borderRadius12,
+                            onTap: () => setState(() =>
+                                _bgmAdvancedExpanded = !_bgmAdvancedExpanded),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(DS.spacing12),
+                              decoration: BoxDecoration(
+                                borderRadius: DS.borderRadius12,
+                                color: Color.alphaBlend(
+                                  DS.brandPrimary.withValues(alpha: 0.05),
+                                  DS.surfaceSecondary,
+                                ),
+                                border: Border.all(
+                                  color:
+                                      DS.brandPrimary.withValues(alpha: 0.14),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.tune_rounded, size: 18),
+                                  const SizedBox(width: DS.spacing10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '高级控制',
+                                          style: DS.bodyLarge,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '控制音乐浓度、轮换频率、阅读保护、专注优先与锁定当前风格',
+                                          style: DS.bodySmall.copyWith(
+                                            color: DS.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    _bgmAdvancedExpanded
+                                        ? Icons.expand_less_rounded
+                                        : Icons.expand_more_rounded,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          AnimatedCrossFade(
+                            firstChild: const SizedBox(width: double.infinity),
+                            secondChild: Padding(
+                              padding: const EdgeInsets.only(top: DS.spacing12),
+                              child: _buildBgmAdvancedControls(),
+                            ),
+                            crossFadeState: _bgmAdvancedExpanded
+                                ? CrossFadeState.showSecond
+                                : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 220),
                           ),
                         ],
                       ),
@@ -1449,6 +1590,202 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
   }
 
+  Widget _buildBgmNowPlayingCard() {
+    final snapshot = _bgmPlaybackSnapshot;
+    final sceneName = snapshot?.scene?.name ?? '当前未播放';
+    final trackName = snapshot?.trackId ?? '内置场景曲目';
+    final sourceLabel = snapshot?.sourceLabel ?? 'Bundled fallback';
+    final reason = snapshot?.selectionReason ?? '等待播放信息';
+    final statusText = !_bgmEnabled
+        ? '背景音乐已关闭'
+        : _bgmMode == BgmMode.silent
+            ? '当前处于全局静音'
+            : sceneName;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius12,
+        color: Color.alphaBlend(
+          DS.warning.withValues(alpha: 0.05),
+          DS.surfaceSecondary,
+        ),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.equalizer_rounded, size: 18),
+              const SizedBox(width: DS.spacing8),
+              Text('当前播放', style: DS.bodyLarge),
+              const Spacer(),
+              if (_previewingSceneTrack == null)
+                TextButton.icon(
+                  onPressed: _bgmEnabled && _bgmPlaybackSnapshot?.track != null
+                      ? () => unawaited(_previewCurrentScene())
+                      : null,
+                  icon: const Icon(Icons.headphones_rounded, size: 16),
+                  label: const Text('试听当前场景'),
+                )
+              else
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(statusText, style: DS.bodyLarge),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            '曲目: $trackName',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          Text(
+            '来源: $sourceLabel',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            reason,
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          if (snapshot != null)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing8),
+              child: Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  _buildInfoChip('强度', _bgmIntensityLabel(snapshot.intensity)),
+                  _buildInfoChip('轮换', _bgmVarietyLabel(snapshot.variety)),
+                  if (snapshot.readingProtectionApplied)
+                    _buildInfoChip('保护', '阅读保护'),
+                  if (snapshot.focusPriorityApplied)
+                    _buildInfoChip('优先', '专注优先'),
+                  if (snapshot.styleLocked) _buildInfoChip('状态', '锁定风格'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBgmAdvancedControls() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '氛围强度',
+          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: BgmIntensity.values
+              .map(
+                (intensity) => ChoiceChip(
+                  label: Text(_bgmIntensityLabel(intensity)),
+                  selected: _bgmIntensity == intensity,
+                  onSelected: _bgmReady
+                      ? (_) => unawaited(_setBgmIntensity(intensity))
+                      : null,
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Text(
+          _bgmIntensityDescription(_bgmIntensity),
+          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        Text(
+          '曲目变化频率',
+          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: BgmVariety.values
+              .map(
+                (variety) => ChoiceChip(
+                  label: Text(_bgmVarietyLabel(variety)),
+                  selected: _bgmVariety == variety,
+                  onSelected: _bgmReady
+                      ? (_) => unawaited(_setBgmVariety(variety))
+                      : null,
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Text(
+          _bgmVarietyDescription(_bgmVariety),
+          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('阅读保护'),
+          subtitle: const Text('聊天、洞察、个人页优先保留低刺激与轻混音'),
+          value: _bgmReadingProtection,
+          onChanged: _bgmReady
+              ? (value) => unawaited(_setBgmReadingProtection(value))
+              : null,
+          activeThumbColor: DS.primaryBase,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('专注优先'),
+          subtitle: const Text('专注与执行阶段优先选择更纯净、更稳定的曲目'),
+          value: _bgmFocusPriority,
+          onChanged: _bgmReady
+              ? (value) => unawaited(_setBgmFocusPriority(value))
+              : null,
+          activeThumbColor: DS.primaryBase,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('锁定当前风格'),
+          subtitle: const Text('跨普通页面时尽量延续当前气质，不覆盖专注和庆祝场景'),
+          value: _bgmLockCurrentStyle,
+          onChanged: _bgmReady
+              ? (value) => unawaited(_setBgmLockCurrentStyle(value))
+              : null,
+          activeThumbColor: DS.primaryBase,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius16,
+        color: DS.surfaceSecondary,
+      ),
+      child: Text(
+        '$label · $value',
+        style: DS.labelSmall.copyWith(color: DS.textSecondary),
+      ),
+    );
+  }
+
   String _bgmPaletteLabel(BgmPalette palette) => switch (palette) {
         BgmPalette.adaptive => '自适应',
         BgmPalette.classical => '精选古典',
@@ -1463,6 +1800,31 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         BgmPalette.piano => '整体更偏轻钢琴与安静旋律，适合长时间陪伴。',
         BgmPalette.airy => '整体更偏空灵、梦幻和空间感更强的氛围。',
         BgmPalette.warm => '整体更偏温暖、柔和、有人味的轻快底色。',
+      };
+
+  String _bgmIntensityLabel(BgmIntensity intensity) => switch (intensity) {
+        BgmIntensity.gentle => '柔和',
+        BgmIntensity.balanced => '平衡',
+        BgmIntensity.lush => '丰盈',
+      };
+
+  String _bgmIntensityDescription(BgmIntensity intensity) =>
+      switch (intensity) {
+        BgmIntensity.gentle => '更适合长时间陪伴，优先轻密度、低干扰和慢切换。',
+        BgmIntensity.balanced => '保留舒适度的同时增加一点层次和存在感。',
+        BgmIntensity.lush => '让同一场景更有氛围和包裹感，但仍避免明显突兀。',
+      };
+
+  String _bgmVarietyLabel(BgmVariety variety) => switch (variety) {
+        BgmVariety.steady => '稳定',
+        BgmVariety.balanced => '均衡',
+        BgmVariety.dynamic => '灵动',
+      };
+
+  String _bgmVarietyDescription(BgmVariety variety) => switch (variety) {
+        BgmVariety.steady => '尽量减少跳曲和重复变化，让氛围更连贯。',
+        BgmVariety.balanced => '在连贯和新鲜之间保持中间值。',
+        BgmVariety.dynamic => '降低重复率，让同类页面也能更常听到新变化。',
       };
 
   String _motionIntensityLabel(MotionIntensityLevel level) => switch (level) {

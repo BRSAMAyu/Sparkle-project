@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
+import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
+import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
+import 'package:sparkle/features/theater/presentation/screens/knowledge_theater_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
@@ -54,7 +59,7 @@ class _FakeSimulationRepository implements SimulationRepository {
 
 class _StaticSimulationNotifier extends SimulationNotifier {
   _StaticSimulationNotifier(SimulationState initialState)
-      : super(_FakeSimulationRepository()) {
+      : super(_FakeSimulationRepository(), _FakeRef()) {
     state = initialState;
   }
 
@@ -66,7 +71,53 @@ class _StaticSimulationNotifier extends SimulationNotifier {
   }) async {}
 }
 
+class _FakeRef implements Ref {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _FakeApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _FakeTheaterRepository extends TheaterRepository {
+  _FakeTheaterRepository() : super(_FakeApiClient());
+}
+
+class _StaticTheaterNotifier extends TheaterNotifier {
+  _StaticTheaterNotifier(this._initialState, Ref ref)
+      : super(_FakeTheaterRepository(), ref) {
+    state = _initialState;
+  }
+
+  final TheaterState _initialState;
+
+  @override
+  Future<void> generatePrediction({
+    required String topic,
+    String? targetNodeId,
+    int horizonDays = 14,
+  }) async {}
+
+  @override
+  Future<void> adoptSelectedRouteWithSource({String? sourceChatSessionId}) async {}
+
+  @override
+  Future<void> runWhatIfForStep(String stepNodeId) async {}
+
+  @override
+  Future<void> saveSnapshot({String? note}) async {}
+
+  @override
+  Future<void> refreshAccuracy() async {}
+}
+
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   group('Insights frontend smoke', () {
     testWidgets('insight hub card renders unified entry and navigates to theater', (tester) async {
       final router = GoRouter(
@@ -183,6 +234,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习分析报告'), findsOneWidget);
+      expect(find.text('趋势会随着更多报告自动补全'), findsOneWidget);
       expect(find.text('掌握度雷达图'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('关键指标'),
@@ -197,6 +249,96 @@ void main() {
       );
       expect(find.text('AI 分析报告'), findsOneWidget);
       expect(find.textContaining('本周总结'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('knowledge theater screen shows friendly timeout guidance', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            simulationProvider.overrideWith(
+              (ref) => _StaticSimulationNotifier(const SimulationState()),
+            ),
+            theaterProvider.overrideWith(
+              (ref) => _StaticTheaterNotifier(
+                const TheaterState(
+                  error: '这次推演花的时间有点长。你可以把目标说得更具体一点，或者稍后再试。',
+                ),
+                ref,
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: KnowledgeTheaterScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('这次推演花的时间有点长'), findsOneWidget);
+      expect(find.text('重试'), findsOneWidget);
+      expect(find.text('换个目标'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('insight hub card shows retry banner when refresh fails', (tester) async {
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: <RouteBase>[
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(body: InsightHubCard()),
+          ),
+          GoRoute(
+            path: '/theater',
+            builder: (context, state) => const SizedBox.shrink(),
+          ),
+          GoRoute(
+            path: '/simulation',
+            builder: (context, state) => const SizedBox.shrink(),
+          ),
+          GoRoute(
+            path: '/learning-report',
+            builder: (context, state) => const SizedBox.shrink(),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            simulationProvider.overrideWith(
+              (ref) => _StaticSimulationNotifier(
+                const SimulationState(
+                  error: 'network failed',
+                  recommendedSeeds: <SimulationSeedModel>[
+                    SimulationSeedModel(
+                      topic: '特征值与特征向量',
+                      context: '来自 Galaxy 的推荐种子',
+                      tensionPoint: '前置知识存在断层',
+                      sourceType: 'galaxy',
+                      sourceIds: <String>['n1'],
+                      relevanceScore: 0.91,
+                      suggestedScenario: 'study_group',
+                      suggestedExperts: <String>['数学专家', '星图导航'],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            systemUpdatesProvider.overrideWith(
+              (ref) async => <Map<String, dynamic>>[],
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('洞察推荐暂时没有刷新成功'), findsOneWidget);
+      expect(find.text('重试'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

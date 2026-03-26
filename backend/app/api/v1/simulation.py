@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
 from app.services.simulation.simulation_engine import SimulationEngine
+from app.services.simulation.scenario_templates import normalize_scenario_key
 from app.services.simulation.seed_extractor import SeedExtractor
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
@@ -44,14 +45,19 @@ async def get_recommended_learning_simulation_seeds(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        normalized_scenario_key = normalize_scenario_key(scenario_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
     extractor = SeedExtractor(db)
     seeds = await extractor.get_cached_or_generate(
         UUID(user_id),
-        scenario_key=scenario_key,
+        scenario_key=normalized_scenario_key,
         limit=max(1, min(limit, 6)),
     )
     return RecommendedSeedsResponse(
-        scenario_key=scenario_key,
+        scenario_key=normalized_scenario_key,
         seeds=[SimulationSeedResponse(**seed.to_dict()) for seed in seeds],
     )
 
@@ -62,8 +68,17 @@ async def run_learning_simulation(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        normalized_scenario_key = normalize_scenario_key(request.scenario_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
     engine = SimulationEngine(db)
-    session = await engine.run(topic=request.topic, scenario_key=request.scenario_key, user_id=UUID(user_id))
+    session = await engine.run(
+        topic=request.topic,
+        scenario_key=normalized_scenario_key,
+        user_id=UUID(user_id),
+    )
     return session.to_dict()
 
 
@@ -73,13 +88,18 @@ async def stream_learning_simulation(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        normalized_scenario_key = normalize_scenario_key(request.scenario_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
     engine = SimulationEngine(db)
 
     async def event_generator():
         try:
             async for event_name, payload in engine.stream(
                 topic=request.topic,
-                scenario_key=request.scenario_key,
+                scenario_key=normalized_scenario_key,
                 user_id=UUID(user_id),
             ):
                 yield f"event: {event_name}\n"

@@ -14,6 +14,7 @@ from app.orchestration.context_builder import ContextBuilderMixin
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.services.report.learning_report_agent import LearningReportAgent
+from app.services.theater.prediction_theater_service import TheaterNodeAccessError
 from app.services.simulation.seed_extractor import SimulationSeed
 from app.services.theater.prediction_theater_service import PredictionTheaterService
 from app.tools.simulation_tool import QuickSimulationParams, QuickSimulationTool
@@ -122,6 +123,65 @@ async def test_quick_simulation_tool_returns_preview_payload(monkeypatch):
     assert len(result.data["round_preview"]) == 3
     assert result.data["participants"] == ["优等生", "提问者", "主持人"]
     assert "scenario_key=study_group" in result.data["deep_link"]
+
+
+@pytest.mark.asyncio
+async def test_launch_prediction_tool_rejects_invalid_target_node_uuid():
+    result = await LaunchPredictionTool().execute(
+        LaunchPredictionParams(
+            topic="两周掌握特征值",
+            target_node_id="not-a-uuid",
+        ),
+        user_id=str(uuid4()),
+        db_session=object(),
+        tool_call_id="tool-invalid-node",
+    )
+
+    assert result.success is False
+    assert result.error_type == "invalid_target_node_id"
+    assert result.error_message == "目标知识节点格式不正确"
+
+
+@pytest.mark.asyncio
+async def test_launch_prediction_tool_rejects_inaccessible_target_node(monkeypatch):
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+        raise TheaterNodeAccessError()
+
+    monkeypatch.setattr(
+        "app.tools.theater_tool.PredictionTheaterService.generate_prediction",
+        fake_generate_prediction,
+    )
+
+    result = await LaunchPredictionTool().execute(
+        LaunchPredictionParams(
+            topic="两周掌握特征值",
+            target_node_id=str(uuid4()),
+        ),
+        user_id=str(uuid4()),
+        db_session=object(),
+        tool_call_id="tool-no-access",
+    )
+
+    assert result.success is False
+    assert result.error_type == "target_node_not_accessible"
+    assert result.error_message == "未找到可访问的知识节点"
+
+
+@pytest.mark.asyncio
+async def test_quick_simulation_tool_rejects_invalid_scenario():
+    result = await QuickSimulationTool().execute(
+        QuickSimulationParams(
+            scenario_key="made_up_scenario",
+            seed_topic="矩阵特征值",
+        ),
+        user_id=str(uuid4()),
+        db_session=object(),
+        tool_call_id="tool-invalid-scenario",
+    )
+
+    assert result.success is False
+    assert result.error_type == "invalid_simulation_scenario"
+    assert "Unsupported simulation scenario" in (result.error_message or "")
 
 
 @pytest.mark.asyncio

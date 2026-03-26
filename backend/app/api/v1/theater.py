@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,12 +49,15 @@ async def generate_theater_prediction(
     db: AsyncSession = Depends(get_db),
 ):
     service = PredictionTheaterService(db)
-    return await service.generate_prediction(
-        user_id=UUID(user_id),
-        topic=request.topic,
-        target_node_id=request.target_node_id,
-        horizon_days=request.horizon_days,
-    )
+    try:
+        return await service.generate_prediction(
+            user_id=UUID(user_id),
+            topic=request.topic,
+            target_node_id=request.target_node_id,
+            horizon_days=request.horizon_days,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.post("/predictions/what-if")

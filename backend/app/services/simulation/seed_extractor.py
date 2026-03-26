@@ -79,7 +79,7 @@ class SeedExtractor:
         cache_key = self._cache_key(user_id, scenario_key=scenario_key, limit=limit)
         if not force_refresh:
             cached = await cache_service.get(cache_key)
-            if isinstance(cached, list) and cached:
+            if isinstance(cached, list):
                 return [SimulationSeed.from_dict(item) for item in cached if isinstance(item, dict)]
 
         seeds = await self.extract_seeds(user_id, scenario_key=scenario_key, limit=limit)
@@ -440,7 +440,12 @@ class SeedExtractor:
             fallback={"selected_topics": fallback_topics},
             temperature=0.2,
         )
-        selected_topics = {str(item).strip() for item in list((payload or {}).get("selected_topics") or []) if str(item).strip()}
+        if isinstance(payload, list):
+            selected_topics = {str(item).strip() for item in payload if str(item).strip()}
+        else:
+            selected_topics = {
+                str(item).strip() for item in list((payload or {}).get("selected_topics") or []) if str(item).strip()
+            }
         if not selected_topics:
             return seeds
 

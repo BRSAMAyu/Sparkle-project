@@ -32,7 +32,8 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
   @override
   Widget build(BuildContext context) {
     final simulationState = ref.watch(simulationProvider);
-    final systemUpdates = ref.watch(systemUpdatesProvider).maybeWhen(
+    final systemUpdatesAsync = ref.watch(systemUpdatesProvider);
+    final systemUpdates = systemUpdatesAsync.maybeWhen(
           data: (items) => items,
           orElse: () => const <Map<String, dynamic>>[],
         );
@@ -57,6 +58,10 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     final hasAnyData = latestTheater != null ||
         latestReportPayload != null ||
         simulationState.recommendedSeeds.isNotEmpty;
+    final hasRefreshError =
+        (simulationState.error?.isNotEmpty ?? false) || systemUpdatesAsync.hasError;
+    final isShowingStaleData =
+        hasRefreshError && hasAnyData;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -158,6 +163,18 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                 ),
               ],
             ),
+            if (hasRefreshError) ...[
+              const SizedBox(height: DS.spacing12),
+              _InsightHubStatusBanner(
+                isShowingStaleData: isShowingStaleData,
+                onRetry: () {
+                  ref.invalidate(systemUpdatesProvider);
+                  unawaited(
+                    ref.read(simulationProvider.notifier).loadRecommendedSeeds(),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -249,6 +266,58 @@ class _InsightHubAction extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InsightHubStatusBanner extends StatelessWidget {
+  const _InsightHubStatusBanner({
+    required this.isShowingStaleData,
+    required this.onRetry,
+  });
+
+  final bool isShowingStaleData;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: DS.warning.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.wifi_tethering_error_rounded,
+            size: 18,
+            color: DS.warning,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isShowingStaleData
+                  ? '洞察推荐暂时没有刷新成功，当前先显示已有内容。'
+                  : '洞察中心暂时没有拿到最新数据，你可以立即重试。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('重试'),
+          ),
+        ],
       ),
     );
   }

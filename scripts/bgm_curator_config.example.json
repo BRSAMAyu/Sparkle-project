@@ -1,0 +1,14 @@
+{
+  "albums": [
+    {
+      "name": "Album Name Here",
+      "sceneTags": ["dashboard", "home", "warm"],
+      "paletteTags": ["adaptive", "warm"],
+      "energy": 0.32,
+      "density": 0.24,
+      "baseGain": 0.94,
+      "loopable": false,
+      "releaseApproved": false
+    }
+  ]
+}

@@ -110,9 +110,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         chatProvider.select(_shouldDuckForReasoning),
         (previous, next) {
           unawaited(
-            BgmService.setPersistentDuckFactor(
-              next ? 0.3 : 1.0,
-            ),
+            BgmService.setReadingActivity(next),
           );
         },
       )
@@ -243,7 +241,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    unawaited(BgmService.setPersistentDuckFactor(1.0));
+    unawaited(BgmService.setReadingActivity(false));
+    unawaited(BgmService.setThinkingActivity(false));
     super.dispose();
   }
 

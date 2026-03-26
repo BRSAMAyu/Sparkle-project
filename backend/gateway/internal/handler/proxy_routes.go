@@ -448,14 +448,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered memory proxy routes")
 
-	// ==================== Error Book Routes ====================
-	errors := api.Group("/errors")
-	errors.Use(authMiddleware)
-	{
-		errors.Any("/*path", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered error-book proxy routes")
-
 	// ==================== Visual Elements Routes ====================
 	visualElements := api.Group("/visual-elements")
 	visualElements.Use(authMiddleware)

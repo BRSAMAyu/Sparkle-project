@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
 
@@ -90,6 +93,19 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
   final TheaterRepository _repository;
   final Ref _ref;
 
+  String _resolveErrorMessage(
+    Object error, {
+    required String fallbackMessage,
+  }) {
+    if (error is TheaterRepositoryException) {
+      if (error.isTimeout) {
+        return '这次推演花的时间有点长。你可以把目标说得更具体一点，或者稍后再试。';
+      }
+      return error.message;
+    }
+    return fallbackMessage;
+  }
+
   Future<void> generatePrediction({
     required String topic,
     String? targetNodeId,
@@ -117,9 +133,23 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         selectedRouteId: selectedRouteId,
         timelineIndex: 0,
       );
+      unawaited(
+        _ref.read(appEventStreamServiceProvider).recordTheaterGenerated(
+              predictionId: prediction.predictionId,
+              topic: prediction.topic,
+              targetNodeId: prediction.targetNodeId,
+              pathCount: prediction.paths.length,
+            ),
+      );
       _syncOverlay();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '这次推演没有成功生成，你可以稍后再试。',
+        ),
+      );
     }
   }
 
@@ -150,7 +180,13 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         whatIfResult: result,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '这次 What-If 没有成功生成，你可以稍后再试。',
+        ),
+      );
     }
   }
 
@@ -172,7 +208,13 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         snapshot: snapshot,
       );
     } catch (e) {
-      state = state.copyWith(isSavingSnapshot: false, error: e.toString());
+      state = state.copyWith(
+        isSavingSnapshot: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '保存推演快照失败，你可以稍后再试。',
+        ),
+      );
     }
   }
 
@@ -197,8 +239,21 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isAdopting: false,
         adoptionResult: adoption,
       );
+      unawaited(
+        _ref.read(appEventStreamServiceProvider).recordRouteAdopted(
+              predictionId: prediction.predictionId,
+              routeId: route.id,
+              planId: adoption.planId,
+            ),
+      );
     } catch (e) {
-      state = state.copyWith(isAdopting: false, error: e.toString());
+      state = state.copyWith(
+        isAdopting: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '采纳这条推演路径失败了，你可以稍后再试。',
+        ),
+      );
     }
   }
 
@@ -211,8 +266,17 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       final summary = await _repository.getAccuracy(prediction.predictionId);
       state = state.copyWith(accuracySummary: summary);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '读取推演准确度失败，你可以稍后再试。',
+        ),
+      );
     }
+  }
+
+  void clearError() {
+    state = state.copyWith(clearError: true);
   }
 
   void clearOverlay() {

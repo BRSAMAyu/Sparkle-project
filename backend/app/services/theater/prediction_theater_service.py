@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -10,6 +11,7 @@ from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.exceptions import NotFoundError, SparkleException
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
@@ -29,6 +31,23 @@ def _utcnow() -> datetime:
 
 def _clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
+
+
+class TheaterTimeoutError(SparkleException):
+    def __init__(self):
+        super().__init__(
+            message="这次推演花的时间有点长，我们先停在这里。你可以换个更具体的目标重试，或稍后再试。",
+            status_code=504,
+            detail={"error_code": "THEATER_TIMEOUT"},
+        )
+
+
+class TheaterNodeAccessError(NotFoundError):
+    def __init__(self):
+        super().__init__(
+            message="未找到可访问的知识节点",
+            detail={"error_code": "THEATER_TARGET_NODE_NOT_ACCESSIBLE"},
+        )
 
 
 @dataclass(frozen=True)
@@ -139,6 +158,7 @@ class PredictionTheaterService:
     SNAPSHOT_PREFIX = "theater:snapshot:"
     SNAPSHOT_TTL_SECONDS = 60 * 60 * 24 * 7
     MAX_GRAPH_NODES = 12
+    PREDICTION_TIMEOUT_SECONDS = 30.0
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -154,7 +174,32 @@ class PredictionTheaterService:
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
     ) -> dict[str, Any]:
-        target_node = await self._resolve_target_node(topic=topic, target_node_id=target_node_id)
+        try:
+            return await asyncio.wait_for(
+                self._generate_prediction_payload(
+                    user_id=user_id,
+                    topic=topic,
+                    target_node_id=target_node_id,
+                    horizon_days=horizon_days,
+                ),
+                timeout=self.PREDICTION_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError as exc:
+            raise TheaterTimeoutError() from exc
+
+    async def _generate_prediction_payload(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        target_node_id: UUID | None = None,
+        horizon_days: int = 14,
+    ) -> dict[str, Any]:
+        target_node = await self._resolve_target_node_for_user(
+            user_id=user_id,
+            topic=topic,
+            target_node_id=target_node_id,
+        )
         learning_path = await self.graph_reasoning.generate_learning_path(
             user_id,
             target_node.id,
@@ -511,6 +556,29 @@ class PredictionTheaterService:
         if not node:
             raise ValueError(f'No knowledge node found for topic "{topic}"')
         return node
+
+    async def _resolve_target_node_for_user(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        target_node_id: UUID | None,
+    ) -> KnowledgeNode:
+        if target_node_id is None:
+            return await self._resolve_target_node(topic=topic, target_node_id=None)
+
+        target_node = await self.db.get(KnowledgeNode, target_node_id)
+        if target_node is None:
+            raise TheaterNodeAccessError()
+
+        if bool(target_node.is_seed) or int(target_node.importance_level or 0) >= 3:
+            return target_node
+
+        user_status = await self.db.get(UserNodeStatus, (user_id, target_node_id))
+        if user_status is not None:
+            return target_node
+
+        raise TheaterNodeAccessError()
 
     async def _get_mastery_map(self, user_id: UUID) -> dict[str, float]:
         result = await self.db.execute(

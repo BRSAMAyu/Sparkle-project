@@ -91,12 +91,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     super.initState();
     _pageEnterTime = DateTime.now(); // Record page entry time
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-    unawaited(
-      BgmService.setPersistentDuckFactor(
-        0.80,
-        duration: const Duration(milliseconds: 600),
-      ),
-    );
+    unawaited(BgmService.setFocusSession(true));
     final task = ref.read(activeTaskProvider);
     final estimated = task?.estimatedMinutes ?? 0;
     _currentTimerDuration = estimated > 0 ? estimated * 60 : 0;
@@ -134,12 +129,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   @override
   void dispose() {
-    unawaited(
-      BgmService.setPersistentDuckFactor(
-        1.0,
-        duration: const Duration(milliseconds: 320),
-      ),
-    );
+    unawaited(BgmService.setFocusSession(false));
     _celebrationDismissTimer?.cancel();
     _completionPanelTimer?.cancel();
     _completionStatsTimer?.cancel();
@@ -296,10 +286,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   Future<void> _loadFocusCompletionSummary(int minutes) async {
     final focusStatsState = ref.read(focus_stats.focusStatisticsProvider);
-    final fallbackToday = (focusStatsState.todayMinutes > 0
-            ? focusStatsState.todayMinutes
-            : 0) +
-        minutes;
+    final fallbackToday =
+        (focusStatsState.todayMinutes > 0 ? focusStatsState.todayMinutes : 0) +
+            minutes;
     if (mounted) {
       setState(() {
         _todayFocusMinutesSnapshot = fallbackToday;
@@ -364,7 +353,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     showSensoryDialog<void>(
       context: context,
       barrierDismissible: false,
-        builder: (context) => TaskFeedbackDialog(
+      builder: (context) => TaskFeedbackDialog(
         result: result,
         taskId: task?.id ?? '',
         onClose: () {
@@ -805,7 +794,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 const Color(0xFF0D1B2A),
                             Color.lerp(
                                   DS.overlay50.withValues(alpha: 0.90),
-                                  const Color(0xFFF0B77A).withValues(alpha: 0.78),
+                                  const Color(0xFFF0B77A)
+                                      .withValues(alpha: 0.78),
                                   warmth,
                                 ) ??
                                 DS.overlay50.withValues(alpha: 0.84),
@@ -836,13 +826,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                         visible: _showCompletionPanel,
                         animateStats: _showCompletionStats,
                         sessionMinutes: _completionMinutesSnapshot,
-                        todayMinutes:
-                            _todayFocusMinutesSnapshot ??
+                        todayMinutes: _todayFocusMinutesSnapshot ??
                             _completionMinutesSnapshot,
                         expGained: activeTask.difficulty * 10,
                         unlockedAchievements:
-                            _completionResult?.unlockedAchievements ??
-                            const [],
+                            _completionResult?.unlockedAchievements ?? const [],
                         onSkip: _skipCelebration,
                         continueLabel: l10n.taskExecutionTapToContinue,
                         skipLabel: l10n.taskExecutionSkipAnimation,
@@ -993,172 +981,170 @@ class _FocusCompletionPanel extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                    Container(
-                      padding: const EdgeInsets.all(DS.xl),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFFFFD79A).withValues(alpha: 0.92),
-                            const Color(0xFFFFB86B).withValues(alpha: 0.88),
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0xFFFFC06B).withValues(alpha: 0.38),
-                            blurRadius: 36,
-                            spreadRadius: 6,
-                          ),
+                  Container(
+                    padding: const EdgeInsets.all(DS.xl),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFFD79A).withValues(alpha: 0.92),
+                          const Color(0xFFFFB86B).withValues(alpha: 0.88),
                         ],
-                        border: Border.all(
-                          color: const Color(0xFFFFF1D7).withValues(alpha: 0.7),
-                        ),
                       ),
-                      child: Icon(
-                        Icons.self_improvement_rounded,
-                        color: const Color(0xFF7E4A12),
-                        size: 72,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFFFFC06B).withValues(alpha: 0.38),
+                          blurRadius: 36,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                      border: Border.all(
+                        color: const Color(0xFFFFF1D7).withValues(alpha: 0.7),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing20),
-                    Text(
-                      _labelForLocale(context, '专注完成', 'Focus Complete'),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    child: Icon(
+                      Icons.self_improvement_rounded,
+                      color: const Color(0xFF7E4A12),
+                      size: 72,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing20),
+                  Text(
+                    _labelForLocale(context, '专注完成', 'Focus Complete'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    _labelForLocale(
+                      context,
+                      '状态已回暖，来看看这次沉浸带来的积累。',
+                      'You are back from deep focus. Here is what you gained.',
+                    ),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _FocusMetricCard(
+                          icon: Icons.timer_outlined,
+                          label:
+                              _labelForLocale(context, '本次专注', 'This Session'),
+                          value: sessionMinutes,
+                          suffix: _labelForLocale(context, '分钟', ' min'),
+                          animate: animateStats,
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: _FocusMetricCard(
+                          icon: Icons.today_rounded,
+                          label: _labelForLocale(
+                            context,
+                            '今日累计',
+                            'Today Total',
+                          ),
+                          value: todayMinutes,
+                          suffix: _labelForLocale(context, '分钟', ' min'),
+                          animate: animateStats,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing18,
+                      vertical: DS.spacing10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceSecondary,
+                      borderRadius: DS.borderRadius20,
+                      border: Border.all(color: DS.borderSubtle),
+                    ),
+                    child: SparkleCountUp(
+                      end: expGained,
+                      animate: animateStats,
+                      prefix: _labelForLocale(context, '专注经验 +', 'Focus XP +'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
                           ),
                     ),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      _labelForLocale(
-                        context,
-                        '状态已回暖，来看看这次沉浸带来的积累。',
-                        'You are back from deep focus. Here is what you gained.',
-                      ),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: DS.textSecondary,
-                            height: 1.45,
-                          ),
-                    ),
-                    const SizedBox(height: DS.spacing18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _FocusMetricCard(
-                            icon: Icons.timer_outlined,
-                            label:
-                                _labelForLocale(context, '本次专注', 'This Session'),
-                            value: sessionMinutes,
-                            suffix: _labelForLocale(context, '分钟', ' min'),
-                            animate: animateStats,
-                          ),
-                        ),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(
-                          child: _FocusMetricCard(
-                            icon: Icons.today_rounded,
-                            label: _labelForLocale(
-                              context,
-                              '今日累计',
-                              'Today Total',
-                            ),
-                            value: todayMinutes,
-                            suffix: _labelForLocale(context, '分钟', ' min'),
-                            animate: animateStats,
-                          ),
-                        ),
-                      ],
-                    ),
+                  ),
+                  if (unlockedAchievements.isNotEmpty) ...[
                     const SizedBox(height: DS.spacing12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing18,
-                        vertical: DS.spacing10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
-                        borderRadius: DS.borderRadius20,
-                        border: Border.all(color: DS.borderSubtle),
-                      ),
-                      child: SparkleCountUp(
-                        end: expGained,
-                        animate: animateStats,
-                        prefix: _labelForLocale(context, '专注经验 +', 'Focus XP +'),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                      ),
-                    ),
-                    if (unlockedAchievements.isNotEmpty) ...[
-                      const SizedBox(height: DS.spacing12),
-                      ...unlockedAchievements.map((a) {
-                        final data = a is Map<String, dynamic>
-                            ? a
-                            : const <String, dynamic>{};
-                        final name = (data['name'] ?? data['title'] ?? '')
-                            .toString();
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing16,
-                            vertical: DS.spacing8,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFFFFD700)
-                                    .withValues(alpha: 0.18),
-                                const Color(0xFFFFA500)
-                                    .withValues(alpha: 0.10),
-                              ],
-                            ),
-                            borderRadius: DS.borderRadius12,
-                            border: Border.all(
-                              color: const Color(0xFFFFD700)
-                                  .withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.emoji_events_rounded,
-                                color: const Color(0xFFFFB300),
-                                size: 20,
-                              ),
-                              const SizedBox(width: DS.spacing8),
-                              Flexible(
-                                child: Text(
-                                  name,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: DS.textPrimary,
-                                        fontWeight: DS.fontWeightSemiBold,
-                                      ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                    ...unlockedAchievements.map((a) {
+                      final data = a is Map<String, dynamic>
+                          ? a
+                          : const <String, dynamic>{};
+                      final name =
+                          (data['name'] ?? data['title'] ?? '').toString();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing16,
+                          vertical: DS.spacing8,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFFFFD700).withValues(alpha: 0.18),
+                              const Color(0xFFFFA500).withValues(alpha: 0.10),
                             ],
                           ),
-                        );
-                      }),
-                    ],
-                    const SizedBox(height: DS.spacing12),
-                    Text(
-                      continueLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: DS.textSecondary,
+                          borderRadius: DS.borderRadius12,
+                          border: Border.all(
+                            color:
+                                const Color(0xFFFFD700).withValues(alpha: 0.4),
                           ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    SparkleButton.ghost(
-                      label: skipLabel,
-                      onPressed: onSkip,
-                    ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.emoji_events_rounded,
+                              color: const Color(0xFFFFB300),
+                              size: 20,
+                            ),
+                            const SizedBox(width: DS.spacing8),
+                            Flexible(
+                              child: Text(
+                                name,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: DS.textPrimary,
+                                      fontWeight: DS.fontWeightSemiBold,
+                                    ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: DS.spacing12),
+                  Text(
+                    continueLabel,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  SparkleButton.ghost(
+                    label: skipLabel,
+                    onPressed: onSkip,
+                  ),
                 ],
               ),
             ),
@@ -1218,10 +1204,11 @@ class _FocusMetricCard extends StatelessWidget {
                       end: value,
                       animate: animate,
                       duration: const Duration(milliseconds: 600),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: DS.fontWeightBold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: DS.textPrimary,
+                                fontWeight: DS.fontWeightBold,
+                              ),
                     ),
                   ),
                   TextSpan(

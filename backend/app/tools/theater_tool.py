@@ -5,7 +5,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.services.theater.prediction_theater_service import PredictionTheaterService
+from app.services.theater.prediction_theater_service import (
+    PredictionTheaterService,
+    TheaterNodeAccessError,
+)
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
@@ -32,7 +35,16 @@ class LaunchPredictionTool(BaseTool):
         try:
             target_node_uuid = None
             if params.target_node_id:
-                target_node_uuid = UUID(params.target_node_id)
+                try:
+                    target_node_uuid = UUID(params.target_node_id)
+                except (TypeError, ValueError) as exc:
+                    return ToolResult(
+                        success=False,
+                        tool_name=self.name,
+                        tool_call_id=tool_call_id,
+                        error_message="目标知识节点格式不正确",
+                        error_type="invalid_target_node_id",
+                    )
 
             service = PredictionTheaterService(db_session)
             prediction = await service.generate_prediction(
@@ -73,6 +85,14 @@ class LaunchPredictionTool(BaseTool):
                     "deep_link": f"/theater?{urlencode({k: v for k, v in query.items() if v})}",
                     "source_chat_session_id": params.source_chat_session_id,
                 },
+            )
+        except TheaterNodeAccessError as exc:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                tool_call_id=tool_call_id,
+                error_message=exc.message,
+                error_type="target_node_not_accessible",
             )
         except Exception as exc:
             return ToolResult(

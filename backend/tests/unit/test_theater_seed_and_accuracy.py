@@ -1,10 +1,35 @@
+import asyncio
 from uuid import uuid4
 
 import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
+from app.api.deps import get_current_user_id, get_db
+from app.api.v1.simulation import router as simulation_router
+from app.api.v1.theater import router as theater_router
 from app.core.cache import cache_service
+from app.main import sparkle_exception_handler
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
-from app.services.theater.prediction_theater_service import PredictionAccuracyTracker
+from app.services.theater.prediction_theater_service import (
+    PredictionAccuracyTracker,
+    PredictionTheaterService,
+    TheaterNodeAccessError,
+    TheaterTimeoutError,
+)
+
+
+TEST_USER_ID = str(uuid4())
+
+
+def _build_test_app():
+    app = FastAPI()
+    app.include_router(theater_router, prefix="/api/v1")
+    app.include_router(simulation_router, prefix="/api/v1")
+    app.add_exception_handler(TheaterTimeoutError, sparkle_exception_handler)
+    app.add_exception_handler(TheaterNodeAccessError, sparkle_exception_handler)
+    return app
 
 
 @pytest.fixture(autouse=True)
@@ -111,3 +136,175 @@ async def test_seed_extractor_reads_from_cache_before_regenerating(monkeypatch):
     assert first == [generated_seed]
     assert second == [generated_seed]
     assert refreshed == [generated_seed]
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_treats_cached_empty_list_as_cache_hit(monkeypatch):
+    extractor = SeedExtractor(db=None)  # type: ignore[arg-type]
+    user_id = uuid4()
+    cache_key = extractor._cache_key(user_id, scenario_key="study_group", limit=2)
+    await cache_service.set(cache_key, [], ttl=60)
+    calls = {"count": 0}
+
+    async def fake_extract(target_user_id, *, scenario_key=None, limit=3):
+        calls["count"] += 1
+        return [
+            SimulationSeed(
+                topic="不该被生成",
+                context="",
+                tension_point="",
+                source_type="fallback",
+                source_ids=[],
+                relevance_score=0.0,
+                suggested_scenario="study_group",
+                suggested_experts=[],
+            )
+        ]
+
+    monkeypatch.setattr(extractor, "extract_seeds", fake_extract)
+
+    seeds = await extractor.get_cached_or_generate(
+        user_id,
+        scenario_key="study_group",
+        limit=2,
+    )
+
+    assert seeds == []
+    assert calls["count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_fallback_seeds_are_stable_for_empty_user():
+    extractor = SeedExtractor(db=None)  # type: ignore[arg-type]
+
+    seeds = extractor._fallback_seeds(scenario_key="study_group", limit=3)
+
+    assert len(seeds) == 3
+    assert all(seed.topic for seed in seeds)
+    assert all(seed.suggested_scenario for seed in seeds)
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_for_user_rejects_inaccessible_explicit_node(db_session, test_user):
+    node = KnowledgeNode(
+        name="Private target node",
+        description="Only explicit user access should allow this node.",
+        importance_level=1,
+        is_seed=False,
+    )
+    db_session.add(node)
+    await db_session.commit()
+    await db_session.refresh(node)
+
+    service = PredictionTheaterService(db_session)
+
+    with pytest.raises(TheaterNodeAccessError):
+        await service._resolve_target_node_for_user(
+            user_id=test_user.id,
+            topic="ignored",
+            target_node_id=node.id,
+        )
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_for_user_accepts_user_status_node(db_session, test_user):
+    node = KnowledgeNode(
+        name="Unlocked target node",
+        description="This node is available via user status.",
+        importance_level=1,
+        is_seed=False,
+    )
+    db_session.add(node)
+    await db_session.commit()
+    await db_session.refresh(node)
+    db_session.add(
+        UserNodeStatus(
+            user_id=test_user.id,
+            node_id=node.id,
+            is_unlocked=True,
+            mastery_score=42.0,
+        )
+    )
+    await db_session.commit()
+
+    service = PredictionTheaterService(db_session)
+    resolved = await service._resolve_target_node_for_user(
+        user_id=test_user.id,
+        topic="ignored",
+        target_node_id=node.id,
+    )
+
+    assert resolved.id == node.id
+
+
+@pytest.mark.asyncio
+async def test_theater_api_returns_timeout_payload(monkeypatch):
+    app = _build_test_app()
+    app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: object()
+
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+        raise TheaterTimeoutError()
+
+    monkeypatch.setattr(
+        "app.api.v1.theater.PredictionTheaterService.generate_prediction",
+        fake_generate_prediction,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/theater/predictions/generate",
+            json={"topic": "两周掌握特征值"},
+        )
+
+    app.dependency_overrides = {}
+
+    assert response.status_code == 504
+    payload = response.json()
+    assert payload["message"].startswith("这次推演花的时间有点长")
+    assert payload["detail"]["error_code"] == "THEATER_TIMEOUT"
+
+
+@pytest.mark.asyncio
+async def test_theater_api_returns_404_for_inaccessible_target(monkeypatch):
+    app = _build_test_app()
+    app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: object()
+
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+        raise TheaterNodeAccessError()
+
+    monkeypatch.setattr(
+        "app.api.v1.theater.PredictionTheaterService.generate_prediction",
+        fake_generate_prediction,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/theater/predictions/generate",
+            json={"topic": "两周掌握特征值", "target_node_id": str(uuid4())},
+        )
+
+    app.dependency_overrides = {}
+
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["message"] == "未找到可访问的知识节点"
+
+
+@pytest.mark.asyncio
+async def test_simulation_api_rejects_invalid_scenario_key():
+    app = _build_test_app()
+    app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: object()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/simulation/run",
+            json={"topic": "矩阵特征值", "scenario_key": "not_real"},
+        )
+
+    app.dependency_overrides = {}
+
+    assert response.status_code == 422
+    assert "Unsupported simulation scenario" in response.json()["detail"]

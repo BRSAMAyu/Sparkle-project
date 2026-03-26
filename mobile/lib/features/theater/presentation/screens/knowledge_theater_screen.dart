@@ -36,6 +36,7 @@ class _KnowledgeTheaterScreenState
     extends ConsumerState<KnowledgeTheaterScreen> {
   late final TextEditingController _topicController;
   late final ProviderSubscription<TheaterState> _theaterSubscription;
+  late final TheaterNotifier _theaterNotifier;
   bool _showCelebration = false;
   bool _playCelebration = false;
 
@@ -43,6 +44,7 @@ class _KnowledgeTheaterScreenState
   void initState() {
     super.initState();
     _topicController = TextEditingController(text: widget.initialTopic ?? '');
+    _theaterNotifier = ref.read(theaterProvider.notifier);
     _theaterSubscription = ref.listenManual<TheaterState>(
       theaterProvider,
       (previous, next) {
@@ -71,7 +73,7 @@ class _KnowledgeTheaterScreenState
   void dispose() {
     _theaterSubscription.close();
     _topicController.dispose();
-    ref.read(theaterProvider.notifier).clearOverlay();
+    _theaterNotifier.clearOverlay();
     super.dispose();
   }
 
@@ -188,9 +190,19 @@ class _KnowledgeTheaterScreenState
                                   isLoading: state.isLoading,
                                   latestSnapshot: state.snapshot,
                                   suggestions: simulationState.recommendedSeeds,
+                                  error: state.error,
                                   onStartFirstPrediction: () => unawaited(
                                     _generatePrediction(_topicController.text),
                                   ),
+                                  onRetry: () => unawaited(
+                                    _generatePrediction(_topicController.text),
+                                  ),
+                                  onChangeTarget: () {
+                                    _topicController.clear();
+                                    ref
+                                        .read(theaterProvider.notifier)
+                                        .clearError();
+                                  },
                                 )
                               : _PredictionView(
                                   key: ValueKey(prediction.predictionId),
@@ -631,14 +643,20 @@ class _TheaterIntroState extends StatelessWidget {
     required this.isLoading,
     required this.latestSnapshot,
     required this.suggestions,
+    required this.error,
     required this.onStartFirstPrediction,
+    required this.onRetry,
+    required this.onChangeTarget,
     super.key,
   });
 
   final bool isLoading;
   final TheaterSnapshot? latestSnapshot;
   final List<SimulationSeedModel> suggestions;
+  final String? error;
   final VoidCallback onStartFirstPrediction;
+  final VoidCallback onRetry;
+  final VoidCallback onChangeTarget;
 
   @override
   Widget build(BuildContext context) {
@@ -648,6 +666,15 @@ class _TheaterIntroState extends StatelessWidget {
 
     return ListView(
       children: [
+        if (error != null) ...[
+          _TheaterErrorCard(
+            message: error!,
+            onRetry: onRetry,
+            onSecondary: onChangeTarget,
+            secondaryLabel: '换个目标',
+          ),
+          const SizedBox(height: 14),
+        ],
         GraphiteCardSurface(
           surfaceRole: SparkleSurfaceRole.card,
           child: Column(
@@ -962,12 +989,78 @@ class _PredictionView extends StatelessWidget {
         ],
         if (error != null) ...[
           const SizedBox(height: 14),
-          Text(
-            error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          _TheaterErrorCard(
+            message: error!,
           ),
         ],
       ],
+    );
+  }
+}
+
+class _TheaterErrorCard extends StatelessWidget {
+  const _TheaterErrorCard({
+    required this.message,
+    this.onRetry,
+    this.onSecondary,
+    this.secondaryLabel,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+  final VoidCallback? onSecondary;
+  final String? secondaryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      borderColor: scheme.error.withValues(alpha: 0.25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: scheme.error,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.error,
+                        height: 1.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          if (onRetry != null || onSecondary != null) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (onRetry != null)
+                  FilledButton.tonalIcon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('重试'),
+                  ),
+                if (onSecondary != null)
+                  OutlinedButton(
+                    onPressed: onSecondary,
+                    child: Text(secondaryLabel ?? '知道了'),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

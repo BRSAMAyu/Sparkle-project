@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
@@ -37,8 +40,75 @@ class LearningReportScreen extends ConsumerStatefulWidget {
 }
 
 class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
+  static const _historyCacheKey = 'learning_report_history_v1';
+  static const _maxCachedReports = 8;
+
   int? _selectedMasteryIndex;
   _ReportRange _range = _ReportRange.week;
+  bool _hasTrackedView = false;
+  List<_HistoricalReportEntry> _cachedHistoryEntries = const [];
+  bool _historyCacheLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_bootstrapHistoryCache());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_hasTrackedView) {
+        return;
+      }
+      _hasTrackedView = true;
+      unawaited(
+        ref.read(appEventStreamServiceProvider).recordReportViewed(
+              reportId: widget.report.reportId,
+              masteryItemCount: widget.report.mastery.length,
+            ),
+      );
+    });
+  }
+
+  Future<void> _bootstrapHistoryCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = _decodeHistoryEntries(prefs.getString(_historyCacheKey));
+      final merged = _mergeHistoryEntries(<_HistoricalReportEntry>[
+        _HistoricalReportEntry(
+          report: widget.report,
+          createdAt: DateTime.now(),
+        ),
+        ...cached,
+      ]);
+      await prefs.setString(
+        _historyCacheKey,
+        jsonEncode(
+          merged
+              .take(_maxCachedReports)
+              .map(
+                (entry) => <String, dynamic>{
+                  'created_at': entry.createdAt.toIso8601String(),
+                  'report': entry.report.toJson(),
+                },
+              )
+              .toList(),
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cachedHistoryEntries = merged;
+        _historyCacheLoaded = true;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _cachedHistoryEntries = const [];
+        _historyCacheLoaded = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +168,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                             height: 1.45,
                           ),
                     ),
-                    if (filteredHistory.length > 1) ...[
+                    if (history.length > 1) ...[
                       const SizedBox(height: 16),
                       SegmentedButton<_ReportRange>(
                         segments: const [
@@ -125,38 +195,44 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 ),
               ),
             ),
-            if (filteredHistory.length > 1) ...[
-              const SizedBox(height: 14),
-              _AnimatedReportSection(
-                delay: 90,
-                child: GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '掌握度趋势',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
+            const SizedBox(height: 14),
+            _AnimatedReportSection(
+              delay: 90,
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '掌握度趋势',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (filteredHistory.length > 1)
                       SizedBox(
                         height: 140,
                         child: _MasteryTrendChart(
                           values: trendPoints,
                           labels: filteredHistory
-                              .map((entry) => '${entry.createdAt.month}/${entry.createdAt.day}')
+                              .map(
+                                (entry) =>
+                                    '${entry.createdAt.month}/${entry.createdAt.day}',
+                              )
                               .toList()
                               .reversed
                               .toList(),
                         ),
+                      )
+                    else
+                      _TrendHistoryEmptyState(
+                        historyCacheLoaded: _historyCacheLoaded,
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-            ],
+            ),
             const SizedBox(height: 14),
             _AnimatedReportSection(
               delay: 140,
@@ -356,6 +432,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         report: currentReport,
         createdAt: DateTime.now(),
       ),
+      ..._cachedHistoryEntries,
     ];
     for (final item in updates) {
       if (item['type']?.toString() != 'learning_report_ready') {
@@ -378,13 +455,55 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         ),
       );
     }
+    return _mergeHistoryEntries(entries);
+  }
+
+  List<_HistoricalReportEntry> _mergeHistoryEntries(
+    List<_HistoricalReportEntry> entries,
+  ) {
     final deduped = <String, _HistoricalReportEntry>{};
     for (final entry in entries) {
-      deduped[entry.report.reportId] = entry;
+      final existing = deduped[entry.report.reportId];
+      if (existing == null || entry.createdAt.isAfter(existing.createdAt)) {
+        deduped[entry.report.reportId] = entry;
+      }
     }
     final list = deduped.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  List<_HistoricalReportEntry> _decodeHistoryEntries(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const [];
+      }
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map((item) {
+            final reportJson = item['report'];
+            if (reportJson is! Map) {
+              return null;
+            }
+            return _HistoricalReportEntry(
+              report: LearningReport.fromJson(
+                Map<String, dynamic>.from(reportJson),
+              ),
+              createdAt: DateTime.tryParse(
+                    item['created_at']?.toString() ?? '',
+                  ) ??
+                  DateTime.now(),
+            );
+          })
+          .whereType<_HistoricalReportEntry>()
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   List<_HistoricalReportEntry> _filterHistory(List<_HistoricalReportEntry> history) {
@@ -585,6 +704,60 @@ class _MasteryTrendChart extends StatelessWidget {
               .toList(),
         ),
       ],
+    );
+  }
+}
+
+class _TrendHistoryEmptyState extends StatelessWidget {
+  const _TrendHistoryEmptyState({
+    required this.historyCacheLoaded,
+  });
+
+  final bool historyCacheLoaded;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.insights_rounded,
+                color: scheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '趋势会随着更多报告自动补全',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            historyCacheLoaded
+                ? '当前时间范围内还没有足够的历史报告可供对比。先根据这次报告聚焦薄弱知识点，后续趋势会自动补全。'
+                : '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.5,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

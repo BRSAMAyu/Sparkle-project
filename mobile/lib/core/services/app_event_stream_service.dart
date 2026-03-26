@@ -115,6 +115,72 @@ class AppEventStreamService {
       ),
     ]);
 
+  Future<void> recordTheaterGenerated({
+    required String predictionId,
+    required String topic,
+    required String targetNodeId,
+    required int pathCount,
+  }) => ingestEvents([
+        _buildEvent(
+          eventType: 'theater_generated',
+          source: 'knowledge_theater',
+          entities: {
+            'prediction_id': predictionId,
+            'target_node_id': targetNodeId,
+          },
+          payload: {
+            'topic': topic,
+            'path_count': pathCount,
+          },
+        ),
+      ]);
+
+  Future<void> recordRouteAdopted({
+    required String predictionId,
+    required String routeId,
+    required String planId,
+  }) => ingestEvents([
+        _buildEvent(
+          eventType: 'route_adopted',
+          source: 'knowledge_theater',
+          entities: {
+            'prediction_id': predictionId,
+            'route_id': routeId,
+            'plan_id': planId,
+          },
+        ),
+      ]);
+
+  Future<void> recordSimulationStarted({
+    required String topic,
+    required String scenarioKey,
+  }) => ingestEvents([
+        _buildEvent(
+          eventType: 'simulation_started',
+          source: 'learning_simulation',
+          payload: {
+            'topic': topic,
+            'scenario_key': scenarioKey,
+          },
+        ),
+      ]);
+
+  Future<void> recordReportViewed({
+    required String reportId,
+    required int masteryItemCount,
+  }) => ingestEvents([
+        _buildEvent(
+          eventType: 'report_viewed',
+          source: 'learning_report',
+          entities: {
+            'report_id': reportId,
+          },
+          payload: {
+            'mastery_item_count': masteryItemCount,
+          },
+        ),
+      ]);
+
   Map<String, dynamic> _buildEvent({
     required String eventType,
     required String source,

@@ -24,3 +24,14 @@ SCENARIOS: dict[str, dict[str, object]] = {
         "rounds": 4,
     },
 }
+
+DEFAULT_SCENARIO_KEY = "study_group"
+
+
+def normalize_scenario_key(scenario_key: str | None) -> str:
+    normalized = (scenario_key or "").strip()
+    if not normalized:
+        return DEFAULT_SCENARIO_KEY
+    if normalized not in SCENARIOS:
+        raise ValueError(f"Unsupported simulation scenario: {normalized}")
+    return normalized

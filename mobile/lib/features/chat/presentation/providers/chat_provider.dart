@@ -671,7 +671,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       sawTerminalEvent = true;
       _streamDebouncer.cancel();
-      unawaited(BgmService.setPersistentDuckFactor(1.0));
+      unawaited(BgmService.setThinkingActivity(false));
       _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
 
       final hasRenderableMessage = accumulatedContent.trim().isNotEmpty ||
@@ -833,7 +833,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
 
         if (event is TextEvent) {
-          unawaited(BgmService.setPersistentDuckFactor(0.72));
+          unawaited(BgmService.setThinkingActivity(true));
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
@@ -969,9 +969,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
           if (event.state == 'THINKING' || event.state == 'GENERATING') {
-            unawaited(BgmService.setPersistentDuckFactor(0.72));
+            unawaited(BgmService.setThinkingActivity(true));
           } else {
-            unawaited(BgmService.setPersistentDuckFactor(1.0));
+            unawaited(BgmService.setThinkingActivity(false));
           }
           final uxProgress = event.metadata?['ux_progress'];
           lastAiStatus = event.state;

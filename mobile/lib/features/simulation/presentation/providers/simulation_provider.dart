@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 
@@ -65,9 +68,11 @@ class SimulationState {
 }
 
 class SimulationNotifier extends StateNotifier<SimulationState> {
-  SimulationNotifier(this._repository) : super(const SimulationState());
+  SimulationNotifier(this._repository, this._ref)
+      : super(const SimulationState());
 
   final SimulationRepository _repository;
+  final Ref _ref;
 
   Future<void> loadRecommendedSeeds({
     String? scenarioKey,
@@ -109,6 +114,12 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       liveParticipants: const [],
       liveRounds: const [],
       clearLiveInsightSummary: true,
+    );
+    unawaited(
+      _ref.read(appEventStreamServiceProvider).recordSimulationStarted(
+            topic: topic,
+            scenarioKey: scenarioKey,
+          ),
     );
     try {
       await for (final event in _repository.streamSimulation(
@@ -244,5 +255,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
 
 final simulationProvider =
     StateNotifierProvider<SimulationNotifier, SimulationState>(
-  (ref) => SimulationNotifier(ref.watch(simulationRepositoryProvider)),
+  (ref) => SimulationNotifier(
+    ref.watch(simulationRepositoryProvider),
+    ref,
+  ),
 );

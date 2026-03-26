@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.services.simulation.simulation_engine import SimulationEngine
+from app.services.simulation.scenario_templates import normalize_scenario_key
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
@@ -30,8 +31,8 @@ class QuickSimulationTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         topic = (params.seed_topic or "当前学习主题").strip()
-        scenario_key = (params.scenario_key or "study_group").strip() or "study_group"
         try:
+            scenario_key = normalize_scenario_key(params.scenario_key)
             engine = SimulationEngine(db_session)
             session = await engine.run(
                 topic=topic,
@@ -60,6 +61,14 @@ class QuickSimulationTool(BaseTool):
                     "deep_link": f"/simulation?{urlencode(query)}",
                     "source_chat_session_id": params.source_chat_session_id,
                 },
+            )
+        except ValueError as exc:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                tool_call_id=tool_call_id,
+                error_message=str(exc),
+                error_type="invalid_simulation_scenario",
             )
         except Exception as exc:
             return ToolResult(
