@@ -64,12 +64,15 @@ class TheaterRepository {
   Future<TheaterAdoptionResult> adoptRoute({
     required String predictionId,
     required String routeId,
+    String? sourceChatSessionId,
   }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.theaterAdopt(predictionId),
       data: {
         'prediction_id': predictionId,
         'route_id': routeId,
+        if (sourceChatSessionId != null && sourceChatSessionId.isNotEmpty)
+          'source_chat_session_id': sourceChatSessionId,
       },
     );
     return TheaterAdoptionResult.fromJson(response.data ?? const {});

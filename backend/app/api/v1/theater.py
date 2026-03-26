@@ -34,6 +34,7 @@ class TheaterSnapshotRequest(BaseModel):
 class TheaterAdoptRequest(BaseModel):
     prediction_id: str
     route_id: str
+    source_chat_session_id: str | None = None
 
 
 class TheaterActualOutcomeRequest(BaseModel):
@@ -98,6 +99,7 @@ async def adopt_theater_prediction(
         user_id=UUID(user_id),
         prediction_id=prediction_id,
         route_id=request.route_id,
+        source_chat_session_id=request.source_chat_session_id,
     )
 
 

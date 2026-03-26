@@ -15,6 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.agent_persona import build_agent_persona
+from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import (
     COLLABORATION_LATENCY,
     COLLABORATION_SUCCESS,
@@ -53,6 +55,7 @@ from app.orchestration.transparency_data_generator import StepType, Transparency
 from app.orchestration.ux_envelope import ux_envelope_builder
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 
 _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
 
@@ -67,6 +70,8 @@ class ExecutionEngineMixin:
         user_message: str,
         stream_callback,
         state: WorkflowState,
+        active_db: AsyncSession | None = None,
+        user_id: str | None = None,
     ) -> None:
         if executable_plan is None or stream_callback is None:
             return
@@ -79,12 +84,14 @@ class ExecutionEngineMixin:
             return
 
         turns: list[dict[str, Any]] = []
+        references = self._resolve_roundtable_reference_ids(executable_plan=executable_plan, state=state)
         for index, agent_id in enumerate(agent_ids):
             preview = self._build_agent_turn_preview(
                 agent_id=agent_id,
                 user_message=user_message,
                 executable_plan=executable_plan,
                 turn_index=index,
+                user_id=user_id,
             )
             await emit_agent_activity(
                 stream_callback,
@@ -102,6 +109,7 @@ class ExecutionEngineMixin:
                 turn_index=index,
                 content=preview,
                 turn_type="analysis",
+                references=references,
                 metadata={
                     "collaboration_mode": executable_plan.collaboration_mode,
                 },
@@ -120,6 +128,14 @@ class ExecutionEngineMixin:
             )
         if turns:
             state.context_data["roundtable_turns"] = turns
+            if active_db is not None and user_id:
+                await self._write_roundtable_graph_updates(
+                    active_db=active_db,
+                    user_id=user_id,
+                    turns=turns,
+                    executable_plan=executable_plan,
+                    state=state,
+                )
 
     def _build_agent_turn_preview(
         self,
@@ -128,29 +144,168 @@ class ExecutionEngineMixin:
         user_message: str,
         executable_plan: ExecutablePlan,
         turn_index: int,
+        user_id: str | None = None,
     ) -> str:
         topic = str(user_message or "").strip()
         topic = topic[:42] + "..." if len(topic) > 42 else topic
         narrative = str(executable_plan.collaboration_narrative or "").strip()
+        resolved_role = self._resolve_agent_role(agent_id)
+        profile = agent_profile_registry.get_profile(resolved_role)
+        persona = build_agent_persona(
+            agent_role=resolved_role,
+            user_context={"user_id": user_id or "anonymous"},
+            profile=profile,
+        )
+        style_hint = f"{persona.communication_style}、{persona.teaching_style}"
         if agent_id == "galaxy_guide":
-            return f"这个问题涉及几个关键前置概念，我先把“{topic}”的知识依赖关系梳理清楚。"
+            return f"我会用{style_hint}的方式，先把“{topic}”的知识依赖关系梳理清楚。"
         if agent_id == "deep_analyst":
-            return f"我会沿着最容易混淆的分歧点拆解“{topic}”，把核心判断依据讲透。"
+            return f"我会用{style_hint}的方式，沿着最容易混淆的分歧点拆解“{topic}”，把核心判断依据讲透。"
         if agent_id == "exam_oracle":
-            return f"如果把“{topic}”放到考试与得分场景里，我会优先定位最容易失分的环节。"
+            return f"我会用{style_hint}的方式，把“{topic}”放到考试与得分场景里，优先定位最容易失分的环节。"
         if agent_id == "time_tutor":
-            return f"我会从学习节奏和投入成本看“{topic}”，判断怎样安排更容易真正学会。"
+            return f"我会用{style_hint}的方式，从学习节奏和投入成本看“{topic}”，判断怎样安排更容易真正学会。"
         if agent_id == "error_analyst":
-            return f"我先从常见错因逆推“{topic}”，看看哪些误区最值得提前规避。"
+            return f"我会用{style_hint}的方式，先从常见错因逆推“{topic}”，看看哪些误区最值得提前规避。"
         if agent_id == "math_agent":
-            return f"我会把“{topic}”里的关键公式、推导和计算路径先压缩成一条可执行主线。"
+            return f"我会用{style_hint}的方式，把“{topic}”里的关键公式、推导和计算路径压缩成一条可执行主线。"
         if agent_id == "code_agent":
-            return f"如果“{topic}”需要落到实现层面，我会先指出最关键的数据结构和步骤约束。"
+            return f"我会用{style_hint}的方式，如果“{topic}”需要落到实现层面，先指出最关键的数据结构和步骤约束。"
         if agent_id == "study_buddy":
-            return f"我会把“{topic}”先翻译成更好吸收的学习语言，确保你能跟得上后面的讨论。"
+            return f"我会用{style_hint}的方式，把“{topic}”先翻译成更好吸收的学习语言，确保你能跟得上后面的讨论。"
         if narrative:
             return narrative
-        return f"我先从自己的专长视角切入“{topic}”，补上这轮协作里最关键的一块。"
+        return f"我会用{style_hint}的方式，从自己的专长视角切入“{topic}”，补上这轮协作里最关键的一块。"
+
+    def _resolve_agent_role(self, agent_id: str) -> AgentRole:
+        normalized = str(agent_id or "").strip().lower()
+        alias_map = {
+            "math_expert": AgentRole.MATH_AGENT,
+            "code_expert": AgentRole.CODE_AGENT,
+            "writing_expert": AgentRole.WRITING_AGENT,
+            "science_expert": AgentRole.SCIENCE_AGENT,
+            "search_expert": AgentRole.SEARCH_AGENT,
+        }
+        if normalized in alias_map:
+            return alias_map[normalized]
+        with contextlib.suppress(ValueError):
+            return AgentRole(normalized)
+        return AgentRole.GENERATION
+
+    def _resolve_roundtable_reference_ids(
+        self,
+        *,
+        executable_plan: ExecutablePlan,
+        state: WorkflowState,
+    ) -> list[str]:
+        candidates: list[str] = []
+        for source in (
+            state.context_data.get("plan_context"),
+            state.context_data.get("focused_memory"),
+            state.context_data.get("conversation_context"),
+            getattr(executable_plan, "context", None),
+        ):
+            self._collect_node_ids_from_payload(source, candidates)
+        deduped: list[str] = []
+        for item in candidates:
+            if item not in deduped:
+                deduped.append(item)
+        return deduped[:4]
+
+    def _collect_node_ids_from_payload(self, payload: Any, sink: list[str]) -> None:
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                normalized_key = str(key or "").lower()
+                if normalized_key in {
+                    "node_id",
+                    "target_node_id",
+                    "source_node_id",
+                } and isinstance(value, str):
+                    with contextlib.suppress(ValueError):
+                        sink.append(str(uuid.UUID(value)))
+                elif normalized_key in {"focus_node_ids", "related_node_ids", "source_ids", "references"} and isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str):
+                            with contextlib.suppress(ValueError):
+                                sink.append(str(uuid.UUID(item)))
+                else:
+                    self._collect_node_ids_from_payload(value, sink)
+            return
+        if isinstance(payload, list):
+            for item in payload:
+                self._collect_node_ids_from_payload(item, sink)
+
+    async def _write_roundtable_graph_updates(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: str,
+        turns: list[dict[str, Any]],
+        executable_plan: ExecutablePlan,
+        state: WorkflowState,
+    ) -> None:
+        user_uuid = uuid.UUID(str(user_id))
+        structure = GraphStructureEvolutionService(active_db)
+        all_node_ids: list[str] = []
+        for turn in turns:
+            refs = [str(item) for item in list(turn.get("references") or []) if str(item).strip()]
+            for ref in refs:
+                with contextlib.suppress(ValueError):
+                    normalized = str(uuid.UUID(ref))
+                    if normalized not in all_node_ids:
+                        all_node_ids.append(normalized)
+        if not all_node_ids:
+            all_node_ids = self._resolve_roundtable_reference_ids(executable_plan=executable_plan, state=state)
+
+        for node_id in all_node_ids:
+            node_uuid = uuid.UUID(node_id)
+            with contextlib.suppress(Exception):
+                await structure.record_engagement(user_id=user_uuid, node_id=node_uuid, minutes=1)
+            with contextlib.suppress(Exception):
+                await structure.tag_node_signal(node_uuid, "signal:expert_discussion", active=True)
+
+        relation_candidates: list[tuple[str, str, str]] = []
+        for turn in turns:
+            refs = [str(item) for item in list(turn.get("references") or []) if str(item).strip()]
+            normalized_refs: list[str] = []
+            for ref in refs:
+                with contextlib.suppress(ValueError):
+                    normalized_refs.append(str(uuid.UUID(ref)))
+            if len(normalized_refs) >= 2:
+                relation_candidates.append(
+                    (
+                        normalized_refs[0],
+                        normalized_refs[1],
+                        str(turn.get("content") or ""),
+                    )
+                )
+
+        for source_id, target_id, text in relation_candidates:
+            relation_type = self._infer_roundtable_relation_type(text)
+            if not relation_type:
+                continue
+            with contextlib.suppress(Exception):
+                await structure.upsert_relation(
+                    source_id=uuid.UUID(source_id),
+                    target_id=uuid.UUID(target_id),
+                    relation_type=relation_type,
+                    default_strength=0.18,
+                    created_by="expert_discussion",
+                )
+
+    @staticmethod
+    def _infer_roundtable_relation_type(text: str) -> str | None:
+        content = str(text or "")
+        mapping = (
+            (("前置", "依赖", "基础"), "prerequisite"),
+            (("解释", "说明"), "explains"),
+            (("支持", "印证"), "supports"),
+            (("对立", "相反", "矛盾"), "contradicts"),
+        )
+        for keywords, relation_type in mapping:
+            if any(keyword in content for keyword in keywords):
+                return relation_type
+        return None
 
     def _format_review_message(self, review_result) -> str:
         """Format plan review result as user-friendly message"""
@@ -1441,6 +1596,8 @@ class ExecutionEngineMixin:
                 user_message=user_message,
                 stream_callback=stream_callback,
                 state=state,
+                active_db=active_db,
+                user_id=user_id,
             )
 
             asyncio.create_task(

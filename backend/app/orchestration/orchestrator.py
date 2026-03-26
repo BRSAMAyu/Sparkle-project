@@ -583,6 +583,50 @@ class ChatOrchestrator(
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
 
+    @staticmethod
+    def _infer_bridge_tool_names(user_message: str) -> list[str]:
+        message = str(user_message or "").strip().lower()
+        if not message:
+            return []
+
+        prediction_keywords = (
+            "学习规划",
+            "学习路径",
+            "路径推演",
+            "两周",
+            "两天",
+            "what if",
+            "what-if",
+            "如果我跳过",
+            "如果跳过",
+            "会怎样",
+            "怎么安排",
+        )
+        simulation_keywords = (
+            "帮我模拟",
+            "模拟一下",
+            "演练",
+            "学习小组",
+            "辩论",
+            "角色扮演",
+            "苏格拉底",
+            "如果我这样学",
+        )
+
+        inferred: list[str] = []
+        if any(keyword in message for keyword in prediction_keywords):
+            inferred.append("launch_prediction")
+        if any(keyword in message for keyword in simulation_keywords):
+            inferred.append("run_quick_simulation")
+        return inferred
+
+    def _resolve_active_tools(self, request: agent_service_pb2.ChatRequest, user_message: str) -> list[str]:
+        requested = [tool.strip() for tool in list(request.active_tools) if str(tool).strip()]
+        for inferred in self._infer_bridge_tool_names(user_message):
+            if inferred not in requested:
+                requested.append(inferred)
+        return requested
+
     # -----------------------------------------------------------------------
     # process_stream — main entry point (delegates to mixin methods)
     # -----------------------------------------------------------------------
@@ -918,11 +962,13 @@ class ChatOrchestrator(
                     )
 
                 # Step 6: Prepare runtime context (transparency, tools)
+                resolved_active_tools = self._resolve_active_tools(request, user_message)
+                state.context_data["resolved_active_tools"] = list(resolved_active_tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
                     state,
                     request_id,
                     response_id,
-                    list(request.active_tools),
+                    resolved_active_tools,
                     stream_callback,
                     tracer,
                 )

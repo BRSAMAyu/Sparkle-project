@@ -32,8 +32,10 @@ import 'package:sparkle/features/community/presentation/providers/community_agen
 import 'package:sparkle/features/community/presentation/widgets/share_cards/share_cards.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
@@ -463,6 +465,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   Widget build(BuildContext context) {
     if (_isRevoked) return _buildRevokedPlaceholder();
 
+    final chatMessage =
+        widget.message is ChatMessageModel ? widget.message as ChatMessageModel : null;
     final isUser = _isUser;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     final reduceMotion = context.reduceMotion;
@@ -497,6 +501,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final agentActivities = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentActivities
         : const <Map<String, dynamic>>[];
+    final predictionPreview = widget.message is ChatMessageModel
+        ? ((widget.message as ChatMessageModel)
+            .agentCollaboration?['prediction_preview'] as Map<String, dynamic>?)
+        : null;
+    final simulationPreview = widget.message is ChatMessageModel
+        ? ((widget.message as ChatMessageModel)
+            .agentCollaboration?['simulation_preview'] as Map<String, dynamic>?)
+        : null;
+    final theaterDeepLink = chatMessage?.agentCollaboration?['deep_link']?.toString();
+    final simulationDeepLink =
+        chatMessage?.agentCollaboration?['simulation_deep_link']?.toString();
     final primaryAgentId = widget.message is ChatMessageModel
         ? ((widget.message as ChatMessageModel)
                 .agentCollaboration?['primary_agent']
@@ -775,6 +790,36 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ),
                               ),
                             if (!isUser &&
+                                predictionPreview != null &&
+                                predictionPreview.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _buildTheaterPreviewCard(
+                                  context,
+                                  preview: predictionPreview,
+                                  deepLink: theaterDeepLink,
+                                ),
+                              ),
+                            if (!isUser &&
+                                simulationPreview != null &&
+                                simulationPreview.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _buildSimulationPreviewCard(
+                                  context,
+                                  preview: simulationPreview,
+                                  deepLink: simulationDeepLink,
+                                ),
+                              ),
+                            if (!isUser &&
                                 agentActivities.isEmpty &&
                                 ((collaborationNarrative != null &&
                                         collaborationNarrative.isNotEmpty) ||
@@ -944,6 +989,63 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildTheaterPreviewCard(
+    BuildContext context, {
+    required Map<String, dynamic> preview,
+    required String? deepLink,
+  }) {
+    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final paths = (preview['paths'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final resolvedDeepLink = (deepLink?.isNotEmpty ?? false)
+        ? deepLink!
+        : '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(topic)}';
+    return _InsightLinkCard(
+      icon: Icons.auto_graph_rounded,
+      title: '查看推演详情',
+      subtitle: topic,
+      bullets: paths
+          .take(3)
+          .map(
+            (item) =>
+                '${item['title'] ?? '路径'} · 掌握度 ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
+          )
+          .toList(),
+      onTap: () => context.push(resolvedDeepLink),
+    );
+  }
+
+  Widget _buildSimulationPreviewCard(
+    BuildContext context, {
+    required Map<String, dynamic> preview,
+    required String? deepLink,
+  }) {
+    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final scenarioKey = preview['scenario_key']?.toString() ?? 'study_group';
+    final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final resolvedDeepLink = (deepLink?.isNotEmpty ?? false)
+        ? deepLink!
+        : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(topic)}&scenario_key=${Uri.encodeComponent(scenarioKey)}';
+    return _InsightLinkCard(
+      icon: Icons.groups_rounded,
+      title: '查看模拟详情',
+      subtitle: topic,
+      bullets: rounds
+          .take(3)
+          .map(
+            (item) =>
+                '${item['speaker'] ?? '参与者'}: ${item['message'] ?? ''}',
+          )
+          .toList(),
+      onTap: () => context.push(resolvedDeepLink),
+    );
   }
 
   Widget _buildTimingBadge(MessageMeta? meta) {
@@ -1665,6 +1767,78 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       DeepLinkService.handleDeepLink(context, deepLink);
     }
   }
+}
+
+class _InsightLinkCard extends StatelessWidget {
+  const _InsightLinkCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.bullets,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<String> bullets;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.14),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: DS.brandPrimary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, size: 18),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              if (bullets.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ...bullets.take(3).map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '• $line',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
 }
 
 Color _chatBubbleHexToColor(String hex, BuildContext context) {

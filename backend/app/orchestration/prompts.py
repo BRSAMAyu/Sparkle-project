@@ -196,6 +196,10 @@ TASK_AWARENESS_SECTION = """
 9. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
 10. dismiss_milestone_proposal - 忽略里程碑提案
 
+学习桥接工具：
+11. launch_prediction - 当用户在问学习路径、what-if、跳过某知识点的后果、两周学会某主题时，优先调用
+12. run_quick_simulation - 当用户要求模拟学习小组、知识辩论、角色扮演或“帮我演练一下”时，优先调用
+
 **重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
 - 当前进度和已达成里程碑
 - 任务完成统计
@@ -1529,6 +1533,11 @@ def format_user_context(
                         lines.append(f"- {node_name}: 掌握度 {mastery}")
             lines.append("如果用户的问题涉及以上知识点，请提供更详细的基础解释。")
 
+    learning_gaps_summary = normalized.get("learning_gaps_summary")
+    if learning_gaps_summary:
+        lines.append("【当前学习状态】")
+        lines.append(f"- {learning_gaps_summary}")
+
     # 碎片时间推荐线索：待办任务
     next_actions = normalized.get("next_actions") or []
     task_weight = section_weights.get("task_summary", "medium")
@@ -1684,6 +1693,9 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("preferred_tools"):
         normalized["preferred_tools"] = context["preferred_tools"]
+
+    if context.get("learning_gaps_summary"):
+        normalized["learning_gaps_summary"] = str(context["learning_gaps_summary"])
 
     if context.get("exam_urgency"):
         normalized["exam_urgency"] = context["exam_urgency"]

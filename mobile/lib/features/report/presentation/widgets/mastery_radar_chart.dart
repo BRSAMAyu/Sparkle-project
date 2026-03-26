@@ -1,16 +1,23 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class MasteryRadarChart extends StatelessWidget {
   const MasteryRadarChart({
     required this.labels,
     required this.values,
+    this.selectedIndex,
+    this.secondaryValues,
+    this.onValueTap,
     super.key,
   });
 
   final List<String> labels;
   final List<double> values;
+  final int? selectedIndex;
+  final List<double>? secondaryValues;
+  final ValueChanged<int>? onValueTap;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +26,7 @@ class MasteryRadarChart extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7FAFF),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Text('至少需要 3 个知识点才能绘制雷达图。'),
@@ -30,12 +37,16 @@ class MasteryRadarChart extends StatelessWidget {
         .take(axisCount)
         .map((value) => value.clamp(0.0, 1.0))
         .toList();
+    final comparisonValues = secondaryValues
+        ?.take(axisCount)
+        .map((value) => value.clamp(0.0, 1.0))
+        .toList();
     final chartLabels = labels.take(axisCount).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAFF),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -63,8 +74,27 @@ class MasteryRadarChart extends StatelessWidget {
                           levels: 4,
                           centerOffset: centerOffset,
                           radius: chartSize / 2,
+                          gridColor: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.7),
                         ),
                       ),
+                    ),
+                    Positioned.fill(
+                      child: comparisonValues == null
+                          ? const SizedBox.shrink()
+                          : CustomPaint(
+                              painter: _RadarComparisonPainter(
+                                values: comparisonValues,
+                                centerOffset: centerOffset,
+                                radius: chartSize / 2,
+                                strokeColor: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
                     ),
                     Positioned.fill(
                       child: CustomPaint(
@@ -72,6 +102,8 @@ class MasteryRadarChart extends StatelessWidget {
                           values: normalizedValues,
                           centerOffset: centerOffset,
                           radius: chartSize / 2,
+                          fillColor: DS.info.withValues(alpha: 0.22),
+                          strokeColor: DS.brandPrimary,
                         ),
                       ),
                     ),
@@ -104,17 +136,36 @@ class MasteryRadarChart extends StatelessWidget {
             runSpacing: 8,
             children: List.generate(
               axisCount,
-              (index) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
+              (index) {
+                final selected = selectedIndex == index;
+                return InkWell(
+                  onTap: onValueTap == null ? null : () => onValueTap!(index),
                   borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${chartLabels[index]} ${(normalizedValues[index] * 100).round()}%',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? DS.info.withValues(alpha: 0.14)
+                          : Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(999),
+                      border: selected
+                          ? Border.all(
+                              color: DS.info.withValues(alpha: 0.28),
+                            )
+                          : null,
+                    ),
+                    child: Text(
+                      '${chartLabels[index]} ${(normalizedValues[index] * 100).round()}%',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: selected ? FontWeight.w700 : null,
+                          ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -123,23 +174,89 @@ class MasteryRadarChart extends StatelessWidget {
   }
 }
 
+class _RadarComparisonPainter extends CustomPainter {
+  const _RadarComparisonPainter({
+    required this.values,
+    required this.centerOffset,
+    required this.radius,
+    required this.strokeColor,
+  });
+
+  final List<double> values;
+  final Offset centerOffset;
+  final double radius;
+  final Color strokeColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 3) {
+      return;
+    }
+    final points = List<Offset>.generate(
+      values.length,
+      (axis) => _pointForAxis(
+        axis,
+        values.length,
+        centerOffset,
+        radius * values[axis],
+      ),
+    );
+    final paint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    for (var index = 0; index < points.length; index++) {
+      final start = points[index];
+      final end = points[(index + 1) % points.length];
+      _drawDashedLine(canvas, start, end, paint);
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const dash = 6.0;
+    const gap = 4.0;
+    final vector = end - start;
+    final distance = vector.distance;
+    if (distance == 0) {
+      return;
+    }
+    final direction = vector / distance;
+    var progress = 0.0;
+    while (progress < distance) {
+      final dashStart = start + (direction * progress);
+      final dashEnd = start + (direction * math.min(progress + dash, distance));
+      canvas.drawLine(dashStart, dashEnd, paint);
+      progress += dash + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarComparisonPainter oldDelegate) =>
+      oldDelegate.values != values ||
+      oldDelegate.centerOffset != centerOffset ||
+      oldDelegate.radius != radius ||
+      oldDelegate.strokeColor != strokeColor;
+}
+
 class _RadarGridPainter extends CustomPainter {
   const _RadarGridPainter({
     required this.axisCount,
     required this.levels,
     required this.centerOffset,
     required this.radius,
+    required this.gridColor,
   });
 
   final int axisCount;
   final int levels;
   final Offset centerOffset;
   final double radius;
+  final Color gridColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = const Color(0xFFCAD8F3)
+      ..color = gridColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -169,7 +286,8 @@ class _RadarGridPainter extends CustomPainter {
       oldDelegate.axisCount != axisCount ||
       oldDelegate.levels != levels ||
       oldDelegate.centerOffset != centerOffset ||
-      oldDelegate.radius != radius;
+      oldDelegate.radius != radius ||
+      oldDelegate.gridColor != gridColor;
 }
 
 class _RadarValuePainter extends CustomPainter {
@@ -177,23 +295,27 @@ class _RadarValuePainter extends CustomPainter {
     required this.values,
     required this.centerOffset,
     required this.radius,
+    required this.fillColor,
+    required this.strokeColor,
   });
 
   final List<double> values;
   final Offset centerOffset;
   final double radius;
+  final Color fillColor;
+  final Color strokeColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final fillPaint = Paint()
-      ..color = const Color(0xFF4B7BEC).withValues(alpha: 0.22)
+      ..color = fillColor
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
-      ..color = const Color(0xFF2A62D5)
+      ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     final pointPaint = Paint()
-      ..color = const Color(0xFF2A62D5)
+      ..color = strokeColor
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -231,7 +353,9 @@ class _RadarValuePainter extends CustomPainter {
   bool shouldRepaint(covariant _RadarValuePainter oldDelegate) =>
       oldDelegate.values != values ||
       oldDelegate.centerOffset != centerOffset ||
-      oldDelegate.radius != radius;
+      oldDelegate.radius != radius ||
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.strokeColor != strokeColor;
 }
 
 Offset _pointForAxis(

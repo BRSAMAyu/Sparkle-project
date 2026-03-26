@@ -3,12 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import PlanType
@@ -18,6 +20,7 @@ from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.cognitive_service import CognitiveService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
@@ -299,6 +302,7 @@ class PredictionTheaterService:
         user_id: UUID,
         prediction_id: str,
         route_id: str,
+        source_chat_session_id: str | None = None,
     ) -> dict[str, Any]:
         cached = await self._get_prediction_or_raise(prediction_id)
         selected_route = self._find_route(cached, route_id)
@@ -373,6 +377,36 @@ class PredictionTheaterService:
         except Exception:
             pass
 
+        deep_link = f"/theater?{urlencode({'topic': str(cached.get('topic') or ''), 'target_node_id': str(cached.get('target_node_id') or '')})}"
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="theater_route_adopted",
+                category="learning_insight",
+                title=f"已采纳推演路径「{selected_route.get('title')}」",
+                description=f"已根据推演创建计划「{plan.name}」",
+                priority="medium",
+                metadata={
+                    "prediction_id": prediction_id,
+                    "route_id": route_id,
+                    "plan_id": str(plan.id),
+                    "title": str(selected_route.get("title") or plan.name),
+                    "deep_link": deep_link,
+                },
+            ),
+        )
+        if source_chat_session_id:
+            await self._write_back_to_chat(
+                user_id=user_id,
+                session_id=source_chat_session_id,
+                content=f"已根据推演创建计划「{plan.name}」",
+                metadata={
+                    "plan_id": str(plan.id),
+                    "prediction_id": prediction_id,
+                    "route_id": route_id,
+                },
+            )
+
         await self.db.commit()
         return {
             "prediction_id": prediction_id,
@@ -381,6 +415,32 @@ class PredictionTheaterService:
             "plan_name": plan.name,
             "source_metadata": plan.source_metadata,
         }
+
+    async def _write_back_to_chat(
+        self,
+        *,
+        user_id: UUID,
+        session_id: str,
+        content: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        try:
+            session_uuid = UUID(str(session_id))
+        except (TypeError, ValueError):
+            return
+        session = await self.db.get(ChatSession, session_uuid)
+        if session is None or session.user_id != user_id:
+            return
+        message = ChatMessage(
+            user_id=user_id,
+            session_id=session_uuid,
+            role=MessageRole.SYSTEM,
+            content=content,
+            actions={"metadata": metadata},
+        )
+        self.db.add(message)
+        session.last_message_at = _utcnow()
+        self.db.add(session)
 
     async def record_actual_outcome(
         self,

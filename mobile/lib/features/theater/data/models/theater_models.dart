@@ -356,6 +356,7 @@ class TheaterAccuracySummary {
 class TheaterGalaxyOverlay {
   const TheaterGalaxyOverlay({
     required this.title,
+    required this.topic,
     required this.focusNodeIds,
     required this.highlightEdgeIds,
     required this.nodeRiskLevels,
@@ -363,6 +364,7 @@ class TheaterGalaxyOverlay {
   });
 
   final String title;
+  final String topic;
   final List<String> focusNodeIds;
   final List<String> highlightEdgeIds;
   final Map<String, String> nodeRiskLevels;

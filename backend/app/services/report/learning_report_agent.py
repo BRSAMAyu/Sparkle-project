@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
+from app.core.agent_persona import build_agent_persona
+from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.report.report_logger import ReportLogger
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
 from app.services.report.report_tools import LearningReportTools
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 class LearningReportAgent:
@@ -81,6 +84,22 @@ class LearningReportAgent:
         }
         self.logger.log_jsonl(report_id, {"stage": "final", "payload": payload})
         self.logger.log_text(report_id, "Learning report generated successfully.")
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="learning_report_ready",
+                category="learning_insight",
+                title="学习分析报告已就绪",
+                description="你可以查看最新的知识掌握度分析与行动建议。",
+                priority="medium",
+                metadata={
+                    "report_id": report_id,
+                    "title": "学习分析报告",
+                    "deep_link": "/learning-report",
+                    "report_payload": payload,
+                },
+            ),
+        )
         return payload
 
     async def _compose_markdown(
@@ -93,9 +112,10 @@ class LearningReportAgent:
         learner_voice: dict[str, Any],
     ) -> str:
         fallback = self._fallback_markdown(sections, mastery, patterns, timeline, learner_voice)
+        persona_section = self._build_report_persona_section()
         data = await analysis_llm.json_call(
             [
-                {"role": "system", "content": "Return valid JSON with a single key markdown."},
+                {"role": "system", "content": f"Return valid JSON with a single key markdown.\n{persona_section}"},
                 {
                     "role": "user",
                     "content": (
@@ -123,13 +143,14 @@ class LearningReportAgent:
         timeline: list[dict[str, Any]],
     ) -> dict[str, Any]:
         fallback = self._fallback_reflection(sections, mastery, patterns, timeline)
+        persona_section = self._build_report_persona_section()
         data = await analysis_llm.json_call(
             [
                 {
                     "role": "system",
                     "content": (
                         "Return valid JSON with keys needs_revision, missing_sections, focus_areas, "
-                        "revision_brief, query_expansion. Be a strict reviewer of the draft report."
+                        f"revision_brief, query_expansion. Be a strict reviewer of the draft report.\n{persona_section}"
                     ),
                 },
                 {
@@ -179,9 +200,10 @@ class LearningReportAgent:
         supplemental_context: dict[str, Any],
     ) -> str:
         fallback = self._fallback_refined_markdown(draft_markdown, reflection, supplemental_context)
+        persona_section = self._build_report_persona_section()
         data = await analysis_llm.json_call(
             [
-                {"role": "system", "content": "Return valid JSON with a single key markdown."},
+                {"role": "system", "content": f"Return valid JSON with a single key markdown.\n{persona_section}"},
                 {
                     "role": "user",
                     "content": (
@@ -199,6 +221,18 @@ class LearningReportAgent:
             temperature=0.25,
         )
         return str((data or {}).get("markdown") or fallback)
+
+    def _build_report_persona_section(self) -> str:
+        profile = agent_profile_registry.get_profile(AgentRole.GENERATION)
+        persona = build_agent_persona(
+            agent_role=AgentRole.GENERATION,
+            user_context={},
+            profile=profile,
+        )
+        return (
+            "保持与你在日常对话中的导师语气一致，但报告仍需结构清晰、证据充分。\n"
+            f"{persona.to_prompt_section()}"
+        )
 
     def _fallback_reflection(
         self,

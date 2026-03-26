@@ -455,6 +455,35 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return _spatialIndex.queryNearest(worldPoint, tapRadius);
   }
 
+  String? _hitTestPredictionOverlayNode(Offset worldPoint) {
+    final overlay = ref.read(theaterOverlayProvider);
+    if (overlay == null || overlay.focusNodeIds.isEmpty) {
+      return null;
+    }
+    final tapRadius = math.max(26 / _camera.scale, 18.0);
+    for (final nodeId in overlay.focusNodeIds.reversed) {
+      final position = _positions[nodeId];
+      if (position == null) {
+        continue;
+      }
+      if ((position - worldPoint).distance <= tapRadius) {
+        return nodeId;
+      }
+    }
+    return null;
+  }
+
+  void _openPredictionOverlay(String? targetNodeId) {
+    final overlay = ref.read(theaterOverlayProvider);
+    final query = <String, String>{
+      if (targetNodeId != null && targetNodeId.isNotEmpty)
+        'target_node_id': targetNodeId,
+      if (overlay != null && overlay.topic.isNotEmpty) 'topic': overlay.topic,
+    };
+    final uri = Uri(path: '/theater', queryParameters: query.isEmpty ? null : query);
+    unawaited(context.push(uri.toString()));
+  }
+
   void _handleGestureCommand(GalaxyGestureCommand command) {
     _noteInteraction();
 
@@ -490,6 +519,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (command is TapCommand) {
       _stopBuildReplay();
       _stopPhysicsSimulation(commitPendingNode: true);
+      final overlayNodeId = _hitTestPredictionOverlayNode(command.worldPosition);
+      if (overlayNodeId != null) {
+        _openPredictionOverlay(overlayNodeId);
+        return;
+      }
       if (command.hit == null) {
         setState(() {
           _selectedNodeId = null;
@@ -2009,6 +2043,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       data: galaxyTheme,
       child: Scaffold(
         backgroundColor: backgroundColor,
+        appBar: theaterOverlay == null
+            ? null
+            : AppBar(
+                backgroundColor: backgroundColor.withValues(alpha: 0.9),
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                titleSpacing: 16,
+                title: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ActionChip(
+                    avatar: const Icon(
+                      Icons.auto_graph_rounded,
+                      size: 18,
+                    ),
+                    label: const Text('推演模式'),
+                    onPressed: () => _openPredictionOverlay(null),
+                  ),
+                ),
+              ),
         body: LayoutBuilder(
           builder: (context, constraints) {
             _updateViewportSize(

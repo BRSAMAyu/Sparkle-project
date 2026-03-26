@@ -162,6 +162,15 @@ class SimulationEngine:
             participants=participants,
             round_index=round_index,
         )
+        participant_prompt = "\n".join(
+            (
+                f"- {participant.get('name')}: "
+                f"role_hint={participant.get('role_hint')}; "
+                f"stance={participant.get('stance')}; "
+                f"persona={participant.get('persona')}"
+            )
+            for participant in participants
+        )
         transcript = "\n".join(
             f"Round {item['round']}: {item['speaker']} - {item['message']}" for item in previous_rounds
         ) or "No prior rounds yet."
@@ -181,7 +190,7 @@ class SimulationEngine:
                         f"Description: {template.get('description')}\n"
                         f"Topic: {topic}\n"
                         f"Current round: {round_index + 1} / {round_count}\n"
-                        f"Participants: {participants}\n"
+                        f"Participants:\n{participant_prompt}\n"
                         f"Transcript so far:\n{transcript}\n"
                         f"Preferred speaker: {speaker}\n"
                         "Generate the next turn only."

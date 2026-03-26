@@ -11,9 +11,11 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
@@ -300,26 +302,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       _staggeredSection(
                         index: 3,
-                        child: const PredictedIntentCard(),
+                        child: const InsightHubCard(),
                       ),
                       _staggeredSection(
                         index: 4,
-                        child: const HomeNotificationCard(),
+                        child: const PredictedIntentCard(),
                       ),
                       _staggeredSection(
                         index: 5,
-                        child: const NightlyReviewPanel(),
+                        child: const HomeNotificationCard(),
                       ),
                       _staggeredSection(
                         index: 6,
-                        child: const DashboardCardSection(),
+                        child: const RecentInsightsCard(),
                       ),
                       _staggeredSection(
                         index: 7,
-                        child: const AchievementProgressCard(),
+                        child: const NightlyReviewPanel(),
                       ),
                       _staggeredSection(
                         index: 8,
+                        child: const DashboardCardSection(),
+                      ),
+                      _staggeredSection(
+                        index: 9,
+                        child: const AchievementProgressCard(),
+                      ),
+                      _staggeredSection(
+                        index: 10,
                         child: const TaskBoardCard(),
                       ),
                     ],

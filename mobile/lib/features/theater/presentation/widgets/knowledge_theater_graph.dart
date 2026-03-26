@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
@@ -11,25 +12,32 @@ class KnowledgeTheaterGraph extends StatefulWidget {
   const KnowledgeTheaterGraph({
     required this.nodes,
     required this.edges,
-    this.focusNodeIds = const [],
+    this.focusNodeIds = const <String>[],
+    this.onNodeTap,
+    this.onEdgeLongPress,
     super.key,
   });
 
   final List<TheaterGraphNode> nodes;
   final List<TheaterGraphEdge> edges;
   final List<String> focusNodeIds;
+  final ValueChanged<TheaterGraphNode>? onNodeTap;
+  final void Function(TheaterGraphEdge edge, Offset globalPosition)?
+      onEdgeLongPress;
 
   @override
   State<KnowledgeTheaterGraph> createState() => _KnowledgeTheaterGraphState();
 }
 
-class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph> {
+class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
+    with SingleTickerProviderStateMixin {
   late final GalaxyForceEngine _forceEngine;
   late final GalaxySpatialIndex _spatialIndex;
+  late final AnimationController _pulseController;
   Timer? _timer;
-  Map<String, Offset> _positions = const {};
-  Map<String, Set<String>> _adjacency = const {};
-  Map<String, double> _edgeStrengths = const {};
+  Map<String, Offset> _positions = const <String, Offset>{};
+  Map<String, Set<String>> _adjacency = const <String, Set<String>>{};
+  Map<String, double> _edgeStrengths = const <String, double>{};
 
   @override
   void initState() {
@@ -41,6 +49,11 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph> {
       centerGravity: 0.002,
     );
     _spatialIndex = GalaxySpatialIndex();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+    unawaited(_pulseController.repeat(reverse: true));
     _rebuildLayout();
   }
 
@@ -57,6 +70,7 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph> {
   @override
   void dispose() {
     _timer?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -136,20 +150,157 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph> {
   }
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: AspectRatio(
-          aspectRatio: 1.3,
-          child: CustomPaint(
-            painter: _KnowledgeTheaterPainter(
-              nodes: widget.nodes,
-              edges: widget.edges,
-              positions: _positions,
-              focusNodeIds: widget.focusNodeIds.toSet(),
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final size = Size(constraints.maxWidth, constraints.maxHeight);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) => _handleTapUp(details.localPosition, size),
+              onLongPressStart: (details) => _handleLongPressStart(
+                details.localPosition,
+                details.globalPosition,
+                size,
+              ),
+              child: AspectRatio(
+                aspectRatio: 1.3,
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) => CustomPaint(
+                    painter: _KnowledgeTheaterPainter(
+                      nodes: widget.nodes,
+                      edges: widget.edges,
+                      positions: _positions,
+                      focusNodeIds: widget.focusNodeIds.toSet(),
+                      pulseValue: _pulseController.value,
+                      backgroundColors: <Color>[
+                        Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.98),
+                        Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHigh
+                            .withValues(alpha: 0.92),
+                        Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withValues(alpha: 0.98),
+                      ],
+                      edgeColor: DS.info,
+                      focusEdgeColor: DS.warning,
+                      lowRiskColor: DS.success,
+                      mediumRiskColor: DS.warning,
+                      highRiskColor: DS.error,
+                      labelColor: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
+
+  void _handleTapUp(Offset localPosition, Size size) {
+    final node = _hitTestNode(localPosition, size);
+    if (node == null) {
+      return;
+    }
+    widget.onNodeTap?.call(node);
+  }
+
+  void _handleLongPressStart(
+    Offset localPosition,
+    Offset globalPosition,
+    Size size,
+  ) {
+    final edge = _hitTestEdge(localPosition, size);
+    if (edge == null) {
+      return;
+    }
+    widget.onEdgeLongPress?.call(edge, globalPosition);
+  }
+
+  TheaterGraphNode? _hitTestNode(Offset localPosition, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    for (final node in widget.nodes.reversed) {
+      final world = _positions[node.id];
+      if (world == null) {
+        continue;
+      }
+      final point = center + world;
+      final radius = _nodeRadius(node);
+      if ((localPosition - point).distance <= radius + 14) {
+        return node;
+      }
+    }
+    return null;
+  }
+
+  TheaterGraphEdge? _hitTestEdge(Offset localPosition, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    TheaterGraphEdge? bestEdge;
+    var bestDistance = double.infinity;
+    for (final edge in widget.edges) {
+      final source = _positions[edge.sourceId];
+      final target = _positions[edge.targetId];
+      if (source == null || target == null) {
+        continue;
+      }
+      final p1 = center + source;
+      final p2 = center + target;
+      final control = Offset(
+        (p1.dx + p2.dx) / 2 + (p2.dy - p1.dy) * 0.12,
+        (p1.dy + p2.dy) / 2 + (p1.dx - p2.dx) * 0.12,
+      );
+      final distance = _distanceToQuadraticBezier(
+        point: localPosition,
+        start: p1,
+        control: control,
+        end: p2,
+      );
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestEdge = edge;
+      }
+    }
+    return bestDistance <= 18 ? bestEdge : null;
+  }
+
+  double _distanceToQuadraticBezier({
+    required Offset point,
+    required Offset start,
+    required Offset control,
+    required Offset end,
+  }) {
+    var best = double.infinity;
+    for (var index = 0; index <= 24; index++) {
+      final t = index / 24;
+      final sample = _quadraticPoint(start, control, end, t);
+      best = math.min(best, (sample - point).distance);
+    }
+    return best;
+  }
+
+  Offset _quadraticPoint(Offset start, Offset control, Offset end, double t) {
+    final oneMinusT = 1 - t;
+    return Offset(
+      (oneMinusT * oneMinusT * start.dx) +
+          (2 * oneMinusT * t * control.dx) +
+          (t * t * end.dx),
+      (oneMinusT * oneMinusT * start.dy) +
+          (2 * oneMinusT * t * control.dy) +
+          (t * t * end.dy),
+    );
+  }
+
+  double _nodeRadius(TheaterGraphNode node) =>
+      18.0 +
+      ((node.predictedMastery - node.currentMastery) / 18)
+          .clamp(0, 8)
+          .toDouble();
 }
 
 class _KnowledgeTheaterPainter extends CustomPainter {
@@ -158,19 +309,35 @@ class _KnowledgeTheaterPainter extends CustomPainter {
     required this.edges,
     required this.positions,
     required this.focusNodeIds,
+    required this.pulseValue,
+    required this.backgroundColors,
+    required this.edgeColor,
+    required this.focusEdgeColor,
+    required this.lowRiskColor,
+    required this.mediumRiskColor,
+    required this.highRiskColor,
+    required this.labelColor,
   });
 
   final List<TheaterGraphNode> nodes;
   final List<TheaterGraphEdge> edges;
   final Map<String, Offset> positions;
   final Set<String> focusNodeIds;
+  final double pulseValue;
+  final List<Color> backgroundColors;
+  final Color edgeColor;
+  final Color focusEdgeColor;
+  final Color lowRiskColor;
+  final Color mediumRiskColor;
+  final Color highRiskColor;
+  final Color labelColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final background = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF0B1220), Color(0xFF14243B), Color(0xFF1C3354)],
+      ..shader = LinearGradient(
+        colors: backgroundColors,
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(Offset.zero & size);
@@ -198,9 +365,8 @@ class _KnowledgeTheaterPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = isFocused ? 3.2 : (1.2 + edge.strength * 1.8)
-          ..color =
-              (isFocused ? const Color(0xFFF7C873) : const Color(0xFF7BA6FF))
-                  .withValues(alpha: isFocused ? 0.92 : 0.38),
+          ..color = (isFocused ? focusEdgeColor : edgeColor)
+              .withValues(alpha: isFocused ? 0.92 : 0.38),
       );
     }
 
@@ -216,8 +382,15 @@ class _KnowledgeTheaterPainter extends CustomPainter {
           ((node.predictedMastery - node.currentMastery) / 18)
               .clamp(0, 8)
               .toDouble();
+      final pulseRadius = radius + 8 + (pulseValue * 8);
+      final pulseAlpha = isFocused ? (0.16 + (pulseValue * 0.14)) : 0.06;
 
       canvas
+        ..drawCircle(
+          point,
+          pulseRadius,
+          Paint()..color = color.withValues(alpha: pulseAlpha),
+        )
         ..drawCircle(
           point,
           radius + 10,
@@ -228,7 +401,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
           radius,
           Paint()
             ..shader = RadialGradient(
-              colors: [Colors.white, color],
+              colors: <Color>[Colors.white, color],
             ).createShader(
               Rect.fromCircle(center: point, radius: radius),
             ),
@@ -238,7 +411,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
         text: TextSpan(
           text: node.name,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: isFocused ? 0.96 : 0.72),
+            color: labelColor.withValues(alpha: isFocused ? 0.96 : 0.72),
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -257,11 +430,11 @@ class _KnowledgeTheaterPainter extends CustomPainter {
   Color _riskColor(String level) {
     switch (level) {
       case 'high':
-        return const Color(0xFFFF7B54);
+        return highRiskColor;
       case 'medium':
-        return const Color(0xFFFFC857);
+        return mediumRiskColor;
       default:
-        return const Color(0xFF59D98E);
+        return lowRiskColor;
     }
   }
 
@@ -270,5 +443,6 @@ class _KnowledgeTheaterPainter extends CustomPainter {
       oldDelegate.nodes != nodes ||
       oldDelegate.edges != edges ||
       oldDelegate.positions != positions ||
-      oldDelegate.focusNodeIds != focusNodeIds;
+      oldDelegate.focusNodeIds != focusNodeIds ||
+      oldDelegate.pulseValue != pulseValue;
 }

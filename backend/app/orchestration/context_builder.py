@@ -36,6 +36,7 @@ from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.perceptible_intelligence_service import (
     PerceptibleInsightService,
 )
+from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.user_service import UserService
 
 
@@ -246,6 +247,30 @@ class ContextBuilderMixin:
 
         return {"has_seed_library": False}
 
+    async def _build_learning_gaps_summary(self, user_id: str, db_session: AsyncSession) -> str | None:
+        try:
+            seeds = await SeedExtractor(db_session).get_cached_or_generate(
+                uuid.UUID(user_id),
+                scenario_key="chat_context",
+                limit=3,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to build learning gaps summary for {user_id}: {exc}")
+            return None
+
+        items: list[str] = []
+        for seed in seeds:
+            topic = str(seed.topic or "").strip()
+            tension = str(seed.tension_point or "").strip()
+            if not topic:
+                continue
+            item = f"{topic}: {tension}" if tension else topic
+            items.append(item[:96])
+        summary = "；".join(items).strip()
+        if not summary:
+            return None
+        return summary[:300]
+
     # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
     # ------------------------------------------------------------------
@@ -413,6 +438,7 @@ class ContextBuilderMixin:
 
                 # P1: 种子库 few-shot 示例注入
                 seed_library_context = await self._get_seed_library_context(user_id, db_session)
+                learning_gaps_summary = await self._build_learning_gaps_summary(user_id, db_session)
 
                 profile_payload = self._build_profile_payload(
                     user_context_data=user_context_data,
@@ -453,6 +479,7 @@ class ContextBuilderMixin:
 
                     # 种子库 few-shot 示例
                     "seed_library": seed_library_context,
+                    "learning_gaps_summary": learning_gaps_summary,
                 }
 
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)

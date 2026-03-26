@@ -177,6 +177,10 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
   }
 
   Future<void> adoptSelectedRoute() async {
+    await adoptSelectedRouteWithSource();
+  }
+
+  Future<void> adoptSelectedRouteWithSource({String? sourceChatSessionId}) async {
     final prediction = state.prediction;
     final route = state.selectedRoute;
     if (prediction == null || route == null) {
@@ -187,6 +191,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       final adoption = await _repository.adoptRoute(
         predictionId: prediction.predictionId,
         routeId: route.id,
+        sourceChatSessionId: sourceChatSessionId,
       );
       state = state.copyWith(
         isAdopting: false,
@@ -238,6 +243,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     }
     _ref.read(theaterOverlayProvider.notifier).state = TheaterGalaxyOverlay(
       title: route.title,
+      topic: prediction.topic,
       focusNodeIds: focusNodeIds,
       highlightEdgeIds: highlightEdgeIds,
       nodeRiskLevels: nodeRiskLevels,

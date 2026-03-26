@@ -22,6 +22,7 @@ from app.orchestration.agent_scoring import AgentScoringService
 from app.orchestration.schemas import ExecutablePlan, RouteDecision
 from app.orchestration.session_feedback import SessionFeedbackSignal, apply_session_feedback_visible_prefix
 from app.orchestration.statechart_engine import WorkflowState
+from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.ux_envelope import ux_envelope_builder
 
 
@@ -235,6 +236,45 @@ class ResponseBuilderMixin:
                 roundtable_turns,
                 ensure_ascii=False,
             )
+        tool_results = ToolResultExtractor().extract_from_messages(final_state.messages)
+        for tool_result in tool_results:
+            if not tool_result.success or not isinstance(tool_result.data, dict):
+                continue
+            tool_payload = tool_result.data
+            if isinstance(tool_payload.get("data"), dict):
+                tool_payload = tool_payload["data"]
+            if tool_result.tool_name == "launch_prediction":
+                response_metadata["open_theater"] = "true"
+                if tool_payload.get("deep_link"):
+                    response_metadata["deep_link"] = str(tool_payload["deep_link"])
+                response_metadata["prediction_preview"] = json.dumps(
+                    {
+                        "prediction_id": str(tool_payload.get("prediction_id") or ""),
+                        "topic": str(tool_payload.get("topic") or ""),
+                        "target_node_id": str(tool_payload.get("target_node_id") or ""),
+                        "paths": list(tool_payload.get("paths") or []),
+                    },
+                    ensure_ascii=False,
+                )
+                if tool_payload.get("source_chat_session_id"):
+                    response_metadata["source_chat_session_id"] = str(tool_payload["source_chat_session_id"])
+            if tool_result.tool_name == "run_quick_simulation":
+                response_metadata["open_simulation"] = "true"
+                if tool_payload.get("deep_link"):
+                    response_metadata["simulation_deep_link"] = str(tool_payload["deep_link"])
+                response_metadata["simulation_preview"] = json.dumps(
+                    {
+                        "session_id": str(tool_payload.get("session_id") or ""),
+                        "scenario_key": str(tool_payload.get("scenario_key") or ""),
+                        "topic": str(tool_payload.get("topic") or ""),
+                        "participants": list(tool_payload.get("participants") or []),
+                        "round_preview": list(tool_payload.get("round_preview") or []),
+                        "insight_summary": str(tool_payload.get("insight_summary") or ""),
+                    },
+                    ensure_ascii=False,
+                )
+                if tool_payload.get("source_chat_session_id"):
+                    response_metadata["source_chat_session_id"] = str(tool_payload["source_chat_session_id"])
         if run_ledger is not None:
             agent_ids = []
             for source in (agents_involved, selected_experts, answer_experts):

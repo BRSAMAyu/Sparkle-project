@@ -1,5 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
+import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
 
@@ -21,7 +24,10 @@ class ReportRoutes {
                   );
             return buildSparkleTransitionPage(
               state: state,
-              child: LearningReportScreen(report: report),
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(track: BgmTrack.insights),
+                child: LearningReportScreen(report: report),
+              ),
             );
           },
         ),
