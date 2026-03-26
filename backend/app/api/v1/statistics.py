@@ -12,10 +12,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.achievement import UserAchievement
 from app.models.galaxy import UserNodeStatus
+from app.models.focus import FocusSession, FocusStatus
 from app.models.task import Task
 from app.models.user import User
 
 router = APIRouter()
+
+
+async def _count_today_focus_sessions(db: AsyncSession, user_id: UUID, today_start: datetime) -> int:
+    """Count completed focus sessions started today."""
+    tomorrow_start = today_start + timedelta(days=1)
+    query = select(func.count(FocusSession.id)).where(
+        and_(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= today_start,
+            FocusSession.start_time < tomorrow_start,
+            FocusSession.status == FocusStatus.COMPLETED,
+        )
+    )
+    result = await db.execute(query)
+    return result.scalar() or 0
 
 
 @router.get("/daily")
@@ -66,7 +82,7 @@ async def get_daily_stats(
         "tasks_completed": tasks_completed,
         "study_minutes": study_minutes,
         "total_tasks_today": total_today,
-        "focus_sessions": 0,  # TRACKED(TD-008): integrate with focus_sessions table when available
+        "focus_sessions": await _count_today_focus_sessions(db, user_id, today_start),
     }
 
 

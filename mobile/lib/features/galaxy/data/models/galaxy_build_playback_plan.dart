@@ -4,14 +4,14 @@ import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
-const int kGalaxyRootRevealDurationMs = 260;
-const int kGalaxyRootPauseMs = 120;
-const int kGalaxyEdgeRevealDurationMs = 140;
-const int kGalaxyNodeRevealDurationMs = 180;
-const int kGalaxyLabelRevealDurationMs = 90;
-const int kGalaxySiblingStaggerMs = 70;
-const int kGalaxyTimeBucketGapMs = 160;
-const int kGalaxyClusterGapMs = 260;
+const int kGalaxyRootRevealDurationMs = 520;
+const int kGalaxyRootPauseMs = 260;
+const int kGalaxyEdgeRevealDurationMs = 280;
+const int kGalaxyNodeRevealDurationMs = 340;
+const int kGalaxyLabelRevealDurationMs = 180;
+const int kGalaxySiblingStaggerMs = 180;
+const int kGalaxyTimeBucketGapMs = 360;
+const int kGalaxyClusterGapMs = 520;
 
 @immutable
 class BuildPlanNodeStep {

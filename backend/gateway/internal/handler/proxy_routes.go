@@ -407,6 +407,100 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		ws.GET("/metrics", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered websocket monitoring proxy routes")
+
+	// ==================== Leaderboards Routes ====================
+	leaderboards := api.Group("/leaderboards")
+	leaderboards.Use(authMiddleware)
+	{
+		leaderboards.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered leaderboards proxy routes")
+
+	// ==================== Notification Center Routes ====================
+	notifCenter := api.Group("/notification-center")
+	notifCenter.Use(authMiddleware)
+	{
+		notifCenter.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered notification-center proxy routes")
+
+	// ==================== Notifications Routes ====================
+	notifications := api.Group("/notifications")
+	notifications.Use(authMiddleware)
+	{
+		notifications.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered notifications proxy routes")
+
+	// ==================== Cognitive Routes ====================
+	cognitive := api.Group("/cognitive")
+	cognitive.Use(authMiddleware)
+	{
+		cognitive.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered cognitive proxy routes")
+
+	// ==================== Memory Routes ====================
+	memory := api.Group("/memory")
+	memory.Use(authMiddleware)
+	{
+		memory.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered memory proxy routes")
+
+	// ==================== Error Book Routes ====================
+	errors := api.Group("/errors")
+	errors.Use(authMiddleware)
+	{
+		errors.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered error-book proxy routes")
+
+	// ==================== Visual Elements Routes ====================
+	visualElements := api.Group("/visual-elements")
+	visualElements.Use(authMiddleware)
+	{
+		visualElements.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered visual-elements proxy routes")
+
+	// ==================== Profile Transparency Routes ====================
+	profileTransparency := api.Group("/profile")
+	profileTransparency.Use(authMiddleware)
+	{
+		profileTransparency.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered profile-transparency proxy routes")
+
+	// ==================== Observability Routes ====================
+	observability := api.Group("/observability")
+	observability.Use(authMiddleware)
+	{
+		observability.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered observability proxy routes")
+
+	// ==================== Shop, Photons, Inventory Routes ====================
+	shop := api.Group("/shop")
+	shop.Use(authMiddleware)
+	{
+		shop.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered shop proxy routes")
+
+	photons := api.Group("/photons")
+	photons.Use(authMiddleware)
+	{
+		photons.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered photons proxy routes")
+
+	inventory := api.Group("/inventory")
+	inventory.Use(authMiddleware)
+	{
+		inventory.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered inventory proxy routes")
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
+import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -20,6 +25,10 @@ class CompactStatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final nickname = user?.nickname ?? user?.username ?? 'Sparkle';
     final weatherSummary = dashboardState.weather.condition;
+    final weatherPresentation = resolveWeatherPresentation(
+      context,
+      dashboardState.weather.type,
+    );
 
     return ContentConstraint(
       child: Padding(
@@ -86,7 +95,10 @@ class CompactStatusBar extends StatelessWidget {
                                   ),
                                   Text(
                                     showWeatherLabel
-                                        ? '今天适合保持节奏，$weatherSummary'
+                                        ? _weatherSentence(
+                                            weatherPresentation,
+                                            weatherSummary,
+                                          )
                                         : '今天适合保持节奏',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -123,12 +135,24 @@ class CompactStatusBar extends StatelessWidget {
                         const SizedBox(width: DS.spacing6),
                       ],
                       _MiniInfoChip(
-                        icon: _weatherIconForType(dashboardState.weather.type),
+                        icon: weatherPresentation.icon,
                         label: showWeatherLabel
-                            ? dashboardState.weather.condition
+                            ? weatherPresentation.resolveCondition(
+                                dashboardState.weather.condition,
+                              )
                             : null,
-                        color: DS.brandPrimary,
+                        color: weatherPresentation.accent,
+                        tintColor: weatherPresentation.softAccent,
+                        borderColor: weatherPresentation.borderTint,
                         maxWidth: showWeatherLabel ? 88 : 32,
+                        onTap: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          context.push(HomeRoutes.weatherGuide);
+                        },
                       ),
                       const SizedBox(width: DS.spacing6),
                       InkWell(
@@ -160,19 +184,14 @@ class CompactStatusBar extends StatelessWidget {
     );
   }
 
-  IconData _weatherIconForType(String type) {
-    switch (type) {
-      case 'sunny':
-        return Icons.wb_sunny_rounded;
-      case 'cloudy':
-        return Icons.cloud_rounded;
-      case 'rainy':
-        return Icons.thunderstorm_rounded;
-      case 'meteor':
-        return Icons.auto_awesome_rounded;
-      default:
-        return Icons.wb_sunny_rounded;
+  String _weatherSentence(
+    WeatherPresentationData presentation,
+    String weatherSummary,
+  ) {
+    if (weatherSummary.trim().isNotEmpty) {
+      return '今天适合${presentation.compactHint}，$weatherSummary';
     }
+    return '今天适合${presentation.compactHint}';
   }
 }
 
@@ -209,6 +228,9 @@ class _MiniInfoChip extends StatelessWidget {
     this.label,
     this.animateLabel = false,
     this.maxWidth = 112,
+    this.tintColor,
+    this.borderColor,
+    this.onTap,
   });
 
   final IconData icon;
@@ -216,46 +238,67 @@ class _MiniInfoChip extends StatelessWidget {
   final Color color;
   final bool animateLabel;
   final double maxWidth;
+  final Color? tintColor;
+  final Color? borderColor;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing6,
+  Widget build(BuildContext context) {
+    final content = Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          (tintColor ?? Colors.transparent).withValues(alpha: 0.1),
+          DS.surfacePanel,
         ),
-        decoration: BoxDecoration(
-          color: DS.surfacePanel,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            if (label != null) ...[
-              const SizedBox(width: DS.spacing4),
-              Flexible(
-                child: AnimatedSwitcher(
-                  duration: DS.durationFast,
-                  switchInCurve: DS.motionCurve(SparkleMotionToken.micro),
-                  switchOutCurve: DS.motionCurve(SparkleMotionToken.micro),
-                  child: Text(
-                    label!,
-                    key: ValueKey(
-                      animateLabel ? label! : '$icon-$label',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: DS.fontWeightSemiBold,
-                    ),
+        borderRadius: DS.borderRadiusFull,
+        border: Border.all(color: borderColor ?? DS.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          if (label != null) ...[
+            const SizedBox(width: DS.spacing4),
+            Flexible(
+              child: AnimatedSwitcher(
+                duration: DS.durationFast,
+                switchInCurve: DS.motionCurve(SparkleMotionToken.micro),
+                switchOutCurve: DS.motionCurve(SparkleMotionToken.micro),
+                child: Text(
+                  label!,
+                  key: ValueKey(
+                    animateLabel ? label! : '$icon-$label',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemiBold,
                   ),
                 ),
               ),
-            ],
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DS.borderRadiusFull,
+        child: content,
+      ),
+    );
+  }
 }

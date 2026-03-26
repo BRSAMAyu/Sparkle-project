@@ -525,6 +525,10 @@ class KnowledgeRetrievalService:
 
 
     # --- Helpers ---
+    async def get_user_node_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
+        """Public alias for _get_user_status."""
+        return await self._get_user_status(user_id, node_id)
+
     async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
         stmt = select(UserNodeStatus).where(
             UserNodeStatus.user_id == user_id,

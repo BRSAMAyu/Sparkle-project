@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -230,12 +231,14 @@ class StarMapPainter extends CustomPainter {
     required this.isDarkMode,
     required this.worldBounds,
     required this.blendedColors,
+    required this.displaySettings,
     required this.playbackPlan,
     required this.playbackElapsedMs,
     required this.preRevealedNodeIds,
     required this.preRevealedEdgeIds,
     required this.nodeConnectionCounts,
-    this.focusNodeIds = const <String>{},
+    this.spotlightNodeIds = const <String>{},
+    this.spotlightAnchorId,
     this.searchMatchedNodeIds = const <String>{},
     this.driftOffsets = const <String, Offset>{},
     this.edgeParticles = const <GalaxyEdgeParticle>[],
@@ -263,12 +266,14 @@ class StarMapPainter extends CustomPainter {
   final bool isDarkMode;
   final Rect worldBounds;
   final Map<String, Color> blendedColors;
+  final GalaxyDisplaySettings displaySettings;
   final GalaxyBuildPlaybackPlan? playbackPlan;
   final int playbackElapsedMs;
   final Set<String> preRevealedNodeIds;
   final Set<String> preRevealedEdgeIds;
   final Map<String, int> nodeConnectionCounts;
-  final Set<String> focusNodeIds;
+  final Set<String> spotlightNodeIds;
+  final String? spotlightAnchorId;
   final Set<String> searchMatchedNodeIds;
   final Map<String, Offset> driftOffsets;
   final List<GalaxyEdgeParticle> edgeParticles;
@@ -376,12 +381,14 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.isDarkMode != isDarkMode ||
       oldDelegate.worldBounds != worldBounds ||
       oldDelegate.blendedColors != blendedColors ||
+      oldDelegate.displaySettings != displaySettings ||
       oldDelegate.playbackPlan != playbackPlan ||
       oldDelegate.playbackElapsedMs != playbackElapsedMs ||
       oldDelegate.preRevealedNodeIds != preRevealedNodeIds ||
       oldDelegate.preRevealedEdgeIds != preRevealedEdgeIds ||
       oldDelegate.nodeConnectionCounts != nodeConnectionCounts ||
-      oldDelegate.focusNodeIds != focusNodeIds ||
+      oldDelegate.spotlightNodeIds != spotlightNodeIds ||
+      oldDelegate.spotlightAnchorId != spotlightAnchorId ||
       oldDelegate.searchMatchedNodeIds != searchMatchedNodeIds ||
       oldDelegate.driftOffsets != driftOffsets ||
       oldDelegate.edgeParticles != edgeParticles ||
@@ -810,7 +817,7 @@ class StarMapPainter extends CustomPainter {
       final alpha = _nodeAlpha(node, lod) *
           reveal *
           _searchNodeVisibility(nodeId) *
-          _focusNodeVisibility(nodeId);
+          _spotlightNodeVisibility(nodeId);
       if (alpha <= 0) {
         continue;
       }
@@ -855,12 +862,15 @@ class StarMapPainter extends CustomPainter {
     return searchMatchedNodeIds.contains(nodeId) ? 1 : 0.14;
   }
 
-  double _focusNodeVisibility(String nodeId) {
-    if (focusNodeIds.isEmpty) {
-      return 1;
-    }
-    return focusNodeIds.contains(nodeId) ? 1 : 0.22;
-  }
+  double _spotlightNodeVisibility(String nodeId) =>
+      galaxySpotlightNodeOpacity(nodeId, spotlightNodeIds);
+
+  double _spotlightLabelVisibility(String nodeId) =>
+      galaxySpotlightLabelOpacity(
+        nodeId: nodeId,
+        spotlightAnchorId: spotlightAnchorId,
+        spotlightNodeIds: spotlightNodeIds,
+      );
 
   void _drawEdges({
     required Canvas canvas,
@@ -935,21 +945,21 @@ class StarMapPainter extends CustomPainter {
                   searchMatchedNodeIds.contains(edge.targetId))
               ? 1.0
               : 0.1;
-      final networkFocusMultiplier = focusNodeIds.isEmpty
-          ? 1.0
-          : (focusNodeIds.contains(edge.sourceId) ||
-                  focusNodeIds.contains(edge.targetId))
-              ? 1.0
-              : 0.16;
+      final spotlightMultiplier = galaxySpotlightEdgeOpacity(
+        sourceId: edge.sourceId,
+        targetId: edge.targetId,
+        spotlightAnchorId: spotlightAnchorId,
+        spotlightNodeIds: spotlightNodeIds,
+      );
       final selectionFocusMultiplier = selectedNodeId == null
           ? 1.0
           : (edge.sourceId == selectedNodeId || edge.targetId == selectedNodeId)
-              ? 1.55
-              : 0.18;
+              ? 1.25
+              : 1.0;
       final alpha = edgeStyle.alpha *
           _edgeAlpha(edge, lod) *
           reveal *
-          networkFocusMultiplier *
+          spotlightMultiplier *
           searchMultiplier *
           selectionFocusMultiplier;
       if (alpha <= 0) {
@@ -969,7 +979,11 @@ class StarMapPainter extends CustomPainter {
         color: edgeStyle.color.withValues(alpha: alpha),
         sourceColor: sourceColor.withValues(alpha: alpha),
         targetColor: targetColor.withValues(alpha: alpha),
-        strokeWidth: edgeStyle.strokeWidth,
+        strokeWidth: edgeStyle.strokeWidth *
+            ((edge.sourceId == spotlightAnchorId ||
+                    edge.targetId == spotlightAnchorId)
+                ? 1.18
+                : 1.0),
         dashLength: edgeStyle.dashLength,
         gapLength: edgeStyle.gapLength,
         relationType: edge.relationType,
@@ -1092,7 +1106,8 @@ class StarMapPainter extends CustomPainter {
           color: Color.lerp(sourceColor, targetColor, 0.5)!,
           sourceColor: sourceColor,
           targetColor: targetColor,
-          strokeWidth: lod.index >= GalaxyLod.l3.index ? 1.2 : 1.0,
+          strokeWidth: (lod.index >= GalaxyLod.l3.index ? 1.2 : 1.0) *
+              displaySettings.linkThicknessScale,
           dashLength: 0,
           gapLength: 0,
           relationType: step.relationType,
@@ -1185,7 +1200,7 @@ class StarMapPainter extends CustomPainter {
         canvas.drawPath(renderedPath, paint);
       }
 
-      if (edge.relationType == EdgeRelationType.prerequisite &&
+      if (displaySettings.showsArrowFor(edge.relationType) &&
           edge.reveal >= 0.999) {
         _drawArrowHead(
           canvas,
@@ -1279,6 +1294,7 @@ class StarMapPainter extends CustomPainter {
       final node = item.node;
       final isDragging = draggingNodeId == node.id;
       final isPreviewed = previewNodeId == node.id;
+      final isSpotlighted = spotlightNodeIds.contains(node.id);
       final revealCurve =
           isBuildAnimating ? Curves.easeOutBack.transform(item.reveal) : 1.0;
       final radius = _effectiveNodeRadius(
@@ -1309,7 +1325,8 @@ class StarMapPainter extends CustomPainter {
       if (!performanceDegraded &&
           style.glowAlpha > 0 &&
           nodeAlpha > 0 &&
-          lod.index >= GalaxyLod.l2.index) {
+          lod.index >= GalaxyLod.l2.index &&
+          (isSpotlighted || camera.scale >= 0.8 || node.masteryScore >= 85)) {
         canvas
           ..drawCircle(
             nodeCenter,
@@ -1429,7 +1446,9 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
-      if (node.importance >= 3 && lod.index >= GalaxyLod.l3.index) {
+      if (node.importance >= 4 &&
+          lod.index >= GalaxyLod.l3.index &&
+          (isSpotlighted || camera.scale >= 0.9)) {
         _drawOrbitRing(
           canvas: canvas,
           center: nodeCenter,
@@ -1441,7 +1460,8 @@ class StarMapPainter extends CustomPainter {
 
       if (!performanceDegraded &&
           node.importance >= 5 &&
-          lod.index >= GalaxyLod.l3.index) {
+          lod.index >= GalaxyLod.l3.index &&
+          (selectedNodeId == node.id || camera.scale >= 1.0)) {
         _drawNodeRays(
           canvas,
           nodeCenter,
@@ -1529,7 +1549,7 @@ class StarMapPainter extends CustomPainter {
       final labelAlpha = _labelAlpha(node, lod) *
           _labelRevealFor(node.id) *
           _searchNodeVisibility(node.id) *
-          _focusNodeVisibility(node.id);
+          _spotlightLabelVisibility(node.id);
       if (labelAlpha <= 0) {
         continue;
       }
@@ -1709,22 +1729,22 @@ class StarMapPainter extends CustomPainter {
   }
 
   double _labelAlpha(GalaxyNodeModel node, GalaxyLod lod) {
+    final emphasized = spotlightNodeIds.contains(node.id);
+    final densityAlpha = displaySettings.labelDensityForScale(
+      camera.scale,
+      importance: node.importance,
+      emphasized: emphasized,
+    );
     switch (lod) {
       case GalaxyLod.l0:
-        return 0;
+        return emphasized ? densityAlpha : 0;
       case GalaxyLod.l1:
-        return node.importance >= 5 ? _fade(camera.scale, 0.12, 0.2) : 0;
+        return emphasized || node.importance >= 5 ? densityAlpha : 0;
       case GalaxyLod.l2:
-        if (node.importance >= 5) {
-          return 1;
-        }
-        if (node.importance >= 3) {
-          return _fade(camera.scale, 0.25, 0.5);
-        }
-        return 0;
+        return emphasized || node.importance >= 3 ? densityAlpha : 0;
       case GalaxyLod.l3:
       case GalaxyLod.l4:
-        return 1;
+        return densityAlpha;
     }
   }
 
@@ -1775,7 +1795,7 @@ class StarMapPainter extends CustomPainter {
       case EdgeRelationType.parentChild:
         return _PaintEdgeStyle(
           color: sourceColor,
-          strokeWidth: 1.25,
+          strokeWidth: 1.25 * displaySettings.linkThicknessScale,
           alpha: 0.54,
         );
       case EdgeRelationType.prerequisite:
@@ -1784,13 +1804,13 @@ class StarMapPainter extends CustomPainter {
             bridgeColor,
             lightnessDelta: isDarkMode ? 0.08 : -0.04,
           ),
-          strokeWidth: 1.0,
+          strokeWidth: 1.0 * displaySettings.linkThicknessScale,
           alpha: 0.48,
         );
       case EdgeRelationType.derived:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.92),
-          strokeWidth: 0.9,
+          strokeWidth: 0.9 * displaySettings.linkThicknessScale,
           alpha: 0.34,
           dashLength: 6,
           gapLength: 4,
@@ -1798,13 +1818,13 @@ class StarMapPainter extends CustomPainter {
       case EdgeRelationType.related:
         return _PaintEdgeStyle(
           color: bridgeColor,
-          strokeWidth: 0.6,
+          strokeWidth: 0.6 * displaySettings.linkThicknessScale,
           alpha: 0.32,
         );
       case EdgeRelationType.similar:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.82),
-          strokeWidth: 0.78,
+          strokeWidth: 0.78 * displaySettings.linkThicknessScale,
           alpha: 0.28,
           dashLength: 2,
           gapLength: 3,
@@ -1815,7 +1835,7 @@ class StarMapPainter extends CustomPainter {
             bridgeColor,
             lightnessDelta: isDarkMode ? 0.04 : -0.03,
           ),
-          strokeWidth: 0.5,
+          strokeWidth: 0.5 * displaySettings.linkThicknessScale,
           alpha: 0.21,
           dashLength: 4,
           gapLength: 6,
@@ -1823,7 +1843,7 @@ class StarMapPainter extends CustomPainter {
       case EdgeRelationType.application:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.95),
-          strokeWidth: 0.5,
+          strokeWidth: 0.5 * displaySettings.linkThicknessScale,
           alpha: 0.21,
           dashLength: 4,
           gapLength: 6,
@@ -1831,7 +1851,7 @@ class StarMapPainter extends CustomPainter {
       case EdgeRelationType.example:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.78),
-          strokeWidth: 0.78,
+          strokeWidth: 0.78 * displaySettings.linkThicknessScale,
           alpha: 0.22,
           dashLength: 3,
           gapLength: 5,
@@ -1918,7 +1938,12 @@ class StarMapPainter extends CustomPainter {
   }
 
   double _nodeRadius(GalaxyNodeModel node, GalaxyLod lod) {
-    final base = math.max(4.0, node.radius * camera.scale.clamp(0.75, 1.5));
+    final base = math.max(
+      4.0,
+      node.radius *
+          displaySettings.nodeSizeScale *
+          camera.scale.clamp(0.75, 1.5),
+    );
     switch (lod) {
       case GalaxyLod.l0:
         return base + node.importance;

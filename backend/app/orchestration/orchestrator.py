@@ -55,6 +55,7 @@ from app.core.metrics import (
     TOKEN_USAGE,  # noqa: F401
 )
 from app.core.pending_actions import pending_actions_store  # noqa: F401
+from app.core.safe_error_messages import build_safe_chat_error
 from app.core.task_manager import task_manager  # noqa: F401
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType  # noqa: F401
 from app.gen.agent.v1 import agent_service_pb2
@@ -1339,12 +1340,15 @@ class ChatOrchestrator(
                 # ✅ Fix C4: Drain queue before yielding error to ensure all queued messages are sent
                 async for queued in self._drain_queue(queue):
                     yield queued
+                safe_message, error_code, retryable = build_safe_chat_error(e)
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(
-                        message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL
+                        message=safe_message,
+                        retryable=retryable,
+                        error_code=error_code,
                     ),
                     finish_reason=agent_service_pb2.ERROR,
                     session_id=session_id,

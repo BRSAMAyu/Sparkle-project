@@ -6,7 +6,7 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-// import 'package:sparkle/features/task/presentation/widgets/task_card.dart'; // Assuming TaskCard is available
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 
 class SprintScreen extends ConsumerWidget {
   const SprintScreen({super.key});
@@ -151,10 +151,9 @@ class _ActiveSprintView extends ConsumerWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final task = fullPlan.tasks![index];
-                  // return TaskCard(task: task); // TRACKED(TD-002): Uncomment when TaskCard is available and integrated
-                  return ListTile(
-                    title: Text(task.title),
-                    subtitle: Text(task.status.name),
+                  return TaskCard(
+                    task: task,
+                    onTap: () => context.push('/tasks/${task.id}'),
                   );
                 },
                 childCount: fullPlan.tasks!.length,

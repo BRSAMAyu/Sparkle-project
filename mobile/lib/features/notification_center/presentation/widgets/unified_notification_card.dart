@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -199,27 +200,38 @@ class UnifiedNotificationCard extends StatelessWidget {
   }
 
   void _handleNavigation(BuildContext context) {
-    // Navigate based on notification type
     switch (notification.type) {
       case 'plan_archived':
       case 'plan_restored':
       case 'plan_deleted':
         final planId = notification.metadata['plan_id'] as String?;
         if (planId != null) {
-          // Navigate to plan detail
-          // TRACKED(TD-003): Implement navigation
+          context.push('/plans/$planId');
+        } else {
+          _showDetailDialog(context);
         }
 
       case 'settings_updated':
-      // Navigate to settings
-      // TRACKED(TD-003): Implement navigation
+        context.push('/profile/settings');
 
       case 'achievement':
-      // Navigate to achievements
-      // TRACKED(TD-003): Implement navigation
+        final achievementId = notification.metadata['achievement_id'] as String?;
+        if (achievementId != null) {
+          context.push('/achievements/$achievementId');
+        } else {
+          context.push('/achievements');
+        }
+
+      case 'task_due':
+      case 'task_overdue':
+        final taskId = notification.metadata['task_id'] as String?;
+        if (taskId != null) {
+          context.push('/tasks/$taskId');
+        } else {
+          _showDetailDialog(context);
+        }
 
       default:
-        // Show detail dialog
         _showDetailDialog(context);
     }
   }

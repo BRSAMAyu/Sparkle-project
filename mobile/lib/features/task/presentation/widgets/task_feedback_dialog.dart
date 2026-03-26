@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart' as custom;
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -140,38 +140,46 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     setState(() => _isSubmitting = true);
 
-    TaskFeedbackResponse? response;
-    if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
-      await SensoryFeedbackService.emit(
-        SensoryFeedbackEvent.confirm,
-        enableHaptic: false,
-      );
-      await SensoryFeedbackService.emit(
-        SensoryFeedbackEvent.selection,
-        enableSound: false,
-      );
-      response = await ref
-          .read(taskListProvider.notifier)
-          .submitTaskFeedbackWithResponse(
-            widget.taskId,
-            TaskFeedbackSubmission(
-              completionQuality: _rating,
-              feedbackText: _feedbackController.text.trim().isEmpty
-                  ? null
-                  : _feedbackController.text.trim(),
-              category: _selectedCategory,
-            ),
-          );
-    }
+    try {
+      TaskFeedbackResponse? response;
+      if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
+        await SensoryFeedbackService.emit(
+          SensoryFeedbackEvent.confirm,
+          enableHaptic: false,
+        );
+        await SensoryFeedbackService.emit(
+          SensoryFeedbackEvent.selection,
+          enableSound: false,
+        );
+        response = await ref
+            .read(taskListProvider.notifier)
+            .submitTaskFeedbackWithResponse(
+              widget.taskId,
+              TaskFeedbackSubmission(
+                completionQuality: _rating,
+                feedbackText: _feedbackController.text.trim().isEmpty
+                    ? null
+                    : _feedbackController.text.trim(),
+                category: _selectedCategory,
+              ),
+            );
+      }
 
-    setState(() => _isSubmitting = false);
+      _hasRecordedSkip = true;
 
-    // Show success message
-    if (mounted) {
+      if (!mounted) return;
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       _showFeedbackSuccess(response);
+      widget.onClose();
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.error(context, context.l10n.submitFailedWithError(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
-    widget.onClose();
   }
 
   void _showFeedbackSuccess(TaskFeedbackResponse? response) {
@@ -739,17 +747,20 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                         Row(
                           children: [
                             Expanded(
-                              child: SparkleButton.ghost(
+                              child: SparkleButton(
                                 label: l10n.taskFeedbackSkip,
                                 onPressed: widget.onClose,
+                                variant: ButtonVariant.ghost,
+                                disabled: _isSubmitting,
                               ),
                             ),
                             const SizedBox(width: DS.spacing12),
                             Expanded(
                               flex: 2,
-                              child: CustomButton.primary(
+                              child: custom.CustomButton.primary(
                                 text: l10n.taskFeedbackComplete,
-                                onPressed: _handleSubmit,
+                                onPressed: _isSubmitting ? null : _handleSubmit,
+                                isLoading: _isSubmitting,
                               ),
                             ),
                           ],

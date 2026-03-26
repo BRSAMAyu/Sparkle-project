@@ -9,7 +9,11 @@ import 'package:sparkle/shared/entities/task_model.dart';
 class TaskReminderConfig {
   const TaskReminderConfig({
     this.enabled = true,
-    this.reminders = const [1440, 60, 15], // 1 day, 1 hour, 15 minutes (in minutes)
+    this.reminders = const [
+      1440,
+      60,
+      15
+    ], // 1 day, 1 hour, 15 minutes (in minutes)
   });
 
   final bool enabled;
@@ -100,7 +104,8 @@ class TaskNotificationScheduler {
     final scheduledIds = <int>[];
 
     for (final minutesBefore in reminderConfig.reminders) {
-      final reminderTime = dueDateTime.subtract(Duration(minutes: minutesBefore));
+      final reminderTime =
+          dueDateTime.subtract(Duration(minutes: minutesBefore));
 
       // Only schedule if reminder time is in the future
       if (reminderTime.isBefore(now)) {
@@ -182,8 +187,18 @@ class TaskNotificationScheduler {
   }) async {
     await TaskNotificationIdMapper.init();
 
-    // Clear all existing task notification mappings
-    await _idMapper.clearAll();
+    // Cancel every previously scheduled reminder before rebuilding mappings,
+    // otherwise toggling reminders off still leaves old local notifications.
+    final existingTaskIds = await _idMapper.getAllTaskIds();
+    for (final taskId in existingTaskIds) {
+      await cancelTaskReminders(taskId);
+    }
+
+    if (config != null && !config.enabled) {
+      _logger.i(
+          'Task reminders disabled, cleared ${existingTaskIds.length} mappings');
+      return;
+    }
 
     for (final task in pendingTasks) {
       if (task.status != TaskStatus.completed &&

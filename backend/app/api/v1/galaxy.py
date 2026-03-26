@@ -118,7 +118,7 @@ async def update_node_mastery(
 
     target_mastery = request.mastery
     if target_mastery is None:
-        current_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
+        current_status = await galaxy_service.retrieval.get_user_node_status(UUID(user_id), node_id)
         current_mastery = float(current_status.mastery_score or 0) if current_status else 0.0
         delta = float(request.mastery_delta or 0.0)
         target_mastery = max(0, min(100, int(round(current_mastery + delta))))
@@ -210,7 +210,7 @@ async def get_node_detail(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
 
     # 获取用户状态
-    user_status = await galaxy_service.retrieval._get_user_status(UUID(user_id), node_id)
+    user_status = await galaxy_service.retrieval.get_user_node_status(UUID(user_id), node_id)
 
     # 获取关系（含对端节点名称）
     relations_query = (
@@ -239,6 +239,7 @@ async def get_node_detail(
             "study_count": int(user_status.study_count or 0),
             "is_unlocked": bool(user_status.is_unlocked),
             "is_favorite": bool(user_status.is_favorite),
+            "is_collapsed": bool(user_status.is_collapsed),
             "last_study_at": user_status.last_study_at.isoformat() if user_status.last_study_at else None,
             "next_review_at": user_status.next_review_at.isoformat() if user_status.next_review_at else None,
             "decay_paused": bool(user_status.decay_paused),
@@ -250,6 +251,7 @@ async def get_node_detail(
             "study_count": 0,
             "is_unlocked": False,
             "is_favorite": False,
+            "is_collapsed": False,
             "last_study_at": None,
             "next_review_at": None,
             "decay_paused": False,

@@ -126,6 +126,93 @@ class AppLocalizationsZh extends AppLocalizations {
   String get enterToSendDescription => '在对话框中按回车键直接发送';
 
   @override
+  String get refresh => '刷新';
+
+  @override
+  String get chatAiSystemSettings => 'AI 系统设置';
+
+  @override
+  String get sensoryFeedbackSectionTitle => '感官反馈';
+
+  @override
+  String get sensoryFeedbackSectionSubtitle => '统一控制操作音效、成就反馈和触觉回馈';
+
+  @override
+  String get sensoryFeedbackLoadingSubtitle => '正在读取感官反馈偏好...';
+
+  @override
+  String get sensorySoundTitle => '音效反馈';
+
+  @override
+  String get sensorySoundSubtitle => '关闭后，所有 Sensory 音效与环境音将静默';
+
+  @override
+  String get sensoryHapticTitle => '触控反馈';
+
+  @override
+  String get sensoryHapticSubtitle => '关闭后，成就、星图等所有触感反馈都会停止';
+
+  @override
+  String get sensoryAmbientSceneTitle => '专注环境音';
+
+  @override
+  String get sensoryAmbientVolumeTitle => '环境音音量';
+
+  @override
+  String get bgmSectionTitle => '背景音乐';
+
+  @override
+  String get bgmSectionSubtitle => '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格';
+
+  @override
+  String get bgmLoadingSubtitle => '正在读取音乐偏好...';
+
+  @override
+  String get bgmEnabledTitle => '启用背景音乐';
+
+  @override
+  String get bgmEnabledSubtitle => '进入不同页面时自动切换对应的 BGM';
+
+  @override
+  String get bgmPlaybackStrategyTitle => '播放策略';
+
+  @override
+  String get themeAiSectionSubtitle => '主题、对话选项、AI 档位与动效强度';
+
+  @override
+  String get aiReasoningTitle => 'AI 档位';
+
+  @override
+  String get aiReasoningSubtitle => '敏捷更快，均衡推荐，深思更强分析';
+
+  @override
+  String get aiReasoningFastLabel => '敏捷';
+
+  @override
+  String get aiReasoningBalancedLabel => '均衡';
+
+  @override
+  String get aiReasoningDeepLabel => '深思';
+
+  @override
+  String get showChatContextToggleTitle => '显示聊天顶部选择条';
+
+  @override
+  String get showChatContextToggleSubtitle => '控制聊天页里可展开的计划/档位选择组件';
+
+  @override
+  String get showChatPredictionDockTitle => '显示聊天预测组件';
+
+  @override
+  String get showChatPredictionDockSubtitle => '控制输入框上方的用户行为预测与快捷建议';
+
+  @override
+  String get showChatTransparencyCapsuleTitle => '显示 AI 透明胶囊';
+
+  @override
+  String get showChatTransparencyCapsuleSubtitle => '控制聊天页底部的 AI 系统完成情况与透明化浮层';
+
+  @override
   String get taskCard => '任务卡片';
 
   @override

@@ -7,6 +7,7 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:uuid/uuid.dart';
 
 const String kCommunityAgentUserId = 'sparkle_agent';
@@ -233,34 +234,7 @@ String _compressContent(String content) {
 }
 
 String normalizeCommunityAgentOutput(String content) {
-  var normalized = content
-      .replaceAll(RegExp(r'```[\s\S]*?```'), '')
-      .replaceAll(RegExp(r'^\s{0,3}#{1,6}\s*', multiLine: true), '')
-      .replaceAll(RegExp(r'^\s*[-*+]\s+', multiLine: true), '')
-      .replaceAll(RegExp(r'^\s*\d+\.\s+', multiLine: true), '');
-
-  normalized = normalized
-      .replaceAllMapped(
-        RegExp(r'`([^`\n]+)`'),
-        (match) => match.group(1) ?? '',
-      )
-      .replaceAllMapped(
-        RegExp(r'\*\*([^*]+)\*\*'),
-        (match) => match.group(1) ?? '',
-      )
-      .replaceAllMapped(
-        RegExp(r'__([^_]+)__'),
-        (match) => match.group(1) ?? '',
-      )
-      .replaceAllMapped(
-        RegExp(r'(?<!\*)\*([^*\n]+)\*(?!\*)'),
-        (match) => match.group(1) ?? '',
-      )
-      .replaceAllMapped(
-        RegExp(r'(?<!_)_([^_\n]+)_(?!_)'),
-        (match) => match.group(1) ?? '',
-      );
-
+  final normalized = normalizeRichText(content);
   final lines = normalized
       .split('\n')
       .map((line) => line.trimRight())
@@ -315,8 +289,10 @@ String _fallbackPrivateAgentOutput(
   final context = lines.isEmpty ? '' : '我结合我们刚才聊的内容看，';
   return switch (preset) {
     'polish_reply' => '${context}可以这样回$name：我这边看到了，我们按这个方向继续，我稍后给你一个更明确的进展。',
-    'gentle_reminder' => '${context}可以这样提醒$name：想跟你确认一下这件事的进度，如果方便的话我们今天把下一步也一起定下来。',
-    'schedule_sync' => '${context}可以这样发给$name：我们把下一步时间对一下吧，你这两天什么时候方便，我这边可以配合安排。',
+    'gentle_reminder' =>
+      '${context}可以这样提醒$name：想跟你确认一下这件事的进度，如果方便的话我们今天把下一步也一起定下来。',
+    'schedule_sync' =>
+      '${context}可以这样发给$name：我们把下一步时间对一下吧，你这两天什么时候方便，我这边可以配合安排。',
     _ => lines.isEmpty ? '我先帮你整理成一句更自然的回复。' : lines.join('；'),
   };
 }

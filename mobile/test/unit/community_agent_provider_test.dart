@@ -91,24 +91,17 @@ void main() {
     expect(prompt.contains('Bob'), isTrue);
   });
 
-  test('normalizeCommunityAgentOutput strips common markdown wrappers', () {
+  test('normalizeCommunityAgentOutput uses shared markdown normalization', () {
     const raw = '''
-# 今日安排
-
-1. 先复习线代
-2. **晚上** 做题
-
-`记得打卡`
+- **学习规划**：先复习线代
+？ **任务管理**：晚上做题
+❓ **进度跟踪**：记得打卡
 ''';
 
     final normalized = normalizeCommunityAgentOutput(raw);
 
-    expect(normalized.contains('#'), isFalse);
-    expect(normalized.contains('1.'), isFalse);
-    expect(normalized.contains('**'), isFalse);
-    expect(normalized, contains('今日安排'));
-    expect(normalized, contains('先复习线代'));
-    expect(normalized, contains('晚上 做题'));
-    expect(normalized, contains('记得打卡'));
+    expect(normalized, contains('- **学习规划**：先复习线代'));
+    expect(normalized, contains('- **任务管理**：晚上做题'));
+    expect(normalized, contains('- **进度跟踪**：记得打卡'));
   });
 }

@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -31,66 +31,31 @@ class _TaskReminderSettingsScreenState
   }
 
   Future<bool> _checkNotificationPermission() async {
-    final plugin = FlutterLocalNotificationsPlugin();
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final ios = plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      final granted = await android.areNotificationsEnabled();
-      if ((granted ?? false) == false && mounted) {
-        final requested = await _requestNotificationPermission();
-        if (!requested && mounted) {
-          _showPermissionDialog();
-        }
-      }
-      return granted ?? false;
+    final service = ref.read(notificationServiceProvider);
+    final status = await service.checkPermissionStatus();
+    if (status.hasPermission) {
+      return true;
     }
-    if (ios != null) {
-      final requested = await _requestNotificationPermission();
-      if (!requested && mounted) {
-        _showPermissionDialog();
-      }
-      return requested;
+    if (!mounted) {
+      return false;
     }
-    return true;
+    final requested = await _requestNotificationPermission();
+    if (!requested && mounted) {
+      _showPermissionDialog();
+    }
+    return requested;
   }
 
   Future<bool> _requestNotificationPermission() async {
-    final plugin = FlutterLocalNotificationsPlugin();
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final ios = plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      final granted = await android.requestNotificationsPermission();
-        if ((granted ?? false) == false && mounted) {
-        if (context.mounted) {
-          AppFeedback.warning(
-            context,
-            context.l10n.taskReminderPermissionDenied,
-          );
-        }
-      }
-      return granted ?? false;
-    }
-    if (ios != null) {
-      final granted = await ios.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
+    final granted =
+        await ref.read(notificationServiceProvider).requestPermission();
+    if (!granted && mounted && context.mounted) {
+      AppFeedback.warning(
+        context,
+        context.l10n.taskReminderPermissionDenied,
       );
-      if ((granted ?? false) == false && mounted) {
-        if (context.mounted) {
-          AppFeedback.warning(
-            context,
-            context.l10n.taskReminderPermissionDenied,
-          );
-        }
-      }
-      return granted ?? false;
     }
-    return true;
+    return granted;
   }
 
   void _showPermissionDialog() {
@@ -142,10 +107,24 @@ class _TaskReminderSettingsScreenState
           title: Text(context.l10n.taskReminderEnableTitle),
           subtitle: Text(context.l10n.taskReminderEnableSubtitle),
           value: config.enabled,
-          onChanged: (value) {
-            ref.read(taskReminderConfigProvider.notifier).updateConfig(
-                  enabled: value,
-                );
+          onChanged: (value) async {
+            if (value) {
+              final granted = await _checkNotificationPermission();
+              if (!granted) {
+                return;
+              }
+            }
+            try {
+              await ref.read(taskReminderConfigProvider.notifier).updateConfig(
+                    enabled: value,
+                  );
+            } catch (e) {
+              if (!context.mounted) return;
+              AppFeedback.error(
+                context,
+                '提醒设置更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+              );
+            }
           },
           activeThumbColor: DS.primaryBase,
         ),
@@ -177,7 +156,7 @@ class _TaskReminderSettingsScreenState
                 ),
                 value: config.reminders.contains(minutes),
                 onChanged: config.enabled
-                    ? (value) {
+                    ? (value) async {
                         final newReminders = List<int>.from(config.reminders);
                         if (value ?? false) {
                           if (!newReminders.contains(minutes)) {
@@ -187,11 +166,19 @@ class _TaskReminderSettingsScreenState
                         } else {
                           newReminders.remove(minutes);
                         }
-                        ref
-                            .read(taskReminderConfigProvider.notifier)
-                            .updateConfig(
-                              reminders: newReminders,
-                            );
+                        try {
+                          await ref
+                              .read(taskReminderConfigProvider.notifier)
+                              .updateConfig(
+                                reminders: newReminders,
+                              );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          AppFeedback.error(
+                            context,
+                            '提醒时间更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+                          );
+                        }
                       }
                     : null,
                 activeColor: DS.primaryBase,
@@ -206,18 +193,27 @@ class _TaskReminderSettingsScreenState
         padding: const EdgeInsets.all(DS.lg),
         child: FilledButton.tonalIcon(
           onPressed: () async {
-            final scheduler = ref.read(taskNotificationSchedulerProvider);
-            final taskRepo = ref.read(taskRepositoryProvider);
-            final tasks = await taskRepo.getTasks();
-            final config = ref.read(taskReminderConfigProvider);
+            try {
+              final scheduler = ref.read(taskNotificationSchedulerProvider);
+              final taskRepo = ref.read(taskRepositoryProvider);
+              final tasks = await taskRepo.getTasks();
+              final config = ref.read(taskReminderConfigProvider);
 
-            await scheduler.refreshAllReminders(tasks.items, config: config);
+              await scheduler.refreshAllReminders(tasks.items, config: config);
 
-            if (mounted) {
-              AppFeedback.success(
-                context,
-                context.l10n.taskReminderRefreshSuccess,
-              );
+              if (mounted) {
+                AppFeedback.success(
+                  context,
+                  context.l10n.taskReminderRefreshSuccess,
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                AppFeedback.error(
+                  context,
+                  '刷新提醒失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+                );
+              }
             }
           },
           icon: Icon(Icons.refresh, color: DS.brandPrimary),

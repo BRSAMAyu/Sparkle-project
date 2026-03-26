@@ -476,6 +476,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
         await router.push(target);
       }
     }
+
     switch (type) {
       case 'CHAT':
         await goToChat();
@@ -620,7 +621,16 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     }
 
     if (mounted) {
-      context.go('/chat');
+      final prompt = _controller.text.trim();
+      final target = Uri(
+        path: '/chat',
+        queryParameters: <String, String>{
+          if (prompt.isNotEmpty) 'prompt': prompt,
+          'chat_mode': mode.apiValue,
+          'source': 'omnibar',
+        },
+      ).toString();
+      context.go(target);
     }
   }
 

@@ -65,27 +65,39 @@ class CacheService:
             logger.warning(f"Redis Cache connection failed: {e}")
             logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")
 
+    # Lua script: delete the lock key only if its value matches the expected token.
+    # Prevents a late-releasing holder from deleting a lock already re-acquired by
+    # another caller (TOCTOU: check-then-delete must be atomic).
+    _RELEASE_LOCK_SCRIPT = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
+
     @asynccontextmanager
     async def distributed_lock(self, lock_key: str, expire: int = 10):
         """
-        简单 Redis 分布式锁
+        Redis 分布式锁（使用 Lua 脚本原子释放，防止 TOCTOU 竞态）
         """
+        import secrets
+
         if not self.redis:
-            yield # Fallback: No lock if redis is not ready
+            yield  # Fallback: No lock if redis is not ready
             return
 
-        # key naming
         key = f"lock:{lock_key}"
-        # try to acquire
-        locked = await self.redis.set(key, "1", ex=expire, nx=True)
+        token = secrets.token_hex(16)
+
+        locked = await self.redis.set(key, token, ex=expire, nx=True)
 
         if not locked:
-            # Retry once after 1s? Or just fail? For simplicity, we fail or wait.
-            # In MVP, let's wait a bit.
-            for _ in range(3):
-                await asyncio.sleep(0.5)
-                locked = await self.redis.set(key, "1", ex=expire, nx=True)
-                if locked: break
+            for attempt in range(3):
+                await asyncio.sleep(min(0.2 * (2**attempt), 1.0))
+                locked = await self.redis.set(key, token, ex=expire, nx=True)
+                if locked:
+                    break
 
         if not locked:
             raise Exception(f"Failed to acquire lock for {lock_key}")
@@ -93,8 +105,11 @@ class CacheService:
         try:
             yield
         finally:
-            # safe release (only if exists)
-            await self.redis.delete(key)
+            # Atomically release only if we still own the lock
+            try:
+                await self.redis.eval(self._RELEASE_LOCK_SCRIPT, 1, key, token)
+            except Exception as e:
+                logger.warning(f"Failed to release lock for {lock_key}: {e}")
 
     async def close(self):
         if self.redis:

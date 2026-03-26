@@ -87,9 +87,7 @@ class _SeedLibraryDetailScreenState
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.edit),
-              onPressed: () {
-                // TRACKED(TD-002): Implement edit
-              },
+              onPressed: () => _showEditDialog(context, state.library!),
             ),
           if (canManageLibrary)
             SparkleIconButton(
@@ -725,6 +723,74 @@ class _SeedLibraryDetailScreenState
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, SeedLibrary library) {
+    final nameController = TextEditingController(text: library.name);
+    final descController = TextEditingController(text: library.description ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('编辑种子库'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '名称'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? '名称不能为空' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: '描述（可选）'),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(ctx);
+                try {
+                  await ref
+                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .updateLibrary(
+                        name: nameController.text.trim(),
+                        description: descController.text.trim().isEmpty
+                            ? null
+                            : descController.text.trim(),
+                      );
+                  if (mounted) {
+                    AppFeedback.success(context, '种子库已更新');
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    AppFeedback.error(
+                      context,
+                      _friendlyActionError(e),
+                    );
+                  }
+                }
+              },
+              child: const Text('保存'),
+            ),
+          ],
         ),
       ),
     );

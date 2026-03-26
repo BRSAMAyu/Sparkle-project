@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
 
 /// WeatherHeader - Full-screen animated background weather system
 class WeatherHeader extends ConsumerStatefulWidget {
@@ -32,6 +35,23 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     super.initState();
     _initAnimations();
     _initParticles();
+    _bindWeatherFeedback();
+  }
+
+  void _bindWeatherFeedback() {
+    ref.listenManual<String>(
+      dashboardProvider.select((state) => state.weather.type),
+      (previous, next) {
+        if (previous == null || previous == next) {
+          return;
+        }
+        unawaited(
+          SensoryFeedbackService.emit(
+            SensoryFeedbackEvent.selection,
+          ),
+        );
+      },
+    );
   }
 
   void _initAnimations() {
@@ -122,8 +142,9 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   @override
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(dashboardProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final weatherType = dashboardState.weather.type;
+    final weatherPresentation =
+        resolveWeatherPresentation(context, weatherType);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -140,50 +161,31 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: _getWeatherGradient(weatherType, isDark),
+          gradient: LinearGradient(
+            colors: weatherPresentation.headerGradient,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: Stack(
           children: [
             Positioned.fill(
               child: IgnorePointer(
-                child: _buildAtmosphereVeil(
-                  weatherType,
-                  dashboardState.weather.condition,
-                ),
+                child: _buildAtmosphereVeil(weatherPresentation),
               ),
             ),
-
             // Animated star field (always present, intensity varies)
-            _buildAnimatedStarField(weatherType),
+            _buildAnimatedStarField(weatherPresentation),
 
             // Weather-specific animated effects
-            _buildWeatherEffects(weatherType, accentColor: DS.brandPrimary),
-
-            // Corner overlay for weather status
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: _buildWeatherStatus(
-                weatherType,
-                dashboardState.weather.condition,
-              ),
-            ),
+            _buildWeatherEffects(weatherPresentation),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAnimatedStarField(String weatherType) {
-    // Stars are most visible in meteor weather, dimmed in others
-    final starIntensity = switch (weatherType) {
-      'meteor' => 1.0,
-      'sunny' => 0.3,
-      'cloudy' => 0.2,
-      'rainy' => 0.1,
-      _ => 0.3,
-    };
-
+  Widget _buildAnimatedStarField(WeatherPresentationData presentation) {
     return AnimatedBuilder(
       animation: _mainAnimationController,
       builder: (context, child) => CustomPaint(
@@ -191,32 +193,34 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         painter: _AnimatedStarPainter(
           stars: _stars,
           animationValue: _mainAnimationController.value,
-          color: DS.brandPrimary,
-          intensity: starIntensity,
+          color: Color.lerp(
+                presentation.accent,
+                presentation.highlight,
+                0.55,
+              ) ??
+              presentation.highlight,
+          intensity: presentation.starIntensity,
         ),
       ),
     );
   }
 
-  Widget _buildWeatherEffects(String type, {required Color accentColor}) {
-    switch (type) {
+  Widget _buildWeatherEffects(WeatherPresentationData presentation) {
+    switch (presentation.type) {
       case 'sunny':
-        return _buildSunnyEffects(accentColor);
+        return _buildSunnyEffects(presentation.accent);
       case 'cloudy':
-        return _buildCloudyEffects(accentColor);
+        return _buildCloudyEffects(presentation.accent);
       case 'rainy':
-        return _buildRainyEffects(accentColor);
+        return _buildRainyEffects(presentation.accent);
       case 'meteor':
-        return _buildMeteorEffects(accentColor);
+        return _buildMeteorEffects(presentation.accent);
       default:
-        return _buildSunnyEffects(accentColor);
+        return _buildSunnyEffects(presentation.accent);
     }
   }
 
-  Widget _buildAtmosphereVeil(String type, String condition) {
-    final accent = _weatherAccent(type);
-    final secondary = Color.lerp(accent, Colors.white, 0.58) ?? Colors.white;
-
+  Widget _buildAtmosphereVeil(WeatherPresentationData presentation) {
     return AnimatedBuilder(
       animation: Listenable.merge([
         _mainAnimationController,
@@ -235,8 +239,12 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      accent.withValues(alpha: 0.08 * pulse),
-                      secondary.withValues(alpha: 0.04 * pulse),
+                      presentation.accent.withValues(
+                        alpha: 0.05 * presentation.overlayStrength * pulse,
+                      ),
+                      presentation.softAccent.withValues(
+                        alpha: 0.04 * presentation.overlayStrength * pulse,
+                      ),
                       Colors.transparent,
                     ],
                     stops: const [0.0, 0.38, 1.0],
@@ -253,11 +261,15 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                   height: 180,
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: const Alignment(0.0, 1.0),
-                      radius: 1.25,
+                      center: presentation.glowAlignment,
+                      radius: presentation.glowRadius,
                       colors: [
-                        accent.withValues(alpha: 0.12),
-                        accent.withValues(alpha: 0.04),
+                        presentation.highlight.withValues(
+                          alpha: 0.07 * presentation.overlayStrength,
+                        ),
+                        presentation.softAccent.withValues(
+                          alpha: 0.05 * presentation.overlayStrength,
+                        ),
                         Colors.transparent,
                       ],
                     ),
@@ -265,35 +277,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 ),
               ),
             ),
-            if (condition.isNotEmpty)
-              Positioned(
-                left: 20,
-                bottom: 28,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing10,
-                    vertical: DS.spacing8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.58),
-                    borderRadius: DS.borderRadiusFull,
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.18),
-                    ),
-                  ),
-                  child: Text(
-                    _getWeatherAmbientLine(type),
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: accent,
-                      fontWeight: DS.fontWeightMedium,
-                    ),
-                  ),
-                )
-                    .animate()
-                    .fadeIn(delay: 200.ms, duration: 500.ms)
-                    .moveY(begin: 8, end: 0),
-              ),
           ],
         );
       },
@@ -415,318 +398,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
           ),
         ],
       );
-
-  Widget _buildWeatherStatus(String type, String condition) {
-    final accent = _weatherAccent(type);
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 196),
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.withValues(alpha: 0.16),
-            DS.surfacePrimary.withValues(alpha: 0.82),
-            DS.surfaceSecondary.withValues(alpha: 0.74),
-          ],
-          stops: const [0.0, 0.36, 1.0],
-        ),
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: accent.withValues(alpha: 0.22)),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.14),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getWeatherTitle(type),
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        fontWeight: DS.fontWeightBold,
-                        color: DS.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing2),
-                    Text(
-                      _getWeatherSubtitle(type),
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              _buildWeatherIcon(type),
-            ],
-          )
-              .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .fadeIn(duration: 2000.ms)
-              .scale(
-                begin: const Offset(0.97, 0.97),
-                end: const Offset(1.0, 1.0),
-                duration: 2000.ms,
-              ),
-          const SizedBox(height: DS.spacing10),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: DS.spacing6,
-            runSpacing: DS.spacing6,
-            children: [
-              _buildWeatherChip(_getWeatherRhythm(type), accent),
-              _buildWeatherChip(
-                condition.isNotEmpty ? condition : _getWeatherCue(type),
-                Color.lerp(accent, DS.info, 0.35) ?? DS.info,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeatherChip(String label, Color color) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(color: color.withValues(alpha: 0.18)),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: DS.fontSizeXs,
-            color: color,
-            fontWeight: DS.fontWeightMedium,
-          ),
-        ),
-      );
-
-  Widget _buildWeatherIcon(String type) {
-    IconData icon;
-    switch (type) {
-      case 'sunny':
-        icon = Icons.wb_sunny_rounded;
-      case 'cloudy':
-        icon = Icons.cloud_rounded;
-      case 'rainy':
-        icon = Icons.thunderstorm_rounded;
-      case 'meteor':
-        icon = Icons.auto_awesome_rounded;
-      default:
-        icon = Icons.wb_sunny_rounded;
-    }
-    final accent = _weatherAccent(type);
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            accent.withValues(alpha: 0.24),
-            accent.withValues(alpha: 0.08),
-            Colors.transparent,
-          ],
-        ),
-      ),
-      child: Icon(icon, color: accent, size: 18),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
-          begin: const Offset(0.9, 0.9),
-          end: const Offset(1.1, 1.1),
-          duration: 1500.ms,
-          curve: Curves.easeInOut,
-        );
-  }
-
-  LinearGradient _getWeatherGradient(String type, bool isDark) {
-    switch (type) {
-      case 'sunny':
-        return LinearGradient(
-          colors: isDark
-              ? [
-                  const Color(0xFF1A2338),
-                  DS.surfacePrimary,
-                  const Color(0xFF2E3A5C),
-                ]
-              : [
-                  const Color(0xFFFFF6DD),
-                  const Color(0xFFF9ECD1),
-                  const Color(0xFFEAD9B8),
-                ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        );
-      case 'cloudy':
-        return LinearGradient(
-          colors: isDark
-              ? [
-                  const Color(0xFF1A2333),
-                  const Color(0xFF243248),
-                  const Color(0xFF31445E),
-                ]
-              : [
-                  const Color(0xFFF1F4FA),
-                  const Color(0xFFE2E8F1),
-                  const Color(0xFFD0D9E6),
-                ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        );
-      case 'rainy':
-        return LinearGradient(
-          colors: isDark
-              ? [
-                  const Color(0xFF101C2B),
-                  const Color(0xFF16283A),
-                  const Color(0xFF23405E),
-                ]
-              : [
-                  const Color(0xFFE7EEF6),
-                  const Color(0xFFD3E1EF),
-                  const Color(0xFFB7CBDF),
-                ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        );
-      case 'meteor':
-        return LinearGradient(
-          colors: isDark
-              ? [
-                  const Color(0xFF120E25),
-                  const Color(0xFF1D1737),
-                  DS.galaxyBackground,
-                ]
-              : [
-                  const Color(0xFFF3EDFF),
-                  const Color(0xFFE4DCF9),
-                  const Color(0xFFD1C5F1),
-                ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        );
-      default:
-        return LinearGradient(
-          colors: isDark
-              ? [DS.surfaceAmbient, DS.surfacePrimary]
-              : [DS.neutral50, DS.neutral100],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        );
-    }
-  }
-
-  String _getWeatherTitle(String type) {
-    switch (type) {
-      case 'sunny':
-        return '晴空万里';
-      case 'cloudy':
-        return '薄雾弥漫';
-      case 'rainy':
-        return '风雨欲来';
-      case 'meteor':
-        return '繁星入梦';
-      default:
-        return '晴空万里';
-    }
-  }
-
-  Color _weatherAccent(String type) {
-    switch (type) {
-      case 'sunny':
-        return const Color(0xFFFFC857);
-      case 'cloudy':
-        return const Color(0xFF8BA3C7);
-      case 'rainy':
-        return const Color(0xFF66C7F4);
-      case 'meteor':
-        return const Color(0xFFB78CFF);
-      default:
-        return DS.brandPrimaryConst;
-    }
-  }
-
-  String _getWeatherSubtitle(String type) {
-    switch (type) {
-      case 'sunny':
-        return '光感上扬，今天适合持续推进。';
-      case 'cloudy':
-        return '边界变柔，适合整理与留白。';
-      case 'rainy':
-        return '环境收拢，适合沉浸专注。';
-      case 'meteor':
-        return '灵感升空，适合冲刺与突破。';
-      default:
-        return '今天的气氛已经就位。';
-    }
-  }
-
-  String _getWeatherRhythm(String type) {
-    switch (type) {
-      case 'sunny':
-        return '节奏: 明亮推进';
-      case 'cloudy':
-        return '节奏: 柔和过渡';
-      case 'rainy':
-        return '节奏: 深潜聚焦';
-      case 'meteor':
-        return '节奏: 高光冲刺';
-      default:
-        return '节奏: 平稳展开';
-    }
-  }
-
-  String _getWeatherCue(String type) {
-    switch (type) {
-      case 'sunny':
-        return '保持出发感';
-      case 'cloudy':
-        return '给思路留白';
-      case 'rainy':
-        return '收拢注意力';
-      case 'meteor':
-        return '抓住灵感窗口';
-      default:
-        return '维持流动状态';
-    }
-  }
-
-  String _getWeatherAmbientLine(String type) {
-    switch (type) {
-      case 'sunny':
-        return '空气偏亮，视野与动机同时抬升';
-      case 'cloudy':
-        return '云层压低了噪声，画面更柔和';
-      case 'rainy':
-        return '雨幕正在帮你屏蔽外界干扰';
-      case 'meteor':
-        return '星迹正在提醒你记录高光时刻';
-      default:
-        return '天气正在为今天的节奏定调';
-    }
-  }
 }
 
 // ============== Data Classes ==============

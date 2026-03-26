@@ -257,10 +257,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.tune_rounded,
-                      title: '感官反馈',
+                      title: l10n.sensoryFeedbackSectionTitle,
                       subtitle: _sensoryReady
-                          ? '统一控制操作音效、成就反馈和触觉回馈'
-                          : '正在读取感官反馈偏好...',
+                          ? l10n.sensoryFeedbackSectionSubtitle
+                          : l10n.sensoryFeedbackLoadingSubtitle,
                       expanded: _sensoryExpanded,
                       onToggle: () =>
                           setState(() => _sensoryExpanded = !_sensoryExpanded),
@@ -270,71 +270,76 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       secondChild: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('音效反馈'),
-                      subtitle: const Text('关闭后，所有 Sensory 音效与环境音将静默'),
-                      value: _soundEnabled,
-                      onChanged: _sensoryReady
-                          ? (value) => unawaited(_setSoundEnabled(value))
-                          : null,
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('触控反馈'),
-                      subtitle: const Text('关闭后，成就、星图等所有触感反馈都会停止'),
-                      value: _hapticEnabled,
-                      onChanged: _sensoryReady
-                          ? (value) => unawaited(_setHapticEnabled(value))
-                          : null,
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      '专注环境音',
-                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: AmbientScene.values
-                          .map(
-                            (scene) => ChoiceChip(
-                              label: Text(scene.label),
-                              selected: _ambientScene == scene,
-                              onSelected: _sensoryReady
-                                  ? (_) => unawaited(_setAmbientScene(scene))
-                                  : null,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: DS.spacing10),
-                    Text(
-                      '环境音音量',
-                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.volume_mute_rounded, size: 18),
-                        Expanded(
-                          child: Slider(
-                            value: _ambientVolume,
-                            divisions: 10,
-                            onChanged: _sensoryReady && _soundEnabled
-                                ? (value) =>
-                                    setState(() => _ambientVolume = value)
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.sensorySoundTitle),
+                            subtitle: Text(l10n.sensorySoundSubtitle),
+                            value: _soundEnabled,
+                            onChanged: _sensoryReady
+                                ? (value) => unawaited(_setSoundEnabled(value))
                                 : null,
-                            onChangeEnd: _sensoryReady && _soundEnabled
-                                ? (value) => unawaited(_setAmbientVolume(value))
-                                : null,
+                            activeThumbColor: DS.primaryBase,
                           ),
-                        ),
-                        const Icon(Icons.surround_sound_rounded, size: 18),
-                      ],
-                    ),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.sensoryHapticTitle),
+                            subtitle: Text(l10n.sensoryHapticSubtitle),
+                            value: _hapticEnabled,
+                            onChanged: _sensoryReady
+                                ? (value) => unawaited(_setHapticEnabled(value))
+                                : null,
+                            activeThumbColor: DS.primaryBase,
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            l10n.sensoryAmbientSceneTitle,
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing8,
+                            runSpacing: DS.spacing8,
+                            children: AmbientScene.values
+                                .map(
+                                  (scene) => ChoiceChip(
+                                    label: Text(scene.label),
+                                    selected: _ambientScene == scene,
+                                    onSelected: _sensoryReady
+                                        ? (_) =>
+                                            unawaited(_setAmbientScene(scene))
+                                        : null,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: DS.spacing10),
+                          Text(
+                            l10n.sensoryAmbientVolumeTitle,
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          Row(
+                            children: [
+                              const Icon(Icons.volume_mute_rounded, size: 18),
+                              Expanded(
+                                child: Slider(
+                                  value: _ambientVolume,
+                                  divisions: 10,
+                                  onChanged: _sensoryReady && _soundEnabled
+                                      ? (value) =>
+                                          setState(() => _ambientVolume = value)
+                                      : null,
+                                  onChangeEnd: _sensoryReady && _soundEnabled
+                                      ? (value) =>
+                                          unawaited(_setAmbientVolume(value))
+                                      : null,
+                                ),
+                              ),
+                              const Icon(Icons.surround_sound_rounded,
+                                  size: 18),
+                            ],
+                          ),
                         ],
                       ),
                       crossFadeState: _sensoryExpanded
@@ -355,65 +360,69 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       title: l10n.learningMode,
                       subtitle: '调整深度与好奇心偏好',
                       expanded: _learningExpanded,
-                      onToggle: () =>
-                          setState(() => _learningExpanded = !_learningExpanded),
+                      onToggle: () => setState(
+                          () => _learningExpanded = !_learningExpanded),
                     ),
                     AnimatedCrossFade(
                       firstChild: const SizedBox(width: double.infinity),
                       secondChild: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                    const SizedBox(height: DS.spacing12),
-                    Text(
-                      l10n.dragToAdjust,
-                      style: DS.bodySmall.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    LearningModeControl(
-                      depth: learningPrefs.depth,
-                      curiosity: learningPrefs.curiosity,
-                      onChanged: (d, c) {
-                        _scheduleLearningPreferenceUpdate(
-                          depth: d,
-                          curiosity: c,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing24),
-                    _buildSectionHeader(
-                      Icons.auto_awesome,
-                      l10n.capsuleGeneration,
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    CapsuleGenerationPreview(
-                      depthPreference: learningPrefs.depth,
-                      curiosityPreference: learningPrefs.curiosity,
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    SparkleButton(
-                      expand: true,
-                      label: _isGenerating ? l10n.generating : l10n.generateNow,
-                      icon:
-                          _isGenerating ? null : const Icon(Icons.auto_awesome),
-                      onPressed: _isGenerating
-                          ? null
-                          : () {
-                              unawaited(
-                                _requestCapsuleGeneration(context, l10n),
+                          const SizedBox(height: DS.spacing12),
+                          Text(
+                            l10n.dragToAdjust,
+                            style: DS.bodySmall.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          LearningModeControl(
+                            depth: learningPrefs.depth,
+                            curiosity: learningPrefs.curiosity,
+                            onChanged: (d, c) {
+                              _scheduleLearningPreferenceUpdate(
+                                depth: d,
+                                curiosity: c,
                               );
                             },
-                      loading: _isGenerating,
-                    ),
-                    const SizedBox(height: DS.spacing24),
-                    _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
-                    const SizedBox(height: DS.spacing12),
-                    _buildWeeklyAgendaSection(
-                      context,
-                      l10n,
-                      weeklyAgenda,
-                    ),
+                          ),
+                          const SizedBox(height: DS.spacing24),
+                          _buildSectionHeader(
+                            Icons.auto_awesome,
+                            l10n.capsuleGeneration,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          CapsuleGenerationPreview(
+                            depthPreference: learningPrefs.depth,
+                            curiosityPreference: learningPrefs.curiosity,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          SparkleButton(
+                            expand: true,
+                            label: _isGenerating
+                                ? l10n.generating
+                                : l10n.generateNow,
+                            icon: _isGenerating
+                                ? null
+                                : const Icon(Icons.auto_awesome),
+                            onPressed: _isGenerating
+                                ? null
+                                : () {
+                                    unawaited(
+                                      _requestCapsuleGeneration(context, l10n),
+                                    );
+                                  },
+                            loading: _isGenerating,
+                          ),
+                          const SizedBox(height: DS.spacing24),
+                          _buildSectionHeader(
+                              Icons.schedule, l10n.weeklyAgenda),
+                          const SizedBox(height: DS.spacing12),
+                          _buildWeeklyAgendaSection(
+                            context,
+                            l10n,
+                            weeklyAgenda,
+                          ),
                         ],
                       ),
                       crossFadeState: _learningExpanded
@@ -442,10 +451,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.music_note_rounded,
-                      title: '背景音乐',
+                      title: l10n.bgmSectionTitle,
                       subtitle: _bgmReady
-                          ? '按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'
-                          : '正在读取音乐偏好...',
+                          ? l10n.bgmSectionSubtitle
+                          : l10n.bgmLoadingSubtitle,
                       expanded: _bgmExpanded,
                       onToggle: () =>
                           setState(() => _bgmExpanded = !_bgmExpanded),
@@ -455,197 +464,208 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       secondChild: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('启用背景音乐'),
-                      subtitle: const Text('进入不同页面时自动切换对应的 BGM'),
-                      value: _bgmEnabled,
-                      onChanged: _bgmReady
-                          ? (value) => unawaited(_setBgmEnabled(value))
-                          : null,
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      '播放策略',
-                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: BgmMode.values
-                          .map(
-                            (mode) => ChoiceChip(
-                              label: Text(_bgmModeLabel(mode)),
-                              selected: _bgmMode == mode,
-                              onSelected: _bgmReady
-                                  ? (_) => unawaited(_setBgmMode(mode))
-                                  : null,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: DS.spacing10),
-                    if (_localBgmOverridesEnabled)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: DS.spacing10),
-                        padding: const EdgeInsets.all(DS.spacing12),
-                        decoration: BoxDecoration(
-                          borderRadius: DS.borderRadius12,
-                          color: Color.alphaBlend(
-                            DS.brandPrimary.withValues(alpha: 0.08),
-                            DS.surfaceSecondary,
-                          ),
-                          border: Border.all(
-                            color: DS.brandPrimary.withValues(alpha: 0.16),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Icon(
-                                Icons.library_music_rounded,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: DS.spacing10),
-                            Expanded(
-                              child: Text(
-                                _bgmPalette == BgmPalette.adaptive
-                                    ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于自适应模式时，系统会优先播放你本机准备的场景音乐。'
-                                    : _bgmPalette == BgmPalette.classical
-                                    ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于精选古典模式时，系统会优先播放你本机准备的调音曲目。'
-                                    : '检测到 $_localBgmOverrideCount 首本地乐曲覆盖。切回“自适应”或“精选古典”后，系统会优先播放本机版场景音乐。',
-                                style: DS.bodySmall.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.45,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(DS.spacing12),
-                      decoration: BoxDecoration(
-                        borderRadius: DS.borderRadius12,
-                        color: Color.alphaBlend(
-                          DS.primaryBase.withValues(alpha: 0.06),
-                          DS.surfaceSecondary,
-                        ),
-                      ),
-                      child: Text(
-                        _bgmModeDescription(_bgmMode),
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      '音乐音量',
-                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.volume_down_rounded, size: 18),
-                        Expanded(
-                          child: Slider(
-                            value: _bgmVolume,
-                            divisions: 10,
-                            onChanged: _bgmEnabled && _bgmReady
-                                ? (value) => setState(() => _bgmVolume = value)
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.bgmEnabledTitle),
+                            subtitle: Text(l10n.bgmEnabledSubtitle),
+                            value: _bgmEnabled,
+                            onChanged: _bgmReady
+                                ? (value) => unawaited(_setBgmEnabled(value))
                                 : null,
-                            onChangeEnd: _bgmEnabled && _bgmReady
-                                ? (value) => unawaited(_setBgmVolume(value))
-                                : null,
+                            activeThumbColor: DS.primaryBase,
                           ),
-                        ),
-                        const Icon(Icons.volume_up_rounded, size: 18),
-                      ],
-                    ),
-                    Text(
-                      '场景偏好',
-                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: BgmPalette.values
-                          .map(
-                            (palette) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.spacing6,
-                                vertical: DS.spacing4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.surfaceSecondary,
-                                borderRadius: DS.borderRadius16,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ChoiceChip(
-                                    label: Text(_bgmPaletteLabel(palette)),
-                                    selected: _bgmPalette == palette,
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            l10n.bgmPlaybackStrategyTitle,
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing8,
+                            runSpacing: DS.spacing8,
+                            children: BgmMode.values
+                                .map(
+                                  (mode) => ChoiceChip(
+                                    label: Text(_bgmModeLabel(mode)),
+                                    selected: _bgmMode == mode,
                                     onSelected: _bgmReady
-                                        ? (_) => unawaited(
-                                            _setBgmPalette(palette),
-                                          )
+                                        ? (_) => unawaited(_setBgmMode(mode))
                                         : null,
                                   ),
-                                  IconButton(
-                                    tooltip: '试听 ${_bgmPaletteLabel(palette)}',
-                                    iconSize: 18,
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: _bgmEnabled && _bgmReady
-                                        ? () => unawaited(
-                                            _previewBgmPalette(palette),
-                                          )
-                                        : null,
-                                    icon: _previewingPalette == palette
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.play_arrow_rounded),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: DS.spacing10),
+                          if (_localBgmOverridesEnabled)
+                            Container(
+                              width: double.infinity,
+                              margin:
+                                  const EdgeInsets.only(bottom: DS.spacing10),
+                              padding: const EdgeInsets.all(DS.spacing12),
+                              decoration: BoxDecoration(
+                                borderRadius: DS.borderRadius12,
+                                color: Color.alphaBlend(
+                                  DS.brandPrimary.withValues(alpha: 0.08),
+                                  DS.surfaceSecondary,
+                                ),
+                                border: Border.all(
+                                  color:
+                                      DS.brandPrimary.withValues(alpha: 0.16),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Icon(
+                                      Icons.library_music_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: DS.spacing10),
+                                  Expanded(
+                                    child: Text(
+                                      _bgmPalette == BgmPalette.adaptive
+                                          ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于自适应模式时，系统会优先播放你本机准备的场景音乐。'
+                                          : _bgmPalette == BgmPalette.classical
+                                              ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于精选古典模式时，系统会优先播放你本机准备的调音曲目。'
+                                              : '检测到 $_localBgmOverrideCount 首本地乐曲覆盖。切回“自适应”或“精选古典”后，系统会优先播放本机版场景音乐。',
+                                      style: DS.bodySmall.copyWith(
+                                        color: DS.textSecondary,
+                                        height: 1.45,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: DS.spacing10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(DS.spacing12),
-                      decoration: BoxDecoration(
-                        borderRadius: DS.borderRadius12,
-                        color: Color.alphaBlend(
-                          DS.info.withValues(alpha: 0.06),
-                          DS.surfaceSecondary,
-                        ),
-                      ),
-                      child: Text(
-                        _bgmPaletteDescription(_bgmPalette),
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              borderRadius: DS.borderRadius12,
+                              color: Color.alphaBlend(
+                                DS.primaryBase.withValues(alpha: 0.06),
+                                DS.surfaceSecondary,
+                              ),
+                            ),
+                            child: Text(
+                              _bgmModeDescription(_bgmMode),
+                              style: DS.bodySmall.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            '音乐音量',
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          Row(
+                            children: [
+                              const Icon(Icons.volume_down_rounded, size: 18),
+                              Expanded(
+                                child: Slider(
+                                  value: _bgmVolume,
+                                  divisions: 10,
+                                  onChanged: _bgmEnabled && _bgmReady
+                                      ? (value) =>
+                                          setState(() => _bgmVolume = value)
+                                      : null,
+                                  onChangeEnd: _bgmEnabled && _bgmReady
+                                      ? (value) =>
+                                          unawaited(_setBgmVolume(value))
+                                      : null,
+                                ),
+                              ),
+                              const Icon(Icons.volume_up_rounded, size: 18),
+                            ],
+                          ),
+                          Text(
+                            '场景偏好',
+                            style:
+                                DS.labelSmall.copyWith(color: DS.textSecondary),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing8,
+                            runSpacing: DS.spacing8,
+                            children: BgmPalette.values
+                                .map(
+                                  (palette) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: DS.spacing6,
+                                      vertical: DS.spacing4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: DS.surfaceSecondary,
+                                      borderRadius: DS.borderRadius16,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ChoiceChip(
+                                          label:
+                                              Text(_bgmPaletteLabel(palette)),
+                                          selected: _bgmPalette == palette,
+                                          onSelected: _bgmReady
+                                              ? (_) => unawaited(
+                                                    _setBgmPalette(palette),
+                                                  )
+                                              : null,
+                                        ),
+                                        IconButton(
+                                          tooltip:
+                                              '试听 ${_bgmPaletteLabel(palette)}',
+                                          iconSize: 18,
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: _bgmEnabled && _bgmReady
+                                              ? () => unawaited(
+                                                    _previewBgmPalette(palette),
+                                                  )
+                                              : null,
+                                          icon: _previewingPalette == palette
+                                              ? const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.play_arrow_rounded),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: DS.spacing10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              borderRadius: DS.borderRadius12,
+                              color: Color.alphaBlend(
+                                DS.info.withValues(alpha: 0.06),
+                                DS.surfaceSecondary,
+                              ),
+                            ),
+                            child: Text(
+                              _bgmPaletteDescription(_bgmPalette),
+                              style: DS.bodySmall.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       crossFadeState: _bgmExpanded
@@ -663,7 +683,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     _buildCollapsibleHeader(
                       icon: Icons.brightness_6_outlined,
                       title: '${l10n.theme} & AI',
-                      subtitle: '主题、对话选项、AI 档位与动效强度',
+                      subtitle: l10n.themeAiSectionSubtitle,
                       expanded: _themeExpanded,
                       onToggle: () =>
                           setState(() => _themeExpanded = !_themeExpanded),
@@ -673,199 +693,203 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       secondChild: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                    _buildSettingsDropdownField<AppThemeMode>(
-                      value: ref.watch(appThemeModeProvider),
-                      items: [
-                        DropdownMenuItem(
-                          value: AppThemeMode.system,
-                          child: Text(l10n.followSystem),
-                        ),
-                        DropdownMenuItem(
-                          value: AppThemeMode.light,
-                          child: Text(l10n.lightMode),
-                        ),
-                        DropdownMenuItem(
-                          value: AppThemeMode.dark,
-                          child: Text(l10n.darkMode),
-                        ),
-                      ],
-                      onChanged: (newValue) {
-                        if (newValue != null) {
-                          ref
-                              .read(themeManagerProvider)
-                              .setAppThemeMode(newValue);
-                        }
-                      },
-                    ),
-                    const Divider(height: DS.spacing24),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.enterToSend),
-                      subtitle: Text(l10n.enterToSendDescription),
-                      value: enterToSend,
-                      onChanged: (v) =>
-                          ref.read(enterToSendProvider.notifier).setEnabled(v),
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    const Divider(height: DS.spacing24),
-                    const ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.tune),
-                      title: Text('AI 档位'),
-                      subtitle: Text('敏捷更快，均衡推荐，深思更强分析'),
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: DS.spacing8,
-                        runSpacing: DS.spacing8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('敏捷'),
-                            selected: aiReasoningMode == 'fast',
-                            onSelected: (_) => ref
-                                .read(aiReasoningModeProvider.notifier)
-                                .setMode('fast'),
+                          _buildSettingsDropdownField<AppThemeMode>(
+                            value: ref.watch(appThemeModeProvider),
+                            items: [
+                              DropdownMenuItem(
+                                value: AppThemeMode.system,
+                                child: Text(l10n.followSystem),
+                              ),
+                              DropdownMenuItem(
+                                value: AppThemeMode.light,
+                                child: Text(l10n.lightMode),
+                              ),
+                              DropdownMenuItem(
+                                value: AppThemeMode.dark,
+                                child: Text(l10n.darkMode),
+                              ),
+                            ],
+                            onChanged: (newValue) {
+                              if (newValue != null) {
+                                ref
+                                    .read(themeManagerProvider)
+                                    .setAppThemeMode(newValue);
+                              }
+                            },
                           ),
-                          ChoiceChip(
-                            label: const Text('均衡'),
-                            selected: aiReasoningMode == 'balanced',
-                            onSelected: (_) => ref
-                                .read(aiReasoningModeProvider.notifier)
-                                .setMode('balanced'),
+                          const Divider(height: DS.spacing24),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.enterToSend),
+                            subtitle: Text(l10n.enterToSendDescription),
+                            value: enterToSend,
+                            onChanged: (v) => ref
+                                .read(enterToSendProvider.notifier)
+                                .setEnabled(v),
+                            activeThumbColor: DS.primaryBase,
                           ),
-                          ChoiceChip(
-                            label: const Text('深思'),
-                            selected: aiReasoningMode == 'deep',
-                            onSelected: (_) => ref
-                                .read(aiReasoningModeProvider.notifier)
-                                .setMode('deep'),
+                          const Divider(height: DS.spacing24),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.tune),
+                            title: Text(l10n.aiReasoningTitle),
+                            subtitle: Text(l10n.aiReasoningSubtitle),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('显示聊天顶部选择条'),
-                      subtitle: const Text('控制聊天页里可展开的计划/档位选择组件'),
-                      value: showChatContextToggle,
-                      onChanged: (value) => ref
-                          .read(showChatContextToggleProvider.notifier)
-                          .setEnabled(value),
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('显示聊天预测组件'),
-                      subtitle: const Text('控制输入框上方的用户行为预测与快捷建议'),
-                      value: showChatPredictionDock,
-                      onChanged: (value) => ref
-                          .read(showChatPredictionDockProvider.notifier)
-                          .setEnabled(value),
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('显示 AI 透明胶囊'),
-                      subtitle: const Text('控制聊天页底部的 AI 系统完成情况与透明化浮层'),
-                      value: showChatTransparencyCapsule,
-                      onChanged: (value) => ref
-                          .read(showChatTransparencyCapsuleProvider.notifier)
-                          .setEnabled(value),
-                      activeThumbColor: DS.primaryBase,
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '动效强度',
-                        style: DS.labelSmall.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: MotionIntensityLevel.values
-                          .map(
-                            (level) => ChoiceChip(
-                              label: Text(_motionIntensityLabel(level)),
-                              selected: motionIntensityLevel == level,
-                              onSelected: (_) => ref
-                                  .read(motionIntensityLevelProvider.notifier)
-                                  .setLevel(level),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: [
+                                ChoiceChip(
+                                  label: Text(l10n.aiReasoningFastLabel),
+                                  selected: aiReasoningMode == 'fast',
+                                  onSelected: (_) => ref
+                                      .read(aiReasoningModeProvider.notifier)
+                                      .setMode('fast'),
+                                ),
+                                ChoiceChip(
+                                  label: Text(l10n.aiReasoningBalancedLabel),
+                                  selected: aiReasoningMode == 'balanced',
+                                  onSelected: (_) => ref
+                                      .read(aiReasoningModeProvider.notifier)
+                                      .setMode('balanced'),
+                                ),
+                                ChoiceChip(
+                                  label: Text(l10n.aiReasoningDeepLabel),
+                                  selected: aiReasoningMode == 'deep',
+                                  onSelected: (_) => ref
+                                      .read(aiReasoningModeProvider.notifier)
+                                      .setMode('deep'),
+                                ),
+                              ],
                             ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: DS.spacing10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(DS.spacing12),
-                      decoration: BoxDecoration(
-                        borderRadius: DS.borderRadius12,
-                        color: Color.alphaBlend(
-                          DS.primaryBase.withValues(alpha: 0.05),
-                          DS.surfaceSecondary,
-                        ),
-                      ),
-                      child: Text(
-                        _motionIntensityDescription(motionIntensityLevel),
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    aiUsageSummary.when(
-                      data: (summary) => _buildAiUsageSummary(summary),
-                      loading: () =>
-                          const LinearProgressIndicator(minHeight: 3),
-                      error: (_, __) => Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: DS.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          '额度面板暂时不可用，但档位切换仍可正常生效。',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    aiOpsDashboard.when(
-                      data: (dashboard) => Column(
-                        children: [
-                          _buildAiUserViewPanel(
-                            dashboard,
-                            predictionAnalytics.valueOrNull,
+                          ),
+                          const SizedBox(height: DS.spacing16),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.showChatContextToggleTitle),
+                            subtitle: Text(l10n.showChatContextToggleSubtitle),
+                            value: showChatContextToggle,
+                            onChanged: (value) => ref
+                                .read(showChatContextToggleProvider.notifier)
+                                .setEnabled(value),
+                            activeThumbColor: DS.primaryBase,
+                          ),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.showChatPredictionDockTitle),
+                            subtitle: Text(l10n.showChatPredictionDockSubtitle),
+                            value: showChatPredictionDock,
+                            onChanged: (value) => ref
+                                .read(showChatPredictionDockProvider.notifier)
+                                .setEnabled(value),
+                            activeThumbColor: DS.primaryBase,
+                          ),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.showChatTransparencyCapsuleTitle),
+                            subtitle:
+                                Text(l10n.showChatTransparencyCapsuleSubtitle),
+                            value: showChatTransparencyCapsule,
+                            onChanged: (value) => ref
+                                .read(showChatTransparencyCapsuleProvider
+                                    .notifier)
+                                .setEnabled(value),
+                            activeThumbColor: DS.primaryBase,
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '动效强度',
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing8,
+                            runSpacing: DS.spacing8,
+                            children: MotionIntensityLevel.values
+                                .map(
+                                  (level) => ChoiceChip(
+                                    label: Text(_motionIntensityLabel(level)),
+                                    selected: motionIntensityLevel == level,
+                                    onSelected: (_) => ref
+                                        .read(motionIntensityLevelProvider
+                                            .notifier)
+                                        .setLevel(level),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: DS.spacing10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              borderRadius: DS.borderRadius12,
+                              color: Color.alphaBlend(
+                                DS.primaryBase.withValues(alpha: 0.05),
+                                DS.surfaceSecondary,
+                              ),
+                            ),
+                            child: Text(
+                              _motionIntensityDescription(motionIntensityLevel),
+                              style: DS.bodySmall.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: DS.spacing12),
-                          _buildAiDeveloperViewPanel(
-                            dashboard,
-                            predictionAnalytics.valueOrNull,
+                          aiUsageSummary.when(
+                            data: (summary) => _buildAiUsageSummary(summary),
+                            loading: () =>
+                                const LinearProgressIndicator(minHeight: 3),
+                            error: (_, __) => Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                '额度面板暂时不可用，但档位切换仍可正常生效。',
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
-                      loading: () =>
-                          const LinearProgressIndicator(minHeight: 3),
-                      error: (_, __) => Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: DS.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。',
-                        ),
-                      ),
-                    ),
+                          const SizedBox(height: DS.spacing12),
+                          aiOpsDashboard.when(
+                            data: (dashboard) => Column(
+                              children: [
+                                _buildAiUserViewPanel(
+                                  dashboard,
+                                  predictionAnalytics.valueOrNull,
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildAiDeveloperViewPanel(
+                                  dashboard,
+                                  predictionAnalytics.valueOrNull,
+                                ),
+                              ],
+                            ),
+                            loading: () =>
+                                const LinearProgressIndicator(minHeight: 3),
+                            error: (_, __) => Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。',
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       crossFadeState: _themeExpanded
@@ -892,7 +916,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         if (v) {
                           final granted = await ref
                               .read(
-                                  notificationPermissionStatusProvider.notifier,)
+                                notificationPermissionStatusProvider.notifier,
+                              )
                               .requestPermission();
                           if (!granted) {
                             if (context.mounted) {
@@ -1068,7 +1093,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() => _isGenerating = true);
 
     try {
-      final capsule = await ref.read(capsuleRepositoryProvider).generateCapsule();
+      final capsule =
+          await ref.read(capsuleRepositoryProvider).generateCapsule();
       await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
       await ref.read(capsuleStatsProvider.notifier).fetchStats();
       await ref.read(generationJobsProvider.notifier).fetchJobs();
@@ -1094,9 +1120,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     capsule.content.trim().isEmpty
                         ? '已生成新的胶囊，点击下方即可查看完整内容。'
                         : capsule.content.trim(),
-                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                          color: DS.textSecondary,
-                        ),
+                    style:
+                        Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                            ),
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1109,7 +1136,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       Navigator.of(sheetContext).pop();
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => CapsuleDetailScreen(capsuleId: capsule.id),
+                          builder: (_) =>
+                              CapsuleDetailScreen(capsuleId: capsule.id),
                         ),
                       );
                     },
@@ -1556,8 +1584,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         onPressed: () async {
                           if (!hasPermission) {
                             final granted = await ref
-                                .read(notificationPermissionStatusProvider
-                                    .notifier,)
+                                .read(
+                                  notificationPermissionStatusProvider.notifier,
+                                )
                                 .requestPermission();
                             if (!granted && context.mounted) {
                               _showOpenSettingsDialog(context);
@@ -1603,38 +1632,38 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }
 
   Widget _buildPermissionChip(String label, bool enabled) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: enabled
-            ? DS.success.withValues(alpha: 0.1)
-            : DS.surfaceTertiary.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(DS.radius8),
-        border: Border.all(
-          color: enabled ? DS.success : DS.borderSubtle,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            enabled ? Icons.check : Icons.close,
-            size: 14,
-            color: enabled ? DS.success : DS.textSecondary,
+        decoration: BoxDecoration(
+          color: enabled
+              ? DS.success.withValues(alpha: 0.1)
+              : DS.surfaceTertiary.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(DS.radius8),
+          border: Border.all(
+            color: enabled ? DS.success : DS.borderSubtle,
           ),
-          const SizedBox(width: DS.spacing4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: DS.fontSizeXs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              enabled ? Icons.check : Icons.close,
+              size: 14,
               color: enabled ? DS.success : DS.textSecondary,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: enabled ? DS.success : DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 
   void _showOpenSettingsDialog(BuildContext context) {
     showDialog<void>(

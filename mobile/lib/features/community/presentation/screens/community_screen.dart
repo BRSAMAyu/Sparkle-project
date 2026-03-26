@@ -12,6 +12,9 @@ import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
 
+/// Selected feed filter index (0 = Global, 1 = My Squad, 2 = Following)
+final _communityFeedFilterProvider = StateProvider<int>((ref) => 0);
+
 class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({super.key});
 
@@ -46,7 +49,7 @@ class CommunityScreen extends ConsumerWidget {
                     itemCount: posts.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        return _buildHeader(context);
+                        return _buildHeader(context, ref);
                       }
                       final post = posts[index - 1];
                       return SparkleStaggerItem(
@@ -85,50 +88,59 @@ class CommunityScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(DS.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Community',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: DS.textPrimary,
-                letterSpacing: 1.2,
-              ),
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
+    final selectedIndex = ref.watch(_communityFeedFilterProvider);
+    const filters = ['Global Feed', 'My Squad', 'Following'];
+    return Padding(
+      padding: const EdgeInsets.all(DS.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Community',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: DS.textPrimary,
+              letterSpacing: 1.2,
             ),
-            const SizedBox(height: DS.sm),
-            Text(
-              'Discover what others are learning',
-              style: TextStyle(
-                fontSize: 14,
-                color: DS.textSecondary,
-              ),
+          ),
+          const SizedBox(height: DS.sm),
+          Text(
+            'Discover what others are learning',
+            style: TextStyle(
+              fontSize: 14,
+              color: DS.textSecondary,
             ),
-            const SizedBox(height: DS.lg),
-            // Filter Tabs (Placeholder)
-            const SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _FilterChip(label: 'Global Feed', isSelected: true),
-                  SizedBox(width: DS.sm),
-                  _FilterChip(label: 'My Squad', isSelected: false),
-                  SizedBox(width: DS.sm),
-                  _FilterChip(label: 'Following', isSelected: false),
+          ),
+          const SizedBox(height: DS.lg),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (int i = 0; i < filters.length; i++) ...[
+                  _FilterChip(
+                    label: filters[i],
+                    isSelected: selectedIndex == i,
+                    onTap: () {
+                      ref.read(_communityFeedFilterProvider.notifier).state = i;
+                      ref.read(feedProvider.notifier).refresh();
+                    },
+                  ),
+                  if (i < filters.length - 1) const SizedBox(width: DS.sm),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) => ScrollEdgeHaptics(
         child: ListView(
           children: [
-            _buildHeader(context),
+            _buildHeader(context, ref),
             const SizedBox(height: DS.spacing64),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -158,13 +170,14 @@ class CommunityScreen extends ConsumerWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.isSelected});
+  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
   final String label;
   final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => SparklePressable(
-        onTap: () {},
+        onTap: onTap,
         feedbackEvent: SensoryFeedbackEvent.selection,
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(20),

@@ -8,6 +8,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 
 class LoggedFocusSession {
   const LoggedFocusSession({
@@ -65,11 +66,7 @@ class FocusRepository {
     }
 
     try {
-      // 🔧 Fix: Ensure taskId is a valid UUID or null. 
-      // "quick_focus_" IDs are local-only and will cause backend validation errors.
-      final validTaskId = (taskId != null && taskId.length == 36 && !taskId.contains('_')) 
-          ? taskId 
-          : null;
+      final validTaskId = (taskId != null && isServerTaskId(taskId)) ? taskId : null;
 
       final request = FocusSessionRequest(
         taskId: validTaskId,

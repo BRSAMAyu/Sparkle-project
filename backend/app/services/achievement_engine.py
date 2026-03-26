@@ -1970,3 +1970,18 @@ class ContractService:
 
         # 检查契约状态
         await self.check_contract_status(user_id)
+
+    # ------------------------------------------------------------------
+    # Public aliases for internal methods used by the API layer
+    # ------------------------------------------------------------------
+    async def get_achievement(self, achievement_id: str):
+        """Public alias for _get_achievement."""
+        return await self._get_achievement(achievement_id)
+
+    async def is_unlocked(self, user_id, achievement_id: str) -> bool:
+        """Public alias for _is_unlocked."""
+        return await self._is_unlocked(user_id, achievement_id)
+
+    def build_achievement_detail(self, achievement, locale: str | None = None):
+        """Public alias for _build_achievement_detail."""
+        return self._build_achievement_detail(achievement, locale)

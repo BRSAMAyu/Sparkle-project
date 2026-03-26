@@ -72,6 +72,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final visibleRelations =
+        detail.relations.where(_isRenderableRelation).toList(growable: false);
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -290,13 +292,13 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           ),
 
           // Related Knowledge Nodes
-          if (detail.relations.isNotEmpty)
+          if (visibleRelations.isNotEmpty)
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
                   title: context.l10n.knowledgeRelatedNodes,
                   child: Column(
-                    children: detail.relations.map((relation) {
+                    children: visibleRelations.map((relation) {
                       final isSource = relation.sourceNodeId == nodeId;
                       final relatedNodeId = isSource
                           ? relation.targetNodeId
@@ -314,7 +316,16 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         subtitle: Text(relation.relationLabel),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
-                          unawaited(context.push('/galaxy/node/$relatedNodeId'));
+                          if (!_isRenderableNodeName(relatedNodeName) ||
+                              relatedNodeId.trim().isEmpty) {
+                            AppFeedback.info(
+                              context,
+                              '这个节点已被清理，星图会在下次刷新后同步。',
+                            );
+                            return;
+                          }
+                          unawaited(
+                              context.push('/galaxy/node/$relatedNodeId'));
                         },
                       );
                     }).toList(),
@@ -415,7 +426,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(task.title),
                             subtitle: Text(
-                                '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}',),
+                              '${context.l10n.knowledgeEstimated} ${task.estimatedMinutes} ${context.l10n.knowledgeMinutes}',
+                            ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               unawaited(context.push('/tasks/${task.id}'));
@@ -520,6 +532,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           onApplied: () {
             ref.invalidate(knowledgeDetailProvider(nodeId));
             ref.invalidate(enhancedGalaxyRepositoryProvider);
+            ref.invalidate(galaxyProvider);
           },
         ),
       ),
@@ -541,6 +554,33 @@ class KnowledgeDetailScreen extends ConsumerWidget {
       default:
         return Icons.circle;
     }
+  }
+
+  bool _isRenderableRelation(NodeRelation relation) {
+    final isSource = relation.sourceNodeId == nodeId;
+    final relatedNodeName =
+        isSource ? relation.targetNodeName : relation.sourceNodeName;
+    final relatedNodeId =
+        isSource ? relation.targetNodeId : relation.sourceNodeId;
+    return relatedNodeId.trim().isNotEmpty &&
+        _isRenderableNodeName(relatedNodeName);
+  }
+
+  bool _isRenderableNodeName(String? rawName) {
+    final name = rawName?.trim() ?? '';
+    if (name.isEmpty || name.contains('�')) {
+      return false;
+    }
+    if (RegExp(r'^J\d', caseSensitive: false).hasMatch(name)) {
+      return false;
+    }
+    if (RegExp(r'^[a-zA-Z]\d{2,}$').hasMatch(name)) {
+      return false;
+    }
+    if (name.toLowerCase() == 'null') {
+      return false;
+    }
+    return !RegExp(r'^[?？·•\-_=\s]+$').hasMatch(name);
   }
 }
 
@@ -750,7 +790,8 @@ class _NodeExpansionSheet extends ConsumerStatefulWidget {
   final VoidCallback onApplied;
 
   @override
-  ConsumerState<_NodeExpansionSheet> createState() => _NodeExpansionSheetState();
+  ConsumerState<_NodeExpansionSheet> createState() =>
+      _NodeExpansionSheetState();
 }
 
 class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
@@ -808,11 +849,12 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       _error = null;
     });
     try {
-      final created = await ref.read(galaxyRepositoryProvider).applyExpansionCandidates(
-            widget.nodeId,
-            promptVersion: _promptVersion ?? 'v1',
-            candidates: selected,
-          );
+      final created =
+          await ref.read(galaxyRepositoryProvider).applyExpansionCandidates(
+                widget.nodeId,
+                promptVersion: _promptVersion ?? 'v1',
+                candidates: selected,
+              );
       if (!mounted) {
         return;
       }
@@ -909,9 +951,13 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                         spacing: DS.spacing8,
                         runSpacing: DS.spacing8,
                         children: [
-                          _CandidateMetaChip(_relationLabel(candidate.relationToTrigger)),
-                          _CandidateMetaChip('重要度 ${candidate.importanceLevel}'),
-                          ...candidate.keywords.take(2).map(_CandidateMetaChip.new),
+                          _CandidateMetaChip(
+                              _relationLabel(candidate.relationToTrigger)),
+                          _CandidateMetaChip(
+                              '重要度 ${candidate.importanceLevel}'),
+                          ...candidate.keywords
+                              .take(2)
+                              .map(_CandidateMetaChip.new),
                         ],
                       ),
                     ],

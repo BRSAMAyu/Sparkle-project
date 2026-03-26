@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
@@ -68,8 +70,9 @@ class ChatBubble extends ConsumerStatefulWidget {
 
 class _ChatBubbleState extends ConsumerState<ChatBubble>
     with TickerProviderStateMixin {
-  static final Map<String, String> _responseFeedbackSelections =
-      <String, String>{};
+  static const int _maxResponseFeedbackSelections = 200;
+  static final LinkedHashMap<String, String> _responseFeedbackSelections =
+      LinkedHashMap<String, String>();
   late AnimationController _entryController;
   late Animation<double> _scale;
   late Animation<Offset> _position;
@@ -223,9 +226,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       ? (widget.message as ChatMessageModel).responseId
       : null;
 
-  String? get _responseFeedbackSelection => _responseId == null
-      ? null
-      : _responseFeedbackSelections[_responseId!];
+  String? get _responseFeedbackSelection =>
+      _responseId == null ? null : _responseFeedbackSelections[_responseId!];
+
+  void _rememberResponseFeedbackSelection(String responseId, String selection) {
+    _responseFeedbackSelections.remove(responseId);
+    _responseFeedbackSelections[responseId] = selection;
+    if (_responseFeedbackSelections.length > _maxResponseFeedbackSelections) {
+      _responseFeedbackSelections
+          .remove(_responseFeedbackSelections.keys.first);
+    }
+  }
 
   List<WidgetPayload> get _widgets => widget.message is ChatMessageModel
       ? (widget.message as ChatMessageModel).widgets ?? const []
@@ -366,7 +377,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       Navigator.pop(context);
                       if (_responseId != null) {
                         setState(() {
-                          _responseFeedbackSelections[_responseId!] = 'up';
+                          _rememberResponseFeedbackSelection(
+                              _responseId!, 'up');
                         });
                       }
                       widget.onResponseFeedback!(
@@ -387,7 +399,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       Navigator.pop(context);
                       if (_responseId != null) {
                         setState(() {
-                          _responseFeedbackSelections[_responseId!] = 'down';
+                          _rememberResponseFeedbackSelection(
+                            _responseId!,
+                            'down',
+                          );
                         });
                       }
                       widget.onResponseFeedback!(
@@ -956,9 +971,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             selected: isPositive,
             onTap: selection == null
                 ? () {
+                    unawaited(SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.confirm));
                     if (_responseId != null) {
                       setState(() {
-                        _responseFeedbackSelections[_responseId!] = 'up';
+                        _rememberResponseFeedbackSelection(_responseId!, 'up');
                       });
                     }
                     widget.onResponseFeedback!(
@@ -975,9 +992,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             selected: isNegative,
             onTap: selection == null
                 ? () {
+                    unawaited(SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.confirm));
                     if (_responseId != null) {
                       setState(() {
-                        _responseFeedbackSelections[_responseId!] = 'down';
+                        _rememberResponseFeedbackSelection(
+                          _responseId!,
+                          'down',
+                        );
                       });
                     }
                     widget.onResponseFeedback!(

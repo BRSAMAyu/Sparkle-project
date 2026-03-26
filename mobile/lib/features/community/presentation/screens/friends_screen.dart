@@ -407,7 +407,9 @@ class _PendingRequestsTab extends ConsumerWidget {
                     ),
                     title: Text(user.displayName),
                     subtitle: const Text('希望先和你建立好友关系'),
-                    onTap: () {},
+                    onTap: () => context.push(
+                      '/community/users/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

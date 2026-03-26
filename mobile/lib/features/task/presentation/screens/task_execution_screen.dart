@@ -30,6 +30,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart'
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
+import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -97,8 +98,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       ),
     );
     final task = ref.read(activeTaskProvider);
-    _currentTimerDuration =
-        task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
+    final estimated = task?.estimatedMinutes ?? 0;
+    _currentTimerDuration = estimated > 0 ? estimated * 60 : 0;
+    if (estimated > 0) _timerMode = TimerMode.countDown;
 
     // 🔧 Fix: Call startTask if the task is PENDING
     // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
@@ -221,6 +223,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           _completionResult = result;
         });
         unawaited(_loadFocusCompletionSummary(minutes));
+        if (result != null) {
+          unawaited(_processAchievementUnlocks(result));
+        }
         if (result == null) {
           _finishCompletionFlow(showFeedbackDialog: false);
           AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
@@ -315,6 +320,23 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       setState(() {
         _todayFocusMinutesSnapshot ??= fallbackToday;
       });
+    }
+  }
+
+  Future<void> _processAchievementUnlocks(TaskCompletionResult result) async {
+    if (result.unlockedAchievements.isEmpty) return;
+    final notifier = ref.read(visualElementsNotifierProvider.notifier);
+    for (final achievement in result.unlockedAchievements) {
+      final id = (achievement is Map<String, dynamic>)
+          ? (achievement['id'] ?? achievement['achievement_id'])?.toString()
+          : null;
+      if (id != null && id.isNotEmpty) {
+        try {
+          await notifier.unlockByAchievement(id);
+        } catch (e) {
+          debugPrint('Visual element unlock failed for $id: $e');
+        }
+      }
     }
   }
 
@@ -818,6 +840,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             _todayFocusMinutesSnapshot ??
                             _completionMinutesSnapshot,
                         expGained: activeTask.difficulty * 10,
+                        unlockedAchievements:
+                            _completionResult?.unlockedAchievements ??
+                            const [],
                         onSkip: _skipCelebration,
                         continueLabel: l10n.taskExecutionTapToContinue,
                         skipLabel: l10n.taskExecutionSkipAnimation,
@@ -922,6 +947,7 @@ class _FocusCompletionPanel extends StatelessWidget {
     required this.onSkip,
     required this.continueLabel,
     required this.skipLabel,
+    this.unlockedAchievements = const [],
   });
 
   final bool visible;
@@ -929,6 +955,7 @@ class _FocusCompletionPanel extends StatelessWidget {
   final int sessionMinutes;
   final int todayMinutes;
   final int expGained;
+  final List<dynamic> unlockedAchievements;
   final VoidCallback onSkip;
   final String continueLabel;
   final String skipLabel;
@@ -1065,6 +1092,61 @@ class _FocusCompletionPanel extends StatelessWidget {
                             ),
                       ),
                     ),
+                    if (unlockedAchievements.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing12),
+                      ...unlockedAchievements.map((a) {
+                        final data = a is Map<String, dynamic>
+                            ? a
+                            : const <String, dynamic>{};
+                        final name = (data['name'] ?? data['title'] ?? '')
+                            .toString();
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing16,
+                            vertical: DS.spacing8,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFFFD700)
+                                    .withValues(alpha: 0.18),
+                                const Color(0xFFFFA500)
+                                    .withValues(alpha: 0.10),
+                              ],
+                            ),
+                            borderRadius: DS.borderRadius12,
+                            border: Border.all(
+                              color: const Color(0xFFFFD700)
+                                  .withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.emoji_events_rounded,
+                                color: const Color(0xFFFFB300),
+                                size: 20,
+                              ),
+                              const SizedBox(width: DS.spacing8),
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: DS.textPrimary,
+                                        fontWeight: DS.fontWeightSemiBold,
+                                      ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                     const SizedBox(height: DS.spacing12),
                     Text(
                       continueLabel,

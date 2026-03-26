@@ -363,8 +363,10 @@ class DemoDataService {
       score += 1;
     }
     if (node.name.contains('写作') && task.tags.contains('Writing')) score += 4;
-    if (node.name.contains('摄影') && task.tags.contains('Photography')) score += 4;
-    if (node.name.contains('统计') && task.tags.contains('Statistics')) score += 4;
+    if (node.name.contains('摄影') && task.tags.contains('Photography'))
+      score += 4;
+    if (node.name.contains('统计') && task.tags.contains('Statistics'))
+      score += 4;
     if (node.name.contains('运动') && task.tags.contains('Recovery')) score += 4;
     return score;
   }
@@ -778,7 +780,7 @@ class DemoDataService {
     edges.addAll(_createCrossFieldEdges(nodes));
 
     final galaxy = GalaxyGraphResponse(
-      nodes: nodes,
+      nodes: _withReplayUnlockOrder(nodes),
       edges: edges,
       userFlameIntensity: 0.85,
     );
@@ -1628,45 +1630,46 @@ class DemoDataService {
   KnowledgeDetailResponse getDemoNodeDetail(String nodeId) {
     // Find the node in our galaxy
     final galaxyNodes = demoGalaxy.nodes;
-    final node = galaxyNodes.firstWhere(
-      (n) => n.id == nodeId,
-      orElse: () => galaxyNodes.first,
-    );
+    final node = _findDemoNodeById(galaxyNodes, nodeId);
+    if (node == null) {
+      throw Exception('当前节点不存在或已被清理，请返回星图后重试');
+    }
 
     // Get related nodes through edges
     final edges = demoGalaxy.edges;
     final relations = edges
         .where((e) => e.sourceId == nodeId || e.targetId == nodeId)
         .map((e) {
-      final isSource = e.sourceId == nodeId;
-      final relatedNodeId = isSource ? e.targetId : e.sourceId;
-      final relatedNode = galaxyNodes.firstWhere(
-        (n) => n.id == relatedNodeId,
-        orElse: () => node,
-      );
+          final isSource = e.sourceId == nodeId;
+          final relatedNodeId = isSource ? e.targetId : e.sourceId;
+          final relatedNode = _findDemoNodeById(galaxyNodes, relatedNodeId);
+          if (relatedNode == null ||
+              !_isRenderableDemoNodeName(relatedNode.name)) {
+            return null;
+          }
 
-      return NodeRelation(
-        id: e.id,
-        sourceNodeId: e.sourceId,
-        targetNodeId: e.targetId,
-        relationType: e.relationType.toString().split('.').last,
-        strength: e.strength,
-        sourceNodeName: isSource ? node.name : relatedNode.name,
-        targetNodeName: isSource ? relatedNode.name : node.name,
-      );
-    }).toList();
+          return NodeRelation(
+            id: e.id,
+            sourceNodeId: e.sourceId,
+            targetNodeId: e.targetId,
+            relationType: e.relationType.toString().split('.').last,
+            strength: e.strength,
+            sourceNodeName: isSource ? node.name : relatedNode.name,
+            targetNodeName: isSource ? relatedNode.name : node.name,
+          );
+        })
+        .whereType<NodeRelation>()
+        .toList();
 
     // Determine sector code string
     final sectorCode = node.sector.toString().split('.').last.toUpperCase();
     final nodeDomains = _domainIdsForNode(node);
     final semanticTokens = _semanticTokensForNode(node);
-    final relatedTasks = [...demoTasks]
-      ..sort(
+    final relatedTasks = [...demoTasks]..sort(
         (a, b) => _taskScoreForNode(b, node, nodeDomains, semanticTokens)
             .compareTo(_taskScoreForNode(a, node, nodeDomains, semanticTokens)),
       );
-    final relatedPlans = [...demoPlans]
-      ..sort(
+    final relatedPlans = [...demoPlans]..sort(
         (a, b) => _planScoreForNode(b, node, nodeDomains, semanticTokens)
             .compareTo(_planScoreForNode(a, node, nodeDomains, semanticTokens)),
       );
@@ -1716,6 +1719,48 @@ class DemoDataService {
         decayPaused: node.studyCount % 10 == 0,
       ),
     );
+  }
+
+  List<GalaxyNodeModel> _withReplayUnlockOrder(List<GalaxyNodeModel> nodes) {
+    final replayBase = DateTime(2026, 1, 3, 9);
+    var unlockedOffset = 0;
+    var lockedOffset = nodes.where((node) => node.isUnlocked).length;
+
+    return nodes.map((node) {
+      if (node.firstUnlockAt != null) {
+        return node;
+      }
+      final offset = node.isUnlocked ? unlockedOffset++ : lockedOffset++;
+      return node.copyWith(
+        firstUnlockAt: replayBase.add(Duration(seconds: offset * 8)),
+      );
+    }).toList(growable: false);
+  }
+
+  bool _isRenderableDemoNodeName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return false;
+    }
+    if (trimmed.contains('�')) {
+      return false;
+    }
+    if (RegExp(r'^J\d', caseSensitive: false).hasMatch(trimmed)) {
+      return false;
+    }
+    return !RegExp(r'^[?？·•\-_=\s]+$').hasMatch(trimmed);
+  }
+
+  GalaxyNodeModel? _findDemoNodeById(
+    List<GalaxyNodeModel> nodes,
+    String nodeId,
+  ) {
+    for (final node in nodes) {
+      if (node.id == nodeId) {
+        return node;
+      }
+    }
+    return null;
   }
 
   // --- Plan Data ---
@@ -1781,10 +1826,12 @@ class DemoDataService {
         description: '把白天的高认知任务、晚间语言复盘和睡前降速动作重新排顺。',
         totalEstimatedHours: 20,
         tasks: demoTasks
-            .where((task) =>
-                task.tags.contains('Academic') ||
-                task.tags.contains('Language') ||
-                task.tags.contains('Wellness'),)
+            .where(
+              (task) =>
+                  task.tags.contains('Academic') ||
+                  task.tags.contains('Language') ||
+                  task.tags.contains('Wellness'),
+            )
             .take(4)
             .toList(),
       ),
@@ -1844,9 +1891,11 @@ class DemoDataService {
         subject: '健康节律',
         planStage: PlanStage.review,
         tasks: demoTasks
-            .where((task) =>
-                task.tags.contains('Wellness') ||
-                task.tags.contains('Humanities'),)
+            .where(
+              (task) =>
+                  task.tags.contains('Wellness') ||
+                  task.tags.contains('Humanities'),
+            )
             .take(3)
             .toList(),
       ),
@@ -1892,47 +1941,47 @@ class DemoDataService {
     if (_demoChatHistoryCache != null) return _demoChatHistoryCache!;
     final now = _now;
     _demoChatHistoryCache = [
-        ChatMessageModel(
-          id: 'msg_1',
-          conversationId: 'demo_conv_1',
-          role: MessageRole.user,
-          content: '我最近白天能学进去，但一到晚上就很想逃避输出任务，尤其是英语口语和复盘。',
-          createdAt: now.subtract(const Duration(hours: 2)),
-        ),
-        ChatMessageModel(
-          id: 'msg_2',
-          conversationId: 'demo_conv_1',
-          role: MessageRole.assistant,
-          content:
-              '这更像是“白天把高能量都花掉了，晚上只剩下对输出的心理负担”。可以把晚上任务改成两段：先做 10 分钟低门槛跟说，再做 10 分钟复盘，而不是一口气要求自己讲完整段内容。',
-          createdAt: now.subtract(const Duration(hours: 1, minutes: 59)),
-        ),
-        ChatMessageModel(
-          id: 'msg_3',
-          conversationId: 'demo_conv_1',
-          role: MessageRole.user,
-          content: '那我今晚是不是可以先做“口语话题卡 2 轮跟说”，再补一句中文反思？',
-          createdAt: now.subtract(const Duration(minutes: 30)),
-        ),
-        ChatMessageModel(
-          id: 'msg_4',
-          conversationId: 'demo_conv_1',
-          role: MessageRole.assistant,
-          content: '可以，这样的组合很适合你当前的晚间状态。我已经按“低门槛开场 + 简短复盘”帮你重排了今晚动作。',
-          createdAt: now.subtract(const Duration(minutes: 29)),
-          toolResults: [
-            ToolResultModel(
-              success: true,
-              toolName: 'generate_plan',
-              data: {'status': 'completed'},
-            ),
-          ],
-        ),
-        ChatMessageModel(
-          id: 'msg_5',
-          conversationId: 'demo_conv_1',
-          role: MessageRole.assistant,
-          content: '''
+      ChatMessageModel(
+        id: 'msg_1',
+        conversationId: 'demo_conv_1',
+        role: MessageRole.user,
+        content: '我最近白天能学进去，但一到晚上就很想逃避输出任务，尤其是英语口语和复盘。',
+        createdAt: now.subtract(const Duration(hours: 2)),
+      ),
+      ChatMessageModel(
+        id: 'msg_2',
+        conversationId: 'demo_conv_1',
+        role: MessageRole.assistant,
+        content:
+            '这更像是“白天把高能量都花掉了，晚上只剩下对输出的心理负担”。可以把晚上任务改成两段：先做 10 分钟低门槛跟说，再做 10 分钟复盘，而不是一口气要求自己讲完整段内容。',
+        createdAt: now.subtract(const Duration(hours: 1, minutes: 59)),
+      ),
+      ChatMessageModel(
+        id: 'msg_3',
+        conversationId: 'demo_conv_1',
+        role: MessageRole.user,
+        content: '那我今晚是不是可以先做“口语话题卡 2 轮跟说”，再补一句中文反思？',
+        createdAt: now.subtract(const Duration(minutes: 30)),
+      ),
+      ChatMessageModel(
+        id: 'msg_4',
+        conversationId: 'demo_conv_1',
+        role: MessageRole.assistant,
+        content: '可以，这样的组合很适合你当前的晚间状态。我已经按“低门槛开场 + 简短复盘”帮你重排了今晚动作。',
+        createdAt: now.subtract(const Duration(minutes: 29)),
+        toolResults: [
+          ToolResultModel(
+            success: true,
+            toolName: 'generate_plan',
+            data: {'status': 'completed'},
+          ),
+        ],
+      ),
+      ChatMessageModel(
+        id: 'msg_5',
+        conversationId: 'demo_conv_1',
+        role: MessageRole.assistant,
+        content: '''
 今晚的顺序建议：
 
 1. 先做 10 分钟跟说，目标只有“张嘴”
@@ -1940,20 +1989,20 @@ class DemoDataService {
 3. 最后补 5 分钟感受记录，判断是累还是怕出错
 
 你现在不是缺努力，而是需要更温和的起步阻力。''',
-          createdAt: now.subtract(const Duration(minutes: 28)),
-        ),
-        ChatMessageModel(
-          id: 'msg_6',
-          conversationId: 'demo_conv_2',
-          role: MessageRole.user,
-          content: '我想把一段英文自我介绍说得更自然，但一紧张就只会背稿子。',
-          createdAt: now.subtract(const Duration(days: 1)),
-        ),
-        ChatMessageModel(
-          id: 'msg_7',
-          conversationId: 'demo_conv_2',
-          role: MessageRole.assistant,
-          content: '''
+        createdAt: now.subtract(const Duration(minutes: 28)),
+      ),
+      ChatMessageModel(
+        id: 'msg_6',
+        conversationId: 'demo_conv_2',
+        role: MessageRole.user,
+        content: '我想把一段英文自我介绍说得更自然，但一紧张就只会背稿子。',
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+      ChatMessageModel(
+        id: 'msg_7',
+        conversationId: 'demo_conv_2',
+        role: MessageRole.assistant,
+        content: '''
 更自然的关键不是“背得更熟”，而是给每一句一个真实意图。
 
 - 第一段只负责打招呼和定位自己
@@ -1961,20 +2010,20 @@ class DemoDataService {
 - 第三段补一个具体例子
 
 你可以先用关键词提纲练习，而不是整段背诵。这样卡住时也更容易换种说法。''',
-          createdAt: now.subtract(const Duration(days: 1)),
-        ),
-        ChatMessageModel(
-          id: 'msg_8',
-          conversationId: 'demo_conv_3',
-          role: MessageRole.user,
-          content: '我拍了几张傍晚通勤的照片，但总觉得画面很满，不知道问题出在哪。',
-          createdAt: now.subtract(const Duration(days: 2)),
-        ),
-        ChatMessageModel(
-          id: 'msg_9',
-          conversationId: 'demo_conv_3',
-          role: MessageRole.assistant,
-          content: '''
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+      ChatMessageModel(
+        id: 'msg_8',
+        conversationId: 'demo_conv_3',
+        role: MessageRole.user,
+        content: '我拍了几张傍晚通勤的照片，但总觉得画面很满，不知道问题出在哪。',
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+      ChatMessageModel(
+        id: 'msg_9',
+        conversationId: 'demo_conv_3',
+        role: MessageRole.assistant,
+        content: '''
 先别急着追求“丰富”，你这组图更像是缺一个明确主角。
 
 你可以试试这三个检查点：
@@ -1984,20 +2033,20 @@ class DemoDataService {
 - 视线能不能在 2 秒内落到主题上
 
 如果你愿意，我可以按你常拍的风格给你一套“通勤街景”取舍清单。''',
-          createdAt: now.subtract(const Duration(days: 2)),
-        ),
-        ChatMessageModel(
-          id: 'msg_10',
-          conversationId: 'demo_conv_4',
-          role: MessageRole.user,
-          content: '为什么我周末一睡晚，整个周日都会觉得脑子很钝？',
-          createdAt: now.subtract(const Duration(days: 3)),
-        ),
-        ChatMessageModel(
-          id: 'msg_11',
-          conversationId: 'demo_conv_4',
-          role: MessageRole.assistant,
-          content: '''
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+      ChatMessageModel(
+        id: 'msg_10',
+        conversationId: 'demo_conv_4',
+        role: MessageRole.user,
+        content: '为什么我周末一睡晚，整个周日都会觉得脑子很钝？',
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+      ChatMessageModel(
+        id: 'msg_11',
+        conversationId: 'demo_conv_4',
+        role: MessageRole.assistant,
+        content: '''
 睡晚之后觉得“整天都钝”，通常不只是睡眠时长问题，而是节律被整体推迟了。
 
 - 起床变晚，第一餐和出门时间也一起后移
@@ -2005,20 +2054,20 @@ class DemoDataService {
 - 到了晚上又不够困，形成循环
 
 所以周末更适合保留固定起床时间，把任务改轻，而不是彻底打乱节奏。''',
-          createdAt: now.subtract(const Duration(days: 3)),
-        ),
-        ChatMessageModel(
-          id: 'msg_12',
-          conversationId: 'demo_conv_5',
-          role: MessageRole.user,
-          content: '我对以后做什么还没有完全确定，作品集是不是也可以先做成“过程型”的？',
-          createdAt: now.subtract(const Duration(days: 4)),
-        ),
-        ChatMessageModel(
-          id: 'msg_13',
-          conversationId: 'demo_conv_5',
-          role: MessageRole.assistant,
-          content: '''
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+      ChatMessageModel(
+        id: 'msg_12',
+        conversationId: 'demo_conv_5',
+        role: MessageRole.user,
+        content: '我对以后做什么还没有完全确定，作品集是不是也可以先做成“过程型”的？',
+        createdAt: now.subtract(const Duration(days: 4)),
+      ),
+      ChatMessageModel(
+        id: 'msg_13',
+        conversationId: 'demo_conv_5',
+        role: MessageRole.assistant,
+        content: '''
 完全可以。对你这种跨领域用户来说，过程型作品集反而更真实。
 
 建议首页先放三类内容：
@@ -2028,9 +2077,9 @@ class DemoDataService {
 - 你持续做过的创作与复盘痕迹
 
 它不需要先证明“我已经定型”，而是先证明“我有连续成长的轨迹”。''',
-          createdAt: now.subtract(const Duration(days: 3)),
-        ),
-      ];
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+    ];
     return _demoChatHistoryCache!;
   }
 
@@ -2049,14 +2098,17 @@ class DemoDataService {
         'level': 15,
         'brightness': 85,
         'today_focus_minutes': 120,
-        'tasks_completed': tasks.where((task) => task.status == TaskStatus.completed).length,
+        'tasks_completed':
+            tasks.where((task) => task.status == TaskStatus.completed).length,
         'nudge_message': '你今天已经完成了理工复盘和语言热身，晚上更适合做轻一点的表达与整理。',
       },
       'sprint': {
         'id': sprint.id,
         'name': sprint.name,
         'progress': sprint.progress,
-        'days_left': sprint.targetDate == null ? 0 : sprint.targetDate!.difference(_now).inDays,
+        'days_left': sprint.targetDate == null
+            ? 0
+            : sprint.targetDate!.difference(_now).inDays,
         'total_estimated_hours': sprint.totalEstimatedHours ?? 20.0,
       },
       'growth': {
@@ -2350,7 +2402,7 @@ class DemoDataService {
         qualityScore: 0.86,
         isFavorite: true,
       ),
-      ];
+    ];
     return _demoCuriosityCapsulesCache!;
   }
 
@@ -2513,7 +2565,8 @@ class DemoDataService {
       Post(
         id: 'post_2',
         userId: 'user_bob',
-        content: '今天用“边走边录音”的方式整理作品集开场白，居然比坐在桌前更敢说。感觉职业准备也不一定都得很正式，先把想法说出来也算前进。',
+        content:
+            '今天用“边走边录音”的方式整理作品集开场白，居然比坐在桌前更敢说。感觉职业准备也不一定都得很正式，先把想法说出来也算前进。',
         createdAt: now.subtract(const Duration(hours: 5)),
         user: const PostUser(
           id: 'user_bob',
@@ -2526,8 +2579,7 @@ class DemoDataService {
       Post(
         id: 'post_3',
         userId: 'user_carol',
-        content:
-            '分享一个阅读办法：不要急着摘金句，先写下“我真正不同意作者的哪一句”。这样读完以后留下来的不是笔记堆，而是自己的判断。',
+        content: '分享一个阅读办法：不要急着摘金句，先写下“我真正不同意作者的哪一句”。这样读完以后留下来的不是笔记堆，而是自己的判断。',
         createdAt: now.subtract(const Duration(hours: 8)),
         user: const PostUser(
           id: 'user_carol',
@@ -2567,7 +2619,8 @@ class DemoDataService {
       Post(
         id: 'post_6',
         userId: 'user_frank',
-        content: '今天拍“傍晚通勤”终于不再什么都想塞进画面里了。我强迫自己每张只保留一个主角，结果照片干净了很多，删减真的是创作的一部分。',
+        content:
+            '今天拍“傍晚通勤”终于不再什么都想塞进画面里了。我强迫自己每张只保留一个主角，结果照片干净了很多，删减真的是创作的一部分。',
         createdAt: now.subtract(const Duration(days: 1, hours: 6)),
         user: const PostUser(
           id: 'user_frank',
@@ -2607,7 +2660,8 @@ class DemoDataService {
       Post(
         id: 'post_9',
         userId: 'user_iris',
-        content: '试了“读完一章只记 3 个问题”的方式，发现自己终于不是在机械摘抄了。虽然写出来的问题有点笨，但它们真的能暴露我没想清的地方。',
+        content:
+            '试了“读完一章只记 3 个问题”的方式，发现自己终于不是在机械摘抄了。虽然写出来的问题有点笨，但它们真的能暴露我没想清的地方。',
         createdAt: now.subtract(const Duration(days: 3)),
         user: const PostUser(
           id: 'user_iris',
@@ -2620,7 +2674,8 @@ class DemoDataService {
       Post(
         id: 'post_10',
         userId: 'user_jack',
-        content: '今天把作品集首页改成“我最近在学什么、在做什么、在思考什么”三段，瞬间没有那么像硬凹人设了。对还没定方向的人来说，过程感真的比结论更诚实。',
+        content:
+            '今天把作品集首页改成“我最近在学什么、在做什么、在思考什么”三段，瞬间没有那么像硬凹人设了。对还没定方向的人来说，过程感真的比结论更诚实。',
         createdAt: now.subtract(const Duration(days: 3, hours: 15)),
         user: const PostUser(
           id: 'user_jack',
@@ -2646,7 +2701,8 @@ class DemoDataService {
       Post(
         id: 'post_12',
         userId: 'user_ryan',
-        content: '转型期最有用的动作不是疯狂投递，而是先把“我做过什么、我能迁移什么、我想往哪去”写成能讲给别人听的版本。写出来以后，焦虑会小很多。',
+        content:
+            '转型期最有用的动作不是疯狂投递，而是先把“我做过什么、我能迁移什么、我想往哪去”写成能讲给别人听的版本。写出来以后，焦虑会小很多。',
         createdAt: now.subtract(const Duration(days: 2, hours: 3)),
         user: const PostUser(
           id: 'user_ryan',
@@ -2754,7 +2810,8 @@ class DemoDataService {
         'id': 'error_2',
         'question_text': '请将 “我最近在尝试建立更稳定的学习节奏” 翻译成更自然的英文。',
         'user_answer': 'I am trying build a more stable study rhythm recently.',
-        'correct_answer': 'I\'ve been trying to build a more stable study routine lately.',
+        'correct_answer':
+            'I\'ve been trying to build a more stable study routine lately.',
         'subject': '英语表达',
         'mastery_level': 0.4,
         'review_count': 3,
@@ -2779,7 +2836,8 @@ class DemoDataService {
         'chapter': '论证结构',
         'difficulty': 2,
         'next_review_at': now.add(const Duration(days: 4)).toIso8601String(),
-        'ai_analysis_summary': '你看到了“举例子”，但没有继续判断这个例子在全文结构中的作用。阅读题里要多问一步：它为什么在这里出现。',
+        'ai_analysis_summary':
+            '你看到了“举例子”，但没有继续判断这个例子在全文结构中的作用。阅读题里要多问一步：它为什么在这里出现。',
       },
       {
         'id': 'error_4',
@@ -2916,7 +2974,8 @@ class DemoDataService {
         'type': 'touchpoint',
         'title': '🧭 转型线索',
         'message': '你最近的作品集整理、信息访谈和可迁移能力记录正在形成一条更清晰的转型主线',
-        'created_at': now.subtract(const Duration(days: 2, hours: 6)).toIso8601String(),
+        'created_at':
+            now.subtract(const Duration(days: 2, hours: 6)).toIso8601String(),
         'is_read': false,
       },
       {
@@ -2935,47 +2994,47 @@ class DemoDataService {
   List<Map<String, dynamic>> get demoFriends {
     if (_demoFriendsCache != null) return _demoFriendsCache!;
     _demoFriendsCache = [
-        {
-          'id': 'friend_1',
-          'username': 'Lena_Words',
-          'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
-          'flame_level': 12,
-          'is_online': true,
-          'recent_activity': '刚完成一轮英语跟说练习',
-        },
-        {
-          'id': 'friend_2',
-          'username': 'Mori_Creative',
-          'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
-          'flame_level': 18,
-          'is_online': false,
-          'recent_activity': '2小时前在整理摄影作品集',
-        },
-        {
-          'id': 'friend_3',
-          'username': 'Nora_Reset',
-          'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
-          'flame_level': 15,
-          'is_online': true,
-          'recent_activity': '正在做晚间阅读整理',
-        },
-        {
-          'id': 'friend_4',
-          'username': 'Owen_Field',
-          'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
-          'flame_level': 10,
-          'is_online': false,
-          'recent_activity': '5小时前完成了统计学练习',
-        },
-        {
-          'id': 'friend_5',
-          'username': 'Rina_Path',
-          'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
-          'flame_level': 20,
-          'is_online': true,
-          'recent_activity': '30分钟前更新了作品集首页',
-        },
-      ];
+      {
+        'id': 'friend_1',
+        'username': 'Lena_Words',
+        'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+        'flame_level': 12,
+        'is_online': true,
+        'recent_activity': '刚完成一轮英语跟说练习',
+      },
+      {
+        'id': 'friend_2',
+        'username': 'Mori_Creative',
+        'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+        'flame_level': 18,
+        'is_online': false,
+        'recent_activity': '2小时前在整理摄影作品集',
+      },
+      {
+        'id': 'friend_3',
+        'username': 'Nora_Reset',
+        'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+        'flame_level': 15,
+        'is_online': true,
+        'recent_activity': '正在做晚间阅读整理',
+      },
+      {
+        'id': 'friend_4',
+        'username': 'Owen_Field',
+        'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
+        'flame_level': 10,
+        'is_online': false,
+        'recent_activity': '5小时前完成了统计学练习',
+      },
+      {
+        'id': 'friend_5',
+        'username': 'Rina_Path',
+        'avatar_url': 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
+        'flame_level': 20,
+        'is_online': true,
+        'recent_activity': '30分钟前更新了作品集首页',
+      },
+    ];
     return _demoFriendsCache!;
   }
 
@@ -2985,41 +3044,35 @@ class DemoDataService {
       return _demoAccountabilityPartnersCache!;
     }
     _demoAccountabilityPartnersCache = [
-        {
-          'id': 'partner_1',
-          'partner_id': 'friend_1',
-          'partner_name': 'Lena_Words',
-          'partner_avatar':
-              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
-          'status': 'active',
-          'started_at': _now
-              .subtract(const Duration(days: 14))
-              .toIso8601String(),
-          'my_streak': 7,
-          'partner_streak': 5,
-          'total_checkins': 12,
-          'last_checkin': _now
-              .subtract(const Duration(hours: 3))
-              .toIso8601String(),
-        },
-        {
-          'id': 'partner_2',
-          'partner_id': 'friend_3',
-          'partner_name': 'Nora_Reset',
-          'partner_avatar':
-              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
-          'status': 'active',
-          'started_at': _now
-              .subtract(const Duration(days: 7))
-              .toIso8601String(),
-          'my_streak': 3,
-          'partner_streak': 4,
-          'total_checkins': 8,
-          'last_checkin': _now
-              .subtract(const Duration(hours: 1))
-              .toIso8601String(),
-        },
-      ];
+      {
+        'id': 'partner_1',
+        'partner_id': 'friend_1',
+        'partner_name': 'Lena_Words',
+        'partner_avatar':
+            'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+        'status': 'active',
+        'started_at': _now.subtract(const Duration(days: 14)).toIso8601String(),
+        'my_streak': 7,
+        'partner_streak': 5,
+        'total_checkins': 12,
+        'last_checkin':
+            _now.subtract(const Duration(hours: 3)).toIso8601String(),
+      },
+      {
+        'id': 'partner_2',
+        'partner_id': 'friend_3',
+        'partner_name': 'Nora_Reset',
+        'partner_avatar':
+            'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+        'status': 'active',
+        'started_at': _now.subtract(const Duration(days: 7)).toIso8601String(),
+        'my_streak': 3,
+        'partner_streak': 4,
+        'total_checkins': 8,
+        'last_checkin':
+            _now.subtract(const Duration(hours: 1)).toIso8601String(),
+      },
+    ];
     return _demoAccountabilityPartnersCache!;
   }
 
@@ -3027,52 +3080,43 @@ class DemoDataService {
   List<Map<String, dynamic>> get demoGroups {
     if (_demoGroupsCache != null) return _demoGroupsCache!;
     _demoGroupsCache = [
-        {
-          'id': 'group_1',
-          'name': '晚间语言复盘屋',
-          'description': '一起做精读、跟说和短复盘，适合下班下课后慢慢进入状态的人。',
-          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=algo',
-          'member_count': 15,
-          'is_member': true,
-          'is_public': true,
-          'created_at': _now
-              .subtract(const Duration(days: 30))
-              .toIso8601String(),
-          'last_activity': _now
-              .subtract(const Duration(hours: 1))
-              .toIso8601String(),
-        },
-        {
-          'id': 'group_2',
-          'name': '作品集慢慢长出来',
-          'description': '给跨领域学习者一个稳定更新作品集和表达职业方向的空间。',
-          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=flutter',
-          'member_count': 42,
-          'is_member': true,
-          'is_public': true,
-          'created_at': _now
-              .subtract(const Duration(days: 60))
-              .toIso8601String(),
-          'last_activity': _now
-              .subtract(const Duration(minutes: 30))
-              .toIso8601String(),
-        },
-        {
-          'id': 'group_3',
-          'name': '周末恢复实验室',
-          'description': '讨论睡眠、运动、恢复和如何避免周末一散就整周失控。',
-          'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=ai',
-          'member_count': 28,
-          'is_member': false,
-          'is_public': true,
-          'created_at': _now
-              .subtract(const Duration(days: 15))
-              .toIso8601String(),
-          'last_activity': _now
-              .subtract(const Duration(hours: 2))
-              .toIso8601String(),
-        },
-      ];
+      {
+        'id': 'group_1',
+        'name': '晚间语言复盘屋',
+        'description': '一起做精读、跟说和短复盘，适合下班下课后慢慢进入状态的人。',
+        'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=algo',
+        'member_count': 15,
+        'is_member': true,
+        'is_public': true,
+        'created_at': _now.subtract(const Duration(days: 30)).toIso8601String(),
+        'last_activity':
+            _now.subtract(const Duration(hours: 1)).toIso8601String(),
+      },
+      {
+        'id': 'group_2',
+        'name': '作品集慢慢长出来',
+        'description': '给跨领域学习者一个稳定更新作品集和表达职业方向的空间。',
+        'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=flutter',
+        'member_count': 42,
+        'is_member': true,
+        'is_public': true,
+        'created_at': _now.subtract(const Duration(days: 60)).toIso8601String(),
+        'last_activity':
+            _now.subtract(const Duration(minutes: 30)).toIso8601String(),
+      },
+      {
+        'id': 'group_3',
+        'name': '周末恢复实验室',
+        'description': '讨论睡眠、运动、恢复和如何避免周末一散就整周失控。',
+        'avatar_url': 'https://api.dicebear.com/9.x/shapes/png?seed=ai',
+        'member_count': 28,
+        'is_member': false,
+        'is_public': true,
+        'created_at': _now.subtract(const Duration(days: 15)).toIso8601String(),
+        'last_activity':
+            _now.subtract(const Duration(hours: 2)).toIso8601String(),
+      },
+    ];
     return _demoGroupsCache!;
   }
 
@@ -3080,50 +3124,46 @@ class DemoDataService {
   List<Map<String, dynamic>> get demoGroupMessages {
     if (_demoGroupMessagesCache != null) return _demoGroupMessagesCache!;
     _demoGroupMessagesCache = [
-        {
-          'id': 'msg_1',
-          'group_id': 'group_1',
-          'sender_id': 'friend_1',
-          'sender_name': 'Lena_Words',
-          'sender_avatar':
-              'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
-          'content': '有人今晚一起做 15 分钟英文跟说吗？我想先从天气和近况两个话题热身。',
-          'created_at': _now
-              .subtract(const Duration(minutes: 30))
-              .toIso8601String(),
-          'reactions': [
-            {'emoji': '👍', 'count': 3},
-          ],
-        },
-        {
-          'id': 'msg_2',
-          'group_id': 'group_1',
-          'sender_id': 'friend_2',
-          'sender_name': 'Mori_Creative',
-          'sender_avatar':
-              'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
-          'content': '我来，今天白天太耗脑了，晚上只想做一点轻输出，正合适。',
-          'created_at': _now
-              .subtract(const Duration(minutes: 25))
-              .toIso8601String(),
-          'reactions': [
-            {'emoji': '💪', 'count': 2},
-          ],
-        },
-        {
-          'id': 'msg_3',
-          'group_id': 'group_1',
-          'sender_id': 'friend_3',
-          'sender_name': 'Nora_Reset',
-          'sender_avatar':
-              'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
-          'content': '加油，今天如果脑子有点钝也没关系，先张嘴比说得完美更重要。',
-          'created_at': _now
-              .subtract(const Duration(minutes: 20))
-              .toIso8601String(),
-          'reactions': <Map<String, dynamic>>[],
-        },
-      ];
+      {
+        'id': 'msg_1',
+        'group_id': 'group_1',
+        'sender_id': 'friend_1',
+        'sender_name': 'Lena_Words',
+        'sender_avatar':
+            'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+        'content': '有人今晚一起做 15 分钟英文跟说吗？我想先从天气和近况两个话题热身。',
+        'created_at':
+            _now.subtract(const Duration(minutes: 30)).toIso8601String(),
+        'reactions': [
+          {'emoji': '👍', 'count': 3},
+        ],
+      },
+      {
+        'id': 'msg_2',
+        'group_id': 'group_1',
+        'sender_id': 'friend_2',
+        'sender_name': 'Mori_Creative',
+        'sender_avatar': 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+        'content': '我来，今天白天太耗脑了，晚上只想做一点轻输出，正合适。',
+        'created_at':
+            _now.subtract(const Duration(minutes: 25)).toIso8601String(),
+        'reactions': [
+          {'emoji': '💪', 'count': 2},
+        ],
+      },
+      {
+        'id': 'msg_3',
+        'group_id': 'group_1',
+        'sender_id': 'friend_3',
+        'sender_name': 'Nora_Reset',
+        'sender_avatar':
+            'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+        'content': '加油，今天如果脑子有点钝也没关系，先张嘴比说得完美更重要。',
+        'created_at':
+            _now.subtract(const Duration(minutes: 20)).toIso8601String(),
+        'reactions': <Map<String, dynamic>>[],
+      },
+    ];
     return _demoGroupMessagesCache!;
   }
 
@@ -3160,31 +3200,27 @@ class DemoDataService {
   List<Map<String, dynamic>> get demoCheckins {
     if (_demoCheckinsCache != null) return _demoCheckinsCache!;
     _demoCheckinsCache = [
-        {
-          'id': 'checkin_1',
-          'partnership_id': 'partner_1',
-          'user_id': demoUserId,
-          'content': '今天先完成了积分换元复盘，晚上又补了 12 分钟口语跟说，虽然都不长，但节奏比前几天稳很多。',
-          'created_at': _now
-              .subtract(const Duration(hours: 3))
-              .toIso8601String(),
-          'likes_count': 2,
-          'encouragements': [
-            {'user_id': 'friend_1', 'message': '这个节奏很真实，稳下来比一口气冲太猛更厉害。'},
-          ],
-        },
-        {
-          'id': 'checkin_2',
-          'partnership_id': 'partner_1',
-          'user_id': 'friend_1',
-          'content': '我今天把英语自我介绍改短了一版，终于不像背模板了，晚上准备再录一次。',
-          'created_at': _now
-              .subtract(const Duration(hours: 5))
-              .toIso8601String(),
-          'likes_count': 3,
-          'encouragements': <Map<String, dynamic>>[],
-        },
-      ];
+      {
+        'id': 'checkin_1',
+        'partnership_id': 'partner_1',
+        'user_id': demoUserId,
+        'content': '今天先完成了积分换元复盘，晚上又补了 12 分钟口语跟说，虽然都不长，但节奏比前几天稳很多。',
+        'created_at': _now.subtract(const Duration(hours: 3)).toIso8601String(),
+        'likes_count': 2,
+        'encouragements': [
+          {'user_id': 'friend_1', 'message': '这个节奏很真实，稳下来比一口气冲太猛更厉害。'},
+        ],
+      },
+      {
+        'id': 'checkin_2',
+        'partnership_id': 'partner_1',
+        'user_id': 'friend_1',
+        'content': '我今天把英语自我介绍改短了一版，终于不像背模板了，晚上准备再录一次。',
+        'created_at': _now.subtract(const Duration(hours: 5)).toIso8601String(),
+        'likes_count': 3,
+        'encouragements': <Map<String, dynamic>>[],
+      },
+    ];
     return _demoCheckinsCache!;
   }
 
@@ -3192,82 +3228,81 @@ class DemoDataService {
   List<Map<String, dynamic>> get demoVisualElements {
     if (_demoVisualElementsCache != null) return _demoVisualElementsCache!;
     _demoVisualElementsCache = [
-        {
-          'id': 've_bg_1',
-          'name': '星空背景',
-          'description': '深邃的宇宙星空背景',
-          'element_type': 'background',
-          'rarity': 'common',
-          'category': '宇宙',
-          'is_unlocked': true,
-          'is_equipped': true,
-          'unlock_condition': '默认解锁',
-          'preview_url':
-              'https://images.unsplash.com/photo-1419248682-f54b?w=200',
-        },
-        {
-          'id': 've_bg_2',
-          'name': '极光背景',
-          'description': '绚丽的北极光效果',
-          'element_type': 'background',
-          'rarity': 'rare',
-          'category': '自然',
-          'is_unlocked': true,
-          'is_equipped': false,
-          'unlock_condition': '连续学习7天',
-          'preview_url':
-              'https://images.unsplash.com/photo-1486402638-b5b?w=200',
-        },
-        {
-          'id': 've_bg_3',
-          'name': '赛博朋克背景',
-          'description': '霓虹灯与未来城市',
-          'element_type': 'background',
-          'rarity': 'epic',
-          'category': '科幻',
-          'is_unlocked': false,
-          'is_equipped': false,
-          'unlock_condition': '完成10个任务',
-          'preview_url':
-              'https://images.unsplash.com/photo-1550751827-f584?w=200',
-        },
-        {
-          'id': 've_particle_1',
-          'name': '萤火虫粒子',
-          'description': '温暖的萤火虫飘动效果',
-          'element_type': 'particle',
-          'rarity': 'common',
-          'category': '自然',
-          'is_unlocked': true,
-          'is_equipped': true,
-          'unlock_condition': '默认解锁',
-          'preview_url': null,
-        },
-        {
-          'id': 've_particle_2',
-          'name': '雪花粒子',
-          'description': '轻柔的雪花飘落效果',
-          'element_type': 'particle',
-          'rarity': 'rare',
-          'category': '自然',
-          'is_unlocked': true,
-          'is_equipped': false,
-          'unlock_condition': '在冬季学习',
-          'preview_url': null,
-        },
-        {
-          'id': 've_effect_1',
-          'name': '金色光环',
-          'description': '完成任务时的金色光环效果',
-          'element_type': 'effect',
-          'rarity': 'epic',
-          'category': '特效',
-          'is_unlocked': false,
-          'is_equipped': false,
-          'unlock_condition': '连续打卡30天',
-          'preview_url': null,
-        },
-      ];
+      {
+        'id': 've_bg_1',
+        'name': '星空背景',
+        'description': '深邃的宇宙星空背景',
+        'element_type': 'background',
+        'rarity': 'common',
+        'category': '宇宙',
+        'is_unlocked': true,
+        'is_equipped': true,
+        'unlock_condition': '默认解锁',
+        'preview_url':
+            'https://images.unsplash.com/photo-1419248682-f54b?w=200',
+      },
+      {
+        'id': 've_bg_2',
+        'name': '极光背景',
+        'description': '绚丽的北极光效果',
+        'element_type': 'background',
+        'rarity': 'rare',
+        'category': '自然',
+        'is_unlocked': true,
+        'is_equipped': false,
+        'unlock_condition': '连续学习7天',
+        'preview_url': 'https://images.unsplash.com/photo-1486402638-b5b?w=200',
+      },
+      {
+        'id': 've_bg_3',
+        'name': '赛博朋克背景',
+        'description': '霓虹灯与未来城市',
+        'element_type': 'background',
+        'rarity': 'epic',
+        'category': '科幻',
+        'is_unlocked': false,
+        'is_equipped': false,
+        'unlock_condition': '完成10个任务',
+        'preview_url':
+            'https://images.unsplash.com/photo-1550751827-f584?w=200',
+      },
+      {
+        'id': 've_particle_1',
+        'name': '萤火虫粒子',
+        'description': '温暖的萤火虫飘动效果',
+        'element_type': 'particle',
+        'rarity': 'common',
+        'category': '自然',
+        'is_unlocked': true,
+        'is_equipped': true,
+        'unlock_condition': '默认解锁',
+        'preview_url': null,
+      },
+      {
+        'id': 've_particle_2',
+        'name': '雪花粒子',
+        'description': '轻柔的雪花飘落效果',
+        'element_type': 'particle',
+        'rarity': 'rare',
+        'category': '自然',
+        'is_unlocked': true,
+        'is_equipped': false,
+        'unlock_condition': '在冬季学习',
+        'preview_url': null,
+      },
+      {
+        'id': 've_effect_1',
+        'name': '金色光环',
+        'description': '完成任务时的金色光环效果',
+        'element_type': 'effect',
+        'rarity': 'epic',
+        'category': '特效',
+        'is_unlocked': false,
+        'is_equipped': false,
+        'unlock_condition': '连续打卡30天',
+        'preview_url': null,
+      },
+    ];
     return _demoVisualElementsCache!;
   }
 
@@ -3277,53 +3312,51 @@ class DemoDataService {
       return _demoAchievementDetailsCache!;
     }
     _demoAchievementDetailsCache = [
-        {
-          'id': 'achv_1',
-          'name': '初出茅庐',
-          'description': '完成第一个任务',
-          'type': 'milestone',
-          'rarity': 'common',
-          'icon_url': '🎯',
-          'is_unlocked': true,
-          'unlocked_at': DateTime.now()
-              .subtract(const Duration(days: 30))
-              .toIso8601String(),
-          'progress': {'current': 1, 'target': 1},
-        },
-        {
-          'id': 'achv_2',
-          'name': '持之以恒',
-          'description': '连续学习7天',
-          'type': 'streak',
-          'rarity': 'rare',
-          'icon_url': '🔥',
-          'is_unlocked': true,
-          'unlocked_at': DateTime.now()
-              .subtract(const Duration(days: 10))
-              .toIso8601String(),
-          'progress': {'current': 7, 'target': 7},
-        },
-        {
-          'id': 'achv_3',
-          'name': '知识星探',
-          'description': '解锁50个知识节点',
-          'type': 'node_explore',
-          'rarity': 'epic',
-          'icon_url': '🌟',
-          'is_unlocked': false,
-          'progress': {'current': 23, 'target': 50},
-        },
-        {
-          'id': 'achv_4',
-          'name': '完美主义',
-          'description': '任务完成率达到95%',
-          'type': 'mastery',
-          'rarity': 'legendary',
-          'icon_url': '💎',
-          'is_unlocked': false,
-          'progress': {'current': 78, 'target': 100},
-        },
-      ];
+      {
+        'id': 'achv_1',
+        'name': '初出茅庐',
+        'description': '完成第一个任务',
+        'type': 'milestone',
+        'rarity': 'common',
+        'icon_url': '🎯',
+        'is_unlocked': true,
+        'unlocked_at':
+            DateTime.now().subtract(const Duration(days: 30)).toIso8601String(),
+        'progress': {'current': 1, 'target': 1},
+      },
+      {
+        'id': 'achv_2',
+        'name': '持之以恒',
+        'description': '连续学习7天',
+        'type': 'streak',
+        'rarity': 'rare',
+        'icon_url': '🔥',
+        'is_unlocked': true,
+        'unlocked_at':
+            DateTime.now().subtract(const Duration(days: 10)).toIso8601String(),
+        'progress': {'current': 7, 'target': 7},
+      },
+      {
+        'id': 'achv_3',
+        'name': '知识星探',
+        'description': '解锁50个知识节点',
+        'type': 'node_explore',
+        'rarity': 'epic',
+        'icon_url': '🌟',
+        'is_unlocked': false,
+        'progress': {'current': 23, 'target': 50},
+      },
+      {
+        'id': 'achv_4',
+        'name': '完美主义',
+        'description': '任务完成率达到95%',
+        'type': 'mastery',
+        'rarity': 'legendary',
+        'icon_url': '💎',
+        'is_unlocked': false,
+        'progress': {'current': 78, 'target': 100},
+      },
+    ];
     return _demoAchievementDetailsCache!;
   }
 }

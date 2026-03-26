@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -172,7 +173,9 @@ class ErrorDetailScreen extends ConsumerWidget {
                 const SizedBox(width: DS.spacing8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing10, vertical: DS.spacing4,),
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing4,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
@@ -226,7 +229,8 @@ class ErrorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMasteryBadge(BuildContext context, ThemeData theme, double mastery) {
+  Widget _buildMasteryBadge(
+      BuildContext context, ThemeData theme, double mastery) {
     final color = mastery >= 0.8
         ? DS.success
         : mastery >= 0.5
@@ -235,7 +239,9 @@ class ErrorDetailScreen extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12, vertical: DS.spacing6,),
+        horizontal: DS.spacing12,
+        vertical: DS.spacing6,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -286,10 +292,13 @@ class ErrorDetailScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader(context, context.l10n.errorBookSimilarSummary),
+              _buildSectionHeader(
+                  context, context.l10n.errorBookSimilarSummary),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing16, vertical: DS.spacing12,),
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -346,7 +355,11 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, DS.spacing12, DS.spacing16, DS.spacing4,),
+        DS.spacing16,
+        DS.spacing12,
+        DS.spacing16,
+        DS.spacing4,
+      ),
       child: Text(
         title,
         style:
@@ -398,7 +411,9 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing10, vertical: DS.spacing6,),
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -656,18 +671,8 @@ class ErrorDetailScreen extends ConsumerWidget {
                     avatar: const Icon(Icons.timeline, size: 16),
                     label: Text(link.nodeName),
                     tooltip: context.l10n.errorBookKnowledgeLinkTooltip,
-                    onPressed: () {
-                      // TRACKED(TD-005): 导航到知识星图对应节点
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            context.l10n
-                                .errorBookKnowledgeLinkSnack(link.nodeName),
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onPressed: () =>
+                        context.push('/galaxy/node/${link.nodeId}'),
                   ),
                 )
                 .toList(),
@@ -936,7 +941,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) async {
-    // TRACKED(TD-005): 调用重新分析 API
+    unawaited(ref.read(errorOperationsProvider.notifier).reAnalyze(error.id));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -1003,7 +1008,8 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.l10n.errorBookDeleteFailedMessage(e.toString())),
+              content:
+                  Text(context.l10n.errorBookDeleteFailedMessage(e.toString())),
               backgroundColor: DS.error,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1018,12 +1024,14 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) {
-    // TRACKED(TD-005): 导航到复习页面
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.errorBookReviewInProgress),
-        behavior: SnackBarBehavior.floating,
-      ),
+    context.push(
+      Uri(
+        path: '/review',
+        queryParameters: {
+          'mode': 'today',
+          if (error.subject.trim().isNotEmpty) 'subject': error.subject,
+        },
+      ).toString(),
     );
   }
 }

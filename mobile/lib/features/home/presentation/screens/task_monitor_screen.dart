@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/shared/entities/background_task_model.dart';
 
 /// Background task state
@@ -70,16 +72,38 @@ enum BackgroundTaskFilter {
 
 /// Background task notifier
 class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
-  BackgroundTaskNotifier() : super(const BackgroundTaskState());
+  BackgroundTaskNotifier(this._apiClient) : super(const BackgroundTaskState());
 
+  final ApiClient _apiClient;
   Timer? _pollTimer;
+
+  Future<void> fetchTasks() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final response = await _apiClient.get<dynamic>('/background-tasks');
+      final items = ApiResponseParser.unwrapList(response.data, action: 'fetchBackgroundTasks');
+      final tasks = items
+          .whereType<Map<String, dynamic>>()
+          .map(BackgroundTaskModel.fromJson)
+          .toList();
+      state = state.copyWith(tasks: tasks, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> retryTask(String taskId) async {
+    try {
+      await _apiClient.post<dynamic>('/background-tasks/$taskId/retry');
+      await fetchTasks();
+    } catch (_) {}
+  }
 
   /// Start polling for updates (every 5 seconds)
   void startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      // TRACKED(TD-003): Fetch latest tasks from API
-    });
+    fetchTasks();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => fetchTasks());
   }
 
   /// Stop polling
@@ -103,7 +127,7 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 /// Provider for background tasks
 final backgroundTaskProvider =
     StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>(
-        (ref) => BackgroundTaskNotifier(),);
+        (ref) => BackgroundTaskNotifier(ref.watch(apiClientProvider)),);
 
 /// Task monitor screen
 class TaskMonitorScreen extends ConsumerStatefulWidget {
@@ -213,9 +237,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
       );
 
   Widget _buildTaskList(List<BackgroundTaskModel> tasks) => RefreshIndicator(
-        onRefresh: () async {
-          // TRACKED(TD-003): Refresh tasks from API
-        },
+        onRefresh: () => ref.read(backgroundTaskProvider.notifier).fetchTasks(),
         color: DS.primaryBase,
         child: ListView.builder(
           padding: const EdgeInsets.all(DS.md),
@@ -288,9 +310,9 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
               Row(
                 children: [
                   TextButton.icon(
-                    onPressed: () {
-                      // TRACKED(TD-003): Retry task
-                    },
+                    onPressed: () => ref
+                        .read(backgroundTaskProvider.notifier)
+                        .retryTask(task.id),
                     icon: Icon(Icons.refresh, size: 16, color: DS.primaryBase),
                     label: Text(
                       context.l10n.commonRetry,

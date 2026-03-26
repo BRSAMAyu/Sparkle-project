@@ -8,8 +8,19 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/calendar_preview_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar/task_preview_panel.dart';
+
+final _focusHeatmapProvider =
+    FutureProvider.autoDispose<Map<String, double>>((ref) async {
+  final repo = ref.watch(focusRepositoryProvider);
+  try {
+    return await repo.getHeatmapData(days: 31);
+  } catch (_) {
+    return const <String, double>{};
+  }
+});
 
 /// Color utility for heatmap intensity levels
 class _HeatmapColor {
@@ -361,6 +372,13 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final summary = calendarState.taskSummaries[dayKey];
     final hasTasks = summary != null && summary.hasTasks;
 
+    // Merge focus session minutes into intensity
+    final focusHeatmap = ref.watch(_focusHeatmapProvider).valueOrNull ?? const {};
+    final dayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+    final focusMinutes = focusHeatmap[dayStr] ?? 0.0;
+    final focusIntensity = (focusMinutes / 30).floor().clamp(0, 4);
+
     var intensity = 0;
     if (hasTasks) {
       final totalTasks = summary.total;
@@ -374,6 +392,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
         intensity = 1;
       }
     }
+    intensity = (intensity + focusIntensity).clamp(0, 4);
 
     final isToday = day == now.day;
     final isSelected = selectedDate != null &&
@@ -386,7 +405,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
       intensity: intensity,
       isToday: isToday,
       isSelected: isSelected,
-      hasTasks: hasTasks,
+      hasTasks: hasTasks || focusMinutes > 0,
       size: cellSize,
       onTap: () =>
           ref.read(calendarPreviewProvider.notifier).selectDate(dayKey),

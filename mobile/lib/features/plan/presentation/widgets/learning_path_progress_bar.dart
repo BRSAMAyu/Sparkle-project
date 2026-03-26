@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
 
@@ -63,7 +64,7 @@ class LearningPathProgressBar extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
               child: Row(
-                children: _buildSegments(reveal),
+                children: _buildSegments(context, reveal),
               ),
             ),
           ),
@@ -83,7 +84,7 @@ class LearningPathProgressBar extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildSegments(double reveal) {
+  List<Widget> _buildSegments(BuildContext context, double reveal) {
     final segments = <Widget>[];
     final totalNodes = progress.nodes.length;
 
@@ -97,9 +98,7 @@ class LearningPathProgressBar extends StatelessWidget {
           child: Tooltip(
             message: '${node.name} (${node.mastery}%)',
             child: GestureDetector(
-              onTap: () {
-                // TRACKED(TD-002): Navigate to galaxy node detail
-              },
+              onTap: () => context.push('/galaxy/node/${node.id}'),
               child: ColoredBox(
                 color: color.withValues(alpha: 0.35 + (0.65 * reveal)),
                 child: node.isTarget

@@ -323,7 +323,8 @@ class PushSenderService:
             return PushResult(success=True, success_count=1)
 
         except messaging.UnregisteredError:
-            logger.warning(f"Token unregistered: {token[:20]}...")
+            masked_token = token[-4:] if len(token) >= 4 else token
+            logger.warning(f"Token unregistered (suffix={masked_token})")
             await self._cleanup_invalid_tokens([token])
             return PushResult(success=False, error="Token unregistered", invalid_tokens=[token])
         except Exception as e:

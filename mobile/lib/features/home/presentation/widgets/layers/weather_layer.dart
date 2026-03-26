@@ -1,7 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/domain/services/emotion_visual_blending_service.dart';
+import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
 
 /// 天气层 - 根据用户状态自动显示天气效果
 ///
@@ -41,26 +42,8 @@ class _WeatherLayerState extends State<WeatherLayer> {
     return (densityScale * moodScale).clamp(0.4, 1.2);
   }
 
-  Color get _accentColor {
-    final baseColor = Color.lerp(
-          DS.brandPrimary,
-          widget.blendParams.primaryTint,
-          0.45,
-        ) ??
-        DS.brandPrimary;
-
-    // 浅色模式：增加对比度
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (!isDark) {
-      // 浅色模式下使用更深的颜色
-      final hsl = HSLColor.fromColor(baseColor);
-      return hsl.withLightness(0.35).toColor();
-    }
-    return baseColor;
-  }
-
   double get _layerOpacity =>
-      (0.4 + widget.blendParams.backgroundOpacity * 0.6).clamp(0.35, 0.7);
+      (0.26 + widget.blendParams.backgroundOpacity * 0.44).clamp(0.24, 0.46);
 
   @override
   void initState() {
@@ -161,6 +144,8 @@ class _WeatherLayerState extends State<WeatherLayer> {
 
   @override
   Widget build(BuildContext context) {
+    final presentation =
+        resolveWeatherPresentation(context, widget.weatherType);
     // 天气层使用半透明叠加
     return Opacity(
       opacity: _layerOpacity,
@@ -175,11 +160,16 @@ class _WeatherLayerState extends State<WeatherLayer> {
             painter: _WeatherPainter(
               weatherType: widget.weatherType,
               particles: _particles,
-              accentColor: _accentColor,
+              accentColor: presentation.accent,
+              softAccent: presentation.softAccent,
+              highlightColor: presentation.highlight,
+              glowAlignment: presentation.glowAlignment,
+              glowRadius: presentation.glowRadius,
               mainValue: widget.mainAnimation.value,
               particleValue: widget.particleAnimation.value,
-              speedMultiplier: _speedMultiplier,
+              speedMultiplier: _speedMultiplier * presentation.driftFactor,
               opacityScale: _opacityScale,
+              overlayStrength: presentation.overlayStrength,
             ),
           ),
         ),
@@ -208,42 +198,34 @@ class _WeatherParticle {
   final double delay;
 }
 
-class _WeatherPalette {
-  _WeatherPalette({
-    required this.primary,
-    required this.secondary,
-    required this.highlight,
-    required this.skyColors,
-    required this.auraCenter,
-    required this.auraRadius,
-  });
-
-  final Color primary;
-  final Color secondary;
-  final Color highlight;
-  final List<Color> skyColors;
-  final Alignment auraCenter;
-  final double auraRadius;
-}
-
 class _WeatherPainter extends CustomPainter {
   _WeatherPainter({
     required this.weatherType,
     required this.particles,
     required this.accentColor,
+    required this.softAccent,
+    required this.highlightColor,
+    required this.glowAlignment,
+    required this.glowRadius,
     required this.mainValue,
     required this.particleValue,
     required this.speedMultiplier,
     required this.opacityScale,
+    required this.overlayStrength,
   });
 
   final String weatherType;
   final List<_WeatherParticle> particles;
   final Color accentColor;
+  final Color softAccent;
+  final Color highlightColor;
+  final Alignment glowAlignment;
+  final double glowRadius;
   final double mainValue;
   final double particleValue;
   final double speedMultiplier;
   final double opacityScale;
+  final double overlayStrength;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -271,13 +253,15 @@ class _WeatherPainter extends CustomPainter {
   }
 
   void _paintAtmosphere(Canvas canvas, Size size) {
-    final palette = _paletteForWeather();
-
     final skyWash = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: palette.skyColors,
+        colors: [
+          accentColor.withValues(alpha: 0.03 * overlayStrength * opacityScale),
+          softAccent.withValues(alpha: 0.05 * overlayStrength * opacityScale),
+          Colors.transparent,
+        ],
         stops: const [0.0, 0.48, 1.0],
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, skyWash);
@@ -285,11 +269,13 @@ class _WeatherPainter extends CustomPainter {
     final pulse = 0.88 + sin(mainValue * 2 * pi) * 0.12;
     final auraPaint = Paint()
       ..shader = RadialGradient(
-        center: palette.auraCenter,
-        radius: palette.auraRadius,
+        center: glowAlignment,
+        radius: glowRadius,
         colors: [
-          palette.highlight.withValues(alpha: 0.18 * opacityScale * pulse),
-          palette.secondary.withValues(alpha: 0.1 * opacityScale),
+          highlightColor.withValues(
+            alpha: 0.12 * overlayStrength * opacityScale * pulse,
+          ),
+          softAccent.withValues(alpha: 0.08 * overlayStrength * opacityScale),
           Colors.transparent,
         ],
         stops: const [0.0, 0.45, 1.0],
@@ -298,15 +284,14 @@ class _WeatherPainter extends CustomPainter {
   }
 
   void _paintForegroundVeil(Canvas canvas, Size size) {
-    final palette = _paletteForWeather();
     final veilPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
           Colors.transparent,
-          palette.secondary.withValues(alpha: 0.03 * opacityScale),
-          palette.primary.withValues(alpha: 0.1 * opacityScale),
+          softAccent.withValues(alpha: 0.025 * overlayStrength * opacityScale),
+          accentColor.withValues(alpha: 0.06 * overlayStrength * opacityScale),
         ],
         stops: const [0.0, 0.62, 1.0],
       ).createShader(Offset.zero & size);
@@ -319,8 +304,12 @@ class _WeatherPainter extends CustomPainter {
           end: Alignment.bottomCenter,
           colors: [
             Colors.transparent,
-            palette.highlight.withValues(alpha: 0.02 * opacityScale),
-            palette.highlight.withValues(alpha: 0.1 * opacityScale),
+            highlightColor.withValues(
+              alpha: 0.02 * overlayStrength * opacityScale,
+            ),
+            highlightColor.withValues(
+              alpha: 0.06 * overlayStrength * opacityScale,
+            ),
           ],
         ).createShader(
           Rect.fromLTWH(0, size.height * 0.62, size.width, size.height * 0.38),
@@ -577,83 +566,6 @@ class _WeatherPainter extends CustomPainter {
     }
   }
 
-  _WeatherPalette _paletteForWeather() {
-    switch (weatherType) {
-      case 'sunny':
-        return _WeatherPalette(
-          primary: accentColor,
-          secondary: Color.lerp(accentColor, const Color(0xFFFFF2C2), 0.55) ??
-              accentColor,
-          highlight:
-              Color.lerp(accentColor, Colors.white, 0.68) ?? Colors.white,
-          skyColors: [
-            accentColor.withValues(alpha: 0.1 * opacityScale),
-            const Color(0xFFFFF4D6).withValues(alpha: 0.06 * opacityScale),
-            Colors.transparent,
-          ],
-          auraCenter: const Alignment(0.82, -0.28),
-          auraRadius: 0.95,
-        );
-      case 'cloudy':
-        return _WeatherPalette(
-          primary: accentColor,
-          secondary: Color.lerp(accentColor, const Color(0xFFD7E0F0), 0.52) ??
-              accentColor,
-          highlight:
-              Color.lerp(accentColor, Colors.white, 0.56) ?? Colors.white,
-          skyColors: [
-            accentColor.withValues(alpha: 0.07 * opacityScale),
-            const Color(0xFFE6ECF5).withValues(alpha: 0.05 * opacityScale),
-            Colors.transparent,
-          ],
-          auraCenter: const Alignment(-0.45, -0.22),
-          auraRadius: 1.2,
-        );
-      case 'rainy':
-        return _WeatherPalette(
-          primary: accentColor,
-          secondary: Color.lerp(accentColor, const Color(0xFF93BCE7), 0.45) ??
-              accentColor,
-          highlight: Color.lerp(accentColor, Colors.white, 0.4) ?? Colors.white,
-          skyColors: [
-            accentColor.withValues(alpha: 0.12 * opacityScale),
-            const Color(0xFFB8D4EC).withValues(alpha: 0.05 * opacityScale),
-            Colors.transparent,
-          ],
-          auraCenter: const Alignment(0.0, -0.35),
-          auraRadius: 1.15,
-        );
-      case 'meteor':
-        return _WeatherPalette(
-          primary: accentColor,
-          secondary: Color.lerp(accentColor, const Color(0xFF6246EA), 0.5) ??
-              accentColor,
-          highlight:
-              Color.lerp(accentColor, Colors.white, 0.62) ?? Colors.white,
-          skyColors: [
-            accentColor.withValues(alpha: 0.13 * opacityScale),
-            const Color(0xFF1A1235).withValues(alpha: 0.08 * opacityScale),
-            Colors.transparent,
-          ],
-          auraCenter: const Alignment(0.0, -0.48),
-          auraRadius: 1.25,
-        );
-      default:
-        return _WeatherPalette(
-          primary: accentColor,
-          secondary: accentColor,
-          highlight: Colors.white,
-          skyColors: [
-            accentColor.withValues(alpha: 0.08 * opacityScale),
-            Colors.transparent,
-            Colors.transparent,
-          ],
-          auraCenter: const Alignment(0.82, -0.28),
-          auraRadius: 1.0,
-        );
-    }
-  }
-
   @override
   bool shouldRepaint(covariant _WeatherPainter oldDelegate) =>
       mainValue != oldDelegate.mainValue ||
@@ -661,6 +573,11 @@ class _WeatherPainter extends CustomPainter {
       speedMultiplier != oldDelegate.speedMultiplier ||
       opacityScale != oldDelegate.opacityScale ||
       accentColor != oldDelegate.accentColor ||
+      softAccent != oldDelegate.softAccent ||
+      highlightColor != oldDelegate.highlightColor ||
+      glowAlignment != oldDelegate.glowAlignment ||
+      glowRadius != oldDelegate.glowRadius ||
+      overlayStrength != oldDelegate.overlayStrength ||
       weatherType != oldDelegate.weatherType ||
       particles != oldDelegate.particles;
 }

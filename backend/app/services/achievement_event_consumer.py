@@ -49,6 +49,8 @@ class AchievementEventConsumer:
             await self._handle_group_task_completed(event)
         elif event_type == "galaxy.node.updated":
             await self._handle_node_updated(event)
+        elif event_type == "focus.session.completed":
+            await self._handle_focus_session_completed(event)
         elif event_type == "achievement.unlocked":
             await self._handle_achievement_unlocked(event)
 
@@ -64,6 +66,21 @@ class AchievementEventConsumer:
                 actual_minutes=int(float(event.get("actual_minutes") or 0)),
                 estimated_minutes=int(float(event.get("estimated_minutes") or 0)),
                 difficulty=int(float(event.get("difficulty") or 1)),
+            )
+
+    async def _handle_focus_session_completed(self, event: dict):
+        user_id = event.get("user_id")
+        if not user_id:
+            return
+        duration_minutes = int(float(event.get("duration_minutes") or 0))
+        if duration_minutes <= 0:
+            return
+        async with AsyncSessionLocal() as db:
+            engine = AchievementEngine(db)
+            await engine.process_event(
+                user_id=str(user_id),
+                event_type=AchievementEvent.STUDY_MINUTES_ACCUMULATED,
+                actual_minutes=duration_minutes,
             )
 
     async def _handle_group_task_completed(self, event: dict):

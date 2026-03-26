@@ -66,7 +66,8 @@ class GalaxyRepository {
       return const Stream.empty();
     }
     // 🔧 后端未实现galaxy/events端点，返回空流避免404错误
-    debugPrint('🌌 Galaxy events stream: endpoint not implemented, returning empty stream');
+    debugPrint(
+        '🌌 Galaxy events stream: endpoint not implemented, returning empty stream');
     return const Stream.empty();
   }
 
@@ -177,35 +178,37 @@ class GalaxyRepository {
     int count = 3,
   }) async {
     if (DemoDataService.isDemoMode) {
-      return const NodeExpansionCandidatesResponse(
-        triggerNodeId: '',
-        promptVersion: 'demo',
-        candidates: <NodeExpansionCandidate>[
-          NodeExpansionCandidate(
-            candidateId: 'demo-1',
-            name: '相关基础概念',
-            description: '补充当前节点的基础前置知识，帮助建立更稳的理解框架。',
-            importanceLevel: 3,
-            relationToTrigger: 'prerequisite',
-            relationStrength: 0.78,
-          ),
-          NodeExpansionCandidate(
-            candidateId: 'demo-2',
-            name: '常见应用场景',
-            description: '围绕当前节点生成一个贴近日常使用的应用知识点。',
-            importanceLevel: 3,
-            relationToTrigger: 'application',
-            relationStrength: 0.72,
-          ),
-          NodeExpansionCandidate(
-            candidateId: 'demo-3',
-            name: '进阶延伸主题',
-            description: '从当前节点继续向上延展一个更值得深入学习的方向。',
-            importanceLevel: 4,
-            relationToTrigger: 'evolution',
-            relationStrength: 0.7,
-          ),
-        ],
+      return _sanitizeExpansionCandidates(
+        const NodeExpansionCandidatesResponse(
+          triggerNodeId: '',
+          promptVersion: 'demo',
+          candidates: <NodeExpansionCandidate>[
+            NodeExpansionCandidate(
+              candidateId: 'demo-1',
+              name: '相关基础概念',
+              description: '补充当前节点的基础前置知识，帮助建立更稳的理解框架。',
+              importanceLevel: 3,
+              relationToTrigger: 'prerequisite',
+              relationStrength: 0.78,
+            ),
+            NodeExpansionCandidate(
+              candidateId: 'demo-2',
+              name: '常见应用场景',
+              description: '围绕当前节点生成一个贴近日常使用的应用知识点。',
+              importanceLevel: 3,
+              relationToTrigger: 'application',
+              relationStrength: 0.72,
+            ),
+            NodeExpansionCandidate(
+              candidateId: 'demo-3',
+              name: '进阶延伸主题',
+              description: '从当前节点继续向上延展一个更值得深入学习的方向。',
+              importanceLevel: 4,
+              relationToTrigger: 'evolution',
+              relationStrength: 0.7,
+            ),
+          ],
+        ),
       );
     }
     try {
@@ -217,7 +220,9 @@ class GalaxyRepository {
       if (payload == null) {
         throw Exception('Expansion candidates payload is missing');
       }
-      return NodeExpansionCandidatesResponse.fromJson(payload);
+      return _sanitizeExpansionCandidates(
+        NodeExpansionCandidatesResponse.fromJson(payload),
+      );
     } on DioException catch (e) {
       throw Exception(
         _extractDetail(
@@ -252,7 +257,8 @@ class GalaxyRepository {
       if (payload == null) {
         return candidates;
       }
-      final created = (payload['created_nodes'] as List<dynamic>? ?? const <dynamic>[])
+      final created = (payload['created_nodes'] as List<dynamic>? ??
+              const <dynamic>[])
           .whereType<Map<String, dynamic>>()
           .map(
             (item) => NodeExpansionCandidate(
@@ -269,7 +275,7 @@ class GalaxyRepository {
             ),
           )
           .toList(growable: false);
-      return created.isEmpty ? candidates : created;
+      return _sanitizeCreatedCandidates(created.isEmpty ? candidates : created);
     } on DioException catch (e) {
       throw Exception(
         _extractDetail(
@@ -282,7 +288,8 @@ class GalaxyRepository {
     }
   }
 
-  String _extractDetail(DioException exception, {required String defaultMessage}) {
+  String _extractDetail(DioException exception,
+      {required String defaultMessage}) {
     if (exception.response?.statusCode == 404) {
       return '当前节点不存在或已被清理，请返回星图后重试';
     }
@@ -294,5 +301,45 @@ class GalaxyRepository {
       }
     }
     return defaultMessage;
+  }
+
+  NodeExpansionCandidatesResponse _sanitizeExpansionCandidates(
+    NodeExpansionCandidatesResponse response,
+  ) =>
+      NodeExpansionCandidatesResponse(
+        triggerNodeId: response.triggerNodeId,
+        promptVersion: response.promptVersion,
+        candidates: _sanitizeCreatedCandidates(response.candidates),
+      );
+
+  List<NodeExpansionCandidate> _sanitizeCreatedCandidates(
+    List<NodeExpansionCandidate> candidates,
+  ) =>
+      candidates
+          .where(
+            (candidate) =>
+                _isRenderableNodeName(candidate.name) &&
+                candidate.description.trim().isNotEmpty,
+          )
+          .toList(growable: false);
+
+  bool _isRenderableNodeName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.contains('�')) {
+      return false;
+    }
+    if (trimmed.length > 36) {
+      return false;
+    }
+    if (RegExp(r'^J\d', caseSensitive: false).hasMatch(trimmed)) {
+      return false;
+    }
+    if (RegExp(r'^[a-zA-Z]\d{2,}$').hasMatch(trimmed)) {
+      return false;
+    }
+    if (trimmed.toLowerCase() == 'null') {
+      return false;
+    }
+    return !RegExp(r'^[?？·•\-_=\s]+$').hasMatch(trimmed);
   }
 }

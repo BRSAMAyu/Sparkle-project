@@ -73,14 +73,14 @@ async def _build_achievement_detail_response(
     locale: str | None = None,
 ) -> AchievementDetailResponse:
     engine = AchievementEngine(db)
-    achievement = await engine._get_achievement(achievement_id)
+    achievement = await engine.get_achievement(achievement_id)
 
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
 
-    is_unlocked = await engine._is_unlocked(current_user.id, achievement_id)
+    is_unlocked = await engine.is_unlocked(current_user.id, achievement_id)
     return AchievementDetailResponse(
-        data=engine._build_achievement_detail(achievement, locale),
+        data=engine.build_achievement_detail(achievement, locale),
         is_unlocked=is_unlocked,
     )
 

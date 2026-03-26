@@ -6,9 +6,10 @@ import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
-    show TaskReminderConfig;
+    show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/data/repositories/prediction_repository.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -155,6 +156,13 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
         'task_reminders_enabled': newState.enabled,
         'task_reminder_times': newState.reminders,
       });
+      final scheduler = _ref.read(taskNotificationSchedulerProvider);
+      final taskRepo = _ref.read(taskRepositoryProvider);
+      final tasks = await taskRepo.getTasks();
+      await scheduler.refreshAllReminders(
+        tasks.items,
+        config: newState,
+      );
     } catch (e) {
       // Revert on error
       state = prevState;
@@ -342,8 +350,8 @@ final showChatTransparencyCapsuleProvider =
   ),
 );
 
-final motionIntensityLevelProvider = StateNotifierProvider<
-    MotionIntensityLevelNotifier, MotionIntensityLevel>(
+final motionIntensityLevelProvider =
+    StateNotifierProvider<MotionIntensityLevelNotifier, MotionIntensityLevel>(
   (ref) => MotionIntensityLevelNotifier(),
 );
 
@@ -438,7 +446,8 @@ final clientTelemetrySummaryProvider =
   return repo.fetchClientTelemetrySummary(days: days);
 });
 
-final healthCapacityProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final healthCapacityProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(authProvider).user;
   if (user == null) {
     return {
@@ -453,7 +462,8 @@ final healthCapacityProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   return repo.fetchHealthCapacity();
 });
 
-final prometheusAlertsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final prometheusAlertsProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(authProvider).user;
   if (user == null) {
     return {
@@ -657,11 +667,13 @@ class OnboardingCompletedNotifier extends StateNotifier<bool> {
 
   final Ref _ref;
 
-  String _storageKeyForUser(String userId) => '${kOnboardingCompletedKey}_$userId';
+  String _storageKeyForUser(String userId) =>
+      '${kOnboardingCompletedKey}_$userId';
 
   bool _inferCompletedFromProfileContext(Map<String, dynamic> payload) {
     final preferenceVersion = payload['preference_version'];
-    final versionValue = preferenceVersion is num ? preferenceVersion.toInt() : 0;
+    final versionValue =
+        preferenceVersion is num ? preferenceVersion.toInt() : 0;
     if (versionValue > 1) {
       return true;
     }

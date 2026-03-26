@@ -122,11 +122,6 @@ class Plan(BaseModel):
     # 关系定义
     user = relationship("User", back_populates="plans")
     tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
-    is_primary = Column(Boolean, default=False, nullable=False, index=True)
-
-    # 关系定义
-    user = relationship("User", back_populates="plans")
-    tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
 
     def __repr__(self):
         return f"<Plan(name={self.name}, type={self.type}, progress={self.progress})>"

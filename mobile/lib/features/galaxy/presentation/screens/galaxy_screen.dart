@@ -16,6 +16,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_servi
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
@@ -59,6 +60,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final AnimationController _buildReplayController;
   late final AnimationController _entranceController;
   late final Animation<double> _tapFeedbackAnimation;
+  late final ProviderSubscription<GalaxyDisplaySettings>
+      _displaySettingsSubscription;
 
   GalaxyGraphResponse? _graph;
   Map<String, Offset> _positions = const <String, Offset>{};
@@ -99,15 +102,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _isSettingsOpen = false;
   bool _performanceDegraded = false;
   double _ambientPhase = 0;
-  double _springStrength = 0.045;
-  double _repulsionStrength = 12000;
-  double _centerGravityStrength = 0.0016;
-  double _replaySpeed = 1.0;
   int _sceneVersion = 0;
   String _searchQuery = '';
   List<GalaxyNodeModel> _searchResults = const <GalaxyNodeModel>[];
   Set<String> _searchMatchedNodeIds = const <String>{};
-  Set<String> _focusNodeIds = const <String>{};
+  Set<String> _spotlightNodeIds = const <String>{};
+  String? _spotlightAnchorId;
   Map<String, Offset> _microDriftOffsets = const <String, Offset>{};
   List<GalaxyEdgeParticle> _edgeParticles = const <GalaxyEdgeParticle>[];
   List<_CelebrationEntry> _celebrations = const <_CelebrationEntry>[];
@@ -119,7 +119,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   int _playbackElapsedMs = 0;
   double _frameBudgetMs = 16;
   Timer? _previewDismissTimer;
-  Timer? _focusDismissTimer;
   Timer? _initialBuildReplayTimer;
 
   @override
@@ -138,10 +137,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       hitTestNode: _hitTestNode,
       onCommand: _handleGestureCommand,
     );
-    _forceEngine.updateParameters(
-      springK: _springStrength,
-      repulsionK: _repulsionStrength,
-      centerGravity: _centerGravityStrength,
+    _displaySettingsSubscription = ref.listenManual<GalaxyDisplaySettings>(
+      galaxyDisplaySettingsProvider,
+      (previous, next) => _applyDisplaySettings(previous: previous, next: next),
+      fireImmediately: true,
     );
     _flingTicker = createTicker(_handleFlingTick);
     _physicsTicker = createTicker(_handlePhysicsTick);
@@ -222,8 +221,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..removeStatusListener(_handleBuildReplayStatus)
       ..dispose();
     _entranceController.dispose();
+    _displaySettingsSubscription.close();
     _previewDismissTimer?.cancel();
-    _focusDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
@@ -321,6 +320,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           playbackLaunch,
           preserveCurrentCamera: true,
         );
+      } else {
+        _startGraphSettleSimulation(impulse: 0.28);
       }
     }
   }
@@ -340,6 +341,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _camera = overviewCamera;
         _didFitInitialCamera = true;
       });
+      _startGraphSettleSimulation(impulse: 0.28);
       return;
     }
 
@@ -490,7 +492,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       if (command.hit == null) {
         setState(() {
           _selectedNodeId = null;
-          _focusNodeIds = const <String>{};
+          _spotlightAnchorId = null;
+          _spotlightNodeIds = const <String>{};
           _cancelTapFeedbackState();
           _clearPreviewState();
         });
@@ -507,14 +510,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         setState(() {
           _cancelTapFeedbackState();
           _selectedNodeId = tappedNode.id;
+          _spotlightAnchorId = tappedNode.id;
           _previewNode = tappedNode;
           _previewScreenPosition = _computePreviewPosition(
             anchor: _camera.worldToScreen(command.hit!.worldPosition),
           );
-          _focusNodeIds = <String>{
-            tappedNode.id,
-            ...?_adjacency[tappedNode.id],
-          };
+          _spotlightNodeIds = _spotlightSetFor(tappedNode.id);
         });
         return;
       }
@@ -543,6 +544,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       setState(() {
         _cancelTapFeedbackState();
         _selectedNodeId = previewNode.id;
+        _spotlightAnchorId = previewNode.id;
+        _spotlightNodeIds = _spotlightSetFor(previewNode.id);
         _draggingNodeId = null;
         _previewNode = previewNode;
         _previewScreenPosition = _computePreviewPosition(
@@ -579,6 +582,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _cancelTapFeedbackState();
         _clearPreviewState();
         _selectedNodeId = command.nodeId;
+        _spotlightAnchorId = command.nodeId;
+        _spotlightNodeIds = _spotlightSetFor(command.nodeId);
         _draggingNodeId = command.nodeId;
         _positions = updatedPositions;
         _microDriftOffsets = const <String, Offset>{};
@@ -606,8 +611,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (_camera.scale >= 0.72) {
       setState(() {
-        _focusNodeIds = const <String>{};
         _selectedNodeId = null;
+        _spotlightAnchorId = null;
+        _spotlightNodeIds = const <String>{};
       });
       _fitOverviewAnimated();
       return;
@@ -650,7 +656,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _tapFeedbackNodeId = nodeId;
       _pendingNavigationNodeId = nodeId;
       _draggingNodeId = null;
-      _focusNodeIds = const <String>{};
+      _spotlightAnchorId = nodeId;
+      _spotlightNodeIds = _spotlightSetFor(nodeId);
     });
     _tapFeedbackController
       ..stop()
@@ -679,7 +686,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _schedulePreviewDismiss([
-    Duration delay = const Duration(milliseconds: 8000),
+    Duration delay = const Duration(milliseconds: 14000),
   ]) {
     _previewDismissTimer?.cancel();
     _previewDismissTimer = Timer(delay, () {
@@ -687,20 +694,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
       setState(_clearPreviewState);
-    });
-  }
-
-  void _scheduleFocusDismiss([
-    Duration delay = const Duration(milliseconds: 10000),
-  ]) {
-    _focusDismissTimer?.cancel();
-    _focusDismissTimer = Timer(delay, () {
-      if (!mounted || _focusNodeIds.isEmpty) {
-        return;
-      }
-      setState(() {
-        _focusNodeIds = const <String>{};
-      });
     });
   }
 
@@ -712,6 +705,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       });
     }
   }
+
+  Set<String> _spotlightSetFor(
+    String nodeId, {
+    bool includeNeighbors = true,
+  }) =>
+      includeNeighbors
+          ? <String>{nodeId, ...?_adjacency[nodeId]}
+          : <String>{nodeId};
 
   Offset _computePreviewPosition({required Offset anchor}) {
     const cardWidth = 220.0;
@@ -975,7 +976,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     setState(() {
       _celebrations = [..._celebrations, entry];
       _selectedNodeId = nextNode.id;
-      _focusNodeIds = emphasis;
+      _spotlightAnchorId = nextNode.id;
+      _spotlightNodeIds = emphasis;
     });
 
     if (entry.emphasizeNeighbors) {
@@ -985,7 +987,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             return;
           }
           setState(() {
-            _focusNodeIds = const <String>{};
+            _spotlightAnchorId = null;
+            _spotlightNodeIds = const <String>{};
           });
         }),
       );
@@ -1113,10 +1116,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     unawaited(_accessibilityService.lightHaptic());
     setState(() {
       _selectedNodeId = nodeId;
-      _focusNodeIds = emphasis;
+      _spotlightAnchorId = nodeId;
+      _spotlightNodeIds = emphasis;
       _clearPreviewState();
     });
-    _scheduleFocusDismiss();
     _animateCameraTo(
       targetCamera,
       duration: const Duration(milliseconds: 520),
@@ -1140,10 +1143,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     setState(() {
       _selectedNodeId = previewNode.id;
-      _focusNodeIds = <String>{previewNode.id, ...?_adjacency[previewNode.id]};
+      _spotlightAnchorId = previewNode.id;
+      _spotlightNodeIds = _spotlightSetFor(previewNode.id);
       _clearPreviewState();
     });
-    _scheduleFocusDismiss();
   }
 
   void _handleMiniMapNavigate(Offset worldPoint) {
@@ -1194,53 +1197,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   List<GalaxyEdgeParticle> _buildEdgeParticles(double timeSeconds) {
-    final graph = _graph;
-    if (_performanceDegraded || graph == null) {
-      return const <GalaxyEdgeParticle>[];
-    }
-
-    if (_isBuildAnimating) {
-      return _buildConstructionEdgeParticles();
-    }
     return const <GalaxyEdgeParticle>[];
-  }
-
-  List<GalaxyEdgeParticle> _buildConstructionEdgeParticles() {
-    final playbackPlan = _playbackPlan;
-    if (playbackPlan == null || playbackPlan.edgeSteps.isEmpty) {
-      return const <GalaxyEdgeParticle>[];
-    }
-
-    final particles = <GalaxyEdgeParticle>[];
-    for (final edgeStep in playbackPlan.edgeSteps.values) {
-      final growth = playbackPlan.edgeRevealAt(edgeStep.id, _playbackElapsedMs);
-      if (growth <= 0 || growth >= 1) {
-        continue;
-      }
-
-      final targetNode =
-          _nodesById[edgeStep.targetId] ?? _nodesById[edgeStep.sourceId];
-      if (targetNode == null) {
-        continue;
-      }
-
-      particles.add(
-        GalaxyEdgeParticle(
-          sourceId: edgeStep.sourceId,
-          targetId: edgeStep.targetId,
-          relationType: edgeStep.relationType,
-          strength: edgeStep.strength,
-          progress: Curves.easeOutCubic.transform(growth.clamp(0.0, 1.0)),
-          radius: 1.8 + edgeStep.strength * 1.1,
-          alpha: 0.55,
-          color: SectorConfig.getGlowColor(targetNode.sector),
-        ),
-      );
-      if (particles.length >= 36) {
-        break;
-      }
-    }
-    return particles;
   }
 
   Map<String, Offset> _buildMicroDriftOffsets(
@@ -1437,7 +1394,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _playbackPlan = null;
       _preRevealedNodeIds = const <String>{};
       _preRevealedEdgeIds = const <String>{};
-      _focusNodeIds = const <String>{};
+      _spotlightAnchorId = null;
+      _spotlightNodeIds = const <String>{};
     });
   }
 
@@ -1492,7 +1450,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _playbackPlan = null;
       _preRevealedNodeIds = const <String>{};
       _preRevealedEdgeIds = const <String>{};
-      _focusNodeIds = const <String>{};
+      _spotlightAnchorId = null;
+      _spotlightNodeIds = const <String>{};
     });
   }
 
@@ -1501,7 +1460,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (playbackPlan == null || playbackPlan.isEmpty) {
       return 7200;
     }
-    return (playbackPlan.totalDurationMs / _replaySpeed)
+    final replaySpeed = ref.read(galaxyDisplaySettingsProvider).replaySpeed;
+    final effectiveReplaySpeed = (replaySpeed * 1.12)
+        .clamp(kGalaxyReplaySpeedMin, kGalaxyReplaySpeedMax);
+    return (playbackPlan.totalDurationMs / effectiveReplaySpeed)
         .round()
         .clamp(1, 40000);
   }
@@ -1603,9 +1565,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _preRevealedEdgeIds = launch.preRevealedEdgeIds;
       _playbackElapsedMs = 0;
       _selectedNodeId = null;
+      _spotlightAnchorId = null;
+      _spotlightNodeIds = const <String>{};
       _draggingNodeId = null;
       _isBuildAnimating = true;
-      _focusNodeIds = const <String>{};
       _sceneVersion++;
     });
     _buildReplayController
@@ -1643,6 +1606,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _camera = preserveCurrentCamera ? _camera : overviewCamera;
     });
     _preparePlayback(launch);
+    _startGraphSettleSimulation();
     _startPreparedPlayback();
   }
 
@@ -1711,32 +1675,35 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return !RegExp(r'^[?？·•\-_=\s]+$').hasMatch(name);
   }
 
-  void _updatePhysicsSettings({
-    double? springStrength,
-    double? repulsionStrength,
-    double? centerGravity,
-    bool notify = true,
+  void _applyDisplaySettings({
+    required GalaxyDisplaySettings? previous,
+    required GalaxyDisplaySettings next,
   }) {
     _forceEngine.updateParameters(
-      springK: springStrength,
-      repulsionK: repulsionStrength,
-      centerGravity: centerGravity,
+      springK: next.linkForce,
+      repulsionK: next.repelForce,
+      centerGravity: next.centerForce,
+      springRestLength: next.linkDistance,
     );
-    if (!notify || !mounted) {
-      return;
+
+    final replaySpeedChanged =
+        previous != null && previous.replaySpeed != next.replaySpeed;
+    if (replaySpeedChanged && _isBuildAnimating) {
+      final progress = _buildReplayController.value.clamp(0.0, 1.0);
+      _buildReplayController
+        ..stop()
+        ..duration = Duration(milliseconds: _currentBuildReplayDurationMs());
+      unawaited(_buildReplayController.forward(from: progress));
     }
-    setState(() {
-      if (springStrength != null) {
-        _springStrength = springStrength;
-      }
-      if (repulsionStrength != null) {
-        _repulsionStrength = repulsionStrength;
-      }
-      if (centerGravity != null) {
-        _centerGravityStrength = centerGravity;
-      }
-    });
-    _previewPhysicsSettingsChange();
+
+    final forcesChanged = previous != null &&
+        (previous.centerForce != next.centerForce ||
+            previous.repelForce != next.repelForce ||
+            previous.linkForce != next.linkForce ||
+            previous.linkDistance != next.linkDistance);
+    if (forcesChanged) {
+      _previewPhysicsSettingsChange();
+    }
   }
 
   void _previewPhysicsSettingsChange() {
@@ -1777,27 +1744,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _startPhysicsSimulation();
   }
 
-  void _updateReplaySpeed(double value) {
-    setState(() {
-      _replaySpeed = value;
-    });
-    if (!_isBuildAnimating) {
+  void _startGraphSettleSimulation({double impulse = 0.4}) {
+    final graph = _graph;
+    if (graph == null || _positions.isEmpty) {
       return;
     }
-    final progress = _buildReplayController.value.clamp(0.0, 1.0);
-    _buildReplayController
-      ..stop()
-      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs());
-    unawaited(_buildReplayController.forward(from: progress));
+
+    _forceEngine.activateNodes(
+      _positions.keys,
+      positions: _positions,
+      impulse: impulse,
+    );
+    _startPhysicsSimulation();
   }
 
   void _resetSimulationSettings() {
-    _updatePhysicsSettings(
-      springStrength: 0.045,
-      repulsionStrength: 12000,
-      centerGravity: 0.0016,
-    );
-    _updateReplaySpeed(1.0);
+    ref.read(galaxyDisplaySettingsProvider.notifier).resetToDefaults();
   }
 
   Future<void> _openSimulationSettings() async {
@@ -1810,33 +1772,72 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => GalaxySimulationSettingsSheet(
-          isDarkMode: isDarkMode,
-          springStrength: _springStrength,
-          repulsionStrength: _repulsionStrength,
-          centerGravity: _centerGravityStrength,
-          replaySpeed: _replaySpeed,
-          onSpringChanged: (value) {
-            _updatePhysicsSettings(springStrength: value);
-            setSheetState(() {});
-          },
-          onRepulsionChanged: (value) {
-            _updatePhysicsSettings(repulsionStrength: value);
-            setSheetState(() {});
-          },
-          onCenterGravityChanged: (value) {
-            _updatePhysicsSettings(centerGravity: value);
-            setSheetState(() {});
-          },
-          onReplaySpeedChanged: (value) {
-            _updateReplaySpeed(value);
-            setSheetState(() {});
-          },
-          onReset: () {
-            _resetSimulationSettings();
-            setSheetState(() {});
-          },
-        ),
+        builder: (context, setSheetState) {
+          final settings = ref.read(galaxyDisplaySettingsProvider);
+          final notifier = ref.read(galaxyDisplaySettingsProvider.notifier);
+          return GalaxySimulationSettingsSheet(
+            isDarkMode: isDarkMode,
+            settings: settings,
+            onTextFadeThresholdChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(textFadeThreshold: value),
+              );
+              setSheetState(() {});
+            },
+            onNodeSizeScaleChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(nodeSizeScale: value),
+              );
+              setSheetState(() {});
+            },
+            onLinkThicknessScaleChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(linkThicknessScale: value),
+              );
+              setSheetState(() {});
+            },
+            onShowArrowsChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(showArrows: value),
+              );
+              setSheetState(() {});
+            },
+            onCenterForceChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(centerForce: value),
+              );
+              setSheetState(() {});
+            },
+            onRepelForceChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(repelForce: value),
+              );
+              setSheetState(() {});
+            },
+            onLinkForceChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(linkForce: value),
+              );
+              setSheetState(() {});
+            },
+            onLinkDistanceChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(linkDistance: value),
+              );
+              setSheetState(() {});
+            },
+            onReplaySpeedChanged: (value) {
+              notifier.updateWith(
+                (current) => current.copyWith(replaySpeed: value),
+              );
+              setSheetState(() {});
+            },
+            onReset: () {
+              _resetSimulationSettings();
+              setSheetState(() {});
+            },
+          );
+        },
       ),
     );
     if (!mounted) {
@@ -1986,6 +1987,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Widget build(BuildContext context) {
     const isDarkMode = _useDarkGalaxyTheme;
     const backgroundColor = isDarkMode ? Color(0xFF060A12) : Color(0xFFF5F6F8);
+    final displaySettings = ref.watch(galaxyDisplaySettingsProvider);
     final graph = _graph;
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
@@ -2080,6 +2082,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           isDarkMode: isDarkMode,
                           worldBounds: _computeWorldBounds(),
                           blendedColors: blendedColors,
+                          displaySettings: displaySettings,
                           playbackPlan: _playbackPlan,
                           playbackElapsedMs: _playbackElapsedMs,
                           preRevealedNodeIds: _preRevealedNodeIds,
@@ -2087,7 +2090,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           nodeConnectionCounts: _nodeConnectionCounts,
                           ambientPhase: _ambientPhase,
                           isBuildAnimating: _isBuildAnimating,
-                          focusNodeIds: _focusNodeIds,
+                          spotlightNodeIds: _spotlightNodeIds,
+                          spotlightAnchorId: _spotlightAnchorId,
                           searchMatchedNodeIds: _searchMatchedNodeIds,
                           driftOffsets: _microDriftOffsets,
                           edgeParticles: _edgeParticles,

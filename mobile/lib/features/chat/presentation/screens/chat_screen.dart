@@ -342,7 +342,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SparkleIconButton(
             icon: Icon(Icons.tune_rounded, color: DS.textSecondary),
             onPressed: () => _showAiSystemSettings(context),
-            semanticLabel: 'AI system settings',
+            semanticLabel: l10n.chatAiSystemSettings,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
@@ -1636,14 +1636,14 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                 SparkleIconButton(
                   icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
                   onPressed: _openingSessionId == null ? _refresh : null,
-                  semanticLabel: 'refresh history',
+                  semanticLabel: l10n.refresh,
                   variant: ButtonVariant.ghost,
                 ),
                 SparkleIconButton(
                   icon: Icon(Icons.close_rounded, color: DS.textSecondary),
                   onPressed: () =>
                       Navigator.of(context, rootNavigator: true).maybePop(),
-                  semanticLabel: 'close history',
+                  semanticLabel: l10n.close,
                   variant: ButtonVariant.ghost,
                 ),
               ],

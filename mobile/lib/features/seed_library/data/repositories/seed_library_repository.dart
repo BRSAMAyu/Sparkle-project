@@ -19,15 +19,21 @@ class SeedLibraryRepository {
     final payload = error.response?.data;
     if (payload is Map<String, dynamic>) {
       final detail = payload['detail'];
-      if (detail is String && detail.trim().isNotEmpty && detail.trim().toLowerCase() != 'null') {
+      if (detail is String &&
+          detail.trim().isNotEmpty &&
+          detail.trim().toLowerCase() != 'null') {
         return detail.trim();
       }
       final message = payload['message'];
-      if (message is String && message.trim().isNotEmpty && message.trim().toLowerCase() != 'null') {
+      if (message is String &&
+          message.trim().isNotEmpty &&
+          message.trim().toLowerCase() != 'null') {
         return message.trim();
       }
     }
-    if (payload is String && payload.trim().isNotEmpty && payload.trim().toLowerCase() != 'null') {
+    if (payload is String &&
+        payload.trim().isNotEmpty &&
+        payload.trim().toLowerCase() != 'null') {
       return payload.trim();
     }
     return fallback;
@@ -257,7 +263,8 @@ class SeedLibraryRepository {
         data: data,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'addItem');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'addItem');
       return SeedItem.fromJson(payload);
     } on DioException catch (e) {
       throw Exception(
@@ -296,7 +303,8 @@ class SeedLibraryRepository {
         data: data,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateItem');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'updateItem');
       return SeedItem.fromJson(payload);
     } on DioException catch (e) {
       throw Exception(
@@ -334,6 +342,12 @@ class SeedLibraryRepository {
         data: data,
       );
 
+      if (response.data == null) {
+        final fallback = await findMySubscriptionForLibrary(libraryId);
+        if (fallback != null) {
+          return fallback;
+        }
+      }
       final payload = ApiResponseParser.unwrapMap(
         response.data,
         action: 'subscribeToLibrary',
@@ -368,6 +382,12 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibrarySubscription(libraryId),
         data: request.toJson(),
       );
+      if (response.data == null) {
+        final fallback = await findMySubscriptionForLibrary(libraryId);
+        if (fallback != null) {
+          return fallback;
+        }
+      }
       final payload = ApiResponseParser.unwrapMap(
         response.data,
         action: 'updateSubscription',
@@ -541,9 +561,7 @@ class SeedLibraryRepository {
         response.data,
         action: 'getFewShotExamples',
       );
-      return data
-          .whereType<Map<String, dynamic>>()
-          .toList();
+      return data.whereType<Map<String, dynamic>>().toList();
     } on DioException catch (e) {
       throw Exception(
         _extractError(e, fallback: 'Failed to get examples'),

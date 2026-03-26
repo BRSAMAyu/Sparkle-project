@@ -68,8 +68,8 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(dashboardProvider);
     final predictionState = ref.watch(intentPredictionProvider);
-    final isTyping =
-        predictionState.isTyping && predictionState.currentInput.trim().isNotEmpty;
+    final isTyping = predictionState.isTyping &&
+        predictionState.currentInput.trim().isNotEmpty;
     final insight = isTyping
         ? predictionState.typingInsight
         : dashboardState.nextIntentForecast;
@@ -108,7 +108,8 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
         title: compactHeadline,
         sourceBadge: sourceBadge,
         onExpand: () {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           unawaited(_setExpanded(true));
         },
       );
@@ -197,15 +198,14 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
                     ),
                   )
                   .followedBy(
-                    promptStarters
-                        .map(
-                          (prompt) => _DockActionChip(
-                            label: prompt,
-                            icon: Icons.chat_bubble_outline_rounded,
-                            color: DS.prismBlue,
-                            onTap: () => widget.onPromptSelected(prompt),
-                          ),
-                        ),
+                    promptStarters.map(
+                      (prompt) => _DockActionChip(
+                        label: prompt,
+                        icon: Icons.chat_bubble_outline_rounded,
+                        color: DS.prismBlue,
+                        onTap: () => widget.onPromptSelected(prompt),
+                      ),
+                    ),
                   )
                   .toList(growable: false),
             ),
@@ -269,7 +269,8 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     return isTyping ? '我在判断你接下来想做什么' : '预测你接下来最可能的动作';
   }
 
-  String? _sourceBadge(PredictionInsightData? insight, {required bool isTyping}) {
+  String? _sourceBadge(PredictionInsightData? insight,
+      {required bool isTyping}) {
     if (insight == null) {
       return null;
     }
@@ -432,12 +433,12 @@ class _DockActionChipState extends State<_DockActionChip> {
       onTapUp: (_) => setState(() => _isPressed = false),
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _isPressed ? 0.98 : 1,
-          duration: DS.durationFast,
-          curve: DS.curveEaseOut,
-          child: Container(
-            constraints: const BoxConstraints(
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1,
+        duration: DS.durationFast,
+        curve: DS.curveEaseOut,
+        child: Container(
+          constraints: const BoxConstraints(
             minHeight: 34,
             maxWidth: 220,
           ),
@@ -469,7 +470,7 @@ class _DockActionChipState extends State<_DockActionChip> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: DS.labelSmall.copyWith(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightMedium,
                   ),

@@ -403,6 +403,22 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
     }
   }
 
+  Future<void> updateLibrary({
+    required String name,
+    String? description,
+  }) async {
+    try {
+      final updated = await _repository.updateLibrary(
+        libraryId,
+        UpdateLibraryRequest(name: name, description: description),
+      );
+      state = state.copyWith(library: updated);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
   Future<void> deleteLibrary() async {
     try {
       await _repository.deleteLibrary(libraryId);

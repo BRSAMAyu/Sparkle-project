@@ -169,7 +169,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
               borderRadius: _radius(context),
               child: RepaintBoundary(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: _getBackgroundGradient(context, widget.task.type),
                     borderRadius: _radius(context),
@@ -243,8 +244,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                             .titleMedium
                                                             ?.copyWith(
                                                               fontWeight:
-                                                                  FontWeight.w700,
-                                                              color: _textPrimary(
+                                                                  FontWeight
+                                                                      .w700,
+                                                              color:
+                                                                  _textPrimary(
                                                                 context,
                                                               ),
                                                             ),
@@ -259,7 +262,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                         TaskStatus.completed)
                                                       Padding(
                                                         padding:
-                                                            const EdgeInsets.only(
+                                                            const EdgeInsets
+                                                                .only(
                                                           left: 8,
                                                         ),
                                                         child: Icon(
@@ -293,8 +297,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                     if (!widget.compact) ...[
                                                       const SizedBox(width: 8),
                                                       _DifficultyStars(
-                                                        difficulty:
-                                                            widget.task.difficulty,
+                                                        difficulty: widget
+                                                            .task.difficulty,
                                                       ),
                                                     ],
                                                   ],
@@ -321,7 +325,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                       onPressed:
                                                           widget.onStart!,
                                                     ),
-                                                  if (widget.onComplete != null &&
+                                                  if (widget.onComplete !=
+                                                          null &&
                                                       widget.task.status !=
                                                           TaskStatus.completed)
                                                     _ActionButton(
@@ -350,8 +355,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                 .textTheme
                                                 .bodySmall
                                                 ?.copyWith(
-                                                  color:
-                                                      _textDisabled(context),
+                                                  color: _textDisabled(context),
                                                 ),
                                           ),
                                           const SizedBox(width: 12),
@@ -367,8 +371,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                 .textTheme
                                                 .bodySmall
                                                 ?.copyWith(
-                                                  color:
-                                                      _textDisabled(context),
+                                                  color: _textDisabled(context),
                                                 ),
                                           ),
                                           const Spacer(),
@@ -382,7 +385,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                   .bodySmall
                                                   ?.copyWith(
                                                     color:
-                                                    _textDisabled(context),
+                                                        _textDisabled(context),
                                                   ),
                                             ),
                                         ],
@@ -396,8 +399,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                         ),
                                       ],
                                       if ((widget.task.userNote ??
-                                                  widget.task.guideContent ??
-                                                  '')
+                                              widget.task.guideContent ??
+                                              '')
                                           .isNotEmpty) ...[
                                         const SizedBox(height: 10),
                                         Text(
@@ -493,17 +496,19 @@ class _DifficultyStars extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         children: List.generate(
           5,
-          (index) => ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                DS.semanticWarning,
-                SparkleContextExtension(context).colors.brandPrimary,
-              ],
-            ).createShader(bounds),
-            child: Icon(
-              index < difficulty ? Icons.star : Icons.star_border,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 16,
+          (index) => ExcludeSemantics(
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [
+                  DS.semanticWarning,
+                  SparkleContextExtension(context).colors.brandPrimary,
+                ],
+              ).createShader(bounds),
+              child: Icon(
+                index < difficulty ? Icons.star : Icons.star_border,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: 16,
+              ),
             ),
           ),
         ),

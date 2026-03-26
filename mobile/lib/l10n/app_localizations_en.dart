@@ -127,6 +127,104 @@ class AppLocalizationsEn extends AppLocalizations {
       'Press the Enter key in the chat box to send messages directly';
 
   @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get chatAiSystemSettings => 'AI system settings';
+
+  @override
+  String get sensoryFeedbackSectionTitle => 'Sensory Feedback';
+
+  @override
+  String get sensoryFeedbackSectionSubtitle =>
+      'Control interaction sounds, achievement feedback, and haptics in one place';
+
+  @override
+  String get sensoryFeedbackLoadingSubtitle =>
+      'Loading sensory feedback preferences...';
+
+  @override
+  String get sensorySoundTitle => 'Sound Feedback';
+
+  @override
+  String get sensorySoundSubtitle =>
+      'Turn off all Sensory sounds and ambient audio';
+
+  @override
+  String get sensoryHapticTitle => 'Haptic Feedback';
+
+  @override
+  String get sensoryHapticSubtitle =>
+      'Turn off haptics for achievements, galaxy interactions, and more';
+
+  @override
+  String get sensoryAmbientSceneTitle => 'Focus Ambience';
+
+  @override
+  String get sensoryAmbientVolumeTitle => 'Ambient Volume';
+
+  @override
+  String get bgmSectionTitle => 'Background Music';
+
+  @override
+  String get bgmSectionSubtitle =>
+      'Auto-switch ambience by page, with piano, airy, or warm preferences';
+
+  @override
+  String get bgmLoadingSubtitle => 'Loading music preferences...';
+
+  @override
+  String get bgmEnabledTitle => 'Enable Background Music';
+
+  @override
+  String get bgmEnabledSubtitle =>
+      'Automatically switch BGM when entering different pages';
+
+  @override
+  String get bgmPlaybackStrategyTitle => 'Playback Strategy';
+
+  @override
+  String get themeAiSectionSubtitle =>
+      'Theme, chat options, AI tier, and motion intensity';
+
+  @override
+  String get aiReasoningTitle => 'AI Tier';
+
+  @override
+  String get aiReasoningSubtitle =>
+      'Fast is quicker, Balanced is recommended, Deep is strongest for analysis';
+
+  @override
+  String get aiReasoningFastLabel => 'Fast';
+
+  @override
+  String get aiReasoningBalancedLabel => 'Balanced';
+
+  @override
+  String get aiReasoningDeepLabel => 'Deep';
+
+  @override
+  String get showChatContextToggleTitle => 'Show chat top controls';
+
+  @override
+  String get showChatContextToggleSubtitle =>
+      'Control the expandable plan and tier selectors on the chat page';
+
+  @override
+  String get showChatPredictionDockTitle => 'Show chat prediction dock';
+
+  @override
+  String get showChatPredictionDockSubtitle =>
+      'Control behavior predictions and quick suggestions above the input';
+
+  @override
+  String get showChatTransparencyCapsuleTitle => 'Show AI transparency capsule';
+
+  @override
+  String get showChatTransparencyCapsuleSubtitle =>
+      'Control the AI completion and transparency capsule at the bottom of chat';
+
+  @override
   String get taskCard => 'Task Card';
 
   @override

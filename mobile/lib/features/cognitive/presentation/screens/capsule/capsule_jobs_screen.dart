@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 
 /// 胶囊生成任务状态页
 ///
@@ -107,13 +108,13 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
       );
 }
 
-class _JobCard extends StatelessWidget {
+class _JobCard extends ConsumerWidget {
   const _JobCard({required this.job});
 
   final CapsuleGenerationJobModel job;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
 
@@ -280,9 +281,11 @@ class _JobCard extends StatelessWidget {
                       label: Text(l10n.capsuleChipLabel(id)),
                       avatar: const Icon(Icons.check_circle_outline, size: 16),
                       backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
-                      onPressed: () {
-                        // TRACKED(TD-005): 导航到胶囊详情
-                      },
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => CapsuleDetailScreen(capsuleId: id),
+                        ),
+                      ),
                     ),
                   )
                   .toList(),
@@ -297,9 +300,13 @@ class _JobCard extends StatelessWidget {
                 Expanded(
                   child: SparkleButton.outline(
                     label: l10n.commonRetry,
-                    onPressed: () {
-                      // TRACKED(TD-005): 重试
-                    },
+                    onPressed: () => ref
+                        .read(generationJobsProvider.notifier)
+                        .requestBatchGeneration(
+                          depthPreference: job.depthPreference,
+                          curiosityPreference: job.curiosityPreference,
+                          requestedCount: job.requestedCount,
+                        ),
                     icon: const Icon(Icons.refresh),
                   ),
                 ),
@@ -310,9 +317,7 @@ class _JobCard extends StatelessWidget {
                 Expanded(
                   child: SparkleButton.primary(
                     label: l10n.capsuleViewCapsules,
-                    onPressed: () {
-                      // TRACKED(TD-005): 查看生成的胶囊
-                    },
+                    onPressed: () => context.push('/curiosity-capsule'),
                     icon: const Icon(Icons.visibility),
                   ),
                 ),

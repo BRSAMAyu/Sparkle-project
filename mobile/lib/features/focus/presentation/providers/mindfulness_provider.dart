@@ -10,6 +10,7 @@ import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
@@ -104,6 +105,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     this._taskRepository,
     this._eventStream,
     this._predictionAttribution,
+    this._visualElementRepository,
   ) : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
@@ -111,6 +113,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   final TaskRepository _taskRepository;
   final AppEventStreamService _eventStream;
   final PredictionAttributionService _predictionAttribution;
+  final VisualElementRepository _visualElementRepository;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -251,8 +254,18 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           },
         );
 
-        // TRACKED(TD-004): Show reward feedback to user
-        // Can emit an event or update state to trigger UI update
+        // Process achievement-linked visual element unlocks
+        for (final achievement in response.unlockedAchievements) {
+          final achievementId =
+              (achievement['id'] ?? achievement['achievement_id'])?.toString();
+          if (achievementId != null && achievementId.isNotEmpty) {
+            try {
+              await _visualElementRepository.unlockByAchievement(achievementId);
+            } catch (e) {
+              debugPrint('Visual element unlock failed for $achievementId: $e');
+            }
+          }
+        }
       } catch (e) {
         // Log error but don't block exit
         debugPrint('❌ Failed to log focus session: $e');
@@ -350,11 +363,13 @@ final mindfulnessProvider =
   final taskRepository = ref.watch(taskRepositoryProvider);
   final eventStream = ref.watch(appEventStreamServiceProvider);
   final predictionAttribution = ref.watch(predictionAttributionServiceProvider);
+  final visualElementRepository = ref.watch(visualElementRepositoryProvider);
   return MindfulnessNotifier(
     focusRepository,
     predictionService,
     taskRepository,
     eventStream,
     predictionAttribution,
+    visualElementRepository,
   );
 });

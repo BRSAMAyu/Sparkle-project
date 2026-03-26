@@ -22,6 +22,7 @@ from app.core.metrics import (
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
 )
+from app.core.safe_error_messages import build_safe_chat_error
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.run_ledger import RunLedgerStore
@@ -236,6 +237,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
+            safe_message, error_code, retryable = build_safe_chat_error(e)
             response = agent_service_pb2.ChatResponse(
                 response_id=str(uuid.uuid4()),
                 created_at=int(datetime.now().timestamp()),
@@ -245,9 +247,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 prompt_version=prompt_version,
                 session_id=request.session_id,
                 error=agent_service_pb2.Error(
-                    message=str(e),
-                    retryable=True,
-                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
+                    message=safe_message,
+                    retryable=retryable,
+                    error_code=error_code,
                 ),
                 finish_reason=agent_service_pb2.STOP,  # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
             )

@@ -87,6 +87,78 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('mode switch preserves current draft in chat route',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await ViewStorageService.ensureInitialized();
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(
+              body: SafeArea(child: UnifiedOmniBar()),
+            ),
+          ),
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => Text(
+              'chat:${state.uri.queryParameters['prompt']}:${state.uri.queryParameters['chat_mode']}',
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            omniBarRepositoryProvider.overrideWithValue(
+              _FakeOmniBarRepository(),
+            ),
+            multiAgentCatalogProvider.overrideWith(
+              (ref) async => MultiAgentCatalog(
+                modes: const [],
+                experts: const [],
+                customExperts: const [],
+                customTeams: const [],
+                modelOptions: const [],
+              ),
+            ),
+            visiblePredictionsProvider.overrideWith(
+              (ref) => const [],
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: const [
+              ...AppLocalizations.localizationsDelegates,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), '我想学习计算机组成原理');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.bySemanticsLabel('切换 Agent 模式'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('学习计划'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('chat:我想学习计算机组成原理:study_plan'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     test('chat chrome toggles persist across notifier reload', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         kShowChatContextToggleKey: false,

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import ErrorCreated, event_bus
 from app.core.llm_client import llm_client
+from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
@@ -663,10 +664,15 @@ class ErrorBookService:
         )
         subject_distribution = {row[0]: row[1] for row in subject_result}
 
+        streak_stats = await self.db.scalar(
+            select(UserStreakStats).where(UserStreakStats.user_id == user_id)
+        )
+        review_streak_days = int(streak_stats.current_streak or 0) if streak_stats else 0
+
         return {
             "total_errors": total or 0,
             "mastered_count": mastered or 0,
             "need_review_count": need_review or 0,
-            "review_streak_days": 0, # TRACKED(TD-008): Calculate from study logs
+            "review_streak_days": review_streak_days,
             "subject_distribution": subject_distribution
         }

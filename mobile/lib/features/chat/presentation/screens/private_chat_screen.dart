@@ -150,7 +150,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                     _lastNewestMessageId = newestMessageId;
                     _scheduleScrollToLatest();
                   }
-                  final showAgentStatus = agentState.isSending;
+                  final showAgentStatus = agentState.isSending &&
+                      agentState.streamingContent.trim().isEmpty;
                   if (mergedMessages.isEmpty) {
                     return Center(
                       child: Column(
@@ -394,6 +395,14 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     UserModel? currentUser,
   ) {
     final merged = [...messages, ...agentState.messages];
+    if (agentState.streamingContent.trim().isNotEmpty) {
+      merged.add(
+        _buildStreamingAgentMessage(
+          agentState.streamingContent,
+          currentUser,
+        ),
+      );
+    }
     final byId = <String, PrivateMessageInfo>{};
     for (final message in merged) {
       final existing = byId[message.id];
@@ -404,6 +413,34 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     final deduped = byId.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return deduped;
+  }
+
+  PrivateMessageInfo _buildStreamingAgentMessage(
+    String content,
+    UserModel? currentUser,
+  ) {
+    final now = DateTime.now();
+    return PrivateMessageInfo(
+      id: 'private_agent_streaming_${now.microsecondsSinceEpoch}',
+      sender: buildCommunityAgentUser(
+        localizedName: context.l10n.communityAgentName,
+      ),
+      receiver: UserBrief(
+        id: widget.friendId,
+        username: _displayName ?? 'friend',
+        nickname: _displayName,
+      ),
+      content: content,
+      messageType: MessageType.text,
+      isRead: true,
+      createdAt: now,
+      updatedAt: now,
+      contentData: {
+        kAgentMetadataKey: true,
+        'agent_streaming': true,
+        if (currentUser != null) kAgentVisibleToKey: [currentUser.id],
+      },
+    );
   }
 
   Future<void> _runAssistantPreset({

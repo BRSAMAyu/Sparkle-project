@@ -332,6 +332,180 @@ abstract class AppLocalizations {
   /// **'在对话框中按回车键直接发送'**
   String get enterToSendDescription;
 
+  /// No description provided for @refresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get refresh;
+
+  /// No description provided for @chatAiSystemSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 系统设置'**
+  String get chatAiSystemSettings;
+
+  /// No description provided for @sensoryFeedbackSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'感官反馈'**
+  String get sensoryFeedbackSectionTitle;
+
+  /// No description provided for @sensoryFeedbackSectionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'统一控制操作音效、成就反馈和触觉回馈'**
+  String get sensoryFeedbackSectionSubtitle;
+
+  /// No description provided for @sensoryFeedbackLoadingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取感官反馈偏好...'**
+  String get sensoryFeedbackLoadingSubtitle;
+
+  /// No description provided for @sensorySoundTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'音效反馈'**
+  String get sensorySoundTitle;
+
+  /// No description provided for @sensorySoundSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后，所有 Sensory 音效与环境音将静默'**
+  String get sensorySoundSubtitle;
+
+  /// No description provided for @sensoryHapticTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'触控反馈'**
+  String get sensoryHapticTitle;
+
+  /// No description provided for @sensoryHapticSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后，成就、星图等所有触感反馈都会停止'**
+  String get sensoryHapticSubtitle;
+
+  /// No description provided for @sensoryAmbientSceneTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注环境音'**
+  String get sensoryAmbientSceneTitle;
+
+  /// No description provided for @sensoryAmbientVolumeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'环境音音量'**
+  String get sensoryAmbientVolumeTitle;
+
+  /// No description provided for @bgmSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景音乐'**
+  String get bgmSectionTitle;
+
+  /// No description provided for @bgmSectionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'按页面自动切换氛围，也支持你偏向钢琴、空灵或温暖风格'**
+  String get bgmSectionSubtitle;
+
+  /// No description provided for @bgmLoadingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取音乐偏好...'**
+  String get bgmLoadingSubtitle;
+
+  /// No description provided for @bgmEnabledTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用背景音乐'**
+  String get bgmEnabledTitle;
+
+  /// No description provided for @bgmEnabledSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入不同页面时自动切换对应的 BGM'**
+  String get bgmEnabledSubtitle;
+
+  /// No description provided for @bgmPlaybackStrategyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放策略'**
+  String get bgmPlaybackStrategyTitle;
+
+  /// No description provided for @themeAiSectionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题、对话选项、AI 档位与动效强度'**
+  String get themeAiSectionSubtitle;
+
+  /// No description provided for @aiReasoningTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 档位'**
+  String get aiReasoningTitle;
+
+  /// No description provided for @aiReasoningSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏捷更快，均衡推荐，深思更强分析'**
+  String get aiReasoningSubtitle;
+
+  /// No description provided for @aiReasoningFastLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏捷'**
+  String get aiReasoningFastLabel;
+
+  /// No description provided for @aiReasoningBalancedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡'**
+  String get aiReasoningBalancedLabel;
+
+  /// No description provided for @aiReasoningDeepLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'深思'**
+  String get aiReasoningDeepLabel;
+
+  /// No description provided for @showChatContextToggleTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示聊天顶部选择条'**
+  String get showChatContextToggleTitle;
+
+  /// No description provided for @showChatContextToggleSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制聊天页里可展开的计划/档位选择组件'**
+  String get showChatContextToggleSubtitle;
+
+  /// No description provided for @showChatPredictionDockTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示聊天预测组件'**
+  String get showChatPredictionDockTitle;
+
+  /// No description provided for @showChatPredictionDockSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制输入框上方的用户行为预测与快捷建议'**
+  String get showChatPredictionDockSubtitle;
+
+  /// No description provided for @showChatTransparencyCapsuleTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 AI 透明胶囊'**
+  String get showChatTransparencyCapsuleTitle;
+
+  /// No description provided for @showChatTransparencyCapsuleSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制聊天页底部的 AI 系统完成情况与透明化浮层'**
+  String get showChatTransparencyCapsuleSubtitle;
+
   /// No description provided for @taskCard.
   ///
   /// In zh, this message translates to:
