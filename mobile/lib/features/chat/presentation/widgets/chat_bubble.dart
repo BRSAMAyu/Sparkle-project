@@ -9,11 +9,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/grapheme_utils.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -22,6 +22,7 @@ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
@@ -378,7 +379,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       if (_responseId != null) {
                         setState(() {
                           _rememberResponseFeedbackSelection(
-                              _responseId!, 'up');
+                            _responseId!,
+                            'up',
+                          );
                         });
                       }
                       widget.onResponseFeedback!(
@@ -475,12 +478,40 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final collaborationMode = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).collaborationMode
         : null;
+    final routingPreview = widget.message is ChatMessageModel
+        ? ((widget.message as ChatMessageModel)
+            .agentCollaboration?['routing_preview'] as Map<String, dynamic>?)
+        : null;
+    final roundtableTurns = widget.message is ChatMessageModel
+        ? ((((widget.message as ChatMessageModel)
+                        .agentCollaboration?['roundtable_turns']
+                    as List<dynamic>?) ??
+                const [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList())
+        : const <Map<String, dynamic>>[];
     final agentsInvolved = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentsInvolved
         : const <String>[];
     final agentActivities = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentActivities
         : const <Map<String, dynamic>>[];
+    final primaryAgentId = widget.message is ChatMessageModel
+        ? ((widget.message as ChatMessageModel)
+                .agentCollaboration?['primary_agent']
+                ?.toString() ??
+            (agentsInvolved.isNotEmpty ? agentsInvolved.first : null))
+        : null;
+    Map<String, dynamic>? primarySnapshot;
+    if (primaryAgentId != null && primaryAgentId.isNotEmpty) {
+      for (final item in agentActivities) {
+        if (item['agent_id']?.toString() == primaryAgentId) {
+          primarySnapshot = item;
+          break;
+        }
+      }
+    }
     final bubble = Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
       child: Column(
@@ -567,6 +598,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    if (!isUser &&
+                                        primaryAgentId != null &&
+                                        primaryAgentId.isNotEmpty)
+                                      AssistantAgentBadge(
+                                        agentId: primaryAgentId,
+                                        displayName:
+                                            primarySnapshot?['display_name']
+                                                ?.toString(),
+                                        colorHex: primarySnapshot?['color']
+                                            ?.toString(),
+                                        iconName: primarySnapshot?['icon']
+                                            ?.toString(),
+                                      ),
                                     if (widget.message is PrivateMessageInfo &&
                                         (widget.message as PrivateMessageInfo)
                                                 .quotedMessage !=
@@ -713,6 +757,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ),
                                 child: OrchestrationTracePanel(
                                   traceData: orchestrationTrace,
+                                ),
+                              ),
+                            if (!isUser &&
+                                (routingPreview != null ||
+                                    roundtableTurns.isNotEmpty))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: ExpertRoundtableWidget(
+                                  routingPreview: routingPreview,
+                                  turns: roundtableTurns,
+                                  compact: true,
                                 ),
                               ),
                             if (!isUser &&
@@ -971,8 +1030,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             selected: isPositive,
             onTap: selection == null
                 ? () {
-                    unawaited(SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.confirm));
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.confirm,
+                      ),
+                    );
                     if (_responseId != null) {
                       setState(() {
                         _rememberResponseFeedbackSelection(_responseId!, 'up');
@@ -992,8 +1054,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             selected: isNegative,
             onTap: selection == null
                 ? () {
-                    unawaited(SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.confirm));
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.confirm,
+                      ),
+                    );
                     if (_responseId != null) {
                       setState(() {
                         _rememberResponseFeedbackSelection(

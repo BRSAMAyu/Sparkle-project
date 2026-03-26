@@ -27,6 +27,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_simul
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
+import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 final galaxyBuildPlaybackSessionProvider = StateProvider<bool>(
@@ -1196,9 +1197,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _ambientPhase = nextPhase;
   }
 
-  List<GalaxyEdgeParticle> _buildEdgeParticles(double timeSeconds) {
-    return const <GalaxyEdgeParticle>[];
-  }
+  List<GalaxyEdgeParticle> _buildEdgeParticles(double timeSeconds) =>
+      const <GalaxyEdgeParticle>[];
 
   Map<String, Offset> _buildMicroDriftOffsets(
     double timeSeconds,
@@ -1992,6 +1992,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
+    final theaterOverlay = ref.watch(theaterOverlayProvider);
 
     final baseTheme = Theme.of(context);
     final galaxyTheme = baseTheme.copyWith(
@@ -2099,6 +2100,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               .map((entry) => entry.nodeId)
                               .toSet(),
                           performanceDegraded: _performanceDegraded,
+                          predictionOverlay: theaterOverlay,
                         ),
                         child: const SizedBox.expand(),
                       ),

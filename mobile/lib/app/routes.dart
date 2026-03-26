@@ -31,6 +31,7 @@ import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/tools/tools.dart';
 import 'package:sparkle/features/translation/translation.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -223,6 +224,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
       ...SimulationRoutes.routes,
+      ...TheaterRoutes.routes,
       ...ReportRoutes.routes,
       ...FocusRoutes.routes,
       ...CalendarRoutes.routes,

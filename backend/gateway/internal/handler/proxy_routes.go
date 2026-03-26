@@ -480,6 +480,35 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered observability proxy routes")
 
+	// ==================== Knowledge Theater Routes ====================
+	theater := api.Group("/theater")
+	theater.Use(authMiddleware)
+	{
+		theater.POST("/predictions/generate", h.proxyWithHeaders)
+		theater.POST("/predictions/what-if", h.proxyWithHeaders)
+		theater.POST("/predictions/:id/adopt", h.proxyWithHeaders)
+		theater.POST("/predictions/:id/actuals", h.proxyWithHeaders)
+		theater.GET("/predictions/:id/accuracy", h.proxyWithHeaders)
+		theater.POST("/snapshots", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered theater proxy routes")
+
+	// ==================== Simulation Routes ====================
+	simulation := api.Group("/simulation")
+	simulation.Use(authMiddleware)
+	{
+		simulation.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered simulation proxy routes")
+
+	// ==================== Learning Reports Routes ====================
+	learningReports := api.Group("/learning-reports")
+	learningReports.Use(authMiddleware)
+	{
+		learningReports.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered learning-reports proxy routes")
+
 	// ==================== Shop, Photons, Inventory Routes ====================
 	shop := api.Group("/shop")
 	shop.Use(authMiddleware)

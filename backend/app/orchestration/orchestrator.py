@@ -95,6 +95,7 @@ from app.orchestration.mode_workflow_config import get_mode_strategy, get_workfl
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
 from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
 from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
+from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
 from app.orchestration.observability_logger import observability_logger
@@ -1002,6 +1003,56 @@ class ChatOrchestrator(
                     state.context_data["answer_experts"] = list(answer_experts)
                 if custom_expert_profiles:
                     state.context_data["_custom_expert_profiles"] = dict(custom_expert_profiles)
+
+                selected_for_preview = []
+                if expert_routing_decision and expert_routing_decision.selected_experts:
+                    selected_for_preview = list(expert_routing_decision.selected_experts)
+                elif isinstance(state.context_data.get("selected_experts"), list):
+                    selected_for_preview = [
+                        str(item).strip()
+                        for item in state.context_data.get("selected_experts", [])
+                        if str(item).strip()
+                    ]
+                if selected_for_preview:
+                    routing_preview = await emit_routing_preview(
+                        stream_callback,
+                        selected_experts=selected_for_preview,
+                        complexity_score=(
+                            expert_routing_decision.complexity_score
+                            if expert_routing_decision
+                            else 0.45
+                        ),
+                        complexity_tier=(
+                            expert_routing_decision.complexity_tier
+                            if expert_routing_decision
+                            else "medium"
+                        ),
+                        route_confidence=(
+                            expert_routing_decision.route_confidence
+                            if expert_routing_decision
+                            else 0.7
+                        ),
+                        routing_strategy=(
+                            expert_routing_decision.routing_strategy
+                            if expert_routing_decision
+                            else "explicit_team"
+                        ),
+                    )
+                    state.context_data["routing_preview"] = routing_preview
+                    for index, expert_id in enumerate(selected_for_preview):
+                        await emit_agent_activity(
+                            stream_callback,
+                            agent_id=expert_id,
+                            status="pending",
+                            metadata={
+                                "phase": "roundtable",
+                                "queue_index": index,
+                                "collaboration_mode": (
+                                    state.context_data.get("collaboration_mode")
+                                    or "expert"
+                                ),
+                            },
+                        )
 
                 # Step 9: Non-standard mode fallback only when unified graph routing is explicitly disabled.
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:

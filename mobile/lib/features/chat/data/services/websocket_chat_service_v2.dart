@@ -208,6 +208,42 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        if (metadata != null && metadata['event_type'] == 'routing_preview') {
+          final payload = metadata['payload'] as String?;
+          if (payload != null && payload.isNotEmpty) {
+            try {
+              final preview = json.decode(payload) as Map<String, dynamic>;
+              return RoutingPreviewEvent(
+                preview: preview,
+                responseId: responseId,
+                traceId: traceId,
+                workflowId: workflowId,
+                promptVersion: promptVersion,
+              );
+            } catch (e) {
+              debugPrint('Failed to parse routing preview: $e');
+            }
+          }
+        }
+
+        if (metadata != null && metadata['event_type'] == 'agent_turn') {
+          final payload = metadata['payload'] as String?;
+          if (payload != null && payload.isNotEmpty) {
+            try {
+              final turn = json.decode(payload) as Map<String, dynamic>;
+              return AgentTurnEvent(
+                turn: turn,
+                responseId: responseId,
+                traceId: traceId,
+                workflowId: workflowId,
+                promptVersion: promptVersion,
+              );
+            } catch (e) {
+              debugPrint('Failed to parse agent turn: $e');
+            }
+          }
+        }
+
         // Check for agent activity events
         if (metadata != null && metadata['event_type'] == 'agent_activity') {
           final activityPayload = metadata['payload'] as String?;
@@ -944,16 +980,6 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 with WidgetsBindingObserver {
-  static const List<Duration> _reconnectSchedule = <Duration>[
-    Duration(milliseconds: 800),
-    Duration(milliseconds: 1200),
-    Duration(milliseconds: 2200),
-    Duration(milliseconds: 4200),
-    Duration(milliseconds: 8200),
-    Duration(milliseconds: 12200),
-  ];
-  static const int _maxReconnectAttempts = 6;
-
   WebSocketChatServiceV2({
     required ProviderContainer container,
     String? baseUrl,
@@ -969,6 +995,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
     WidgetsBinding.instance.addObserver(this);
   }
+
+  static const List<Duration> _reconnectSchedule = <Duration>[
+    Duration(milliseconds: 800),
+    Duration(milliseconds: 1200),
+    Duration(milliseconds: 2200),
+    Duration(milliseconds: 4200),
+    Duration(milliseconds: 8200),
+    Duration(milliseconds: 12200),
+  ];
+  static const int _maxReconnectAttempts = 6;
 
   // Factory for creating channels
   final WebSocketChannelFactory? _channelFactory;
@@ -1031,7 +1067,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   // 401错误处理和Token刷新
   bool _isRefreshingToken = false;
-  int _401ErrorCount = 0;
+  int _error401Count = 0;
   static const int _max401Retries = 1;
 
   /// Exposed for testing
@@ -1505,7 +1541,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
 
     // 检查是否超过最大重试次数
-    if (_401ErrorCount >= _max401Retries) {
+    if (_error401Count >= _max401Retries) {
       _log('❌ Max 401 retry attempts exceeded, logging out...');
 
       // 发送友好错误提示
@@ -1550,10 +1586,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
 
     _isRefreshingToken = true;
-    _401ErrorCount++;
+    _error401Count++;
 
     _log(
-      '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)',
+      '🔑 Detected 401 error, refreshing token... ($_error401Count/$_max401Retries)',
     );
 
     try {
@@ -1626,7 +1662,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _log('🔄 Resetting connection state');
     _enableReconnectLocal = true;
     _reconnectAttempts = 0;
-    _401ErrorCount = 0;
+    _error401Count = 0;
     _isRefreshingToken = false;
   }
 
@@ -1658,7 +1694,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     if (_is401Error(error)) {
       _log('🔐 401 Authentication error detected');
       // 异步处理401，避免阻塞错误处理流程
-      Future.microtask(_handle401Error);
+      unawaited(Future.microtask(_handle401Error));
       return;
     }
 
@@ -1724,9 +1760,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _reconnectAttempts++;
     _updateConnectionState(WsConnectionState.reconnecting);
 
-    final baseDelay =
-        _reconnectSchedule[_reconnectAttempts.clamp(1, _maxReconnectAttempts) -
-            1];
+    final baseDelay = _reconnectSchedule[
+        _reconnectAttempts.clamp(1, _maxReconnectAttempts) - 1];
     final jitterMs = math.Random().nextInt(250);
     final delayMs = baseDelay.inMilliseconds + jitterMs;
 
@@ -1777,7 +1812,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _heartbeatTimeoutTimer?.cancel();
     _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () {
       _log(
-          '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s',);
+        '⏰ Heartbeat timeout - no pong received in ${_heartbeatTimeout.inSeconds}s',
+      );
       _handleHeartbeatFailure();
     });
   }
@@ -1817,7 +1853,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
 
     _log(
-        '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures',);
+      '❌ Heartbeat failure #$_consecutiveHeartbeatFailures/$_maxConsecutiveHeartbeatFailures',
+    );
 
     if (_consecutiveHeartbeatFailures >= _maxConsecutiveHeartbeatFailures) {
       // 🔧 P0修复：流式消息活跃期间，如果最近收到过数据则跳过重连
@@ -1826,7 +1863,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         final sinceLastData = DateTime.now().difference(_lastStreamDataTime!);
         if (sinceLastData.inSeconds < 120) {
           _log(
-              '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago',);
+            '💡 Suppressing heartbeat reconnect: stream active, last data ${sinceLastData.inSeconds}s ago',
+          );
           _consecutiveHeartbeatFailures =
               0; // Reset to avoid immediate re-trigger
           return;
@@ -2045,9 +2083,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       timer.cancel();
     }
     _terminalFallbackTimers.clear();
-    for (final controller in _requestControllers.values) {
-      _safeClose(controller);
-    }
+    _requestControllers.values.forEach(_safeClose);
     _requestControllers.clear();
     if (!_connectionStateController.isClosed) {
       unawaited(_connectionStateController.close());

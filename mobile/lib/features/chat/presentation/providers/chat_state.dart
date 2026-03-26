@@ -128,6 +128,8 @@ class ChatState {
     this.activeAgentType,
     this.activeTools = const [],
     this.agentActivities = const [],
+    this.routingPreview,
+    this.roundtableTurns = const [],
     this.dailyTokens,
     this.dailyTokenLimit,
     this.dailyCostMicroUsd,
@@ -174,6 +176,8 @@ class ChatState {
   final String? activeAgentType;
   final List<String> activeTools;
   final List<AgentActivityEvent> agentActivities;
+  final Map<String, dynamic>? routingPreview;
+  final List<Map<String, dynamic>> roundtableTurns;
   final int? dailyTokens;
   final int? dailyTokenLimit;
   final int? dailyCostMicroUsd;
@@ -239,6 +243,8 @@ class ChatState {
     String? activeAgentType,
     List<String>? activeTools,
     List<AgentActivityEvent>? agentActivities,
+    Map<String, dynamic>? routingPreview,
+    List<Map<String, dynamic>>? roundtableTurns,
     int? dailyTokens,
     int? dailyTokenLimit,
     int? dailyCostMicroUsd,
@@ -255,6 +261,7 @@ class ChatState {
     ActiveRunSummary? activeRunSummary,
     bool clearActiveRunSummary = false,
     TransparencyPresentationState? transparencyPresentationState,
+    bool clearRoundtable = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -308,6 +315,10 @@ class ChatState {
         activeAgentType: activeAgentType ?? this.activeAgentType,
         activeTools: activeTools ?? this.activeTools,
         agentActivities: agentActivities ?? this.agentActivities,
+        routingPreview:
+            clearRoundtable ? null : routingPreview ?? this.routingPreview,
+        roundtableTurns:
+            clearRoundtable ? [] : roundtableTurns ?? this.roundtableTurns,
         dailyTokens: dailyTokens ?? this.dailyTokens,
         dailyTokenLimit: dailyTokenLimit ?? this.dailyTokenLimit,
         dailyCostMicroUsd: dailyCostMicroUsd ?? this.dailyCostMicroUsd,

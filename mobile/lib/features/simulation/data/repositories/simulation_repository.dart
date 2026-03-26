@@ -11,6 +11,24 @@ class SimulationRepository {
 
   final ApiClient _apiClient;
 
+  Future<List<SimulationSeedModel>> getRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+  }) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/simulation/recommended-seeds',
+      queryParameters: {
+        if (scenarioKey != null && scenarioKey.isNotEmpty)
+          'scenario_key': scenarioKey,
+        'limit': limit,
+      },
+    );
+    return (response.data?['seeds'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(SimulationSeedModel.fromJson)
+        .toList();
+  }
+
   Future<SimulationSessionModel> runSimulation({
     required String topic,
     required String scenarioKey,

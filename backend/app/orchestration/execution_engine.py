@@ -34,6 +34,7 @@ from app.gen.agent.v1 import agent_service_pb2
 from app.models.galaxy import KnowledgeNode
 from app.orchestration.agent_memory import AgentMemoryService
 from app.orchestration.agent_scoring import AgentScoringService
+from app.orchestration.agent_activity import emit_agent_activity, emit_agent_turn
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD, is_expert_chat_mode
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
@@ -58,6 +59,98 @@ _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
 
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
+
+    async def _emit_roundtable_preview(
+        self,
+        *,
+        executable_plan: ExecutablePlan | None,
+        user_message: str,
+        stream_callback,
+        state: WorkflowState,
+    ) -> None:
+        if executable_plan is None or stream_callback is None:
+            return
+        agent_ids = [
+            str(agent).strip()
+            for agent in list(executable_plan.agents_involved or [])
+            if str(agent).strip()
+        ]
+        if len(agent_ids) < 2:
+            return
+
+        turns: list[dict[str, Any]] = []
+        for index, agent_id in enumerate(agent_ids):
+            preview = self._build_agent_turn_preview(
+                agent_id=agent_id,
+                user_message=user_message,
+                executable_plan=executable_plan,
+                turn_index=index,
+            )
+            await emit_agent_activity(
+                stream_callback,
+                agent_id=agent_id,
+                status="active",
+                metadata={
+                    "phase": "analysis",
+                    "collaboration_mode": executable_plan.collaboration_mode,
+                    "turn_index": index,
+                },
+            )
+            turn_payload = await emit_agent_turn(
+                stream_callback,
+                agent_id=agent_id,
+                turn_index=index,
+                content=preview,
+                turn_type="analysis",
+                metadata={
+                    "collaboration_mode": executable_plan.collaboration_mode,
+                },
+            )
+            turns.append(turn_payload)
+            await emit_agent_activity(
+                stream_callback,
+                agent_id=agent_id,
+                status="completed",
+                result_summary=preview,
+                metadata={
+                    "phase": "analysis",
+                    "collaboration_mode": executable_plan.collaboration_mode,
+                    "turn_index": index,
+                },
+            )
+        if turns:
+            state.context_data["roundtable_turns"] = turns
+
+    def _build_agent_turn_preview(
+        self,
+        *,
+        agent_id: str,
+        user_message: str,
+        executable_plan: ExecutablePlan,
+        turn_index: int,
+    ) -> str:
+        topic = str(user_message or "").strip()
+        topic = topic[:42] + "..." if len(topic) > 42 else topic
+        narrative = str(executable_plan.collaboration_narrative or "").strip()
+        if agent_id == "galaxy_guide":
+            return f"这个问题涉及几个关键前置概念，我先把“{topic}”的知识依赖关系梳理清楚。"
+        if agent_id == "deep_analyst":
+            return f"我会沿着最容易混淆的分歧点拆解“{topic}”，把核心判断依据讲透。"
+        if agent_id == "exam_oracle":
+            return f"如果把“{topic}”放到考试与得分场景里，我会优先定位最容易失分的环节。"
+        if agent_id == "time_tutor":
+            return f"我会从学习节奏和投入成本看“{topic}”，判断怎样安排更容易真正学会。"
+        if agent_id == "error_analyst":
+            return f"我先从常见错因逆推“{topic}”，看看哪些误区最值得提前规避。"
+        if agent_id == "math_agent":
+            return f"我会把“{topic}”里的关键公式、推导和计算路径先压缩成一条可执行主线。"
+        if agent_id == "code_agent":
+            return f"如果“{topic}”需要落到实现层面，我会先指出最关键的数据结构和步骤约束。"
+        if agent_id == "study_buddy":
+            return f"我会把“{topic}”先翻译成更好吸收的学习语言，确保你能跟得上后面的讨论。"
+        if narrative:
+            return narrative
+        return f"我先从自己的专长视角切入“{topic}”，补上这轮协作里最关键的一块。"
 
     def _format_review_message(self, review_result) -> str:
         """Format plan review result as user-friendly message"""
@@ -1343,6 +1436,12 @@ class ExecutionEngineMixin:
                     agents=executable_plan.agents_involved,
                     mode=executable_plan.collaboration_mode,
                 )
+            await self._emit_roundtable_preview(
+                executable_plan=executable_plan,
+                user_message=user_message,
+                stream_callback=stream_callback,
+                state=state,
+            )
 
             asyncio.create_task(
                 self.shadow_predictor.predict_and_record(

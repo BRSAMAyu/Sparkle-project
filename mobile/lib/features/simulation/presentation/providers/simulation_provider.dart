@@ -5,33 +5,39 @@ import 'package:sparkle/features/simulation/data/repositories/simulation_reposit
 class SimulationState {
   const SimulationState({
     this.isLoading = false,
+    this.isLoadingRecommendations = false,
     this.session,
     this.error,
     this.sessionId,
     this.engineState,
     this.progress = 0,
+    this.recommendedSeeds = const [],
     this.liveParticipants = const [],
     this.liveRounds = const [],
     this.liveInsightSummary,
   });
 
   final bool isLoading;
+  final bool isLoadingRecommendations;
   final SimulationSessionModel? session;
   final String? error;
   final String? sessionId;
   final String? engineState;
   final double progress;
+  final List<SimulationSeedModel> recommendedSeeds;
   final List<SimulationParticipantModel> liveParticipants;
   final List<SimulationRoundModel> liveRounds;
   final String? liveInsightSummary;
 
   SimulationState copyWith({
     bool? isLoading,
+    bool? isLoadingRecommendations,
     SimulationSessionModel? session,
     String? error,
     String? sessionId,
     String? engineState,
     double? progress,
+    List<SimulationSeedModel>? recommendedSeeds,
     List<SimulationParticipantModel>? liveParticipants,
     List<SimulationRoundModel>? liveRounds,
     String? liveInsightSummary,
@@ -42,11 +48,14 @@ class SimulationState {
   }) =>
       SimulationState(
         isLoading: isLoading ?? this.isLoading,
+        isLoadingRecommendations:
+            isLoadingRecommendations ?? this.isLoadingRecommendations,
         session: clearSession ? null : session ?? this.session,
         error: clearError ? null : error ?? this.error,
         sessionId: clearSessionId ? null : sessionId ?? this.sessionId,
         engineState: engineState ?? this.engineState,
         progress: progress ?? this.progress,
+        recommendedSeeds: recommendedSeeds ?? this.recommendedSeeds,
         liveParticipants: liveParticipants ?? this.liveParticipants,
         liveRounds: liveRounds ?? this.liveRounds,
         liveInsightSummary: clearLiveInsightSummary
@@ -59,6 +68,32 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
   SimulationNotifier(this._repository) : super(const SimulationState());
 
   final SimulationRepository _repository;
+
+  Future<void> loadRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+    bool silent = false,
+  }) async {
+    state = state.copyWith(
+      isLoadingRecommendations: !silent,
+      clearError: true,
+    );
+    try {
+      final seeds = await _repository.getRecommendedSeeds(
+        scenarioKey: scenarioKey,
+        limit: limit,
+      );
+      state = state.copyWith(
+        isLoadingRecommendations: false,
+        recommendedSeeds: seeds,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingRecommendations: false,
+        error: e.toString(),
+      );
+    }
+  }
 
   Future<void> run({
     required String topic,

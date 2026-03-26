@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
 from app.services.simulation.simulation_engine import SimulationEngine
+from app.services.simulation.seed_extractor import SeedExtractor
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
 
@@ -18,6 +19,41 @@ router = APIRouter(prefix="/simulation", tags=["simulation"])
 class SimulationRunRequest(BaseModel):
     topic: str = Field(..., description="学习主题")
     scenario_key: str = Field(default="study_group", description="场景模板 key")
+
+
+class SimulationSeedResponse(BaseModel):
+    topic: str
+    context: str
+    tension_point: str
+    source_type: str
+    source_ids: list[str]
+    relevance_score: float
+    suggested_scenario: str
+    suggested_experts: list[str]
+
+
+class RecommendedSeedsResponse(BaseModel):
+    scenario_key: str | None
+    seeds: list[SimulationSeedResponse]
+
+
+@router.get("/recommended-seeds", response_model=RecommendedSeedsResponse)
+async def get_recommended_learning_simulation_seeds(
+    scenario_key: str | None = None,
+    limit: int = 3,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    extractor = SeedExtractor(db)
+    seeds = await extractor.get_cached_or_generate(
+        UUID(user_id),
+        scenario_key=scenario_key,
+        limit=max(1, min(limit, 6)),
+    )
+    return RecommendedSeedsResponse(
+        scenario_key=scenario_key,
+        seeds=[SimulationSeedResponse(**seed.to_dict()) for seed in seeds],
+    )
 
 
 @router.post("/run")

@@ -18,6 +18,7 @@ from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.galaxy_service import GalaxyService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.plan_state_service import PlanStateService
+from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -83,6 +84,7 @@ class GalaxyEventConsumer:
                 await galaxy_service.handle_error_created(event)
                 evolution = GraphEvolutionService(db)
                 await evolution.handle_error_created(event)
+                await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
 
             logger.info(f"Processed error_created for user {user_id}")
 
@@ -209,18 +211,24 @@ class GalaxyEventConsumer:
 
     async def _handle_task_completed(self, event: dict):
         try:
+            user_id = event.get("user_id")
             async with AsyncSessionLocal() as db:
                 evolution = GraphEvolutionService(db)
                 await evolution.handle_task_completed(event)
+                if user_id:
+                    await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
             logger.info("Processed task.completed graph evolution for task {}", event.get("task_id"))
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")
 
     async def _handle_mastery_updated(self, event: dict):
         try:
+            user_id = event.get("user_id")
             async with AsyncSessionLocal() as db:
                 evolution = GraphEvolutionService(db)
                 await evolution.handle_mastery_updated(event)
+                if user_id:
+                    await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
             logger.info("Processed node_mastery_updated graph evolution for node {}", event.get("node_id"))
         except Exception as e:
             logger.error(f"Failed to handle node_mastery_updated: {e}")

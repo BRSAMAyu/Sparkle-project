@@ -28,6 +28,45 @@ class SimulationParticipantModel {
   final String? contextAnchor;
 }
 
+class SimulationSeedModel {
+  const SimulationSeedModel({
+    required this.topic,
+    required this.context,
+    required this.tensionPoint,
+    required this.sourceType,
+    required this.sourceIds,
+    required this.relevanceScore,
+    required this.suggestedScenario,
+    required this.suggestedExperts,
+  });
+
+  factory SimulationSeedModel.fromJson(Map<String, dynamic> json) =>
+      SimulationSeedModel(
+        topic: json['topic']?.toString() ?? '',
+        context: json['context']?.toString() ?? '',
+        tensionPoint: json['tension_point']?.toString() ?? '',
+        sourceType: json['source_type']?.toString() ?? '',
+        sourceIds: (json['source_ids'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        relevanceScore: (json['relevance_score'] as num?)?.toDouble() ?? 0,
+        suggestedScenario: json['suggested_scenario']?.toString() ?? '',
+        suggestedExperts:
+            (json['suggested_experts'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
+      );
+
+  final String topic;
+  final String context;
+  final String tensionPoint;
+  final String sourceType;
+  final List<String> sourceIds;
+  final double relevanceScore;
+  final String suggestedScenario;
+  final List<String> suggestedExperts;
+}
+
 class SimulationRoundModel {
   const SimulationRoundModel({
     required this.round,

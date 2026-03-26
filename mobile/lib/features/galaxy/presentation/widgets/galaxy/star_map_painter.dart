@@ -10,6 +10,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart'
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 GalaxyLod resolveGalaxyLod(double scale) {
@@ -244,6 +245,7 @@ class StarMapPainter extends CustomPainter {
     this.edgeParticles = const <GalaxyEdgeParticle>[],
     this.celebrationNodeIds = const <String>{},
     this.performanceDegraded = false,
+    this.predictionOverlay,
     this.selectedNodeId,
     this.previewNodeId,
     this.draggingNodeId,
@@ -279,6 +281,7 @@ class StarMapPainter extends CustomPainter {
   final List<GalaxyEdgeParticle> edgeParticles;
   final Set<String> celebrationNodeIds;
   final bool performanceDegraded;
+  final TheaterGalaxyOverlay? predictionOverlay;
   final String? selectedNodeId;
   final String? previewNodeId;
   final String? draggingNodeId;
@@ -360,6 +363,10 @@ class StarMapPainter extends CustomPainter {
       } finally {
         developer.Timeline.finishSync();
       }
+
+      if (predictionOverlay != null) {
+        _drawPredictionOverlay(canvas);
+      }
     } finally {
       developer.Timeline.finishSync();
     }
@@ -394,8 +401,86 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.edgeParticles != edgeParticles ||
       oldDelegate.celebrationNodeIds != celebrationNodeIds ||
       oldDelegate.performanceDegraded != performanceDegraded ||
+      oldDelegate.predictionOverlay != predictionOverlay ||
       oldDelegate.ambientPhase != ambientPhase ||
       oldDelegate.isBuildAnimating != isBuildAnimating;
+
+  void _drawPredictionOverlay(Canvas canvas) {
+    final overlay = predictionOverlay;
+    if (overlay == null) {
+      return;
+    }
+    for (final edgeId in overlay.highlightEdgeIds) {
+      final edge = edges.cast<GalaxyEdgeModel?>().firstWhere(
+            (item) => item?.id == edgeId,
+            orElse: () => null,
+          );
+      if (edge == null) {
+        continue;
+      }
+      final source = positions[edge.sourceId];
+      final target = positions[edge.targetId];
+      if (source == null || target == null) {
+        continue;
+      }
+      final rendered = Path()
+        ..moveTo(
+          camera.worldToScreen(source).dx,
+          camera.worldToScreen(source).dy,
+        )
+        ..lineTo(
+          camera.worldToScreen(target).dx,
+          camera.worldToScreen(target).dy,
+        );
+      canvas.drawPath(
+        rendered,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.6
+          ..color = const Color(0xFFFFD166).withValues(alpha: 0.9),
+      );
+    }
+
+    for (final nodeId in overlay.focusNodeIds) {
+      final node = nodesById[nodeId];
+      final world = positions[nodeId];
+      if (node == null || world == null) {
+        continue;
+      }
+      final center = camera.worldToScreen(world);
+      final risk = overlay.nodeRiskLevels[nodeId] ?? 'low';
+      final predictedMastery = overlay.predictedMasteryByNodeId[nodeId];
+      final ringColor = switch (risk) {
+        'high' => const Color(0xFFFF7B54),
+        'medium' => const Color(0xFFFFC857),
+        _ => const Color(0xFF59D98E),
+      };
+      final ringRadius = (node.radius * camera.scale).clamp(8.0, 32.0) + 8;
+      canvas.drawCircle(
+        center,
+        ringRadius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6
+          ..color = ringColor.withValues(alpha: 0.92),
+      );
+
+      if (predictedMastery != null) {
+        final painter = labelCache.obtain(
+          cacheKey: 'prediction:$nodeId:${predictedMastery.round()}',
+          text: '${predictedMastery.round()}%',
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          maxWidth: 44,
+        );
+        painter.paint(
+          canvas,
+          Offset(center.dx - painter.width / 2, center.dy - ringRadius - 16),
+        );
+      }
+    }
+  }
 
   void _drawBackground(Canvas canvas, Size size) {
     if (backdropPictureCache.canReuse(
@@ -1799,6 +1884,7 @@ class StarMapPainter extends CustomPainter {
           alpha: 0.54,
         );
       case EdgeRelationType.prerequisite:
+      case EdgeRelationType.prerequisiteOf:
         return _PaintEdgeStyle(
           color: _toneColor(
             bridgeColor,
@@ -1808,6 +1894,7 @@ class StarMapPainter extends CustomPainter {
           alpha: 0.48,
         );
       case EdgeRelationType.derived:
+      case EdgeRelationType.derivedFrom:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.92),
           strokeWidth: 0.9 * displaySettings.linkThicknessScale,
@@ -1841,6 +1928,7 @@ class StarMapPainter extends CustomPainter {
           gapLength: 6,
         );
       case EdgeRelationType.application:
+      case EdgeRelationType.appliesTo:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.95),
           strokeWidth: 0.5 * displaySettings.linkThicknessScale,
@@ -1849,12 +1937,44 @@ class StarMapPainter extends CustomPainter {
           gapLength: 6,
         );
       case EdgeRelationType.example:
+      case EdgeRelationType.exampleOf:
         return _PaintEdgeStyle(
           color: _toneColor(bridgeColor, saturationMultiplier: 0.78),
           strokeWidth: 0.78 * displaySettings.linkThicknessScale,
           alpha: 0.22,
           dashLength: 3,
           gapLength: 5,
+        );
+      case EdgeRelationType.explains:
+      case EdgeRelationType.supports:
+        return _PaintEdgeStyle(
+          color: _toneColor(bridgeColor, saturationMultiplier: 0.88),
+          strokeWidth: 0.72 * displaySettings.linkThicknessScale,
+          alpha: 0.3,
+        );
+      case EdgeRelationType.contradicts:
+        return _PaintEdgeStyle(
+          color: _toneColor(
+            bridgeColor,
+            saturationMultiplier: 1.08,
+            lightnessDelta: isDarkMode ? 0.03 : -0.02,
+          ),
+          strokeWidth: 0.82 * displaySettings.linkThicknessScale,
+          alpha: 0.28,
+          dashLength: 5,
+          gapLength: 4,
+        );
+      case EdgeRelationType.weakAt:
+        return _PaintEdgeStyle(
+          color: _toneColor(
+            bridgeColor,
+            saturationMultiplier: 1.02,
+            lightnessDelta: isDarkMode ? 0.02 : -0.01,
+          ),
+          strokeWidth: 0.95 * displaySettings.linkThicknessScale,
+          alpha: 0.36,
+          dashLength: 3,
+          gapLength: 3,
         );
     }
   }

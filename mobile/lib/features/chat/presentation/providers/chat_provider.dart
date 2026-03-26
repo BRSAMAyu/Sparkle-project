@@ -137,6 +137,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearReasoning: true,
       clearDagExecution: true,
       clearTransparency: true,
+      clearRoundtable: true,
       agentActivities: const [],
       activeTools: const [],
       clearActiveRunId: true,
@@ -163,6 +164,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       streamingContent: '',
       activeTools: const [],
       agentActivities: const [],
+      clearRoundtable: true,
       clearDagExecution: true,
       clearTransparency: true,
       clearError: true,
@@ -227,6 +229,48 @@ class ChatNotifier extends StateNotifier<ChatState> {
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
           .toList();
+    }
+    return const [];
+  }
+
+  Map<String, dynamic>? _parseJsonMap(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> _parseJsonMapList(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map<dynamic, dynamic>>()
+              .map(Map<String, dynamic>.from)
+              .toList();
+        }
+      } catch (_) {}
     }
     return const [];
   }
@@ -545,9 +589,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? accumulatedUxEnvelope;
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
+    Map<String, dynamic>? accumulatedRoutingPreview;
     String? accumulatedCollaborationNarrative;
     String? accumulatedCollaborationMode;
     List<String>? accumulatedAgentsInvolved;
+    final accumulatedRoundtableTurns = <Map<String, dynamic>>[];
     final accumulatedMeta = <String, dynamic>{};
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
@@ -682,6 +728,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         clearAiStatus: true,
         clearReasoning: true,
         clearTransparency: true,
+        clearRoundtable: true,
         agentActivities: const [],
         activeTools: const [],
         clearActiveRunId: true,
@@ -817,6 +864,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final routingPreview = _parseJsonMap(metadata['routing_preview']);
+            final roundtableTurns =
+                _parseJsonMapList(metadata['roundtable_turns']);
+            final primaryAgent = metadata['primary_agent']?.toString();
             final collaborationNarrative =
                 metadata['collaboration_narrative']?.toString();
             final collaborationMode =
@@ -840,6 +891,28 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'expert_entry_source': expertEntrySource,
               };
             }
+            if (routingPreview != null && routingPreview.isNotEmpty) {
+              accumulatedRoutingPreview = routingPreview;
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'routing_preview': routingPreview,
+              };
+              state = state.copyWith(routingPreview: routingPreview);
+            }
+            if (roundtableTurns.isNotEmpty) {
+              accumulatedRoundtableTurns
+                ..clear()
+                ..addAll(roundtableTurns);
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'roundtable_turns':
+                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+              };
+              state = state.copyWith(
+                roundtableTurns:
+                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+              );
+            }
             if (collaborationNarrative != null &&
                 collaborationNarrative.trim().isNotEmpty) {
               accumulatedCollaborationNarrative = collaborationNarrative.trim();
@@ -850,6 +923,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             }
             if (agentsInvolved.isNotEmpty) {
               accumulatedAgentsInvolved = agentsInvolved;
+            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+              accumulatedAgentsInvolved = [primaryAgent];
             }
           }
           // 流式文本片段（delta）
@@ -915,6 +990,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final routingPreview = _parseJsonMap(metadata['routing_preview']);
+            final roundtableTurns =
+                _parseJsonMapList(metadata['roundtable_turns']);
+            final primaryAgent = metadata['primary_agent']?.toString();
             final collaborationNarrative =
                 metadata['collaboration_narrative']?.toString();
             final collaborationMode =
@@ -938,6 +1017,28 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'expert_entry_source': expertEntrySource,
               };
             }
+            if (routingPreview != null && routingPreview.isNotEmpty) {
+              accumulatedRoutingPreview = routingPreview;
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'routing_preview': routingPreview,
+              };
+              state = state.copyWith(routingPreview: routingPreview);
+            }
+            if (roundtableTurns.isNotEmpty) {
+              accumulatedRoundtableTurns
+                ..clear()
+                ..addAll(roundtableTurns);
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'roundtable_turns':
+                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+              };
+              state = state.copyWith(
+                roundtableTurns:
+                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+              );
+            }
             if (collaborationNarrative != null &&
                 collaborationNarrative.trim().isNotEmpty) {
               accumulatedCollaborationNarrative = collaborationNarrative.trim();
@@ -948,6 +1049,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             }
             if (agentsInvolved.isNotEmpty) {
               accumulatedAgentsInvolved = agentsInvolved;
+            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+              accumulatedAgentsInvolved = [primaryAgent];
             }
           }
           accumulatedContent = event.content;
@@ -1125,6 +1228,40 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is ModeSuggestionEvent) {
           accumulatedModeSuggestion = event.suggestion;
+          flushPending();
+        } else if (event is RoutingPreviewEvent) {
+          accumulatedRoutingPreview = event.preview;
+          accumulatedCollaboration = {
+            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+            'routing_preview': event.preview,
+          };
+          state = state.copyWith(routingPreview: event.preview);
+          flushPending();
+        } else if (event is AgentTurnEvent) {
+          final turns = [...state.roundtableTurns];
+          final incoming = Map<String, dynamic>.from(event.turn);
+          final incomingAgent = incoming['agent_id']?.toString();
+          final incomingIndex = incoming['turn_index'];
+          final existingIndex = turns.indexWhere(
+            (item) =>
+                item['agent_id']?.toString() == incomingAgent &&
+                item['turn_index'] == incomingIndex,
+          );
+          if (existingIndex >= 0) {
+            turns[existingIndex] = incoming;
+          } else {
+            turns.add(incoming);
+          }
+          accumulatedRoundtableTurns
+            ..clear()
+            ..addAll(turns);
+          accumulatedCollaboration = {
+            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+            if (accumulatedRoutingPreview != null)
+              'routing_preview': accumulatedRoutingPreview,
+            'roundtable_turns': List<Map<String, dynamic>>.from(turns),
+          };
+          state = state.copyWith(roundtableTurns: turns);
           flushPending();
         } else if (event is AgentActivityEvent) {
           final activities = [...state.agentActivities];

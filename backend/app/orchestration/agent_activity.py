@@ -7,6 +7,18 @@ from typing import Any, Literal
 
 
 AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {
+    "orchestrator": {
+        "display_name": "协调器",
+        "icon": "layers",
+        "color": "#5F6CAF",
+        "description": "负责整合专家视角与最终结论",
+    },
+    "synthesis": {
+        "display_name": "综合结论",
+        "icon": "layers",
+        "color": "#5F6CAF",
+        "description": "整合专家讨论并给出结论",
+    },
     "galaxy_guide": {
         "display_name": "星图导航",
         "icon": "constellation",
@@ -176,3 +188,114 @@ def get_stream_callback(config: dict[str, Any] | None) -> Any | None:
         return None
     configurable = config.get("configurable", {})
     return configurable.get("stream_callback")
+
+
+def build_routing_preview(
+    *,
+    selected_experts: list[str],
+    complexity_score: float,
+    complexity_tier: str,
+    route_confidence: float,
+    routing_strategy: str,
+) -> dict[str, Any]:
+    expert_cards = []
+    for expert_id in selected_experts:
+        config = AGENT_DISPLAY_CONFIG.get(expert_id, {})
+        expert_cards.append(
+            {
+                "agent_id": expert_id,
+                "display_name": config.get("display_name", expert_id),
+                "icon": config.get("icon", "bot"),
+                "color": config.get("color", "#636E72"),
+            }
+        )
+    eta_seconds = 3 if len(selected_experts) <= 1 else 4 + max(0, len(selected_experts) - 2) * 2
+    return {
+        "complexity_score": round(float(complexity_score or 0.0), 2),
+        "complexity_tier": str(complexity_tier or "low"),
+        "route_confidence": round(float(route_confidence or 0.0), 2),
+        "routing_strategy": str(routing_strategy or ""),
+        "selected_experts": selected_experts,
+        "experts": expert_cards,
+        "eta_seconds_min": max(2, eta_seconds - 1),
+        "eta_seconds_max": eta_seconds + 2,
+    }
+
+
+async def emit_routing_preview(
+    stream_callback: Any | None,
+    *,
+    selected_experts: list[str],
+    complexity_score: float,
+    complexity_tier: str,
+    route_confidence: float,
+    routing_strategy: str,
+) -> dict[str, Any]:
+    if stream_callback is None:
+        return build_routing_preview(
+            selected_experts=selected_experts,
+            complexity_score=complexity_score,
+            complexity_tier=complexity_tier,
+            route_confidence=route_confidence,
+            routing_strategy=routing_strategy,
+        )
+
+    payload = build_routing_preview(
+        selected_experts=selected_experts,
+        complexity_score=complexity_score,
+        complexity_tier=complexity_tier,
+        route_confidence=route_confidence,
+        routing_strategy=routing_strategy,
+    )
+
+    from app.gen.agent.v1 import agent_service_pb2
+    import json
+
+    await stream_callback(
+        agent_service_pb2.ChatResponse(
+            metadata={
+                "event_type": "routing_preview",
+                "payload": json.dumps(payload, ensure_ascii=False),
+            }
+        )
+    )
+    return payload
+
+
+async def emit_agent_turn(
+    stream_callback: Any | None,
+    *,
+    agent_id: str,
+    turn_index: int,
+    content: str,
+    turn_type: Literal["analysis", "rebuttal", "synthesis", "question"] = "analysis",
+    references: list[str] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    config = AGENT_DISPLAY_CONFIG.get(agent_id, {})
+    payload = {
+        "agent_id": agent_id,
+        "display_name": config.get("display_name", agent_id),
+        "icon": config.get("icon", "bot"),
+        "color": config.get("color", "#636E72"),
+        "turn_index": turn_index,
+        "turn_type": turn_type,
+        "content": str(content or "").strip(),
+        "references": list(references or []),
+        "metadata": dict(metadata or {}),
+    }
+    if stream_callback is None:
+        return payload
+
+    from app.gen.agent.v1 import agent_service_pb2
+    import json
+
+    await stream_callback(
+        agent_service_pb2.ChatResponse(
+            metadata={
+                "event_type": "agent_turn",
+                "payload": json.dumps(payload, ensure_ascii=False),
+            }
+        )
+    )
+    return payload

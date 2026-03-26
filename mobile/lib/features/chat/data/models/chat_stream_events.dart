@@ -965,12 +965,6 @@ class NotificationEvent extends ChatStreamEvent {
     super.promptVersion,
   });
 
-  /// 通知数据
-  final Map<String, dynamic> notificationData;
-
-  /// 通知类型: 'system' | 'intervention'
-  final String notificationType;
-
   /// 工厂方法：从 JSON 创建
   factory NotificationEvent.fromJson(Map<String, dynamic> json) {
     final rawNotification =
@@ -989,6 +983,12 @@ class NotificationEvent extends ChatStreamEvent {
       promptVersion: json['prompt_version'] as String?,
     );
   }
+
+  /// 通知数据
+  final Map<String, dynamic> notificationData;
+
+  /// 通知类型: 'system' | 'intervention'
+  final String notificationType;
 
   /// 通知 ID
   String get notificationId =>
@@ -1277,6 +1277,30 @@ class ModeSuggestionEvent extends ChatStreamEvent {
   String get reason => suggestion['reason'] as String? ?? '';
   double get confidence =>
       (suggestion['confidence'] as num?)?.toDouble() ?? 0.0;
+}
+
+class RoutingPreviewEvent extends ChatStreamEvent {
+  RoutingPreviewEvent({
+    required this.preview,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> preview;
+}
+
+class AgentTurnEvent extends ChatStreamEvent {
+  AgentTurnEvent({
+    required this.turn,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> turn;
 }
 
 // ============================================

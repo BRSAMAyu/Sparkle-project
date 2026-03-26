@@ -90,10 +90,14 @@ class ApiEndpoints {
   static const String healthPrometheusAlerts = '/health/prometheus/alerts';
 
   // Notification Center
-  static const String notificationCenterNotifications = '/notification-center/notifications';
-  static const String notificationCenterMarkAllRead = '/notification-center/notifications/mark-all-read';
-  static const String notificationCenterAnalytics = '/notification-center/analytics';
-  static const String notificationCenterHistory = '/notification-center/history';
+  static const String notificationCenterNotifications =
+      '/notification-center/notifications';
+  static const String notificationCenterMarkAllRead =
+      '/notification-center/notifications/mark-all-read';
+  static const String notificationCenterAnalytics =
+      '/notification-center/analytics';
+  static const String notificationCenterHistory =
+      '/notification-center/history';
 
   // Statistics
   static const String statsOverview = '/stats/overview';
@@ -132,6 +136,18 @@ class ApiEndpoints {
 
   static String learningPathProgress(String planId) =>
       '/plans/$planId/learning-path-progress';
+
+  // Knowledge Theater
+  static const String theaterGeneratePrediction =
+      '/theater/predictions/generate';
+  static const String theaterWhatIf = '/theater/predictions/what-if';
+  static const String theaterSnapshots = '/theater/snapshots';
+  static String theaterAdopt(String predictionId) =>
+      '/theater/predictions/$predictionId/adopt';
+  static String theaterActuals(String predictionId) =>
+      '/theater/predictions/$predictionId/actuals';
+  static String theaterAccuracy(String predictionId) =>
+      '/theater/predictions/$predictionId/accuracy';
 
   // Community - Friends
   static const String communityFeed = '/community/feed';

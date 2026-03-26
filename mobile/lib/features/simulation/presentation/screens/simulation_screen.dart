@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/simulation/presentation/widgets/simulation_chat_bubble.dart';
+import 'package:sparkle/features/theater/theater_routes.dart';
 
 class SimulationScreen extends ConsumerStatefulWidget {
   const SimulationScreen({super.key});
@@ -21,6 +25,19 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
   final _topicController = TextEditingController();
   String _selectedScenarioKey = 'study_group';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        ref.read(simulationProvider.notifier).loadRecommendedSeeds(
+              scenarioKey: _selectedScenarioKey,
+              silent: true,
+            ),
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -72,15 +89,49 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   : (value) {
                       if (value == null) return;
                       setState(() => _selectedScenarioKey = value);
+                      unawaited(
+                        ref
+                            .read(simulationProvider.notifier)
+                            .loadRecommendedSeeds(
+                              scenarioKey: value,
+                              silent: true,
+                            ),
+                      );
                     },
+            ),
+            const SizedBox(height: 16),
+            _RecommendedSeedSection(
+              seeds: state.recommendedSeeds,
+              isLoading: state.isLoadingRecommendations,
+              scenarioLabels: _scenarioLabels,
+              onRefresh: () => unawaited(
+                ref.read(simulationProvider.notifier).loadRecommendedSeeds(
+                      scenarioKey: _selectedScenarioKey,
+                    ),
+              ),
+              onStartSeed: (seed) {
+                setState(() => _selectedScenarioKey = seed.suggestedScenario);
+                _topicController.text = seed.topic;
+                unawaited(
+                  ref.read(simulationProvider.notifier).run(
+                        topic: seed.topic,
+                        scenarioKey: seed.suggestedScenario,
+                      ),
+                );
+              },
+              onOpenTheater: (seed) => context.push(
+                '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(seed.topic)}',
+              ),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: state.isLoading
                   ? null
-                  : () => ref.read(simulationProvider.notifier).run(
-                        topic: _topicController.text.trim(),
-                        scenarioKey: _selectedScenarioKey,
+                  : () => unawaited(
+                        ref.read(simulationProvider.notifier).run(
+                              topic: _topicController.text.trim(),
+                              scenarioKey: _selectedScenarioKey,
+                            ),
                       ),
               child: Text(state.isLoading ? '生成中...' : '开始模拟'),
             ),
@@ -88,7 +139,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               const SizedBox(height: 16),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(value: state.progress.clamp(0.0, 1.0)),
+                child: LinearProgressIndicator(
+                  value: state.progress.clamp(0.0, 1.0),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -154,5 +207,120 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       return '${participant.name} · 图谱角色';
     }
     return participant.name;
+  }
+}
+
+class _RecommendedSeedSection extends StatelessWidget {
+  const _RecommendedSeedSection({
+    required this.seeds,
+    required this.isLoading,
+    required this.scenarioLabels,
+    required this.onRefresh,
+    required this.onStartSeed,
+    required this.onOpenTheater,
+  });
+
+  final List<SimulationSeedModel> seeds;
+  final bool isLoading;
+  final Map<String, String> scenarioLabels;
+  final VoidCallback onRefresh;
+  final ValueChanged<SimulationSeedModel> onStartSeed;
+  final ValueChanged<SimulationSeedModel> onOpenTheater;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading && seeds.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (seeds.isEmpty) {
+      return OutlinedButton.icon(
+        onPressed: onRefresh,
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('生成推荐场景'),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              '为你推荐',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('刷新'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...seeds.map(
+          (seed) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    seed.topic,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(seed.context),
+                  const SizedBox(height: 8),
+                  Text(
+                    seed.tensionPoint,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Chip(
+                        label: Text(
+                          scenarioLabels[seed.suggestedScenario] ??
+                              seed.suggestedScenario,
+                        ),
+                      ),
+                      ...seed.suggestedExperts.map(
+                        (expert) => Chip(label: Text(expert)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => onOpenTheater(seed),
+                          child: const Text('推演剧场'),
+                        ),
+                        FilledButton(
+                          onPressed: () => onStartSeed(seed),
+                          child: const Text('一键开始'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

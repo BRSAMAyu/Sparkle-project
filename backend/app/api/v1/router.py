@@ -72,6 +72,7 @@ from app.api.v1 import (
     subtasks,
     suggestions,  # Vision Item 3
     tasks,
+    theater,
     translation,
     user_persona_batch,
     user_settings,
@@ -116,6 +117,7 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboar
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
 api_router.include_router(simulation.router)
+api_router.include_router(theater.router)
 api_router.include_router(learning_reports.router)
 api_router.include_router(agent_stats.router)
 api_router.include_router(assets.router)

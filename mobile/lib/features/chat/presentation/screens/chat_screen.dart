@@ -26,6 +26,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
+import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
@@ -491,6 +492,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
+                                          if (chatState.routingPreview !=
+                                                  null ||
+                                              chatState
+                                                  .roundtableTurns.isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: DS.spacing12,
+                                              ),
+                                              child: ExpertRoundtableWidget(
+                                                routingPreview:
+                                                    chatState.routingPreview,
+                                                turns:
+                                                    chatState.roundtableTurns,
+                                              ),
+                                            ),
                                           _StreamingBubble(
                                             content: chatState.streamingContent,
                                           ),
@@ -683,7 +699,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           (file) => InputChip(
                                             avatar: Icon(
                                               _attachmentStatusIcon(
-                                                  file.status),
+                                                file.status,
+                                              ),
                                               size: 16,
                                               color: _attachmentStatusColor(
                                                 file.status,

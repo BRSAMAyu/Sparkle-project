@@ -155,6 +155,14 @@ class ResponseBuilderMixin:
         agents_involved = []
         if executable_plan and executable_plan.agents_involved:
             agents_involved = [str(agent).strip() for agent in executable_plan.agents_involved if str(agent).strip()]
+        if not agents_involved:
+            selected_experts_for_primary = final_state.context_data.get("selected_experts")
+            if isinstance(selected_experts_for_primary, list):
+                agents_involved = [
+                    str(agent).strip()
+                    for agent in selected_experts_for_primary
+                    if str(agent).strip()
+                ]
         if not agents_involved and isinstance(user_context_payload, dict):
             raw_trace = user_context_payload.get("orchestration_trace")
             if isinstance(raw_trace, str) and raw_trace:
@@ -166,11 +174,15 @@ class ResponseBuilderMixin:
                 trace_agents = raw_trace.get("agents")
                 if isinstance(trace_agents, list):
                     agents_involved = [str(agent).strip() for agent in trace_agents if str(agent).strip()]
+        if not agents_involved:
+            fallback_primary = str(final_state.context_data.get("next_step") or "").strip() or "study_buddy"
+            agents_involved = [fallback_primary]
         if agents_involved:
             response_metadata["agents_involved"] = json.dumps(
                 agents_involved,
                 ensure_ascii=False,
             )
+            response_metadata["primary_agent"] = agents_involved[0]
             if executable_plan and getattr(executable_plan, "collaboration_mode", None):
                 response_metadata["collaboration_mode"] = executable_plan.collaboration_mode
             collaboration_narrative = (
@@ -209,6 +221,18 @@ class ResponseBuilderMixin:
         if isinstance(answer_experts, list) and answer_experts:
             response_metadata["answer_experts"] = json.dumps(
                 [str(expert) for expert in answer_experts],
+                ensure_ascii=False,
+            )
+        routing_preview = final_state.context_data.get("routing_preview")
+        if isinstance(routing_preview, dict) and routing_preview:
+            response_metadata["routing_preview"] = json.dumps(
+                routing_preview,
+                ensure_ascii=False,
+            )
+        roundtable_turns = final_state.context_data.get("roundtable_turns")
+        if isinstance(roundtable_turns, list) and roundtable_turns:
+            response_metadata["roundtable_turns"] = json.dumps(
+                roundtable_turns,
                 ensure_ascii=False,
             )
         if run_ledger is not None:
