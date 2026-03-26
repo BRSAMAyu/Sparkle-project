@@ -18,6 +18,7 @@ from app.core.cache import cached
 from app.core.event_bus import KnowledgeNodeUpdated, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
+from app.models.galaxy import UserNodeStatus
 from app.schemas.galaxy import (
     GalaxyGraphResponse,
     NodeRelationInfo,
@@ -28,6 +29,8 @@ from app.schemas.galaxy import (
 from app.services.embedding_service import embedding_service
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+from app.services.galaxy.ontology_generator import relation_type_to_wire_name
+from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
 
@@ -42,6 +45,7 @@ class GalaxyService:
         self.structure = GraphStructureService(db)
         self.retrieval = KnowledgeRetrievalService(db)
         self.stats = GalaxyStatsService(db)
+        self.ontology_generator = OntologyGenerator()
 
         # Subscribe to error.created events
         # Note: In a real production app, subscription should be handled in a startup event or a separate worker
@@ -202,6 +206,110 @@ class GalaxyService:
 
     async def create_edge(self, user_id: UUID, source_id: UUID, target_id: UUID, relation_type: str) -> NodeRelation:
         return await self.structure.create_edge(user_id, source_id, target_id, relation_type)
+
+    async def auto_generate_ontology(self, document_text: str, subject: str | None = None) -> OntologyExtractionResult:
+        return await self.ontology_generator.generate(document_text=document_text, subject=subject)
+
+    async def create_nodes_from_document(
+        self,
+        *,
+        user_id: UUID,
+        file_id: UUID,
+        file_name: str,
+        document_text: str,
+        subject_id: int | None = None,
+        subject: str | None = None,
+    ) -> dict[str, object]:
+        ontology = await self.auto_generate_ontology(document_text, subject)
+
+        root_node = KnowledgeNode(
+            name=file_name[:255],
+            description=f"Imported from {file_name}",
+            subject_id=subject_id,
+            source_type="document_import",
+            source_file_id=file_id,
+            status="draft",
+            importance_level=3,
+            is_seed=False,
+            keywords=["document_import", "ontology:root", *(["subject:" + subject] if subject else [])],
+        )
+        self.db.add(root_node)
+        await self.db.flush()
+
+        root_status = UserNodeStatus(
+            user_id=user_id,
+            node_id=root_node.id,
+            is_unlocked=True,
+            mastery_score=0,
+            first_unlock_at=_utcnow(),
+        )
+        self.db.add(root_status)
+
+        created_nodes: list[KnowledgeNode] = []
+        created_relations: list[NodeRelation] = []
+        node_by_name: dict[str, KnowledgeNode] = {}
+
+        for candidate in ontology.nodes:
+            child = KnowledgeNode(
+                name=candidate.name[:255],
+                description=candidate.summary,
+                keywords=[
+                    *list(dict.fromkeys([*candidate.keywords[:8], f"node_type:{candidate.node_type.lower()}"])),
+                ],
+                importance_level=candidate.importance_level,
+                subject_id=subject_id,
+                parent_id=root_node.id,
+                source_type="document_import",
+                source_file_id=file_id,
+                status="draft",
+                is_seed=False,
+            )
+            self.db.add(child)
+            await self.db.flush()
+            self.db.add(
+                UserNodeStatus(
+                    user_id=user_id,
+                    node_id=child.id,
+                    is_unlocked=True,
+                    mastery_score=0,
+                    first_unlock_at=_utcnow(),
+                )
+            )
+            node_by_name[candidate.name] = child
+            created_nodes.append(child)
+            created_relations.append(
+                NodeRelation(
+                    source_node_id=root_node.id,
+                    target_node_id=child.id,
+                    relation_type="parent_child",
+                    strength=0.65,
+                    created_by="document_import",
+                )
+            )
+            self.db.add(created_relations[-1])
+
+        for relation in ontology.relations:
+            source = node_by_name.get(relation.source_name)
+            target = node_by_name.get(relation.target_name)
+            if not source or not target:
+                continue
+            edge = NodeRelation(
+                source_node_id=source.id,
+                target_node_id=target.id,
+                relation_type=relation_type_to_wire_name(relation.relation_type),
+                strength=relation.strength,
+                created_by="ontology_generator",
+            )
+            self.db.add(edge)
+            created_relations.append(edge)
+
+        await self.db.commit()
+        return {
+            "root_node": root_node,
+            "created_nodes": created_nodes,
+            "created_relations": created_relations,
+            "ontology": ontology.to_dict(),
+        }
 
     async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> list[KnowledgeNode]:
         """Get connected neighbor nodes (Graph RAG support)"""

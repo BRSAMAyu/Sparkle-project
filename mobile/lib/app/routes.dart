@@ -25,8 +25,10 @@ import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
+import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/shop/shop_routes.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/tools/tools.dart';
@@ -220,6 +222,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
+      ...SimulationRoutes.routes,
+      ...ReportRoutes.routes,
       ...FocusRoutes.routes,
       ...CalendarRoutes.routes,
       ...ChatRoutes.routes,

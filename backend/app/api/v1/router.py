@@ -41,6 +41,7 @@ from app.api.v1 import (
     interventions,
     inventory,
     leaderboards,
+    learning_reports,
     learning_paths,
     memory,
     memory_admin,
@@ -64,6 +65,7 @@ from app.api.v1 import (
     seed_libraries,
     shop,
     signals,
+    simulation,
     statistics,
     stt,
     subjects,
@@ -113,6 +115,8 @@ api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
+api_router.include_router(simulation.router)
+api_router.include_router(learning_reports.router)
 api_router.include_router(agent_stats.router)
 api_router.include_router(assets.router)
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])

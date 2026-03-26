@@ -24,8 +24,12 @@ enum SectorEnum {
 enum EdgeRelationType {
   @JsonValue('prerequisite')
   prerequisite, // 前置知识
+  @JsonValue('prerequisite_of')
+  prerequisiteOf,
   @JsonValue('derived')
   derived, // 衍生知识
+  @JsonValue('derived_from')
+  derivedFrom,
   @JsonValue('related')
   related, // 相关知识
   @JsonValue('similar')
@@ -34,8 +38,20 @@ enum EdgeRelationType {
   contrast, // 对比概念
   @JsonValue('application')
   application, // 应用场景
+  @JsonValue('applies_to')
+  appliesTo,
   @JsonValue('example')
   example, // 具体示例
+  @JsonValue('example_of')
+  exampleOf,
+  @JsonValue('explains')
+  explains,
+  @JsonValue('supports')
+  supports,
+  @JsonValue('contradicts')
+  contradicts,
+  @JsonValue('weak_at')
+  weakAt,
   @JsonValue('parent_child')
   parentChild, // 父子层级关系
 }
@@ -89,7 +105,10 @@ class GalaxyEdgeModel {
 
   static EdgeRelationType _parseRelationType(String? raw) =>
       EdgeRelationType.values.firstWhere(
-        (type) => type.name == raw || _relationWireValue(type) == raw,
+        (type) =>
+            type.name == raw ||
+            _relationWireValue(type) == raw ||
+            _relationWireValue(type).toUpperCase() == raw,
         orElse: () => EdgeRelationType.related,
       );
 

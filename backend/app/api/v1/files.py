@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.celery_tasks import process_stored_file
 from app.db.session import get_db
+from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.file_storage import StoredFile
 
 router = APIRouter()
@@ -35,6 +36,7 @@ class FileProcessRequest(BaseModel):
 async def process_file(
     payload: FileProcessRequest,
     _: None = Depends(verify_internal_token),
+    db: AsyncSession = Depends(get_db),
 ):
     task = process_stored_file.delay(
         file_id=str(payload.file_id),
@@ -44,6 +46,19 @@ async def process_file(
         mime_type=payload.mime_type,
         thumbnail_upload_url=str(payload.thumbnail_upload_url) if payload.thumbnail_upload_url else None,
     )
+    background_task = BackgroundTask(
+        user_id=payload.user_id,
+        task_type=BackgroundTaskType.DATA_SYNC,
+        name=f"文档分析: {payload.file_name}",
+        status=BackgroundTaskStatus.PENDING,
+        progress=0.0,
+        progress_message="AI 正在分析知识结构...",
+        related_entity_id=payload.file_id,
+        related_entity_type="stored_file",
+        external_task_id=task.id,
+    )
+    db.add(background_task)
+    await db.commit()
     return {"status": "queued", "task_id": task.id}
 
 

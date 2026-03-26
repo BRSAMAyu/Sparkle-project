@@ -117,6 +117,8 @@ class AgentProfile:
     role: AgentRole
     display_name: str
     description: str
+    persona_archetype: str = "balanced_mentor"
+    expertise_domains: list[str] = field(default_factory=list)
     public_entry: bool = False
     entry_tags: list[str] = field(default_factory=list)
     entry_rank: int = 999
@@ -183,6 +185,8 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.ORCHESTRATOR,
         display_name="协调器",
         description="负责整体流程编排",
+        persona_archetype="calm_conductor",
+        expertise_domains=["learning orchestration", "multi-step coaching"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
             preferred_models=["mimo_pro", "dashscope_chat"],
@@ -197,6 +201,8 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.GENERATION,
         display_name="生成器",
         description="负责生成回复内容",
+        persona_archetype="warm_tutor",
+        expertise_domains=["concept explanation", "learning companionship"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
             preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
@@ -211,6 +217,8 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         role=AgentRole.RETRIEVAL,
         display_name="检索器",
         description="负责知识检索",
+        persona_archetype="quiet_researcher",
+        expertise_domains=["search grounding", "knowledge lookup"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
             preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
@@ -257,6 +265,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.GALAXY_GUIDE,
         display_name="星图向导",
         description="知识图谱专家",
+        persona_archetype="system_mapper",
+        expertise_domains=["knowledge graph", "prerequisite analysis", "learning paths"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=10,
@@ -284,6 +294,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.EXAM_ORACLE,
         display_name="考试预言家",
         description="考试预测与分析",
+        persona_archetype="strategic_coach",
+        expertise_domains=["exam focus", "revision strategy"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=20,
@@ -309,6 +321,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.TIME_TUTOR,
         display_name="时间导师",
         description="学习计划与时间管理",
+        persona_archetype="steady_planner",
+        expertise_domains=["time management", "task pacing"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=30,
@@ -340,6 +354,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.DEEP_ANALYST,
         display_name="深度分析师",
         description="多视角结构化分析专家",
+        persona_archetype="structured_reasoner",
+        expertise_domains=["deep analysis", "evidence synthesis"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=40,
@@ -364,6 +380,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.ERROR_ANALYST,
         display_name="错题分析师",
         description="错题诊断与根因分析",
+        persona_archetype="repair_specialist",
+        expertise_domains=["error diagnosis", "weak-spot remediation"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=50,
@@ -393,6 +411,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.STUDY_PLANNER,
         display_name="学习规划师",
         description="制定宏观学习计划",
+        persona_archetype="macro_designer",
+        expertise_domains=["roadmap design", "milestone planning"],
         model_tier=ModelTier.PLUS,
         model_policy=AgentModelPolicy(
             preferred_models=["dashscope_chat", "deepseek_chat", "dashscope_reason"],
@@ -407,6 +427,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.PROBLEM_SOLVER,
         display_name="问题解决者",
         description="错题诊断与解题分析",
+        persona_archetype="stepwise_solver",
+        expertise_domains=["problem solving", "diagnosis"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
             preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
@@ -421,6 +443,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.MATH_AGENT,
         display_name="数学专家",
         description="数学问题与练习",
+        persona_archetype="precise_explainer",
+        expertise_domains=["mathematics", "derivation", "practice"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=60,
@@ -445,6 +469,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.CODE_AGENT,
         display_name="编程专家",
         description="代码问题与项目",
+        persona_archetype="hands_on_engineer",
+        expertise_domains=["programming", "debugging", "projects"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=70,
@@ -463,6 +489,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.SEARCH_AGENT,
         display_name="搜索专家",
         description="知识检索与证据收集",
+        persona_archetype="evidence_hunter",
+        expertise_domains=["search", "evidence gathering"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=90,
@@ -482,6 +510,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.REVIEWER,
         display_name="审查专家",
         description="AI内容质量审查（使用独立模型）",
+        persona_archetype="quality_guardian",
+        expertise_domains=["quality review", "risk identification"],
         model_tier=ModelTier.PRO,  # 使用深推理层
         model_policy=AgentModelPolicy(
             preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
@@ -505,6 +535,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.TOOL_EXECUTION,
         display_name="工具执行",
         description="执行工具调用",
+        persona_archetype="reliable_operator",
+        expertise_domains=["tool execution", "workflow support"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
             preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
@@ -519,6 +551,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.STUDY_BUDDY,
         display_name="学习伙伴",
         description="日常学习陪伴与闲聊",
+        persona_archetype="friendly_companion",
+        expertise_domains=["motivation", "lightweight coaching"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=80,
@@ -545,6 +579,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.WRITING_AGENT,
         display_name="写作专家",
         description="写作指导与文本优化",
+        persona_archetype="expression_coach",
+        expertise_domains=["writing", "editing", "expression"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=100,
@@ -569,6 +605,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         role=AgentRole.SCIENCE_AGENT,
         display_name="科学专家",
         description="科学概念讲解与实验设计",
+        persona_archetype="curious_scientist",
+        expertise_domains=["science", "experiments", "concepts"],
         public_entry=True,
         entry_enabled=True,
         entry_rank=110,
@@ -683,6 +721,8 @@ class AgentProfileRegistry:
                 "model_policy": p.model_policy.to_dict() if p.model_policy else None,
                 "temperature": p.temperature,
                 "tools": p.allowed_tools,
+                "persona_archetype": p.persona_archetype,
+                "expertise_domains": p.expertise_domains,
             }
             for role, p in self._profiles.items()
         }
@@ -715,6 +755,8 @@ def get_public_agent_catalog() -> list[dict[str, Any]]:
             "model_tier": profile.model_tier.value,
             "specific_model": profile.specific_model,
             "model_policy": profile.model_policy.to_dict() if profile.model_policy else None,
+            "persona_archetype": profile.persona_archetype,
+            "expertise_domains": profile.expertise_domains,
         })
     return catalog
 

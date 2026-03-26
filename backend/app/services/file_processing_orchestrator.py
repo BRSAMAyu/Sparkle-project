@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
+from app.models.background_task import BackgroundTaskStatus, BackgroundTaskType
+from app.core.task_monitor import task_monitor_service
 from app.services.document_service import document_service
 from app.services.embedding_service import embedding_service
 from app.services.thumbnail_service import thumbnail_service
@@ -33,13 +35,21 @@ class FileProcessingOrchestrator:
         file_name: str,
         mime_type: str,
         thumbnail_upload_url: str | None = None,
+        external_task_id: str | None = None,
     ) -> dict:
         file_record = await self.db.get(StoredFile, file_id)
         if not file_record or file_record.user_id != user_id:
             raise ValueError("File record not found")
 
         await self._update_status(file_record, "processing")
-        await self._publish_status(file_id, user_id, "processing", 10)
+        await self._publish_status(
+            file_id,
+            user_id,
+            "processing",
+            10,
+            external_task_id=external_task_id,
+            file_name=file_name,
+        )
 
         temp_path = await self._download_file(download_url, file_name)
         try:
@@ -52,13 +62,28 @@ class FileProcessingOrchestrator:
             if not quality.passed:
                 error_msg = f"Quality Gate Failed: {'; '.join(quality.issues)}"
                 await self._update_status(file_record, "failed", error_message=error_msg)
-                await self._publish_status(file_id, user_id, "failed", 100, error=error_msg)
+                await self._publish_status(
+                    file_id,
+                    user_id,
+                    "failed",
+                    100,
+                    error=error_msg,
+                    external_task_id=external_task_id,
+                    file_name=file_name,
+                )
                 return {"status": "failed", "error": error_msg}
 
             await self._replace_chunks(file_id)
             await self._store_chunks(file_id, user_id, chunks, quality.score)
 
-            await self._publish_status(file_id, user_id, "processing", 80)
+            await self._publish_status(
+                file_id,
+                user_id,
+                "processing",
+                80,
+                external_task_id=external_task_id,
+                file_name=file_name,
+            )
 
             # 2. Drafting
             await document_service.draft_knowledge_nodes(self.db, file_id, user_id, chunks)
@@ -66,12 +91,27 @@ class FileProcessingOrchestrator:
             await thumbnail_service.generate_and_upload(temp_path, file_id, thumbnail_upload_url)
 
             await self._update_status(file_record, "processed")
-            await self._publish_status(file_id, user_id, "processed", 100)
+            await self._publish_status(
+                file_id,
+                user_id,
+                "processed",
+                100,
+                external_task_id=external_task_id,
+                file_name=file_name,
+            )
 
             return {"status": "processed", "file_id": str(file_id)}
         except Exception as exc:
             await self._update_status(file_record, "failed", error_message=str(exc))
-            await self._publish_status(file_id, user_id, "failed", 100, error=str(exc))
+            await self._publish_status(
+                file_id,
+                user_id,
+                "failed",
+                100,
+                error=str(exc),
+                external_task_id=external_task_id,
+                file_name=file_name,
+            )
             raise
         finally:
             if os.path.exists(temp_path):
@@ -133,6 +173,8 @@ class FileProcessingOrchestrator:
         status: str,
         progress: int,
         error: str | None = None,
+        external_task_id: str | None = None,
+        file_name: str | None = None,
     ) -> None:
         if not cache_service.redis:
             await cache_service.init_redis()
@@ -151,3 +193,24 @@ class FileProcessingOrchestrator:
             await cache_service.redis.publish("file_status", json.dumps(payload, ensure_ascii=True))
         except Exception as exc:
             logger.warning(f"Failed to publish file status: {exc}")
+        await task_monitor_service.publish_progress(
+            user_id=user_id,
+            task_type=BackgroundTaskType.DATA_SYNC,
+            name=f"文档分析: {file_name or file_id}",
+            status={
+                "processing": BackgroundTaskStatus.RUNNING,
+                "processed": BackgroundTaskStatus.COMPLETED,
+                "failed": BackgroundTaskStatus.FAILED,
+            }.get(status, BackgroundTaskStatus.PENDING),
+            progress=max(0.0, min(progress / 100.0, 1.0)),
+            progress_message=(
+                "AI 正在分析知识结构..."
+                if status == "processing" and progress >= 70
+                else ("处理完成" if status == "processed" else (error or status))
+            ),
+            external_task_id=external_task_id,
+            related_entity_id=file_id,
+            related_entity_type="stored_file",
+            result_data={"file_id": str(file_id), "status": status} if status == "processed" else None,
+            error_message=error,
+        )

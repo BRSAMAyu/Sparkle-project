@@ -7,10 +7,13 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.cache import cache_service
+from app.core.task_monitor import task_monitor_service
 from app.db.session import get_db
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.user import User
@@ -56,6 +59,38 @@ async def get_background_tasks(
             await db.rollback()
             return {"data": [], "count": 0, "degraded": True}
         raise
+
+
+@router.get("/stream/events")
+async def stream_background_task_updates(current_user: User = Depends(get_current_user)):
+    if not cache_service.redis:
+        await cache_service.init_redis()
+    redis_client = cache_service.redis
+    if not redis_client:
+        raise HTTPException(status_code=503, detail="Redis unavailable")
+
+    pubsub = redis_client.pubsub()
+    await pubsub.subscribe(task_monitor_service.user_channel(str(current_user.id)))
+
+    async def event_generator():
+        try:
+            yield "event: connected\ndata: {\"status\":\"connected\"}\n\n"
+            async for message in pubsub.listen():
+                if message.get("type") != "message":
+                    continue
+                data = message.get("data")
+                if isinstance(data, bytes):
+                    data = data.decode("utf-8", errors="ignore")
+                yield f"event: task_update\ndata: {data}\n\n"
+        finally:
+            await pubsub.unsubscribe(task_monitor_service.user_channel(str(current_user.id)))
+            await pubsub.close()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/{task_id}", response_model=dict[str, Any])

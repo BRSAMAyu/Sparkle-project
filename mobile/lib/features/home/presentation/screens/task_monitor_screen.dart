@@ -76,6 +76,7 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 
   final ApiClient _apiClient;
   Timer? _pollTimer;
+  StreamSubscription<SSEEvent>? _streamSubscription;
 
   Future<void> fetchTasks() async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -92,6 +93,31 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
     }
   }
 
+  void _startRealtimeStream() {
+    if (_streamSubscription != null) {
+      unawaited(_streamSubscription!.cancel());
+    }
+    _streamSubscription = _apiClient
+        .getStream('/background-tasks/stream/events')
+        .listen(_handleRealtimeEvent);
+  }
+
+  void _handleRealtimeEvent(SSEEvent event) {
+    if (event.event != 'task_update') return;
+    final payload = event.jsonData;
+    final taskJson = payload?['task'];
+    if (taskJson is! Map<String, dynamic>) return;
+    final incoming = BackgroundTaskModel.fromJson(taskJson);
+    final current = [...state.tasks];
+    final index = current.indexWhere((item) => item.id == incoming.id);
+    if (index >= 0) {
+      current[index] = incoming;
+    } else {
+      current.insert(0, incoming);
+    }
+    state = state.copyWith(tasks: current);
+  }
+
   Future<void> retryTask(String taskId) async {
     try {
       await _apiClient.post<dynamic>('/background-tasks/$taskId/retry');
@@ -102,14 +128,22 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
   /// Start polling for updates (every 5 seconds)
   void startPolling() {
     _pollTimer?.cancel();
-    fetchTasks();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => fetchTasks());
+    unawaited(fetchTasks());
+    _startRealtimeStream();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(fetchTasks()),
+    );
   }
 
   /// Stop polling
   void stopPolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
+    if (_streamSubscription != null) {
+      unawaited(_streamSubscription!.cancel());
+    }
+    _streamSubscription = null;
   }
 
   /// Set filter

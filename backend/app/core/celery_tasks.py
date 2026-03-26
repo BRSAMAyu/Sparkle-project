@@ -162,6 +162,7 @@ def process_stored_file(
                 file_name=file_name,
                 mime_type=mime_type,
                 thumbnail_upload_url=thumbnail_upload_url,
+                external_task_id=self.request.id,
             )
 
     try:

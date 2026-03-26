@@ -467,6 +467,23 @@ class DocumentService:
             logger.error(f"File {file_id} not found for drafting")
             return
 
+        document_text = "\n\n".join(chunk.content for chunk in chunks if chunk.content)
+        if document_text.strip():
+            try:
+                from app.services.galaxy_service import GalaxyService
+
+                galaxy_service = GalaxyService(db_session)
+                await galaxy_service.create_nodes_from_document(
+                    user_id=user_id,
+                    file_id=file_id,
+                    file_name=file_record.file_name,
+                    document_text=document_text,
+                )
+                logger.info(f"Drafted ontology-driven knowledge nodes for file {file_id}")
+                return
+            except Exception as exc:
+                logger.warning(f"Ontology drafting failed for file {file_id}, fallback to section heuristic: {exc}")
+
         # 2. Create Root Node
         root_node = KnowledgeNode(
             name=file_record.file_name,

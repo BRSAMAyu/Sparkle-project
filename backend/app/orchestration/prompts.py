@@ -24,6 +24,7 @@ import random
 
 from loguru import logger
 
+from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.plan_context import merge_plan_context
@@ -60,6 +61,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "cognitive_prism_section": (60, 0.05),
     "preference_instructions": (60, 0.05),
     "persona_section": (40, 0.04),
+    "agent_persona_section": (40, 0.04),
     "agent_memory_section": (40, 0.03),
     "understanding_depth_section": (60, 0.05),
     "orchestration_context_section": (60, 0.05),
@@ -207,6 +209,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {task_awareness_section}
 
 {persona_section}
+
+{agent_persona_section}
 
 ## 当前用户上下文
 
@@ -687,6 +691,7 @@ def build_system_prompt(
     persona_constraints_summary = ""
     agent_memory_context = ""
     collaboration_narrative = ""
+    agent_persona_section = ""
     if isinstance(user_context, dict):
         raw_trace = user_context.get("orchestration_trace")
         if isinstance(raw_trace, str) and raw_trace:
@@ -714,6 +719,11 @@ def build_system_prompt(
     # 1. 首先检查 AgentProfile 是否有专用 prompt
 
     profile = agent_profile_registry.get_profile(agent_role)
+    agent_persona_section = build_agent_persona_prompt_section(
+        agent_role=agent_role,
+        user_context=user_context,
+        profile=profile,
+    )
 
     if profile.system_prompt_template:
         base_prompt = profile.system_prompt_template
@@ -913,6 +923,11 @@ def build_system_prompt(
                 persona_section,
                 reason="本轮以精简为主；画像信息仅作轻量提示。",
             )
+        if agent_persona_section:
+            agent_persona_section = _soften_section(
+                agent_persona_section,
+                reason="本轮以精简为主；导师人格保持稳定但不需展开描述。",
+            )
         if agent_memory_section:
             agent_memory_section = _soften_section(
                 agent_memory_section,
@@ -950,6 +965,7 @@ def build_system_prompt(
         "collaboration_narrative_section": collaboration_narrative_section,
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
+        "agent_persona_section": agent_persona_section,
         "agent_memory_section": agent_memory_section,
         "cognitive_prism_section": cognitive_prism_section,
         "seed_library_section": seed_library_section,
@@ -983,6 +999,7 @@ def build_system_prompt(
             "collaboration_narrative_section": 2,
             "mode_strategy_section": 2,
             "persona_section": 2,
+            "agent_persona_section": 2,
             "agent_memory_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "seed_library_section": 3,
@@ -1003,6 +1020,7 @@ def build_system_prompt(
     collaboration_narrative_section = section_map["collaboration_narrative_section"]
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
+    agent_persona_section = section_map["agent_persona_section"]
     agent_memory_section = section_map["agent_memory_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
@@ -1027,6 +1045,7 @@ def build_system_prompt(
                 collaboration_narrative_section=collaboration_narrative_section,
                 mode_strategy_section=mode_strategy_section,
                 persona_section=persona_section,
+                agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
@@ -1039,6 +1058,7 @@ def build_system_prompt(
                 mode_strategy_section,
                 task_awareness_section,
                 persona_section,
+                agent_persona_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
@@ -1074,6 +1094,7 @@ def build_system_prompt(
             mode_strategy_section,
             task_awareness_section,
             persona_section,
+            agent_persona_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
@@ -1155,35 +1176,15 @@ def get_system_prompt_for_role(
             query="什么是神经网络？"
         )
     """
-    profile = agent_profile_registry.get_profile(agent_role)
-    base_template = profile.system_prompt_template
-
-    if not base_template:
-        # 回退到通用prompt
-        return build_system_prompt(
-            user_context=user_context,
-            conversation_history=conversation_history,
-            agent_role=agent_role,
-            chat_mode=chat_mode,
-            context_level=context_level,
-        )
-
-    # 格式化上下文
-    formatted_user_context = format_user_context(user_context, context_level=context_level)
-
-    # 渲染角色专用模板
-    try:
-        prompt = base_template.format(
-            user_context=formatted_user_context,
-            query=query,
-        )
-    except KeyError as e:
-        # 模板变量不匹配，回退
-        from loguru import logger
-        logger.warning(f"Prompt template missing key {e} for {agent_role}, using fallback")
-        prompt = base_template
-
-    return prompt
+    enriched_context = dict(user_context or {})
+    enriched_context["current_query"] = query
+    return build_system_prompt(
+        user_context=enriched_context,
+        conversation_history=conversation_history,
+        agent_role=agent_role,
+        chat_mode=chat_mode,
+        context_level=context_level,
+    )
 
 
 def get_system_prompt(

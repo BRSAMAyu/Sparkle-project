@@ -16,6 +16,7 @@ from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.galaxy_service import GalaxyService
+from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -63,6 +64,10 @@ class GalaxyEventConsumer:
             await self._handle_error_created(event)
         elif event_type == "galaxy.node.updated":
             await self._handle_node_updated(event)
+        elif event_type == "task.completed":
+            await self._handle_task_completed(event)
+        elif event_type == "node_mastery_updated":
+            await self._handle_mastery_updated(event)
 
     async def _handle_error_created(self, event: dict):
         """处理错题创建事件 - 降低关联节点掌握度"""
@@ -76,6 +81,8 @@ class GalaxyEventConsumer:
             async with AsyncSessionLocal() as db:
                 galaxy_service = GalaxyService(db)
                 await galaxy_service.handle_error_created(event)
+                evolution = GraphEvolutionService(db)
+                await evolution.handle_error_created(event)
 
             logger.info(f"Processed error_created for user {user_id}")
 
@@ -199,6 +206,24 @@ class GalaxyEventConsumer:
             logger.info(f"Processed galaxy.node.updated for user {user_id}, node {node_id}")
         except Exception as e:
             logger.error(f"Failed to handle galaxy.node.updated: {e}")
+
+    async def _handle_task_completed(self, event: dict):
+        try:
+            async with AsyncSessionLocal() as db:
+                evolution = GraphEvolutionService(db)
+                await evolution.handle_task_completed(event)
+            logger.info("Processed task.completed graph evolution for task {}", event.get("task_id"))
+        except Exception as e:
+            logger.error(f"Failed to handle task.completed: {e}")
+
+    async def _handle_mastery_updated(self, event: dict):
+        try:
+            async with AsyncSessionLocal() as db:
+                evolution = GraphEvolutionService(db)
+                await evolution.handle_mastery_updated(event)
+            logger.info("Processed node_mastery_updated graph evolution for node {}", event.get("node_id"))
+        except Exception as e:
+            logger.error(f"Failed to handle node_mastery_updated: {e}")
 
     def stop(self):
         """停止消费者"""
