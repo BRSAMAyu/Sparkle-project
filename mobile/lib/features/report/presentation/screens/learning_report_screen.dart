@@ -112,7 +112,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final report = widget.report;
+    final report = _resolveActiveReport(widget.report);
     final chartData = report.mastery.take(6).toList();
     final averageMastery = _averageMastery(report);
     final strongCount =
@@ -121,7 +121,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         report.mastery.where((item) => item.masteryScore < 60).length;
     final history = _loadHistoryEntries(report);
     final filteredHistory = _filterHistory(history);
-    final previousReport = filteredHistory.length > 1 ? filteredHistory[1].report : null;
+    final previousReport =
+        filteredHistory.length > 1 ? filteredHistory[1].report : null;
     final trendPoints = filteredHistory
         .map((entry) => _averageMastery(entry.report) / 100)
         .toList()
@@ -246,7 +247,9 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 ),
                 title: const Text('掌握度雷达图'),
                 subtitle: Text(
-                  previousReport == null ? '点击任一维度查看更细的掌握情况' : '当前报告已叠加上次轮廓，可点击维度查看详情',
+                  previousReport == null
+                      ? '点击任一维度查看更细的掌握情况'
+                      : '当前报告已叠加上次轮廓，可点击维度查看详情',
                 ),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
@@ -422,7 +425,44 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               .fold<double>(0, (sum, value) => sum + value) /
           report.mastery.length;
 
-  List<_HistoricalReportEntry> _loadHistoryEntries(LearningReport currentReport) {
+  LearningReport _resolveActiveReport(LearningReport fallbackReport) {
+    if (!_isPlaceholderReport(fallbackReport)) {
+      return fallbackReport;
+    }
+    final latest = _latestReportFromSystemUpdates();
+    return latest ?? fallbackReport;
+  }
+
+  bool _isPlaceholderReport(LearningReport report) =>
+      report.reportId == 'empty' &&
+      report.mastery.isEmpty &&
+      report.markdown.trim() == '暂无学习报告数据。';
+
+  LearningReport? _latestReportFromSystemUpdates() {
+    final updates = ref.watch(systemUpdatesProvider).maybeWhen(
+          data: (items) => items,
+          orElse: () => const <Map<String, dynamic>>[],
+        );
+    for (final item in updates) {
+      if (item['type']?.toString() != 'learning_report_ready') {
+        continue;
+      }
+      final metadata = item['metadata'];
+      if (metadata is! Map) {
+        continue;
+      }
+      final payload = metadata['report_payload'];
+      if (payload is! Map) {
+        continue;
+      }
+      return LearningReport.fromJson(Map<String, dynamic>.from(payload));
+    }
+    return null;
+  }
+
+  List<_HistoricalReportEntry> _loadHistoryEntries(
+    LearningReport currentReport,
+  ) {
     final updates = ref.watch(systemUpdatesProvider).maybeWhen(
           data: (items) => items,
           orElse: () => const <Map<String, dynamic>>[],
@@ -446,7 +486,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       if (payload is! Map) {
         continue;
       }
-      final report = LearningReport.fromJson(Map<String, dynamic>.from(payload));
+      final report =
+          LearningReport.fromJson(Map<String, dynamic>.from(payload));
       final createdAt = DateTime.tryParse(item['created_at']?.toString() ?? '');
       entries.add(
         _HistoricalReportEntry(
@@ -506,7 +547,9 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     }
   }
 
-  List<_HistoricalReportEntry> _filterHistory(List<_HistoricalReportEntry> history) {
+  List<_HistoricalReportEntry> _filterHistory(
+    List<_HistoricalReportEntry> history,
+  ) {
     final now = DateTime.now();
     return history.where((entry) {
       switch (_range) {
@@ -528,7 +571,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       return null;
     }
     final byName = <String, double>{
-      for (final item in previous.mastery) item.nodeName: item.masteryScore / 100,
+      for (final item in previous.mastery)
+        item.nodeName: item.masteryScore / 100,
     };
     return current.map((item) => byName[item.nodeName] ?? 0.0).toList();
   }
@@ -551,9 +595,10 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               children: [
                 Text(
                   item.nodeName,
-                  style: Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style:
+                      Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                 ),
                 const SizedBox(height: 10),
                 Container(
@@ -567,10 +612,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   ),
                   child: Text(
                     '${score.round()}% · ${_masteryLabel(score)}',
-                    style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
-                          color: masteryColor,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style:
+                        Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
+                              color: masteryColor,
+                              fontWeight: FontWeight.w700,
+                            ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -683,8 +729,10 @@ class _MasteryTrendChart extends StatelessWidget {
               values: values,
               lineColor: Theme.of(context).colorScheme.primary,
               fillColor: DS.info.withValues(alpha: 0.12),
-              gridColor:
-                  Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+              gridColor: Theme.of(context)
+                  .colorScheme
+                  .outlineVariant
+                  .withValues(alpha: 0.5),
             ),
             child: const SizedBox.expand(),
           ),
@@ -787,8 +835,11 @@ class _TrendChartPainter extends CustomPainter {
 
     final points = <Offset>[];
     for (var i = 0; i < values.length; i++) {
-      final x = values.length == 1 ? size.width / 2 : size.width * (i / (values.length - 1));
-      final y = size.height - (values[i].clamp(0.0, 1.0) * (size.height - 12)) - 6;
+      final x = values.length == 1
+          ? size.width / 2
+          : size.width * (i / (values.length - 1));
+      final y =
+          size.height - (values[i].clamp(0.0, 1.0) * (size.height - 12)) - 6;
       points.add(Offset(x, y));
     }
     if (points.isEmpty) {

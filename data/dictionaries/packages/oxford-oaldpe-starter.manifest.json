@@ -1,8 +1,8 @@
 {
   "id": "oxford-oaldpe-starter",
   "version": "1.0.0",
-  "entry_count": 114,
-  "size_bytes": 55877,
-  "sha256": "22c4a86f103bfb91afda93d977cb25d4a614649b018c56bf03ab5a5fbcd8a229",
-  "generated_at": "2026-03-19T02:58:47.511924+00:00"
+  "entry_count": 11,
+  "size_bytes": 1088,
+  "sha256": "224b4bd95bd9b555691c0deee10c49e5fdaff4e50f794c889f1a09093734c75a",
+  "generated_at": "2026-03-26T17:45:08.915552+00:00"
 }

@@ -11,7 +11,6 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
@@ -258,84 +257,77 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                  if (dashboardState.isLoading) ...[
-                    _staggeredSection(
-                      index: 0,
-                      child: CompactStatusBar(
-                        user: user,
-                        dashboardState: dashboardState,
+                    if (dashboardState.isLoading) ...[
+                      _staggeredSection(
+                        index: 0,
+                        child: CompactStatusBar(
+                          user: user,
+                          dashboardState: dashboardState,
+                        ),
                       ),
-                    ),
-                    ..._buildDashboardSkeletonSections()
-                        .asMap()
-                        .entries
-                        .map(
-                          (entry) => _staggeredSection(
-                            index: entry.key + 1,
-                            child: entry.value,
+                      ..._buildDashboardSkeletonSections().asMap().entries.map(
+                            (entry) => _staggeredSection(
+                              index: entry.key + 1,
+                              child: entry.value,
+                            ),
+                          ),
+                    ] else ...[
+                      _staggeredSection(
+                        index: 0,
+                        child: CompactStatusBar(
+                          user: user,
+                          dashboardState: dashboardState,
+                        ),
+                      ),
+                      _staggeredSection(
+                        index: 1,
+                        child: MetricsRow(dashboardState: dashboardState),
+                      ),
+                      if (showFirstGoalEmptyState)
+                        _staggeredSection(
+                          index: 2,
+                          child: _buildFirstGoalEmptyState(),
+                        )
+                      else ...[
+                        _staggeredSection(
+                          index: 2,
+                          child: NextActionsCard(
+                            compact: true,
+                            onViewAll: () => context.push('/tasks'),
                           ),
                         ),
-                  ] else ...[
-                    _staggeredSection(
-                      index: 0,
-                      child: CompactStatusBar(
-                        user: user,
-                        dashboardState: dashboardState,
-                      ),
-                    ),
-                    _staggeredSection(
-                      index: 1,
-                      child: MetricsRow(dashboardState: dashboardState),
-                    ),
-                    if (showFirstGoalEmptyState)
-                      _staggeredSection(
-                        index: 2,
-                        child: _buildFirstGoalEmptyState(),
-                      )
-                    else ...[
-                      _staggeredSection(
-                        index: 2,
-                        child: NextActionsCard(
-                          compact: true,
-                          onViewAll: () => context.push('/tasks'),
+                        _staggeredSection(
+                          index: 3,
+                          child: const PredictedIntentCard(),
                         ),
-                      ),
-                      _staggeredSection(
-                        index: 3,
-                        child: const InsightHubCard(),
-                      ),
-                      _staggeredSection(
-                        index: 4,
-                        child: const PredictedIntentCard(),
-                      ),
-                      _staggeredSection(
-                        index: 5,
-                        child: const HomeNotificationCard(),
-                      ),
-                      _staggeredSection(
-                        index: 6,
-                        child: const RecentInsightsCard(),
-                      ),
-                      _staggeredSection(
-                        index: 7,
-                        child: const NightlyReviewPanel(),
-                      ),
-                      _staggeredSection(
-                        index: 8,
-                        child: const DashboardCardSection(),
-                      ),
-                      _staggeredSection(
-                        index: 9,
-                        child: const AchievementProgressCard(),
-                      ),
-                      _staggeredSection(
-                        index: 10,
-                        child: const TaskBoardCard(),
-                      ),
+                        _staggeredSection(
+                          index: 4,
+                          child: const HomeNotificationCard(),
+                        ),
+                        _staggeredSection(
+                          index: 5,
+                          child: const RecentInsightsCard(),
+                        ),
+                        _staggeredSection(
+                          index: 6,
+                          child: const NightlyReviewPanel(),
+                        ),
+                        _staggeredSection(
+                          index: 7,
+                          child: const DashboardCardSection(),
+                        ),
+                        _staggeredSection(
+                          index: 8,
+                          child: const AchievementProgressCard(),
+                        ),
+                        _staggeredSection(
+                          index: 9,
+                          child: const TaskBoardCard(),
+                        ),
+                      ],
                     ],
-                  ],
 
-                  // Dynamic bottom spacing for floating components
+                    // Dynamic bottom spacing for floating components
                     SliverToBoxAdapter(
                       child: SizedBox(
                         height: totalBottomHeight,

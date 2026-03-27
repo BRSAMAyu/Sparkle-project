@@ -641,16 +641,18 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     Map<String, dynamic> item,
   ) {
     final key = item['key']?.toString() ?? 'unknown';
+    final label = item['label']?.toString() ?? key;
     final value = item['value'];
     final explanation = item['explanation']?.toString() ?? '';
     final source = item['source']?.toString() ?? 'system';
+    final sourceLabel = item['source_label']?.toString() ?? source;
     final adjustable = item['adjustable'] == true;
     final overridden = item['overridden'] == true;
     final metadata = <String, dynamic>{
       'level': adjustable ? 'editable' : 'readonly',
       'reason': explanation.isNotEmpty
           ? explanation
-          : 'Inferred from recent behavior.',
+          : '系统会根据最近行为持续更新这项推断。',
       'confidence': null,
     };
     final actions = <Widget>[
@@ -659,7 +661,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           MemoryRoutes.detail,
           extra: MemoryDetailArgs.preferenceKey(key),
         ),
-        label: 'History',
+        label: '查看记录',
       ),
       if (adjustable)
         SparkleButton.ghost(
@@ -669,12 +671,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             key,
             value,
           ),
-          label: overridden ? 'Update' : 'Adjust',
+          label: overridden ? '更新' : '调整',
         ),
       if (overridden)
         SparkleButton.ghost(
           onPressed: () => _resetOverride(ref, context, key),
-          label: 'Reset',
+          label: '重置',
         ),
     ];
     return KeyedSubtree(
@@ -684,7 +686,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         children: [
           _metadataRow(
             l10n,
-            '$key: ${_formatValue(value)} (${overridden ? 'override' : source})',
+            '$label: ${_formatValue(value)}（${overridden ? '手动覆盖' : sourceLabel}）',
             metadata,
           ),
           Padding(
@@ -756,17 +758,19 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _policyRow(AppLocalizations l10n, Map<String, dynamic> item) {
-    final signal = item['signal']?.toString() ?? 'policy';
+    final profileLabel = item['profile_label']?.toString() ?? item['profile']?.toString() ?? '策略';
+    final signal = item['signal_label']?.toString() ?? item['signal']?.toString() ?? 'policy';
     final effect = item['effect']?.toString() ?? '';
-    final sourcePattern = item['source_pattern']?.toString() ?? '';
+    final sourcePattern =
+        item['source_pattern_label']?.toString() ?? item['source_pattern']?.toString() ?? '';
     return _metadataRow(
       l10n,
-      '$signal: $effect',
+      '$profileLabel · $signal: $effect',
       <String, dynamic>{
         'level': 'readonly',
         'reason': sourcePattern.isNotEmpty
-            ? 'Source pattern: $sourcePattern'
-            : 'Currently active strategy.',
+            ? '来源模式：$sourcePattern'
+            : '当前已生效的系统策略。',
         'confidence': null,
       },
     );

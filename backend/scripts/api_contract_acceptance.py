@@ -25,7 +25,7 @@ MOBILE_ENDPOINTS = ROOT / "mobile/lib/core/network/api_endpoints.dart"
 
 def _extract_endpoints() -> list[str]:
     content = MOBILE_ENDPOINTS.read_text(encoding="utf-8")
-    return sorted(set(re.findall(r"= '(/[^']+)'", content)))
+    return sorted(set(re.findall(r"=\s*'(/[^']+)'", content, flags=re.MULTILINE)))
 
 
 def _expect_error_shape(payload: Any, label: str) -> None:

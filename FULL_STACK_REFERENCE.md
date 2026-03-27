@@ -4,13 +4,47 @@
 # PURPOSE: Single source of truth for all AI agents modifying this codebase.
 # USAGE: Read relevant sections BEFORE making any change. Cross-check interfaces here.
 # AUDIENCE: AI coding agents, senior engineers
-# LAST UPDATED: 2026-03-22
+# LAST UPDATED: 2026-03-27
 
 ---
 
 ## VERIFICATION STATUS
 
-This document was audited against the repository source tree on `2026-03-21`.
+This document was re-audited against the repository source tree and the live local stack on `2026-03-27`.
+
+This refresh is aligned with:
+- `docs/contracts/openapi_snapshot.json` regenerated on `2026-03-27`
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
+
+Acceptance and contract checks completed during this refresh:
+- `make env-check`
+- `make smoke`
+- `backend/scripts/mirofish_bridge_benchmark.py`
+- `python3 scripts/check_openapi_contract.py`
+- `backend/scripts/ai_chat_multiturn_acceptance.py`
+- `backend/scripts/ai_expert_acceptance.py`
+- `backend/scripts/memory_acceptance.py`
+- `backend/scripts/security_acceptance.py`
+- `backend/scripts/auth_smoke.py`
+- `backend/scripts/calendar_weather_acceptance.py`
+- `backend/scripts/long_term_plan_acceptance.py`
+- `backend/scripts/cognitive_capsule_acceptance.py`
+- `backend/scripts/community_smoke.py`
+- `backend/scripts/community_acceptance.py`
+- `backend/scripts/accountability_acceptance.py`
+- `backend/scripts/achievement_visual_acceptance.py`
+- `backend/scripts/focus_acceptance.py`
+- `backend/scripts/insights_acceptance.py`
+- `backend/scripts/api_contract_acceptance.py`
+- `backend/scripts/galaxy_plan_acceptance.py`
+- `backend/scripts/community_share_adopt_acceptance.py`
+- `backend/scripts/notes_errorbook_acceptance.py`
+- `backend/scripts/document_stt_acceptance.py`
+- `backend/scripts/translation_dictionary_acceptance.py`
+- `backend/scripts/seed_library_acceptance.py`
+- `backend/scripts/celery_acceptance.py`
+- `backend/scripts/worker_smoke.py`
+- `backend/scripts/verify_data_integrity.py`
 
 Verification labels used in this document:
 - `VERIFIED`: confirmed against current source files.
@@ -18,16 +52,50 @@ Verification labels used in this document:
 - `CLIENT-ONLY`: present in Flutter constants or UI code, but not confirmed as current server truth.
 - `HIGH-RISK DRIFT`: client/server or doc/code mismatch already observed in this repo.
 
-High-risk corrections applied during this audit:
+High-risk corrections applied during this audit and refresh:
 - Proto contracts are **9 files**, not 4.
 - Flutter traffic is **mostly** routed through Go Gateway, but there are **direct mobile gRPC calls** to `agent_service` review endpoints.
 - Go Gateway proxying is **not only explicit routes**; it also has a `NoRoute` reverse-proxy fallback.
 - Python API surface is much larger than the prior summary: current `backend/app/api/v1/` contains about **525 route decorators** across many modules.
-- Several mobile endpoint constants are stale or divergent from server reality. Known examples:
-  - mobile uses `/statistics/*`, server routes are `/stats/*`
-  - community key routes under `/encryption/keys/user/:id` and `/revoke` do not match current Python/Gateway shapes
-  - some file upload routes are Gateway-native rather than Python REST routes
-  - mobile has constants for `/community/shared-resources/:id/adopt`, while Python uses that path but earlier doc recorded `/share/:id/adopt`
+- Current truth for statistics is `/api/v1/stats/*`; older `/statistics/*` references are historical drift.
+- Current truth for community encryption is:
+  - `POST /api/v1/community/encryption/keys`
+  - `GET /api/v1/community/encryption/keys/{user_id}`
+  - `DELETE /api/v1/community/encryption/keys/{key_id}`
+  - there is no separate `/user/:id` or `/revoke` runtime contract in the current Python API
+- Current truth for shared resource adoption is `POST /api/v1/community/shared-resources/{id}/adopt`; older `/share/{id}/adopt` references are stale.
+- Notification Center endpoints under `/api/v1/notification-center/*` are active and verified; some Flutter constants are declared across multiple lines and must not be treated as missing.
+- MiroFish-era routes are live and verified in the current stack:
+  - `POST /api/v1/learning-reports/generate`
+  - `GET /api/v1/profile/system-updates`
+  - `GET /api/v1/simulation/recommended-seeds`
+  - `POST /api/v1/theater/predictions/generate`
+  - `POST /api/v1/ws/ticket`
+- Learning insight/profile contracts were re-verified live on `2026-03-27` after the latest MiroFish alignment pass:
+  - `GET /api/v1/profile/context` now backfills `knowledge_summary` from error-book/task/study data when `UserNodeStatus` rows are sparse, instead of returning an effectively empty context.
+  - `GET /api/v1/profile/context` now emits non-empty `policy_signals` and `risk_signals` for current cognitive patterns (for example `夜间能量错配循环`, `完美主义回避循环`, `理想化排程循环`).
+  - `GET /api/v1/profile/inferred-preferences` now includes user-facing `label` and `source_label`, and its `explanation` field is localized for the mobile persona UI.
+  - `GET /api/v1/profile/active-policies` now includes `profile_label`, `signal_label`, and `source_pattern_label`, with localized human-readable `effect` text.
+  - `GET /api/v1/dashboard/status` returns localized cognitive insight copy under `cognitive`.
+- Chat bridge behavior is verified on the live WebSocket path: Theater and Simulation prompts produce preview metadata (`open_theater` / `open_simulation`) in `full_text` events.
+- Chat bridge now also covers Learning Report on the live WebSocket path:
+  - `open_report` + `report_preview` + `report_deep_link` are emitted in `full_text` events
+  - Theater / Simulation / Report all use short-circuit bridge execution instead of full chat generation
+  - Local benchmark on `2026-03-27` measured representative prompts at approximately:
+    - Theater preview: `~1.8s`
+    - Simulation preview: `~4.8s`
+    - Learning Report preview: `~9.3s`
+  - Current bridge cost tiers are intentionally asymmetric for balance:
+    - Theater: `low`
+    - Simulation: `low`
+    - Learning Report: `low` via `instant_preview` mode in chat bridge, while API-triggered full reports remain richer/slower
+- Focus statistics now use UTC-consistent boundaries in the backend service layer, matching how sessions are persisted.
+- Decay timemachine now returns non-empty projections even for users without pre-existing `UserNodeStatus` rows, avoiding empty-state contract breaks during local acceptance.
+- Vocabulary lookup/package behavior is now locally acceptance-safe:
+  - if the full `data/dictionaries/oaldpe.mdx` asset is present, `/api/v1/vocabulary/lookup` uses MDX directly
+  - if that file is only a Git LFS pointer in local checkout, the API falls back to a bundled Oxford starter subset instead of degrading to `llm_fallback`
+  - `/api/v1/vocabulary/dictionary/packages` and `/api/v1/vocabulary/dictionary/packages/{id}/download` remain live in both cases
+- Local acceptance helpers now tolerate prior auth rate-limit pressure by falling back to locally issued smoke tokens when the shared `chat_test` account is temporarily throttled. This affects validation tooling only; runtime API contracts are unchanged.
 
 Companion pre-release acceptance checklist:
 - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
@@ -843,7 +911,10 @@ the source module wins.
 | POST | `/preferences/preview` | JWT | Preference preview |
 | GET | `/preferences/effectiveness` | JWT | Preference effectiveness |
 | GET | `/profile/transparent` | JWT | Transparency summary |
-| GET | `/profile/context` | JWT | Context explanation |
+| GET | `/profile/context` | JWT | Context explanation; current live payload includes `knowledge_summary` and `cognitive_summary` with fallback-derived mastery/timeline/policy signals when direct node-status data is sparse |
+| GET | `/profile/inferred-preferences` | JWT | Inferred preference list; live payload includes `label`, `source_label`, localized `explanation` |
+| GET | `/profile/active-policies` | JWT | Applied personalization policies; live payload includes `profile_label`, `signal_label`, localized `effect`, `source_pattern_label` |
+| GET | `/profile/system-updates` | JWT | Insight/report/theater update inbox used by MiroFish surfaces |
 
 ### [6.3] Tasks & Subtasks — `/api/v1/tasks`, `/api/v1/subtasks`
 
@@ -1172,7 +1243,7 @@ REST routes registered via `ErrorBookHandler.RegisterRoutes`. Internally calls P
 | `/api/v1/recommendations` | AI recommendations |
 | `/api/v1/suggestions` | Suggestions (Vision item 3) |
 | `/api/v1/omnibar/dispatch` | OmniBar command dispatch |
-| `/api/v1/dashboard/status` | Dashboard data |
+| `/api/v1/dashboard/status` | Dashboard data; live `cognitive` block is localized and aligned with current MiroFish insight cards |
 | `/api/v1/analytics` | Analytics |
 | `/api/v1/visual-elements` | Visual element system |
 | `/api/v1/reviews/nightly/latest` | Nightly review |

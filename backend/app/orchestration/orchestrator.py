@@ -593,6 +593,9 @@ class ChatOrchestrator(
             "学习规划",
             "学习路径",
             "路径推演",
+            "推演一下",
+            "帮我推演",
+            "推演",
             "两周",
             "两天",
             "what if",
@@ -605,6 +608,7 @@ class ChatOrchestrator(
         simulation_keywords = (
             "帮我模拟",
             "模拟一下",
+            "学习场景",
             "演练",
             "学习小组",
             "辩论",
@@ -612,12 +616,29 @@ class ChatOrchestrator(
             "苏格拉底",
             "如果我这样学",
         )
+        report_keywords = (
+            "学习报告",
+            "分析报告",
+            "学习分析",
+            "复盘报告",
+            "学习总结",
+            "周报",
+            "周总结",
+            "最近学得怎么样",
+            "最近学习表现",
+            "生成学习报告",
+        )
 
         inferred: list[str] = []
         if any(keyword in message for keyword in prediction_keywords):
             inferred.append("launch_prediction")
         if any(keyword in message for keyword in simulation_keywords):
             inferred.append("run_quick_simulation")
+        report_context = ("报告" in message or "总结" in message or "复盘" in message) and any(
+            keyword in message for keyword in ("学习", "掌握", "进度", "本周", "这周", "最近")
+        )
+        if any(keyword in message for keyword in report_keywords) or report_context:
+            inferred.append("generate_learning_report")
         return inferred
 
     def _resolve_active_tools(self, request: agent_service_pb2.ChatRequest, user_message: str) -> list[str]:
@@ -964,6 +985,24 @@ class ChatOrchestrator(
                 # Step 6: Prepare runtime context (transparency, tools)
                 resolved_active_tools = self._resolve_active_tools(request, user_message)
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
+                bridge_responses = await self._maybe_short_circuit_bridge_tool(
+                    active_tools=resolved_active_tools,
+                    user_message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    response_id=response_id,
+                    request_id=request_id,
+                    trace_id=trace_id,
+                    workflow_id=workflow_id,
+                    prompt_version=prompt_version,
+                    active_db=active_db,
+                )
+                if bridge_responses:
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    for bridge_response in bridge_responses:
+                        yield bridge_response
+                    return
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
                     state,
                     request_id,

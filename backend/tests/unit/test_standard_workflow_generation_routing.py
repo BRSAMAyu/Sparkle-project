@@ -220,7 +220,7 @@ async def test_generation_node_uses_custom_expert_specific_model(monkeypatch):
                     "display_name": "批判专家",
                     "system_prompt": "必须补充两个反例。",
                     "base_expert_id": "deep_analyst",
-                    "preferred_model_key": "mimo_pro",
+                    "preferred_model_key": "glm_5_max",
                     "reasoning_mode": "deep",
                 }
             },
@@ -232,7 +232,7 @@ async def test_generation_node_uses_custom_expert_specific_model(monkeypatch):
 
     new_state = await generation_node(state)
 
-    get_specific_mock.assert_awaited_once_with("mimo_pro", AgentRole.DEEP_ANALYST)
+    get_specific_mock.assert_awaited_once_with("glm_5_max", AgentRole.DEEP_ANALYST)
     assert "必须补充两个反例" in captured["system_prompt"]
     assert new_state.messages[-1]["content"] == "自定义专家分析完成"
 

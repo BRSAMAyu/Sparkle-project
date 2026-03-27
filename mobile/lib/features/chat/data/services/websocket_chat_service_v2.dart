@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -1268,7 +1269,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _closeConnection();
       return true;
     }
-    if (token != null && _currentToken != null && _currentToken != token) {
+    if (token != null && token.isNotEmpty && _currentToken != token) {
       _log('🔐 Token changed, reconnecting...');
       _closeConnection();
       return true;
@@ -1289,13 +1290,21 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   /// 建立 WebSocket 连接
   void _establishConnection(String userId, String? token) {
+    unawaited(_establishConnectionAsync(userId, token));
+  }
+
+  Future<void> _establishConnectionAsync(String userId, String? token) async {
     if (_connectionState == WsConnectionState.connecting ||
         _connectionState == WsConnectionState.connected) {
       _log('⚠️  Already connecting/connected');
       return;
     }
 
-    final effectiveToken = token ?? _currentToken;
+    final shouldUseRuntimeAuthResolution = _channelFactory == null;
+    final effectiveToken = shouldUseRuntimeAuthResolution
+        ? await _resolveAuthToken(token) ??
+            await _resolveAuthToken(_currentToken)
+        : token ?? _currentToken;
     _currentUserId = userId;
     _currentToken = effectiveToken;
     _updateConnectionState(WsConnectionState.connecting);
@@ -1319,14 +1328,25 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       );
       _log('📍 Effective WebSocket URL: $effectiveBaseUrl');
 
-      // Add token to query parameter for WebSocket authentication
-      // (Authorization header may not be preserved during WebSocket upgrade)
-      final query = effectiveToken != null
-          ? 'user_id=$userId&token=$effectiveToken'
-          : 'user_id=$userId';
+      String? wsTicket;
+      if (shouldUseRuntimeAuthResolution &&
+          effectiveToken != null &&
+          effectiveToken.isNotEmpty) {
+        wsTicket = await _issueWsTicket();
+      }
 
-      final wsUrl = '$effectiveBaseUrl/ws/chat?$query';
-      _log('🔌 Connecting to: $wsUrl');
+      final queryParameters = <String, String>{'user_id': userId};
+      if (wsTicket != null && wsTicket.isNotEmpty) {
+        queryParameters['ticket'] = wsTicket;
+      } else if (effectiveToken != null && effectiveToken.isNotEmpty) {
+        // Fallback for environments where ws ticket exchange is unavailable.
+        queryParameters['token'] = effectiveToken;
+      }
+
+      final wsUri = Uri.parse('$effectiveBaseUrl/ws/chat').replace(
+        queryParameters: queryParameters,
+      );
+      _log('🔌 Connecting to: $wsUri');
 
       // Note: We still send Authorization header for reference, but WS uses query param
       final headers = <String, dynamic>{};
@@ -1337,12 +1357,12 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       if (_channelFactory != null) {
         _channel = _channelFactory!(
-          Uri.parse(wsUrl),
+          wsUri,
           headers: headers.isEmpty ? null : headers,
         );
       } else {
         _channel = IOWebSocketChannel.connect(
-          Uri.parse(wsUrl),
+          wsUri,
           headers: headers.isEmpty ? null : headers,
         );
       }
@@ -1370,6 +1390,44 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Connection failed: $e');
       _handleConnectionError(e);
     }
+  }
+
+  Future<String?> _resolveAuthToken(String? candidate) async {
+    final trimmed = candidate?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+
+    try {
+      final storedToken =
+          await _container.read(authRepositoryProvider).getAccessToken();
+      if (storedToken != null && storedToken.isNotEmpty) {
+        return storedToken;
+      }
+    } catch (e) {
+      _log('⚠️ Failed to resolve auth token from repository: $e');
+    }
+
+    return null;
+  }
+
+  Future<String?> _issueWsTicket() async {
+    try {
+      final response = await _container.read(apiClientProvider).post<dynamic>(
+            '/ws/ticket',
+          );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final ticket = data['ticket']?.toString();
+        if (ticket != null && ticket.isNotEmpty) {
+          return ticket;
+        }
+      }
+    } catch (e) {
+      _log('⚠️ Failed to issue WS ticket, falling back to direct auth: $e');
+    }
+
+    return null;
   }
 
   /// 更新连接状态

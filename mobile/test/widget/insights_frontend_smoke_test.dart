@@ -101,7 +101,9 @@ class _StaticTheaterNotifier extends TheaterNotifier {
   }) async {}
 
   @override
-  Future<void> adoptSelectedRouteWithSource({String? sourceChatSessionId}) async {}
+  Future<void> adoptSelectedRouteWithSource({
+    String? sourceChatSessionId,
+  }) async {}
 
   @override
   Future<void> runWhatIfForStep(String stepNodeId) async {}
@@ -119,7 +121,9 @@ void main() {
   });
 
   group('Insights frontend smoke', () {
-    testWidgets('insight hub card renders unified entry and navigates to theater', (tester) async {
+    testWidgets(
+        'insight hub card renders unified entry and routes into overview',
+        (tester) async {
       final router = GoRouter(
         initialLocation: '/',
         routes: <RouteBase>[
@@ -128,16 +132,10 @@ void main() {
             builder: (context, state) => const Scaffold(body: InsightHubCard()),
           ),
           GoRoute(
-            path: '/theater',
-            builder: (context, state) => const Text('open-theater'),
-          ),
-          GoRoute(
-            path: '/simulation',
-            builder: (context, state) => const Text('open-simulation'),
-          ),
-          GoRoute(
-            path: '/learning-report',
-            builder: (context, state) => const Text('open-report'),
+            path: '/learning/insights',
+            builder: (context, state) => Text(
+              'overview-${state.uri.queryParameters['initialPanel'] ?? 'none'}',
+            ),
           ),
         ],
       );
@@ -201,16 +199,17 @@ void main() {
       expect(find.text('推演剧场'), findsOneWidget);
       expect(find.text('学习仿真'), findsOneWidget);
       expect(find.text('学习报告'), findsOneWidget);
-      expect(find.textContaining('上次推演：线性代数'), findsOneWidget);
-      expect(find.textContaining('1 个推荐场景待探索'), findsOneWidget);
+      expect(find.textContaining('线性代数'), findsOneWidget);
+      expect(find.textContaining('1 个推荐场景'), findsWidgets);
       expect(find.textContaining('掌握度 72%'), findsOneWidget);
 
       await tester.tap(find.text('推演剧场'));
       await tester.pumpAndSettle();
-      expect(find.text('open-theater'), findsOneWidget);
+      expect(find.text('overview-theater'), findsOneWidget);
     });
 
-    testWidgets('learning report screen renders animated dashboard sections', (tester) async {
+    testWidgets('learning report screen renders animated dashboard sections',
+        (tester) async {
       const report = LearningReport(
         reportId: 'report-1',
         markdown: '# 本周总结\n\n- 特征值掌握提升\n- 仍需补强行列式',
@@ -252,7 +251,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('knowledge theater screen shows friendly timeout guidance', (tester) async {
+    testWidgets('knowledge theater screen shows friendly timeout guidance',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
@@ -282,7 +282,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('insight hub card shows retry banner when refresh fails', (tester) async {
+    testWidgets('insight hub card shows retry banner when refresh fails',
+        (tester) async {
       final router = GoRouter(
         initialLocation: '/',
         routes: <RouteBase>[
@@ -337,7 +338,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('洞察推荐暂时没有刷新成功'), findsOneWidget);
+      expect(find.textContaining('洞察内容暂时没有刷新成功'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

@@ -190,6 +190,8 @@ class _EditableCardTile extends StatelessWidget {
 
   String _titleForCard(String cardId) {
     switch (cardId) {
+      case DashboardCardIds.insights:
+        return '学习洞察';
       case DashboardCardIds.focus:
         return '专注核心';
       case DashboardCardIds.calendar:
@@ -204,6 +206,8 @@ class _EditableCardTile extends StatelessWidget {
         return '好奇心胶囊';
       case DashboardCardIds.longTermPlan:
         return '长期计划';
+      case DashboardCardIds.seedLibrary:
+        return '种子库';
       default:
         return cardId;
     }
@@ -211,6 +215,8 @@ class _EditableCardTile extends StatelessWidget {
 
   String _subtitleForCard(String cardId) {
     switch (cardId) {
+      case DashboardCardIds.insights:
+        return '学习仿真、推演和报告的统一入口';
       case DashboardCardIds.focus:
         return '专注时长与火焰状态';
       case DashboardCardIds.calendar:
@@ -225,6 +231,8 @@ class _EditableCardTile extends StatelessWidget {
         return '最近认知与探索摘要';
       case DashboardCardIds.longTermPlan:
         return '长期成长目标进展';
+      case DashboardCardIds.seedLibrary:
+        return '查看常用知识种子与灵感入口';
       default:
         return '';
     }

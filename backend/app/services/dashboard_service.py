@@ -11,6 +11,11 @@ from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.services.insight_copy import (
+    present_pattern_description,
+    present_pattern_name,
+    present_pattern_solution,
+)
 
 
 def _utcnow() -> datetime:
@@ -213,10 +218,16 @@ class DashboardService:
 
         if latest_pattern:
             return {
-                "weekly_pattern": latest_pattern.pattern_name,
+                "weekly_pattern": present_pattern_name(latest_pattern.pattern_name),
                 "pattern_type": latest_pattern.pattern_type,
-                "description": latest_pattern.description,
-                "solution_text": latest_pattern.solution_text,
+                "description": present_pattern_description(
+                    latest_pattern.pattern_name,
+                    latest_pattern.description,
+                ),
+                "solution_text": present_pattern_solution(
+                    latest_pattern.pattern_name,
+                    latest_pattern.solution_text,
+                ),
                 "status": "new" if has_new_pattern else "active",
                 "has_new_insight": has_new_pattern
             }

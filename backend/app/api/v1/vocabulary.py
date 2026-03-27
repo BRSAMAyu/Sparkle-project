@@ -176,6 +176,10 @@ async def lookup_word(
         if mdx_result:
             return mdx_result
 
+    packaged_fallback = dictionary_package_service.lookup_fallback_entry(normalized_word)
+    if packaged_fallback:
+        return packaged_fallback
+
     # 2. 再查数据库镜像/导入词典
     entry = await vocabulary_service.lookup(db, normalized_word)
     if entry:

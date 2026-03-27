@@ -119,6 +119,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   int _consecutiveFastFrames = 0;
   int _playbackElapsedMs = 0;
   double _frameBudgetMs = 16;
+  double _activeReplaySpeedMultiplier = 1.0;
+  bool _physicsUsesViewportCulling = true;
   Timer? _previewDismissTimer;
   Timer? _initialBuildReplayTimer;
 
@@ -360,7 +362,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
     if (playbackLaunch != null) {
       ref.read(galaxyBuildPlaybackSessionProvider.notifier).state = true;
-      _preparePlayback(playbackLaunch);
+      _preparePlayback(playbackLaunch, speedMultiplier: 1.24);
+      _startGraphSettleSimulation(impulse: 0.34);
     }
 
     _entranceController
@@ -372,11 +375,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       curve: Curves.easeOutCubic,
     );
     _initialBuildReplayTimer?.cancel();
-    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 280), () {
+    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 180), () {
       if (!mounted || _graph == null || playbackLaunch == null) {
         return;
       }
-      _startPreparedPlayback();
+      _startPreparedPlayback(preRoll: const Duration(milliseconds: 50));
     });
     unawaited(_entranceController.forward());
   }
@@ -480,8 +483,26 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         'target_node_id': targetNodeId,
       if (overlay != null && overlay.topic.isNotEmpty) 'topic': overlay.topic,
     };
-    final uri = Uri(path: '/theater', queryParameters: query.isEmpty ? null : query);
+    final uri =
+        Uri(path: '/theater', queryParameters: query.isEmpty ? null : query);
     unawaited(context.push(uri.toString()));
+  }
+
+  void _launchPredictionForPreviewNode() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    final query = <String, String>{
+      'target_node_id': previewNode.id,
+      'topic': previewNode.name,
+    };
+    setState(_clearPreviewState);
+    unawaited(
+      context.push(
+        Uri(path: '/theater', queryParameters: query).toString(),
+      ),
+    );
   }
 
   void _handleGestureCommand(GalaxyGestureCommand command) {
@@ -519,7 +540,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (command is TapCommand) {
       _stopBuildReplay();
       _stopPhysicsSimulation(commitPendingNode: true);
-      final overlayNodeId = _hitTestPredictionOverlayNode(command.worldPosition);
+      final overlayNodeId =
+          _hitTestPredictionOverlayNode(command.worldPosition);
       if (overlayNodeId != null) {
         _openPredictionOverlay(overlayNodeId);
         return;
@@ -877,7 +899,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
   }
 
-  void _startPhysicsSimulation() {
+  void _startPhysicsSimulation({bool useViewportCulling = true}) {
+    _physicsUsesViewportCulling = useViewportCulling;
     if (!_physicsTicker.isActive && _forceEngine.hasActiveSimulation) {
       unawaited(_physicsTicker.start());
     }
@@ -895,7 +918,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       adjacency: _adjacency,
       edgeStrengths: _edgeStrengths,
       spatialIndex: _spatialIndex,
-      viewport: _camera.viewportRect,
+      viewport: _physicsUsesViewportCulling ? _camera.viewportRect : null,
     );
 
     _spatialIndex.build(result.positions, graph.nodes);
@@ -917,6 +940,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (_physicsTicker.isActive) {
       _physicsTicker.stop();
     }
+    _physicsUsesViewportCulling = true;
     _forceEngine.clear();
     if (commitPendingNode) {
       _commitPendingNodePositionIfNeeded();
@@ -1428,6 +1452,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _playbackPlan = null;
       _preRevealedNodeIds = const <String>{};
       _preRevealedEdgeIds = const <String>{};
+      _activeReplaySpeedMultiplier = 1.0;
       _spotlightAnchorId = null;
       _spotlightNodeIds = const <String>{};
     });
@@ -1484,6 +1509,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _playbackPlan = null;
       _preRevealedNodeIds = const <String>{};
       _preRevealedEdgeIds = const <String>{};
+      _activeReplaySpeedMultiplier = 1.0;
       _spotlightAnchorId = null;
       _spotlightNodeIds = const <String>{};
     });
@@ -1495,7 +1521,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return 7200;
     }
     final replaySpeed = ref.read(galaxyDisplaySettingsProvider).replaySpeed;
-    final effectiveReplaySpeed = (replaySpeed * 1.12)
+    final effectiveReplaySpeed = (replaySpeed * _activeReplaySpeedMultiplier)
         .clamp(kGalaxyReplaySpeedMin, kGalaxyReplaySpeedMax);
     return (playbackPlan.totalDurationMs / effectiveReplaySpeed)
         .round()
@@ -1592,7 +1618,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return animatedNodeIds;
   }
 
-  void _preparePlayback(_PlaybackLaunch launch) {
+  void _preparePlayback(
+    _PlaybackLaunch launch, {
+    double speedMultiplier = 1.0,
+  }) {
     setState(() {
       _playbackPlan = launch.plan;
       _preRevealedNodeIds = launch.preRevealedNodeIds;
@@ -1603,6 +1632,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _spotlightNodeIds = const <String>{};
       _draggingNodeId = null;
       _isBuildAnimating = true;
+      _activeReplaySpeedMultiplier = speedMultiplier;
       _sceneVersion++;
     });
     _buildReplayController
@@ -1611,7 +1641,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..reset();
   }
 
-  void _startPreparedPlayback() {
+  void _startPreparedPlayback({
+    Duration preRoll = const Duration(milliseconds: 100),
+  }) {
     if (!_isBuildAnimating || _playbackPlan == null) {
       return;
     }
@@ -1619,7 +1651,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
       ..stop()
       ..reset();
-    unawaited(_buildReplayController.forward());
+    _initialBuildReplayTimer?.cancel();
+    _initialBuildReplayTimer = Timer(preRoll, () {
+      if (!mounted || !_isBuildAnimating || _playbackPlan == null) {
+        return;
+      }
+      unawaited(_buildReplayController.forward());
+    });
   }
 
   void _launchPlayback(
@@ -1746,36 +1784,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
-    final viewport = _camera.viewportRect.inflate(180);
-    final viewportCenter = _camera.screenToWorld(
-      Offset(_viewportSize.width / 2, _viewportSize.height / 2),
-    );
-    final candidates = _positions.entries
-        .where((entry) => viewport.contains(entry.value))
-        .toList(growable: false);
-    final activeEntries =
-        (candidates.isNotEmpty ? candidates : _positions.entries.toList())
-          ..sort(
-            (a, b) => (a.value - viewportCenter)
-                .distance
-                .compareTo((b.value - viewportCenter).distance),
-          );
-
-    final nodeIds = activeEntries
-        .take(36)
-        .map((entry) => entry.key)
-        .toList(growable: false);
-    if (nodeIds.isEmpty) {
-      return;
-    }
-
     _forceEngine.activateNodes(
-      nodeIds,
+      _positions.keys,
       positions: _positions,
-      center: viewportCenter,
-      impulse: 1.15,
+      impulse: 0.78,
     );
-    _startPhysicsSimulation();
+    _startPhysicsSimulation(useViewportCulling: false);
   }
 
   void _startGraphSettleSimulation({double impulse = 0.4}) {
@@ -1789,7 +1803,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       positions: _positions,
       impulse: impulse,
     );
-    _startPhysicsSimulation();
+    _startPhysicsSimulation(useViewportCulling: false);
   }
 
   void _resetSimulationSettings() {
@@ -2202,6 +2216,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               node: _previewNode!,
                               onFocus: _focusPreviewNode,
                               onInspectConnections: _inspectPreviewConnections,
+                              onLaunchPrediction:
+                                  _launchPredictionForPreviewNode,
                             ),
                           ),
                         ),

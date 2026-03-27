@@ -884,6 +884,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 _parseJsonMap(metadata['prediction_preview']);
             final simulationPreview =
                 _parseJsonMap(metadata['simulation_preview']);
+            final reportPreview = _parseJsonMap(metadata['report_preview']);
             final agentsInvolved = _parseSelectedExperts(
               metadata['agents_involved'],
             );
@@ -957,6 +958,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'simulation_deep_link':
                     metadata['simulation_deep_link']?.toString(),
                 'simulation_preview': simulationPreview,
+                'source_chat_session_id':
+                    metadata['source_chat_session_id']?.toString(),
+              };
+            }
+            if (_parseMetadataFlag(metadata['open_report']) &&
+                reportPreview != null) {
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'open_report': true,
+                'report_deep_link': metadata['report_deep_link']?.toString(),
+                'report_preview': reportPreview,
                 'source_chat_session_id':
                     metadata['source_chat_session_id']?.toString(),
               };
@@ -1037,6 +1049,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 _parseJsonMap(metadata['prediction_preview']);
             final simulationPreview =
                 _parseJsonMap(metadata['simulation_preview']);
+            final reportPreview = _parseJsonMap(metadata['report_preview']);
             final agentsInvolved = _parseSelectedExperts(
               metadata['agents_involved'],
             );
@@ -1110,6 +1123,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'simulation_deep_link':
                     metadata['simulation_deep_link']?.toString(),
                 'simulation_preview': simulationPreview,
+                'source_chat_session_id':
+                    metadata['source_chat_session_id']?.toString(),
+              };
+            }
+            if (_parseMetadataFlag(metadata['open_report']) &&
+                reportPreview != null) {
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'open_report': true,
+                'report_deep_link': metadata['report_deep_link']?.toString(),
+                'report_preview': reportPreview,
                 'source_chat_session_id':
                     metadata['source_chat_session_id']?.toString(),
               };

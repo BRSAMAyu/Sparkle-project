@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-MIMO v2-pro 集成验证脚本
+MIMO 集成验证脚本
 
 验证内容：
 1. 配置正确加载
-2. LLM Router 正确路由到 mimo_pro
+2. LLM Router 不再路由到 mimo_pro
 3. MIMO API 调用成功
 4. 联网搜索功能正常工作
 5. 思考链和引用正确返回
@@ -48,14 +48,14 @@ def verify_config():
     try:
         from app.config import settings
 
-        # 检查 MIMO Pro 配置
-        assert hasattr(settings, 'XIAOMI_PRO_MODEL'), "缺少 XIAOMI_PRO_MODEL 配置"
-        assert hasattr(settings, 'XIAOMI_PRO_TEMPERATURE'), "缺少 XIAOMI_PRO_TEMPERATURE 配置"
-        assert hasattr(settings, 'XIAOMI_WEB_SEARCH_ENABLED'), "缺少 XIAOMI_WEB_SEARCH_ENABLED 配置"
+        # 检查 MIMO 基础配置
+        assert hasattr(settings, 'XIAOMI_CHAT_MODEL'), "缺少 XIAOMI_CHAT_MODEL 配置"
+        assert hasattr(settings, 'XIAOMI_STANDARD_MODEL'), "缺少 XIAOMI_STANDARD_MODEL 配置"
+        assert hasattr(settings, 'XIAOMI_TEMPERATURE'), "缺少 XIAOMI_TEMPERATURE 配置"
 
-        print_success(f"XIAOMI_PRO_MODEL = {settings.XIAOMI_PRO_MODEL}")
-        print_success(f"XIAOMI_PRO_TEMPERATURE = {settings.XIAOMI_PRO_TEMPERATURE}")
-        print_success(f"XIAOMI_WEB_SEARCH_ENABLED = {settings.XIAOMI_WEB_SEARCH_ENABLED}")
+        print_success(f"XIAOMI_CHAT_MODEL = {settings.XIAOMI_CHAT_MODEL}")
+        print_success(f"XIAOMI_STANDARD_MODEL = {settings.XIAOMI_STANDARD_MODEL}")
+        print_success(f"XIAOMI_TEMPERATURE = {settings.XIAOMI_TEMPERATURE}")
         print_success(f"XIAOMI_MIMO_API_KEY = {settings.XIAOMI_MIMO_API_KEY[:10]}...")
         print_success(f"XIAOMI_MIMO_BASE_URL = {settings.XIAOMI_MIMO_BASE_URL}")
 
@@ -75,50 +75,36 @@ def verify_llm_router():
 
         router = LLMRouter()
 
-        # 检查 mimo_pro 是否注册
-        if 'mimo_pro' not in router._available_models:
-            print_error("mimo_pro 未在可用模型中注册")
+        # 检查最高层模型是否注册
+        if 'glm_5_max' not in router._available_models:
+            print_error("glm_5_max 未在可用模型中注册")
             return False
-        print_success("mimo_pro 已注册")
+        print_success("glm_5_max 已注册")
 
-        # 检查 mimo_pro 配置
-        config = router._available_models['mimo_pro']
-        assert config.provider == ModelProvider.XIAOMI, "mimo_pro 应该使用 XIAOMI provider"
+        if 'mimo_pro' in router._available_models:
+            print_error("mimo_pro 仍然在可用模型中注册")
+            return False
+        print_success("mimo_pro 已移除")
+
+        config = router._available_models['glm_5_max']
+        assert config.provider == ModelProvider.ZHIPU, "glm_5_max 应该使用 ZHIPU provider"
         print_success(f"Provider: {config.provider.value}")
 
-        assert config.model_name == "mimo-v2-pro", f"模型名称应该是 mimo-v2-pro，实际是 {config.model_name}"
+        assert config.model_name == "glm-5", f"模型名称应该是 glm-5，实际是 {config.model_name}"
         print_success(f"Model: {config.model_name}")
 
-        assert config.enable_web_search == True, "mimo_pro 应该启用联网搜索"
-        print_success("联网搜索已启用")
-
-        assert config.thinking_mode == "enabled", "mimo_pro 应该启用思考模式"
-        print_success("思考模式已启用")
-
         # 检查 tier mapping
-        standard_models = router._tier_mapping.get(ModelTier.STANDARD, [])
-        reasoning_models = router._tier_mapping.get(ModelTier.REASONING, [])
+        max_models = router._tier_mapping.get(ModelTier.MAX, [])
 
-        if 'mimo_pro' not in standard_models:
-            print_error("mimo_pro 未在 STANDARD 层级中")
+        if 'glm_5_max' not in max_models:
+            print_error("glm_5_max 未在 MAX 层级中")
             return False
-        print_success(f"STANDARD 层级: {standard_models}")
+        print_success(f"MAX 层级: {max_models}")
 
-        if 'mimo_pro' not in reasoning_models:
-            print_error("mimo_pro 未在 REASONING 层级中")
+        if max_models[0] != 'glm_5_max':
+            print_error(f"glm_5_max 不是 MAX 层级第一优先级: {max_models}")
             return False
-        print_success(f"REASONING 层级: {reasoning_models}")
-
-        # 检查优先级
-        if standard_models[0] != 'mimo_pro':
-            print_error(f"mimo_pro 不是 STANDARD 层级第一优先级: {standard_models}")
-            return False
-        print_success("mimo_pro 是 STANDARD 层级第一优先级")
-
-        if reasoning_models[0] != 'mimo_pro':
-            print_error(f"mimo_pro 不是 REASONING 层级第一优先级: {reasoning_models}")
-            return False
-        print_success("mimo_pro 是 REASONING 层级第一优先级")
+        print_success("glm_5_max 是 MAX 层级第一优先级")
 
         return True
     except Exception as e:
@@ -146,11 +132,11 @@ async def verify_mimo_api_call():
 
         # 测试基础聊天（不带联网搜索）
         response = await client.chat.completions.create(
-            model=settings.XIAOMI_PRO_MODEL,
+            model=settings.XIAOMI_CHAT_MODEL,
             messages=[
                 {"role": "user", "content": "你好，请用一句话介绍你自己。"}
             ],
-            temperature=settings.XIAOMI_PRO_TEMPERATURE,
+            temperature=settings.XIAOMI_TEMPERATURE,
             max_tokens=100,
         )
 
@@ -182,12 +168,12 @@ async def verify_web_search():
 
         # 测试联网搜索
         response = await client.chat.completions.create(
-            model=settings.XIAOMI_PRO_MODEL,
+            model=settings.XIAOMI_CHAT_MODEL,
             messages=[
                 {"role": "user", "content": "今天北京的天气怎么样？请搜索最新信息。"}
             ],
             tools=[{"type": "web_search"}],
-            temperature=settings.XIAOMI_PRO_TEMPERATURE,
+            temperature=settings.XIAOMI_TEMPERATURE,
             max_tokens=500,
         )
 
@@ -237,12 +223,12 @@ async def verify_streaming():
 
         # 测试流式响应
         stream = await client.chat.completions.create(
-            model=settings.XIAOMI_PRO_MODEL,
+            model=settings.XIAOMI_CHAT_MODEL,
             messages=[
                 {"role": "user", "content": "请简单介绍一下 Python 编程语言。"}
             ],
             tools=[{"type": "web_search"}],
-            temperature=settings.XIAOMI_PRO_TEMPERATURE,
+            temperature=settings.XIAOMI_TEMPERATURE,
             stream=True,
             stream_options={"include_usage": True},
         )

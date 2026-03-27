@@ -24,6 +24,7 @@ from app.services.personalization.inferred_meta import INFERRED_META, build_infe
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.profile_write_service import ProfileWriteService
+from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -299,6 +300,125 @@ def _normalize_inferred_display_value(value: Any) -> Any:
     return value
 
 
+_INFERRED_KEY_LABELS = {
+    "avg_question_complexity": "问题复杂度",
+    "chat_active_hours": "聊天活跃时段",
+    "community_engagement_level": "社区参与度",
+    "content_contribution_rate": "社区贡献倾向",
+    "curiosity_preference": "探索偏好",
+    "curiosity_push_receptivity": "探索推送接受度",
+    "depth_preference": "讲解深度偏好",
+    "depth_preference_signal": "深度讲解倾向",
+    "error_correction_rate": "错题纠正率",
+    "error_density_score": "错题密度",
+    "peak_focus_hours": "高专注时段",
+    "preferred_focus_duration": "偏好专注时长",
+    "push_receptivity": "推送接受度",
+    "recurring_error_tags": "高频错误标签",
+    "response_satisfaction_rate": "回答满意度",
+    "social_learning_preference": "社交学习倾向",
+}
+
+_INFERRED_SOURCE_LABELS = {
+    "behavior": "行为推断",
+    "chat_behavior": "聊天行为",
+    "community": "社区行为",
+    "error_book": "错题记录",
+    "focus_sessions": "专注记录",
+    "push_feedback": "推送反馈",
+    "streak_stats": "连续记录",
+    "task_feedback": "任务反馈",
+    "learning_assets": "学习资产",
+    "galaxy_feedback": "知识星图反馈",
+}
+
+_VALUE_LABELS = {
+    "moderate": "中等",
+    "high": "高",
+    "low": "低",
+    "balanced": "均衡",
+    "detailed": "详细",
+    "concise": "简洁",
+    "structured": "结构化",
+    "intermediate": "中等基础",
+}
+
+_POLICY_PROFILE_LABELS = {
+    "llm": "AI 回复",
+    "push": "提醒推送",
+    "task": "任务规划",
+}
+
+_POLICY_SIGNAL_LABELS = {
+    "llm.feedback.emphasize_progress": "强调进度反馈",
+    "llm.explanation.add_foundation": "补齐前置概念",
+    "push.timing.earlier_reminder": "提醒时间前移",
+    "push.timing.avoid_inactive_hours": "避开低响应时段",
+    "task.time_estimate.add_buffer_30pct": "任务时长增加缓冲",
+    "task.difficulty.start_easy": "先从低门槛开始",
+    "task.content.scaffold_prerequisites": "优先补前置知识",
+    "task.review.raise_priority_for_recurring_errors": "高频错题优先复盘",
+    "plan.milestone.add_checkpoint": "里程碑增加检查点",
+}
+
+_POLICY_EFFECT_LABELS = {
+    "llm.feedback.emphasize_progress": "AI 在反馈时会先强调你已经取得的进展，减少挫败感和过度纠错。",
+    "llm.explanation.add_foundation": "AI 在解释复杂问题前会先补上必要的基础概念，避免直接跳步。",
+    "push.timing.earlier_reminder": "提醒会更早出现，把关键任务尽量推到你更容易启动的时段。",
+    "push.timing.avoid_inactive_hours": "系统会尽量避开你常常忽略提醒或不适合被打断的时间段。",
+    "task.time_estimate.add_buffer_30pct": "任务时长会自动预留额外缓冲，减少计划过满带来的失真。",
+    "task.difficulty.start_easy": "任务会先给一个更容易启动的版本，帮助你快速进入状态。",
+    "task.content.scaffold_prerequisites": "任务与讲解会优先补齐前置知识，再推进到更高难度内容。",
+    "task.review.raise_priority_for_recurring_errors": "系统会把高频错题与复盘任务排得更靠前，优先解决反复出现的问题。",
+    "plan.milestone.add_checkpoint": "计划里会加入更多检查点，帮助你更早发现偏航并及时回正。",
+}
+
+_SOURCE_PATTERN_LABELS = {
+    "push_feedback": "推送反馈",
+    "error_book": "错题记录",
+    "behavior_pattern": "行为模式",
+}
+
+
+def _present_value_text(value: Any) -> str:
+    if isinstance(value, str):
+        return _VALUE_LABELS.get(value, value)
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    if isinstance(value, list):
+        return "、".join(str(item) for item in value[:5]) if value else "暂无"
+    if isinstance(value, dict):
+        return "；".join(f"{key}: {raw}" for key, raw in list(value.items())[:5]) if value else "暂无"
+    return str(value)
+
+
+def _localize_inferred_explanation(key: str, value: Any, fallback: str) -> str:
+    label = _INFERRED_KEY_LABELS.get(key, key)
+    if key == "peak_focus_hours" and isinstance(value, list):
+        return f"系统根据最近专注记录判断，你更容易进入状态的时间集中在 { _present_value_text(value) }。"
+    if key == "chat_active_hours" and isinstance(value, list):
+        return f"系统观察到你最近更常在 { _present_value_text(value) } 发起对话，这些时段会被视为更自然的互动窗口。"
+    if key == "error_density_score":
+        return f"最近错题密度约为 { _present_value_text(value) }，偏高时系统会放慢节奏并提高复盘优先级。"
+    if key == "error_correction_rate":
+        return f"最近错题纠正率约为 { _present_value_text(value) }，这会影响系统对你复盘力度的判断。"
+    if key == "recurring_error_tags" and isinstance(value, list):
+        return f"系统最近识别到这些高频错误模式：{ _present_value_text(value) }。"
+    if key == "social_learning_preference":
+        return f"从最近互动看，你对社交式学习的偏好约为 { _present_value_text(value) }。"
+    if key == "depth_preference_signal":
+        return "系统发现你常常围绕同一主题连续追问，因此会更倾向于提供更深入、分层的解释。"
+    if key == "response_satisfaction_rate":
+        return f"结合最近聊天反馈，系统估计你当前的回答满意度约为 { _present_value_text(value) }。"
+    if fallback and any("\u4e00" <= ch <= "\u9fff" for ch in fallback):
+        return fallback
+    return f"系统根据最近行为推断出「{label}」目前约为 { _present_value_text(value) }。"
+
+
+def _present_source_pattern_label(value: str) -> str:
+    return present_pattern_name(_SOURCE_PATTERN_LABELS.get(value, value))
+
+
 def _build_inferred_entries(
     *,
     explicit: dict[str, Any],
@@ -330,9 +450,11 @@ def _build_inferred_entries(
         items.append(
             {
                 "key": key,
+                "label": _INFERRED_KEY_LABELS.get(key, key),
                 "value": display_value,
                 "source": source,
-                "explanation": explanation,
+                "source_label": _INFERRED_SOURCE_LABELS.get(source, source),
+                "explanation": _localize_inferred_explanation(key, display_value, explanation),
                 "updated_at": updated_at,
                 "adjustable": adjustable,
                 "overridden": overridden,
@@ -349,9 +471,12 @@ def _serialize_policy_explanations(profile_name: str, items: list[Any]) -> list[
         serialized.append(
             {
                 "profile": profile_name,
+                "profile_label": _POLICY_PROFILE_LABELS.get(profile_name, profile_name),
                 "signal": item.signal,
-                "effect": item.effect,
+                "signal_label": _POLICY_SIGNAL_LABELS.get(item.signal, item.signal),
+                "effect": _POLICY_EFFECT_LABELS.get(item.signal, item.effect),
                 "source_pattern": item.source_pattern,
+                "source_pattern_label": _present_source_pattern_label(item.source_pattern),
             }
         )
     return serialized

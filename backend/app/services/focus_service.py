@@ -178,7 +178,8 @@ class FocusService:
         user_id: UUID
     ) -> dict[str, Any]:
         """Get focus stats for today"""
-        today_start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        now = _utcnow()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Total duration
         stmt_duration = select(func.sum(FocusSession.duration_minutes)).where(
@@ -272,7 +273,7 @@ class FocusService:
         user_id: UUID
     ) -> dict[str, Any]:
         """Get focus stats for the current week (Monday to Sunday)"""
-        now = datetime.datetime.now()
+        now = _utcnow()
         week_start = (now - datetime.timedelta(days=now.weekday())).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
@@ -334,7 +335,7 @@ class FocusService:
         user_id: UUID
     ) -> dict[str, Any]:
         """Get focus stats for the current month"""
-        now = datetime.datetime.now()
+        now = _utcnow()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         # Calculate first day of next month
@@ -456,7 +457,7 @@ class FocusService:
         days: int = 90
     ) -> dict[str, float]:
         """Get heatmap data for the last N days"""
-        end_date = datetime.datetime.now()
+        end_date = _utcnow()
         start_date = end_date - datetime.timedelta(days=days)
 
         stmt = select(FocusSession).where(
@@ -481,7 +482,7 @@ class FocusService:
         user_id: UUID
     ) -> int:
         """Calculate current consecutive days streak"""
-        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         check_date = today
         streak = 0
 

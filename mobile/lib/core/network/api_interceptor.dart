@@ -138,6 +138,15 @@ class AuthInterceptor extends Interceptor {
 
     if (err.response?.statusCode == 401) {
       try {
+        final authHeader =
+            err.requestOptions.headers['Authorization']?.toString();
+        if (authHeader == null || authHeader.isEmpty) {
+          debugPrint(
+            '🔐 Skipping token refresh for unauthenticated request: $path',
+          );
+          return super.onError(err, handler);
+        }
+
         final authRepo = _ref.read(authRepositoryProvider);
         final refreshToken = await authRepo.getRefreshToken();
         if (refreshToken == null || refreshToken.isEmpty) {

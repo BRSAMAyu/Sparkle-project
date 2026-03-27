@@ -219,18 +219,6 @@ class LLMRouter:
                 avg_latency_ms=350,
                 thinking_mode="enabled",
             ),
-            "mimo_pro": ModelConfig(
-                provider=ModelProvider.XIAOMI,
-                model_name=settings.XIAOMI_PRO_MODEL,
-                base_url=settings.XIAOMI_MIMO_BASE_URL,
-                api_key=settings.XIAOMI_MIMO_API_KEY,
-                temperature=settings.XIAOMI_PRO_TEMPERATURE,
-                tier=ModelTier.MAX,
-                cost_per_1k_tokens=0.004,
-                avg_latency_ms=1200,
-                enable_web_search=settings.XIAOMI_WEB_SEARCH_ENABLED,
-                thinking_mode="enabled",
-            ),
             "deepseek_chat": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,
                 model_name=settings.DEEPSEEK_CHAT_MODEL,
@@ -447,7 +435,7 @@ class LLMRouter:
         standard_models = ["xiaomi_standard_thinking", "dashscope_standard_thinking"]
         plus_models = ["dashscope_chat", "deepseek_chat"]
         pro_models = ["dashscope_reason", "deepseek_reason"]
-        max_models = ["mimo_pro", "glm_5_max"]
+        max_models = ["glm_5_max"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
         provider_standard_preference = {

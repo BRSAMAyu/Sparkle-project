@@ -4,6 +4,7 @@ import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 enum DashboardCardLayoutMode { swipe, grid }
 
 class DashboardCardIds {
+  static const String insights = 'insights';
   static const String focus = 'focus';
   static const String calendar = 'calendar';
   static const String tools = 'tools';
@@ -14,6 +15,7 @@ class DashboardCardIds {
   static const String seedLibrary = 'seed_library';
 
   static const List<String> all = [
+    insights,
     focus,
     calendar,
     tools,
@@ -25,6 +27,7 @@ class DashboardCardIds {
   ];
 
   static const List<String> defaultOrder = [
+    insights,
     calendar,
     tools,
     curiosity,
@@ -35,9 +38,27 @@ class DashboardCardIds {
     streak,
   ];
 
-  static const List<String> legacyDefaultOrder = all;
+  static const List<String> legacyDefaultOrder = [
+    focus,
+    calendar,
+    tools,
+    streak,
+    nextActions,
+    curiosity,
+    longTermPlan,
+    seedLibrary,
+  ];
+
+  static const List<String> legacyDefaultVisible = [
+    calendar,
+    tools,
+    curiosity,
+    seedLibrary,
+    longTermPlan,
+  ];
 
   static const List<String> defaultVisible = [
+    insights,
     calendar,
     tools,
     curiosity,
@@ -107,9 +128,14 @@ class DashboardCardConfigState {
         orElse: () => DashboardCardLayoutMode.swipe,
       );
 
+      final normalizedVisibleIds = visibleIds.isEmpty
+          ? DashboardCardIds.defaultVisible
+          : _listEquals(visibleIds, DashboardCardIds.legacyDefaultVisible)
+              ? DashboardCardIds.defaultVisible
+              : visibleIds;
+
       return DashboardCardConfigState(
-        visibleCardIds:
-            visibleIds.isEmpty ? DashboardCardIds.defaultVisible : visibleIds,
+        visibleCardIds: normalizedVisibleIds,
         cardOrder: cardOrder,
         layoutMode: layoutMode,
       );

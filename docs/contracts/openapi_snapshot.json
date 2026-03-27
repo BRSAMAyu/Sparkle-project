@@ -1237,6 +1237,53 @@
         "title": "AnalysisStatus",
         "type": "string"
       },
+      "ApplyNodeExpansionRequest": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/NodeExpansionCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          }
+        },
+        "title": "ApplyNodeExpansionRequest",
+        "type": "object"
+      },
+      "ApplyNodeExpansionResponse": {
+        "properties": {
+          "created_count": {
+            "default": 0,
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeBase"
+            },
+            "title": "Created Nodes",
+            "type": "array"
+          },
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "ApplyNodeExpansionResponse",
+        "type": "object"
+      },
       "AssetListResponse": {
         "description": "Response for asset listing",
         "properties": {
@@ -11397,6 +11444,19 @@
         "title": "LearningPathNodeResponse",
         "type": "object"
       },
+      "LearningReportRequest": {
+        "properties": {
+          "section_limit": {
+            "default": 5,
+            "maximum": 5.0,
+            "minimum": 2.0,
+            "title": "Section Limit",
+            "type": "integer"
+          }
+        },
+        "title": "LearningReportRequest",
+        "type": "object"
+      },
       "LibraryCategoryEnum": {
         "enum": [
           "few_shot",
@@ -11495,6 +11555,18 @@
             "title": "Created At",
             "type": "string"
           },
+          "current_user_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "当前用户评分",
+            "title": "Current User Rating"
+          },
           "description": {
             "anyOf": [
               {
@@ -11585,6 +11657,18 @@
             "title": "Subscriber Count",
             "type": "integer"
           },
+          "system_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "系统基础质量评分",
+            "title": "System Quality Score"
+          },
           "tags": {
             "anyOf": [
               {
@@ -11610,6 +11694,24 @@
             "default": 0,
             "description": "使用次数",
             "title": "Usage Count",
+            "type": "integer"
+          },
+          "user_rating_avg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "用户平均评分",
+            "title": "User Rating Avg"
+          },
+          "user_rating_count": {
+            "default": 0,
+            "description": "用户评分人数",
+            "title": "User Rating Count",
             "type": "integer"
           },
           "visibility": {
@@ -13637,6 +13739,106 @@
           "relations"
         ],
         "title": "NodeDetailResponse",
+        "type": "object"
+      },
+      "NodeExpansionCandidate": {
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "importance_level": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Importance Level",
+            "type": "integer"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name En"
+          },
+          "relation_strength": {
+            "default": 0.7,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Relation Strength",
+            "type": "number"
+          },
+          "relation_to_trigger": {
+            "default": "related",
+            "title": "Relation To Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "name",
+          "description"
+        ],
+        "title": "NodeExpansionCandidate",
+        "type": "object"
+      },
+      "NodeExpansionCandidateRequest": {
+        "properties": {
+          "count": {
+            "default": 3,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "title": "NodeExpansionCandidateRequest",
+        "type": "object"
+      },
+      "NodeExpansionCandidatesResponse": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/NodeExpansionCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "trigger_node_id": {
+            "format": "uuid",
+            "title": "Trigger Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trigger_node_id",
+          "prompt_version",
+          "candidates"
+        ],
+        "title": "NodeExpansionCandidatesResponse",
         "type": "object"
       },
       "NodeRelationInfo": {
@@ -16101,6 +16303,36 @@
         "title": "PushPreferenceUpdate",
         "type": "object"
       },
+      "RatingUpsertRequest": {
+        "description": "提交或更新用户评分",
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "评分说明",
+            "title": "Comment"
+          },
+          "score": {
+            "description": "用户评分，0-10",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "title": "RatingUpsertRequest",
+        "type": "object"
+      },
       "ReactionActionEnum": {
         "enum": [
           "add",
@@ -16342,6 +16574,34 @@
         ],
         "title": "RecommendationItemTypeEnum",
         "type": "string"
+      },
+      "RecommendedSeedsResponse": {
+        "properties": {
+          "scenario_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Key"
+          },
+          "seeds": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationSeedResponse"
+            },
+            "title": "Seeds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scenario_key",
+          "seeds"
+        ],
+        "title": "RecommendedSeedsResponse",
+        "type": "object"
       },
       "RecordMetricRequest": {
         "description": "Request to record a metric",
@@ -17241,6 +17501,80 @@
         "title": "SimilarErrorItem",
         "type": "object"
       },
+      "SimulationRunRequest": {
+        "properties": {
+          "scenario_key": {
+            "default": "study_group",
+            "description": "场景模板 key",
+            "title": "Scenario Key",
+            "type": "string"
+          },
+          "topic": {
+            "description": "学习主题",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "SimulationRunRequest",
+        "type": "object"
+      },
+      "SimulationSeedResponse": {
+        "properties": {
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "relevance_score": {
+            "title": "Relevance Score",
+            "type": "number"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "suggested_experts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggested Experts",
+            "type": "array"
+          },
+          "suggested_scenario": {
+            "title": "Suggested Scenario",
+            "type": "string"
+          },
+          "tension_point": {
+            "title": "Tension Point",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "context",
+          "tension_point",
+          "source_type",
+          "source_ids",
+          "relevance_score",
+          "suggested_scenario",
+          "suggested_experts"
+        ],
+        "title": "SimulationSeedResponse",
+        "type": "object"
+      },
       "SmartScheduleRequest": {
         "description": "智能排程请求",
         "properties": {
@@ -18136,7 +18470,7 @@
           "priority": {
             "default": 0,
             "description": "优先级",
-            "maximum": 100.0,
+            "maximum": 1000.0,
             "minimum": 0.0,
             "title": "Priority",
             "type": "integer"
@@ -18291,6 +18625,51 @@
           }
         },
         "title": "SubscriptionResponse",
+        "type": "object"
+      },
+      "SubscriptionUpdate": {
+        "description": "更新订阅请求",
+        "properties": {
+          "is_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "是否启用",
+            "title": "Is Enabled"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "备注",
+            "title": "Notes"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "优先级",
+            "title": "Priority"
+          }
+        },
+        "title": "SubscriptionUpdate",
         "type": "object"
       },
       "SuggestedNode": {
@@ -19454,6 +19833,17 @@
             "description": "Task title",
             "title": "Title"
           },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Task type"
+          },
           "user_note": {
             "anyOf": [
               {
@@ -19468,6 +19858,156 @@
           }
         },
         "title": "TaskUpdate",
+        "type": "object"
+      },
+      "TheaterActualOutcomeRequest": {
+        "properties": {
+          "actual_completion_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Completion Rate"
+          },
+          "actual_mastery": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Mastery"
+          }
+        },
+        "title": "TheaterActualOutcomeRequest",
+        "type": "object"
+      },
+      "TheaterAdoptRequest": {
+        "properties": {
+          "prediction_id": {
+            "title": "Prediction Id",
+            "type": "string"
+          },
+          "route_id": {
+            "title": "Route Id",
+            "type": "string"
+          },
+          "source_chat_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Chat Session Id"
+          }
+        },
+        "required": [
+          "prediction_id",
+          "route_id"
+        ],
+        "title": "TheaterAdoptRequest",
+        "type": "object"
+      },
+      "TheaterGenerateRequest": {
+        "properties": {
+          "horizon_days": {
+            "default": 14,
+            "description": "推演周期天数",
+            "maximum": 30.0,
+            "minimum": 7.0,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "可选的目标节点 ID",
+            "title": "Target Node Id"
+          },
+          "topic": {
+            "description": "学习目标或主题",
+            "minLength": 1,
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "TheaterGenerateRequest",
+        "type": "object"
+      },
+      "TheaterSnapshotRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "prediction_id": {
+            "title": "Prediction Id",
+            "type": "string"
+          },
+          "route_id": {
+            "title": "Route Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prediction_id",
+          "route_id"
+        ],
+        "title": "TheaterSnapshotRequest",
+        "type": "object"
+      },
+      "TheaterWhatIfRequest": {
+        "properties": {
+          "prediction_id": {
+            "title": "Prediction Id",
+            "type": "string"
+          },
+          "route_id": {
+            "title": "Route Id",
+            "type": "string"
+          },
+          "skip_node_id": {
+            "title": "Skip Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prediction_id",
+          "route_id",
+          "skip_node_id"
+        ],
+        "title": "TheaterWhatIfRequest",
         "type": "object"
       },
       "TimeSlotQuality": {
@@ -21196,6 +21736,18 @@
           "decay_paused": {
             "title": "Decay Paused",
             "type": "boolean"
+          },
+          "first_unlock_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Unlock At"
           },
           "is_collapsed": {
             "title": "Is Collapsed",
@@ -25263,6 +25815,57 @@
         ]
       }
     },
+    "/api/v1/agent-stats/overview": {
+      "get": {
+        "description": "Compatibility alias for legacy acceptance paths.",
+        "operationId": "get_user_stats_overview_alias_api_v1_agent_stats_overview_get",
+        "parameters": [
+          {
+            "description": "统计天数",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "统计天数",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Stats Overview Alias",
+        "tags": [
+          "agent-stats"
+        ]
+      }
+    },
     "/api/v1/agent-stats/performance": {
       "get": {
         "description": "获取Agent性能指标\n\n包括：\n- 平均耗时\n- 中位数耗时\n- P95耗时\n- 成功率/失败率",
@@ -25470,6 +26073,35 @@
         "summary": "Get Top Agents",
         "tags": [
           "agent-stats"
+        ]
+      }
+    },
+    "/api/v1/analytics/report": {
+      "get": {
+        "description": "Compatibility alias for legacy acceptance and dashboard integrations.",
+        "operationId": "get_weekly_report_alias_api_v1_analytics_report_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Weekly Report Alias Api V1 Analytics Report Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Weekly Report Alias",
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -26674,6 +27306,30 @@
           }
         ],
         "summary": "Get Background Task Stats",
+        "tags": [
+          "background_tasks"
+        ]
+      }
+    },
+    "/api/v1/background-tasks/stream/events": {
+      "get": {
+        "operationId": "stream_background_task_updates_api_v1_background_tasks_stream_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stream Background Task Updates",
         "tags": [
           "background_tasks"
         ]
@@ -36218,6 +36874,124 @@
         ]
       }
     },
+    "/api/v1/galaxy/node/{node_id}/expansion/apply": {
+      "post": {
+        "operationId": "apply_node_expansion_candidates_api_v1_galaxy_node__node_id__expansion_apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyNodeExpansionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyNodeExpansionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Node Expansion Candidates",
+        "tags": [
+          "galaxy",
+          "Knowledge Galaxy"
+        ]
+      }
+    },
+    "/api/v1/galaxy/node/{node_id}/expansion/candidates": {
+      "post": {
+        "operationId": "generate_node_expansion_candidates_api_v1_galaxy_node__node_id__expansion_candidates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodeExpansionCandidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeExpansionCandidatesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Node Expansion Candidates",
+        "tags": [
+          "galaxy",
+          "Knowledge Galaxy"
+        ]
+      }
+    },
     "/api/v1/galaxy/node/{node_id}/favorite": {
       "post": {
         "description": "切换知识点收藏状态",
@@ -38350,6 +39124,128 @@
         "summary": "Generate Learning Path Plan",
         "tags": [
           "Learning Paths"
+        ]
+      }
+    },
+    "/api/v1/learning-paths/{target_node_id}/task-path": {
+      "post": {
+        "description": "生成不占用计划额度的轻量学习路径。\n\n会直接创建一组任务卡，并把最近一次学习路径摘要写回知识节点详情。",
+        "operationId": "generate_learning_task_path_api_v1_learning_paths__target_node_id__task_path_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "target_node_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Target Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "是否在任务路径中纳入推荐拓展节点",
+            "in": "query",
+            "name": "include_related",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "是否在任务路径中纳入推荐拓展节点",
+              "title": "Include Related",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "用户选择纳入任务路径的拓展节点",
+            "in": "query",
+            "name": "selected_related_node_ids",
+            "required": false,
+            "schema": {
+              "description": "用户选择纳入任务路径的拓展节点",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "title": "Selected Related Node Ids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Generate Learning Task Path Api V1 Learning Paths  Target Node Id  Task Path Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Learning Task Path",
+        "tags": [
+          "Learning Paths"
+        ]
+      }
+    },
+    "/api/v1/learning-reports/generate": {
+      "post": {
+        "operationId": "generate_learning_report_api_v1_learning_reports_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearningReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Learning Report",
+        "tags": [
+          "learning-reports"
         ]
       }
     },
@@ -44468,6 +45364,65 @@
         ]
       }
     },
+    "/api/v1/seed-libraries/{library_id}/rating": {
+      "post": {
+        "description": "提交用户评分，并更新融合后的质量分展示",
+        "operationId": "rate_library_api_v1_seed_libraries__library_id__rating_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Library Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "评分种子库",
+        "tags": [
+          "seed-libraries"
+        ]
+      }
+    },
     "/api/v1/seed-libraries/{library_id}/subscribe": {
       "post": {
         "operationId": "subscribe_library_alias_api_v1_seed_libraries__library_id__subscribe_post",
@@ -44523,6 +45478,65 @@
           }
         ],
         "summary": "订阅库（兼容路径）",
+        "tags": [
+          "seed-libraries"
+        ]
+      }
+    },
+    "/api/v1/seed-libraries/{library_id}/subscription": {
+      "put": {
+        "description": "启用/停用种子库并调整优先级，决定它在系统中的实际生效方式",
+        "operationId": "update_library_subscription_api_v1_seed_libraries__library_id__subscription_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Library Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "更新种子库应用状态",
         "tags": [
           "seed-libraries"
         ]
@@ -44917,6 +45931,158 @@
         ]
       }
     },
+    "/api/v1/simulation/recommended-seeds": {
+      "get": {
+        "operationId": "get_recommended_learning_simulation_seeds_api_v1_simulation_recommended_seeds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scenario_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scenario Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendedSeedsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recommended Learning Simulation Seeds",
+        "tags": [
+          "simulation"
+        ]
+      }
+    },
+    "/api/v1/simulation/run": {
+      "post": {
+        "operationId": "run_learning_simulation_api_v1_simulation_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Learning Simulation",
+        "tags": [
+          "simulation"
+        ]
+      }
+    },
+    "/api/v1/simulation/run/stream": {
+      "post": {
+        "operationId": "stream_learning_simulation_api_v1_simulation_run_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stream Learning Simulation",
+        "tags": [
+          "simulation"
+        ]
+      }
+    },
     "/api/v1/stats/daily": {
       "get": {
         "description": "获取今日统计数据\nGet daily statistics for current user",
@@ -44962,6 +46128,31 @@
           }
         ],
         "summary": "Get Flame Stats",
+        "tags": [
+          "statistics"
+        ]
+      }
+    },
+    "/api/v1/stats/learning-summary": {
+      "get": {
+        "description": "Compatibility summary endpoint for acceptance and legacy clients.",
+        "operationId": "get_learning_summary_api_v1_stats_learning_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Learning Summary",
         "tags": [
           "statistics"
         ]
@@ -46822,6 +48013,293 @@
         "summary": "Create Subtask",
         "tags": [
           "subtasks"
+        ]
+      }
+    },
+    "/api/v1/theater/predictions/generate": {
+      "post": {
+        "operationId": "generate_theater_prediction_api_v1_theater_predictions_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TheaterGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Theater Prediction",
+        "tags": [
+          "theater"
+        ]
+      }
+    },
+    "/api/v1/theater/predictions/what-if": {
+      "post": {
+        "operationId": "generate_theater_what_if_api_v1_theater_predictions_what_if_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TheaterWhatIfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Theater What If",
+        "tags": [
+          "theater"
+        ]
+      }
+    },
+    "/api/v1/theater/predictions/{prediction_id}/accuracy": {
+      "get": {
+        "operationId": "get_theater_prediction_accuracy_api_v1_theater_predictions__prediction_id__accuracy_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prediction_id",
+            "required": true,
+            "schema": {
+              "title": "Prediction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Theater Prediction Accuracy",
+        "tags": [
+          "theater"
+        ]
+      }
+    },
+    "/api/v1/theater/predictions/{prediction_id}/actuals": {
+      "post": {
+        "operationId": "record_theater_actual_outcome_api_v1_theater_predictions__prediction_id__actuals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prediction_id",
+            "required": true,
+            "schema": {
+              "title": "Prediction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TheaterActualOutcomeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Theater Actual Outcome",
+        "tags": [
+          "theater"
+        ]
+      }
+    },
+    "/api/v1/theater/predictions/{prediction_id}/adopt": {
+      "post": {
+        "operationId": "adopt_theater_prediction_api_v1_theater_predictions__prediction_id__adopt_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prediction_id",
+            "required": true,
+            "schema": {
+              "title": "Prediction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TheaterAdoptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Adopt Theater Prediction",
+        "tags": [
+          "theater"
+        ]
+      }
+    },
+    "/api/v1/theater/snapshots": {
+      "post": {
+        "operationId": "save_theater_snapshot_api_v1_theater_snapshots_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TheaterSnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Theater Snapshot",
+        "tags": [
+          "theater"
         ]
       }
     },

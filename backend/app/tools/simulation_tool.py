@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.simulation.scenario_templates import normalize_scenario_key
+from app.services.simulation.seed_extractor import SeedExtractor
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
@@ -30,9 +31,14 @@ class QuickSimulationTool(BaseTool):
         db_session,
         tool_call_id: str | None = None,
     ) -> ToolResult:
-        topic = (params.seed_topic or "当前学习主题").strip()
         try:
             scenario_key = normalize_scenario_key(params.scenario_key)
+            topic = await self._resolve_topic(
+                raw_topic=(params.seed_topic or "当前学习主题").strip(),
+                scenario_key=scenario_key,
+                user_id=UUID(user_id),
+                db_session=db_session,
+            )
             engine = SimulationEngine(db_session)
             session = await engine.run(
                 topic=topic,
@@ -40,7 +46,7 @@ class QuickSimulationTool(BaseTool):
                 user_id=UUID(user_id),
             )
             query = {
-                "topic": topic,
+                "topic": session.topic,
                 "scenario_key": scenario_key,
             }
             if params.source_chat_session_id:
@@ -78,3 +84,40 @@ class QuickSimulationTool(BaseTool):
                 error_message=f"启动学习模拟失败: {exc}",
                 error_type="simulation_launch_failed",
             )
+
+    async def _resolve_topic(
+        self,
+        *,
+        raw_topic: str,
+        scenario_key: str,
+        user_id: UUID,
+        db_session,
+    ) -> str:
+        topic = raw_topic.strip() or "当前学习主题"
+        if not self._looks_generic_prompt(topic):
+            return topic
+
+        seeds = await SeedExtractor(db_session).get_cached_or_generate(
+            user_id,
+            scenario_key=scenario_key,
+            limit=1,
+        )
+        if seeds and str(seeds[0].topic).strip():
+            return str(seeds[0].topic).strip()
+        return "当前学习主题"
+
+    @staticmethod
+    def _looks_generic_prompt(topic: str) -> bool:
+        normalized = topic.strip().lower()
+        if not normalized:
+            return True
+        generic_markers = (
+            "模拟一下学习场景",
+            "学习场景",
+            "帮我模拟",
+            "我想模拟",
+            "演练一下",
+            "角色扮演",
+            "当前学习主题",
+        )
+        return any(marker in normalized for marker in generic_markers)

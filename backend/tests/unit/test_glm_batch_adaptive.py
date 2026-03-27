@@ -73,13 +73,13 @@ def test_glm_batch_dispatch_spills_to_standard_when_queue_is_saturated(monkeypat
         llm_router,
         "select_model",
         lambda agent_role, task_type=None, force_tier=None: LLMSelection(
-            model_key="mimo_pro",
+            model_key="glm_5_max",
             config=ModelConfig(
-                provider=ModelProvider.XIAOMI,
-                model_name="mimo-v2-pro",
-                base_url="https://mimo.test",
+                provider=ModelProvider.ZHIPU,
+                model_name="glm-5",
+                base_url="https://glm.test",
                 api_key="test-key",
-                tier=ModelTier.STANDARD,
+                tier=ModelTier.MAX,
             ),
             agent_role=AgentRole.GENERATION,
             task_type=TaskType.STANDARD_RESPONSE,
@@ -102,4 +102,4 @@ def test_glm_batch_dispatch_spills_to_standard_when_queue_is_saturated(monkeypat
 
     assert decision.should_enqueue is False
     assert decision.execution_mode == "standard_spillover"
-    assert decision.spillover_model_key == "mimo_pro"
+    assert decision.spillover_model_key == "glm_5_max"

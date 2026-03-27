@@ -90,7 +90,7 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 	backendURL += "?token=" + token
 
 	// 双向代理 WebSocket 连接
-	p.proxyWebSocket(c.Writer, c.Request, backendURL, userID, "group", groupID)
+	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "group", groupID)
 }
 
 // HandlePersonalWS 代理个人 WebSocket 连接
@@ -127,11 +127,11 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 	backendURL := p.pythonBackendURL + "/api/v1/community/ws/connect?token=" + token
 
-	p.proxyWebSocket(c.Writer, c.Request, backendURL, userID, "personal", "")
+	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "personal", "")
 }
 
 // proxyWebSocket 实现双向 WebSocket 代理
-func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, backendURL string, userID, connType, resourceID string) {
+func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, backendURL, authToken, userID, connType, resourceID string) {
 	backendWSURL, err := p.toWebSocketURL(backendURL)
 	if err != nil {
 		p.logger.Error("Failed to normalize backend websocket URL",
@@ -141,8 +141,12 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// 连接到后端
-	backendConn, _, err := websocket.DefaultDialer.Dial(backendWSURL, nil)
+	// 连接到后端，并透传认证/子协议，避免网关后的 Python WS 鉴权失配。
+	dialer := *websocket.DefaultDialer
+	if subprotocols := websocket.Subprotocols(r); len(subprotocols) > 0 {
+		dialer.Subprotocols = subprotocols
+	}
+	backendConn, _, err := dialer.Dial(backendWSURL, buildBackendWebSocketHeaders(r, authToken))
 	if err != nil {
 		p.logger.Error("Failed to dial backend",
 			zap.String("backend_url", backendWSURL),
@@ -152,8 +156,12 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	}
 	defer backendConn.Close()
 
-	// 升级前端连接
-	clientConn, err := p.upgrader.Upgrade(w, r, nil)
+	// 升级前端连接，并回显后端确认的子协议，保持客户端/后端握手一致。
+	upgradeHeaders := http.Header{}
+	if selectedSubprotocol := backendConn.Subprotocol(); selectedSubprotocol != "" {
+		upgradeHeaders.Set("Sec-WebSocket-Protocol", selectedSubprotocol)
+	}
+	clientConn, err := p.upgrader.Upgrade(w, r, upgradeHeaders)
 	if err != nil {
 		p.logger.Error("Failed to upgrade client connection",
 			zap.Error(err))
@@ -258,6 +266,23 @@ func (p *WebSocketProxy) toWebSocketURL(rawURL string) (string, error) {
 	}
 
 	return parsed.String(), nil
+}
+
+func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header {
+	headers := http.Header{}
+	if authToken != "" {
+		headers.Set("Authorization", "Bearer "+authToken)
+	}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		headers.Set("Origin", origin)
+	}
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		headers.Set("X-Forwarded-For", forwardedFor)
+	}
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		headers.Set("X-Real-IP", realIP)
+	}
+	return headers
 }
 
 // Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)

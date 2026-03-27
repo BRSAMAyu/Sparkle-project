@@ -125,8 +125,7 @@ class ModelFallbackService:
 
     # 模型能力映射（用于降级时的替代选择）
     MODEL_ALTERNATIVES = {
-        "mimo_pro": ["glm_5_max", "dashscope_reason", "deepseek_reason"],
-        "glm_5_max": ["mimo_pro", "dashscope_reason"],
+        "glm_5_max": ["dashscope_reason", "deepseek_reason"],
         "dashscope_reason": ["deepseek_reason", "dashscope_chat", "xiaomi_standard_thinking"],
         "deepseek_reason": ["dashscope_reason", "deepseek_chat", "xiaomi_standard_thinking"],
         "dashscope_chat": ["deepseek_chat", "xiaomi_standard_thinking", "dashscope_fast"],
@@ -138,7 +137,7 @@ class ModelFallbackService:
 
     # 模型层级（用于质量优先策略）
     MODEL_TIERS = {
-        "highest": ["mimo_pro", "glm_5_max"],
+        "highest": ["glm_5_max"],
         "high": ["dashscope_reason", "deepseek_reason", "dashscope_chat", "deepseek_chat"],
         "medium": ["xiaomi_standard_thinking", "dashscope_fast", "xiaomi_chat"],
     }

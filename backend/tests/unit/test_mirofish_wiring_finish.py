@@ -13,6 +13,8 @@ from app.models.plan import Plan, PlanType
 from app.orchestration.context_builder import ContextBuilderMixin
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.tools.base import ToolResult
+from app.tools.report_tool import GenerateLearningReportParams, GenerateLearningReportTool
 from app.services.report.learning_report_agent import LearningReportAgent
 from app.services.theater.prediction_theater_service import TheaterNodeAccessError
 from app.services.simulation.seed_extractor import SimulationSeed
@@ -34,8 +36,9 @@ async def test_launch_prediction_tool_returns_preview_payload(monkeypatch):
     prediction_id = str(uuid4())
     target_node_id = str(uuid4())
 
-    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14, preview_mode=False):
         assert topic == "两周掌握特征值"
+        assert preview_mode is True
         return {
             "prediction_id": prediction_id,
             "target_node_id": target_node_id,
@@ -75,6 +78,7 @@ async def test_launch_prediction_tool_returns_preview_payload(monkeypatch):
     assert result.data["prediction_id"] == prediction_id
     assert result.data["open_theater"] is True
     assert result.data["source_chat_session_id"] == "chat-123"
+    assert result.data["target_name"] == "两周掌握特征值"
     assert result.data["paths"][0]["title"] == "稳扎稳打"
     assert "source_chat_session_id=chat-123" in result.data["deep_link"]
 
@@ -144,7 +148,7 @@ async def test_launch_prediction_tool_rejects_invalid_target_node_uuid():
 
 @pytest.mark.asyncio
 async def test_launch_prediction_tool_rejects_inaccessible_target_node(monkeypatch):
-    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14, preview_mode=False):
         raise TheaterNodeAccessError()
 
     monkeypatch.setattr(
@@ -182,6 +186,105 @@ async def test_quick_simulation_tool_rejects_invalid_scenario():
     assert result.success is False
     assert result.error_type == "invalid_simulation_scenario"
     assert "Unsupported simulation scenario" in (result.error_message or "")
+
+
+@pytest.mark.asyncio
+async def test_quick_simulation_tool_uses_seed_topic_for_generic_prompt(monkeypatch):
+    fake_session = SimpleNamespace(
+        id="sim-002",
+        scenario_key="study_group",
+        topic="特征值",
+        participants=["主持人"],
+        rounds=[{"round": 1, "summary": "先补前置概念"}],
+        insight_summary="先补前置概念。",
+    )
+
+    async def fake_run(self, *, topic, scenario_key, user_id):
+        assert topic == "特征值"
+        assert scenario_key == "study_group"
+        return fake_session
+
+    async def fake_get_cached_or_generate(self, user_id, *, scenario_key=None, limit=3, force_refresh=False):
+        assert scenario_key == "study_group"
+        assert limit == 1
+        return [
+            SimulationSeed(
+                topic="特征值",
+                context="最近卡在前置概念",
+                tension_point="总把行列式和特征值混淆",
+                source_type="galaxy",
+                source_ids=["node-1"],
+                relevance_score=0.92,
+                suggested_scenario="study_group",
+                suggested_experts=["数学专家"],
+            )
+        ]
+
+    monkeypatch.setattr(
+        "app.tools.simulation_tool.SimulationEngine.run",
+        fake_run,
+    )
+    monkeypatch.setattr(
+        "app.tools.simulation_tool.SeedExtractor.get_cached_or_generate",
+        fake_get_cached_or_generate,
+    )
+
+    result = await QuickSimulationTool().execute(
+        QuickSimulationParams(
+            scenario_key="study_group",
+            seed_topic="我想模拟一下学习场景",
+        ),
+        user_id=str(uuid4()),
+        db_session=object(),
+        tool_call_id="tool-generic-simulation",
+    )
+
+    assert result.success is True
+    assert result.data is not None
+    assert result.data["topic"] == "特征值"
+
+
+@pytest.mark.asyncio
+async def test_generate_learning_report_tool_returns_preview_payload(monkeypatch):
+    async def fake_generate_report(self, user_id, section_limit=5, *, delivery_mode="full", trigger_source="api"):
+        assert delivery_mode == "chat_bridge"
+        assert trigger_source == "chat"
+        assert section_limit == 4
+        return {
+            "report_id": "report-001",
+            "quality_mode": "fast_balanced",
+            "deep_link": "/learning-report",
+            "report_preview": {
+                "report_id": "report-001",
+                "markdown": "# 学习分析报告\n\n## 行动计划\n- 先补 Python 基础语法",
+                "sections": ["Executive Summary", "行动计划"],
+                "mastery": [{"node_name": "Python 基础语法", "mastery_score": 58}],
+                "summary": "优先关注 Python 基础语法，并结合最近学习记录补一轮针对性练习。",
+            },
+        }
+
+    monkeypatch.setattr(
+        "app.tools.report_tool.LearningReportAgent.generate_report",
+        fake_generate_report,
+    )
+
+    result = await GenerateLearningReportTool().execute(
+        GenerateLearningReportParams(
+            section_limit=4,
+            delivery_mode="chat_bridge",
+            source_chat_session_id="chat-789",
+        ),
+        user_id=str(uuid4()),
+        db_session=object(),
+        tool_call_id="tool-3",
+    )
+
+    assert result.success is True
+    assert result.data is not None
+    assert result.data["report_id"] == "report-001"
+    assert result.data["open_report"] is True
+    assert result.data["report_preview"]["mastery"][0]["node_name"] == "Python 基础语法"
+    assert result.data["deep_link"] == "/learning-report"
 
 
 @pytest.mark.asyncio
@@ -489,13 +592,136 @@ async def test_learning_report_generate_enqueues_ready_update(monkeypatch):
     assert update_payload["metadata"]["report_payload"]["report_id"] == payload["report_id"]
 
 
+def test_learning_report_preview_uses_pattern_summary_when_mastery_missing():
+    agent = LearningReportAgent(db=AsyncMock())
+
+    preview = agent._build_report_preview(
+        {
+            "report_id": "report-1",
+            "sections": ["Executive Summary", "行动计划"],
+            "mastery": [],
+            "patterns": [
+                {
+                    "pattern_name": "夜间能量错配循环",
+                    "solution_text": "把最费脑的任务前移到你最清醒的两个小时。",
+                }
+            ],
+            "markdown": "# 学习分析报告",
+        }
+    )
+
+    assert preview["summary"].startswith("当前最影响推进节奏的是 夜间能量错配循环")
+    assert preview["highlights"] == ["夜间能量错配循环"]
+
+
 def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():
     orchestrator = object.__new__(ChatOrchestrator)
 
     prediction_tools = orchestrator._infer_bridge_tool_names("如果我两周学完特征值会怎样？")
     simulation_tools = orchestrator._infer_bridge_tool_names("帮我模拟一个学习小组讨论这个概念")
+    natural_prediction_tools = orchestrator._infer_bridge_tool_names("帮我推演一下学 Python 的路径")
+    natural_simulation_tools = orchestrator._infer_bridge_tool_names("我想模拟一下学习场景")
+    report_tools = orchestrator._infer_bridge_tool_names("给我生成一份最近学习表现的分析报告")
     plain_tools = orchestrator._infer_bridge_tool_names("解释一下什么是特征值")
 
     assert "launch_prediction" in prediction_tools
     assert "run_quick_simulation" in simulation_tools
+    assert "launch_prediction" in natural_prediction_tools
+    assert "run_quick_simulation" in natural_simulation_tools
+    assert "generate_learning_report" in report_tools
     assert plain_tools == []
+
+
+@pytest.mark.asyncio
+async def test_maybe_short_circuit_bridge_tool_returns_preview_metadata():
+    engine = _DummyExecutionEngine()
+    engine.tool_executor = SimpleNamespace(
+        execute_tool_call=AsyncMock(
+            return_value=ToolResult(
+                success=True,
+                tool_name="launch_prediction",
+                data={
+                    "prediction_id": "prediction-001",
+                    "topic": "学 Python 的路径",
+                    "target_node_id": "node-python",
+                    "target_name": "Python编程",
+                    "paths": [{"id": "path_foundation", "title": "稳扎稳打"}],
+                    "deep_link": "/theater?topic=%E5%AD%A6+Python+%E7%9A%84%E8%B7%AF%E5%BE%84",
+                    "source_chat_session_id": "chat-bridge-1",
+                },
+            )
+        ),
+    )
+    engine._persist_assistant_message = AsyncMock()
+    engine._cache_response = AsyncMock()
+
+    responses = await engine._maybe_short_circuit_bridge_tool(
+        active_tools=["launch_prediction"],
+        user_message="学 Python 的路径",
+        user_id=str(uuid4()),
+        session_id="chat-bridge-1",
+        response_id="resp-1",
+        request_id="req-1",
+        trace_id="trace-1",
+        workflow_id="workflow-1",
+        prompt_version="v1",
+        active_db=None,
+    )
+
+    assert responses is not None
+    assert len(responses) == 2
+    final_response = responses[-1]
+    assert final_response.full_text
+    assert final_response.metadata["open_theater"] == "true"
+    assert "prediction_preview" in final_response.metadata
+    engine._persist_assistant_message.assert_awaited_once()
+    engine._cache_response.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_maybe_short_circuit_learning_report_returns_preview_metadata():
+    engine = _DummyExecutionEngine()
+    engine.tool_executor = SimpleNamespace(
+        execute_tool_call=AsyncMock(
+            return_value=ToolResult(
+                success=True,
+                tool_name="generate_learning_report",
+                data={
+                    "report_id": "report-bridge-1",
+                    "quality_mode": "fast_balanced",
+                    "deep_link": "/learning-report",
+                    "report_preview": {
+                        "report_id": "report-bridge-1",
+                        "markdown": "# 学习分析报告\n\n## 行动计划\n- 先补弱项",
+                        "sections": ["Executive Summary", "行动计划"],
+                        "mastery": [{"node_name": "特征值", "mastery_score": 61}],
+                        "summary": "优先关注特征值，并结合最近学习记录补一轮针对性练习。",
+                    },
+                    "source_chat_session_id": "chat-bridge-report",
+                },
+            )
+        ),
+    )
+    engine._persist_assistant_message = AsyncMock()
+    engine._cache_response = AsyncMock()
+
+    responses = await engine._maybe_short_circuit_bridge_tool(
+        active_tools=["generate_learning_report"],
+        user_message="帮我总结最近学习表现",
+        user_id=str(uuid4()),
+        session_id="chat-bridge-report",
+        response_id="resp-report-1",
+        request_id="req-report-1",
+        trace_id="trace-report-1",
+        workflow_id="workflow-report-1",
+        prompt_version="v1",
+        active_db=None,
+    )
+
+    assert responses is not None
+    final_response = responses[-1]
+    assert final_response.metadata["open_report"] == "true"
+    assert final_response.metadata["report_deep_link"] == "/learning-report"
+    assert "report_preview" in final_response.metadata
+    engine._persist_assistant_message.assert_awaited_once()
+    engine._cache_response.assert_awaited_once()

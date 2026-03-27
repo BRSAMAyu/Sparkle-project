@@ -22,7 +22,9 @@ from app.core.profile_context import (
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
+from app.services.insight_copy import canonical_pattern_key, present_pattern_name
 from app.services.personalization.preference_service import PreferenceService
+from app.services.report.report_tools import LearningReportTools
 
 
 def _utcnow() -> datetime:
@@ -37,49 +39,50 @@ class ProfileContextService:
     SUBJECT_LIMIT = 5
 
     PATTERN_POLICY_MAP: dict[str, list[str]] = {
-        "planning optimism": [
+        "planning_optimism": [
             "task.time_estimate.add_buffer_30pct",
             "plan.milestone.add_checkpoint",
         ],
-        "planning fallacy": [
-            "task.time_estimate.add_buffer_30pct",
-            "plan.milestone.add_checkpoint",
-        ],
-        "procrastination": [
+        "night_time_energy_mismatch": [
             "push.timing.earlier_reminder",
-            "task.difficulty.start_easy",
         ],
-        "perfectionism": [
+        "perfectionism_avoidance": [
+            "task.difficulty.start_easy",
             "llm.feedback.emphasize_progress",
         ],
-        "knowledge gap avoidance": [
+        "perfectionism_paralysis": [
+            "task.difficulty.start_easy",
+            "llm.feedback.emphasize_progress",
+        ],
+        "cognitive_blindspot": [
             "task.content.scaffold_prerequisites",
             "llm.explanation.add_foundation",
         ],
-        "cognitive blindspot": [
-            "task.content.scaffold_prerequisites",
-            "llm.explanation.add_foundation",
-        ],
-        "focus decay": [
+        "focus_decay": [
             "push.timing.earlier_reminder",
+            "llm.feedback.emphasize_progress",
+        ],
+        "doubt_driven_revision": [
+            "task.difficulty.start_easy",
             "llm.feedback.emphasize_progress",
         ],
     }
 
     RISK_SIGNAL_MAP: dict[str, list[str]] = {
-        "planning optimism": ["risk.planning_overrun"],
-        "planning fallacy": ["risk.planning_overrun"],
-        "procrastination": ["risk.execution_delay"],
-        "perfectionism": ["risk.overcorrection"],
-        "knowledge gap avoidance": ["risk.knowledge_gap"],
-        "cognitive blindspot": ["risk.knowledge_gap"],
-        "focus decay": ["risk.focus_fatigue"],
+        "planning_optimism": ["risk.planning_overrun"],
+        "night_time_energy_mismatch": ["risk.focus_fatigue"],
+        "perfectionism_avoidance": ["risk.execution_delay", "risk.overcorrection"],
+        "perfectionism_paralysis": ["risk.execution_delay", "risk.overcorrection"],
+        "cognitive_blindspot": ["risk.knowledge_gap"],
+        "focus_decay": ["risk.focus_fatigue"],
+        "doubt_driven_revision": ["risk.overcorrection"],
     }
 
     def __init__(self, db: AsyncSession, redis=None):
         self.db = db
         self.redis = redis or cache_service.redis
         self.pref_service = PreferenceService(db, self.redis)
+        self.report_tools = LearningReportTools(db)
 
     async def get_profile_context(self, user_id: UUID) -> ProfileContext:
         cache_key = f"user:profile_context:{user_id}"
@@ -198,6 +201,64 @@ class ProfileContextService:
         except Exception as exc:
             logger.warning(f"Failed to load active subjects: {exc}")
 
+        if overall_mastery <= 0.0 or not weak_spots or not active_subjects:
+            fallback_mastery = await self.report_tools.query_mastery_scores(
+                user_id,
+                limit=self.WEAK_SPOT_LIMIT,
+            )
+            if fallback_mastery:
+                if overall_mastery <= 0.0:
+                    overall_mastery = sum(
+                        float(item.get("mastery_score") or 0.0) for item in fallback_mastery
+                    ) / max(len(fallback_mastery), 1)
+                if not weak_spots:
+                    weak_spots = [
+                        WeakSpot(
+                            node_id=f"derived:{index}",
+                            node_name=str(item.get("node_name") or ""),
+                            mastery=float(item.get("mastery_score") or 0.0),
+                            last_attempt_at=None,
+                        )
+                        for index, item in enumerate(fallback_mastery)
+                        if str(item.get("node_name") or "").strip()
+                    ]
+                if not active_subjects:
+                    active_subjects = [
+                        str(item.get("node_name") or "")
+                        for item in fallback_mastery[: self.SUBJECT_LIMIT]
+                        if str(item.get("node_name") or "").strip()
+                    ]
+
+        if not recent_changes:
+            fallback_timeline = await self.report_tools.query_study_timeline(
+                user_id,
+                limit=self.CHANGE_LIMIT,
+            )
+            recent_changes = []
+            for index, item in enumerate(fallback_timeline):
+                node_name = str(item.get("node_name") or "").strip()
+                if not node_name:
+                    continue
+                delta = float(item.get("mastery_delta") or 0.0)
+                created_at_raw = item.get("created_at")
+                changed_at = _utcnow()
+                if isinstance(created_at_raw, str) and created_at_raw.strip():
+                    try:
+                        changed_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00")).replace(
+                            tzinfo=None
+                        )
+                    except ValueError:
+                        changed_at = _utcnow()
+                recent_changes.append(
+                    MasteryChange(
+                        node_id=f"derived:{index}",
+                        node_name=node_name,
+                        old_mastery=max(0.0, 42.0 - delta),
+                        new_mastery=max(0.0, 42.0),
+                        changed_at=changed_at,
+                    )
+                )
+
         return KnowledgeSummary(
             overall_mastery=overall_mastery,
             weak_spots=weak_spots,
@@ -232,7 +293,7 @@ class ProfileContextService:
             signals = list(self.PATTERN_POLICY_MAP.get(normalized, []))
             active_patterns.append(
                 ActivePattern(
-                    pattern_name=name or normalized,
+                    pattern_name=present_pattern_name(name or normalized),
                     pattern_type=str(pattern.pattern_type or "execution"),
                     confidence=float(pattern.confidence_score or 0.0),
                     policy_signals=signals,
@@ -260,4 +321,4 @@ class ProfileContextService:
 
     @staticmethod
     def _normalize_pattern_name(name: str) -> str:
-        return str(name or "").strip().lower()
+        return canonical_pattern_key(name)

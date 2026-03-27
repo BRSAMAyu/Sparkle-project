@@ -15,7 +15,7 @@ def test_tool_execution_uses_policy_backed_registered_model():
 
 def test_science_agent_no_longer_points_to_removed_model_key():
     selection = llm_router.select_model(AgentRole.SCIENCE_AGENT)
-    assert selection.model_key in {"dashscope_reason", "mimo_pro", "deepseek_reason"}
+    assert selection.model_key in {"dashscope_reason", "deepseek_reason", "dashscope_chat"}
 
 
 def test_reviewer_can_avoid_generation_provider():

@@ -17,7 +17,7 @@ async def test_create_and_serialize_custom_expert(db_session, test_user):
         description="把政策文本拆成用户可执行步骤",
         system_prompt="你是政策拆解专家，专门把复杂政策翻译成可执行清单。",
         base_expert_id="deep_analyst",
-        preferred_model_key="mimo_pro",
+        preferred_model_key="glm_5_max",
         preferred_model_tier="reasoning",
     )
     await db_session.commit()
@@ -25,7 +25,7 @@ async def test_create_and_serialize_custom_expert(db_session, test_user):
     payload = service.serialize_runtime_profile(expert)
     assert payload["display_name"] == "政策拆解官"
     assert payload["base_expert_id"] == "deep_analyst"
-    assert payload["preferred_model_key"] == "mimo_pro"
+    assert payload["preferred_model_key"] == "glm_5_max"
     assert payload["entry_chat_mode"].startswith("expert::custom_expert:")
     assert is_custom_expert_id(payload["id"]) is True
     assert make_custom_expert_id(expert.id) == payload["id"]

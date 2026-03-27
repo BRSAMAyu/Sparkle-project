@@ -540,31 +540,27 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               if (taskSummary.total >= 4) {
                 // Show number badge for 4+ tasks
                 taskMarkers.add(
-                  Positioned(
-                    bottom: 1,
-                    right: 1,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: markerColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 12,
+                    ),
+                    child: Text(
+                      '${taskSummary.total}',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
                       ),
-                      decoration: BoxDecoration(
-                        color: markerColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 12,
-                      ),
-                      child: Text(
-                        '${taskSummary.total}',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 );
@@ -760,7 +756,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                               if (event.taskId != null &&
                                   event.taskId!.isNotEmpty) {
                                 unawaited(
-                                  context.push('/tasks/new?taskId=${event.taskId!}'),
+                                  context.push(
+                                      '/tasks/new?taskId=${event.taskId!}'),
                                 );
                                 return;
                               }
@@ -852,7 +849,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, 0, DS.spacing16, DS.spacing16,),
+        DS.spacing16,
+        0,
+        DS.spacing16,
+        DS.spacing16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -917,9 +918,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 const SizedBox(height: DS.spacing12),
                 Row(
                   children: [
-                    Text('低',
-                        style:
-                            TextStyle(fontSize: 11, color: DS.textSecondary),),
+                    Text(
+                      '低',
+                      style: TextStyle(fontSize: 11, color: DS.textSecondary),
+                    ),
                     const SizedBox(width: DS.spacing6),
                     ...List.generate(
                       5,
@@ -933,9 +935,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         ),
                       ),
                     ),
-                    Text('高',
-                        style:
-                            TextStyle(fontSize: 11, color: DS.textSecondary),),
+                    Text(
+                      '高',
+                      style: TextStyle(fontSize: 11, color: DS.textSecondary),
+                    ),
                   ],
                 ),
               ],

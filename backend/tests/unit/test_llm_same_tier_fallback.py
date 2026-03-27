@@ -240,12 +240,12 @@ async def test_reason_honors_explicit_glm_batch_override(monkeypatch):
         tier=ModelTier.GLM_BATCH,
     )
     unrelated_reasoning = ModelConfig(
-        provider=ModelProvider.XIAOMI,
-        model_name="mimo-v2-pro",
+        provider=ModelProvider.DEEPSEEK,
+        model_name="deepseek-reasoner",
         base_url="https://reasoning.test",
         api_key="reasoning-key",
         temperature=0.2,
-        tier=ModelTier.REASONING,
+        tier=ModelTier.PRO,
     )
 
     monkeypatch.setattr(
@@ -254,7 +254,7 @@ async def test_reason_honors_explicit_glm_batch_override(monkeypatch):
         {
             "glm_4_7_thinking": explicit_primary,
             "glm_4_7_flash_thinking": explicit_secondary,
-            "mimo_pro": unrelated_reasoning,
+            "deepseek_reason": unrelated_reasoning,
             "default": unrelated_reasoning,
         },
     )
@@ -263,7 +263,7 @@ async def test_reason_honors_explicit_glm_batch_override(monkeypatch):
         "_tier_mapping",
         {
             ModelTier.GLM_BATCH: ["glm_4_7_thinking", "glm_4_7_flash_thinking"],
-            ModelTier.REASONING: ["mimo_pro"],
+            ModelTier.REASONING: ["deepseek_reason"],
             ModelTier.STANDARD: [],
             ModelTier.FAST: [],
             ModelTier.FREE_REASONING: [],
@@ -274,7 +274,7 @@ async def test_reason_honors_explicit_glm_batch_override(monkeypatch):
     monkeypatch.setattr(
         llm_router,
         "select_model",
-        lambda agent_role, task_type=None, force_tier=None: _build_selection("mimo_pro", unrelated_reasoning, task_type),
+        lambda agent_role, task_type=None, force_tier=None: _build_selection("deepseek_reason", unrelated_reasoning, task_type),
     )
     monkeypatch.setattr(
         llm_router,
@@ -331,29 +331,29 @@ async def test_chat_stream_with_tools_skips_original_model_after_429(fallback_ro
 
 @pytest.mark.asyncio
 async def test_thinking_mode_is_sent_via_extra_body_not_top_level(monkeypatch):
-    xiaomi_cfg = ModelConfig(
-        provider=ModelProvider.XIAOMI,
-        model_name="mimo-v2-pro",
-        base_url="https://mimo.test",
-        api_key="mimo-key",
+    glm_cfg = ModelConfig(
+        provider=ModelProvider.ZHIPU,
+        model_name="glm-5",
+        base_url="https://glm.test",
+        api_key="glm-key",
         temperature=0.2,
         thinking_mode="enabled",
-        tier=ModelTier.STANDARD,
+        tier=ModelTier.MAX,
     )
 
     monkeypatch.setattr(
         llm_router,
         "_available_models",
         {
-            "mimo_pro": xiaomi_cfg,
-            "default": xiaomi_cfg,
+            "glm_5_max": glm_cfg,
+            "default": glm_cfg,
         },
     )
     monkeypatch.setattr(
         llm_router,
         "_tier_mapping",
         {
-            ModelTier.STANDARD: ["mimo_pro"],
+            ModelTier.MAX: ["glm_5_max"],
             ModelTier.REASONING: [],
             ModelTier.FAST: [],
             ModelTier.FREE_REASONING: [],
@@ -364,7 +364,7 @@ async def test_thinking_mode_is_sent_via_extra_body_not_top_level(monkeypatch):
     monkeypatch.setattr(
         llm_router,
         "select_model",
-        lambda agent_role, task_type=None, force_tier=None: _build_selection("mimo_pro", xiaomi_cfg, task_type),
+        lambda agent_role, task_type=None, force_tier=None: _build_selection("glm_5_max", glm_cfg, task_type),
     )
     monkeypatch.setattr("app.services.llm_service.OpenAICompatibleProvider", FakeProvider)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -17,6 +18,7 @@ from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import PlanType
 from app.schemas.plan import PlanCreate
+from app.services.insight_copy import present_pattern_name
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
@@ -31,6 +33,49 @@ def _utcnow() -> datetime:
 
 def _clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
+
+
+def _normalized_topic_terms(topic: str) -> list[str]:
+    normalized = " ".join(topic.strip().lower().split())
+    if not normalized:
+        return []
+
+    cleaned = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff+#]+", " ", normalized)
+    compact = cleaned
+    filler_phrases = (
+        "帮我",
+        "请帮我",
+        "我想",
+        "想要",
+        "想学",
+        "学习一下",
+        "学习",
+        "学会",
+        "学",
+        "推演一下",
+        "推演",
+        "模拟一下",
+        "模拟",
+        "一下",
+        "路径",
+        "路线",
+        "计划",
+        "怎么",
+        "如何",
+        "的",
+    )
+    for phrase in filler_phrases:
+        compact = compact.replace(phrase, " ")
+
+    tokens = re.findall(r"[a-z0-9+#]+|[\u4e00-\u9fff]{2,}", compact)
+    terms: list[str] = []
+    for candidate in [normalized, cleaned, compact, *tokens]:
+        term = " ".join(str(candidate).strip().split())
+        if len(term) < 2:
+            continue
+        if term not in terms:
+            terms.append(term)
+    return terms
 
 
 class TheaterTimeoutError(SparkleException):
@@ -173,6 +218,7 @@ class PredictionTheaterService:
         topic: str,
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
+        preview_mode: bool = False,
     ) -> dict[str, Any]:
         try:
             return await asyncio.wait_for(
@@ -181,6 +227,7 @@ class PredictionTheaterService:
                     topic=topic,
                     target_node_id=target_node_id,
                     horizon_days=horizon_days,
+                    preview_mode=preview_mode,
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
@@ -194,6 +241,7 @@ class PredictionTheaterService:
         topic: str,
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
+        preview_mode: bool = False,
     ) -> dict[str, Any]:
         target_node = await self._resolve_target_node_for_user(
             user_id=user_id,
@@ -212,7 +260,6 @@ class PredictionTheaterService:
         mastery_map = await self._get_mastery_map(user_id)
         study_preferences = await self._build_user_learning_profile(user_id)
         pattern_names = await self._top_pattern_names(user_id)
-        graph_bundle = await self._build_graph_bundle(backbone, mastery_map)
         options = self._build_path_options(
             target_name=target_node.name,
             backbone=backbone,
@@ -222,13 +269,17 @@ class PredictionTheaterService:
             pattern_names=pattern_names,
         )
         selected_prediction = options[0].to_dict() if options else {}
-        discussion = await self._build_discussion(
-            topic=topic,
-            target_name=target_node.name,
-            options=options,
-            graph_bundle=graph_bundle,
-            pattern_names=pattern_names,
-        )
+        graph_bundle = {"nodes": [], "edges": []}
+        discussion: list[dict[str, Any]] = []
+        if not preview_mode:
+            graph_bundle = await self._build_graph_bundle(backbone, mastery_map)
+            discussion = await self._build_discussion(
+                topic=topic,
+                target_name=target_node.name,
+                options=options,
+                graph_bundle=graph_bundle,
+                pattern_names=pattern_names,
+            )
         timeline = self._build_timeline(options, discussion)
 
         prediction_id = str(uuid4())
@@ -248,6 +299,7 @@ class PredictionTheaterService:
                 "patterns": pattern_names,
                 "recommended_entry": options[0].title if options else "稳扎稳打",
             },
+            "preview_mode": preview_mode,
         }
         await self.accuracy.record_prediction(payload)
         return payload
@@ -540,22 +592,72 @@ class PredictionTheaterService:
         if not normalized:
             raise ValueError("Topic cannot be empty")
 
+        search_terms = _normalized_topic_terms(topic)
+        if not search_terms:
+            raise ValueError("Topic cannot be empty")
+
+        conditions = []
+        for term in search_terms:
+            conditions.extend(
+                [
+                    func.lower(KnowledgeNode.name).contains(term),
+                    func.lower(func.coalesce(KnowledgeNode.description, "")).contains(term),
+                ]
+            )
+
         stmt = (
             select(KnowledgeNode)
-            .where(
-                or_(
-                    func.lower(KnowledgeNode.name).contains(normalized),
-                    func.lower(func.coalesce(KnowledgeNode.description, "")).contains(normalized),
-                )
-            )
-            .order_by(desc(KnowledgeNode.importance_level), desc(KnowledgeNode.updated_at))
-            .limit(1)
+            .where(or_(*conditions))
+            .limit(30)
         )
         result = await self.db.execute(stmt)
-        node = result.scalar_one_or_none()
+        candidates = list(result.scalars().all())
+        node = self._pick_best_target_node(candidates=candidates, normalized_topic=normalized, search_terms=search_terms)
         if not node:
             raise ValueError(f'No knowledge node found for topic "{topic}"')
         return node
+
+    @staticmethod
+    def _pick_best_target_node(
+        *,
+        candidates: list[KnowledgeNode],
+        normalized_topic: str,
+        search_terms: list[str],
+    ) -> KnowledgeNode | None:
+        if not candidates:
+            return None
+
+        def score(node: KnowledgeNode) -> tuple[float, float, datetime]:
+            name = str(node.name or "").strip().lower()
+            description = str(node.description or "").strip().lower()
+            best = 0.0
+
+            for term in search_terms:
+                if not term:
+                    continue
+                term_score = 0.0
+                if name == term:
+                    term_score = max(term_score, 120.0)
+                if term == normalized_topic and term in name:
+                    term_score = max(term_score, 105.0)
+                if term in name:
+                    term_score = max(term_score, 95.0 + min(len(term), 20))
+                if name and name in normalized_topic:
+                    term_score = max(term_score, 88.0 + min(len(name), 20))
+                if term in description:
+                    term_score = max(term_score, 54.0 + min(len(term), 18))
+                if description and description in normalized_topic:
+                    term_score = max(term_score, 42.0)
+                best = max(best, term_score)
+
+            best += float(getattr(node, "importance_level", 0) or 0) * 0.5
+            return (
+                best,
+                float(getattr(node, "importance_level", 0) or 0),
+                getattr(node, "updated_at", None) or datetime.min,
+            )
+
+        return max(candidates, key=score)
 
     async def _resolve_target_node_for_user(
         self,
@@ -614,7 +716,7 @@ class PredictionTheaterService:
             .order_by(desc(BehaviorPattern.confidence_score), desc(BehaviorPattern.updated_at))
             .limit(3)
         )
-        return [str(item[0]) for item in result.all() if str(item[0]).strip()]
+        return [present_pattern_name(str(item[0])) for item in result.all() if str(item[0]).strip()]
 
     async def _build_graph_bundle(
         self,
@@ -818,7 +920,12 @@ class PredictionTheaterService:
             fallback={"turns": fallback},
             temperature=0.25,
         )
-        turns = list((payload or {}).get("turns") or [])
+        if isinstance(payload, list):
+            turns = list(payload)
+        elif isinstance(payload, dict):
+            turns = list(payload.get("turns") or [])
+        else:
+            turns = []
         normalized: list[dict[str, Any]] = []
         for index, turn in enumerate(turns):
             if not isinstance(turn, dict):

@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -15,8 +16,11 @@ from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
 from app.services.theater.prediction_theater_service import (
     PredictionAccuracyTracker,
     PredictionTheaterService,
+    TheaterPathOption,
+    TheaterPathStep,
     TheaterNodeAccessError,
     TheaterTimeoutError,
+    _normalized_topic_terms,
 )
 
 
@@ -237,6 +241,41 @@ async def test_resolve_target_node_for_user_accepts_user_status_node(db_session,
     assert resolved.id == node.id
 
 
+def test_normalized_topic_terms_extracts_keywords_from_natural_language():
+    terms = _normalized_topic_terms("帮我推演一下学 Python 的路径")
+
+    assert "python" in terms
+    assert "帮我推演一下学 python 的路径" in terms
+    assert all(term.strip() for term in terms)
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_matches_natural_language_topic(db_session):
+    target = KnowledgeNode(
+        name="Python编程",
+        description="Python语法、数据结构、面向对象",
+        importance_level=4,
+        is_seed=True,
+    )
+    distractor = KnowledgeNode(
+        name="程序设计基础",
+        description="变量、控制流、函数、基本算法",
+        importance_level=3,
+        is_seed=True,
+    )
+    db_session.add_all([target, distractor])
+    await db_session.commit()
+    await db_session.refresh(target)
+
+    service = PredictionTheaterService(db_session)
+    resolved = await service._resolve_target_node(
+        topic="学 Python 的路径",
+        target_node_id=None,
+    )
+
+    assert resolved.id == target.id
+
+
 @pytest.mark.asyncio
 async def test_theater_api_returns_timeout_payload(monkeypatch):
     app = _build_test_app()
@@ -290,6 +329,62 @@ async def test_theater_api_returns_404_for_inaccessible_target(monkeypatch):
     assert response.status_code == 404
     payload = response.json()
     assert payload["message"] == "未找到可访问的知识节点"
+
+
+@pytest.mark.asyncio
+async def test_build_discussion_accepts_list_payload(monkeypatch, db_session):
+    service = PredictionTheaterService(db_session)
+    option = TheaterPathOption(
+        id="path_foundation",
+        title="稳扎稳打",
+        summary="先补前置，再推进目标。",
+        strategy_type="foundation",
+        expert_ids=["galaxy_guide"],
+        estimated_completion_rate=0.8,
+        estimated_mastery=76.0,
+        daily_minutes=40,
+        risks=["后期任务较密"],
+        steps=[
+            TheaterPathStep(
+                index=1,
+                node_id="node-1",
+                node_name="Python编程",
+                rationale="先打通语法和基本数据结构。",
+                current_mastery=48.0,
+                predicted_mastery=71.0,
+                risk_level="medium",
+                estimated_minutes=40,
+                day_label="Day 1",
+            )
+        ],
+    )
+
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.analysis_llm.json_call",
+        AsyncMock(
+            return_value=[
+                {
+                    "agent_id": "galaxy_guide",
+                    "display_name": "星图导航",
+                    "turn_type": "analysis",
+                    "content": "先把依赖链补齐，再推目标节点。",
+                    "related_node_ids": ["node-1"],
+                }
+            ]
+        ),
+    )
+
+    turns = await service._build_discussion(
+        topic="学 Python 的路径",
+        target_name="Python编程",
+        options=[option],
+        graph_bundle={"nodes": [], "edges": []},
+        pattern_names=[],
+    )
+
+    assert len(turns) == 1
+    assert turns[0]["agent_id"] == "galaxy_guide"
+    assert turns[0]["related_node_ids"] == ["node-1"]
 
 
 @pytest.mark.asyncio

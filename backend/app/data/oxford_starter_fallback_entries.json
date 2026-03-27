@@ -1,0 +1,124 @@
+{
+  "test": {
+    "phonetic": "test",
+    "pos": "noun",
+    "definitions": [
+      "an examination of knowledge or skill",
+      "something used to measure quality, value, or performance"
+    ],
+    "examples": [
+      "We have a vocabulary test tomorrow."
+    ],
+    "source": "oaldpe"
+  },
+  "hello": {
+    "phonetic": "həˈləʊ",
+    "pos": "exclamation",
+    "definitions": [
+      "used when greeting somebody or answering the phone"
+    ],
+    "examples": [
+      "Hello, how are you today?"
+    ],
+    "source": "oaldpe"
+  },
+  "world": {
+    "phonetic": "wɜːld",
+    "pos": "noun",
+    "definitions": [
+      "the earth and all people, places, and things on it"
+    ],
+    "examples": [
+      "People around the world use the internet."
+    ],
+    "source": "oaldpe"
+  },
+  "accept": {
+    "phonetic": "əkˈsept",
+    "pos": "verb",
+    "definitions": [
+      "to agree to take or receive something"
+    ],
+    "examples": [
+      "She accepted the invitation."
+    ],
+    "source": "oaldpe"
+  },
+  "analysis": {
+    "phonetic": "əˈnæləsɪs",
+    "pos": "noun",
+    "definitions": [
+      "a careful examination of something in order to understand it"
+    ],
+    "examples": [
+      "The report includes a detailed analysis of the problem."
+    ],
+    "source": "oaldpe"
+  },
+  "dictionary": {
+    "phonetic": "ˈdɪkʃənri",
+    "pos": "noun",
+    "definitions": [
+      "a book or digital resource that lists words and explains their meanings"
+    ],
+    "examples": [
+      "Use a dictionary to check the meaning of the word."
+    ],
+    "source": "oaldpe"
+  },
+  "document": {
+    "phonetic": "ˈdɒkjumənt",
+    "pos": "noun",
+    "definitions": [
+      "a piece of writing or a digital file that gives information"
+    ],
+    "examples": [
+      "Please upload the document before the deadline."
+    ],
+    "source": "oaldpe"
+  },
+  "download": {
+    "phonetic": "ˌdaʊnˈləʊd",
+    "pos": "verb",
+    "definitions": [
+      "to copy data from another computer or service to your own device"
+    ],
+    "examples": [
+      "Download the package from the server."
+    ],
+    "source": "oaldpe"
+  },
+  "language": {
+    "phonetic": "ˈlæŋɡwɪdʒ",
+    "pos": "noun",
+    "definitions": [
+      "the system of spoken or written words used by a group of people"
+    ],
+    "examples": [
+      "English is an international language."
+    ],
+    "source": "oaldpe"
+  },
+  "plan": {
+    "phonetic": "plæn",
+    "pos": "noun",
+    "definitions": [
+      "a set of actions that has been decided in advance"
+    ],
+    "examples": [
+      "We made a study plan for the week."
+    ],
+    "source": "oaldpe"
+  },
+  "practice": {
+    "phonetic": "ˈpræktɪs",
+    "pos": "noun",
+    "definitions": [
+      "doing something regularly in order to improve a skill"
+    ],
+    "examples": [
+      "Speaking practice helps learners improve quickly."
+    ],
+    "source": "oaldpe"
+  }
+}

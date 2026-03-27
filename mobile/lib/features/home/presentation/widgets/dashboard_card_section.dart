@@ -13,6 +13,7 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_card_grid.d
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_edit_sheet.dart';
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/seed_library_dashboard_card.dart';
@@ -25,7 +26,8 @@ class DashboardCardSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(dashboardCardConfigProvider);
     final isGridMode = config.layoutMode == DashboardCardLayoutMode.grid;
-    final cards = config.visibleOrderedCards
+    final visibleCardIds = config.visibleOrderedCards;
+    final cards = visibleCardIds
         .map((cardId) => _buildCard(context, cardId, isGridMode: isGridMode))
         .toList(growable: false);
 
@@ -124,7 +126,11 @@ class DashboardCardSection extends ConsumerWidget {
                 if (cards.isEmpty)
                   const _EmptyDashboardCardSection()
                 else if (config.layoutMode == DashboardCardLayoutMode.swipe)
-                  DashboardCardCarousel(cards: cards)
+                  DashboardCardCarousel(
+                    cards: cards,
+                    cardIds: visibleCardIds,
+                    preferredInitialCardId: DashboardCardIds.calendar,
+                  )
                 else
                   DashboardCardGrid(cards: cards),
               ],
@@ -141,6 +147,8 @@ class DashboardCardSection extends ConsumerWidget {
     required bool isGridMode,
   }) {
     switch (cardId) {
+      case DashboardCardIds.insights:
+        return InsightHubCard(compact: true, dense: isGridMode);
       case DashboardCardIds.focus:
         return FocusCard(onTap: () => context.push('/focus'));
       case DashboardCardIds.calendar:

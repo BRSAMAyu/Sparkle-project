@@ -63,6 +63,29 @@ final communityEventsStreamProvider =
   return wsService.stream;
 });
 
+Map<String, dynamic>? _decodeCommunityWsPayload(dynamic data) {
+  if (data is Map<String, dynamic>) {
+    return data;
+  }
+  if (data is Map) {
+    return Map<String, dynamic>.from(data);
+  }
+  if (data is String) {
+    try {
+      final decoded = jsonDecode(data);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
 // 1. Friends Provider
 final friendsProvider =
     StateNotifierProvider<FriendsNotifier, AsyncValue<List<FriendshipInfo>>>(
@@ -910,110 +933,112 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       _wsService.connect(wsUrl, headers: headers);
       _wsSubscription = _wsService.stream.listen(
         (data) {
-          if (data is String) {
-            try {
-              final jsonData = jsonDecode(data) as Map<String, dynamic>;
+          final jsonData = _decodeCommunityWsPayload(data);
+          if (jsonData == null) {
+            return;
+          }
 
-              if (jsonData['type'] == 'ack') {
-                final nonce = jsonData['nonce'];
-                if (nonce != null && _pendingNonces.contains(nonce)) {
-                  _pendingNonces.remove(nonce);
-                  Future(
-                    () => _cacheService.removePendingGroupMessage(
-                      _groupId,
-                      nonce.toString(),
-                    ),
-                  );
-                  state.whenData(
-                    (messages) => state = AsyncValue.data([...messages]),
-                  );
-                }
-                return;
-              }
-
-              if (jsonData['type'] == 'message_edit' &&
-                  jsonData['message'] != null) {
-                final message = MessageInfo.fromJson(
-                  jsonData['message'] as Map<String, dynamic>,
+          try {
+            if (jsonData['type'] == 'ack') {
+              final nonce = jsonData['nonce'];
+              if (nonce != null && _pendingNonces.contains(nonce)) {
+                _pendingNonces.remove(nonce);
+                unawaited(
+                  _cacheService.removePendingGroupMessage(
+                    _groupId,
+                    nonce.toString(),
+                  ),
                 );
-                _handleEditedEvent(message);
-                return;
+                state.whenData(
+                  (messages) => state = AsyncValue.data([...messages]),
+                );
               }
-
-              if (jsonData['type'] == 'message_revoke' ||
-                  jsonData['type'] == 'revoked') {
-                final messageId = jsonData['message_id'];
-                if (messageId != null) {
-                  _handleRevokedEvent(messageId.toString());
-                }
-                return;
-              }
-
-              if (jsonData['type'] == 'reaction_update') {
-                final messageId = jsonData['message_id'];
-                final reactions = jsonData['reactions'];
-                if (messageId != null) {
-                  _handleReactionUpdate(
-                    messageId.toString(),
-                    reactions as Map<String, dynamic>?,
-                  );
-                }
-                return;
-              }
-
-              if (jsonData['type'] == 'read_receipt') {
-                final upToMessageId = jsonData['up_to_message_id']?.toString();
-                final readerId = jsonData['reader_id']?.toString();
-                final readerRaw = jsonData['reader'];
-                final reader = readerRaw is Map<String, dynamic>
-                    ? UserBrief.fromJson(readerRaw)
-                    : readerRaw is Map
-                        ? UserBrief.fromJson(
-                            Map<String, dynamic>.from(readerRaw),
-                          )
-                        : null;
-                if (upToMessageId != null &&
-                    upToMessageId.isNotEmpty &&
-                    readerId != null &&
-                    readerId.isNotEmpty) {
-                  _handleReadReceipt(
-                    upToMessageId: upToMessageId,
-                    readerId: readerId,
-                    reader: reader,
-                  );
-                }
-                return;
-              }
-
-              final message = MessageInfo.fromJson(jsonData);
-              state.whenData((messages) {
-                if (!messages.any((m) => m.id == message.id)) {
-                  state = AsyncValue.data([message, ...messages]);
-                  unawaited(
-                      _markVisibleMessagesAsRead(upToMessageId: message.id),);
-
-                  // Trigger in-app notification for incoming group messages
-                  // Only notify if message is from someone else
-                  if (message.sender != null &&
-                      message.sender!.id != _currentUserId) {
-                    _ref.read(unreadMessageCountProvider.notifier).increment();
-                    _ref.read(inAppNotificationProvider.notifier).show(
-                          NotificationMessage(
-                            id: message.id,
-                            senderName: message.sender!.displayName,
-                            senderAvatarUrl: message.sender!.avatarUrl,
-                            content: message.content ?? '',
-                            timestamp: message.createdAt,
-                            type: NotificationType.groupMessage,
-                            targetId: _groupId,
-                          ),
-                        );
-                  }
-                }
-              });
-            } catch (e) {
-              debugPrint('WS Parse Error: $e');
+              return;
             }
+
+            if (jsonData['type'] == 'message_edit' &&
+                jsonData['message'] != null) {
+              final message = MessageInfo.fromJson(
+                jsonData['message'] as Map<String, dynamic>,
+              );
+              _handleEditedEvent(message);
+              return;
+            }
+
+            if (jsonData['type'] == 'message_revoke' ||
+                jsonData['type'] == 'revoked') {
+              final messageId = jsonData['message_id'];
+              if (messageId != null) {
+                _handleRevokedEvent(messageId.toString());
+              }
+              return;
+            }
+
+            if (jsonData['type'] == 'reaction_update') {
+              final messageId = jsonData['message_id'];
+              final reactions = jsonData['reactions'];
+              if (messageId != null) {
+                _handleReactionUpdate(
+                  messageId.toString(),
+                  reactions as Map<String, dynamic>?,
+                );
+              }
+              return;
+            }
+
+            if (jsonData['type'] == 'read_receipt') {
+              final upToMessageId = jsonData['up_to_message_id']?.toString();
+              final readerId = jsonData['reader_id']?.toString();
+              final readerRaw = jsonData['reader'];
+              final reader = readerRaw is Map<String, dynamic>
+                  ? UserBrief.fromJson(readerRaw)
+                  : readerRaw is Map
+                      ? UserBrief.fromJson(
+                          Map<String, dynamic>.from(readerRaw),
+                        )
+                      : null;
+              if (upToMessageId != null &&
+                  upToMessageId.isNotEmpty &&
+                  readerId != null &&
+                  readerId.isNotEmpty) {
+                _handleReadReceipt(
+                  upToMessageId: upToMessageId,
+                  readerId: readerId,
+                  reader: reader,
+                );
+              }
+              return;
+            }
+
+            final message = MessageInfo.fromJson(jsonData);
+            state.whenData((messages) {
+              if (!messages.any((m) => m.id == message.id)) {
+                state = AsyncValue.data([message, ...messages]);
+                unawaited(
+                  _markVisibleMessagesAsRead(upToMessageId: message.id),
+                );
+
+                // Trigger in-app notification for incoming group messages
+                // Only notify if message is from someone else
+                if (message.sender != null &&
+                    message.sender!.id != _currentUserId) {
+                  _ref.read(unreadMessageCountProvider.notifier).increment();
+                  _ref.read(inAppNotificationProvider.notifier).show(
+                        NotificationMessage(
+                          id: message.id,
+                          senderName: message.sender!.displayName,
+                          senderAvatarUrl: message.sender!.avatarUrl,
+                          content: message.content ?? '',
+                          timestamp: message.createdAt,
+                          type: NotificationType.groupMessage,
+                          targetId: _groupId,
+                        ),
+                      );
+                }
+              }
+            });
+          } catch (e) {
+            debugPrint('WS Parse Error: $e');
           }
         },
         onError: (Object error) {
@@ -1040,10 +1065,11 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     if (_retryCount < _maxRetries) {
       _retryCount++;
       final delay = Duration(
-          seconds:
-              1 << _retryCount,); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+        seconds: 1 << _retryCount,
+      ); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
       debugPrint(
-          'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)',);
+        'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)',
+      );
       Future.delayed(delay, () {
         if (mounted) {
           _connectWebSocket(isRetry: true);
@@ -1271,8 +1297,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   Future<List<MessageInfo>> getThreadMessages(String threadRootId) async =>
       _repository.getThreadMessages(_groupId, threadRootId);
 
-  Future<void> _markVisibleMessagesAsRead(
-      {required String upToMessageId,}) async {
+  Future<void> _markVisibleMessagesAsRead({
+    required String upToMessageId,
+  }) async {
     final currentUserId = await _resolveCurrentUserId();
     if (currentUserId == null || currentUserId.isEmpty) {
       return;
@@ -1565,107 +1592,107 @@ class PrivateChatNotifier
   }
 
   void _handleEvent(dynamic data) {
-    if (data is String) {
-      try {
-        final jsonData = jsonDecode(data) as Map<String, dynamic>;
+    final jsonData = _decodeCommunityWsPayload(data);
+    if (jsonData == null) {
+      return;
+    }
 
-        if (jsonData['type'] == 'ack') {
-          final nonce = jsonData['nonce'];
-          if (nonce != null && _pendingNonces.contains(nonce)) {
-            _pendingNonces.remove(nonce);
-            Future(
-              () => _cacheService.removePendingPrivateMessage(
-                _friendId,
-                nonce.toString(),
+    try {
+      if (jsonData['type'] == 'ack') {
+        final nonce = jsonData['nonce'];
+        if (nonce != null && _pendingNonces.contains(nonce)) {
+          _pendingNonces.remove(nonce);
+          unawaited(
+            _cacheService.removePendingPrivateMessage(
+              _friendId,
+              nonce.toString(),
+            ),
+          );
+          state.whenData((messages) => state = AsyncValue.data([...messages]));
+        }
+        return;
+      }
+
+      if (jsonData['type'] == 'message_edit' && jsonData['message'] != null) {
+        final message = PrivateMessageInfo.fromJson(
+          jsonData['message'] as Map<String, dynamic>,
+        );
+        _handleEditedEvent(message);
+        return;
+      }
+
+      if (jsonData['type'] == 'mention' && jsonData['message'] != null) {
+        final groupMessage = MessageInfo.fromJson(
+          jsonData['message'] as Map<String, dynamic>,
+        );
+        _ref.read(unreadMessageCountProvider.notifier).increment();
+        _ref.read(inAppNotificationProvider.notifier).show(
+              NotificationMessage(
+                id: groupMessage.id,
+                senderName: groupMessage.sender?.displayName ?? '群成员',
+                senderAvatarUrl: groupMessage.sender?.avatarUrl,
+                content: groupMessage.content ?? '提及了你',
+                timestamp: groupMessage.createdAt,
+                type: NotificationType.mention,
+                targetId: jsonData['group_id']?.toString(),
               ),
             );
-            state
-                .whenData((messages) => state = AsyncValue.data([...messages]));
-          }
-          return;
-        }
-
-        if (jsonData['type'] == 'message_edit' && jsonData['message'] != null) {
-          final message = PrivateMessageInfo.fromJson(
-            jsonData['message'] as Map<String, dynamic>,
-          );
-          _handleEditedEvent(message);
-          return;
-        }
-
-        if (jsonData['type'] == 'mention' && jsonData['message'] != null) {
-          final groupMessage = MessageInfo.fromJson(
-            jsonData['message'] as Map<String, dynamic>,
-          );
-          _ref.read(unreadMessageCountProvider.notifier).increment();
-          _ref.read(inAppNotificationProvider.notifier).show(
-                NotificationMessage(
-                  id: groupMessage.id,
-                  senderName: groupMessage.sender?.displayName ?? '群成员',
-                  senderAvatarUrl: groupMessage.sender?.avatarUrl,
-                  content: groupMessage.content ?? '提及了你',
-                  timestamp: groupMessage.createdAt,
-                  type: NotificationType.mention,
-                  targetId: jsonData['group_id']?.toString(),
-                ),
-              );
-          return;
-        }
-
-        if (jsonData['type'] == 'message_revoke' ||
-            jsonData['type'] == 'revoked') {
-          final messageId = jsonData['message_id'];
-          if (messageId != null) {
-            _handleRevokedEvent(messageId.toString());
-          }
-          return;
-        }
-
-        if (jsonData['type'] == 'reaction_update') {
-          final messageId = jsonData['message_id'];
-          final reactions = jsonData['reactions'];
-          if (messageId != null) {
-            _handleReactionUpdate(
-              messageId.toString(),
-              reactions as Map<String, dynamic>?,
-            );
-          }
-          return;
-        }
-
-        if (jsonData['sender'] != null && jsonData['receiver'] != null) {
-          try {
-            final message = PrivateMessageInfo.fromJson(jsonData);
-            if (message.sender.id == _friendId ||
-                message.receiver.id == _friendId) {
-              state.whenData((messages) {
-                if (!messages.any((m) => m.id == message.id)) {
-                  final updated = [message, ...messages];
-                  state = AsyncValue.data(updated);
-
-                  // Trigger in-app notification for incoming messages
-                  if (message.sender.id == _friendId) {
-                    _ref.read(unreadMessageCountProvider.notifier).increment();
-                    _ref.read(inAppNotificationProvider.notifier).show(
-                          NotificationMessage(
-                            id: message.id,
-                            senderName: message.sender.displayName,
-                            senderAvatarUrl: message.sender.avatarUrl,
-                            content: message.content ?? '',
-                            timestamp: message.createdAt,
-                            type: NotificationType.privateMessage,
-                            targetId: _friendId,
-                          ),
-                        );
-                  }
-                }
-              });
-            }
-          } catch (_) {}
-        }
-      } catch (e) {
-        debugPrint('WS Parse Error (Private): $e');
+        return;
       }
+
+      if (jsonData['type'] == 'message_revoke' ||
+          jsonData['type'] == 'revoked') {
+        final messageId = jsonData['message_id'];
+        if (messageId != null) {
+          _handleRevokedEvent(messageId.toString());
+        }
+        return;
+      }
+
+      if (jsonData['type'] == 'reaction_update') {
+        final messageId = jsonData['message_id'];
+        final reactions = jsonData['reactions'];
+        if (messageId != null) {
+          _handleReactionUpdate(
+            messageId.toString(),
+            reactions as Map<String, dynamic>?,
+          );
+        }
+        return;
+      }
+
+      if (jsonData['sender'] != null && jsonData['receiver'] != null) {
+        try {
+          final message = PrivateMessageInfo.fromJson(jsonData);
+          if (message.sender.id == _friendId ||
+              message.receiver.id == _friendId) {
+            state.whenData((messages) {
+              if (!messages.any((m) => m.id == message.id)) {
+                final updated = [message, ...messages];
+                state = AsyncValue.data(updated);
+
+                // Trigger in-app notification for incoming messages
+                if (message.sender.id == _friendId) {
+                  _ref.read(unreadMessageCountProvider.notifier).increment();
+                  _ref.read(inAppNotificationProvider.notifier).show(
+                        NotificationMessage(
+                          id: message.id,
+                          senderName: message.sender.displayName,
+                          senderAvatarUrl: message.sender.avatarUrl,
+                          content: message.content ?? '',
+                          timestamp: message.createdAt,
+                          type: NotificationType.privateMessage,
+                          targetId: _friendId,
+                        ),
+                      );
+                }
+              }
+            });
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('WS Parse Error (Private): $e');
     }
   }
 
@@ -1998,7 +2025,9 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
 
 // 10. Blocked Users Provider (Phase 4)
 final blockedUsersProvider = StateNotifierProvider.autoDispose<
-    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>((ref) => BlockedUsersNotifier(ref.watch(communityRepositoryProvider)));
+    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>(
+  (ref) => BlockedUsersNotifier(ref.watch(communityRepositoryProvider)),
+);
 
 class BlockedUsersNotifier
     extends StateNotifier<AsyncValue<List<BlockUserInfo>>> {

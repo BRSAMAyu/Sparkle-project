@@ -9,6 +9,8 @@ import uuid
 
 import requests
 
+from _acceptance_common import login_with_requests
+
 
 AUTH_BASE_URL = "http://127.0.0.1:8000/api/v1"
 BASE_URL = "http://127.0.0.1:8080/api/v1"
@@ -35,18 +37,6 @@ def _request(method: str, path: str, *, token: str | None = None, expected_statu
         )
     return response
 
-
-def _login() -> str:
-    response = requests.post(
-        f"{AUTH_BASE_URL}/auth/login",
-        json={"username": USERNAME, "password": PASSWORD},
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
-    if response.status_code != 200:
-        raise RuntimeError(f"POST /auth/login failed: {response.status_code} {response.text[:800]}")
-    return response.json()["access_token"]
-
-
 def _poll_until(predicate, *, timeout_seconds: int, interval_seconds: float = 1.0):
     deadline = time.monotonic() + timeout_seconds
     last_value = None
@@ -59,7 +49,12 @@ def _poll_until(predicate, *, timeout_seconds: int, interval_seconds: float = 1.
 
 
 def main() -> None:
-    token = _login()
+    token = login_with_requests(
+        auth_base_url=AUTH_BASE_URL,
+        username=USERNAME,
+        password=PASSWORD,
+        timeout_seconds=REQUEST_TIMEOUT_SECONDS,
+    )
 
     baseline_dashboard = _request("GET", "/dashboard/status", token=token).json()
     baseline_context = _request("GET", "/profile/context", token=token).json()

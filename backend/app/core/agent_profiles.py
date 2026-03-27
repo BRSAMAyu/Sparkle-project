@@ -189,7 +189,7 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         expertise_domains=["learning orchestration", "multi-step coaching"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "dashscope_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING],
         ),
@@ -205,7 +205,7 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         expertise_domains=["concept explanation", "learning companionship"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
+            preferred_models=["dashscope_chat", "deepseek_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -273,7 +273,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["knowledge", "prerequisite", "learning-path"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "mimo_pro"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -329,7 +329,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["schedule", "tasks", "focus"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "dashscope_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -477,7 +477,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
+            preferred_models=["deepseek_chat", "dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.GLM_BATCH],
         ),
@@ -539,7 +539,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["tool execution", "workflow support"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["mimo_pro", "dashscope_chat", "deepseek_chat"],
+            preferred_models=["dashscope_chat", "deepseek_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -587,7 +587,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["writing", "editing", "expression"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_chat", "dashscope_chat", "mimo_pro"],
+            preferred_models=["deepseek_chat", "dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),

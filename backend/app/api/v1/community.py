@@ -1099,6 +1099,9 @@ async def get_blocked_users(
 
     return [
         BlockUserInfo(
+            id=block.id,
+            created_at=block.created_at,
+            updated_at=block.updated_at,
             blocked_user=UserBrief(
                 id=block.blocked.id,
                 username=block.blocked.username,
@@ -1108,9 +1111,7 @@ async def get_blocked_users(
                 flame_brightness=block.blocked.flame_brightness,
                 status=block.blocked.status
             ),
-            reason=block.reason,
-            created_at=block.created_at,
-            updated_at=block.updated_at
+            reason=block.reason
         )
         for block in blocks
     ]
@@ -2261,7 +2262,7 @@ async def update_status(
 @router.websocket("/ws/connect")
 async def user_websocket_endpoint(
     websocket: WebSocket,
-    token: str = Query(...)
+    token: str | None = Query(None)
 ):
     """
     用户个人 WebSocket 连接
@@ -2270,7 +2271,13 @@ async def user_websocket_endpoint(
     """
     user_id = None
     try:
-        payload = await decode_token(token, expected_type="access")
+        auth_token = token if settings.WS_ALLOW_QUERY_TOKEN else None
+        auth_token = auth_token or _extract_ws_token(websocket)
+        if not auth_token:
+            await websocket.close(code=4003)
+            return
+
+        payload = await decode_token(auth_token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)

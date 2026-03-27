@@ -312,25 +312,27 @@ Return ONLY a JSON array of entity names."""
 
         results = []
         relationships = []  # 新增：收集关系信息
+        seen_result_ids: set[str] = set()
+        seen_relationship_keys: set[tuple[str | None, str | None, str | None]] = set()
 
         for entity in entities:
             try:
-                # 查找实体及其关联知识
-                cypher = f"""
-                MATCH (start:KnowledgeNode {{name: $entity}})
-                -[r*1..{depth}]-(related)
-                WHERE ALL(edge IN r WHERE edge.strength > $min_strength)
-                RETURN {{
+                # AGE 对复杂路径列表过滤支持较弱，这里优先使用稳定的一跳关联查询。
+                cypher = """
+                MATCH (start:KnowledgeNode {name: $entity})
+                -[rel]-(related:KnowledgeNode)
+                WHERE toFloat(rel.strength) > $min_strength
+                RETURN {
                     start_id: start.id,
                     start_name: start.name,
                     id: related.id,
                     name: related.name,
                     description: related.description,
-                    relation_type: type(r[0]),
-                    strength: r[0].strength,
+                    relation_type: type(rel),
+                    strength: toFloat(rel.strength),
                     sector: related.sector
-                }} as result
-                ORDER BY r[0].strength DESC
+                } as result
+                ORDER BY toFloat(rel.strength) DESC
                 LIMIT 10
                 """
 
@@ -341,10 +343,24 @@ Return ONLY a JSON array of entity names."""
 
                 # 添加元数据并收集关系
                 for item in result:
+                    item_id = str(item.get("id") or "")
+                    if item_id and item_id in seen_result_ids:
+                        continue
+                    if item_id:
+                        seen_result_ids.add(item_id)
                     item["source"] = "graph"
                     item["query_entity"] = entity
+                    results.append(item)
 
                     # 收集关系信息（用于可视化）
+                    relationship_key = (
+                        item.get("start_id"),
+                        item.get("id"),
+                        item.get("relation_type"),
+                    )
+                    if relationship_key in seen_relationship_keys:
+                        continue
+                    seen_relationship_keys.add(relationship_key)
                     relationships.append({
                         "from_id": item.get("start_id"),
                         "from_name": item.get("start_name", entity),
@@ -353,8 +369,6 @@ Return ONLY a JSON array of entity names."""
                         "relation_type": item.get("relation_type"),
                         "strength": item.get("strength")
                     })
-
-                results.extend(result)
 
             except Exception as e:
                 logger.warning(f"图检索失败 for {entity}: {e}")
@@ -377,9 +391,9 @@ Return ONLY a JSON array of entity names."""
             MATCH (u:User {id: $user_id})-[r]->(k:KnowledgeNode)
             WHERE type(r) IN ["INTERESTED_IN", "STUDIED"]
               AND toFloat(r.strength) > 0.3
-            RETURN DISTINCT {name: k.name} as result
+            RETURN {name: k.name, strength: toFloat(r.strength)} as result
             ORDER BY toFloat(r.strength) DESC
-            LIMIT 10
+            LIMIT 20
             """
 
             results = await self.age_client.execute_cypher(
@@ -387,7 +401,18 @@ Return ONLY a JSON array of entity names."""
                 {"user_id": user_id}
             )
 
-            return [r["name"] for r in results]
+            interests: list[str] = []
+            seen: set[str] = set()
+            for item in results:
+                name = str(item.get("name") or "").strip()
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                interests.append(name)
+                if len(interests) >= 10:
+                    break
+
+            return interests
 
         except Exception as e:
             logger.warning(f"获取用户兴趣失败: {e}")

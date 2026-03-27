@@ -63,6 +63,198 @@ _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
 
+    async def _maybe_short_circuit_bridge_tool(
+        self,
+        *,
+        active_tools: list[str],
+        user_message: str,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        active_db: AsyncSession | None,
+    ) -> list[agent_service_pb2.ChatResponse] | None:
+        bridge_tool_name = next(
+            (
+                tool_name
+                for tool_name in ("launch_prediction", "run_quick_simulation", "generate_learning_report")
+                if tool_name in active_tools
+            ),
+            None,
+        )
+        if bridge_tool_name is None or not str(user_message or "").strip():
+            return None
+
+        if bridge_tool_name == "launch_prediction":
+            arguments = {
+                "topic": user_message,
+                "source_chat_session_id": session_id,
+            }
+        elif bridge_tool_name == "run_quick_simulation":
+            arguments = {
+                "seed_topic": user_message,
+                "source_chat_session_id": session_id,
+            }
+        else:
+            arguments = {
+                "section_limit": 4,
+                "delivery_mode": "chat_bridge",
+                "source_chat_session_id": session_id,
+            }
+
+        result = await self.tool_executor.execute_tool_call(
+            tool_name=bridge_tool_name,
+            arguments=arguments,
+            user_id=user_id,
+            db_session=active_db,
+            tool_call_id=f"bridge_{bridge_tool_name}_{uuid.uuid4().hex[:12]}",
+        )
+        if not result.success or not isinstance(result.data, dict):
+            return None
+
+        full_response = self._bridge_tool_response_text(
+            tool_name=bridge_tool_name,
+            payload=result.data,
+        )
+        metadata = self._bridge_tool_response_metadata(
+            tool_name=bridge_tool_name,
+            payload=result.data,
+            response_id=response_id,
+            trace_id=trace_id,
+            session_id=session_id,
+        )
+
+        await self._persist_assistant_message(
+            active_db=active_db,
+            user_id=user_id,
+            session_id=session_id,
+            full_response=full_response,
+        )
+        await self._cache_response(
+            session_id,
+            request_id,
+            {
+                "message": full_response,
+                "full_text": full_response,
+                "tool_results": [result.model_dump()],
+                "metadata": metadata,
+            },
+        )
+
+        now = int(datetime.now().timestamp())
+        return [
+            agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=now,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.GENERATING,
+                    details="正在准备可视化预览",
+                    current_agent_name="Sparkle AI",
+                ),
+            ),
+            agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=now,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                metadata={str(k): str(v) for k, v in metadata.items()},
+                full_text=full_response,
+                finish_reason=agent_service_pb2.STOP,
+            ),
+        ]
+
+    @staticmethod
+    def _bridge_tool_response_text(*, tool_name: str, payload: dict[str, Any]) -> str:
+        if tool_name == "launch_prediction":
+            topic = str(payload.get("topic") or "当前主题").strip()
+            target_name = str(payload.get("target_name") or topic).strip() or topic
+            return f"我已经为你准备好“{target_name}”的知识推演预览，点开卡片就能查看路径、风险和采纳入口。"
+        if tool_name == "run_quick_simulation":
+            topic = str(payload.get("topic") or "当前主题").strip()
+            scenario_key = str(payload.get("scenario_key") or "study_group").strip() or "study_group"
+            return f"我已经为“{topic}”准备了一个 {scenario_key} 学习仿真预览，点开卡片就能直接进入模拟。"
+        preview = payload.get("report_preview") if isinstance(payload.get("report_preview"), dict) else {}
+        summary = str((preview or {}).get("summary") or "点开卡片就能查看学习表现、薄弱点和下一步建议。").strip()
+        return f"我已经整理出一份最新学习报告，{summary}"
+
+    @staticmethod
+    def _bridge_tool_response_metadata(
+        *,
+        tool_name: str,
+        payload: dict[str, Any],
+        response_id: str,
+        trace_id: str,
+        session_id: str,
+    ) -> dict[str, Any]:
+        metadata: dict[str, Any] = {
+            "response_id": response_id,
+            "trace_id": trace_id,
+            "session_id": session_id,
+            "bridge_execution_mode": "short_circuit",
+        }
+        if tool_name == "launch_prediction":
+            metadata["open_theater"] = "true"
+            if payload.get("deep_link"):
+                metadata["deep_link"] = str(payload["deep_link"])
+            metadata["prediction_preview"] = json.dumps(
+                {
+                    "prediction_id": str(payload.get("prediction_id") or ""),
+                    "topic": str(payload.get("topic") or ""),
+                    "target_node_id": str(payload.get("target_node_id") or ""),
+                    "target_name": str(payload.get("target_name") or ""),
+                    "paths": list(payload.get("paths") or []),
+                },
+                ensure_ascii=False,
+            )
+            metadata["bridge_cost_tier"] = "low"
+            metadata["bridge_quality_mode"] = "preview"
+        elif tool_name == "run_quick_simulation":
+            metadata["open_simulation"] = "true"
+            if payload.get("deep_link"):
+                metadata["simulation_deep_link"] = str(payload["deep_link"])
+            metadata["simulation_preview"] = json.dumps(
+                {
+                    "session_id": str(payload.get("session_id") or ""),
+                    "topic": str(payload.get("topic") or ""),
+                    "scenario_key": str(payload.get("scenario_key") or ""),
+                    "participants": list(payload.get("participants") or []),
+                    "round_preview": list(payload.get("round_preview") or []),
+                    "insight_summary": str(payload.get("insight_summary") or ""),
+                },
+                ensure_ascii=False,
+            )
+            metadata["bridge_cost_tier"] = "low"
+            metadata["bridge_quality_mode"] = "preview"
+        else:
+            metadata["open_report"] = "true"
+            if payload.get("deep_link"):
+                metadata["report_deep_link"] = str(payload["deep_link"])
+            metadata["report_preview"] = json.dumps(
+                {
+                    "report_id": str(payload.get("report_id") or ""),
+                    **(
+                        dict(payload.get("report_preview") or {})
+                        if isinstance(payload.get("report_preview"), dict)
+                        else {}
+                    ),
+                },
+                ensure_ascii=False,
+            )
+            metadata["bridge_cost_tier"] = "low"
+            metadata["bridge_quality_mode"] = str(payload.get("quality_mode") or "instant_preview")
+        if payload.get("source_chat_session_id"):
+            metadata["source_chat_session_id"] = str(payload["source_chat_session_id"])
+        return metadata
+
     async def _emit_roundtable_preview(
         self,
         *,

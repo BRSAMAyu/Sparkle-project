@@ -28,6 +28,7 @@ class DictionaryPackageService:
     def __init__(self) -> None:
         preferred_dir = Path(settings.DICTIONARY_PACKAGE_DIR)
         self._package_dir = preferred_dir.resolve() if not preferred_dir.is_absolute() else preferred_dir
+        self._fallback_entries_path = Path(__file__).resolve().parents[1] / "data" / "oxford_starter_fallback_entries.json"
         if not self._is_directory_writable(self._package_dir):
             self._package_dir = (Path(settings.UPLOAD_DIR) / "dictionary_packages").resolve()
             self._package_dir.mkdir(parents=True, exist_ok=True)
@@ -90,6 +91,23 @@ class DictionaryPackageService:
             )
         return packages
 
+    def lookup_fallback_entry(self, word: str) -> dict[str, Any] | None:
+        normalized_word = word.strip().lower()
+        if not normalized_word:
+            return None
+        entries = self._load_fallback_entries()
+        entry = entries.get(normalized_word)
+        if not entry:
+            return None
+        return {
+            "word": normalized_word,
+            "phonetic": entry.get("phonetic"),
+            "pos": entry.get("pos"),
+            "definitions": entry.get("definitions") or [],
+            "examples": entry.get("examples") or [],
+            "source": entry.get("source") or "oaldpe",
+        }
+
     def ensure_package(self, package_id: str) -> Path:
         definition = self._definitions.get(package_id)
         if definition is None:
@@ -122,14 +140,8 @@ class DictionaryPackageService:
         return package_path
 
     def _build_payload(self, definition: DictionaryPackageDefinition) -> dict[str, Any]:
-        if definition.source_path is None or not definition.source_path.exists():
-            raise FileNotFoundError("Oxford dictionary source file is not available")
         if definition.words_file is None or not definition.words_file.exists():
             raise FileNotFoundError("Starter word list is not available")
-
-        mdx = create_mdx_service(str(definition.source_path))
-        if mdx is None:
-            raise RuntimeError("MDX dictionary service is unavailable")
 
         words = [
             line.strip().lower()
@@ -137,8 +149,12 @@ class DictionaryPackageService:
             if line.strip()
         ]
         entries: dict[str, Any] = {}
+        mdx = None
+        if definition.source_path is not None and definition.source_path.exists():
+            mdx = create_mdx_service(str(definition.source_path))
+
         for word in words:
-            result = mdx.lookup(word)
+            result = mdx.lookup(word) if mdx else self.lookup_fallback_entry(word)
             if not result:
                 continue
             entries[word] = {
@@ -178,6 +194,16 @@ class DictionaryPackageService:
         if not manifest_path.exists():
             return None
         return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    def _load_fallback_entries(self) -> dict[str, dict[str, Any]]:
+        if not self._fallback_entries_path.exists():
+            return {}
+        payload = json.loads(self._fallback_entries_path.read_text(encoding="utf-8"))
+        return {
+            str(key).strip().lower(): value
+            for key, value in payload.items()
+            if isinstance(value, dict)
+        }
 
 
 dictionary_package_service = DictionaryPackageService()

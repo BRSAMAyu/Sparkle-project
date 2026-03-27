@@ -8,12 +8,14 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     required this.node,
     required this.onFocus,
     required this.onInspectConnections,
+    required this.onLaunchPrediction,
     super.key,
   });
 
   final GalaxyNodeModel node;
   final VoidCallback onFocus;
   final VoidCallback onInspectConnections;
+  final VoidCallback onLaunchPrediction;
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +190,16 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: _CardActionButton(
+                    label: '推演此节点',
+                    icon: Icons.auto_graph_rounded,
+                    color: sectorColor,
+                    onPressed: onLaunchPrediction,
+                  ),
                 ),
                 if ((node.description ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 10),

@@ -51,6 +51,7 @@ class LaunchPredictionTool(BaseTool):
                 user_id=UUID(user_id),
                 topic=params.topic,
                 target_node_id=target_node_uuid,
+                preview_mode=True,
             )
             paths = []
             for item in list(prediction.get("paths") or [])[:3]:
@@ -66,7 +67,7 @@ class LaunchPredictionTool(BaseTool):
                 )
 
             query = {
-                "topic": params.topic,
+                "topic": str(prediction.get("target_name") or params.topic),
                 "target_node_id": str(prediction.get("target_node_id") or params.target_node_id or ""),
             }
             if params.source_chat_session_id:
@@ -78,7 +79,8 @@ class LaunchPredictionTool(BaseTool):
                 tool_call_id=tool_call_id,
                 data={
                     "prediction_id": str(prediction.get("prediction_id") or ""),
-                    "topic": params.topic,
+                    "topic": str(prediction.get("target_name") or params.topic),
+                    "target_name": str(prediction.get("target_name") or params.topic),
                     "target_node_id": str(prediction.get("target_node_id") or params.target_node_id or ""),
                     "paths": paths,
                     "open_theater": True,

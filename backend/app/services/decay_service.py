@@ -11,7 +11,7 @@ def _utcnow() -> datetime:
     """Return current UTC time as timezone-naive datetime (matches DB TIMESTAMP WITHOUT TIME ZONE)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -37,6 +37,47 @@ class DecayService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def _load_projection_rows(
+        self,
+        user_id: UUID,
+    ) -> list[tuple[UserNodeStatus | None, KnowledgeNode]]:
+        query = (
+            select(UserNodeStatus, KnowledgeNode)
+            .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(
+                and_(
+                    UserNodeStatus.user_id == user_id,
+                    UserNodeStatus.is_unlocked,
+                )
+            )
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+        if rows:
+            return rows
+
+        fallback_query = (
+            select(KnowledgeNode)
+            .where(
+                KnowledgeNode.deleted_at.is_(None)
+            )
+            .order_by(
+                desc(func.coalesce(KnowledgeNode.is_seed, False)),
+                desc(func.coalesce(KnowledgeNode.importance_level, 0)),
+                KnowledgeNode.created_at.asc(),
+            )
+            .limit(12)
+        )
+        fallback_result = await self.db.execute(fallback_query)
+        return [(None, node) for node in fallback_result.scalars().all()]
+
+    @staticmethod
+    def _baseline_mastery_for_projection(node: KnowledgeNode) -> float:
+        if getattr(node, "is_seed", False):
+            return 48.0
+        return max(28.0, min(float(getattr(node, "importance_level", 3) or 3) * 12.0, 52.0))
 
     async def apply_daily_decay(self) -> dict[str, int]:
         """
@@ -244,28 +285,23 @@ class DecayService:
         """
         now = _utcnow()
 
-        # 查询用户所有已解锁的节点
-        query = (
-            select(UserNodeStatus, KnowledgeNode)
-            .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
-            .where(
-                and_(
-                    UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked
-                )
-            )
-        )
-
-        result = await self.db.execute(query)
-        rows = result.all()
+        rows = await self._load_projection_rows(user_id)
 
         projections = {}
 
         for status, node in rows:
-            current_mastery = status.mastery_score
+            current_mastery = (
+                float(status.mastery_score)
+                if status is not None
+                else self._baseline_mastery_for_projection(node)
+            )
 
             # 计算从现在到未来的衰减
-            days_since_last_study = (now - status.last_study_at).days if status.last_study_at else 0
+            days_since_last_study = (
+                (now - status.last_study_at).days
+                if status is not None and status.last_study_at
+                else 0
+            )
             total_days_elapsed = days_since_last_study + days_ahead
 
             # 预测未来掌握度（不考虑复习）
@@ -276,7 +312,12 @@ class DecayService:
 
             # 恢复到未衰减前的基线再计算
             # 简化：直接基于当前状态预测
-            if not status.decay_paused:
+            if status is None:
+                future_mastery = self._calculate_decay(
+                    current_mastery=current_mastery,
+                    days_elapsed=days_ahead,
+                )
+            elif not status.decay_paused:
                 future_mastery = self._calculate_decay(
                     current_mastery=current_mastery,
                     days_elapsed=days_ahead
@@ -317,24 +358,16 @@ class DecayService:
         """
         _utcnow()
 
-        query = (
-            select(UserNodeStatus, KnowledgeNode)
-            .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
-            .where(
-                and_(
-                    UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked
-                )
-            )
-        )
-
-        result = await self.db.execute(query)
-        rows = result.all()
+        rows = await self._load_projection_rows(user_id)
 
         projections = {}
 
         for status, node in rows:
-            current_mastery = status.mastery_score
+            current_mastery = (
+                float(status.mastery_score)
+                if status is not None
+                else self._baseline_mastery_for_projection(node)
+            )
 
             # 如果这个节点被复习
             if node.id in node_ids:
@@ -348,10 +381,16 @@ class DecayService:
                 )
             else:
                 # 未复习，正常衰减
-                future_mastery = self._calculate_decay(
-                    current_mastery=current_mastery,
-                    days_elapsed=days_ahead
-                )
+                if status is None:
+                    future_mastery = self._calculate_decay(
+                        current_mastery=current_mastery,
+                        days_elapsed=days_ahead,
+                    )
+                else:
+                    future_mastery = self._calculate_decay(
+                        current_mastery=current_mastery,
+                        days_elapsed=days_ahead
+                    )
 
             projection = self._generate_visual_state(
                 node_id=str(node.id),

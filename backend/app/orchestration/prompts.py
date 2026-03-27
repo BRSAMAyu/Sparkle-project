@@ -199,6 +199,7 @@ TASK_AWARENESS_SECTION = """
 学习桥接工具：
 11. launch_prediction - 当用户在问学习路径、what-if、跳过某知识点的后果、两周学会某主题时，优先调用
 12. run_quick_simulation - 当用户要求模拟学习小组、知识辩论、角色扮演或“帮我演练一下”时，优先调用
+13. generate_learning_report - 当用户要求学习报告、阶段复盘、最近学习表现总结时，优先调用
 
 **重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
 - 当前进度和已达成里程碑

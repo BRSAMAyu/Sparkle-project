@@ -1,5 +1,5 @@
 #!/bin/bash
-# MIMO v2-pro API 验证脚本
+# MIMO API 验证脚本
 # 直接使用 curl 测试 MIMO API 调用和联网搜索功能
 
 set -e
@@ -12,10 +12,10 @@ fi
 
 API_KEY="${XIAOMI_MIMO_API_KEY:-sk-cpvw0yaaow852p35x6pez0x76mk6o3leg8py0by8jpv30zr5}"
 BASE_URL="${XIAOMI_MIMO_BASE_URL:-https://api.xiaomimimo.com/v1}"
-MODEL="${XIAOMI_PRO_MODEL:-mimo-v2-pro}"
+MODEL="${XIAOMI_CHAT_MODEL:-mimo-v2-flash}"
 
 echo "============================================================"
-echo "  MIMO v2-pro API 验证"
+echo "  MIMO API 验证"
 echo "============================================================"
 echo ""
 echo "配置信息:"

@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
@@ -15,7 +16,10 @@ class SimulationRoutes {
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: SceneAudioScope(
-              policy: const SceneAudioPolicy(track: BgmTrack.insights),
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.insights,
+                atmosphereOverride: ExperienceAtmosphere.insightsMist,
+              ),
               child: SimulationScreen(
                 initialTopic: state.uri.queryParameters['topic'],
                 initialScenarioKey: state.uri.queryParameters['scenario_key'],

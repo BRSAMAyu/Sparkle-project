@@ -244,11 +244,6 @@ class Settings(BaseSettings):
     XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
 
-    # XiaoMi MIMO Pro Configuration (最高层，支持联网搜索)
-    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
-    XIAOMI_PRO_TEMPERATURE: float = 1.0  # mimo-v2-pro 默认值
-    XIAOMI_WEB_SEARCH_ENABLED: bool = True  # 启用内置联网搜索
-
     # Prompt Snapshot (debug observability)
     PROMPT_SNAPSHOT_ENABLED: bool = False
     PROMPT_SNAPSHOT_SAMPLE_RATE: float = 0.0

@@ -275,6 +275,24 @@ class ResponseBuilderMixin:
                 )
                 if tool_payload.get("source_chat_session_id"):
                     response_metadata["source_chat_session_id"] = str(tool_payload["source_chat_session_id"])
+            if tool_result.tool_name == "generate_learning_report":
+                response_metadata["open_report"] = "true"
+                if tool_payload.get("deep_link"):
+                    response_metadata["report_deep_link"] = str(tool_payload["deep_link"])
+                preview_payload = (
+                    dict(tool_payload.get("report_preview") or {})
+                    if isinstance(tool_payload.get("report_preview"), dict)
+                    else {}
+                )
+                preview_payload.setdefault("report_id", str(tool_payload.get("report_id") or ""))
+                response_metadata["report_preview"] = json.dumps(
+                    preview_payload,
+                    ensure_ascii=False,
+                )
+                if tool_payload.get("quality_mode"):
+                    response_metadata["bridge_quality_mode"] = str(tool_payload["quality_mode"])
+                if tool_payload.get("source_chat_session_id"):
+                    response_metadata["source_chat_session_id"] = str(tool_payload["source_chat_session_id"])
         if run_ledger is not None:
             agent_ids = []
             for source in (agents_involved, selected_experts, answer_experts):

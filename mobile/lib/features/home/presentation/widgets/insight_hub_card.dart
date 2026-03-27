@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
-import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
-import 'package:sparkle/features/simulation/simulation_routes.dart';
-import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 class InsightHubCard extends ConsumerStatefulWidget {
-  const InsightHubCard({super.key});
+  const InsightHubCard({
+    super.key,
+    this.compact = false,
+    this.dense = false,
+  });
+
+  final bool compact;
+  final bool dense;
 
   @override
   ConsumerState<InsightHubCard> createState() => _InsightHubCardState();
@@ -24,7 +29,9 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(
-        ref.read(simulationProvider.notifier).loadRecommendedSeeds(silent: true),
+        ref
+            .read(simulationProvider.notifier)
+            .loadRecommendedSeeds(silent: true),
       );
     });
   }
@@ -34,14 +41,15 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     final simulationState = ref.watch(simulationProvider);
     final systemUpdatesAsync = ref.watch(systemUpdatesProvider);
     final systemUpdates = systemUpdatesAsync.maybeWhen(
-          data: (items) => items,
-          orElse: () => const <Map<String, dynamic>>[],
-        );
-    final latestTheater = systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
-          (item) =>
-              item?['type']?.toString().startsWith('theater_') ?? false,
-          orElse: () => null,
-        );
+      data: (items) => items,
+      orElse: () => const <Map<String, dynamic>>[],
+    );
+    final latestTheater =
+        systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
+              (item) =>
+                  item?['type']?.toString().startsWith('theater_') ?? false,
+              orElse: () => null,
+            );
     final latestReport = systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
           (item) => item?['type']?.toString() == 'learning_report_ready',
           orElse: () => null,
@@ -54,14 +62,18 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
           )
         : null;
+    final hasRefreshError = (simulationState.error?.isNotEmpty ?? false) ||
+        systemUpdatesAsync.hasError;
 
-    final hasAnyData = latestTheater != null ||
-        latestReportPayload != null ||
-        simulationState.recommendedSeeds.isNotEmpty;
-    final hasRefreshError =
-        (simulationState.error?.isNotEmpty ?? false) || systemUpdatesAsync.hasError;
-    final isShowingStaleData =
-        hasRefreshError && hasAnyData;
+    if (widget.compact) {
+      return _CompactInsightHubCard(
+        latestTheater: latestTheater,
+        latestReportPayload: latestReportPayload,
+        simulationState: simulationState,
+        dense: widget.dense,
+        hasRefreshError: hasRefreshError,
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -71,106 +83,79 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        DS.info.withValues(alpha: 0.9),
-                        DS.brandPrimary.withValues(alpha: 0.82),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: DS.info.withValues(alpha: 0.2),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+            Text(
+              '学习洞察',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-                  child: const Icon(
-                    Icons.insights_rounded,
-                    color: Colors.white,
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              _heroSummary(
+                latestTheater,
+                latestReportPayload,
+                simulationState,
+              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                _InsightHubQuickAction(
+                  icon: Icons.groups_rounded,
+                  title: '学习仿真',
+                  subtitle: _simulationSubtitle(simulationState),
+                  accent: DS.accent,
+                  onTap: () => _openOverview(
+                    context,
+                    initialPanel: 'simulation',
                   ),
                 ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '学习洞察',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        hasAnyData
-                            ? '把推演、仿真和报告放进同一个洞察中心，自然串起你的学习全貌。'
-                            : '输入一个学习目标，AI 会为你推演路径、生成仿真并沉淀学习报告。',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.45,
-                            ),
-                      ),
-                    ],
+                _InsightHubQuickAction(
+                  icon: Icons.auto_graph_rounded,
+                  title: '推演剧场',
+                  subtitle: _theaterSubtitle(latestTheater),
+                  accent: DS.info,
+                  onTap: () => _openOverview(
+                    context,
+                    initialPanel: 'theater',
+                  ),
+                ),
+                _InsightHubQuickAction(
+                  icon: Icons.article_outlined,
+                  title: '学习报告',
+                  subtitle: _reportSubtitle(latestReportPayload),
+                  accent: DS.success,
+                  onTap: () => _openOverview(
+                    context,
+                    initialPanel: 'report',
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: DS.spacing16),
-            Row(
-              children: [
-                Expanded(
-                  child: _InsightHubAction(
-                    icon: Icons.auto_graph_rounded,
-                    title: '推演剧场',
-                    subtitle: _theaterSubtitle(latestTheater),
-                    accent: DS.info,
-                    onTap: () => context.push(TheaterRoutes.theater),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: _InsightHubAction(
-                    icon: Icons.groups_rounded,
-                    title: '学习仿真',
-                    subtitle: simulationState.recommendedSeeds.isNotEmpty
-                        ? '${simulationState.recommendedSeeds.length} 个推荐场景待探索'
-                        : '围绕一个知识点，快速展开辩论或学习小组讨论',
-                    accent: DS.accent,
-                    onTap: () => context.push(SimulationRoutes.simulation),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: _InsightHubAction(
-                    icon: Icons.article_outlined,
-                    title: '学习报告',
-                    subtitle: _reportSubtitle(latestReportPayload),
-                    accent: DS.success,
-                    onTap: () => context.push(
-                      ReportRoutes.learningReport,
-                      extra: latestReportPayload,
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: DS.spacing12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: () => _openOverview(context),
+                icon: const Icon(Icons.wb_iridescent_rounded),
+                label: const Text('进入洞察总览'),
+              ),
             ),
             if (hasRefreshError) ...[
               const SizedBox(height: DS.spacing12),
               _InsightHubStatusBanner(
-                isShowingStaleData: isShowingStaleData,
                 onRetry: () {
                   ref.invalidate(systemUpdatesProvider);
                   unawaited(
-                    ref.read(simulationProvider.notifier).loadRecommendedSeeds(),
+                    ref
+                        .read(simulationProvider.notifier)
+                        .loadRecommendedSeeds(),
                   );
                 },
               ),
@@ -181,34 +166,311 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     );
   }
 
-  String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
-    if (latestTheater == null) {
-      return '输入一个目标，查看多条学习路径';
+  String _heroSummary(
+    Map<String, dynamic>? latestTheater,
+    LearningReport? report,
+    SimulationState simulationState,
+  ) {
+    if (simulationState.recommendedSeeds.isNotEmpty) {
+      return '现在有 ${simulationState.recommendedSeeds.length} 个推荐场景可以直接开始模拟。';
     }
-    final metadata = Map<String, dynamic>.from(
-      latestTheater['metadata'] as Map? ?? const {},
-    );
-    final title = metadata['title']?.toString();
-    if (title != null && title.isNotEmpty) {
-      return '上次推演：$title';
+    if (report != null && report.mastery.isNotEmpty) {
+      return _reportSubtitle(report);
     }
-    return latestTheater['description']?.toString() ?? '继续上次推演';
+    if (latestTheater != null) {
+      return _theaterSubtitle(latestTheater);
+    }
+    return '把推演、仿真和报告收进一条更轻量的学习动线。';
   }
 
-  String _reportSubtitle(LearningReport? report) {
-    if (report == null || report.mastery.isEmpty) {
-      return '完成一轮学习后，自动查看分析报告';
-    }
-    final avg = report.mastery
-            .map((item) => item.masteryScore)
-            .fold<double>(0, (sum, value) => sum + value) /
-        report.mastery.length;
-    return '掌握度 ${avg.round()}% · ${report.mastery.length} 个知识点已分析';
+  void _openOverview(BuildContext context, {String? initialPanel}) {
+    unawaited(
+      context.push(
+        InsightsRoutes.overviewLocation(initialPanel: initialPanel),
+      ),
+    );
   }
 }
 
-class _InsightHubAction extends StatelessWidget {
-  const _InsightHubAction({
+class _CompactInsightHubCard extends ConsumerWidget {
+  const _CompactInsightHubCard({
+    required this.latestTheater,
+    required this.latestReportPayload,
+    required this.simulationState,
+    required this.dense,
+    required this.hasRefreshError,
+  });
+
+  final Map<String, dynamic>? latestTheater;
+  final LearningReport? latestReportPayload;
+  final SimulationState simulationState;
+  final bool dense;
+  final bool hasRefreshError;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contentPadding = dense ? DS.spacing10 : DS.spacing12;
+    final summary = _heroSummary(
+      latestTheater,
+      latestReportPayload,
+      simulationState,
+    );
+
+    return ClipRRect(
+      borderRadius: DS.borderRadius20,
+      child: MaterialStyler(
+        material: AppMaterials.ceramic.copyWith(
+          backgroundGradient: LinearGradient(
+            colors: [
+              DS.info.withValues(alpha: 0.06),
+              DS.surfaceSecondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderColor: DS.info.withValues(alpha: 0.22),
+          borderWidth: 1,
+        ),
+        borderRadius: DS.borderRadius20,
+        padding: EdgeInsets.all(contentPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => context.push(InsightsRoutes.overviewLocation()),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(DS.spacing4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: dense ? 34 : 38,
+                          height: dense ? 34 : 38,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                DS.info.withValues(alpha: 0.9),
+                                DS.brandPrimary.withValues(alpha: 0.82),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: DS.info.withValues(alpha: 0.18),
+                                blurRadius: 22,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.insights_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '学习洞察',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.sparkleTypography.labelLarge
+                                    .copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                summary,
+                                maxLines: dense ? 1 : 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.sparkleTypography.labelSmall
+                                    .copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: DS.textTertiary,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.info.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '进入洞察总览',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.info,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: dense ? DS.spacing8 : DS.spacing10),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _CompactInsightAction(
+                      title: '仿真',
+                      subtitle: _simulationSubtitle(simulationState),
+                      icon: Icons.groups_rounded,
+                      accent: DS.accent,
+                      onTap: () => context.push(
+                        InsightsRoutes.overviewLocation(
+                          initialPanel: 'simulation',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: _CompactInsightAction(
+                      title: '推演',
+                      subtitle: _theaterSubtitle(latestTheater),
+                      icon: Icons.auto_graph_rounded,
+                      accent: DS.info,
+                      onTap: () => context.push(
+                        InsightsRoutes.overviewLocation(
+                          initialPanel: 'theater',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: _CompactInsightAction(
+                      title: '报告',
+                      subtitle: _reportSubtitle(latestReportPayload),
+                      icon: Icons.article_outlined,
+                      accent: DS.success,
+                      onTap: () => context.push(
+                        InsightsRoutes.overviewLocation(initialPanel: 'report'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (hasRefreshError) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                '部分洞察数据尚未刷新，点击后会继续显示已有内容。',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _heroSummary(
+    Map<String, dynamic>? latestTheater,
+    LearningReport? report,
+    SimulationState simulationState,
+  ) {
+    if (simulationState.recommendedSeeds.isNotEmpty) {
+      return '${simulationState.recommendedSeeds.length} 个推荐场景待探索';
+    }
+    if (report != null && report.mastery.isNotEmpty) {
+      return _reportSubtitle(report);
+    }
+    if (latestTheater != null) {
+      return _theaterSubtitle(latestTheater);
+    }
+    return '仿真、推演和报告现在收在同一张卡里';
+  }
+}
+
+class _CompactInsightAction extends StatelessWidget {
+  const _CompactInsightAction({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            padding: const EdgeInsets.all(DS.spacing10),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withValues(alpha: 0.12)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 16, color: accent),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Expanded(
+                  child: Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.3,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _InsightHubQuickAction extends StatelessWidget {
+  const _InsightHubQuickAction({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -223,61 +485,52 @@ class _InsightHubAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accent.withValues(alpha: 0.16)),
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            width: 220,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: accent.withValues(alpha: 0.14)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 18, color: accent),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                ),
+              ],
+            ),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 18, color: accent),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.35,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 }
 
 class _InsightHubStatusBanner extends StatelessWidget {
   const _InsightHubStatusBanner({
-    required this.isShowingStaleData,
     required this.onRetry,
   });
 
-  final bool isShowingStaleData;
   final VoidCallback onRetry;
 
   @override
@@ -302,9 +555,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isShowingStaleData
-                  ? '洞察推荐暂时没有刷新成功，当前先显示已有内容。'
-                  : '洞察中心暂时没有拿到最新数据，你可以立即重试。',
+              '洞察内容暂时没有刷新成功，当前先显示已有内容。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -321,4 +572,39 @@ class _InsightHubStatusBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
+  if (latestTheater == null) {
+    return '最近暂无推演';
+  }
+  final metadata = Map<String, dynamic>.from(
+    latestTheater['metadata'] as Map? ?? const {},
+  );
+  final title = metadata['title']?.toString();
+  if (title != null && title.isNotEmpty) {
+    return title;
+  }
+  return latestTheater['description']?.toString() ?? '继续上次推演';
+}
+
+String _simulationSubtitle(SimulationState simulationState) {
+  if (simulationState.recommendedSeeds.isNotEmpty) {
+    return '${simulationState.recommendedSeeds.length} 个推荐场景';
+  }
+  if (simulationState.session != null) {
+    return '继续 ${simulationState.session!.topic}';
+  }
+  return '开始一轮新模拟';
+}
+
+String _reportSubtitle(LearningReport? report) {
+  if (report == null || report.mastery.isEmpty) {
+    return '最近暂无报告';
+  }
+  final avg = report.mastery
+          .map((item) => item.masteryScore)
+          .fold<double>(0, (sum, value) => sum + value) /
+      report.mastery.length;
+  return '掌握度 ${avg.round()}%';
 }

@@ -83,7 +83,7 @@ async def main() -> int:
                 "description": "强调反例、风险和边界条件",
                 "system_prompt": "你是一位批判性分析专家。回答时先下判断，再补两个边界条件，最后给风险提醒。避免空话。",
                 "base_expert_id": "deep_analyst",
-                "preferred_model_key": "mimo_pro",
+                "preferred_model_key": "glm_5_max",
                 "reasoning_mode": "deep",
             },
         )

@@ -14,6 +14,7 @@ from app.models.cognitive import BehaviorPattern
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import Plan, PlanType
+from app.services.insight_copy import present_pattern_description, present_pattern_name, present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
 
 
@@ -224,7 +225,7 @@ class SeedExtractor:
         rows = (await self.db.execute(stmt)).all()
         seeds: list[SimulationSeed] = []
         for error_id, subject_code, chapter, question_text, latest_analysis, mastery_level in rows:
-            analysis = latest_analysis if isinstance(latest_analysis, dict) else {}
+            analysis = self._coerce_error_analysis(latest_analysis)
             root_cause = str(analysis.get("root_cause") or analysis.get("error_type") or "").strip()
             subject_label = str(chapter or subject_code or "近期错题").strip()
             prompt = root_cause or str(question_text or "").strip()[:90] or "同类题目中出现了重复失误。"
@@ -242,6 +243,20 @@ class SeedExtractor:
                 )
             )
         return seeds
+
+    def _coerce_error_analysis(self, latest_analysis: Any) -> dict[str, Any]:
+        if isinstance(latest_analysis, dict):
+            return latest_analysis
+        if isinstance(latest_analysis, list):
+            # Historical rows sometimes store analysis steps as a list of items.
+            # Prefer the first mapping that carries a meaningful error summary.
+            for item in latest_analysis:
+                if isinstance(item, dict):
+                    root_cause = item.get("root_cause") or item.get("error_type")
+                    if root_cause:
+                        return item
+            return {}
+        return {}
 
     async def _sprint_seeds(self, user_id: UUID) -> list[SimulationSeed]:
         stmt = (
@@ -294,10 +309,15 @@ class SeedExtractor:
         rows = (await self.db.execute(stmt)).all()
         seeds: list[SimulationSeed] = []
         for pattern_id, pattern_name, description, solution_text, confidence in rows:
+            display_name = present_pattern_name(pattern_name)
             seeds.append(
                 SimulationSeed(
-                    topic=f"拆解你的 {pattern_name} 学习定式",
-                    context=description or solution_text or "最近的行为画像显示这里存在稳定模式。",
+                    topic=f"拆解你的 {display_name} 学习定式",
+                    context=(
+                        present_pattern_description(pattern_name, description)
+                        or present_pattern_solution(pattern_name, solution_text)
+                        or "最近的行为画像显示这里存在稳定模式。"
+                    ),
                     tension_point="这类定式往往不是不会，而是在某个决策瞬间重复做出同样选择。",
                     source_type="cognitive",
                     source_ids=[str(pattern_id)],

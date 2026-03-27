@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from app.core.agent_persona import build_agent_persona
 from app.core.agent_profiles import AgentRole, agent_profile_registry
+from app.services.insight_copy import present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.report.report_logger import ReportLogger
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
@@ -18,26 +19,50 @@ class LearningReportAgent:
         self.tools = LearningReportTools(db)
         self.logger = ReportLogger()
 
-    async def generate_report(self, user_id: UUID, section_limit: int = 5) -> dict[str, Any]:
+    async def generate_report(
+        self,
+        user_id: UUID,
+        section_limit: int = 5,
+        *,
+        delivery_mode: str = "full",
+        trigger_source: str = "api",
+    ) -> dict[str, Any]:
         report_id = str(uuid4())
         mastery = await self.tools.query_mastery_scores(user_id)
         patterns = await self.tools.query_error_patterns(user_id)
         timeline = await self.tools.query_study_timeline(user_id)
         learner_voice = await self.tools.interview_learner(user_id)
 
-        sections = DEFAULT_REPORT_SECTIONS[: max(2, min(section_limit, 5))]
-        draft_markdown = await self._compose_markdown(
-            sections=sections,
+        normalized_delivery_mode = self._normalize_delivery_mode(delivery_mode)
+        max_sections = 4 if normalized_delivery_mode == "chat_bridge" else 5
+        sections = DEFAULT_REPORT_SECTIONS[: max(2, min(section_limit, max_sections))]
+        if self._should_use_fallback_draft(
+            delivery_mode=normalized_delivery_mode,
             mastery=mastery,
             patterns=patterns,
             timeline=timeline,
-            learner_voice=learner_voice,
-        )
+        ):
+            draft_markdown = self._fallback_markdown(
+                sections,
+                mastery,
+                patterns,
+                timeline,
+                learner_voice,
+            )
+        else:
+            draft_markdown = await self._compose_markdown(
+                sections=sections,
+                mastery=mastery,
+                patterns=patterns,
+                timeline=timeline,
+                learner_voice=learner_voice,
+            )
         self.logger.log_jsonl(
             report_id,
             {
                 "stage": "draft",
                 "sections": sections,
+                "delivery_mode": normalized_delivery_mode,
                 "mastery": mastery,
                 "patterns": patterns,
                 "timeline": timeline,
@@ -47,15 +72,35 @@ class LearningReportAgent:
         )
         self.logger.log_text(report_id, "Draft learning report generated.")
 
-        reflection = await self._reflect_on_markdown(
-            sections=sections,
+        reflection = self._fallback_reflection(sections, mastery, patterns, timeline)
+        if self._should_run_reflection(
+            delivery_mode=normalized_delivery_mode,
             draft_markdown=draft_markdown,
+            sections=sections,
             mastery=mastery,
             patterns=patterns,
             timeline=timeline,
-        )
-        self.logger.log_jsonl(report_id, {"stage": "reflection", "reflection": reflection})
-        self.logger.log_text(report_id, f"Reflection pass completed. needs_revision={reflection.get('needs_revision')}.")
+        ):
+            reflection = await self._reflect_on_markdown(
+                sections=sections,
+                draft_markdown=draft_markdown,
+                mastery=mastery,
+                patterns=patterns,
+                timeline=timeline,
+            )
+            self.logger.log_jsonl(report_id, {"stage": "reflection", "reflection": reflection})
+            self.logger.log_text(
+                report_id,
+                f"Reflection pass completed. needs_revision={reflection.get('needs_revision')}.",
+            )
+        else:
+            reflection = {
+                **reflection,
+                "needs_revision": False,
+                "revision_brief": "聊天桥接使用快速生成模式，当前报告已满足预览质量要求。",
+            }
+            self.logger.log_jsonl(report_id, {"stage": "reflection_skipped", "reflection": reflection})
+            self.logger.log_text(report_id, "Reflection skipped for fast bridge delivery.")
 
         supplemental_context = await self._expand_context(user_id, reflection)
         if supplemental_context:
@@ -81,7 +126,11 @@ class LearningReportAgent:
             "patterns": patterns,
             "timeline": timeline,
             "reflection": reflection,
+            "quality_mode": "instant_preview" if normalized_delivery_mode == "chat_bridge" else "full_analysis",
+            "delivery_mode": normalized_delivery_mode,
+            "deep_link": "/learning-report",
         }
+        payload["report_preview"] = self._build_report_preview(payload)
         self.logger.log_jsonl(report_id, {"stage": "final", "payload": payload})
         self.logger.log_text(report_id, "Learning report generated successfully.")
         await SystemUpdateService().enqueue(
@@ -97,6 +146,10 @@ class LearningReportAgent:
                     "title": "学习分析报告",
                     "deep_link": "/learning-report",
                     "report_payload": payload,
+                    "report_preview": payload["report_preview"],
+                    "quality_mode": payload["quality_mode"],
+                    "delivery_mode": normalized_delivery_mode,
+                    "trigger_source": trigger_source,
                 },
             ),
         )
@@ -234,6 +287,76 @@ class LearningReportAgent:
             f"{persona.to_prompt_section()}"
         )
 
+    @staticmethod
+    def _normalize_delivery_mode(value: str | None) -> str:
+        normalized = str(value or "full").strip().lower()
+        if normalized in {"chat_bridge", "full"}:
+            return normalized
+        return "full"
+
+    def _should_run_reflection(
+        self,
+        *,
+        delivery_mode: str,
+        draft_markdown: str,
+        sections: list[str],
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+    ) -> bool:
+        if not mastery and not timeline:
+            return False
+        if delivery_mode != "chat_bridge":
+            return True
+        heading_hits = sum(1 for section in sections[:3] if section in draft_markdown)
+        evidence_points = int(bool(mastery)) + int(bool(patterns)) + int(bool(timeline))
+        return len(draft_markdown.strip()) < 260 or heading_hits < 2 or evidence_points < 2
+
+    def _should_use_fallback_draft(
+        self,
+        *,
+        delivery_mode: str,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+    ) -> bool:
+        if delivery_mode != "chat_bridge":
+            return not mastery and not timeline
+        return True
+
+    def _build_report_preview(self, payload: dict[str, Any]) -> dict[str, Any]:
+        mastery = list(payload.get("mastery") or [])
+        patterns = list(payload.get("patterns") or [])
+        sections = [str(item) for item in list(payload.get("sections") or []) if str(item).strip()]
+        weak_nodes = [
+            str(item.get("node_name") or "").strip()
+            for item in mastery[:3]
+            if isinstance(item, dict) and str(item.get("node_name") or "").strip()
+        ]
+        pattern_names = [
+            str(item.get("pattern_name") or "").strip()
+            for item in patterns[:2]
+            if isinstance(item, dict) and str(item.get("pattern_name") or "").strip()
+        ]
+        summary = (
+            f"优先关注 {weak_nodes[0]}，并结合最近学习记录补一轮针对性练习。"
+            if weak_nodes
+            else (
+                f"当前最影响推进节奏的是 {pattern_names[0]}，建议先调整节奏再展开高强度学习。"
+                if pattern_names
+                else "已整理出一份学习状态速览，适合先看结论再展开细节。"
+            )
+        )
+        highlights = weak_nodes or pattern_names or sections[:3]
+        return {
+            "report_id": str(payload.get("report_id") or ""),
+            "markdown": str(payload.get("markdown") or ""),
+            "sections": sections,
+            "mastery": mastery,
+            "summary": summary,
+            "highlights": highlights,
+        }
+
     def _fallback_reflection(
         self,
         sections: list[str],
@@ -291,12 +414,29 @@ class LearningReportAgent:
         recent_text = "；".join(
             f"{item['node_name']} +{item['mastery_delta']:.1f}" for item in timeline[:3]
         ) or "暂无近期学习记录"
+        primary_pattern = patterns[0] if patterns else {}
+        primary_pattern_name = str(primary_pattern.get("pattern_name") or "").strip()
+        primary_pattern_solution = present_pattern_solution(
+            primary_pattern.get("raw_pattern_name") or primary_pattern_name,
+            primary_pattern.get("solution_text"),
+        )
+        action_hint = primary_pattern_solution or (
+            f"先针对 {primary_pattern_name} 做一次最小行动修正。"
+            if primary_pattern_name
+            else "先补前置薄弱点，再进入高强度训练。"
+        )
         lines = [
-            f"# {sections[0]}",
+            "# 学习分析报告",
+            "## 总结速览",
             f"近期最需要关注的知识点：{weak_text}。",
+            (
+                f"当前最影响学习推进的模式是 {primary_pattern_name}。"
+                if primary_pattern_name
+                else f"当前最值得留意的学习模式包括：{pattern_text}。"
+            ),
             "",
             "## 知识掌握度分析",
-            f"当前掌握度最低的节点集中在：{weak_text}。",
+            f"当前需要优先回看的主题集中在：{weak_text}。",
             "",
             "## 薄弱点诊断",
             f"当前行为模式主要表现为：{pattern_text}。",
@@ -305,8 +445,9 @@ class LearningReportAgent:
             str(learner_voice.get("learner_voice") or "建议先补前置，再进入高强度训练。"),
             "",
             "## 行动计划",
-            f"- 先复盘 {weak_text}",
-            "- 选 1 个节点做 20-30 分钟专项练习",
+            f"- 先复盘 {weak_text}，确认最容易卡住的 1 个知识点或任务环节",
+            f"- 立刻执行：{action_hint}",
+            "- 选 1 个节点做 20-30 分钟专项练习，并记录这轮练习后的变化",
             f"- 复盘近期变化：{recent_text}",
         ]
         return "\n".join(lines)

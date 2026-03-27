@@ -6,6 +6,8 @@ import time
 
 import httpx
 
+from _acceptance_common import login as shared_login
+
 
 USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
 PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
@@ -15,23 +17,6 @@ BASE_URL = os.getenv("LOCAL_SMOKE_BASE_URL", "http://127.0.0.1:8080/api/v1")
 def ensure(condition: bool, message: str) -> None:
     if not condition:
         raise RuntimeError(message)
-
-
-def login(client: httpx.Client) -> str:
-    last_error = ""
-    for attempt in range(5):
-        response = client.post(
-            f"{BASE_URL}/auth/login",
-            json={"username": USERNAME, "password": PASSWORD},
-        )
-        if response.status_code == 200:
-            return response.json()["access_token"]
-        last_error = f"{response.status_code} {response.text[:400]}"
-        if response.status_code != 429:
-            break
-        time.sleep(1.5 * (attempt + 1))
-    raise RuntimeError(f"login failed: {last_error}")
-
 
 def poll_until(callback, *, timeout_seconds: int = 25, interval_seconds: float = 1.5):
     deadline = time.monotonic() + timeout_seconds
@@ -46,7 +31,7 @@ def poll_until(callback, *, timeout_seconds: int = 25, interval_seconds: float =
 
 def main() -> None:
     with httpx.Client(timeout=60.0) as client:
-        token = login(client)
+        token = shared_login(client)
         headers = {"Authorization": f"Bearer {token}"}
 
         baseline_fragments = client.get(f"{BASE_URL}/cognitive/fragments", headers=headers)

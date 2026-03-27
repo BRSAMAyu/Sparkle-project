@@ -3,6 +3,8 @@ from datetime import date, timedelta
 
 import requests
 
+from _acceptance_common import login_with_requests
+
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 USERNAME = "chat_test"
@@ -33,18 +35,12 @@ def _request(
         )
     return response
 
-
-def _login() -> str:
-    response = _request(
-        "POST",
-        "/auth/login",
-        json={"username": USERNAME, "password": PASSWORD},
-    )
-    return response.json()["access_token"]
-
-
 def main() -> None:
-    token = _login()
+    token = login_with_requests(
+        auth_base_url=BASE_URL,
+        username=USERNAME,
+        password=PASSWORD,
+    )
 
     list_all = _request("GET", "/plans", token=token).json()
     growth_before = _request("GET", "/plans?type=growth&is_active=true", token=token).json()

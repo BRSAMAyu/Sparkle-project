@@ -1,9 +1,9 @@
 """
-MIMO v2-pro 集成测试
+Xiaomi / GLM 路由集成测试
 
-测试 MIMO 体系的：
+测试当前路由体系的：
 1. 分层路由（STANDARD 和 MAX 层级）
-2. 联网搜索功能
+2. 最高层级模型注册情况
 3. 思考链响应处理
 """
 import pytest
@@ -14,37 +14,39 @@ from app.core.llm_router import LLMRouter, ModelConfig, ModelProvider
 
 
 class TestMIMOPRoTierRouting:
-    """测试 MIMO 分层路由"""
+    """测试分层路由"""
 
     def test_mimo_flash_thinking_is_available_in_standard_tier(self):
-        """验证标准层使用 flash 思考模型而非 mimo_pro"""
+        """验证标准层使用 flash 思考模型而非最高层模型"""
         router = LLMRouter()
 
         standard_models = router._tier_mapping.get(ModelTier.STANDARD, [])
 
         assert "xiaomi_standard_thinking" in standard_models
-        assert "mimo_pro" not in standard_models
+        assert "glm_5_max" not in standard_models
 
-    def test_mimo_pro_is_available_in_max_tier(self):
-        """验证 mimo_pro 被提升到 MAX 层级"""
+    def test_glm_5_max_is_available_in_max_tier(self):
+        """验证 glm_5_max 仍在 MAX 层级"""
         router = LLMRouter()
 
         max_models = router._tier_mapping.get(ModelTier.MAX, [])
 
-        assert "mimo_pro" in max_models
+        assert "glm_5_max" in max_models
+        assert "mimo_pro" not in router._available_models
 
-    def test_mimo_pro_config_has_web_search_enabled(self):
-        """验证 mimo_pro 配置启用了联网搜索"""
+    def test_glm_5_max_config_is_registered(self):
+        """验证 glm_5_max 配置已注册"""
         router = LLMRouter()
 
-        mimo_pro_config = router._available_models.get("mimo_pro")
+        glm_5_max_config = router._available_models.get("glm_5_max")
 
-        assert mimo_pro_config is not None, "mimo_pro 配置应该存在"
-        assert mimo_pro_config.enable_web_search is True, "mimo_pro 应该启用联网搜索"
-        assert mimo_pro_config.thinking_mode == "enabled", "mimo_pro 应该启用思考模式"
+        assert glm_5_max_config is not None, "glm_5_max 配置应该存在"
+        assert glm_5_max_config.provider == ModelProvider.ZHIPU
+        assert glm_5_max_config.model_name == "glm-5"
+        assert glm_5_max_config.tier == ModelTier.MAX
 
     def test_select_model_returns_standard_tier_model_for_standard_task(self):
-        """验证 STANDARD 任务不再默认命中 mimo_pro"""
+        """验证 STANDARD 任务不再默认命中最高层模型"""
         router = LLMRouter()
 
         selection = router.select_model(
@@ -68,33 +70,32 @@ class TestMIMOPRoTierRouting:
         assert selection.model_key in {"dashscope_reason", "deepseek_reason"}
 
 
-class TestMIMOProConfigFields:
-    """测试 mimo_pro 配置字段"""
+class TestMaxConfigFields:
+    """测试最高层模型配置字段"""
 
-    def test_mimo_pro_uses_xiaomi_provider(self):
-        """验证 mimo_pro 使用 XIAOMI 提供商"""
+    def test_glm_5_max_uses_zhipu_provider(self):
+        """验证 glm_5_max 使用 ZHIPU 提供商"""
         router = LLMRouter()
 
-        mimo_pro_config = router._available_models.get("mimo_pro")
+        glm_5_max_config = router._available_models.get("glm_5_max")
 
-        assert mimo_pro_config.provider == ModelProvider.XIAOMI
+        assert glm_5_max_config.provider == ModelProvider.ZHIPU
 
-    def test_mimo_pro_model_name_is_correct(self):
-        """验证 mimo_pro 使用正确的模型名称"""
+    def test_glm_5_max_model_name_is_correct(self):
+        """验证 glm_5_max 使用正确的模型名称"""
         router = LLMRouter()
 
-        mimo_pro_config = router._available_models.get("mimo_pro")
+        glm_5_max_config = router._available_models.get("glm_5_max")
 
-        assert mimo_pro_config.model_name == "mimo-v2-pro"
+        assert glm_5_max_config.model_name == "glm-5"
 
-    def test_mimo_pro_temperature_is_correct(self):
-        """验证 mimo_pro 使用正确的默认温度"""
+    def test_glm_5_max_temperature_is_correct(self):
+        """验证 glm_5_max 使用正确的默认温度"""
         router = LLMRouter()
 
-        mimo_pro_config = router._available_models.get("mimo_pro")
+        glm_5_max_config = router._available_models.get("glm_5_max")
 
-        # mimo-v2-pro 默认温度是 1.0
-        assert mimo_pro_config.temperature == 1.0
+        assert glm_5_max_config.temperature == 0.3
 
 
 class TestMIMOWebSearchTool:
