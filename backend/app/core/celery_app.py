@@ -111,6 +111,8 @@ celery_app.conf.update(
         "daily_report": {"queue": "default"},
         "send_task_reminders": {"queue": "default"},
         "generate_daily_capsules_for_all": {"queue": "default"},
+        "app.core.celery_tasks.check_prediction_accuracy": {"queue": "low_priority"},
+        "app.core.celery_tasks.cleanup_stale_simulation_sessions": {"queue": "low_priority"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -883,6 +885,19 @@ celery_app.conf.beat_schedule = {
         "task": "app.core.celery_tasks.generate_weekly_learning_reports",
         "schedule": crontab(day_of_week="mon", hour=9, minute=0),
         "options": {"queue": "default"}
+    },
+
+    "theater-prediction-accuracy-daily": {
+        "task": "app.core.celery_tasks.check_prediction_accuracy",
+        "schedule": crontab(hour=4, minute=10),
+        "options": {"queue": "low_priority"}
+    },
+
+    "cleanup-stale-simulation-sessions-hourly": {
+        "task": "app.core.celery_tasks.cleanup_stale_simulation_sessions",
+        "schedule": 3600.0,
+        "args": (6,),
+        "options": {"queue": "low_priority"}
     },
 
     "ai-metric-baseline-daily": {

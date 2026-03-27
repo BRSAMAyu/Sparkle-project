@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -150,6 +151,7 @@ class SimulationSession:
 class SimulationEngine:
     SESSION_KEY_PREFIX = "simulation:session:"
     SESSION_TTL_SECONDS = 60 * 60 * 6
+    _local_checkpoints: dict[str, dict[str, Any]] = {}
 
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
@@ -252,7 +254,10 @@ class SimulationEngine:
             scenario_key=normalized_scenario_key,
             participants=participants,
             rounds=[],
-            planned_round_count=self._initial_round_target(template.get("rounds")),
+            planned_round_count=self._initial_round_target(
+                template.get("rounds"),
+                scenario_key=normalized_scenario_key,
+            ),
             user_id=user_id,
             await_user_input=await_user_input,
         ):
@@ -335,6 +340,7 @@ class SimulationEngine:
             planned_round_count = self._normalize_round_target(
                 moderator_decision.round_target,
                 current_rounds=len(rounds),
+                scenario_key=scenario_key,
             )
             round_item = await self._generate_agent_round(
                 topic=topic,
@@ -515,7 +521,7 @@ class SimulationEngine:
             (
                 f"- {participant.name}: role={participant.role_hint}; stance={participant.stance}; "
                 f"strategy={participant.strategy}; response_policy={participant.response_policy}; "
-                f"memory={participant.memory[-3:]}"
+                f"memory={participant.memory[-5:]}"
             )
             for participant in participants
         ) or "- 学习伙伴"
@@ -525,9 +531,29 @@ class SimulationEngine:
                 {
                     "role": "system",
                     "content": (
+                        "You are the moderator of a multi-agent learning simulation.\n"
+                        "## Your Role\n"
+                        "Guide a productive discussion among experts and the learner.\n\n"
+                        "## Decision Criteria\n"
+                        "- Speaker selection: choose the expert whose expertise is most relevant to the current turn_goal. "
+                        "Rotate speakers to avoid repetition.\n"
+                        "- should_pause_for_user: true when the discussion reaches a key decision point, "
+                        "a provocative question is raised, or after 2 or more consecutive agent turns without user input.\n"
+                        "- should_end: true when the discussion has converged on a clear insight, "
+                        "the topic is exhausted, or the learner has engaged meaningfully 2 or more times.\n"
+                        "- interaction_type: use open_question for reflection, forced_choice for concrete decisions, "
+                        "and challenge for provocative counterpoints.\n\n"
+                        "## Scenario Adaptation\n"
+                        "- study_group: encourage collaborative synthesis\n"
+                        "- knowledge_debate: amplify disagreements and require evidence\n"
+                        "- socratic_dialogue: build question chains that deepen thinking\n"
+                        "- case_analysis: ground discussion in concrete scenarios\n"
+                        "- what_if_path: explore hypothetical branches\n"
+                        "- concept_map_build: focus on connection-building\n"
+                        "- error_diagnosis: prioritize root-cause analysis\n\n"
                         "Return strict JSON with keys speaker, reply_target, turn_goal, real_time_insight, "
                         "round_target, should_pause_for_user, should_end, interaction_type, interaction_prompt, "
-                        "interaction_options, suggested_replies. You are the moderator of a multi-agent learning simulation."
+                        "interaction_options, suggested_replies."
                     ),
                 },
                 {
@@ -564,6 +590,7 @@ class SimulationEngine:
             round_target=self._normalize_round_target(
                 payload.get("round_target"),
                 current_rounds=len(rounds),
+                scenario_key=scenario_key,
             ),
             should_pause_for_user=bool(payload.get("should_pause_for_user")),
             should_end=bool(payload.get("should_end")),
@@ -628,7 +655,7 @@ class SimulationEngine:
             "round_target": min(6, max(planned_round_count, 3 + int(len(rounds) >= 2))),
             "should_pause_for_user": should_pause,
             "should_end": len(rounds) + 1 >= planned_round_count and len(rounds) >= 2,
-            "interaction_type": "choice" if scenario_key != "socratic_dialogue" else "open_question",
+            "interaction_type": "forced_choice" if scenario_key != "socratic_dialogue" else "open_question",
             "interaction_prompt": interaction_prompt,
             "interaction_options": [participant.name for participant in participants[:3]],
             "suggested_replies": [
@@ -659,9 +686,13 @@ class SimulationEngine:
             rounds=rounds,
         )
         room_state = "\n".join(
-            f"- {participant.name}: memory={participant.memory[-3:]}"
+            f"- {participant.name}: memory={participant.memory[-5:]}"
             for participant in participants
         ) or "No room state yet."
+        cross_agent_summary = self._cross_agent_summary(
+            participants=participants,
+            speaker_name=speaker.name,
+        )
         transcript = self._latest_exchange(rounds, limit=5)
         data = await analysis_llm.json_call(
             [
@@ -684,8 +715,9 @@ class SimulationEngine:
                         f"Strategy: {speaker.strategy}\n"
                         f"Response policy: {speaker.response_policy}\n"
                         f"Context anchor: {speaker.context_anchor or 'none'}\n"
-                        f"Personal memory: {speaker.memory[-4:]}\n"
+                        f"Personal memory: {speaker.memory[-5:]}\n"
                         f"Room state:\n{room_state}\n"
+                        f"Other participants recent viewpoints:\n{cross_agent_summary or 'No recent cross-agent summary.'}\n"
                         f"Transcript:\n{transcript}\n"
                         f"Reply target: {moderator_decision.reply_target or 'the room'}\n"
                         f"Moderator wants you to reply to: {moderator_decision.reply_target or 'the room'}\n"
@@ -710,51 +742,6 @@ class SimulationEngine:
             "turn_goal": str(payload.get("turn_goal") or moderator_decision.turn_goal).strip() or moderator_decision.turn_goal,
             "speaker_type": "agent",
         }
-
-    async def _generate_round(
-        self,
-        *,
-        topic: str,
-        scenario_key: str,
-        participants: list[dict[str, Any]],
-        round_index: int,
-        round_count: int,
-        previous_rounds: list[dict[str, Any]],
-        template: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        del template
-        participant_objects = [
-            AgentParticipant.from_public_dict(item)
-            for item in participants
-            if isinstance(item, dict)
-        ]
-        for index, participant in enumerate(participant_objects):
-            participant.strategy = self._resolve_strategy(
-                scenario_key=scenario_key,
-                participant=participant,
-                index=index,
-            )
-            participant.response_policy = self._resolve_response_policy(
-                scenario_key=scenario_key,
-                participant=participant,
-                index=index,
-            )
-        moderator_decision = ModeratorDecision(
-            speaker=participant_objects[min(round_index, max(len(participant_objects) - 1, 0))].name
-            if participant_objects
-            else "学习伙伴",
-            reply_target=str(previous_rounds[-1].get("speaker") or "").strip() if previous_rounds else "",
-            turn_goal="synthesize" if round_index + 1 >= max(round_count, 1) else "extend",
-            real_time_insight="旧接口兼容模式下生成的新一轮发言。",
-            round_target=max(round_count, round_index + 1),
-        )
-        return await self._generate_agent_round(
-            topic=topic,
-            scenario_key=scenario_key,
-            participants=participant_objects or [AgentParticipant.from_public_dict({"name": "学习伙伴", "persona": {}})],
-            rounds=previous_rounds,
-            moderator_decision=moderator_decision,
-        )
 
     def _fallback_round_message(
         self,
@@ -815,51 +802,26 @@ class SimulationEngine:
             target_round=len(rounds),
         )
 
-    def _build_interaction_point(
-        self,
+    @staticmethod
+    def _cross_agent_summary(
         *,
-        topic: str,
-        scenario_key: str,
-        participants: list[dict[str, Any]],
-        rounds: list[dict[str, Any]],
-        final_round: bool,
-    ) -> dict[str, Any]:
-        participant_objects = [
-            AgentParticipant.from_public_dict(item)
-            for item in participants
-            if isinstance(item, dict)
-        ]
-        moderator_decision = self._fallback_moderator_decision(
-            topic=topic,
-            scenario_key=scenario_key,
-            participants=participant_objects,
-            rounds=rounds,
-            planned_round_count=max(len(rounds) + 1, 4),
-        )
-        moderator_decision["should_pause_for_user"] = True
-        if final_round:
-            moderator_decision["interaction_prompt"] = (
-                f"围绕“{topic}”已经形成两种走法。现在轮到你：你会更支持哪一边，还是给出第三种学习策略？"
-            )
-        interaction = self._build_user_interaction_point(
-            topic=topic,
-            participants=participant_objects,
-            rounds=rounds,
-            moderator_decision=ModeratorDecision(
-                speaker=str(moderator_decision["speaker"]),
-                reply_target=str(moderator_decision["reply_target"]),
-                turn_goal=str(moderator_decision["turn_goal"]),
-                real_time_insight=str(moderator_decision["real_time_insight"]),
-                round_target=int(moderator_decision["round_target"]),
-                should_pause_for_user=True,
-                should_end=final_round,
-                interaction_type=str(moderator_decision["interaction_type"]),
-                interaction_prompt=str(moderator_decision["interaction_prompt"]),
-                interaction_options=list(moderator_decision["interaction_options"]),
-                suggested_replies=list(moderator_decision["suggested_replies"]),
-            ),
-        )
-        return interaction.to_dict() if interaction else {}
+        participants: list[AgentParticipant],
+        speaker_name: str,
+    ) -> str:
+        lines: list[str] = []
+        for participant in participants:
+            if participant.name == speaker_name or not participant.memory:
+                continue
+            latest = participant.memory[-1]
+            latest_message = str(
+                latest.get("message")
+                or latest.get("insight")
+                or latest.get("turn_goal")
+                or ""
+            ).strip()
+            if latest_message:
+                lines.append(f"- {participant.name} 最近观点: {latest_message}")
+        return "\n".join(lines)
 
     def _update_memories_after_round(
         self,
@@ -891,17 +853,33 @@ class SimulationEngine:
                     }
                 )
 
-    def _initial_round_target(self, configured_rounds: object) -> int:
+    def _initial_round_target(self, configured_rounds: object, *, scenario_key: str) -> int:
         if str(configured_rounds) == "dynamic":
             return 4
-        return self._normalize_round_target(configured_rounds, current_rounds=0)
+        return self._normalize_round_target(
+            configured_rounds,
+            current_rounds=0,
+            scenario_key=scenario_key,
+        )
 
-    def _normalize_round_target(self, requested: object, *, current_rounds: int) -> int:
+    def _normalize_round_target(
+        self,
+        requested: object,
+        *,
+        current_rounds: int,
+        scenario_key: str = "study_group",
+    ) -> int:
         try:
             requested_int = int(requested or 4)
         except (TypeError, ValueError):
             requested_int = 4
-        return max(current_rounds + 1, min(max(requested_int, 3), 6))
+        scenario_max = {
+            "case_analysis": 8,
+            "error_diagnosis": 7,
+            "knowledge_debate": 8,
+            "what_if_path": 6,
+        }.get(str(scenario_key or "study_group"), 6)
+        return max(current_rounds + 1, min(max(requested_int, 3), scenario_max))
 
     def _summarize_rounds(self, topic: str, rounds: list[dict[str, Any]]) -> str:
         if not rounds:
@@ -949,6 +927,7 @@ class SimulationEngine:
     ) -> None:
         payload = session.to_dict()
         payload["user_id"] = str(user_id) if user_id else None
+        payload["last_active_at"] = datetime.now(UTC).isoformat()
         payload["participants"] = [participant.to_public_dict() for participant in participants]
         payload["participant_runtime"] = [
             {
@@ -959,11 +938,15 @@ class SimulationEngine:
             }
             for participant in participants
         ]
-        await cache_service.set(
-            f"{self.SESSION_KEY_PREFIX}{session.id}",
-            payload,
-            ttl=self.SESSION_TTL_SECONDS,
-        )
+        self._local_checkpoints[session.id] = payload
+        try:
+            await cache_service.set(
+                f"{self.SESSION_KEY_PREFIX}{session.id}",
+                payload,
+                ttl=self.SESSION_TTL_SECONDS,
+            )
+        except Exception:
+            return
 
     async def _load_checkpoint(
         self,
@@ -971,7 +954,13 @@ class SimulationEngine:
         session_id: str,
         user_id: UUID | None,
     ) -> dict[str, Any]:
-        payload = await cache_service.get(f"{self.SESSION_KEY_PREFIX}{session_id}")
+        payload: Any = None
+        try:
+            payload = await cache_service.get(f"{self.SESSION_KEY_PREFIX}{session_id}")
+        except Exception:
+            payload = None
+        if not isinstance(payload, dict):
+            payload = self._local_checkpoints.get(session_id)
         if not isinstance(payload, dict):
             raise ValueError("Simulation session not found or expired")
         owner_id = str(payload.get("user_id") or "").strip()

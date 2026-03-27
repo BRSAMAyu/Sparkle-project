@@ -159,6 +159,7 @@ class TaskDetail(TaskBase):
     user_note: str | None = Field(description="User note")
     knowledge_node_id: UUID | None = Field(description="Knowledge node ID")
     tool_result_id: str | None = Field(description="Tool result ID")
+    execution_mode: str | None = Field(default=None, description="Execution mode")
     order_index: int = Field(default=0, description="Display order")
     subtasks_total: int = Field(default=0, description="Total subtasks")
     subtasks_completed: int = Field(default=0, description="Completed subtasks")

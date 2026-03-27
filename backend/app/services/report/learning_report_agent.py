@@ -1,14 +1,23 @@
 from __future__ import annotations
 
+import base64
+import gzip
+import hashlib
+import json
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
+from loguru import logger
+
+from app.core.cache import cache_service
 from app.core.agent_persona import build_agent_persona
 from app.core.agent_profiles import AgentRole, agent_profile_registry
+from app.schemas.notification import NotificationCreate
 from app.services.insight_copy import present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
+from app.services.notification_service import NotificationService
 from app.services.report.report_logger import ReportLogger
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
 from app.services.report.report_tools import LearningReportTools
@@ -17,6 +26,8 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 class LearningReportAgent:
+    CACHE_TTL_SECONDS = 60 * 60 * 24
+
     def __init__(self, db):
         self.db = db
         self.tools = LearningReportTools(db)
@@ -53,6 +64,22 @@ class LearningReportAgent:
         )
 
         normalized_delivery_mode = self._normalize_delivery_mode(delivery_mode)
+        cache_version = self._build_cache_version(
+            mastery=mastery,
+            patterns=patterns,
+            timeline=timeline,
+            learner_voice=learner_voice,
+            starter_focus=starter_focus,
+            chat_inference=chat_inference,
+            delivery_mode=normalized_delivery_mode,
+            trigger_source=trigger_source,
+        )
+        cached_payload = await self._load_cached_report(
+            user_id=user_id,
+            cache_version=cache_version,
+        )
+        if cached_payload is not None:
+            return cached_payload
         max_sections = 4 if normalized_delivery_mode == "chat_bridge" else 5
         sections = DEFAULT_REPORT_SECTIONS[: max(2, min(section_limit, max_sections))]
         if self._should_use_fallback_draft(
@@ -198,7 +225,122 @@ class LearningReportAgent:
                 },
             ),
         )
+        if payload["trigger_summary"].get("mode") in {"bottleneck", "breakthrough"}:
+            await self._push_report_notification(user_id, payload)
+        await self._cache_report(
+            user_id=user_id,
+            cache_version=cache_version,
+            payload=payload,
+        )
         return payload
+
+    async def _load_cached_report(
+        self,
+        *,
+        user_id: UUID,
+        cache_version: str,
+    ) -> dict[str, Any] | None:
+        cached = await cache_service.get(self._cache_key(user_id))
+        if not isinstance(cached, dict):
+            return None
+        if str(cached.get("cache_version") or "").strip() != cache_version:
+            return None
+        payload = cached.get("payload")
+        if not isinstance(payload, dict):
+            return None
+        hydrated = dict(payload)
+        markdown_blob = str(cached.get("markdown_gzip_b64") or "").strip()
+        if markdown_blob:
+            try:
+                hydrated["markdown"] = gzip.decompress(
+                    base64.b64decode(markdown_blob.encode("ascii"))
+                ).decode("utf-8")
+            except Exception:
+                return None
+        return hydrated
+
+    async def _cache_report(
+        self,
+        *,
+        user_id: UUID,
+        cache_version: str,
+        payload: dict[str, Any],
+    ) -> None:
+        compact_payload = dict(payload)
+        markdown = str(compact_payload.pop("markdown", "") or "")
+        await cache_service.set(
+            self._cache_key(user_id),
+            {
+                "cache_version": cache_version,
+                "payload": compact_payload,
+                "markdown_gzip_b64": (
+                    base64.b64encode(gzip.compress(markdown.encode("utf-8"))).decode("ascii")
+                    if markdown
+                    else ""
+                ),
+                "cached_at": datetime.now(UTC).isoformat(),
+            },
+            ttl=self.CACHE_TTL_SECONDS,
+        )
+
+    @staticmethod
+    def _cache_key(user_id: UUID) -> str:
+        return f"report:latest:{user_id}"
+
+    def _build_cache_version(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+        learner_voice: dict[str, Any],
+        starter_focus: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+        delivery_mode: str,
+        trigger_source: str,
+    ) -> str:
+        fingerprint = json.dumps(
+            {
+                "mastery": mastery,
+                "patterns": patterns,
+                "timeline": timeline,
+                "learner_voice": learner_voice,
+                "starter_focus": starter_focus,
+                "chat_inference": chat_inference,
+                "delivery_mode": delivery_mode,
+                "trigger_source": trigger_source,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            default=str,
+        )
+        return hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
+
+    async def _push_report_notification(
+        self,
+        user_id: UUID,
+        payload: dict[str, Any],
+    ) -> None:
+        trigger_summary = dict(payload.get("trigger_summary") or {})
+        try:
+            await NotificationService.create(
+                self.db,
+                user_id,
+                NotificationCreate(
+                    title=str(trigger_summary.get("title") or "学习报告提醒"),
+                    content=str(trigger_summary.get("summary") or "新的学习报告已生成。"),
+                    type="learning_report",
+                    data={
+                        "deep_link": "/learning-report",
+                        "report_id": payload.get("report_id"),
+                        "trigger_mode": trigger_summary.get("mode"),
+                    },
+                ),
+                push_via_websocket=True,
+            )
+        except Exception as exc:
+            logger.warning(f"Learning report notification push failed: {exc}")
+            return
 
     async def _compose_markdown(
         self,

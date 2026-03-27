@@ -61,6 +61,27 @@ class ApiEndpoints {
       '/tasks/$id/next-action-selection';
   static const String taskSuggestions = '/tasks/suggestions';
 
+  // Executions
+  static const String executions = '/executions';
+  static const String executionHealth = '/executions/health';
+  static String classifyTaskExecution(String taskId) =>
+      '/executions/tasks/$taskId/classify';
+  static String handoffTaskExecution(String taskId) =>
+      '/executions/tasks/$taskId/handoff';
+  static String taskExecutionIntents(String taskId) =>
+      '/executions/tasks/$taskId/intents';
+  static String execution(String intentId) => '/executions/$intentId';
+  static String executionRecord(String intentId) =>
+      '/executions/$intentId/record';
+  static String confirmExecutionResult(String recordId) =>
+      '/executions/records/$recordId/confirm';
+  static String rejectExecutionResult(String recordId) =>
+      '/executions/records/$recordId/reject';
+  static String cancelExecution(String intentId) =>
+      '/executions/$intentId/cancel';
+  static String handbackExecution(String intentId) =>
+      '/executions/$intentId/handback';
+
   // Subtasks
   static const String subtasks = '/subtasks';
   static String subtask(String id) => '/subtasks/$id';

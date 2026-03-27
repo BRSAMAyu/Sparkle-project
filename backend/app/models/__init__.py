@@ -60,6 +60,15 @@ from app.models.decision_record import DecisionRecord
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
 from app.models.event import TrackingEvent
+from app.models.execution_intent import (
+    ExecutionIntent,
+    ExecutionIntentStatus,
+    ExecutionMode,
+    ExecutionTargetEnv,
+    ExecutorType,
+    TrustLevel,
+)
+from app.models.execution_record import ExecutionRecord
 from app.models.experiment import (
     ABExperiment,
     ABExperimentAssignment,
@@ -239,6 +248,13 @@ __all__ = [
     "IRTItemParameter",
     "UserIRTAbility",
     "TrackingEvent",
+    "ExecutionIntent",
+    "ExecutionIntentStatus",
+    "ExecutionMode",
+    "ExecutorType",
+    "ExecutionTargetEnv",
+    "TrustLevel",
+    "ExecutionRecord",
     "UserStateSnapshot",
     "StrategyNode",
     "SemanticLink",

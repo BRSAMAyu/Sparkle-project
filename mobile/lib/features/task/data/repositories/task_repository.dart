@@ -5,6 +5,8 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
+import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -70,7 +72,8 @@ class TaskRepository {
       };
       if (filters != null) {
         queryParams.addAll(
-            filters.map((key, value) => MapEntry(key, value.toString())),);
+          filters.map((key, value) => MapEntry(key, value.toString())),
+        );
       }
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.tasks,
@@ -88,17 +91,161 @@ class TaskRepository {
 
   Future<TaskModel> getTask(String id) async {
     if (DemoDataService.isDemoMode) {
-      return DemoDataService().demoTasks.firstWhere((t) => t.id == id,
-          orElse: () => DemoDataService().demoTasks.first,);
+      return DemoDataService().demoTasks.firstWhere(
+            (t) => t.id == id,
+            orElse: () => DemoDataService().demoTasks.first,
+          );
     }
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.task(id),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getTask');
+    }
+  }
+
+  Future<ExecutionIntentModel> handoffTask(
+    String taskId, {
+    String? goal,
+    List<String>? instructions,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return ExecutionIntentModel.fromJson({
+        'id': 'demo_exec_${DateTime.now().millisecondsSinceEpoch}',
+        'task_id': taskId,
+        'execution_mode': 'agent',
+        'executor': 'openclaw',
+        'status': 'succeeded',
+        'trust_level': 'validated',
+        'goal': goal ?? 'Demo AI handoff',
+        'created_at': DateTime.now().toIso8601String(),
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    try {
+      final payload = <String, dynamic>{
+        if (goal != null && goal.trim().isNotEmpty) 'goal': goal.trim(),
+        if (instructions != null && instructions.isNotEmpty)
+          'instructions': instructions,
+      };
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.handoffTaskExecution(taskId),
+        data: payload,
+      );
+      final data =
+          ApiResponseParser.unwrapMap(response.data, action: 'handoffTask');
+      return ExecutionIntentModel.fromJson(data);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'handoffTask');
+    }
+  }
+
+  Future<List<ExecutionIntentModel>> listExecutionIntents(String taskId) async {
+    if (DemoDataService.isDemoMode) {
+      return const [];
+    }
+
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.taskExecutionIntents(taskId),
+      );
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'listExecutionIntents',
+      );
+      return data
+          .map(
+            (json) =>
+                ExecutionIntentModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'listExecutionIntents');
+    }
+  }
+
+  Future<ExecutionRecordModel?> getExecutionRecord(String intentId) async {
+    if (DemoDataService.isDemoMode) {
+      return null;
+    }
+
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.executionRecord(intentId),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      final payload = ApiResponseParser.unwrapMap(
+        data,
+        action: 'getExecutionRecord',
+      );
+      if (payload.isEmpty) return null;
+      return ExecutionRecordModel.fromJson(payload);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      return _handleDioError(e, 'getExecutionRecord');
+    }
+  }
+
+  Future<ExecutionRecordModel> confirmExecutionResult(String recordId) async {
+    if (DemoDataService.isDemoMode) {
+      return ExecutionRecordModel.fromJson({
+        'id': recordId,
+        'execution_intent_id': 'demo_intent',
+        'trust_level': 'trusted',
+        'artifacts': <Object>[],
+      });
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.confirmExecutionResult(recordId),
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'confirmExecutionResult',
+      );
+      return ExecutionRecordModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'confirmExecutionResult');
+    }
+  }
+
+  Future<ExecutionRecordModel> rejectExecutionResult(
+    String recordId, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return ExecutionRecordModel.fromJson({
+        'id': recordId,
+        'execution_intent_id': 'demo_intent',
+        'trust_level': 'raw',
+        'artifacts': <Object>[],
+        'error_category': 'user_rejected',
+        'error_message': reason ?? 'Rejected by user',
+      });
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.rejectExecutionResult(recordId),
+        data: {
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'rejectExecutionResult',
+      );
+      return ExecutionRecordModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'rejectExecutionResult');
     }
   }
 
@@ -114,7 +261,8 @@ class TaskRepository {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.todayTasks,
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getTodayTasks');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'getTodayTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -132,7 +280,10 @@ class TaskRepository {
         ApiEndpoints.recommendedTasks,
         queryParameters: {'limit': limit},
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getRecommendedTasks');
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getRecommendedTasks',
+      );
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -149,10 +300,12 @@ class TaskRepository {
     if (DemoDataService.isDemoMode) {
       return DemoDataService()
           .demoTasks
-          .where((t) =>
-              t.dueDate != null &&
-              t.dueDate!.isAfter(start.subtract(const Duration(days: 1))) &&
-              t.dueDate!.isBefore(end.add(const Duration(days: 1))),)
+          .where(
+            (t) =>
+                t.dueDate != null &&
+                t.dueDate!.isAfter(start.subtract(const Duration(days: 1))) &&
+                t.dueDate!.isBefore(end.add(const Duration(days: 1))),
+          )
           .toList();
     }
     try {
@@ -166,7 +319,10 @@ class TaskRepository {
           'page': 1,
         },
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getTasksByDateRange');
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getTasksByDateRange',
+      );
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -175,7 +331,10 @@ class TaskRepository {
     }
   }
 
-  Future<TaskModel> createTask(TaskCreate task, {bool generateGuide = false}) async {
+  Future<TaskModel> createTask(
+    TaskCreate task, {
+    bool generateGuide = false,
+  }) async {
     if (DemoDataService.isDemoMode) {
       // Mock creation
       final newTask = TaskModel(
@@ -192,7 +351,8 @@ class TaskRepository {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         dueDate: task.dueDate,
-        guideContent: generateGuide ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段' : null,
+        guideContent:
+            generateGuide ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段' : null,
       );
       DemoDataService().demoTasks.add(newTask);
       return newTask;
@@ -203,7 +363,8 @@ class TaskRepository {
         data: task.toJson(),
         queryParameters: generateGuide ? {'generate_guide': 'true'} : null,
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTask');
@@ -211,7 +372,10 @@ class TaskRepository {
   }
 
   /// Create task and return nudges if available
-  Future<TaskCreateResult> createTaskWithNudges(TaskCreate task, {bool generateGuide = false}) async {
+  Future<TaskCreateResult> createTaskWithNudges(
+    TaskCreate task, {
+    bool generateGuide = false,
+  }) async {
     if (DemoDataService.isDemoMode) {
       final newTask = await createTask(task, generateGuide: generateGuide);
       // Mock nudges for demo
@@ -220,7 +384,8 @@ class TaskRepository {
               TaskNudge(
                 type: 'time_adjustment',
                 title: '检测到规划乐观偏差',
-                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟',
+                message:
+                    '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟',
                 suggestedValue: task.estimatedMinutes * 130 ~/ 100,
                 confidence: 0.8,
               ),
@@ -239,12 +404,14 @@ class TaskRepository {
         throw Exception('createTaskWithNudges response is empty');
       }
       // Handle both wrapped and direct formats
-      final taskData = ApiResponseParser.unwrapMap(payload, action: 'createTaskWithNudges');
+      final taskData =
+          ApiResponseParser.unwrapMap(payload, action: 'createTaskWithNudges');
       final nudgesData = payload['nudges'] as List<dynamic>?;
       final taskModel = TaskModel.fromJson(taskData);
       final nudges = nudgesData
-          ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
-          .toList() ?? <TaskNudge>[];
+              ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
+              .toList() ??
+          <TaskNudge>[];
       return TaskCreateResult(task: taskModel, nudges: nudges);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTaskWithNudges');
@@ -279,7 +446,8 @@ class TaskRepository {
         ApiEndpoints.task(id),
         data: task.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'updateTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'updateTask');
@@ -319,7 +487,8 @@ class TaskRepository {
         ApiEndpoints.tasksReorder,
         data: {'task_ids': taskIds},
       );
-      final data = ApiResponseParser.unwrapList(response.data, action: 'reorderTasks');
+      final data =
+          ApiResponseParser.unwrapList(response.data, action: 'reorderTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -347,7 +516,8 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.taskGenerateGuide(id),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'generateGuide');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'generateGuide');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'generateGuide');
@@ -405,7 +575,8 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.startTask(id),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'startTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'startTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
@@ -413,7 +584,10 @@ class TaskRepository {
   }
 
   Future<TaskCompletionResult> completeTask(
-      String id, int actualMinutes, String? note,) async {
+    String id,
+    int actualMinutes,
+    String? note,
+  ) async {
     if (DemoDataService.isDemoMode) {
       final existingIndex =
           DemoDataService().demoTasks.indexWhere((t) => t.id == id);
@@ -461,7 +635,8 @@ class TaskRepository {
         ApiEndpoints.completeTask(id),
         data: taskComplete.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'completeTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'completeTask');
       return TaskCompletionResult.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'completeTask');
@@ -485,7 +660,8 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.abandonTask(id),
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'abandonTask');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'abandonTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'abandonTask');
@@ -498,9 +674,10 @@ class TaskRepository {
         intent: 'learning',
         suggestedNodes: [
           SuggestedNode(
-              name: 'Data Structures',
-              reason: 'Relevant to your text',
-              isNew: false,),
+            name: 'Data Structures',
+            reason: 'Relevant to your text',
+            isNew: false,
+          ),
         ],
         suggestedTags: ['CS'],
         estimatedMinutes: 60,
@@ -512,7 +689,8 @@ class TaskRepository {
         ApiEndpoints.taskSuggestions,
         data: {'input_text': inputText},
       );
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getSuggestions');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getSuggestions');
       return TaskSuggestionResponse.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getSuggestions');
@@ -641,7 +819,9 @@ class TaskRepository {
     }
   }
 
-  Future<Map<String, dynamic>> confirmGeneratedTasks(String toolResultId) async {
+  Future<Map<String, dynamic>> confirmGeneratedTasks(
+    String toolResultId,
+  ) async {
     final response = await _apiClient.post<dynamic>(
       '/tasks/confirm-batch/$toolResultId',
     );

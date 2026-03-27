@@ -428,6 +428,73 @@ def generate_weekly_learning_reports(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.check_prediction_accuracy")
+def check_prediction_accuracy(self):
+    """每日自动回填到期的 Theater 预测准确度。"""
+    from uuid import UUID
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.theater.prediction_theater_service import PredictionTheaterService
+
+    async def _run():
+        if cache_service.redis is None:
+            await cache_service.init_redis()
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return {"users": 0, "updated_predictions": 0}
+
+        from app.services.theater.prediction_theater_service import PredictionAccuracyTracker
+
+        raw_user_ids = await redis_client.smembers(PredictionAccuracyTracker.USER_INDEX_KEY)
+        user_ids = {
+            raw_user_id.decode() if isinstance(raw_user_id, bytes) else str(raw_user_id)
+            for raw_user_id in raw_user_ids
+            if str(raw_user_id).strip()
+        }
+        if not user_ids:
+            async for raw_key in redis_client.scan_iter("theater:prediction:*"):
+                key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
+                cached = await cache_service.get(key)
+                if not isinstance(cached, dict):
+                    continue
+                user_id = str(cached.get("user_id") or "").strip()
+                if user_id:
+                    user_ids.add(user_id)
+
+        updated_predictions = 0
+        async with AsyncSessionLocal() as session:
+            service = PredictionTheaterService(session)
+            for raw_user_id in user_ids:
+                try:
+                    updated_predictions += len(await service.auto_check_predictions(UUID(raw_user_id)))
+                except ValueError:
+                    continue
+        return {"users": len(user_ids), "updated_predictions": updated_predictions}
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Theater prediction accuracy check completed: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to auto-check theater prediction accuracy: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.cleanup_stale_simulation_sessions")
+def cleanup_stale_simulation_sessions(self, max_age_hours: int = 6):
+    """清理超过指定时长未活跃的仿真 session。"""
+    from app.services.simulation.session_cleanup import cleanup_stale_sessions
+
+    try:
+        result = _run_async(cleanup_stale_sessions(max_age_hours=max_age_hours))
+        logger.info(f"✅ Stale simulation sessions cleaned: {result}")
+        return {"cleaned": result}
+    except Exception as exc:
+        logger.error(f"❌ Failed to cleanup stale simulation sessions: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.capture_ai_metric_baseline")
 def capture_ai_metric_baseline(self):
     """Capture AI metric baseline snapshots into Redis."""

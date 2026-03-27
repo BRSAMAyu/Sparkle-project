@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
+from app.core.cache import cache_service
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.plan import Plan, PlanType
 from app.orchestration.context_builder import ContextBuilderMixin
@@ -16,7 +17,7 @@ from app.orchestration.orchestrator import ChatOrchestrator
 from app.tools.base import ToolResult
 from app.tools.report_tool import GenerateLearningReportParams, GenerateLearningReportTool
 from app.services.report.learning_report_agent import LearningReportAgent
-from app.services.simulation.simulation_engine import SimulationEngine
+from app.services.simulation.simulation_engine import ModeratorDecision, SimulationEngine
 from app.services.theater.prediction_theater_service import TheaterNodeAccessError
 from app.services.simulation.seed_extractor import SimulationSeed
 from app.services.theater.prediction_theater_service import PredictionTheaterService
@@ -30,6 +31,18 @@ class _DummyContextBuilder(ContextBuilderMixin):
 
 class _DummyExecutionEngine(ExecutionEngineMixin):
     pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_report_cache():
+    previous_redis = cache_service.redis
+    previous_local_cache = dict(cache_service._local_cache)
+    cache_service.redis = None
+    cache_service._local_cache.clear()
+    yield
+    cache_service._local_cache.clear()
+    cache_service._local_cache.update(previous_local_cache)
+    cache_service.redis = previous_redis
 
 
 @pytest.mark.asyncio
@@ -288,34 +301,120 @@ async def test_generate_learning_report_tool_returns_preview_payload(monkeypatch
     assert result.data["deep_link"] == "/learning-report?report_id=report-001&source_chat_session_id=chat-789"
 
 
-def test_simulation_engine_builds_interaction_point():
-    engine = SimulationEngine()
-    interaction = engine._build_interaction_point(
-        topic="特征值与特征向量",
-        scenario_key="knowledge_debate",
-        participants=[
-            {"name": "优等生"},
-            {"name": "提问者"},
-            {"name": "主持人"},
-        ],
-        rounds=[
-            {
-                "round": 1,
-                "speaker": "优等生",
-                "message": "我认为先理解几何意义，后面推导会更稳。",
-            },
-            {
-                "round": 2,
-                "speaker": "提问者",
-                "message": "如果遇到计算题，还是容易直接陷入公式。",
-            },
-        ],
-        final_round=True,
+@pytest.mark.asyncio
+async def test_learning_report_agent_reuses_cached_payload(monkeypatch):
+    agent = LearningReportAgent(db=object())
+    user_id = uuid4()
+    compose_calls = {"count": 0}
+
+    monkeypatch.setattr(
+        agent.tools,
+        "query_mastery_scores",
+        AsyncMock(return_value=[{"node_name": "矩阵", "mastery_score": 61.0}]),
+    )
+    monkeypatch.setattr(agent.tools, "query_error_patterns", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        agent.tools,
+        "query_study_timeline",
+        AsyncMock(
+            return_value=[
+                {
+                    "node_name": "矩阵",
+                    "study_minutes": 35,
+                    "mastery_delta": 4.0,
+                    "created_at": "2026-03-27T08:00:00",
+                }
+            ],
+        ),
+    )
+    monkeypatch.setattr(agent.tools, "interview_learner", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        agent.tools,
+        "infer_learning_state_from_chat",
+        AsyncMock(return_value={"topics": ["矩阵"]}),
+    )
+    monkeypatch.setattr(agent, "_build_starter_focus", AsyncMock(return_value=[]))
+
+    async def fake_compose_markdown(**kwargs):
+        del kwargs
+        compose_calls["count"] += 1
+        return "# 学习分析报告\n\n- 缓存命中测试"
+
+    monkeypatch.setattr(agent, "_compose_markdown", fake_compose_markdown)
+    monkeypatch.setattr(agent, "_should_run_reflection", lambda **kwargs: False)
+    monkeypatch.setattr(agent, "_push_report_notification", AsyncMock())
+    monkeypatch.setattr(
+        "app.services.report.learning_report_agent.SystemUpdateService.enqueue",
+        AsyncMock(return_value=True),
     )
 
-    assert "你会更支持哪一边" in interaction["prompt"]
-    assert len(interaction["suggested_replies"]) == 3
-    assert any("特征值与特征向量" in item for item in interaction["suggested_replies"])
+    first = await agent.generate_report(
+        user_id,
+        delivery_mode="full",
+        trigger_source="api",
+    )
+    second = await agent.generate_report(
+        user_id,
+        delivery_mode="full",
+        trigger_source="api",
+    )
+
+    assert compose_calls["count"] == 1
+    assert first["report_preview"] == second["report_preview"]
+
+
+def test_simulation_engine_builds_interaction_point():
+    engine = SimulationEngine()
+    participants = [
+        {"name": "优等生"},
+        {"name": "提问者"},
+        {"name": "主持人"},
+    ]
+    participant_objects = engine._build_agent_participants(
+        participants,
+        scenario_key="knowledge_debate",
+    )
+    rounds = [
+        {
+            "round": 1,
+            "speaker": "优等生",
+            "message": "我认为先理解几何意义，后面推导会更稳。",
+        },
+        {
+            "round": 2,
+            "speaker": "提问者",
+            "message": "如果遇到计算题，还是容易直接陷入公式。",
+        },
+    ]
+    moderator_payload = engine._fallback_moderator_decision(
+        topic="特征值与特征向量",
+        scenario_key="knowledge_debate",
+        rounds=rounds,
+        participants=participant_objects,
+        planned_round_count=4,
+    )
+    interaction = engine._build_user_interaction_point(
+        topic="特征值与特征向量",
+        participants=participant_objects,
+        rounds=rounds,
+        moderator_decision=ModeratorDecision(
+            speaker=str(moderator_payload["speaker"]),
+            reply_target=str(moderator_payload["reply_target"]),
+            turn_goal=str(moderator_payload["turn_goal"]),
+            real_time_insight=str(moderator_payload["real_time_insight"]),
+            round_target=int(moderator_payload["round_target"]),
+            should_pause_for_user=True,
+            should_end=True,
+            interaction_type=str(moderator_payload["interaction_type"]),
+            interaction_prompt="围绕“特征值与特征向量”已经形成两种走法。现在轮到你：你会更支持哪一边，还是给出第三种学习策略？",
+            interaction_options=list(moderator_payload["interaction_options"]),
+            suggested_replies=list(moderator_payload["suggested_replies"]),
+        ),
+    )
+
+    assert interaction is not None
+    assert len(interaction.suggested_replies) == 3
+    assert "你会更支持哪一边" in interaction.prompt
 
 
 @pytest.mark.asyncio

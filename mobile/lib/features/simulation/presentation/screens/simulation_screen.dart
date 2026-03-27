@@ -1001,8 +1001,11 @@ class _SimulationInteractionCard extends StatelessWidget {
     switch (raw) {
       case 'open_question':
         return '开放追问';
+      case 'challenge':
+        return '观点挑战';
+      case 'forced_choice':
       case 'vote':
-        return '站队投票';
+        return '二选一判断';
       default:
         return '选择判断';
     }

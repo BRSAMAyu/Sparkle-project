@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -182,6 +184,8 @@ class TheaterTargetContext:
 class PredictionAccuracyTracker:
     PREDICTION_KEY_PREFIX = "theater:prediction:"
     SUMMARY_KEY_PREFIX = "theater:prediction:summary:"
+    USER_INDEX_KEY = "theater:prediction:users"
+    USER_PREDICTION_INDEX_PREFIX = "theater:prediction:user:"
     TTL_SECONDS = 60 * 60 * 24 * 7
 
     async def record_prediction(self, payload: dict[str, Any]) -> None:
@@ -189,6 +193,12 @@ class PredictionAccuracyTracker:
         if not prediction_id:
             return
         await cache_service.set(f"{self.PREDICTION_KEY_PREFIX}{prediction_id}", payload, ttl=self.TTL_SECONDS)
+        redis_client = cache_service.redis
+        user_id = str(payload.get("user_id") or "").strip()
+        if redis_client is not None and user_id:
+            await redis_client.sadd(self.USER_INDEX_KEY, user_id)
+            await redis_client.sadd(f"{self.USER_PREDICTION_INDEX_PREFIX}{user_id}", prediction_id)
+            await redis_client.expire(f"{self.USER_PREDICTION_INDEX_PREFIX}{user_id}", self.TTL_SECONDS)
 
     async def record_actual(
         self,
@@ -292,6 +302,11 @@ class PredictionTheaterService:
             horizon_days=max(7, min(horizon_days, 30)),
             study_preferences=study_preferences,
             pattern_names=pattern_names,
+            risk_overrides=(
+                await self._assess_step_risks(backbone, mastery_map)
+                if target_context.resolution_mode == "free_mode"
+                else None
+            ),
         )
         selected_prediction = options[0].to_dict() if options else {}
         graph_bundle = {"nodes": [], "edges": []}
@@ -315,6 +330,7 @@ class PredictionTheaterService:
         prediction_id = str(uuid4())
         payload = {
             "prediction_id": prediction_id,
+            "user_id": str(user_id),
             "topic": topic,
             "target_node_id": target_context.target_node_id,
             "target_name": target_context.name,
@@ -447,6 +463,9 @@ class PredictionTheaterService:
             temperature=0.2,
         )
         parsed = payload if isinstance(payload, dict) else fallback
+        for field in ("target_name", "description", "prerequisites", "milestones"):
+            if field not in parsed or parsed.get(field) in (None, "", []):
+                parsed[field] = self._default_free_mode_field(field, topic, fallback=fallback)
         target_name = str(parsed.get("target_name") or fallback["target_name"]).strip() or fallback["target_name"]
         description = str(parsed.get("description") or fallback["description"]).strip() or fallback["description"]
         prerequisites = self._coerce_string_list(parsed.get("prerequisites")) or list(fallback["prerequisites"])
@@ -468,6 +487,24 @@ class PredictionTheaterService:
             resolution_mode="free_mode",
             backbone=backbone,
         )
+
+    def _default_free_mode_field(
+        self,
+        field: str,
+        topic: str,
+        *,
+        fallback: dict[str, Any] | None = None,
+    ) -> Any:
+        base = fallback or self._fallback_free_mode_target(topic)
+        if field == "target_name":
+            return base["target_name"]
+        if field == "description":
+            return base["description"]
+        if field == "prerequisites":
+            return list(base["prerequisites"])
+        if field == "milestones":
+            return list(base["milestones"])
+        return ""
 
     def _fallback_free_mode_target(self, topic: str) -> dict[str, Any]:
         terms = _normalized_topic_terms(topic)
@@ -502,6 +539,92 @@ class PredictionTheaterService:
             if normalized and normalized not in deduped:
                 deduped.append(normalized)
         return deduped
+
+    async def _assess_step_risks(
+        self,
+        steps: list[dict[str, Any]],
+        user_mastery: dict[str, float],
+    ) -> list[str]:
+        if not steps:
+            return []
+        cache_key = self._risk_assessment_cache_key(
+            steps=steps,
+            user_mastery=user_mastery,
+        )
+        cached = await cache_service.get(cache_key)
+        if isinstance(cached, list) and cached:
+            return [str(item).strip().lower() for item in cached]
+        serialized_steps = [
+            {
+                "id": str(step.get("id") or ""),
+                "name": str(step.get("name") or step.get("node_name") or ""),
+                "current_mastery": round(user_mastery.get(str(step.get("id") or ""), 0.0), 2),
+            }
+            for step in steps
+        ]
+        fallback = [
+            self._risk_level_for_step(
+                current_mastery=float(item.get("current_mastery") or 0.0),
+                index=index,
+                total=len(serialized_steps),
+            )
+            for index, item in enumerate(serialized_steps)
+        ]
+        payload = await analysis_llm.json_call(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "请返回严格 JSON 数组。"
+                        "数组中的每一项都必须是 low、medium、high 之一，表示学习步骤的风险等级。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "请根据每个学习步骤的标题和当前掌握度，判断它对当前用户的推进风险。\n"
+                        f"步骤数据：{json.dumps(serialized_steps, ensure_ascii=False)}"
+                    ),
+                },
+            ],
+            fallback=fallback,
+            temperature=0.15,
+        )
+        if not isinstance(payload, list):
+            return fallback
+        normalized: list[str] = []
+        for index, item in enumerate(payload[: len(serialized_steps)]):
+            level = str(item).strip().lower()
+            normalized.append(level if level in {"low", "medium", "high"} else fallback[index])
+        while len(normalized) < len(serialized_steps):
+            normalized.append(fallback[len(normalized)])
+        await cache_service.set(cache_key, normalized, ttl=60 * 60 * 12)
+        return normalized
+
+    @staticmethod
+    def _risk_assessment_cache_key(
+        *,
+        steps: list[dict[str, Any]],
+        user_mastery: dict[str, float],
+    ) -> str:
+        fingerprint = json.dumps(
+            {
+                "steps": [
+                    {
+                        "id": str(step.get("id") or ""),
+                        "name": str(step.get("name") or step.get("node_name") or ""),
+                    }
+                    for step in steps
+                ],
+                "mastery": {
+                    str(key): round(float(value), 2)
+                    for key, value in sorted(user_mastery.items())
+                },
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        return f"theater:risk-assessment:{hashlib.sha256(fingerprint.encode('utf-8')).hexdigest()}"
 
     async def simulate_what_if(
         self,
@@ -840,6 +963,111 @@ class PredictionTheaterService:
     async def get_accuracy_summary(self, prediction_id: str) -> dict[str, Any] | None:
         return await self.accuracy.get_summary(prediction_id)
 
+    async def auto_check_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
+        pending_predictions = await self._get_pending_predictions(user_id)
+        today = _utcnow().date()
+        results: list[dict[str, Any]] = []
+        for prediction in pending_predictions:
+            accuracy_tracking = dict(prediction.get("accuracy_tracking") or {})
+            due_on = str(accuracy_tracking.get("due_on") or "").strip()
+            if not due_on:
+                continue
+            try:
+                due_date = date.fromisoformat(due_on)
+            except ValueError:
+                continue
+            if due_date > today:
+                continue
+            actual = await self._compute_actual_from_prediction(user_id, prediction)
+            if not actual:
+                continue
+            summary = await self.record_actual_outcome(
+                user_id=user_id,
+                prediction_id=str(prediction.get("prediction_id") or ""),
+                actual_completion_rate=actual.get("completion"),
+                actual_mastery=actual.get("mastery"),
+            )
+            results.append(summary)
+        return results
+
+    async def _get_pending_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return []
+        results: list[dict[str, Any]] = []
+        indexed_prediction_ids = await redis_client.smembers(
+            f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
+        )
+        prediction_keys = [
+            f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
+            for raw_id in indexed_prediction_ids
+        ]
+        if not prediction_keys:
+            async for raw_key in redis_client.scan_iter(f"{self.accuracy.PREDICTION_KEY_PREFIX}*"):
+                key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
+                prediction_keys.append(key)
+        for key in prediction_keys:
+            cached = await cache_service.get(key)
+            if not isinstance(cached, dict):
+                continue
+            if str(cached.get("user_id") or "").strip() != str(user_id):
+                continue
+            accuracy_tracking = dict(cached.get("accuracy_tracking") or {})
+            if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
+                continue
+            results.append(cached)
+        return results
+
+    async def _compute_actual_from_prediction(
+        self,
+        user_id: UUID,
+        prediction: dict[str, Any],
+    ) -> dict[str, float] | None:
+        resolved_mastery: float | None = None
+        target_node_id = self._maybe_uuid(prediction.get("target_node_id"))
+        if target_node_id is not None:
+            status = await self.db.get(UserNodeStatus, (user_id, target_node_id))
+            if status is not None:
+                resolved_mastery = float(status.mastery_score or 0.0)
+        if resolved_mastery is None:
+            selected_prediction = dict(prediction.get("selected_prediction") or {})
+            route_steps = [
+                step
+                for step in list(selected_prediction.get("steps") or [])
+                if isinstance(step, dict)
+            ]
+            candidate_node_ids = [
+                self._maybe_uuid(step.get("node_id"))
+                for step in route_steps
+            ]
+            valid_node_ids = [node_id for node_id in candidate_node_ids if node_id is not None]
+            if valid_node_ids:
+                result = await self.db.execute(
+                    select(UserNodeStatus.mastery_score).where(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.node_id.in_(valid_node_ids),
+                    )
+                )
+                mastery_scores = [float(score or 0.0) for score in result.scalars().all()]
+                if mastery_scores:
+                    resolved_mastery = sum(mastery_scores) / len(mastery_scores)
+
+        resolved_completion: float | None = None
+        adopted_plan_id = self._maybe_uuid(prediction.get("adopted_plan_id"))
+        if adopted_plan_id is not None:
+            from app.models.plan import Plan
+
+            plan = await self.db.get(Plan, adopted_plan_id)
+            if plan is not None:
+                resolved_completion = float(plan.progress or 0.0)
+
+        if resolved_mastery is None and resolved_completion is None:
+            return None
+        return {
+            "mastery": float(resolved_mastery or 0.0),
+            "completion": float(resolved_completion or 0.0),
+        }
+
     async def _resolve_target_node(
         self,
         *,
@@ -1137,6 +1365,7 @@ class PredictionTheaterService:
         self,
         backbone: list[dict[str, Any]],
         mastery_map: dict[str, float],
+        risk_overrides: list[str] | None = None,
     ) -> dict[str, Any]:
         nodes = []
         ordered_ids: list[str] = []
@@ -1152,7 +1381,15 @@ class PredictionTheaterService:
                     "description": str(item.get("description") or "自由模式推演阶段"),
                     "current_mastery": round(current_mastery, 2),
                     "predicted_mastery": round(_clamp(current_mastery + 16 - index, 12, 92), 2),
-                    "risk_level": "high" if index < max(total - 2, 1) else "medium",
+                    "risk_level": (
+                        str(risk_overrides[index]).strip().lower()
+                        if risk_overrides and index < len(risk_overrides)
+                        else self._risk_level_for_step(
+                            current_mastery=current_mastery,
+                            index=index,
+                            total=total,
+                        )
+                    ),
                 }
             )
         edges = [
@@ -1176,6 +1413,7 @@ class PredictionTheaterService:
         horizon_days: int,
         study_preferences: dict[str, Any],
         pattern_names: list[str],
+        risk_overrides: list[str] | None = None,
     ) -> list[TheaterPathOption]:
         node_names = [str(item.get("name") or "") for item in backbone]
         average_mastery = sum(mastery_map.get(str(item["id"]), 0.0) for item in backbone) / max(len(backbone), 1)
@@ -1226,7 +1464,15 @@ class PredictionTheaterService:
                 node_id = str(item.get("id") or "")
                 current_mastery = mastery_map.get(node_id, 0.0)
                 predicted_mastery = _clamp(current_mastery + (18 - step_index * 1.5) + float(strategy["mastery_bias"]), 8, 100)
-                risk_level = "high" if current_mastery < 45 else ("medium" if current_mastery < 70 else "low")
+                risk_level = (
+                    str(risk_overrides[step_index - 1]).strip().lower()
+                    if risk_overrides and step_index - 1 < len(risk_overrides)
+                    else self._risk_level_for_step(
+                        current_mastery=current_mastery,
+                        index=step_index - 1,
+                        total=total_steps,
+                    )
+                )
                 if strategy["strategy_type"] == "breakthrough" and step_index == 1:
                     risk_level = "medium" if risk_level == "high" else risk_level
                 estimated_minutes = int(_clamp(session_minutes + (6 if step_index == total_steps else 0), 25, 95))
@@ -1295,6 +1541,19 @@ class PredictionTheaterService:
                 )
             )
         return options
+
+    @staticmethod
+    def _risk_level_for_step(
+        *,
+        current_mastery: float,
+        index: int,
+        total: int,
+    ) -> str:
+        if current_mastery < 45:
+            return "high"
+        if current_mastery < 70:
+            return "medium"
+        return "medium" if index < max(total - 2, 1) else "low"
 
     async def _build_discussion(
         self,

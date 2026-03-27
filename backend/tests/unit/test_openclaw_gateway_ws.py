@@ -1,0 +1,186 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from app.adapters.openclaw.config import OpenClawConfig
+from app.adapters.openclaw.gateway_ws_client import OpenClawGatewayWebSocketClient
+
+
+class _FakeWebSocket:
+    def __init__(self, frames: list[dict]):
+        self._frames = [json.dumps(frame) for frame in frames]
+        self.sent: list[dict] = []
+
+    async def recv(self):
+        if not self._frames:
+            raise AssertionError("No more frames queued for FakeWebSocket.recv()")
+        return self._frames.pop(0)
+
+    async def send(self, message: str):
+        self.sent.append(json.loads(message))
+
+
+class _FakeConnect:
+    def __init__(self, websocket: _FakeWebSocket):
+        self._websocket = websocket
+
+    async def __aenter__(self):
+        return self._websocket
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
+def _make_config() -> OpenClawConfig:
+    return OpenClawConfig(
+        enabled=True,
+        gateway_url="http://openclaw.local",
+        auth_token="token",
+        default_agent_id="main",
+        transport="gateway_ws",
+        ws_url="ws://openclaw.local",
+        ws_allow_insecure_auth=True,
+        ws_client_id="sparkle-backend",
+        ws_client_version="0.1.0",
+    )
+
+
+@pytest.mark.asyncio
+async def test_gateway_ws_execute_returns_approval_result(monkeypatch) -> None:
+    websocket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-1", "ts": 1}},
+            {"type": "res", "id": "sparkle-1", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {
+                "type": "res",
+                "id": "sparkle-2",
+                "ok": True,
+                "payload": {
+                    "runId": "run-1",
+                    "acceptedAt": "2026-03-27T00:00:00Z",
+                    "sessionKey": "sparkle:main:user:task",
+                },
+            },
+            {
+                "type": "event",
+                "event": "exec.approval.requested",
+                "payload": {
+                    "approvalId": "approval-1",
+                    "systemRunPlan": {"rawCommand": "rg -n TODO", "cwd": "/tmp"},
+                },
+            },
+        ]
+    )
+    monkeypatch.setattr(
+        "app.adapters.openclaw.gateway_ws_client.websockets.connect",
+        lambda *args, **kwargs: _FakeConnect(websocket),
+    )
+
+    client = OpenClawGatewayWebSocketClient(_make_config())
+    response = await client.execute(
+        {
+            "agentId": "main",
+            "sessionKey": "sparkle:main:user:task",
+            "message": "hello",
+            "idempotencyKey": "idempotency-1",
+        },
+        timeout_seconds=30,
+    )
+
+    assert response["status"] == "requires_action"
+    assert response["approval"]["id"] == "approval-1"
+    assert response["required_action"]["approval_id"] == "approval-1"
+    assert websocket.sent[0]["method"] == "connect"
+    assert websocket.sent[1]["method"] == "agent"
+
+
+@pytest.mark.asyncio
+async def test_gateway_ws_execute_collects_output_and_waits_for_completion(monkeypatch) -> None:
+    websocket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-1", "ts": 1}},
+            {"type": "res", "id": "sparkle-1", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {
+                "type": "res",
+                "id": "sparkle-2",
+                "ok": True,
+                "payload": {
+                    "runId": "run-2",
+                    "acceptedAt": "2026-03-27T00:00:00Z",
+                    "sessionKey": "sparkle:main:user:task",
+                },
+            },
+            {
+                "type": "event",
+                "event": "agent",
+                "payload": {"stream": "assistant", "delta": '{"summary":"done"}'},
+            },
+            {
+                "type": "event",
+                "event": "agent",
+                "payload": {"stream": "lifecycle", "phase": "end"},
+            },
+            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"status": "ok"}},
+        ]
+    )
+    monkeypatch.setattr(
+        "app.adapters.openclaw.gateway_ws_client.websockets.connect",
+        lambda *args, **kwargs: _FakeConnect(websocket),
+    )
+
+    client = OpenClawGatewayWebSocketClient(_make_config())
+    response = await client.execute(
+        {
+            "agentId": "main",
+            "sessionKey": "sparkle:main:user:task",
+            "message": "hello",
+            "idempotencyKey": "idempotency-2",
+        },
+        timeout_seconds=30,
+    )
+
+    assert response["status"] == "completed"
+    assert response["output"][0]["content"][0]["text"] == '{"summary":"done"}'
+    assert websocket.sent[2]["method"] == "agent.wait"
+
+
+@pytest.mark.asyncio
+async def test_gateway_ws_resolve_approval_resumes_run(monkeypatch) -> None:
+    websocket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-1", "ts": 1}},
+            {"type": "res", "id": "sparkle-1", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {"type": "res", "id": "sparkle-2", "ok": True, "payload": {"status": "accepted"}},
+            {
+                "type": "event",
+                "event": "agent",
+                "payload": {"stream": "assistant", "delta": '{"summary":"approved"}'},
+            },
+            {
+                "type": "event",
+                "event": "agent",
+                "payload": {"stream": "lifecycle", "phase": "end"},
+            },
+            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"status": "ok"}},
+        ]
+    )
+    monkeypatch.setattr(
+        "app.adapters.openclaw.gateway_ws_client.websockets.connect",
+        lambda *args, **kwargs: _FakeConnect(websocket),
+    )
+
+    client = OpenClawGatewayWebSocketClient(_make_config())
+    response = await client.resolve_approval(
+        approval_id="approval-1",
+        decision="allow-once",
+        run_id="run-3",
+        session_key="sparkle:main:user:task",
+        timeout_seconds=30,
+    )
+
+    assert response["status"] == "completed"
+    assert response["output"][0]["content"][0]["text"] == '{"summary":"approved"}'
+    assert websocket.sent[1]["method"] == "exec.approval.resolve"
+    assert websocket.sent[2]["method"] == "agent.wait"

@@ -578,113 +578,268 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         chatMessage.agentCollaboration?['report_deep_link']?.toString();
     final sourceChatSessionId =
         chatMessage.agentCollaboration?['source_chat_session_id']?.toString();
-
-    unawaited(
-      showSensoryModalBottomSheet<void>(
-        context: context,
-        backgroundColor: DS.overlay30.withValues(alpha: 0),
-        isScrollControlled: true,
-        builder: (sheetContext) => DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(sheetContext).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    final pageSpecs = <_AccessoryPreviewPage>[
+      ..._actionableWidgets.map(
+        (w) {
+          final actionable = (w.data['id'] ??
+                  w.data['tool_result_id'] ??
+                  w.data['intervention_id'] ??
+                  w.data['request_id']) !=
+              null;
+          return _AccessoryPreviewPage(
+            title: '行动建议',
+            subtitle: '继续完成这一步，或者先确认任务和计划。',
+            child: ActionCard(
+              action: w,
+              onConfirm: actionable && widget.onActionConfirm != null
+                  ? () => widget.onActionConfirm!(w)
+                  : null,
+              onDismiss: actionable && widget.onActionDismiss != null
+                  ? () => widget.onActionDismiss!(w)
+                  : null,
+              onConfirmTasks: (toolResultId) async {
+                final planId =
+                    w.data['plan_id']?.toString() ?? w.data['planId']?.toString();
+                await _confirmGeneratedTasks(
+                  toolResultId: toolResultId,
+                  planId: planId,
+                );
+              },
+              onConfirmAllTasks: (toolResultId) async {
+                final planId =
+                    w.data['plan_id']?.toString() ?? w.data['planId']?.toString();
+                await _confirmGeneratedTasks(
+                  toolResultId: toolResultId,
+                  planId: planId,
+                );
+              },
+              onPlanNavigation: (planId) {
+                unawaited(ref.read(planListProvider.notifier).refresh());
+              },
+              onWidgetAction: widget.onWidgetAction,
+            ),
+          );
+        },
+      ),
+      if (predictionPreview != null && predictionPreview.isNotEmpty)
+        _AccessoryPreviewPage(
+          title: '推演剧场',
+          subtitle: '先快速看路径，再决定要不要展开完整推演。',
+          child: _buildTheaterPreviewCard(
+            context,
+            preview: predictionPreview,
+            deepLink: theaterDeepLink,
+            sourceChatSessionId: sourceChatSessionId,
           ),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(DS.spacing16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '附加内容',
-                    style:
-                        Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+        ),
+      if (simulationPreview != null && simulationPreview.isNotEmpty)
+        _AccessoryPreviewPage(
+          title: '学习仿真',
+          subtitle: '这里是当前讨论的精简舞台，左右滑动可以比较不同入口。',
+          child: _buildSimulationPreviewCard(
+            context,
+            preview: simulationPreview,
+            deepLink: simulationDeepLink,
+            sourceChatSessionId: sourceChatSessionId,
+          ),
+        ),
+      if (reportPreview != null && reportPreview.isNotEmpty)
+        _AccessoryPreviewPage(
+          title: '学习报告',
+          subtitle: '先看最核心的诊断，再决定是否进入完整报告页。',
+          child: _buildReportPreviewCard(
+            context,
+            preview: reportPreview,
+            deepLink: reportDeepLink,
+            sourceChatSessionId: sourceChatSessionId,
+          ),
+        ),
+    ];
+    if (pageSpecs.isEmpty) {
+      return;
+    }
+    final pageController = PageController();
+    final currentPage = ValueNotifier<int>(0);
+    final dialogFuture = showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '附加内容',
+      barrierColor: DS.overlay30.withValues(alpha: 0.68),
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (dialogContext, _, __) => SafeArea(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              height: MediaQuery.of(dialogContext).size.height * 0.72,
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(dialogContext).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
-                  const SizedBox(height: DS.spacing12),
-                  if (_actionableWidgets.isNotEmpty) ...[
-                    ..._actionableWidgets.map(
-                      (w) {
-                        final actionable = (w.data['id'] ??
-                                w.data['tool_result_id'] ??
-                                w.data['intervention_id'] ??
-                                w.data['request_id']) !=
-                            null;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: DS.spacing12),
-                          child: ActionCard(
-                            action: w,
-                            onConfirm:
-                                actionable && widget.onActionConfirm != null
-                                    ? () => widget.onActionConfirm!(w)
-                                    : null,
-                            onDismiss:
-                                actionable && widget.onActionDismiss != null
-                                    ? () => widget.onActionDismiss!(w)
-                                    : null,
-                            onConfirmTasks: (toolResultId) async {
-                              final planId = w.data['plan_id']?.toString() ??
-                                  w.data['planId']?.toString();
-                              await _confirmGeneratedTasks(
-                                toolResultId: toolResultId,
-                                planId: planId,
-                              );
-                            },
-                            onConfirmAllTasks: (toolResultId) async {
-                              final planId = w.data['plan_id']?.toString() ??
-                                  w.data['planId']?.toString();
-                              await _confirmGeneratedTasks(
-                                toolResultId: toolResultId,
-                                planId: planId,
-                              );
-                            },
-                            onPlanNavigation: (planId) {
-                              unawaited(
-                                ref.read(planListProvider.notifier).refresh(),
-                              );
-                            },
-                            onWidgetAction: widget.onWidgetAction,
+                ],
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 10, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '附加内容',
+                            style: Theme.of(dialogContext)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: currentPage,
+                      builder: (context, pageIndex, _) {
+                        final page = pageSpecs[pageIndex];
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    page.title,
+                                    style: Theme.of(dialogContext)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    page.subtitle,
+                                    style: Theme.of(dialogContext)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: DS.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (pageSpecs.length > 1)
+                              Row(
+                                children: List.generate(
+                                  pageSpecs.length,
+                                  (index) => AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    margin: EdgeInsets.only(
+                                      left: index == 0 ? 0 : 6,
+                                      top: 8,
+                                    ),
+                                    width: index == pageIndex ? 18 : 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: index == pageIndex
+                                          ? Theme.of(dialogContext)
+                                              .colorScheme
+                                              .primary
+                                          : Theme.of(dialogContext)
+                                              .colorScheme
+                                              .outlineVariant,
+                                      borderRadius:
+                                          BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),
-                  ],
-                  if (predictionPreview != null && predictionPreview.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: DS.spacing8),
-                      child: _buildTheaterPreviewCard(
-                        sheetContext,
-                        preview: predictionPreview,
-                        deepLink: theaterDeepLink,
-                        sourceChatSessionId: sourceChatSessionId,
-                      ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: PageView(
+                      controller: pageController,
+                      onPageChanged: (index) => currentPage.value = index,
+                      children: pageSpecs
+                          .map(
+                            (page) => SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: _AccessoryPreviewShell(
+                                child: page.child,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
-                  if (simulationPreview != null && simulationPreview.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: DS.spacing8),
-                      child: _buildSimulationPreviewCard(
-                        sheetContext,
-                        preview: simulationPreview,
-                        deepLink: simulationDeepLink,
-                        sourceChatSessionId: sourceChatSessionId,
-                      ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Row(
+                      children: [
+                        if (pageSpecs.length > 1)
+                          Expanded(
+                            child: Text(
+                              '左右滑动查看不同预览',
+                              style: Theme.of(dialogContext)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                          )
+                        else
+                          const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          label: const Text('关闭'),
+                        ),
+                      ],
                     ),
-                  if (reportPreview != null && reportPreview.isNotEmpty)
-                    _buildReportPreviewCard(
-                      sheetContext,
-                      preview: reportPreview,
-                      deepLink: reportDeepLink,
-                      sourceChatSessionId: sourceChatSessionId,
-                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+      transitionBuilder: (dialogContext, animation, _, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(
+            opacity: curved,
+            child: child,
+          ),
+        );
+      },
+    );
+    unawaited(
+      dialogFuture.whenComplete(() {
+        pageController.dispose();
+        currentPage.dispose();
+      }),
     );
   }
 
@@ -1392,6 +1547,78 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     await ref.read(chatProvider.notifier).sendMessage(normalized);
   }
 
+  List<String> _recentTopicHints() {
+    final messages = ref.read(chatProvider).messages;
+    final recentText = messages
+        .reversed
+        .take(6)
+        .map((item) => item.content)
+        .where((item) => item.trim().isNotEmpty)
+        .join(' ');
+    final hints = <String>{};
+    final tagSignals = <String, List<String>>{
+      '考试': ['考试', '考点', '测验', '刷题'],
+      '面试': ['面试', '答辩', '自我介绍'],
+      '复盘': ['复盘', '总结', '回顾', '反思'],
+      '计划': ['计划', '安排', '排期', '日程', '路线'],
+      '错题': ['错题', '报错', '错误', '卡点', '诊断'],
+      '表达': ['表达', '口语', '写作', '论文', '讲解', '陈述'],
+    };
+    for (final entry in tagSignals.entries) {
+      if (entry.value.any(recentText.contains)) {
+        hints.add(entry.key);
+      }
+    }
+    final normalized = recentText.replaceAll(
+      RegExp(r'[^\u4e00-\u9fffA-Za-z0-9 ]'),
+      ' ',
+    );
+    final tokenCounts = <String, int>{};
+    final stopWords = <String>{
+      '这个',
+      '那个',
+      '今天',
+      '现在',
+      '学习',
+      '感觉',
+      '然后',
+      '因为',
+      '所以',
+      '如果',
+      '但是',
+      'about',
+      'there',
+      'which',
+    };
+    for (final match
+        in RegExp(r'[\u4e00-\u9fff]{2,6}|[A-Za-z]{4,}').allMatches(normalized)) {
+      final token = match.group(0)?.trim() ?? '';
+      if (token.isEmpty || stopWords.contains(token)) {
+        continue;
+      }
+      tokenCounts[token] = (tokenCounts[token] ?? 0) + 1;
+    }
+    final dynamicTokens = tokenCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    for (final entry in dynamicTokens.take(3)) {
+      hints.add(entry.key);
+    }
+    return hints.toList();
+  }
+
+  List<_InlinePromptAction> _dedupePromptActions(
+    List<_InlinePromptAction> actions,
+  ) {
+    final prompts = <String>{};
+    final deduped = <_InlinePromptAction>[];
+    for (final action in actions) {
+      if (prompts.add(action.prompt)) {
+        deduped.add(action);
+      }
+    }
+    return deduped.take(3).toList();
+  }
+
   List<_InlinePromptAction> _theaterPromptActions(
     Map<String, dynamic> preview,
   ) {
@@ -1431,7 +1658,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       );
     }
-    return actions;
+    final recentHints = _recentTopicHints();
+    if (recentHints.contains('考试')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '考试重点是什么',
+          prompt: '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。',
+          onTap: () => _continueInlinePrompt(
+            '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。',
+          ),
+        ),
+      );
+    }
+    if (recentHints.contains('计划')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '给我排成计划',
+          prompt: '把「$topic」这条路径改写成 7 天可执行的小计划。',
+          onTap: () => _continueInlinePrompt(
+            '把「$topic」这条路径改写成 7 天可执行的小计划。',
+          ),
+        ),
+      );
+    }
+    return _dedupePromptActions(actions);
   }
 
   List<_InlinePromptAction> _simulationPromptActions(
@@ -1463,7 +1713,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       );
     }
-    return actions;
+    final recentHints = _recentTopicHints();
+    if (recentHints.contains('表达')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '练习讲给别人听',
+          prompt: '围绕「$topic」安排一轮需要我讲给别人听的仿真。',
+          onTap: () => _continueInlinePrompt(
+            '围绕「$topic」安排一轮需要我讲给别人听的仿真。',
+          ),
+        ),
+      );
+    }
+    if (recentHints.contains('错题')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '换成错因诊断',
+          prompt: '把「$topic」切到错因诊断模式，帮我定位真正的卡点。',
+          onTap: () => _continueInlinePrompt(
+            '把「$topic」切到错因诊断模式，帮我定位真正的卡点。',
+          ),
+        ),
+      );
+    }
+    return _dedupePromptActions(actions);
   }
 
   List<_InlinePromptAction> _reportPromptActions(
@@ -1505,7 +1778,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       );
     }
-    return actions;
+    final recentHints = _recentTopicHints();
+    if (recentHints.contains('计划')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '转成 7 天计划',
+          prompt: '把这份学习报告改写成我接下来 7 天的执行顺序。',
+          onTap: () => _continueInlinePrompt(
+            '把这份学习报告改写成我接下来 7 天的执行顺序。',
+          ),
+        ),
+      );
+    }
+    if (recentHints.contains('复盘')) {
+      actions.add(
+        _InlinePromptAction(
+          label: '帮我做复盘提纲',
+          prompt: '根据这份学习报告，给我一份今晚就能用的复盘提纲。',
+          onTap: () => _continueInlinePrompt(
+            '根据这份学习报告，给我一份今晚就能用的复盘提纲。',
+          ),
+        ),
+      );
+    }
+    return _dedupePromptActions(actions);
   }
 
   Widget _buildTheaterPreviewCard(
@@ -2430,6 +2726,37 @@ class _InsightLinkCard extends StatelessWidget {
   final String? secondaryLabel;
   final VoidCallback? onSecondaryTap;
 
+  Future<void> _showPromptPreview(
+    BuildContext context,
+    _InlinePromptAction action,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(action.label),
+        content: Text(
+          action.prompt,
+          style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                height: 1.45,
+              ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('先不发'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              action.onTap?.call();
+            },
+            child: const Text('直接发送'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
@@ -2561,13 +2888,20 @@ class _InsightLinkCard extends StatelessWidget {
                   runSpacing: DS.spacing8,
                   children: promptActions
                       .map(
-                        (item) => ActionChip(
-                          avatar: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 16,
+                        (item) => Tooltip(
+                          message: item.prompt,
+                          child: GestureDetector(
+                            onLongPress: () => _showPromptPreview(context, item),
+                            child: ActionChip(
+                              avatar: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 16,
+                              ),
+                              label: Text(item.label),
+                              onPressed: item.onTap ??
+                                  () => _showPromptPreview(context, item),
+                            ),
                           ),
-                          label: Text(item.label),
-                          onPressed: item.onTap,
                         ),
                       )
                       .toList(),
@@ -2622,6 +2956,43 @@ class _InlineActionButton {
 
   final String label;
   final VoidCallback onTap;
+}
+
+class _AccessoryPreviewPage {
+  const _AccessoryPreviewPage({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+}
+
+class _AccessoryPreviewShell extends StatelessWidget {
+  const _AccessoryPreviewShell({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Theme.of(context)
+                .colorScheme
+                .outlineVariant
+                .withValues(alpha: 0.28),
+          ),
+        ),
+        child: child,
+      );
 }
 
 Color _chatBubbleHexToColor(String hex, BuildContext context) {

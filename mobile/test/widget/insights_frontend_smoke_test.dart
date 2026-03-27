@@ -327,6 +327,8 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('AI 分析报告'), findsOneWidget);
+      await tester.tap(find.text('AI 分析报告'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('本周总结'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

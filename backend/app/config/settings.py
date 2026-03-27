@@ -196,6 +196,23 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: Optional[bool] = None
 
+    # OpenClaw Integration
+    OPENCLAW_ENABLED: bool = False
+    OPENCLAW_GATEWAY_URL: str = ""
+    OPENCLAW_AUTH_TOKEN: str = ""
+    OPENCLAW_DEFAULT_AGENT_ID: str = ""
+    OPENCLAW_TRANSPORT: str = "responses_http"  # responses_http | gateway_ws
+    OPENCLAW_WS_URL: str = ""
+    OPENCLAW_WS_PROTOCOL_VERSION: int = 3
+    OPENCLAW_WS_WAIT_TIMEOUT_MS: int = 30000
+    OPENCLAW_WS_ALLOW_INSECURE_AUTH: bool = False
+    OPENCLAW_WS_DEVICE_TOKEN: str = ""
+    OPENCLAW_WS_CLIENT_ID: str = "sparkle-backend"
+    OPENCLAW_DEFAULT_TIMEOUT_SECONDS: int = 300
+    OPENCLAW_MAX_CONCURRENT_RUNS: int = 3
+    OPENCLAW_TRUST_AUTO_PROMOTE_MIN_HISTORY: int = 5
+    OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

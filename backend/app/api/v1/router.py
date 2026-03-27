@@ -27,6 +27,7 @@ from app.api.v1 import (
     devices,
     dlq_admin,
     error_book,
+    executions,
     event_bus_health,
     events,
     experiments,
@@ -103,6 +104,7 @@ api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(executions.router)
 api_router.include_router(subtasks.router, tags=["subtasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])

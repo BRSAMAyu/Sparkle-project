@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -24,6 +24,7 @@ from app.services.theater.prediction_theater_service import (
     TheaterTimeoutError,
     _normalized_topic_terms,
 )
+from app.services.simulation.simulation_engine import ModeratorDecision
 
 
 TEST_USER_ID = str(uuid4())
@@ -304,25 +305,112 @@ async def test_simulation_engine_generates_rounds_as_replies(monkeypatch):
         fake_json_call,
     )
 
-    round_item = await engine._generate_round(
+    participants = [
+        {"name": "优等生", "role_hint": "先解释定义", "stance": "supportive", "persona": {}},
+        {"name": "提问者", "role_hint": "持续追问", "stance": "challenging", "persona": {}},
+    ]
+    participant_objects = engine._build_agent_participants(
+        participants,
+        scenario_key="study_group",
+    )
+
+    fallback_decision = engine._fallback_moderator_decision(
         topic="特征值",
         scenario_key="study_group",
-        participants=[
-            {"name": "优等生", "role_hint": "先解释定义", "stance": "supportive", "persona": {}},
-            {"name": "提问者", "role_hint": "持续追问", "stance": "challenging", "persona": {}},
-        ],
-        round_index=1,
-        round_count=3,
-        previous_rounds=[
+        participants=participant_objects,
+        rounds=[{"round": 1, "speaker": "优等生", "message": "我建议先从定义和几何意义开始。"}],
+        planned_round_count=3,
+    )
+
+    round_item = await engine._generate_agent_round(
+        topic="特征值",
+        scenario_key="study_group",
+        participants=participant_objects,
+        rounds=[
             {"round": 1, "speaker": "优等生", "message": "我建议先从定义和几何意义开始。"},
         ],
-        template={"description": "虚拟学习小组讨论"},
+        moderator_decision=ModeratorDecision(
+            speaker=str(fallback_decision["speaker"]),
+            reply_target="优等生",
+            turn_goal=str(fallback_decision["turn_goal"]),
+            real_time_insight=str(fallback_decision["real_time_insight"]),
+            round_target=int(fallback_decision["round_target"]),
+        ),
     )
 
     assert round_item["speaker"] == "提问者"
     assert round_item["reply_to_speaker"] == "优等生"
     assert round_item["turn_goal"] == "extend"
     assert "Reply target: 优等生" in captured["prompt"]
+
+
+def test_simulation_engine_round_target_respects_scenario_cap():
+    engine = SimulationEngine(db=None)
+
+    assert (
+        engine._normalize_round_target(
+            10,
+            current_rounds=2,
+            scenario_key="knowledge_debate",
+        )
+        == 8
+    )
+    assert (
+        engine._normalize_round_target(
+            10,
+            current_rounds=2,
+            scenario_key="what_if_path",
+        )
+        == 6
+    )
+
+
+@pytest.mark.asyncio
+async def test_simulation_engine_load_checkpoint_falls_back_to_local_storage(monkeypatch):
+    engine = SimulationEngine(db=None)
+    session_id = "sim-local-fallback"
+    engine._local_checkpoints[session_id] = {
+        "id": session_id,
+        "user_id": TEST_USER_ID,
+        "scenario_key": "study_group",
+        "participants": [{"name": "提问者"}],
+        "participant_runtime": [{"name": "提问者", "memory": [{"message": "最近观点"}]}],
+        "rounds": [],
+    }
+
+    async def broken_get(key):
+        del key
+        raise RuntimeError("redis unavailable")
+
+    monkeypatch.setattr(cache_service, "get", broken_get)
+
+    payload = await engine._load_checkpoint(
+        session_id=session_id,
+        user_id=UUID(TEST_USER_ID),
+    )
+
+    assert payload["id"] == session_id
+    assert payload["participants"][0]["memory"][0]["message"] == "最近观点"
+
+
+@pytest.mark.asyncio
+async def test_free_mode_target_context_backfills_missing_required_fields(monkeypatch):
+    service = PredictionTheaterService(db=None)  # type: ignore[arg-type]
+
+    async def fake_json_call(messages, *, fallback=None, temperature=0.2):
+        del messages, fallback, temperature
+        return {"target_name": "特征值"}
+
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.analysis_llm.json_call",
+        fake_json_call,
+    )
+
+    context = await service._build_free_mode_target_context("帮我推演特征值")
+
+    assert context.name == "特征值"
+    assert context.description
+    assert len(context.backbone) >= 3
 
 
 @pytest.mark.asyncio

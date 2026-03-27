@@ -5,21 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/core/widgets/scene_atmosphere_layer.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
-import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
+import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
+import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -30,8 +32,8 @@ import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart'
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
-import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
+import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 LinearGradient _taskWarmActionGradient(BuildContext context) {
@@ -73,6 +75,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   Timer? _completionPanelTimer;
   Timer? _completionStatsTimer;
   Timer? _completionAudioTimer;
+  Timer? _executionRefreshTimer;
   int _completionMinutesSnapshot = 0;
   int? _todayFocusMinutesSnapshot;
 
@@ -101,28 +104,40 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activeTask = ref.read(activeTaskProvider);
-      if (activeTask != null &&
-          isServerTaskId(activeTask.id) &&
-          activeTask.status == TaskStatus.pending) {
-        ref.read(taskListProvider.notifier).startTask(activeTask.id).catchError(
-          (Object error, StackTrace stackTrace) {
-            debugPrint('Error starting task: $error');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    context.l10n.taskExecutionStartFailed(
-                      error is DioException
-                          ? (error.message ?? error.toString())
-                          : error.toString(),
-                    ),
-                  ),
-                  backgroundColor: DS.error,
-                ),
-              );
-            }
-          },
+      if (activeTask != null && isServerTaskId(activeTask.id)) {
+        unawaited(
+          ref
+              .read(taskListProvider.notifier)
+              .loadTaskExecutionState(activeTask.id),
         );
+        _startExecutionPolling(activeTask.id);
+
+        if (activeTask.status == TaskStatus.pending) {
+          unawaited(
+            ref
+                .read(taskListProvider.notifier)
+                .startTask(activeTask.id)
+                .catchError(
+              (Object error, StackTrace stackTrace) {
+                debugPrint('Error starting task: $error');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        context.l10n.taskExecutionStartFailed(
+                          error is DioException
+                              ? (error.message ?? error.toString())
+                              : error.toString(),
+                        ),
+                      ),
+                      backgroundColor: DS.error,
+                    ),
+                  );
+                }
+              },
+            ),
+          );
+        }
       }
     });
   }
@@ -134,7 +149,23 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     _completionPanelTimer?.cancel();
     _completionStatsTimer?.cancel();
     _completionAudioTimer?.cancel();
+    _executionRefreshTimer?.cancel();
     super.dispose();
+  }
+
+  void _startExecutionPolling(String taskId) {
+    _executionRefreshTimer?.cancel();
+    _executionRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      unawaited(() async {
+        final latest = await ref
+            .read(taskListProvider.notifier)
+            .loadTaskExecutionState(taskId);
+        if (!mounted) return;
+        if (latest == null || latest.isTerminal) {
+          _executionRefreshTimer?.cancel();
+        }
+      }());
+    });
   }
 
   bool _shouldShowFullExitConfirmation() {
@@ -1308,99 +1339,160 @@ class _BottomControls extends ConsumerWidget {
   final int elapsedSeconds;
   final void Function(int minutes, String? note) onComplete;
 
+  Future<void> _handoffTask(BuildContext context, WidgetRef ref) async {
+    final intent =
+        await ref.read(taskListProvider.notifier).handoffTaskToAi(task.id);
+    if (!context.mounted) return;
+
+    if (intent == null) {
+      final message = ref.read(taskListProvider).error ?? 'AI 执行发起失败';
+      AppFeedback.error(
+        context,
+        message.replaceFirst('Exception: ', ''),
+      );
+      return;
+    }
+
+    final feedbackMessage = switch (intent.status) {
+      ExecutionIntentStatus.succeeded => 'AI 已完成本次执行',
+      ExecutionIntentStatus.partial => 'AI 已完成部分内容，请继续查看',
+      ExecutionIntentStatus.failed => intent.errorMessage ?? 'AI 执行失败',
+      ExecutionIntentStatus.waitingApproval => 'AI 正在等待你的确认',
+      _ => '任务已交给 AI，当前状态：${intent.statusLabel}',
+    };
+
+    if (intent.status == ExecutionIntentStatus.failed) {
+      AppFeedback.error(context, feedbackMessage);
+    } else {
+      AppFeedback.success(context, feedbackMessage);
+    }
+  }
+
+  Future<void> _confirmAiResult(BuildContext context, WidgetRef ref) async {
+    final record = await ref
+        .read(taskListProvider.notifier)
+        .confirmTaskExecutionResult(task.id);
+    if (!context.mounted) return;
+
+    if (record == null) {
+      final message = ref.read(taskListProvider).error ?? 'AI 结果确认失败';
+      AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
+      return;
+    }
+
+    AppFeedback.success(context, 'AI 结果已确认，任务状态已同步');
+  }
+
+  Future<void> _rejectAiResult(BuildContext context, WidgetRef ref) async {
+    final record = await ref
+        .read(taskListProvider.notifier)
+        .rejectTaskExecutionResult(task.id, reason: '用户取回任务');
+    if (!context.mounted) return;
+
+    if (record == null) {
+      final message = ref.read(taskListProvider).error ?? '取回任务失败';
+      AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
+      return;
+    }
+
+    AppFeedback.info(context, '任务已交还给你继续处理');
+  }
+
   void _showCompleteDialog(BuildContext context, WidgetRef ref) {
     final noteController = TextEditingController();
     final minutes = Duration(seconds: elapsedSeconds).inMinutes;
 
-    showSensoryDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: GraphiteModalSurface(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceOverlay,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: DS.borderSubtle),
-                    ),
-                    child: Icon(
-                      Icons.check_circle_outline,
-                      color: DS.success,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Text(
-                    context.l10n.taskExecutionCompleteTitle,
-                    style: DS.titleLarge.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing16),
-              GraphiteCardSurface(
-                padding: const EdgeInsets.all(DS.spacing12),
-                borderColor: DS.borderSubtle,
-                child: Row(
+    unawaited(
+      showSensoryDialog<void>(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: GraphiteModalSurface(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(Icons.timer_outlined, color: DS.primaryBase),
-                    const SizedBox(width: DS.spacing8),
+                    Container(
+                      padding: const EdgeInsets.all(DS.sm),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceOverlay,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: DS.borderSubtle),
+                      ),
+                      child: Icon(
+                        Icons.check_circle_outline,
+                        color: DS.success,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing12),
                     Text(
-                      context.l10n.taskExecutionElapsedMinutes(minutes),
-                      style: DS.bodyMedium.copyWith(
-                        fontWeight: DS.fontWeightMedium,
+                      context.l10n.taskExecutionCompleteTitle,
+                      style: DS.titleLarge.copyWith(
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: DS.spacing16),
-              TextField(
-                controller: noteController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.taskExecutionNoteLabel,
-                  hintText: context.l10n.taskExecutionNoteHint,
+                const SizedBox(height: DS.spacing16),
+                GraphiteCardSurface(
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  borderColor: DS.borderSubtle,
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer_outlined, color: DS.primaryBase),
+                      const SizedBox(width: DS.spacing8),
+                      Text(
+                        context.l10n.taskExecutionElapsedMinutes(minutes),
+                        style: DS.bodyMedium.copyWith(
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: DS.spacing20),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton.text(
-                      text: context.l10n.cancel,
-                      onPressed: () => Navigator.of(ctx).pop(),
-                    ),
+                const SizedBox(height: DS.spacing16),
+                TextField(
+                  controller: noteController,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.taskExecutionNoteLabel,
+                    hintText: context.l10n.taskExecutionNoteHint,
                   ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: CustomButton.primary(
-                      text: context.l10n.taskExecutionConfirmComplete,
-                      icon: Icons.check_rounded,
-                      customGradient: _taskWarmActionGradient(context),
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        onComplete(
-                          minutes,
-                          noteController.text.trim().isEmpty
-                              ? null
-                              : noteController.text.trim(),
-                        );
-                      },
-                      size: CustomButtonSize.small,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: DS.spacing20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton.text(
+                        text: context.l10n.cancel,
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: CustomButton.primary(
+                        text: context.l10n.taskExecutionConfirmComplete,
+                        icon: Icons.check_rounded,
+                        customGradient: _taskWarmActionGradient(context),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          onComplete(
+                            minutes,
+                            noteController.text.trim().isEmpty
+                                ? null
+                                : noteController.text.trim(),
+                          );
+                        },
+                        size: CustomButtonSize.small,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1408,43 +1500,324 @@ class _BottomControls extends ConsumerWidget {
   }
 
   void _abandonTask(BuildContext context, WidgetRef ref) {
-    showSensoryDialog<void>(
-      context: context,
-      builder: (ctx) => BlockingInterceptorDialog(
-        taskId: task.id,
-        onAbandonConfirmed: () {
-          ref.read(taskListProvider.notifier).abandonTask(task.id);
-          context.go(TaskRoutes.home);
-        },
+    unawaited(
+      showSensoryDialog<void>(
+        context: context,
+        builder: (ctx) => BlockingInterceptorDialog(
+          taskId: task.id,
+          onAbandonConfirmed: () {
+            unawaited(ref.read(taskListProvider.notifier).abandonTask(task.id));
+            context.go(TaskRoutes.home);
+          },
+        ),
       ),
     );
   }
 
+  Color _executionStatusColor(ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return DS.primaryBase;
+    switch (intent?.status) {
+      case ExecutionIntentStatus.succeeded:
+        return DS.success;
+      case ExecutionIntentStatus.partial:
+        return DS.warning;
+      case ExecutionIntentStatus.failed:
+      case ExecutionIntentStatus.timedOut:
+      case ExecutionIntentStatus.canceled:
+        return DS.error;
+      case ExecutionIntentStatus.waitingApproval:
+        return DS.warning;
+      case ExecutionIntentStatus.handedBack:
+        return DS.neutral500;
+      case ExecutionIntentStatus.draft:
+      case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.dispatched:
+      case ExecutionIntentStatus.running:
+      case ExecutionIntentStatus.unknown:
+      case null:
+        return DS.primaryBase;
+    }
+  }
+
+  IconData _executionStatusIcon(ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return Icons.smart_toy_outlined;
+    switch (intent?.status) {
+      case ExecutionIntentStatus.succeeded:
+        return Icons.check_circle_outline;
+      case ExecutionIntentStatus.partial:
+        return Icons.pending_actions_outlined;
+      case ExecutionIntentStatus.failed:
+      case ExecutionIntentStatus.timedOut:
+        return Icons.error_outline;
+      case ExecutionIntentStatus.canceled:
+      case ExecutionIntentStatus.handedBack:
+        return Icons.keyboard_return_rounded;
+      case ExecutionIntentStatus.waitingApproval:
+        return Icons.approval_outlined;
+      case ExecutionIntentStatus.draft:
+      case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.dispatched:
+      case ExecutionIntentStatus.running:
+      case ExecutionIntentStatus.unknown:
+      case null:
+        return Icons.smart_toy_outlined;
+    }
+  }
+
+  String _executionStatusTitle(ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return 'AI 正在接管这个任务';
+    return intent == null ? 'AI 执行尚未开始' : 'AI 状态：${intent.statusLabel}';
+  }
+
+  String _executionStatusSubtitle(
+    ExecutionIntentModel? intent,
+    ExecutionRecordModel? record,
+    bool isLoading,
+  ) {
+    if (isLoading) {
+      return 'Sparkle 正在把任务发送给 OpenClaw。';
+    }
+    if (intent == null) {
+      return '适合数字执行的任务可以在这里一键转交。';
+    }
+    if (intent.errorMessage != null && intent.errorMessage!.trim().isNotEmpty) {
+      return intent.errorMessage!;
+    }
+    if (record?.errorMessage != null &&
+        record!.errorMessage!.trim().isNotEmpty) {
+      return record.errorMessage!;
+    }
+    if (record != null) {
+      final validationText =
+          record.validationPassed != null && record.validationTotal != null
+              ? '校验 ${record.validationPassed}/${record.validationTotal}'
+              : record.trustLabel;
+      return '结果：$validationText'
+          '${record.approvalRequested != null ? ' · 审批请求 ${record.approvalRequested}' : ''}';
+    }
+    if (intent.goal.trim().isNotEmpty) {
+      return '目标：${intent.goal} · ${intent.trustLabel}';
+    }
+    return '结果信任：${intent.trustLabel}';
+  }
+
+  String? _executionOutputPreview(ExecutionRecordModel? record) {
+    final parsedOutput = record?.parsedOutput;
+    if (parsedOutput == null || parsedOutput.isEmpty) return null;
+    final preview = parsedOutput.entries.take(2).map((entry) {
+      final rawValue = entry.value;
+      final value = rawValue is List
+          ? rawValue.join(', ')
+          : rawValue is Map
+              ? rawValue.toString()
+              : rawValue.toString();
+      return '${entry.key}: $value';
+    }).join('  |  ');
+    return preview.isEmpty ? null : preview;
+  }
+
+  String _handoffButtonText(ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return 'AI 接管中...';
+    switch (intent?.status) {
+      case ExecutionIntentStatus.failed:
+      case ExecutionIntentStatus.timedOut:
+      case ExecutionIntentStatus.canceled:
+      case ExecutionIntentStatus.handedBack:
+        return '重新交给 AI';
+      case ExecutionIntentStatus.succeeded:
+      case ExecutionIntentStatus.partial:
+        return '再次交给 AI';
+      case ExecutionIntentStatus.waitingApproval:
+        return '等待确认';
+      case ExecutionIntentStatus.draft:
+      case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.dispatched:
+      case ExecutionIntentStatus.running:
+        return 'AI 执行中';
+      case ExecutionIntentStatus.unknown:
+      case null:
+        return '交给 AI 执行';
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) => GraphiteCardSurface(
-        padding: const EdgeInsets.all(DS.spacing16),
-        borderColor: DS.borderSubtle,
-        child: Row(
-          children: [
-            Expanded(
-              child: CustomButton.text(
-                text: context.l10n.taskExecutionAbandon,
-                onPressed: () => _abandonTask(context, ref),
-                // Use error color for text if possible, or leave as primary/custom
+  Widget build(BuildContext context, WidgetRef ref) {
+    final executionIntent = ref.watch(
+      taskListProvider.select((state) => state.taskExecutions[task.id]),
+    );
+    final executionRecord = ref.watch(
+      taskListProvider.select((state) => state.taskExecutionRecords[task.id]),
+    );
+    final isHandoffLoading = ref.watch(
+      taskListProvider
+          .select((state) => state.handoffInFlight.contains(task.id)),
+    );
+    final isExecutionDecisionLoading = ref.watch(
+      taskListProvider.select(
+        (state) => state.executionDecisionInFlight.contains(task.id),
+      ),
+    );
+    final supportsAiHandoff = isServerTaskId(task.id);
+    final canHandoff = supportsAiHandoff &&
+        task.status != TaskStatus.completed &&
+        task.status != TaskStatus.abandoned &&
+        (executionIntent == null || executionIntent.isTerminal) &&
+        !isHandoffLoading;
+    final showExecutionStatus =
+        supportsAiHandoff && (executionIntent != null || isHandoffLoading);
+    final statusColor =
+        _executionStatusColor(executionIntent, isHandoffLoading);
+    final outputPreview = _executionOutputPreview(executionRecord);
+
+    return GraphiteCardSurface(
+      padding: const EdgeInsets.all(DS.spacing16),
+      borderColor: DS.borderSubtle,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showExecutionStatus) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                border: Border.all(
+                  color: statusColor.withValues(alpha: 0.22),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.spacing8),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceOverlay,
+                      borderRadius: BorderRadius.circular(DS.borderRadiusSM),
+                    ),
+                    child: Icon(
+                      _executionStatusIcon(executionIntent, isHandoffLoading),
+                      color: statusColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _executionStatusTitle(
+                            executionIntent,
+                            isHandoffLoading,
+                          ),
+                          style: DS.bodyMedium.copyWith(
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing4),
+                        Text(
+                          _executionStatusSubtitle(
+                            executionIntent,
+                            executionRecord,
+                            isHandoffLoading,
+                          ),
+                          style: DS.bodySmall.copyWith(
+                            color: DS.neutral600,
+                          ),
+                        ),
+                        if (outputPreview != null) ...[
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            outputPreview,
+                            style: DS.bodySmall.copyWith(
+                              color: DS.neutral700,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (isHandoffLoading)
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(width: DS.spacing16),
-            Expanded(
-              flex: 2,
-              child: CustomButton.primary(
-                text: context.l10n.taskExecutionCompleteTitle,
-                customGradient: _taskWarmActionGradient(context),
-                onPressed: () => _showCompleteDialog(context, ref),
-              ),
-            ),
+            const SizedBox(height: DS.spacing12),
           ],
-        ),
-      );
+          if (executionIntent?.isWaitingApproval == true &&
+              executionRecord != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton.secondary(
+                    text: '取回任务',
+                    icon: Icons.keyboard_return_rounded,
+                    onPressed: isExecutionDecisionLoading
+                        ? null
+                        : () => _rejectAiResult(context, ref),
+                    isLoading: isExecutionDecisionLoading,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: CustomButton.primary(
+                    text: '确认采用 AI 结果',
+                    icon: Icons.approval_outlined,
+                    customGradient: _taskWarmActionGradient(context),
+                    onPressed: isExecutionDecisionLoading
+                        ? null
+                        : () => _confirmAiResult(context, ref),
+                    isLoading: isExecutionDecisionLoading,
+                    size: CustomButtonSize.small,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+          ],
+          if (supportsAiHandoff) ...[
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton.secondary(
+                text: _handoffButtonText(executionIntent, isHandoffLoading),
+                icon: Icons.smart_toy_outlined,
+                onPressed: canHandoff ? () => _handoffTask(context, ref) : null,
+                isLoading: isHandoffLoading,
+              ),
+            ),
+            const SizedBox(height: DS.spacing12),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: CustomButton.text(
+                  text: context.l10n.taskExecutionAbandon,
+                  onPressed: () => _abandonTask(context, ref),
+                ),
+              ),
+              const SizedBox(width: DS.spacing16),
+              Expanded(
+                flex: 2,
+                child: CustomButton.primary(
+                  text: context.l10n.taskExecutionCompleteTitle,
+                  customGradient: _taskWarmActionGradient(context),
+                  onPressed: () => _showCompleteDialog(context, ref),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Task Exit Confirmation Dialog - Triple confirmation for focus protection

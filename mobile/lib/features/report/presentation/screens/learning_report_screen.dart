@@ -17,6 +17,7 @@ import 'package:sparkle/features/mirofish/presentation/support/mirofish_mileston
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
+import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
@@ -155,6 +156,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             .toList()
             .reversed
             .toList();
+    final trendStudyMinutes = structuredTrendPoints.isNotEmpty
+        ? structuredTrendPoints
+            .map((point) => point.studyMinutes.toDouble())
+            .toList()
+        : const <double>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -188,7 +194,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 .isNotEmpty) ...[
               ChatContinuityBanner(
                 sourceChatSessionId: widget.initialSourceChatSessionId!.trim(),
-                subtitle: '这份报告来自你刚才的对话桥接，你可以回到原会话继续追问策略、任务和下一步安排。',
+                subtitle: '这份报告承接了你刚才的探索流程，你可以回到原会话继续追问策略、任务和下一步安排。',
               ),
               const SizedBox(height: 14),
             ],
@@ -312,10 +318,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     ],
                     if (trendPoints.length > 1)
                       SizedBox(
-                        height: 140,
+                        height: 236,
                         child: _MasteryTrendChart(
                           values: trendPoints,
                           labels: trendLabels,
+                          studyMinutes: trendStudyMinutes,
                         ),
                       )
                     else
@@ -479,7 +486,6 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             _AnimatedReportSection(
               delay: 420,
               child: ExpansionTile(
-                initiallyExpanded: true,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -948,7 +954,32 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     if (normalized.isEmpty || !mounted) {
       return;
     }
-    await context.push(normalized);
+    final parsed = Uri.tryParse(normalized);
+    if (parsed == null) {
+      await context.push(normalized);
+      return;
+    }
+    final query = Map<String, String>.from(parsed.queryParameters);
+    final sourceChatSessionId = widget.initialSourceChatSessionId?.trim();
+    final shouldCarryChatContext =
+        parsed.path.startsWith(TheaterRoutes.theater) ||
+            parsed.path.startsWith(SimulationRoutes.simulation) ||
+            parsed.path.startsWith(ReportRoutes.learningReport);
+    if (shouldCarryChatContext &&
+        (sourceChatSessionId?.isNotEmpty ?? false) &&
+        !query.containsKey('source_chat_session_id')) {
+      query['source_chat_session_id'] = sourceChatSessionId!;
+    }
+    final resolvedPath = switch (parsed.path) {
+      '/sprint' => PlanRoutes.sprintHistory,
+      '' => ReportRoutes.learningReport,
+      _ => parsed.path,
+    };
+    final resolved = Uri(
+      path: resolvedPath,
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+    await context.push(resolved);
   }
 
   String _masteryLabel(double score) {
@@ -1006,53 +1037,234 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   }
 }
 
-class _MasteryTrendChart extends StatelessWidget {
+class _MasteryTrendChart extends StatefulWidget {
   const _MasteryTrendChart({
     required this.values,
     required this.labels,
+    this.studyMinutes = const <double>[],
   });
 
   final List<double> values;
   final List<String> labels;
+  final List<double> studyMinutes;
+
+  @override
+  State<_MasteryTrendChart> createState() => _MasteryTrendChartState();
+}
+
+class _MasteryTrendChartState extends State<_MasteryTrendChart> {
+  int? _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.values.isEmpty ? null : widget.values.length - 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant _MasteryTrendChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.values.isEmpty) {
+      _selectedIndex = null;
+      return;
+    }
+    if (_selectedIndex == null || _selectedIndex! >= widget.values.length) {
+      _selectedIndex = widget.values.length - 1;
+    }
+  }
+
+  void _updateSelection(Offset localPosition, double chartWidth) {
+    if (widget.values.length < 2 || chartWidth <= 0) {
+      return;
+    }
+    final ratio = (localPosition.dx / chartWidth).clamp(0.0, 1.0);
+    final rawIndex = (ratio * (widget.values.length - 1)).round();
+    if (_selectedIndex == rawIndex) {
+      return;
+    }
+    setState(() => _selectedIndex = rawIndex);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (values.length < 2) {
+    if (widget.values.length < 2) {
       return Center(
         child: Text(
-          '至少需要两份报告才能绘制趋势。',
+          '第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: DS.textSecondary,
               ),
+          textAlign: TextAlign.center,
         ),
       );
     }
+    final showStudyMinutes = widget.studyMinutes.length == widget.values.length &&
+        widget.studyMinutes.any((item) => item > 0);
+    final selectedIndex =
+        (_selectedIndex ?? (widget.values.length - 1)).clamp(0, widget.values.length - 1);
+    final selectedLabel = widget.labels[selectedIndex];
+    final selectedMastery = (widget.values[selectedIndex] * 100).round();
+    final selectedMinutes = showStudyMinutes
+        ? widget.studyMinutes[selectedIndex].round()
+        : null;
+    final maxStudyMinutes = showStudyMinutes && widget.studyMinutes.isNotEmpty
+        ? widget.studyMinutes.reduce((a, b) => a > b ? a : b).round()
+        : 0;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.46),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                selectedLabel,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              Text(
+                '掌握度 $selectedMastery%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              if (selectedMinutes != null)
+                Text(
+                  '学习时长 $selectedMinutes 分钟',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.warning,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         Expanded(
-          child: CustomPaint(
-            painter: _TrendChartPainter(
-              values: values,
-              lineColor: Theme.of(context).colorScheme.primary,
-              fillColor: DS.info.withValues(alpha: 0.12),
-              gridColor: Theme.of(context)
-                  .colorScheme
-                  .outlineVariant
-                  .withValues(alpha: 0.5),
-            ),
-            child: const SizedBox.expand(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final axisWidth = showStudyMinutes ? 46.0 : 0.0;
+              final chartWidth =
+                  (constraints.maxWidth - axisWidth).clamp(0.0, double.infinity);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (details) =>
+                          _updateSelection(details.localPosition, chartWidth),
+                      onHorizontalDragStart: (details) =>
+                          _updateSelection(details.localPosition, chartWidth),
+                      onHorizontalDragUpdate: (details) =>
+                          _updateSelection(details.localPosition, chartWidth),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, progress, _) => CustomPaint(
+                          painter: _TrendChartPainter(
+                            values: widget.values,
+                            secondaryValues: widget.studyMinutes,
+                            progress: progress,
+                            lineColor: Theme.of(context).colorScheme.primary,
+                            secondaryLineColor: DS.warning,
+                            fillColor: DS.info.withValues(alpha: 0.12),
+                            gridColor: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: 0.5),
+                            selectedIndex: selectedIndex,
+                            showSecondarySeries: showStudyMinutes,
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (showStudyMinutes) ...[
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: axisWidth,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '$maxStudyMinutes分',
+                            style:
+                                Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: DS.warning,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                          ),
+                          Text(
+                            '${(maxStudyMinutes / 2).round()}分',
+                            style:
+                                Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                          ),
+                          Text(
+                            '0分',
+                            style:
+                                Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 8),
+        if (showStudyMinutes) ...[
+          Row(
+            children: [
+              _TrendLegendChip(
+                color: Theme.of(context).colorScheme.primary,
+                label: '掌握度',
+              ),
+              const SizedBox(width: 8),
+              _TrendLegendChip(
+                color: DS.warning,
+                label: '学习时长',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: labels
+          children: widget.labels
               .map(
-                (label) => Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: DS.textSecondary,
-                      ),
+                (label) => Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
                 ),
               )
               .toList(),
@@ -1166,10 +1378,26 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: cards,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              final useSingleColumn = availableWidth < 520;
+              final cardWidth = useSingleColumn
+                  ? availableWidth
+                  : ((availableWidth - 12) / 2).clamp(220.0, 320.0);
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: cards
+                    .map(
+                      (card) => SizedBox(
+                        width: cardWidth,
+                        child: card,
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
         ],
       ),
@@ -1227,7 +1455,6 @@ class _DiagnosisCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          width: 220,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1268,6 +1495,8 @@ class _DiagnosisCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -1275,6 +1504,8 @@ class _DiagnosisCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 headline,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -1282,6 +1513,8 @@ class _DiagnosisCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 body,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -1468,6 +1701,13 @@ class _ActionSuggestionTile extends StatelessWidget {
       'plan' => DS.warning,
       _ => Theme.of(context).colorScheme.primary,
     };
+    final icon = switch (actionCard.kind) {
+      'theater' => Icons.alt_route_rounded,
+      'simulation' => Icons.groups_rounded,
+      'galaxy' => Icons.auto_graph_rounded,
+      'plan' => Icons.flag_rounded,
+      _ => Icons.arrow_forward_rounded,
+    };
     return Container(
       width: 240,
       padding: const EdgeInsets.all(14),
@@ -1479,23 +1719,37 @@ class _ActionSuggestionTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if ((actionCard.badge ?? '').isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 18, color: accent),
               ),
-              child: Text(
-                actionCard.badge!,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+              const Spacer(),
+              if ((actionCard.badge ?? '').isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    actionCard.badge!,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Text(
             actionCard.title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -1609,7 +1863,7 @@ class _TrendHistoryEmptyState extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             historyCacheLoaded
-                ? '当前时间范围内还没有足够的历史报告可供对比。先根据这次报告聚焦薄弱知识点，后续趋势会自动补全。'
+                ? '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。'
                 : '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
@@ -1625,15 +1879,25 @@ class _TrendHistoryEmptyState extends StatelessWidget {
 class _TrendChartPainter extends CustomPainter {
   const _TrendChartPainter({
     required this.values,
+    required this.progress,
     required this.lineColor,
+    required this.secondaryLineColor,
     required this.fillColor,
     required this.gridColor,
+    required this.selectedIndex,
+    required this.showSecondarySeries,
+    this.secondaryValues = const <double>[],
   });
 
   final List<double> values;
+  final List<double> secondaryValues;
+  final double progress;
   final Color lineColor;
+  final Color secondaryLineColor;
   final Color fillColor;
   final Color gridColor;
+  final int selectedIndex;
+  final bool showSecondarySeries;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1658,6 +1922,87 @@ class _TrendChartPainter extends CustomPainter {
       return;
     }
 
+    final path = _buildSmoothPath(points);
+
+    final fillPath = Path.from(path)
+      ..lineTo(points.last.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+
+    canvas
+      ..save()
+      ..clipRect(Rect.fromLTWH(0, 0, size.width * progress, size.height))
+      ..drawPath(
+        fillPath,
+        Paint()..color = fillColor,
+      );
+    final linePaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawPath(path, linePaint);
+    if (showSecondarySeries &&
+        secondaryValues.isNotEmpty &&
+        secondaryValues.length == values.length) {
+      final maxSecondary = secondaryValues.reduce((a, b) => a > b ? a : b);
+      final normalizedSecondary = maxSecondary <= 0
+          ? List<double>.filled(secondaryValues.length, 0)
+          : secondaryValues.map((item) => item / maxSecondary).toList();
+      final secondaryPoints = <Offset>[];
+      for (var i = 0; i < normalizedSecondary.length; i++) {
+        final x = normalizedSecondary.length == 1
+            ? size.width / 2
+            : size.width * (i / (normalizedSecondary.length - 1));
+        final y = size.height -
+            (normalizedSecondary[i].clamp(0.0, 1.0) * (size.height - 12)) -
+            6;
+        secondaryPoints.add(Offset(x, y));
+      }
+      if (secondaryPoints.isNotEmpty) {
+        canvas.drawPath(
+          _buildSmoothPath(secondaryPoints),
+          Paint()
+            ..color = secondaryLineColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+    }
+    final pointRadius = values.length >= 10
+        ? 2.4
+        : values.length >= 7
+            ? 3.0
+            : 4.0;
+    final selected = points[selectedIndex.clamp(0, points.length - 1)];
+    canvas.drawLine(
+      Offset(selected.dx, 0),
+      Offset(selected.dx, size.height),
+      Paint()
+        ..color = lineColor.withValues(alpha: 0.18)
+        ..strokeWidth = 1.2,
+    );
+    for (var i = 0; i < points.length; i++) {
+      final point = points[i];
+      final isSelected = i == selectedIndex;
+      canvas
+        ..drawCircle(
+          point,
+          isSelected ? pointRadius + 2 : pointRadius,
+          Paint()
+            ..color = isSelected
+                ? lineColor.withValues(alpha: 0.2)
+                : Colors.transparent,
+        )
+        ..drawCircle(
+          point,
+          isSelected ? pointRadius + 0.8 : pointRadius,
+          Paint()..color = lineColor,
+        );
+    }
+    canvas.restore();
+  }
+
+  Path _buildSmoothPath(List<Offset> points) {
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length; i++) {
       final previous = points[i - 1];
@@ -1672,32 +2017,60 @@ class _TrendChartPainter extends CustomPainter {
         current.dy,
       );
     }
-
-    final fillPath = Path.from(path)
-      ..lineTo(points.last.dx, size.height)
-      ..lineTo(points.first.dx, size.height)
-      ..close();
-
-    canvas.drawPath(
-      fillPath,
-      Paint()..color = fillColor,
-    );
-    final linePaint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawPath(path, linePaint);
-    for (final point in points) {
-      canvas.drawCircle(point, 4, Paint()..color = lineColor);
-    }
+    return path;
   }
 
   @override
   bool shouldRepaint(covariant _TrendChartPainter oldDelegate) =>
       oldDelegate.values != values ||
+      oldDelegate.secondaryValues != secondaryValues ||
+      oldDelegate.progress != progress ||
       oldDelegate.lineColor != lineColor ||
+      oldDelegate.secondaryLineColor != secondaryLineColor ||
       oldDelegate.fillColor != fillColor ||
-      oldDelegate.gridColor != gridColor;
+      oldDelegate.gridColor != gridColor ||
+      oldDelegate.selectedIndex != selectedIndex ||
+      oldDelegate.showSecondarySeries != showSecondarySeries;
+}
+
+class _TrendLegendChip extends StatelessWidget {
+  const _TrendLegendChip({
+    required this.color,
+    required this.label,
+  });
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _AnimatedReportSection extends StatefulWidget {

@@ -14,6 +14,8 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
+import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -33,6 +35,10 @@ class TaskListState {
     this.tasks = const [],
     this.todayTasks = const [],
     this.recommendedTasks = const [],
+    this.taskExecutions = const {},
+    this.taskExecutionRecords = const {},
+    this.handoffInFlight = const <String>{},
+    this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
     this.error,
   });
@@ -40,6 +46,10 @@ class TaskListState {
   final List<TaskModel> tasks;
   final List<TaskModel> todayTasks;
   final List<TaskModel> recommendedTasks;
+  final Map<String, ExecutionIntentModel> taskExecutions;
+  final Map<String, ExecutionRecordModel> taskExecutionRecords;
+  final Set<String> handoffInFlight;
+  final Set<String> executionDecisionInFlight;
   final TaskFilter? currentFilter;
   final String? error;
 
@@ -48,6 +58,10 @@ class TaskListState {
     List<TaskModel>? tasks,
     List<TaskModel>? todayTasks,
     List<TaskModel>? recommendedTasks,
+    Map<String, ExecutionIntentModel>? taskExecutions,
+    Map<String, ExecutionRecordModel>? taskExecutionRecords,
+    Set<String>? handoffInFlight,
+    Set<String>? executionDecisionInFlight,
     TaskFilter? currentFilter,
     String? error,
     bool clearError = false,
@@ -57,6 +71,11 @@ class TaskListState {
         tasks: tasks ?? this.tasks,
         todayTasks: todayTasks ?? this.todayTasks,
         recommendedTasks: recommendedTasks ?? this.recommendedTasks,
+        taskExecutions: taskExecutions ?? this.taskExecutions,
+        taskExecutionRecords: taskExecutionRecords ?? this.taskExecutionRecords,
+        handoffInFlight: handoffInFlight ?? this.handoffInFlight,
+        executionDecisionInFlight:
+            executionDecisionInFlight ?? this.executionDecisionInFlight,
         currentFilter: currentFilter ?? this.currentFilter,
         error: clearError ? null : error ?? this.error,
       );
@@ -442,6 +461,83 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     await loadRecommendedTasks();
   }
 
+  Future<ExecutionIntentModel?> loadTaskExecutionState(
+    String taskId, {
+    bool includeRecord = true,
+  }) async {
+    if (!isServerTaskId(taskId)) return null;
+
+    try {
+      final intents = await _taskRepository.listExecutionIntents(taskId);
+      final latest = intents.isEmpty ? null : intents.first;
+      if (!mounted) return latest;
+      _setTaskExecution(taskId, latest);
+      if (includeRecord && latest != null) {
+        final record = await _taskRepository.getExecutionRecord(latest.id);
+        if (!mounted) return latest;
+        _setTaskExecutionRecord(taskId, record);
+      } else if (latest == null) {
+        _setTaskExecutionRecord(taskId, null);
+      }
+      return latest;
+    } catch (e) {
+      debugPrint('Failed to load execution intents for $taskId: $e');
+      return null;
+    }
+  }
+
+  Future<ExecutionIntentModel?> handoffTaskToAi(
+    String taskId, {
+    String? goal,
+  }) async {
+    if (!isServerTaskId(taskId)) {
+      state = state.copyWith(error: '本地任务暂不支持 AI 执行');
+      return null;
+    }
+
+    if (state.handoffInFlight.contains(taskId)) {
+      return state.taskExecutions[taskId];
+    }
+
+    final currentIntent = state.taskExecutions[taskId];
+    if (currentIntent != null && !currentIntent.isTerminal) {
+      return currentIntent;
+    }
+
+    _setHandoffLoading(taskId, true);
+    if (mounted) {
+      state = state.copyWith(clearError: true);
+    }
+
+    try {
+      final intent = await _taskRepository.handoffTask(taskId, goal: goal);
+      if (!mounted) return intent;
+
+      _setTaskExecution(taskId, intent);
+      final record = await _taskRepository.getExecutionRecord(intent.id);
+      if (mounted) {
+        _setTaskExecutionRecord(taskId, record);
+      }
+
+      try {
+        await _refreshTaskFromServer(taskId);
+      } catch (e) {
+        debugPrint('Failed to refresh task after AI handoff: $e');
+      }
+
+      return intent;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(error: e.toString());
+      }
+      return null;
+    } finally {
+      if (mounted) {
+        _setHandoffLoading(taskId, false);
+      }
+    }
+  }
+
   Future<void> reorderTasks(int oldIndex, int newIndex) async {
     final originalTasks = List<TaskModel>.from(state.tasks);
     final normalizedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
@@ -475,12 +571,131 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     );
   }
 
+  Future<ExecutionRecordModel?> confirmTaskExecutionResult(
+      String taskId) async {
+    return _decideExecutionResult(
+      taskId,
+      decision: (recordId) => _taskRepository.confirmExecutionResult(recordId),
+    );
+  }
+
+  Future<ExecutionRecordModel?> rejectTaskExecutionResult(
+    String taskId, {
+    String? reason,
+  }) async {
+    return _decideExecutionResult(
+      taskId,
+      decision: (recordId) =>
+          _taskRepository.rejectExecutionResult(recordId, reason: reason),
+    );
+  }
+
   void _updateTask(String taskId, TaskModel Function(TaskModel) updater) {
     state = state.copyWith(
       tasks: state.tasks.map((t) => t.id == taskId ? updater(t) : t).toList(),
       todayTasks:
           state.todayTasks.map((t) => t.id == taskId ? updater(t) : t).toList(),
     );
+  }
+
+  void _setTaskExecution(String taskId, ExecutionIntentModel? intent) {
+    final nextExecutions = Map<String, ExecutionIntentModel>.from(
+      state.taskExecutions,
+    );
+    if (intent == null) {
+      nextExecutions.remove(taskId);
+    } else {
+      nextExecutions[taskId] = intent;
+    }
+    state = state.copyWith(taskExecutions: nextExecutions);
+  }
+
+  void _setTaskExecutionRecord(String taskId, ExecutionRecordModel? record) {
+    final nextRecords = Map<String, ExecutionRecordModel>.from(
+      state.taskExecutionRecords,
+    );
+    if (record == null) {
+      nextRecords.remove(taskId);
+    } else {
+      nextRecords[taskId] = record;
+    }
+    state = state.copyWith(taskExecutionRecords: nextRecords);
+  }
+
+  void _setHandoffLoading(String taskId, bool isLoading) {
+    final nextLoading = Set<String>.from(state.handoffInFlight);
+    if (isLoading) {
+      nextLoading.add(taskId);
+    } else {
+      nextLoading.remove(taskId);
+    }
+    state = state.copyWith(handoffInFlight: nextLoading);
+  }
+
+  void _setExecutionDecisionLoading(String taskId, bool isLoading) {
+    final nextLoading = Set<String>.from(state.executionDecisionInFlight);
+    if (isLoading) {
+      nextLoading.add(taskId);
+    } else {
+      nextLoading.remove(taskId);
+    }
+    state = state.copyWith(executionDecisionInFlight: nextLoading);
+  }
+
+  Future<ExecutionRecordModel?> _decideExecutionResult(
+    String taskId, {
+    required Future<ExecutionRecordModel> Function(String recordId) decision,
+  }) async {
+    if (state.executionDecisionInFlight.contains(taskId)) {
+      return state.taskExecutionRecords[taskId];
+    }
+
+    final intent = state.taskExecutions[taskId] ??
+        await loadTaskExecutionState(taskId, includeRecord: true);
+    if (intent == null) {
+      state = state.copyWith(error: '没有可处理的 AI 执行记录');
+      return null;
+    }
+
+    var record = state.taskExecutionRecords[taskId];
+    record ??= await _taskRepository.getExecutionRecord(intent.id);
+    if (record == null) {
+      state = state.copyWith(error: '执行记录暂不可用');
+      return null;
+    }
+
+    _setExecutionDecisionLoading(taskId, true);
+    if (mounted) {
+      state = state.copyWith(clearError: true);
+    }
+
+    try {
+      final updatedRecord = await decision(record.id);
+      if (!mounted) return updatedRecord;
+      _setTaskExecutionRecord(taskId, updatedRecord);
+      await loadTaskExecutionState(taskId, includeRecord: true);
+      await _refreshTaskFromServer(taskId);
+      return updatedRecord;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(error: e.toString());
+      }
+      return null;
+    } finally {
+      if (mounted) {
+        _setExecutionDecisionLoading(taskId, false);
+      }
+    }
+  }
+
+  Future<void> _refreshTaskFromServer(String taskId) async {
+    final updatedTask = await _taskRepository.getTask(taskId);
+    if (!mounted) return;
+    _updateTaskInState(updatedTask);
+    final activeTask = _ref.read(activeTaskProvider);
+    if (activeTask?.id == taskId) {
+      _ref.read(activeTaskProvider.notifier).state = updatedTask;
+    }
   }
 
   /// Submit optional feedback after task completion
