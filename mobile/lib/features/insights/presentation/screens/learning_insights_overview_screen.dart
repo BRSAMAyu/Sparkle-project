@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
+import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
@@ -33,6 +34,11 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
               (item) =>
                   item?['type']?.toString().startsWith('theater_') ?? false,
+              orElse: () => null,
+            );
+    final latestSimulation =
+        systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
+              (item) => item?['type']?.toString() == 'simulation_session_ready',
               orElse: () => null,
             );
     final latestReport = systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
@@ -78,18 +84,29 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(
                 title: '学习仿真',
-                subtitle: topSeed != null ? topSeed.topic : '把一个知识点拉进多角色现场讨论',
-                status: simulationState.recommendedSeeds.isNotEmpty
-                    ? '${simulationState.recommendedSeeds.length} 个推荐场景'
-                    : '可立即开始一轮新模拟',
+                subtitle: _simulationTitle(
+                  latestSimulation,
+                  fallbackSeed: topSeed,
+                ),
+                status: latestSimulation != null
+                    ? _simulationStatus(latestSimulation)
+                    : simulationState.recommendedSeeds.isNotEmpty
+                        ? '${simulationState.recommendedSeeds.length} 个推荐场景'
+                        : '可立即开始一轮新模拟',
                 accent: DS.accent,
                 icon: Icons.groups_rounded,
                 highlighted: initialPanel == panelSimulation,
-                buttonLabel: topSeed != null ? '从推荐开始' : '开始模拟',
+                buttonLabel: latestSimulation != null
+                    ? '继续查看'
+                    : topSeed != null
+                        ? '从推荐开始'
+                        : '开始模拟',
                 onPressed: () => context.push(
-                  topSeed != null
-                      ? '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(topSeed.topic)}&scenario_key=${Uri.encodeComponent(topSeed.suggestedScenario)}'
-                      : SimulationRoutes.simulation,
+                  latestSimulation != null
+                      ? _simulationLocation(latestSimulation)
+                      : topSeed != null
+                          ? '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(topSeed.topic)}&scenario_key=${Uri.encodeComponent(topSeed.suggestedScenario)}'
+                          : SimulationRoutes.simulation,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -170,6 +187,33 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         : latestTheater['description']?.toString() ?? '继续上次推演';
   }
 
+  String _simulationTitle(
+    Map<String, dynamic>? latestSimulation, {
+    required SimulationSeedModel? fallbackSeed,
+  }) {
+    if (latestSimulation == null) {
+      return fallbackSeed?.topic ?? '把一个知识点拉进多角色现场讨论';
+    }
+    final metadata = Map<String, dynamic>.from(
+      latestSimulation['metadata'] as Map? ?? const {},
+    );
+    final sessionPayload = metadata['session_payload'];
+    if (sessionPayload is Map) {
+      final topic = sessionPayload['topic']?.toString().trim();
+      if (topic != null && topic.isNotEmpty) {
+        return topic;
+      }
+    }
+    return latestSimulation['title']?.toString() ?? '继续上次学习仿真';
+  }
+
+  String _simulationStatus(Map<String, dynamic>? latestSimulation) {
+    if (latestSimulation == null) {
+      return '暂未生成最近仿真';
+    }
+    return '最近更新 · ${latestSimulation['description']?.toString() ?? '已有可继续内容'}';
+  }
+
   String _theaterStatus(Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return '暂未生成最近推演';
@@ -188,6 +232,20 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     return '掌握度 ${avg.round()}%';
   }
 
+  String _simulationLocation(Map<String, dynamic>? latestSimulation) {
+    if (latestSimulation == null) {
+      return SimulationRoutes.simulation;
+    }
+    final metadata = Map<String, dynamic>.from(
+      latestSimulation['metadata'] as Map? ?? const {},
+    );
+    final deepLink = metadata['deep_link']?.toString().trim();
+    if (deepLink != null && deepLink.startsWith(SimulationRoutes.simulation)) {
+      return deepLink;
+    }
+    return SimulationRoutes.simulation;
+  }
+
   String _theaterLocation(Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return TheaterRoutes.theater;
@@ -195,11 +253,27 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     final metadata = Map<String, dynamic>.from(
       latestTheater['metadata'] as Map? ?? const {},
     );
-    final topic = metadata['title']?.toString();
+    final deepLink = metadata['deep_link']?.toString().trim();
+    if (deepLink != null && deepLink.startsWith(TheaterRoutes.theater)) {
+      return deepLink;
+    }
+    final topicCandidate = metadata['topic']?.toString().trim();
+    final targetNameCandidate = metadata['target_name']?.toString().trim();
+    final titleCandidate = metadata['title']?.toString().trim();
+    final topic = (topicCandidate?.isNotEmpty ?? false)
+        ? topicCandidate
+        : (targetNameCandidate?.isNotEmpty ?? false)
+            ? targetNameCandidate
+            : titleCandidate;
     if (topic == null || topic.isEmpty) {
       return TheaterRoutes.theater;
     }
-    return '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(topic)}';
+    final query = <String, String>{'topic': topic};
+    final targetNodeId = metadata['target_node_id']?.toString().trim();
+    if (targetNodeId != null && targetNodeId.isNotEmpty) {
+      query['target_node_id'] = targetNodeId;
+    }
+    return Uri(path: TheaterRoutes.theater, queryParameters: query).toString();
   }
 }
 

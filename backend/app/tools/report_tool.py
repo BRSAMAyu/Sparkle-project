@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -41,6 +42,17 @@ class GenerateLearningReportTool(BaseTool):
             preview.setdefault("markdown", str(report.get("markdown") or ""))
             preview.setdefault("sections", list(report.get("sections") or []))
             preview.setdefault("mastery", list(report.get("mastery") or []))
+            deep_link = str(report.get("deep_link") or "/learning-report")
+            query = dict(parse_qsl(urlsplit(deep_link).query))
+            report_id = str(report.get("report_id") or "")
+            if report_id:
+                query["report_id"] = report_id
+            if params.source_chat_session_id:
+                query["source_chat_session_id"] = params.source_chat_session_id
+            parts = urlsplit(deep_link)
+            resolved_deep_link = urlunsplit(
+                (parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
+            )
 
             return ToolResult(
                 success=True,
@@ -50,7 +62,7 @@ class GenerateLearningReportTool(BaseTool):
                     "report_id": str(report.get("report_id") or ""),
                     "report_preview": preview,
                     "quality_mode": str(report.get("quality_mode") or ""),
-                    "deep_link": str(report.get("deep_link") or "/learning-report"),
+                    "deep_link": resolved_deep_link,
                     "open_report": True,
                     "source_chat_session_id": params.source_chat_session_id,
                 },

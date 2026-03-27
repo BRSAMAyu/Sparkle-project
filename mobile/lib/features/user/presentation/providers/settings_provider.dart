@@ -24,6 +24,7 @@ const String kShowChatContextToggleKey = 'settings_show_chat_context_toggle';
 const String kShowChatPredictionDockKey = 'settings_show_chat_prediction_dock';
 const String kShowChatTransparencyCapsuleKey =
     'settings_show_chat_transparency_capsule';
+const String kChatPureModeKey = 'settings_chat_pure_mode';
 const String kMotionIntensityLevelPreferenceKey =
     'settings_motion_intensity_level';
 
@@ -347,6 +348,14 @@ final showChatTransparencyCapsuleProvider =
   (ref) => SimpleBoolPreferenceNotifier(
     storageKey: kShowChatTransparencyCapsuleKey,
     defaultValue: true,
+  ),
+);
+
+final chatPureModeProvider =
+    StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
+  (ref) => SimpleBoolPreferenceNotifier(
+    storageKey: kChatPureModeKey,
+    defaultValue: false,
   ),
 );
 

@@ -3,6 +3,7 @@ class SimulationParticipantModel {
     required this.name,
     required this.roleHint,
     required this.persona,
+    this.stance,
     this.source,
     this.sourceNodeName,
     this.contextAnchor,
@@ -15,6 +16,7 @@ class SimulationParticipantModel {
         persona: Map<String, dynamic>.from(
           json['persona'] as Map<String, dynamic>? ?? const {},
         ),
+        stance: json['stance']?.toString(),
         source: json['source']?.toString(),
         sourceNodeName: json['source_node_name']?.toString(),
         contextAnchor: json['context_anchor']?.toString(),
@@ -23,6 +25,7 @@ class SimulationParticipantModel {
   final String name;
   final String roleHint;
   final Map<String, dynamic> persona;
+  final String? stance;
   final String? source;
   final String? sourceNodeName;
   final String? contextAnchor;
@@ -72,6 +75,8 @@ class SimulationRoundModel {
     required this.round,
     required this.speaker,
     required this.message,
+    this.replyToSpeaker,
+    this.turnGoal,
   });
 
   factory SimulationRoundModel.fromJson(Map<String, dynamic> json) =>
@@ -79,11 +84,15 @@ class SimulationRoundModel {
         round: (json['round'] as num?)?.toInt() ?? 0,
         speaker: json['speaker']?.toString() ?? '',
         message: json['message']?.toString() ?? '',
+        replyToSpeaker: json['reply_to_speaker']?.toString(),
+        turnGoal: json['turn_goal']?.toString(),
       );
 
   final int round;
   final String speaker;
   final String message;
+  final String? replyToSpeaker;
+  final String? turnGoal;
 }
 
 class SimulationSessionModel {
@@ -95,6 +104,8 @@ class SimulationSessionModel {
     required this.participants,
     required this.rounds,
     required this.insightSummary,
+    this.interactionPrompt,
+    this.suggestedReplies = const [],
   });
 
   factory SimulationSessionModel.fromJson(Map<String, dynamic> json) =>
@@ -112,6 +123,11 @@ class SimulationSessionModel {
             .map(SimulationRoundModel.fromJson)
             .toList(),
         insightSummary: json['insight_summary']?.toString() ?? '',
+        interactionPrompt: json['interaction_prompt']?.toString(),
+        suggestedReplies:
+            (json['suggested_replies'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
       );
 
   final String id;
@@ -121,6 +137,8 @@ class SimulationSessionModel {
   final List<SimulationParticipantModel> participants;
   final List<SimulationRoundModel> rounds;
   final String insightSummary;
+  final String? interactionPrompt;
+  final List<String> suggestedReplies;
 
   SimulationSessionModel copyWith({
     String? id,
@@ -130,6 +148,8 @@ class SimulationSessionModel {
     List<SimulationParticipantModel>? participants,
     List<SimulationRoundModel>? rounds,
     String? insightSummary,
+    String? interactionPrompt,
+    List<String>? suggestedReplies,
   }) =>
       SimulationSessionModel(
         id: id ?? this.id,
@@ -139,6 +159,8 @@ class SimulationSessionModel {
         participants: participants ?? this.participants,
         rounds: rounds ?? this.rounds,
         insightSummary: insightSummary ?? this.insightSummary,
+        interactionPrompt: interactionPrompt ?? this.interactionPrompt,
+        suggestedReplies: suggestedReplies ?? this.suggestedReplies,
       );
 }
 
@@ -153,6 +175,8 @@ class SimulationStreamEventModel {
     this.rounds = const [],
     this.session,
     this.message,
+    this.interactionPrompt,
+    this.suggestedReplies = const [],
   });
 
   factory SimulationStreamEventModel.fromJson(
@@ -183,6 +207,11 @@ class SimulationStreamEventModel {
               )
             : null,
         message: json['message']?.toString(),
+        interactionPrompt: json['interaction_prompt']?.toString(),
+        suggestedReplies:
+            (json['suggested_replies'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
       );
 
   final String event;
@@ -194,4 +223,6 @@ class SimulationStreamEventModel {
   final List<SimulationRoundModel> rounds;
   final SimulationSessionModel? session;
   final String? message;
+  final String? interactionPrompt;
+  final List<String> suggestedReplies;
 }

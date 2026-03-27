@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
 class AssistantAgentBadge extends StatelessWidget {
   const AssistantAgentBadge({
@@ -7,6 +10,7 @@ class AssistantAgentBadge extends StatelessWidget {
     this.displayName,
     this.colorHex,
     this.iconName,
+    this.onTap,
     super.key,
   });
 
@@ -14,114 +18,285 @@ class AssistantAgentBadge extends StatelessWidget {
   final String? displayName;
   final String? colorHex;
   final String? iconName;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = _hexToColor(colorHex) ?? DS.brandPrimary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: DS.spacing8),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_iconForName(iconName), size: 14, color: color),
-          const SizedBox(width: DS.spacing6),
-          Text(
-            displayName ?? _labelForAgent(agentId),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+    return ChatAccessoryPill(
+      icon: _iconForName(iconName),
+      label: displayName ?? _labelForAgent(agentId),
+      accentColor: color,
+      onTap: onTap,
     );
   }
 }
 
-class ExpertRoundtableWidget extends StatelessWidget {
+class ExpertRoundtableWidget extends StatefulWidget {
   const ExpertRoundtableWidget({
     super.key,
     this.routingPreview,
     this.turns = const [],
     this.compact = false,
+    this.autoCollapse = true,
+    this.collapseDelay = const Duration(seconds: 4),
+    this.collapseId,
   });
 
   final Map<String, dynamic>? routingPreview;
   final List<Map<String, dynamic>> turns;
   final bool compact;
+  final bool autoCollapse;
+  final Duration collapseDelay;
+  final String? collapseId;
+
+  @override
+  State<ExpertRoundtableWidget> createState() => _ExpertRoundtableWidgetState();
+}
+
+class _ExpertRoundtableWidgetState extends State<ExpertRoundtableWidget> {
+  static final Set<String> _collapsedIds = <String>{};
+
+  Timer? _collapseTimer;
+  late bool _isCollapsed;
+
+  String? get _collapseId => widget.collapseId;
+
+  bool get _hasContent =>
+      (widget.routingPreview != null && widget.routingPreview!.isNotEmpty) ||
+      widget.turns.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _isCollapsed = _collapseId != null && _collapsedIds.contains(_collapseId);
+    _scheduleAutoCollapse();
+  }
+
+  @override
+  void didUpdateWidget(covariant ExpertRoundtableWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final collapseIdChanged = oldWidget.collapseId != widget.collapseId;
+    final contentChanged = oldWidget.routingPreview != widget.routingPreview ||
+        oldWidget.turns != widget.turns;
+
+    if (collapseIdChanged) {
+      _isCollapsed = _collapseId != null && _collapsedIds.contains(_collapseId);
+    }
+
+    if (collapseIdChanged || contentChanged) {
+      _collapseTimer?.cancel();
+      _scheduleAutoCollapse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _collapseTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleAutoCollapse() {
+    if (!_hasContent || !widget.autoCollapse || _isCollapsed) {
+      return;
+    }
+
+    _collapseTimer = Timer(widget.collapseDelay, () {
+      if (!mounted) return;
+      setState(() => _isCollapsed = true);
+      if (_collapseId != null) {
+        _collapsedIds.add(_collapseId!);
+      }
+    });
+  }
+
+  void _setCollapsed(bool collapsed) {
+    _collapseTimer?.cancel();
+    setState(() => _isCollapsed = collapsed);
+    if (collapsed && _collapseId != null) {
+      _collapsedIds.add(_collapseId!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if ((routingPreview == null || routingPreview!.isEmpty) && turns.isEmpty) {
+    if (!_hasContent) {
       return const SizedBox.shrink();
     }
 
-    final experts = (routingPreview?['experts'] as List<dynamic>? ?? const [])
+    final experts = (widget.routingPreview?['experts'] as List<dynamic>? ??
+            const <dynamic>[])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
-    final complexityTier = routingPreview?['complexity_tier']?.toString();
+    final complexityTier =
+        widget.routingPreview?['complexity_tier']?.toString();
     final complexityScore =
-        (routingPreview?['complexity_score'] as num?)?.toDouble();
-    final etaMin = (routingPreview?['eta_seconds_min'] as num?)?.toInt();
-    final etaMax = (routingPreview?['eta_seconds_max'] as num?)?.toInt();
+        (widget.routingPreview?['complexity_score'] as num?)?.toDouble();
+    final etaMin = (widget.routingPreview?['eta_seconds_min'] as num?)?.toInt();
+    final etaMax = (widget.routingPreview?['eta_seconds_max'] as num?)?.toInt();
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: _isCollapsed
+          ? _CollapsedExpertRoundtable(
+              key: const ValueKey('collapsed'),
+              experts: experts,
+              turnCount: widget.turns.length,
+              complexityTier: complexityTier,
+              onExpand: () => _setCollapsed(false),
+            )
+          : _ExpandedExpertRoundtable(
+              key: const ValueKey('expanded'),
+              experts: experts,
+              turns: widget.turns,
+              compact: widget.compact,
+              complexityTier: complexityTier,
+              complexityScore: complexityScore,
+              etaMin: etaMin,
+              etaMax: etaMax,
+              onCollapse: () => _setCollapsed(true),
+            ),
+    );
+  }
+}
+
+class _CollapsedExpertRoundtable extends StatelessWidget {
+  const _CollapsedExpertRoundtable({
+    required this.experts,
+    required this.turnCount,
+    required this.onExpand,
+    super.key,
+    this.complexityTier,
+  });
+
+  final List<Map<String, dynamic>> experts;
+  final int turnCount;
+  final String? complexityTier;
+  final VoidCallback onExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayedExperts = experts.take(2).toList();
+    final remainingExperts = experts.length - displayedExperts.length;
+
+    return Wrap(
+      spacing: DS.spacing6,
+      runSpacing: DS.spacing6,
+      children: [
+        ChatAccessoryPill(
+          icon: Icons.forum_rounded,
+          label: experts.isEmpty ? '专家协作' : '专家协作 ${experts.length}位',
+          emphasize: true,
+          onTap: onExpand,
+          trailing: Icon(
+            Icons.expand_more_rounded,
+            size: 14,
+            color: DS.primaryBase,
+          ),
+        ),
+        ...displayedExperts.map(
+          (expert) => AssistantAgentBadge(
+            agentId: expert['agent_id']?.toString() ?? '',
+            displayName: expert['display_name']?.toString(),
+            colorHex: expert['color']?.toString(),
+            iconName: expert['icon']?.toString(),
+            onTap: onExpand,
+          ),
+        ),
+        if (remainingExperts > 0)
+          ChatAccessoryPill(
+            icon: Icons.add_rounded,
+            label: '$remainingExperts 位',
+            onTap: onExpand,
+          ),
+        if (turnCount > 0)
+          ChatAccessoryPill(
+            icon: Icons.notes_rounded,
+            label: '$turnCount 条观点',
+            onTap: onExpand,
+          ),
+        if (complexityTier != null && complexityTier!.isNotEmpty)
+          ChatAccessoryPill(
+            icon: Icons.auto_graph_rounded,
+            label: _complexityLabel(complexityTier!),
+            onTap: onExpand,
+          ),
+      ],
+    );
+  }
+}
+
+class _ExpandedExpertRoundtable extends StatelessWidget {
+  const _ExpandedExpertRoundtable({
+    required this.experts,
+    required this.turns,
+    required this.compact,
+    required this.onCollapse,
+    super.key,
+    this.complexityTier,
+    this.complexityScore,
+    this.etaMin,
+    this.etaMax,
+  });
+
+  final List<Map<String, dynamic>> experts;
+  final List<Map<String, dynamic>> turns;
+  final bool compact;
+  final String? complexityTier;
+  final double? complexityScore;
+  final int? etaMin;
+  final int? etaMax;
+  final VoidCallback onCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewTurns = compact ? turns.take(2).toList() : turns;
+    final hiddenTurns = turns.length - previewTurns.length;
 
     return Container(
       padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F8FC),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDCE4F2)),
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD8E1EF)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(
-                  Icons.forum_rounded,
-                  size: 16,
-                  color: DS.brandPrimary,
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Text(
-                '专家圆桌',
-                style: TextStyle(
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.textPrimary,
+              const ChatAccessoryPill(
+                icon: Icons.forum_rounded,
+                label: '专家协作',
+                selected: true,
+                padding: EdgeInsets.symmetric(
+                  horizontal: DS.spacing10,
+                  vertical: DS.spacing6,
                 ),
               ),
               const Spacer(),
-              if (complexityTier != null && complexityTier.isNotEmpty)
-                _InfoChip(
-                  label: '${_complexityLabel(complexityTier)}'
-                      '${complexityScore != null ? ' ${(complexityScore * 100).round()}%' : ''}',
+              IconButton(
+                onPressed: onCollapse,
+                icon: const Icon(Icons.unfold_less_rounded, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 28,
+                  height: 28,
                 ),
+                splashRadius: 18,
+                color: DS.textSecondary,
+                tooltip: '收起',
+              ),
             ],
           ),
           if (experts.isNotEmpty) ...[
-            const SizedBox(height: DS.spacing10),
+            const SizedBox(height: DS.spacing8),
             Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
+              spacing: DS.spacing6,
+              runSpacing: DS.spacing6,
               children: experts
                   .map(
                     (expert) => AssistantAgentBadge(
@@ -134,24 +309,42 @@ class ExpertRoundtableWidget extends StatelessWidget {
                   .toList(),
             ),
           ],
-          if (etaMin != null || etaMax != null) ...[
+          if (complexityTier != null ||
+              complexityScore != null ||
+              etaMin != null ||
+              etaMax != null) ...[
             const SizedBox(height: DS.spacing8),
-            Text(
-              '预计 ${etaMin ?? etaMax}-${etaMax ?? etaMin} 秒',
-              style: TextStyle(
-                fontSize: 12,
-                color: DS.textSecondary,
-              ),
+            Wrap(
+              spacing: DS.spacing6,
+              runSpacing: DS.spacing6,
+              children: [
+                if (complexityTier != null && complexityTier!.isNotEmpty)
+                  ChatAccessoryPill(
+                    icon: Icons.auto_graph_rounded,
+                    label:
+                        '${_complexityLabel(complexityTier!)}${complexityScore == null ? '' : ' ${(complexityScore! * 100).round()}%'}',
+                  ),
+                if (etaMin != null || etaMax != null)
+                  ChatAccessoryPill(
+                    icon: Icons.schedule_rounded,
+                    label: _etaLabel(etaMin, etaMax),
+                  ),
+              ],
             ),
           ],
-          if (turns.isNotEmpty) ...[
-            const SizedBox(height: DS.spacing12),
-            ...turns.map(
+          if (previewTurns.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing10),
+            ...previewTurns.map(
               (turn) => Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing8),
                 child: _TurnCard(turn: turn),
               ),
             ),
+            if (hiddenTurns > 0)
+              ChatAccessoryPill(
+                icon: Icons.more_horiz_rounded,
+                label: '还有 $hiddenTurns 条观点',
+              ),
           ],
         ],
       ),
@@ -171,7 +364,7 @@ class _TurnCard extends StatelessWidget {
         _labelForAgent(turn['agent_id']?.toString() ?? '');
     final content = turn['content']?.toString() ?? '';
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -180,62 +373,37 @@ class _TurnCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                _iconForName(turn['icon']?.toString()),
-                size: 14,
-                color: color,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
+          AssistantAgentBadge(
+            agentId: turn['agent_id']?.toString() ?? '',
+            displayName: label,
+            colorHex: turn['color']?.toString(),
+            iconName: turn['icon']?.toString(),
           ),
-          const SizedBox(height: DS.spacing6),
-          Text(
-            content,
-            style: TextStyle(
-              color: DS.textPrimary,
-              height: 1.45,
+          if (content.trim().isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: DS.textPrimary,
+                height: 1.45,
+                fontSize: 12.5,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFDCE4F2)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: DS.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
+String _etaLabel(int? etaMin, int? etaMax) {
+  final low = etaMin ?? etaMax;
+  final high = etaMax ?? etaMin;
+  if (low == null || high == null) return '预计处理中';
+  if (low == high) return '约 ${low}s';
+  return '$low-$high s';
 }
 
 String _complexityLabel(String tier) {

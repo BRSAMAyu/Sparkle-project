@@ -13,6 +13,7 @@ from app.core.cache import cache_service
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
+from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.theater.prediction_theater_service import (
     PredictionAccuracyTracker,
     PredictionTheaterService,
@@ -188,6 +189,141 @@ async def test_seed_extractor_fallback_seeds_are_stable_for_empty_user():
     assert all(seed.suggested_scenario for seed in seeds)
 
 
+def test_seed_extractor_extract_selected_topics_accepts_dict_and_list_payloads():
+    extractor = SeedExtractor(db=None)  # type: ignore[arg-type]
+
+    from_dict = extractor._extract_selected_topics(
+        {
+            "selected_topics": [
+                "指针与内存",
+                {"topic": "derivative 错因深挖"},
+                {"selected_topic": "Python编程"},
+            ]
+        }
+    )
+    from_list = extractor._extract_selected_topics(
+        [
+            "指针与内存",
+            {"topic": "derivative 错因深挖"},
+            {"selected_topic": "Python编程"},
+        ]
+    )
+
+    assert from_dict == {"指针与内存", "derivative 错因深挖", "Python编程"}
+    assert from_list == {"指针与内存", "derivative 错因深挖", "Python编程"}
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_refine_with_llm_accepts_list_payload(monkeypatch):
+    extractor = SeedExtractor(db=None)  # type: ignore[arg-type]
+    seeds = [
+        SimulationSeed(
+            topic="指针与内存",
+            context="",
+            tension_point="",
+            source_type="error_book",
+            source_ids=["1"],
+            relevance_score=0.9,
+            suggested_scenario="study_group",
+            suggested_experts=["错题教练"],
+        ),
+        SimulationSeed(
+            topic="derivative 错因深挖",
+            context="",
+            tension_point="",
+            source_type="error_book",
+            source_ids=["2"],
+            relevance_score=0.8,
+            suggested_scenario="study_group",
+            suggested_experts=["深度分析"],
+        ),
+    ]
+
+    monkeypatch.setattr(
+        "app.services.simulation.seed_extractor.analysis_llm.json_call",
+        AsyncMock(return_value=["derivative 错因深挖"]),
+    )
+
+    refined = await extractor._refine_with_llm(
+        seeds,
+        scenario_key="study_group",
+        limit=1,
+    )
+
+    assert [seed.topic for seed in refined] == ["derivative 错因深挖"]
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_prefers_cold_start_seeds_before_generic_fallback(monkeypatch):
+    extractor = SeedExtractor(db=None)  # type: ignore[arg-type]
+    user_id = uuid4()
+    cold_start_seed = SimulationSeed(
+        topic="把 特征值 变成第一轮可执行练习",
+        context="来自任务或计划的冷启动种子。",
+        tension_point="先说清第一步。",
+        source_type="task_bootstrap",
+        source_ids=["task-1"],
+        relevance_score=0.74,
+        suggested_scenario="study_group",
+        suggested_experts=["学伴"],
+    )
+
+    for method_name in (
+        "_galaxy_seeds",
+        "_error_seeds",
+        "_sprint_seeds",
+        "_cognitive_seeds",
+        "_timeline_seeds",
+    ):
+        monkeypatch.setattr(extractor, method_name, AsyncMock(return_value=[]))
+    monkeypatch.setattr(extractor, "_cold_start_seeds", AsyncMock(return_value=[cold_start_seed]))
+
+    seeds = await extractor.extract_seeds(user_id, scenario_key="study_group", limit=2)
+
+    assert [seed.source_type for seed in seeds] == ["task_bootstrap"]
+
+
+@pytest.mark.asyncio
+async def test_simulation_engine_generates_rounds_as_replies(monkeypatch):
+    engine = SimulationEngine(db=None)
+    captured: dict[str, str] = {}
+
+    async def fake_json_call(messages, *, fallback=None, temperature=0.45):
+        del temperature
+        captured["prompt"] = str(messages[-1]["content"])
+        return {
+            "speaker": "提问者",
+            "message": "回应优等生刚才的解释，我更想先确认为什么这一步不能直接跳过。",
+            "reply_to_speaker": "优等生",
+            "turn_goal": "extend",
+        }
+
+    monkeypatch.setattr(
+        "app.services.simulation.simulation_engine.analysis_llm.json_call",
+        fake_json_call,
+    )
+
+    round_item = await engine._generate_round(
+        topic="特征值",
+        scenario_key="study_group",
+        participants=[
+            {"name": "优等生", "role_hint": "先解释定义", "stance": "supportive", "persona": {}},
+            {"name": "提问者", "role_hint": "持续追问", "stance": "challenging", "persona": {}},
+        ],
+        round_index=1,
+        round_count=3,
+        previous_rounds=[
+            {"round": 1, "speaker": "优等生", "message": "我建议先从定义和几何意义开始。"},
+        ],
+        template={"description": "虚拟学习小组讨论"},
+    )
+
+    assert round_item["speaker"] == "提问者"
+    assert round_item["reply_to_speaker"] == "优等生"
+    assert round_item["turn_goal"] == "extend"
+    assert "Reply target: 优等生" in captured["prompt"]
+
+
 @pytest.mark.asyncio
 async def test_resolve_target_node_for_user_rejects_inaccessible_explicit_node(db_session, test_user):
     node = KnowledgeNode(
@@ -249,6 +385,19 @@ def test_normalized_topic_terms_extracts_keywords_from_natural_language():
     assert all(term.strip() for term in terms)
 
 
+def test_normalized_topic_terms_split_compound_chinese_topic():
+    terms = _normalized_topic_terms("我想补一下指针与内存")
+
+    assert "指针" in terms
+    assert "内存" in terms
+
+
+def test_normalized_topic_terms_expand_linear_algebra_alias():
+    terms = _normalized_topic_terms("帮我推演特征值与特征向量")
+
+    assert "线性代数" in terms
+
+
 @pytest.mark.asyncio
 async def test_resolve_target_node_matches_natural_language_topic(db_session):
     target = KnowledgeNode(
@@ -270,6 +419,87 @@ async def test_resolve_target_node_matches_natural_language_topic(db_session):
     service = PredictionTheaterService(db_session)
     resolved = await service._resolve_target_node(
         topic="学 Python 的路径",
+        target_node_id=None,
+    )
+
+    assert resolved.id == target.id
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_prefers_multi_term_match(db_session):
+    target = KnowledgeNode(
+        name="C/C++编程",
+        description="C语言基础、指针、内存模型",
+        importance_level=4,
+        is_seed=True,
+    )
+    distractor = KnowledgeNode(
+        name="操作系统",
+        description="进程、内存管理、文件系统",
+        importance_level=5,
+        is_seed=True,
+    )
+    db_session.add_all([target, distractor])
+    await db_session.commit()
+    await db_session.refresh(target)
+
+    service = PredictionTheaterService(db_session)
+    resolved = await service._resolve_target_node(
+        topic="我想补一下指针与内存",
+        target_node_id=None,
+    )
+
+    assert resolved.id == target.id
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_uses_character_overlap_fallback(db_session):
+    target = KnowledgeNode(
+        name="特征分解与谱分析",
+        description="矩阵谱、相似对角化与不变子空间",
+        importance_level=4,
+        is_seed=True,
+    )
+    distractor = KnowledgeNode(
+        name="操作系统",
+        description="进程、调度与文件系统",
+        importance_level=5,
+        is_seed=True,
+    )
+    db_session.add_all([target, distractor])
+    await db_session.commit()
+    await db_session.refresh(target)
+
+    service = PredictionTheaterService(db_session)
+    resolved = await service._resolve_target_node(
+        topic="帮我推演特征值与特征向量",
+        target_node_id=None,
+    )
+
+    assert resolved.id == target.id
+
+
+@pytest.mark.asyncio
+async def test_resolve_target_node_uses_alias_expansion_for_linear_algebra(db_session):
+    target = KnowledgeNode(
+        name="线性代数",
+        description="矩阵、向量、特征分解与线性变换",
+        importance_level=4,
+        is_seed=True,
+    )
+    distractor = KnowledgeNode(
+        name="概率论与数理统计",
+        description="随机变量、概率分布与统计推断",
+        importance_level=5,
+        is_seed=True,
+    )
+    db_session.add_all([target, distractor])
+    await db_session.commit()
+    await db_session.refresh(target)
+
+    service = PredictionTheaterService(db_session)
+    resolved = await service._resolve_target_node(
+        topic="帮我推演特征值与特征向量",
         target_node_id=None,
     )
 

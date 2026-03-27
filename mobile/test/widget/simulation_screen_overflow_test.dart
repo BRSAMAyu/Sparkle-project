@@ -100,19 +100,29 @@ void main() {
                       round: 1,
                       speaker: '数学专家',
                       message: '先从定义出发，说明特征值与线性变换之间的联系。',
+                      turnGoal: 'open',
                     ),
                     SimulationRoundModel(
                       round: 2,
                       speaker: '反方辩手',
                       message: '如果只会代公式但不理解几何意义，后面仍然会卡住。',
+                      replyToSpeaker: '数学专家',
+                      turnGoal: 'challenge',
                     ),
                     SimulationRoundModel(
                       round: 3,
                       speaker: '学习伙伴',
                       message: '可以先把矩阵看成对空间的拉伸，再理解不变方向。',
+                      replyToSpeaker: '反方辩手',
+                      turnGoal: 'synthesize',
                     ),
                   ],
                   insightSummary: '这轮讨论的关键在于先建立直觉，再回到代数表达，避免只停留在机械运算。',
+                  interactionPrompt: '如果是你，现在会先补几何直觉还是先练一道题？',
+                  suggestedReplies: <String>[
+                    '我会先补几何直觉，再回到代数表达。',
+                    '我想先找一道典型题验证理解。',
+                  ],
                 ),
                 recommendedSeeds: <SimulationSeedModel>[
                   SimulationSeedModel(
@@ -140,6 +150,7 @@ void main() {
 
     expect(find.text('学习场景模拟'), findsOneWidget);
     expect(find.text('讨论时间线'), findsOneWidget);
+    expect(find.text('轮到你加入这场讨论'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

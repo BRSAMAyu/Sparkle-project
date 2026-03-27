@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import String, and_, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -67,14 +67,24 @@ def _normalized_topic_terms(topic: str) -> list[str]:
     for phrase in filler_phrases:
         compact = compact.replace(phrase, " ")
 
-    tokens = re.findall(r"[a-z0-9+#]+|[\u4e00-\u9fff]{2,}", compact)
+    segmented = re.sub(r"(以及|还有|还有|并且|并|与|和|及|跟|或)", " ", compact)
+    tokens = re.findall(r"[a-z0-9+#]+|[\u4e00-\u9fff]{2,}", segmented)
     terms: list[str] = []
-    for candidate in [normalized, cleaned, compact, *tokens]:
+    for candidate in [normalized, cleaned, compact, segmented, *tokens]:
         term = " ".join(str(candidate).strip().split())
         if len(term) < 2:
             continue
         if term not in terms:
             terms.append(term)
+
+    alias_expansions = {
+        "线性代数": ("特征值", "特征向量", "向量", "矩阵", "线性变换", "特征分解"),
+        "微积分": ("导数", "积分", "极限"),
+        "概率论与数理统计": ("概率", "统计", "随机变量"),
+    }
+    for alias, markers in alias_expansions.items():
+        if any(marker in compact for marker in markers) and alias not in terms:
+            terms.append(alias)
     return terms
 
 
@@ -147,6 +157,15 @@ class TheaterPathOption:
             "risks": self.risks,
             "steps": [step.to_dict() for step in self.steps],
         }
+
+
+@dataclass(frozen=True)
+class TheaterTargetContext:
+    name: str
+    description: str
+    target_node_id: str | None
+    resolution_mode: str
+    backbone: list[dict[str, Any]]
 
 
 class PredictionAccuracyTracker:
@@ -243,17 +262,12 @@ class PredictionTheaterService:
         horizon_days: int = 14,
         preview_mode: bool = False,
     ) -> dict[str, Any]:
-        target_node = await self._resolve_target_node_for_user(
+        target_context = await self._resolve_target_context(
             user_id=user_id,
             topic=topic,
             target_node_id=target_node_id,
         )
-        learning_path = await self.graph_reasoning.generate_learning_path(
-            user_id,
-            target_node.id,
-            include_related_suggestions=True,
-        )
-        backbone = [item for item in learning_path if not item.get("is_optional")]
+        backbone = list(target_context.backbone)
         if not backbone:
             raise ValueError("Unable to generate a learning backbone for the selected topic")
 
@@ -261,7 +275,7 @@ class PredictionTheaterService:
         study_preferences = await self._build_user_learning_profile(user_id)
         pattern_names = await self._top_pattern_names(user_id)
         options = self._build_path_options(
-            target_name=target_node.name,
+            target_name=target_context.name,
             backbone=backbone,
             mastery_map=mastery_map,
             horizon_days=max(7, min(horizon_days, 30)),
@@ -275,7 +289,7 @@ class PredictionTheaterService:
             graph_bundle = await self._build_graph_bundle(backbone, mastery_map)
             discussion = await self._build_discussion(
                 topic=topic,
-                target_name=target_node.name,
+                target_name=target_context.name,
                 options=options,
                 graph_bundle=graph_bundle,
                 pattern_names=pattern_names,
@@ -286,8 +300,8 @@ class PredictionTheaterService:
         payload = {
             "prediction_id": prediction_id,
             "topic": topic,
-            "target_node_id": str(target_node.id),
-            "target_name": target_node.name,
+            "target_node_id": target_context.target_node_id,
+            "target_name": target_context.name,
             "horizon_days": horizon_days,
             "generated_at": _utcnow().isoformat(),
             "paths": [option.to_dict() for option in options],
@@ -298,11 +312,174 @@ class PredictionTheaterService:
             "routing_notes": {
                 "patterns": pattern_names,
                 "recommended_entry": options[0].title if options else "稳扎稳打",
+                "target_resolution_mode": target_context.resolution_mode,
             },
             "preview_mode": preview_mode,
         }
         await self.accuracy.record_prediction(payload)
+        if not preview_mode:
+            query = {"topic": topic}
+            if target_context.target_node_id:
+                query["target_node_id"] = target_context.target_node_id
+            deep_link = f"/theater?{urlencode(query)}"
+            await SystemUpdateService().enqueue(
+                user_id,
+                build_system_update(
+                    update_type="theater_prediction_ready",
+                    category="learning_insight",
+                    title=f"已生成知识推演「{target_context.name}」",
+                    description=(
+                        f"为“{topic}”生成了 {len(options)} 条可采纳路径，"
+                        f"推荐入口是 {options[0].title if options else '稳扎稳打'}。"
+                    ),
+                    priority="medium",
+                    metadata={
+                        "prediction_id": prediction_id,
+                        "target_node_id": target_context.target_node_id,
+                        "target_name": target_context.name,
+                        "topic": topic,
+                        "title": options[0].title if options else target_context.name,
+                        "path_count": len(options),
+                        "deep_link": deep_link,
+                        "target_resolution_mode": target_context.resolution_mode,
+                        "prediction_preview": {
+                            "prediction_id": prediction_id,
+                            "topic": topic,
+                            "target_node_id": target_context.target_node_id,
+                            "target_name": target_context.name,
+                            "paths": [option.to_dict() for option in options[:3]],
+                        },
+                    },
+                ),
+            )
         return payload
+
+    async def _resolve_target_context(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        target_node_id: UUID | None,
+    ) -> TheaterTargetContext:
+        if target_node_id is not None:
+            target_node = await self._resolve_target_node_for_user(
+                user_id=user_id,
+                topic=topic,
+                target_node_id=target_node_id,
+            )
+            return await self._build_target_context_from_node(user_id=user_id, target_node=target_node)
+
+        try:
+            target_node = await self._resolve_target_node_for_user(
+                user_id=user_id,
+                topic=topic,
+                target_node_id=None,
+            )
+        except ValueError:
+            return await self._build_free_mode_target_context(topic)
+        return await self._build_target_context_from_node(user_id=user_id, target_node=target_node)
+
+    async def _build_target_context_from_node(
+        self,
+        *,
+        user_id: UUID,
+        target_node: KnowledgeNode,
+    ) -> TheaterTargetContext:
+        learning_path = await self.graph_reasoning.generate_learning_path(
+            user_id,
+            target_node.id,
+            include_related_suggestions=True,
+        )
+        backbone = [item for item in learning_path if not item.get("is_optional")]
+        if not backbone:
+            raise ValueError("Unable to generate a learning backbone for the selected topic")
+        return TheaterTargetContext(
+            name=str(target_node.name or "当前主题"),
+            description=str(target_node.description or ""),
+            target_node_id=str(target_node.id),
+            resolution_mode="knowledge_graph",
+            backbone=backbone,
+        )
+
+    async def _build_free_mode_target_context(self, topic: str) -> TheaterTargetContext:
+        fallback = self._fallback_free_mode_target(topic)
+        payload = await analysis_llm.json_call(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Return strict JSON with keys target_name, description, prerequisites, milestones. "
+                        "This is for a free-mode learning theater when no knowledge graph node is found."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"User topic: {topic}\n"
+                        "Extract the most likely learning target, 2-4 prerequisite concepts, and 1-2 milestone outcomes. "
+                        "Keep it concrete and beginner-friendly."
+                    ),
+                },
+            ],
+            fallback=fallback,
+            temperature=0.2,
+        )
+        parsed = payload if isinstance(payload, dict) else fallback
+        target_name = str(parsed.get("target_name") or fallback["target_name"]).strip() or fallback["target_name"]
+        description = str(parsed.get("description") or fallback["description"]).strip() or fallback["description"]
+        prerequisites = self._coerce_string_list(parsed.get("prerequisites")) or list(fallback["prerequisites"])
+        milestones = self._coerce_string_list(parsed.get("milestones")) or list(fallback["milestones"])
+        backbone_names = self._dedupe_preserve_order([*prerequisites, target_name, *milestones])
+        backbone = [
+            {
+                "id": f"free-step-{index + 1}",
+                "name": name,
+                "description": description if index == 0 else f"{target_name} 自由模式推演中的关键阶段",
+                "is_target": index == max(len(backbone_names) - 2, 0),
+            }
+            for index, name in enumerate(backbone_names[:5])
+        ]
+        return TheaterTargetContext(
+            name=target_name,
+            description=description,
+            target_node_id=None,
+            resolution_mode="free_mode",
+            backbone=backbone,
+        )
+
+    def _fallback_free_mode_target(self, topic: str) -> dict[str, Any]:
+        terms = _normalized_topic_terms(topic)
+        candidates = [term for term in terms if len(term) >= 2]
+        target_name = candidates[0] if candidates else topic.strip() or "当前学习主题"
+        prerequisites = candidates[1:4]
+        if not prerequisites:
+            prerequisites = [f"{target_name} 的核心概念", f"{target_name} 的关键步骤"]
+        milestones = [f"{target_name} 的典型练习", f"{target_name} 的迁移应用"]
+        return {
+            "target_name": target_name,
+            "description": f"围绕 {target_name} 生成一条不依赖既有图谱节点的自由模式学习路径。",
+            "prerequisites": prerequisites[:3],
+            "milestones": milestones[:2],
+        }
+
+    @staticmethod
+    def _coerce_string_list(raw: Any) -> list[str]:
+        if isinstance(raw, list):
+            items = raw
+        elif raw is None:
+            items = []
+        else:
+            items = [raw]
+        return [str(item).strip() for item in items if str(item).strip()]
+
+    @staticmethod
+    def _dedupe_preserve_order(items: list[str]) -> list[str]:
+        deduped: list[str] = []
+        for item in items:
+            normalized = str(item).strip()
+            if normalized and normalized not in deduped:
+                deduped.append(normalized)
+        return deduped
 
     async def simulate_what_if(
         self,
@@ -602,6 +779,7 @@ class PredictionTheaterService:
                 [
                     func.lower(KnowledgeNode.name).contains(term),
                     func.lower(func.coalesce(KnowledgeNode.description, "")).contains(term),
+                    func.lower(cast(KnowledgeNode.keywords, String)).contains(term),
                 ]
             )
 
@@ -613,6 +791,24 @@ class PredictionTheaterService:
         result = await self.db.execute(stmt)
         candidates = list(result.scalars().all())
         node = self._pick_best_target_node(candidates=candidates, normalized_topic=normalized, search_terms=search_terms)
+        if node:
+            return node
+
+        # Fallback to a broader slice of high-signal nodes so free-form topics
+        # from cards and recommendations can still land on a usable target.
+        fallback_stmt = (
+            select(KnowledgeNode)
+            .where(or_(KnowledgeNode.is_seed.is_(True), KnowledgeNode.importance_level >= 3))
+            .order_by(desc(KnowledgeNode.importance_level), desc(KnowledgeNode.updated_at))
+            .limit(200)
+        )
+        fallback_result = await self.db.execute(fallback_stmt)
+        fallback_candidates = list(fallback_result.scalars().all())
+        node = self._pick_best_target_node(
+            candidates=fallback_candidates,
+            normalized_topic=normalized,
+            search_terms=search_terms,
+        )
         if not node:
             raise ValueError(f'No knowledge node found for topic "{topic}"')
         return node
@@ -627,10 +823,17 @@ class PredictionTheaterService:
         if not candidates:
             return None
 
-        def score(node: KnowledgeNode) -> tuple[float, float, datetime]:
+        def score(node: KnowledgeNode) -> tuple[float, int, float, datetime]:
             name = str(node.name or "").strip().lower()
             description = str(node.description or "").strip().lower()
+            keyword_blob = " ".join(
+                str(item).strip().lower()
+                for item in (node.keywords or [])
+                if str(item).strip()
+            )
             best = 0.0
+            matched_terms = 0
+            lexical_total = 0.0
 
             for term in search_terms:
                 if not term:
@@ -646,18 +849,84 @@ class PredictionTheaterService:
                     term_score = max(term_score, 88.0 + min(len(name), 20))
                 if term in description:
                     term_score = max(term_score, 54.0 + min(len(term), 18))
+                if term in keyword_blob:
+                    term_score = max(term_score, 66.0 + min(len(term), 18))
                 if description and description in normalized_topic:
                     term_score = max(term_score, 42.0)
+                if keyword_blob and keyword_blob in normalized_topic:
+                    term_score = max(term_score, 40.0)
+                if term_score > 0:
+                    matched_terms += 1
+                    lexical_total += term_score
                 best = max(best, term_score)
 
-            best += float(getattr(node, "importance_level", 0) or 0) * 0.5
+            lexical_score = best + lexical_total + matched_terms * 18.0
             return (
-                best,
+                lexical_score,
+                matched_terms,
                 float(getattr(node, "importance_level", 0) or 0),
                 getattr(node, "updated_at", None) or datetime.min,
             )
 
-        return max(candidates, key=score)
+        best_node = max(candidates, key=score)
+        best_score = score(best_node)
+        if best_score[0] <= 0:
+            fallback_node = PredictionTheaterService._pick_character_overlap_node(
+                candidates=candidates,
+                search_terms=search_terms,
+            )
+            if fallback_node is None:
+                return None
+            return fallback_node
+        return best_node
+
+    @staticmethod
+    def _pick_character_overlap_node(
+        *,
+        candidates: list[KnowledgeNode],
+        search_terms: list[str],
+    ) -> KnowledgeNode | None:
+        filtered_terms = [
+            term
+            for term in search_terms
+            if term and len(term.strip()) >= 2
+        ]
+        topic_chars = [
+            char
+            for term in filtered_terms
+            for char in term
+            if re.match(r"[0-9a-zA-Z\u4e00-\u9fff+#]", char)
+            and char not in {"帮", "我", "推", "演", "学", "习", "路", "径", "与", "和", "的"}
+        ]
+        if not topic_chars:
+            return None
+
+        def overlap_score(node: KnowledgeNode) -> tuple[float, int, float, datetime]:
+            corpus = " ".join(
+                [
+                    str(node.name or "").strip().lower(),
+                    str(node.description or "").strip().lower(),
+                    " ".join(
+                        str(item).strip().lower()
+                        for item in (node.keywords or [])
+                        if str(item).strip()
+                    ),
+                ]
+            )
+            overlap = sum(1 for char in set(topic_chars) if char in corpus)
+            coverage = overlap / max(len(set(topic_chars)), 1)
+            return (
+                coverage,
+                overlap,
+                float(getattr(node, "importance_level", 0) or 0),
+                getattr(node, "updated_at", None) or datetime.min,
+            )
+
+        best_node = max(candidates, key=overlap_score)
+        best_score = overlap_score(best_node)
+        if best_score[1] >= 2 and best_score[0] >= 0.18:
+            return best_node
+        return None
 
     async def _resolve_target_node_for_user(
         self,
@@ -723,7 +992,12 @@ class PredictionTheaterService:
         backbone: list[dict[str, Any]],
         mastery_map: dict[str, float],
     ) -> dict[str, Any]:
-        node_ids = [UUID(str(item["id"])) for item in backbone[: self.MAX_GRAPH_NODES]]
+        node_ids: list[UUID] = []
+        for item in backbone[: self.MAX_GRAPH_NODES]:
+            try:
+                node_ids.append(UUID(str(item["id"])))
+            except (KeyError, TypeError, ValueError):
+                return self._build_synthetic_graph_bundle(backbone, mastery_map)
         result = await self.db.execute(
             select(KnowledgeNode.id, KnowledgeNode.name, KnowledgeNode.description)
             .where(KnowledgeNode.id.in_(node_ids))
@@ -772,6 +1046,40 @@ class PredictionTheaterService:
                 for index in range(len(ordered_ids) - 1)
             ]
         return {"nodes": list(nodes_by_id.values()), "edges": edges}
+
+    def _build_synthetic_graph_bundle(
+        self,
+        backbone: list[dict[str, Any]],
+        mastery_map: dict[str, float],
+    ) -> dict[str, Any]:
+        nodes = []
+        ordered_ids: list[str] = []
+        total = max(len(backbone), 1)
+        for index, item in enumerate(backbone[: self.MAX_GRAPH_NODES]):
+            node_id = str(item.get("id") or f"free-step-{index + 1}")
+            ordered_ids.append(node_id)
+            current_mastery = mastery_map.get(node_id, _clamp(34 + index * 7, 18, 74))
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": str(item.get("name") or f"阶段 {index + 1}"),
+                    "description": str(item.get("description") or "自由模式推演阶段"),
+                    "current_mastery": round(current_mastery, 2),
+                    "predicted_mastery": round(_clamp(current_mastery + 16 - index, 12, 92), 2),
+                    "risk_level": "high" if index < max(total - 2, 1) else "medium",
+                }
+            )
+        edges = [
+            {
+                "id": f"{ordered_ids[index]}_{ordered_ids[index + 1]}_free_mode",
+                "source_id": ordered_ids[index],
+                "target_id": ordered_ids[index + 1],
+                "relation_type": "prerequisite",
+                "strength": round(_clamp(0.66 - index * 0.06, 0.36, 0.76), 2),
+            }
+            for index in range(len(ordered_ids) - 1)
+        ]
+        return {"nodes": nodes, "edges": edges}
 
     def _build_path_options(
         self,

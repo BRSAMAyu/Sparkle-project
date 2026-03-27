@@ -40,102 +40,39 @@ class DashboardCardSection extends ConsumerWidget {
           DS.spacing10,
         ),
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compactHeader = constraints.maxWidth < 430;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (compactHeader)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '驾驶舱组件',
-                        style: context.sparkleTypography.labelLarge.copyWith(
-                          fontWeight: DS.fontWeightBold,
-                          color: DS.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        '把常用入口和摘要信息固定在这里。',
-                        style: context.sparkleTypography.labelSmall.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => _openEditSheet(context),
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing10,
-                              vertical: DS.spacing8,
-                            ),
-                          ),
-                          icon: const Icon(Icons.tune_rounded, size: 18),
-                          label: Text(
-                            AppLocalizations.of(context)!
-                                .dashboardCustomizeCards,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Row(
-                    children: [
-                      Text(
-                        '驾驶舱组件',
-                        style: context.sparkleTypography.labelLarge.copyWith(
-                          fontWeight: DS.fontWeightBold,
-                          color: DS.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      Expanded(
-                        child: Text(
-                          '把常用入口和摘要信息固定在这里。',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.labelSmall.copyWith(
-                            color: DS.textSecondary,
-                          ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _openEditSheet(context),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing10,
-                            vertical: DS.spacing8,
-                          ),
-                        ),
-                        icon: const Icon(Icons.tune_rounded, size: 18),
-                        label: Text(
-                          AppLocalizations.of(context)!.dashboardCustomizeCards,
-                        ),
-                      ),
-                    ],
+          builder: (context, constraints) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _openEditSheet(context),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing10,
+                      vertical: DS.spacing6,
+                    ),
                   ),
-                const SizedBox(height: DS.spacing10),
-                if (cards.isEmpty)
-                  const _EmptyDashboardCardSection()
-                else if (config.layoutMode == DashboardCardLayoutMode.swipe)
-                  DashboardCardCarousel(
-                    cards: cards,
-                    cardIds: visibleCardIds,
-                    preferredInitialCardId: DashboardCardIds.calendar,
-                  )
-                else
-                  DashboardCardGrid(cards: cards),
-              ],
-            );
-          },
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  label: Text(
+                    AppLocalizations.of(context)!.dashboardCustomizeCards,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing6),
+              if (cards.isEmpty)
+                const _EmptyDashboardCardSection()
+              else if (config.layoutMode == DashboardCardLayoutMode.swipe)
+                DashboardCardCarousel(
+                  cards: cards,
+                  cardIds: visibleCardIds,
+                  preferredInitialCardId: DashboardCardIds.calendar,
+                )
+              else
+                DashboardCardGrid(cards: cards),
+            ],
+          ),
         ),
       ),
     );

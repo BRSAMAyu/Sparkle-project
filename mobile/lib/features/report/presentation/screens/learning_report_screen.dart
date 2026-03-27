@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
+import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 enum _ReportRange { week, month, all }
@@ -30,9 +32,11 @@ class LearningReportScreen extends ConsumerStatefulWidget {
   const LearningReportScreen({
     required this.report,
     super.key,
+    this.initialSourceChatSessionId,
   });
 
   final LearningReport report;
+  final String? initialSourceChatSessionId;
 
   @override
   ConsumerState<LearningReportScreen> createState() =>
@@ -123,6 +127,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     final filteredHistory = _filterHistory(history);
     final previousReport =
         filteredHistory.length > 1 ? filteredHistory[1].report : null;
+    final strongestNode = _strongestMasteryNode(report);
+    final weakestNode = _weakestMasteryNode(report);
     final trendPoints = filteredHistory
         .map((entry) => _averageMastery(entry.report) / 100)
         .toList()
@@ -148,6 +154,15 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if ((widget.initialSourceChatSessionId ?? '')
+                .trim()
+                .isNotEmpty) ...[
+              ChatContinuityBanner(
+                sourceChatSessionId: widget.initialSourceChatSessionId!.trim(),
+                subtitle: '这份报告来自你刚才的对话桥接，你可以回到原会话继续追问策略、任务和下一步安排。',
+              ),
+              const SizedBox(height: 14),
+            ],
             _AnimatedReportSection(
               delay: 0,
               child: GraphiteCardSurface(
@@ -198,6 +213,18 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             ),
             const SizedBox(height: 14),
             _AnimatedReportSection(
+              delay: 50,
+              child: _ReportDiagnosisStrip(
+                strongestNode: strongestNode,
+                weakestNode: weakestNode,
+                averageMastery: averageMastery,
+                previousAverageMastery: previousReport == null
+                    ? null
+                    : _averageMastery(previousReport),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _AnimatedReportSection(
               delay: 90,
               child: GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.card,
@@ -232,6 +259,22 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _AnimatedReportSection(
+              delay: 180,
+              child: _ReportActionCard(
+                weakestNode: weakestNode,
+                strongestNode: strongestNode,
+                onOpenGalaxy: () => context.push(GalaxyRoutes.home),
+                onOpenTheater: weakestNode == null
+                    ? null
+                    : () => context.push(
+                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                        ),
+                onOpenSprintHistory: () =>
+                    context.push(PlanRoutes.sprintHistory),
               ),
             ),
             const SizedBox(height: 14),
@@ -424,6 +467,24 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               .map((item) => item.masteryScore)
               .fold<double>(0, (sum, value) => sum + value) /
           report.mastery.length;
+
+  LearningMasteryDatum? _strongestMasteryNode(LearningReport report) {
+    if (report.mastery.isEmpty) {
+      return null;
+    }
+    final sorted = [...report.mastery]
+      ..sort((a, b) => b.masteryScore.compareTo(a.masteryScore));
+    return sorted.first;
+  }
+
+  LearningMasteryDatum? _weakestMasteryNode(LearningReport report) {
+    if (report.mastery.isEmpty) {
+      return null;
+    }
+    final sorted = [...report.mastery]
+      ..sort((a, b) => a.masteryScore.compareTo(b.masteryScore));
+    return sorted.first;
+  }
 
   LearningReport _resolveActiveReport(LearningReport fallbackReport) {
     if (!_isPlaceholderReport(fallbackReport)) {
@@ -754,6 +815,227 @@ class _MasteryTrendChart extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ReportDiagnosisStrip extends StatelessWidget {
+  const _ReportDiagnosisStrip({
+    required this.strongestNode,
+    required this.weakestNode,
+    required this.averageMastery,
+    required this.previousAverageMastery,
+  });
+
+  final LearningMasteryDatum? strongestNode;
+  final LearningMasteryDatum? weakestNode;
+  final double averageMastery;
+  final double? previousAverageMastery;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = previousAverageMastery == null
+        ? null
+        : averageMastery - previousAverageMastery!;
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '诊断摘要',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _DiagnosisCard(
+                title: '当前强项',
+                headline: strongestNode == null
+                    ? '待生成'
+                    : '${strongestNode!.nodeName} ${strongestNode!.masteryScore.round()}%',
+                body: strongestNode == null
+                    ? '生成更多学习记录后，这里会出现最稳的知识点。'
+                    : '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。',
+                icon: Icons.trending_up_rounded,
+                accent: DS.success,
+              ),
+              _DiagnosisCard(
+                title: '主要短板',
+                headline: weakestNode == null
+                    ? '待生成'
+                    : '${weakestNode!.nodeName} ${weakestNode!.masteryScore.round()}%',
+                body: weakestNode == null
+                    ? '当前还没有足够数据定位短板。'
+                    : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
+                icon: Icons.priority_high_rounded,
+                accent: Theme.of(context).colorScheme.error,
+              ),
+              _DiagnosisCard(
+                title: '整体趋势',
+                headline: delta == null
+                    ? '等待历史对比'
+                    : '${delta >= 0 ? '+' : ''}${delta.round()}%',
+                body: delta == null
+                    ? '再积累一到两份报告后，这里会显示你的连续变化趋势。'
+                    : delta >= 0
+                        ? '掌握度在继续抬升，接下来更适合做巩固和迁移。'
+                        : '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。',
+                icon: delta == null
+                    ? Icons.timeline_rounded
+                    : delta >= 0
+                        ? Icons.north_east_rounded
+                        : Icons.south_east_rounded,
+                accent: delta == null
+                    ? DS.info
+                    : delta >= 0
+                        ? DS.brandPrimary
+                        : DS.warning,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiagnosisCard extends StatelessWidget {
+  const _DiagnosisCard({
+    required this.title,
+    required this.headline,
+    required this.body,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String title;
+  final String headline;
+  final String body;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 220,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accent.withValues(alpha: 0.14),
+              Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accent.withValues(alpha: 0.14)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: accent),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              headline,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              body,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _ReportActionCard extends StatelessWidget {
+  const _ReportActionCard({
+    required this.weakestNode,
+    required this.strongestNode,
+    required this.onOpenGalaxy,
+    required this.onOpenTheater,
+    required this.onOpenSprintHistory,
+  });
+
+  final LearningMasteryDatum? weakestNode;
+  final LearningMasteryDatum? strongestNode;
+  final VoidCallback onOpenGalaxy;
+  final VoidCallback? onOpenTheater;
+  final VoidCallback onOpenSprintHistory;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        borderColor: DS.info.withValues(alpha: 0.2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '下一步行动',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              weakestNode == null
+                  ? '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。'
+                  : '优先围绕 ${weakestNode!.nodeName} 收口，再用 ${strongestNode?.nodeName ?? '当前强项'} 做迁移练习，能更快把整体掌握度拉起来。',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.5,
+                  ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: onOpenGalaxy,
+                  icon: const Icon(Icons.auto_graph_rounded),
+                  label: const Text('打开知识星图'),
+                ),
+                if (onOpenTheater != null)
+                  FilledButton.tonalIcon(
+                    onPressed: onOpenTheater,
+                    icon: const Icon(Icons.theater_comedy_outlined),
+                    label: Text('推演 ${weakestNode!.nodeName}'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: onOpenSprintHistory,
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('查看 Sprint 历史'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 }
 
 class _TrendHistoryEmptyState extends StatelessWidget {

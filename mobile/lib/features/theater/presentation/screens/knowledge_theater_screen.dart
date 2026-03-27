@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -37,8 +38,10 @@ class _KnowledgeTheaterScreenState
   late final TextEditingController _topicController;
   late final ProviderSubscription<TheaterState> _theaterSubscription;
   late final TheaterNotifier _theaterNotifier;
+  Timer? _timelinePlaybackTimer;
   bool _showCelebration = false;
   bool _playCelebration = false;
+  bool _isTimelinePlaying = false;
 
   @override
   void initState() {
@@ -71,6 +74,7 @@ class _KnowledgeTheaterScreenState
 
   @override
   void dispose() {
+    _timelinePlaybackTimer?.cancel();
     _theaterSubscription.close();
     _topicController.dispose();
     _theaterNotifier.clearOverlay();
@@ -81,11 +85,62 @@ class _KnowledgeTheaterScreenState
     if (topic.trim().isEmpty) {
       return;
     }
+    _stopTimelinePlayback();
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     await ref.read(theaterProvider.notifier).generatePrediction(
           topic: topic.trim(),
           targetNodeId: widget.initialTargetNodeId,
         );
+  }
+
+  void _toggleTimelinePlayback() {
+    final prediction = ref.read(theaterProvider).prediction;
+    final timeline = prediction?.timeline ?? const <TheaterTimelineFrame>[];
+    if (timeline.isEmpty) {
+      return;
+    }
+    if (_isTimelinePlaying) {
+      _stopTimelinePlayback();
+      return;
+    }
+    if (ref.read(theaterProvider).timelineIndex >= timeline.length - 1) {
+      ref.read(theaterProvider.notifier).setTimelineIndex(0);
+    }
+    setState(() => _isTimelinePlaying = true);
+    _timelinePlaybackTimer?.cancel();
+    _timelinePlaybackTimer = Timer.periodic(
+      const Duration(milliseconds: 1400),
+      (_) => _advanceTimelinePlayback(),
+    );
+  }
+
+  void _advanceTimelinePlayback() {
+    final state = ref.read(theaterProvider);
+    final timeline =
+        state.prediction?.timeline ?? const <TheaterTimelineFrame>[];
+    if (timeline.isEmpty) {
+      _stopTimelinePlayback();
+      return;
+    }
+    final currentIndex = state.timelineIndex.clamp(0, timeline.length - 1);
+    if (currentIndex >= timeline.length - 1) {
+      _stopTimelinePlayback();
+      return;
+    }
+    ref.read(theaterProvider.notifier).setTimelineIndex(currentIndex + 1);
+  }
+
+  void _resetTimelinePlayback() {
+    _stopTimelinePlayback();
+    ref.read(theaterProvider.notifier).setTimelineIndex(0);
+  }
+
+  void _stopTimelinePlayback() {
+    _timelinePlaybackTimer?.cancel();
+    _timelinePlaybackTimer = null;
+    if (mounted && _isTimelinePlaying) {
+      setState(() => _isTimelinePlaying = false);
+    }
   }
 
   void _triggerAdoptionCelebration() {
@@ -137,8 +192,7 @@ class _KnowledgeTheaterScreenState
             icon: const Icon(Icons.share_outlined),
           ),
           IconButton(
-            onPressed:
-                prediction == null ? null : () => context.go('/galaxy'),
+            onPressed: prediction == null ? null : () => context.go('/galaxy'),
             icon: const Icon(Icons.auto_graph_rounded),
           ),
         ],
@@ -167,6 +221,16 @@ class _KnowledgeTheaterScreenState
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      if ((widget.initialSourceChatSessionId ?? '')
+                          .trim()
+                          .isNotEmpty) ...[
+                        ChatContinuityBanner(
+                          sourceChatSessionId:
+                              widget.initialSourceChatSessionId!.trim(),
+                          subtitle: '这次推演来自刚才的聊天桥接。你可以随时回到原对话继续追问路径、风险和具体行动。',
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       _ComposerCard(
                         controller: _topicController,
                         isLoading: state.isLoading,
@@ -175,8 +239,9 @@ class _KnowledgeTheaterScreenState
                           _topicController.text = topic;
                           unawaited(_generatePrediction(topic));
                         },
-                        onSubmit: () =>
-                            unawaited(_generatePrediction(_topicController.text)),
+                        onSubmit: () => unawaited(
+                          _generatePrediction(_topicController.text),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Expanded(
@@ -211,6 +276,7 @@ class _KnowledgeTheaterScreenState
                                   timeline: timeline,
                                   timelineIndex: timelineIndex,
                                   focusNodeIds: focusNodeIds,
+                                  isTimelinePlaying: _isTimelinePlaying,
                                   whatIfResult: state.whatIfResult,
                                   snapshot: state.snapshot,
                                   adoptionResult: state.adoptionResult,
@@ -228,10 +294,17 @@ class _KnowledgeTheaterScreenState
                                         SensoryFeedbackEvent.selection,
                                       ),
                                     );
+                                    if (_isTimelinePlaying) {
+                                      _stopTimelinePlayback();
+                                    }
                                     ref
                                         .read(theaterProvider.notifier)
                                         .setTimelineIndex(index);
                                   },
+                                  onToggleTimelinePlayback:
+                                      _toggleTimelinePlayback,
+                                  onResetTimelinePlayback:
+                                      _resetTimelinePlayback,
                                   onAdopt: route == null
                                       ? null
                                       : () => unawaited(
@@ -262,7 +335,9 @@ class _KnowledgeTheaterScreenState
                                           ? null
                                           : (nodeId) => unawaited(
                                                 ref
-                                                    .read(theaterProvider.notifier)
+                                                    .read(
+                                                      theaterProvider.notifier,
+                                                    )
                                                     .runWhatIfForStep(nodeId),
                                               ),
                                     ),
@@ -333,9 +408,10 @@ class _KnowledgeTheaterScreenState
               children: [
                 Text(
                   node.name,
-                  style: Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style:
+                      Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -373,37 +449,32 @@ class _KnowledgeTheaterScreenState
                   ],
                 ),
                 const SizedBox(height: 20),
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: canRunWhatIf && onRunWhatIf != null
-                            ? () {
-                                Navigator.of(sheetContext).pop();
-                                onRunWhatIf(node.id);
-                              }
-                            : null,
-                        icon: const Icon(Icons.alt_route_rounded),
-                        label: const Text('从这里开始 What-If'),
-                      ),
+                    FilledButton.tonal(
+                      onPressed: canRunWhatIf && onRunWhatIf != null
+                          ? () {
+                              Navigator.of(sheetContext).pop();
+                              onRunWhatIf(node.id);
+                            }
+                          : null,
+                      child: const Text('开始 What-If'),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(sheetContext).pop();
-                          unawaited(
-                            context.push(
-                              GalaxyRoutes.knowledgeDetail.replaceFirst(
-                                ':id',
-                                node.id,
-                              ),
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(
+                          context.push(
+                            GalaxyRoutes.knowledgeDetail.replaceFirst(
+                              ':id',
+                              node.id,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.auto_graph_rounded),
-                        label: const Text('在 Galaxy 中查看'),
-                      ),
+                          ),
+                        );
+                      },
+                      child: const Text('查看 Galaxy'),
                     ),
                   ],
                 ),
@@ -429,7 +500,8 @@ class _KnowledgeTheaterScreenState
     Offset globalPosition,
   ) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
     final size = overlay?.size ?? const Size(1200, 800);
     await showMenu<void>(
       context: context,
@@ -597,8 +669,8 @@ class _ComposerCard extends StatelessWidget {
                       color: scheme.primary,
                     ),
                     filled: true,
-                    fillColor: scheme.surfaceContainerHighest
-                        .withValues(alpha: 0.55),
+                    fillColor:
+                        scheme.surfaceContainerHighest.withValues(alpha: 0.55),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
                       borderSide: BorderSide.none,
@@ -768,27 +840,29 @@ class _TheaterIntroState extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 ...suggestions.take(3).map(
-                  (seed) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.adjust_rounded, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${seed.topic}\n${seed.tensionPoint}',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                      (seed) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.adjust_rounded, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${seed.topic}\n${seed.tensionPoint}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: DS.textSecondary,
                                       height: 1.45,
                                     ),
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -805,6 +879,7 @@ class _PredictionView extends StatelessWidget {
     required this.timeline,
     required this.timelineIndex,
     required this.focusNodeIds,
+    required this.isTimelinePlaying,
     required this.whatIfResult,
     required this.snapshot,
     required this.adoptionResult,
@@ -815,6 +890,8 @@ class _PredictionView extends StatelessWidget {
     required this.error,
     required this.onRouteSelected,
     required this.onTimelineSelected,
+    required this.onToggleTimelinePlayback,
+    required this.onResetTimelinePlayback,
     required this.onAdopt,
     required this.onRunWhatIf,
     required this.onSaveSnapshot,
@@ -828,6 +905,7 @@ class _PredictionView extends StatelessWidget {
   final List<TheaterTimelineFrame> timeline;
   final int timelineIndex;
   final List<String> focusNodeIds;
+  final bool isTimelinePlaying;
   final TheaterWhatIfResult? whatIfResult;
   final TheaterSnapshot? snapshot;
   final TheaterAdoptionResult? adoptionResult;
@@ -838,6 +916,8 @@ class _PredictionView extends StatelessWidget {
   final String? error;
   final ValueChanged<String> onRouteSelected;
   final ValueChanged<int> onTimelineSelected;
+  final VoidCallback onToggleTimelinePlayback;
+  final VoidCallback onResetTimelinePlayback;
   final VoidCallback? onAdopt;
   final ValueChanged<String>? onRunWhatIf;
   final VoidCallback onSaveSnapshot;
@@ -939,7 +1019,10 @@ class _PredictionView extends StatelessWidget {
               timeline: timeline,
               selectedIndex: timelineIndex,
               turns: prediction.discussionTurns,
+              isPlaying: isTimelinePlaying,
               onSelected: onTimelineSelected,
+              onTogglePlayback: onToggleTimelinePlayback,
+              onReset: onResetTimelinePlayback,
             ),
           ),
         ],
@@ -1242,13 +1325,19 @@ class _TimelineSection extends StatelessWidget {
     required this.timeline,
     required this.selectedIndex,
     required this.turns,
+    required this.isPlaying,
     required this.onSelected,
+    required this.onTogglePlayback,
+    required this.onReset,
   });
 
   final List<TheaterTimelineFrame> timeline;
   final int selectedIndex;
   final List<TheaterDiscussionTurn> turns;
+  final bool isPlaying;
   final ValueChanged<int> onSelected;
+  final VoidCallback onTogglePlayback;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -1256,20 +1345,63 @@ class _TimelineSection extends StatelessWidget {
         ? null
         : turns.cast<TheaterDiscussionTurn?>().elementAt(
               timeline[selectedIndex].discussionTurnIndex.clamp(
-                0,
-                turns.isEmpty ? 0 : turns.length - 1,
-              ),
+                    0,
+                    turns.isEmpty ? 0 : turns.length - 1,
+                  ),
             );
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '推演时间轴',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '推演时间轴',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '自动播放会按时间顺序推进焦点节点，你也可以手动点选任一阶段并点击图中节点查看详情。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: onTogglePlayback,
+                    icon: Icon(
+                      isPlaying
+                          ? Icons.pause_circle_outline_rounded
+                          : Icons.play_circle_outline_rounded,
+                    ),
+                    label: Text(isPlaying ? '暂停播放' : '自动播放'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onReset,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('回到起点'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value:
+                  timeline.isEmpty ? 0 : (selectedIndex + 1) / timeline.length,
+              minHeight: 7,
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -1324,9 +1456,10 @@ class _TimelineSection extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'T${index + 1}',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: DS.textSecondary,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
                         ),
                       ],
                     ),
@@ -1352,6 +1485,13 @@ class _TimelineSection extends StatelessWidget {
                       height: 1.4,
                     ),
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '当前阶段：${timeline[selectedIndex].label} · 聚焦 ${timeline[selectedIndex].focusNodeIds.length} 个关键节点',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
             ),
           ],
         ],
@@ -1616,7 +1756,8 @@ class _RouteComparePager extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentIndex = routes.indexWhere((route) => route.id == selectedRouteId);
+    final currentIndex =
+        routes.indexWhere((route) => route.id == selectedRouteId);
     final safeIndex = currentIndex < 0 ? 0 : currentIndex;
     return Column(
       children: [
@@ -1638,7 +1779,8 @@ class _RouteComparePager extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Row(
@@ -1654,7 +1796,10 @@ class _RouteComparePager extends StatelessWidget {
                           children: [
                             Text(
                               route.title,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w800,
                                   ),
                             ),
@@ -1893,12 +2038,11 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
       0,
       (sum, step) => sum + _penaltyForRisk(step.riskLevel),
     );
-    final previewMastery = (widget.route.estimatedMastery - totalPenalty)
-        .clamp(0, 100)
-        .toDouble();
-    final previewCompletion = (widget.route.estimatedCompletionRate -
-            (selectedSteps.length * 0.05))
-        .clamp(0.1, 1.0);
+    final previewMastery =
+        (widget.route.estimatedMastery - totalPenalty).clamp(0, 100).toDouble();
+    final previewCompletion =
+        (widget.route.estimatedCompletionRate - (selectedSteps.length * 0.05))
+            .clamp(0.1, 1.0);
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -2006,9 +2150,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                     ),
             icon: const Icon(Icons.alt_route),
             label: Text(
-              _selectedNodeIds.isEmpty
-                  ? '先选择一个节点'
-                  : '生成完整 What-If 结果',
+              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整 What-If 结果',
             ),
           ),
           if (widget.result != null) ...[
@@ -2088,7 +2230,9 @@ class _PreviewMetricBar extends StatelessWidget {
             Text(
               '${(newValue * 100).round()}% ${improving ? '↑' : '↓'}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: improving ? DS.success : Theme.of(context).colorScheme.error,
+                    color: improving
+                        ? DS.success
+                        : Theme.of(context).colorScheme.error,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -2101,8 +2245,7 @@ class _PreviewMetricBar extends StatelessWidget {
             minHeight: 8,
             value: originalValue.clamp(0.0, 1.0),
             color: Theme.of(context).colorScheme.outlineVariant,
-            backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHigh,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
           ),
         ),
         const SizedBox(height: 4),
@@ -2112,8 +2255,7 @@ class _PreviewMetricBar extends StatelessWidget {
             minHeight: 10,
             value: newValue.clamp(0.0, 1.0),
             color: improving ? DS.success : Theme.of(context).colorScheme.error,
-            backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHigh,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
           ),
         ),
       ],
@@ -2176,10 +2318,12 @@ class _DiscussionSection extends StatelessWidget {
                           const SizedBox(height: 6),
                           Text(
                             turn.content,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      height: 1.5,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  height: 1.5,
+                                ),
                           ),
                         ],
                       ),
@@ -2221,7 +2365,9 @@ class _SnapshotSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    snapshot == null ? '把当前推演保存下来，稍后可以继续回看。' : '已保存：${snapshot!.title}',
+                    snapshot == null
+                        ? '把当前推演保存下来，稍后可以继续回看。'
+                        : '已保存：${snapshot!.title}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),

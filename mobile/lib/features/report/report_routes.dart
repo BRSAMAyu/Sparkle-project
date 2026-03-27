@@ -26,7 +26,11 @@ class ReportRoutes {
               state: state,
               child: SceneAudioScope(
                 policy: const SceneAudioPolicy(track: BgmTrack.insights),
-                child: LearningReportScreen(report: report),
+                child: LearningReportScreen(
+                  report: report,
+                  initialSourceChatSessionId:
+                      state.uri.queryParameters['source_chat_session_id'],
+                ),
               ),
             );
           },

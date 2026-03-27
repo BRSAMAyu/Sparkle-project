@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
 class AssistantMessageMetadataTray extends StatefulWidget {
   const AssistantMessageMetadataTray({
@@ -299,9 +300,9 @@ class _TimingContent extends StatelessWidget {
         MapEntry('流式阶段', _formatDuration(meta.streamDurationMs!)),
       if ((meta.responseEventCount ?? 0) > 0)
         MapEntry('事件数', '${meta.responseEventCount}'),
-      if ((meta.modelTier?.isNotEmpty ?? false))
+      if (meta.modelTier?.isNotEmpty ?? false)
         MapEntry('模型层级', meta.modelTier!),
-      if ((meta.reasoningMode?.isNotEmpty ?? false))
+      if (meta.reasoningMode?.isNotEmpty ?? false)
         MapEntry('档位', meta.reasoningMode!),
       if (meta.isCacheHit != null)
         MapEntry('缓存', meta.isCacheHit! ? '命中' : '未命中'),
@@ -374,55 +375,18 @@ class _MetadataBadge extends StatelessWidget {
         label.trim().isNotEmpty &&
         (!iconOnlyWhenCollapsed || selected);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: EdgeInsets.symmetric(
-            horizontal: isCompact
-                ? DS.spacing8
-                : (showLabel ? DS.spacing10 : DS.spacing8),
-            vertical: emphasize ? DS.spacing8 : DS.spacing6,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? DS.primaryBase.withValues(alpha: 0.12)
-                : emphasize
-                    ? DS.primaryBase.withValues(alpha: 0.08)
-                    : DS.surfacePanel,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? DS.primaryBase.withValues(alpha: 0.28)
-                  : emphasize
-                      ? DS.primaryBase.withValues(alpha: 0.22)
-                      : DS.borderSubtle,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: DS.iconSizeXs,
-                color: selected ? DS.primaryBase : DS.textSecondary,
-              ),
-              if (showLabel) ...[
-                const SizedBox(width: DS.spacing4),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: selected ? DS.primaryBase : DS.textSecondary,
-                        fontWeight: DS.fontWeightMedium,
-                      ),
-                ),
-              ],
-            ],
-          ),
-        ),
+    return ChatAccessoryPill(
+      icon: icon,
+      label: label,
+      selected: selected,
+      emphasize: emphasize,
+      enabled: enabled,
+      onTap: enabled ? onTap : null,
+      showLabel: showLabel,
+      iconSize: DS.iconSizeXs,
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? DS.spacing8 : DS.spacing10,
+        vertical: DS.spacing6,
       ),
     );
   }

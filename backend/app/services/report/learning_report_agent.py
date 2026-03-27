@@ -10,6 +10,7 @@ from app.services.llm_fallback_utils import analysis_llm
 from app.services.report.report_logger import ReportLogger
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
 from app.services.report.report_tools import LearningReportTools
+from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -32,6 +33,22 @@ class LearningReportAgent:
         patterns = await self.tools.query_error_patterns(user_id)
         timeline = await self.tools.query_study_timeline(user_id)
         learner_voice = await self.tools.interview_learner(user_id)
+        chat_inference = await self.tools.infer_learning_state_from_chat(user_id)
+        learner_voice = self._merge_chat_inference_into_learner_voice(learner_voice, chat_inference)
+        starter_focus = await self._build_starter_focus(
+            user_id=user_id,
+            mastery=mastery,
+            patterns=patterns,
+            timeline=timeline,
+            chat_inference=chat_inference,
+        )
+        mastery, patterns, timeline = self._hydrate_cold_start_inputs(
+            mastery=mastery,
+            patterns=patterns,
+            timeline=timeline,
+            starter_focus=starter_focus,
+            chat_inference=chat_inference,
+        )
 
         normalized_delivery_mode = self._normalize_delivery_mode(delivery_mode)
         max_sections = 4 if normalized_delivery_mode == "chat_bridge" else 5
@@ -129,6 +146,8 @@ class LearningReportAgent:
             "quality_mode": "instant_preview" if normalized_delivery_mode == "chat_bridge" else "full_analysis",
             "delivery_mode": normalized_delivery_mode,
             "deep_link": "/learning-report",
+            "starter_focus": starter_focus,
+            "chat_inference": chat_inference,
         }
         payload["report_preview"] = self._build_report_preview(payload)
         self.logger.log_jsonl(report_id, {"stage": "final", "payload": payload})
@@ -451,3 +470,127 @@ class LearningReportAgent:
             f"- 复盘近期变化：{recent_text}",
         ]
         return "\n".join(lines)
+
+    async def _build_starter_focus(
+        self,
+        *,
+        user_id: UUID,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        if mastery or timeline:
+            return []
+        chat_topics = [str(item).strip() for item in list(chat_inference.get("topics") or []) if str(item).strip()]
+        if chat_topics:
+            evidence_text = "；".join(
+                str(item).strip()
+                for item in list(chat_inference.get("evidence") or [])[:2]
+                if str(item).strip()
+            ) or str(chat_inference.get("goal_summary") or "最近聊天里反复提到这个方向。").strip()
+            friction = str(
+                (list(chat_inference.get("frictions") or []) or ["先把第一步和关键卡点说清楚"])[0]
+            ).strip()
+            return [
+                {
+                    "topic": topic,
+                    "context": f"最近聊天里，你多次提到这个方向：{evidence_text}",
+                    "tension_point": friction,
+                    "source_type": "chat_inference",
+                    "source_ids": [],
+                    "relevance_score": 0.76,
+                    "suggested_scenario": "study_group",
+                    "suggested_experts": ["学伴", "深度分析"],
+                }
+                for topic in chat_topics[:3]
+            ]
+        seeds = await SeedExtractor(self.db).extract_seeds(user_id, limit=3)
+        return [seed.to_dict() for seed in seeds]
+
+    def _hydrate_cold_start_inputs(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+        starter_focus: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+        if not starter_focus:
+            return mastery, patterns, timeline
+
+        hydrated_mastery = list(mastery)
+        if not hydrated_mastery:
+            hydrated_mastery = [
+                {
+                    "node_name": str(item.get("topic") or "").strip(),
+                    "mastery_score": 45.0,
+                }
+                for item in starter_focus
+                if str(item.get("topic") or "").strip()
+            ][:3]
+
+        hydrated_patterns = list(patterns)
+        if not hydrated_patterns:
+            frictions = [
+                str(item).strip()
+                for item in list(chat_inference.get("frictions") or [])
+                if str(item).strip()
+            ]
+            first_focus = starter_focus[0] if starter_focus else {}
+            focus_label = str(first_focus.get("topic") or "当前学习方向").strip() or "当前学习方向"
+            if frictions:
+                hydrated_patterns = [
+                    {
+                        "pattern_name": "对话推断：起步与理解待收敛",
+                        "raw_pattern_name": "chat_inferred_bootstrap_friction",
+                        "confidence": 0.48,
+                        "description": f"最近聊天里反复出现的信号是：{frictions[0]}。",
+                        "solution_text": f"先围绕 {focus_label} 做一次低门槛试跑，把第一步和第一处卡点记录下来。",
+                    }
+                ]
+            else:
+                hydrated_patterns = [
+                    {
+                        "pattern_name": "学习基线尚在建立",
+                        "raw_pattern_name": "baseline_building",
+                        "confidence": 0.42,
+                        "description": "当前历史样本不足，系统先根据你现在最值得启动的方向来生成一份起步期报告。",
+                        "solution_text": f"先围绕 {focus_label} 完成一次 20-30 分钟的试跑，再回来对照这份报告做调整。",
+                    }
+                ]
+
+        hydrated_timeline = list(timeline)
+        if not hydrated_timeline:
+            hydrated_timeline = [
+                {
+                    "node_name": str(item.get("topic") or "").strip(),
+                    "study_minutes": 25,
+                    "mastery_delta": 0.0,
+                    "created_at": None,
+                }
+                for item in starter_focus
+                if str(item.get("topic") or "").strip()
+            ][:3]
+
+        return hydrated_mastery, hydrated_patterns, hydrated_timeline
+
+    def _merge_chat_inference_into_learner_voice(
+        self,
+        learner_voice: dict[str, Any],
+        chat_inference: dict[str, Any],
+    ) -> dict[str, Any]:
+        if not chat_inference:
+            return learner_voice
+        merged = dict(learner_voice)
+        parts = [str(merged.get("learner_voice") or "").strip()]
+        goal_summary = str(chat_inference.get("goal_summary") or "").strip()
+        frictions = [str(item).strip() for item in list(chat_inference.get("frictions") or []) if str(item).strip()]
+        if goal_summary:
+            parts.append(f"最近聊天里，你最在意的是：{goal_summary}。")
+        if frictions:
+            parts.append(f"当前更像是 {frictions[0]}。")
+        merged["learner_voice"] = " ".join(part for part in parts if part).strip()
+        merged["chat_inference"] = chat_inference
+        return merged

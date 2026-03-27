@@ -18,6 +18,8 @@ class SimulationState {
     this.liveParticipants = const [],
     this.liveRounds = const [],
     this.liveInsightSummary,
+    this.liveInteractionPrompt,
+    this.liveSuggestedReplies = const [],
   });
 
   final bool isLoading;
@@ -31,6 +33,8 @@ class SimulationState {
   final List<SimulationParticipantModel> liveParticipants;
   final List<SimulationRoundModel> liveRounds;
   final String? liveInsightSummary;
+  final String? liveInteractionPrompt;
+  final List<String> liveSuggestedReplies;
 
   SimulationState copyWith({
     bool? isLoading,
@@ -44,10 +48,13 @@ class SimulationState {
     List<SimulationParticipantModel>? liveParticipants,
     List<SimulationRoundModel>? liveRounds,
     String? liveInsightSummary,
+    String? liveInteractionPrompt,
+    List<String>? liveSuggestedReplies,
     bool clearError = false,
     bool clearSession = false,
     bool clearSessionId = false,
     bool clearLiveInsightSummary = false,
+    bool clearLiveInteractionPrompt = false,
   }) =>
       SimulationState(
         isLoading: isLoading ?? this.isLoading,
@@ -64,6 +71,10 @@ class SimulationState {
         liveInsightSummary: clearLiveInsightSummary
             ? null
             : liveInsightSummary ?? this.liveInsightSummary,
+        liveInteractionPrompt: clearLiveInteractionPrompt
+            ? null
+            : liveInteractionPrompt ?? this.liveInteractionPrompt,
+        liveSuggestedReplies: liveSuggestedReplies ?? this.liveSuggestedReplies,
       );
 }
 
@@ -114,6 +125,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       liveParticipants: const [],
       liveRounds: const [],
       clearLiveInsightSummary: true,
+      clearLiveInteractionPrompt: true,
+      liveSuggestedReplies: const [],
     );
     unawaited(
       _ref.read(appEventStreamServiceProvider).recordSimulationStarted(
@@ -142,6 +155,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveParticipants: session.participants,
           liveRounds: session.rounds,
           liveInsightSummary: session.insightSummary,
+          liveInteractionPrompt: session.interactionPrompt,
+          liveSuggestedReplies: session.suggestedReplies,
         );
       }
     } catch (e) {
@@ -174,6 +189,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             sessionId: event.sessionId,
             participants: event.participants,
             engineState: event.state,
+            interactionPrompt: event.interactionPrompt,
+            suggestedReplies: event.suggestedReplies,
           ),
         );
         return;
@@ -190,6 +207,11 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           progress: event.progress ?? state.progress,
           liveRounds: updatedRounds,
           liveInsightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
+          liveInteractionPrompt:
+              event.interactionPrompt ?? state.liveInteractionPrompt,
+          liveSuggestedReplies: event.suggestedReplies.isNotEmpty
+              ? event.suggestedReplies
+              : state.liveSuggestedReplies,
           session: _draftSession(
             topic: topic,
             scenarioKey: scenarioKey,
@@ -198,6 +220,11 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             rounds: updatedRounds,
             engineState: event.state,
             insightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
+            interactionPrompt:
+                event.interactionPrompt ?? state.liveInteractionPrompt,
+            suggestedReplies: event.suggestedReplies.isNotEmpty
+                ? event.suggestedReplies
+                : state.liveSuggestedReplies,
           ),
         );
         return;
@@ -211,7 +238,13 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           progress: event.progress ?? 1,
           liveParticipants: session?.participants ?? state.liveParticipants,
           liveRounds: session?.rounds ?? state.liveRounds,
-          liveInsightSummary: session?.insightSummary ?? state.liveInsightSummary,
+          liveInsightSummary:
+              session?.insightSummary ?? state.liveInsightSummary,
+          liveInteractionPrompt:
+              session?.interactionPrompt ?? state.liveInteractionPrompt,
+          liveSuggestedReplies: (session?.suggestedReplies.isNotEmpty ?? false)
+              ? session!.suggestedReplies
+              : state.liveSuggestedReplies,
         );
         return;
       case 'error':
@@ -239,6 +272,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     List<SimulationRoundModel>? rounds,
     String? engineState,
     String? insightSummary,
+    String? interactionPrompt,
+    List<String>? suggestedReplies,
   }) =>
       SimulationSessionModel(
         id: sessionId ?? state.sessionId ?? '',
@@ -247,9 +282,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         topic: topic,
         participants: participants ?? state.liveParticipants,
         rounds: rounds ?? state.liveRounds,
-        insightSummary: insightSummary ??
-            state.liveInsightSummary ??
-            '模拟进行中，正在汇总当前讨论洞察...',
+        insightSummary:
+            insightSummary ?? state.liveInsightSummary ?? '模拟进行中，正在汇总当前讨论洞察...',
+        interactionPrompt: interactionPrompt ?? state.liveInteractionPrompt,
+        suggestedReplies: suggestedReplies ?? state.liveSuggestedReplies,
       );
 }
 

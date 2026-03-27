@@ -291,6 +291,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
     final showChatTransparencyCapsule =
         ref.watch(showChatTransparencyCapsuleProvider);
+    final chatPureMode = ref.watch(chatPureModeProvider);
     final motionIntensityLevel = ref.watch(motionIntensityLevelProvider);
     final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
     final aiOpsDashboard = ref.watch(aiOpsDashboardProvider);
@@ -936,6 +937,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             onChanged: (value) => ref
                                 .read(showChatTransparencyCapsuleProvider
                                     .notifier)
+                                .setEnabled(value),
+                            activeThumbColor: DS.primaryBase,
+                          ),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('纯净模式'),
+                            subtitle: const Text(
+                              '聊天中只保留文字消息，隐藏附加信息卡片与消息下方组件。',
+                            ),
+                            value: chatPureMode,
+                            onChanged: (value) => ref
+                                .read(chatPureModeProvider.notifier)
                                 .setEnabled(value),
                             activeThumbColor: DS.primaryBase,
                           ),

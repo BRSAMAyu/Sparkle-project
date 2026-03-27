@@ -81,6 +81,7 @@ High-risk corrections applied during this audit and refresh:
 - Chat bridge now also covers Learning Report on the live WebSocket path:
   - `open_report` + `report_preview` + `report_deep_link` are emitted in `full_text` events
   - Theater / Simulation / Report all use short-circuit bridge execution instead of full chat generation
+  - Bridge deep links now preserve `source_chat_session_id` across Theater / Simulation / Report so downstream screens can return to the originating chat session.
   - Local benchmark on `2026-03-27` measured representative prompts at approximately:
     - Theater preview: `~1.8s`
     - Simulation preview: `~4.8s`
@@ -89,6 +90,15 @@ High-risk corrections applied during this audit and refresh:
     - Theater: `low`
     - Simulation: `low`
     - Learning Report: `low` via `instant_preview` mode in chat bridge, while API-triggered full reports remain richer/slower
+- MiroFish interaction/persistence behavior was re-verified live on `2026-03-27`:
+  - `POST /api/v1/simulation/run` now returns `interaction_prompt` + `suggested_replies` at session level, and each round carries `reply_to_speaker` + `turn_goal`.
+  - `GET /api/v1/profile/system-updates` now includes `simulation_session_ready` entries with `session_payload`, `interaction_prompt`, `suggested_replies`, and a deep link back to `/simulation`.
+  - `POST /api/v1/theater/predictions/generate` now tolerates free-text prompts such as `帮我推演特征值与特征向量`; current local graph maps that phrase to target node `线性代数` instead of returning `400`.
+  - If no usable knowledge-graph node can be resolved at all, Theater now falls back to `free_mode` path generation instead of failing. In that mode the API keeps `target_name`, omits `target_node_id`, and still returns usable `paths`, `timeline`, and preview metadata.
+  - Chat-bridge Theater previews now omit `target_node_id` in deep links when the result came from `free_mode`, so `/theater` can reopen safely without tripping UUID validation on the next request.
+  - `GET /api/v1/simulation/recommended-seeds` cold start now prefers `onboarding_profile` seeds derived from `user_learning_profiles` / active-plan subject hints before falling back to generic starter graph seeds.
+  - `POST /api/v1/learning-reports/generate` now uses recent user chat messages as a cold-start evidence source. When mastery/timeline are empty, the API can emit `starter_focus` from `chat_inference` and synthesize an intro diagnostic instead of a blank baseline report.
+  - `GET /api/v1/profile/system-updates` now also includes `theater_prediction_ready` entries with a deep link back to `/theater`.
 - Focus statistics now use UTC-consistent boundaries in the backend service layer, matching how sessions are persisted.
 - Decay timemachine now returns non-empty projections even for users without pre-existing `UserNodeStatus` rows, avoiding empty-state contract breaks during local acceptance.
 - Vocabulary lookup/package behavior is now locally acceptance-safe:

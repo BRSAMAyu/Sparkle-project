@@ -16,6 +16,7 @@ from app.orchestration.orchestrator import ChatOrchestrator
 from app.tools.base import ToolResult
 from app.tools.report_tool import GenerateLearningReportParams, GenerateLearningReportTool
 from app.services.report.learning_report_agent import LearningReportAgent
+from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.theater.prediction_theater_service import TheaterNodeAccessError
 from app.services.simulation.seed_extractor import SimulationSeed
 from app.services.theater.prediction_theater_service import PredictionTheaterService
@@ -284,7 +285,37 @@ async def test_generate_learning_report_tool_returns_preview_payload(monkeypatch
     assert result.data["report_id"] == "report-001"
     assert result.data["open_report"] is True
     assert result.data["report_preview"]["mastery"][0]["node_name"] == "Python 基础语法"
-    assert result.data["deep_link"] == "/learning-report"
+    assert result.data["deep_link"] == "/learning-report?report_id=report-001&source_chat_session_id=chat-789"
+
+
+def test_simulation_engine_builds_interaction_point():
+    engine = SimulationEngine()
+    interaction = engine._build_interaction_point(
+        topic="特征值与特征向量",
+        scenario_key="knowledge_debate",
+        participants=[
+            {"name": "优等生"},
+            {"name": "提问者"},
+            {"name": "主持人"},
+        ],
+        rounds=[
+            {
+                "round": 1,
+                "speaker": "优等生",
+                "message": "我认为先理解几何意义，后面推导会更稳。",
+            },
+            {
+                "round": 2,
+                "speaker": "提问者",
+                "message": "如果遇到计算题，还是容易直接陷入公式。",
+            },
+        ],
+        final_round=True,
+    )
+
+    assert "你会更支持哪一边" in interaction["prompt"]
+    assert len(interaction["suggested_replies"]) == 3
+    assert any("特征值与特征向量" in item for item in interaction["suggested_replies"])
 
 
 @pytest.mark.asyncio
@@ -561,6 +592,11 @@ async def test_learning_report_generate_enqueues_ready_update(monkeypatch):
         "interview_learner",
         AsyncMock(return_value={"summary": "最近更想要清晰的步骤拆解。"}),
     )
+    monkeypatch.setattr(
+        agent.tools,
+        "infer_learning_state_from_chat",
+        AsyncMock(return_value={}),
+    )
     monkeypatch.setattr(agent, "_compose_markdown", AsyncMock(return_value="# 学习分析报告"))
     monkeypatch.setattr(
         agent,
@@ -612,6 +648,70 @@ def test_learning_report_preview_uses_pattern_summary_when_mastery_missing():
 
     assert preview["summary"].startswith("当前最影响推进节奏的是 夜间能量错配循环")
     assert preview["highlights"] == ["夜间能量错配循环"]
+
+
+@pytest.mark.asyncio
+async def test_learning_report_generate_uses_starter_focus_for_cold_start(monkeypatch):
+    agent = LearningReportAgent(db=AsyncMock())
+    user_id = uuid4()
+
+    monkeypatch.setattr(agent.tools, "query_mastery_scores", AsyncMock(return_value=[]))
+    monkeypatch.setattr(agent.tools, "query_error_patterns", AsyncMock(return_value=[]))
+    monkeypatch.setattr(agent.tools, "query_study_timeline", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        agent.tools,
+        "interview_learner",
+        AsyncMock(return_value={"learner_voice": "先建立连续三次学习记录。"}),
+    )
+    monkeypatch.setattr(
+        agent.tools,
+        "infer_learning_state_from_chat",
+        AsyncMock(return_value={}),
+    )
+    monkeypatch.setattr(
+        "app.services.report.learning_report_agent.SeedExtractor.extract_seeds",
+        AsyncMock(
+            return_value=[
+                SimulationSeed(
+                    topic="把 特征值 变成第一轮可执行练习",
+                    context="适合先从定义与几何意义切入。",
+                    tension_point="先说清第一步。",
+                    source_type="starter_graph",
+                    source_ids=["node-1"],
+                    relevance_score=0.64,
+                    suggested_scenario="study_group",
+                    suggested_experts=["学伴"],
+                )
+            ]
+        ),
+    )
+    monkeypatch.setattr(agent, "_compose_markdown", AsyncMock(return_value="# 学习分析报告"))
+    monkeypatch.setattr(
+        agent,
+        "_reflect_on_markdown",
+        AsyncMock(
+            return_value={
+                "needs_revision": False,
+                "missing_sections": [],
+                "focus_areas": [],
+                "revision_brief": "",
+                "query_expansion": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(agent, "_expand_context", AsyncMock(return_value={}))
+    agent.logger.log_jsonl = lambda *args, **kwargs: None
+    agent.logger.log_text = lambda *args, **kwargs: None
+    monkeypatch.setattr(
+        "app.services.report.learning_report_agent.SystemUpdateService.enqueue",
+        AsyncMock(return_value=True),
+    )
+
+    payload = await agent.generate_report(user_id)
+
+    assert payload["starter_focus"][0]["topic"] == "把 特征值 变成第一轮可执行练习"
+    assert payload["mastery"][0]["node_name"] == "把 特征值 变成第一轮可执行练习"
+    assert payload["patterns"][0]["pattern_name"] == "学习基线尚在建立"
 
 
 def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():

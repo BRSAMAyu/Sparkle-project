@@ -122,7 +122,7 @@ void main() {
 
   group('Insights frontend smoke', () {
     testWidgets(
-        'insight hub card renders unified entry and routes into overview',
+        'insight hub card renders unified entry and supports direct jump',
         (tester) async {
       final router = GoRouter(
         initialLocation: '/',
@@ -133,9 +133,11 @@ void main() {
           ),
           GoRoute(
             path: '/learning/insights',
-            builder: (context, state) => Text(
-              'overview-${state.uri.queryParameters['initialPanel'] ?? 'none'}',
-            ),
+            builder: (context, state) => const Text('overview-none'),
+          ),
+          GoRoute(
+            path: '/theater',
+            builder: (context, state) => const Text('open-theater'),
           ),
         ],
       );
@@ -205,7 +207,7 @@ void main() {
 
       await tester.tap(find.text('推演剧场'));
       await tester.pumpAndSettle();
-      expect(find.text('overview-theater'), findsOneWidget);
+      expect(find.text('open-theater'), findsOneWidget);
     });
 
     testWidgets('learning report screen renders animated dashboard sections',
@@ -233,8 +235,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习分析报告'), findsOneWidget);
+      expect(find.text('诊断摘要'), findsOneWidget);
       expect(find.text('趋势会随着更多报告自动补全'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('掌握度雷达图'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('掌握度雷达图'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('下一步行动'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('下一步行动'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('关键指标'),
         240,

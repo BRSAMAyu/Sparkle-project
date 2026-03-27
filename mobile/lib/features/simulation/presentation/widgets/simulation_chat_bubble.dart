@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 
 class SimulationChatBubble extends StatefulWidget {
   const SimulationChatBubble({
@@ -9,11 +10,17 @@ class SimulationChatBubble extends StatefulWidget {
     required this.message,
     required this.round,
     super.key,
+    this.participant,
+    this.replyToSpeaker,
+    this.turnGoal,
   });
 
   final String speaker;
   final String message;
   final int round;
+  final SimulationParticipantModel? participant;
+  final String? replyToSpeaker;
+  final String? turnGoal;
 
   @override
   State<SimulationChatBubble> createState() => _SimulationChatBubbleState();
@@ -78,6 +85,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     final scheme = Theme.of(context).colorScheme;
     final accent = _accentForSpeaker(widget.speaker);
     final isLeftAligned = widget.speaker.hashCode.isEven;
+    final participant = widget.participant;
     final revealed = widget.message.substring(
       0,
       _visibleLength.clamp(0, widget.message.length),
@@ -86,21 +94,27 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     return AnimatedSlide(
       duration: DS.durationNormal,
       curve: Curves.easeOutCubic,
-      offset: _entered
-          ? Offset.zero
-          : Offset(isLeftAligned ? -0.08 : 0.08, 0),
+      offset: _entered ? Offset.zero : Offset(isLeftAligned ? -0.08 : 0.08, 0),
       child: AnimatedOpacity(
         duration: DS.durationNormal,
         opacity: _entered ? 1 : 0,
         child: Align(
-          alignment: isLeftAligned ? Alignment.centerLeft : Alignment.centerRight,
+          alignment:
+              isLeftAligned ? Alignment.centerLeft : Alignment.centerRight,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 340),
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.86),
+                gradient: LinearGradient(
+                  begin: isLeftAligned ? Alignment.topLeft : Alignment.topRight,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accent.withValues(alpha: 0.14),
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.92),
+                  ],
+                ),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -119,32 +133,137 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (widget.replyToSpeaker?.isNotEmpty ?? false) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.reply_rounded,
+                            size: 14,
+                            color: accent,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '承接 ${widget.replyToSpeaker} 的观点',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   Row(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: accent.withValues(alpha: 0.14),
-                        child: Text(
-                          widget.speaker.isEmpty ? '?' : widget.speaker[0],
-                          style: TextStyle(
-                            color: accent,
-                            fontWeight: FontWeight.w700,
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              accent.withValues(alpha: 0.96),
+                              accent.withValues(alpha: 0.68),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            widget.speaker.isEmpty ? '?' : widget.speaker[0],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text(
-                          widget.speaker,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: accent,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.speaker,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: accent,
+                                  ),
+                            ),
+                            if ((participant?.roleHint.isNotEmpty ?? false) ||
+                                (participant?.stance?.isNotEmpty ?? false)) ...[
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  if (participant?.roleHint.isNotEmpty ?? false)
+                                    _MetaPill(
+                                      label: participant!.roleHint,
+                                      foreground: accent,
+                                      background:
+                                          accent.withValues(alpha: 0.12),
+                                    ),
+                                  if (participant?.stance?.isNotEmpty ?? false)
+                                    _MetaPill(
+                                      label: participant!.stance!,
+                                      foreground: DS.textSecondary,
+                                      background:
+                                          scheme.surface.withValues(alpha: 0.9),
+                                    ),
+                                ],
                               ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
                   ),
+                  if ((participant?.sourceNodeName?.isNotEmpty ?? false) ||
+                      (participant?.source?.isNotEmpty ?? false)) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (participant?.sourceNodeName?.isNotEmpty ?? false)
+                          _MetaPill(
+                            icon: Icons.hub_rounded,
+                            label: participant!.sourceNodeName!,
+                            foreground: DS.info,
+                            background: DS.info.withValues(alpha: 0.12),
+                          ),
+                        if (participant?.source?.isNotEmpty ?? false)
+                          _MetaPill(
+                            icon: Icons.dataset_linked_rounded,
+                            label: _sourceLabel(participant!.source!),
+                            foreground: DS.textSecondary,
+                            background: scheme.surfaceContainerHigh
+                                .withValues(alpha: 0.9),
+                          ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
                     revealed,
@@ -152,6 +271,57 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           height: 1.5,
                         ),
                   ),
+                  if (participant?.contextAnchor?.isNotEmpty ?? false) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.anchor_rounded,
+                            size: 16,
+                            color: accent,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              participant!.contextAnchor!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.4,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if ((widget.replyToSpeaker?.isNotEmpty ?? false) ||
+                      (widget.turnGoal?.isNotEmpty ?? false)) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        if (widget.replyToSpeaker?.isNotEmpty ?? false)
+                          _MetaPill(label: '回应 ${widget.replyToSpeaker}'),
+                        if (widget.turnGoal?.isNotEmpty ?? false)
+                          _MetaPill(label: '目标 ${widget.turnGoal}'),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
                     '第 ${widget.round} 轮',
@@ -178,4 +348,61 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     ];
     return palette[speaker.hashCode.abs() % palette.length];
   }
+
+  String _sourceLabel(String source) {
+    switch (source) {
+      case 'galaxy':
+        return '知识星图';
+      case 'tasks':
+        return '任务记录';
+      case 'plan':
+        return '学习计划';
+      case 'starter_graph':
+        return '起步图谱';
+      default:
+        return source;
+    }
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({
+    required this.label,
+    this.icon,
+    this.foreground,
+    this.background,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Color? foreground;
+  final Color? background;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: background ?? DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 12,
+                color: foreground ?? DS.textSecondary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: foreground ?? DS.textSecondary,
+                  ),
+            ),
+          ],
+        ),
+      );
 }

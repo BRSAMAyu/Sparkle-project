@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
+import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
+import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 class InsightHubCard extends ConsumerStatefulWidget {
@@ -50,6 +53,11 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                   item?['type']?.toString().startsWith('theater_') ?? false,
               orElse: () => null,
             );
+    final latestSimulation =
+        systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
+              (item) => item?['type']?.toString() == 'simulation_session_ready',
+              orElse: () => null,
+            );
     final latestReport = systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
           (item) => item?['type']?.toString() == 'learning_report_ready',
           orElse: () => null,
@@ -68,6 +76,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     if (widget.compact) {
       return _CompactInsightHubCard(
         latestTheater: latestTheater,
+        latestSimulation: latestSimulation,
         latestReportPayload: latestReportPayload,
         simulationState: simulationState,
         dense: widget.dense,
@@ -95,6 +104,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                 latestTheater,
                 latestReportPayload,
                 simulationState,
+                latestSimulation,
               ),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
@@ -109,11 +119,15 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                 _InsightHubQuickAction(
                   icon: Icons.groups_rounded,
                   title: '学习仿真',
-                  subtitle: _simulationSubtitle(simulationState),
+                  subtitle: _simulationSubtitle(
+                    simulationState,
+                    latestSimulation: latestSimulation,
+                  ),
                   accent: DS.accent,
-                  onTap: () => _openOverview(
+                  onTap: () => _openSimulation(
                     context,
-                    initialPanel: 'simulation',
+                    simulationState,
+                    latestSimulation: latestSimulation,
                   ),
                 ),
                 _InsightHubQuickAction(
@@ -121,20 +135,14 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                   title: '推演剧场',
                   subtitle: _theaterSubtitle(latestTheater),
                   accent: DS.info,
-                  onTap: () => _openOverview(
-                    context,
-                    initialPanel: 'theater',
-                  ),
+                  onTap: () => _openTheater(context, latestTheater),
                 ),
                 _InsightHubQuickAction(
                   icon: Icons.article_outlined,
                   title: '学习报告',
                   subtitle: _reportSubtitle(latestReportPayload),
                   accent: DS.success,
-                  onTap: () => _openOverview(
-                    context,
-                    initialPanel: 'report',
-                  ),
+                  onTap: () => _openReport(context, latestReportPayload),
                 ),
               ],
             ),
@@ -170,9 +178,16 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     Map<String, dynamic>? latestTheater,
     LearningReport? report,
     SimulationState simulationState,
+    Map<String, dynamic>? latestSimulation,
   ) {
     if (simulationState.recommendedSeeds.isNotEmpty) {
       return '现在有 ${simulationState.recommendedSeeds.length} 个推荐场景可以直接开始模拟。';
+    }
+    if (latestSimulation != null) {
+      return _simulationSubtitle(
+        simulationState,
+        latestSimulation: latestSimulation,
+      );
     }
     if (report != null && report.mastery.isNotEmpty) {
       return _reportSubtitle(report);
@@ -190,11 +205,42 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
       ),
     );
   }
+
+  void _openSimulation(
+    BuildContext context,
+    SimulationState simulationState, {
+    Map<String, dynamic>? latestSimulation,
+  }) {
+    final metadata = Map<String, dynamic>.from(
+      latestSimulation?['metadata'] as Map? ?? const {},
+    );
+    final deepLink = metadata['deep_link']?.toString().trim();
+    if (deepLink != null && deepLink.startsWith(SimulationRoutes.simulation)) {
+      unawaited(context.push(deepLink));
+      return;
+    }
+    final seed = simulationState.recommendedSeeds.isNotEmpty
+        ? simulationState.recommendedSeeds.first
+        : null;
+    final location = seed == null
+        ? SimulationRoutes.simulation
+        : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(seed.topic)}&scenario_key=${Uri.encodeComponent(seed.suggestedScenario)}';
+    unawaited(context.push(location));
+  }
+
+  void _openTheater(BuildContext context, Map<String, dynamic>? latestTheater) {
+    unawaited(context.push(_resolveTheaterLocation(latestTheater)));
+  }
+
+  void _openReport(BuildContext context, LearningReport? report) {
+    unawaited(context.push(ReportRoutes.learningReport, extra: report));
+  }
 }
 
 class _CompactInsightHubCard extends ConsumerWidget {
   const _CompactInsightHubCard({
     required this.latestTheater,
+    required this.latestSimulation,
     required this.latestReportPayload,
     required this.simulationState,
     required this.dense,
@@ -202,6 +248,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
   });
 
   final Map<String, dynamic>? latestTheater;
+  final Map<String, dynamic>? latestSimulation;
   final LearningReport? latestReportPayload;
   final SimulationState simulationState;
   final bool dense;
@@ -214,6 +261,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
       latestTheater,
       latestReportPayload,
       simulationState,
+      latestSimulation,
     );
 
     return ClipRRect(
@@ -335,14 +383,29 @@ class _CompactInsightHubCard extends ConsumerWidget {
                   Expanded(
                     child: _CompactInsightAction(
                       title: '仿真',
-                      subtitle: _simulationSubtitle(simulationState),
+                      subtitle: _simulationSubtitle(
+                        simulationState,
+                        latestSimulation: latestSimulation,
+                      ),
                       icon: Icons.groups_rounded,
                       accent: DS.accent,
-                      onTap: () => context.push(
-                        InsightsRoutes.overviewLocation(
-                          initialPanel: 'simulation',
-                        ),
-                      ),
+                      onTap: () {
+                        final metadata = Map<String, dynamic>.from(
+                          latestSimulation?['metadata'] as Map? ?? const {},
+                        );
+                        final deepLink =
+                            metadata['deep_link']?.toString().trim();
+                        final seed = simulationState.recommendedSeeds.isNotEmpty
+                            ? simulationState.recommendedSeeds.first
+                            : null;
+                        final location = deepLink != null &&
+                                deepLink.startsWith(SimulationRoutes.simulation)
+                            ? deepLink
+                            : seed == null
+                                ? SimulationRoutes.simulation
+                                : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(seed.topic)}&scenario_key=${Uri.encodeComponent(seed.suggestedScenario)}';
+                        unawaited(context.push(location));
+                      },
                     ),
                   ),
                   const SizedBox(width: DS.spacing8),
@@ -352,11 +415,16 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       subtitle: _theaterSubtitle(latestTheater),
                       icon: Icons.auto_graph_rounded,
                       accent: DS.info,
-                      onTap: () => context.push(
-                        InsightsRoutes.overviewLocation(
-                          initialPanel: 'theater',
-                        ),
-                      ),
+                      onTap: () {
+                        final metadata = Map<String, dynamic>.from(
+                          latestTheater?['metadata'] as Map? ?? const {},
+                        );
+                        final title = metadata['title']?.toString();
+                        final location = title == null || title.isEmpty
+                            ? TheaterRoutes.theater
+                            : '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(title)}';
+                        unawaited(context.push(location));
+                      },
                     ),
                   ),
                   const SizedBox(width: DS.spacing8),
@@ -366,8 +434,11 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       subtitle: _reportSubtitle(latestReportPayload),
                       icon: Icons.article_outlined,
                       accent: DS.success,
-                      onTap: () => context.push(
-                        InsightsRoutes.overviewLocation(initialPanel: 'report'),
+                      onTap: () => unawaited(
+                        context.push(
+                          ReportRoutes.learningReport,
+                          extra: latestReportPayload,
+                        ),
                       ),
                     ),
                   ),
@@ -395,9 +466,16 @@ class _CompactInsightHubCard extends ConsumerWidget {
     Map<String, dynamic>? latestTheater,
     LearningReport? report,
     SimulationState simulationState,
+    Map<String, dynamic>? latestSimulation,
   ) {
     if (simulationState.recommendedSeeds.isNotEmpty) {
       return '${simulationState.recommendedSeeds.length} 个推荐场景待探索';
+    }
+    if (latestSimulation != null) {
+      return _simulationSubtitle(
+        simulationState,
+        latestSimulation: latestSimulation,
+      );
     }
     if (report != null && report.mastery.isNotEmpty) {
       return _reportSubtitle(report);
@@ -588,7 +666,50 @@ String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
   return latestTheater['description']?.toString() ?? '继续上次推演';
 }
 
-String _simulationSubtitle(SimulationState simulationState) {
+String _resolveTheaterLocation(Map<String, dynamic>? latestTheater) {
+  final metadata = Map<String, dynamic>.from(
+    latestTheater?['metadata'] as Map? ?? const {},
+  );
+  final deepLink = metadata['deep_link']?.toString().trim();
+  if (deepLink != null && deepLink.startsWith(TheaterRoutes.theater)) {
+    return deepLink;
+  }
+  final topicCandidate = metadata['topic']?.toString().trim();
+  final targetNameCandidate = metadata['target_name']?.toString().trim();
+  final titleCandidate = metadata['title']?.toString().trim();
+  final topic = (topicCandidate?.isNotEmpty ?? false)
+      ? topicCandidate
+      : (targetNameCandidate?.isNotEmpty ?? false)
+          ? targetNameCandidate
+          : titleCandidate;
+  if (topic == null || topic.isEmpty) {
+    return TheaterRoutes.theater;
+  }
+  final query = <String, String>{'topic': topic};
+  final targetNodeId = metadata['target_node_id']?.toString().trim();
+  if (targetNodeId != null && targetNodeId.isNotEmpty) {
+    query['target_node_id'] = targetNodeId;
+  }
+  return Uri(path: TheaterRoutes.theater, queryParameters: query).toString();
+}
+
+String _simulationSubtitle(
+  SimulationState simulationState, {
+  Map<String, dynamic>? latestSimulation,
+}) {
+  if (latestSimulation != null) {
+    final metadata = Map<String, dynamic>.from(
+      latestSimulation['metadata'] as Map? ?? const {},
+    );
+    final sessionPayload = metadata['session_payload'];
+    if (sessionPayload is Map) {
+      final topic = sessionPayload['topic']?.toString().trim();
+      if (topic != null && topic.isNotEmpty) {
+        return '继续 $topic';
+      }
+    }
+    return latestSimulation['description']?.toString() ?? '继续上次仿真';
+  }
   if (simulationState.recommendedSeeds.isNotEmpty) {
     return '${simulationState.recommendedSeeds.length} 个推荐场景';
   }

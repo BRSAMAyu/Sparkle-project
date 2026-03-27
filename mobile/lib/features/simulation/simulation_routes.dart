@@ -23,6 +23,8 @@ class SimulationRoutes {
               child: SimulationScreen(
                 initialTopic: state.uri.queryParameters['topic'],
                 initialScenarioKey: state.uri.queryParameters['scenario_key'],
+                initialSourceChatSessionId:
+                    state.uri.queryParameters['source_chat_session_id'],
               ),
             ),
           ),

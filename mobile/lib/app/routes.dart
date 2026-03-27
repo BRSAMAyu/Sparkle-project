@@ -173,6 +173,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                     child: ChatScreen(
                       initialPrompt: state.uri.queryParameters['prompt'],
                       initialChatMode: state.uri.queryParameters['chat_mode'],
+                      initialConversationId:
+                          state.uri.queryParameters['session_id'],
                     ),
                   ),
                 ),

@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 part 'transparency_settings_screen.g.dart';
 
@@ -23,6 +24,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(transparencyPreferencesNotifierProvider);
+    final pureModeEnabled = ref.watch(chatPureModeProvider);
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
@@ -51,6 +53,23 @@ class TransparencySettingsScreen extends ConsumerWidget {
                             transparencyPreferencesNotifierProvider.notifier,
                           )
                           .setEnabled(value),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: DS.md),
+              GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
+                child: SwitchListTile(
+                  title: const Text('纯净模式'),
+                  subtitle: Text(
+                    '聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  value: pureModeEnabled,
+                  onChanged: (value) {
+                    unawaited(
+                      ref.read(chatPureModeProvider.notifier).setEnabled(value),
                     );
                   },
                 ),
@@ -282,8 +301,7 @@ class TransparencyPreferences {
         displayMode: TransparencyDisplayMode.values.byName(
           json['displayMode'] as String? ?? 'collapsedFloating',
         ),
-        autoCollapseOnComplete:
-            json['autoCollapseOnComplete'] as bool? ?? true,
+        autoCollapseOnComplete: json['autoCollapseOnComplete'] as bool? ?? true,
         allowPerTurnDismiss: json['allowPerTurnDismiss'] as bool? ?? true,
       );
 

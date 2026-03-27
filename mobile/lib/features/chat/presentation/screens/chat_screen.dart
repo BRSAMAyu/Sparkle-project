@@ -54,10 +54,12 @@ class ChatScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialPrompt,
     this.initialChatMode,
+    this.initialConversationId,
   });
 
   final String? initialPrompt;
   final String? initialChatMode;
+  final String? initialConversationId;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -76,6 +78,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
+  String? _hydratedConversationId;
 
   @override
   void initState() {
@@ -193,15 +196,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         },
       );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final activePlanId = ref.read(activePlanProvider);
-      unawaited(
-        ref.read(chatProvider.notifier).switchPlanSession(activePlanId),
-      );
+      await ref.read(chatProvider.notifier).switchPlanSession(activePlanId);
       if (ref.read(dashboardProvider).nextIntentForecast == null) {
         unawaited(ref.read(dashboardProvider.notifier).refresh());
       }
-      _queueInitialPromptDispatch();
+      await _hydrateInitialConversationAndPrompt();
     });
   }
 
@@ -209,9 +210,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void didUpdateWidget(covariant ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialPrompt != widget.initialPrompt ||
-        oldWidget.initialChatMode != widget.initialChatMode) {
-      _queueInitialPromptDispatch();
+        oldWidget.initialChatMode != widget.initialChatMode ||
+        oldWidget.initialConversationId != widget.initialConversationId) {
+      unawaited(_hydrateInitialConversationAndPrompt());
     }
+  }
+
+  Future<void> _hydrateInitialConversationAndPrompt() async {
+    if (!mounted) {
+      return;
+    }
+    final sessionId = widget.initialConversationId?.trim();
+    if (sessionId != null &&
+        sessionId.isNotEmpty &&
+        sessionId != _hydratedConversationId &&
+        ref.read(chatProvider).conversationId != sessionId) {
+      _hydratedConversationId = sessionId;
+      await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
+    }
+    _queueInitialPromptDispatch();
   }
 
   void _queueInitialPromptDispatch() {
@@ -254,6 +271,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
             _defaultAiSystemPreferences;
     final messages = chatState.messages;
+    final chatPureMode = ref.watch(chatPureModeProvider);
+    final showChatTransparencyCapsule =
+        ref.watch(showChatTransparencyCapsuleProvider) && !chatPureMode;
+    final showStatusIndicator =
+        chatState.shouldShowStatusIndicator && !chatPureMode;
+    final showReasoningIndicator =
+        chatState.shouldShowReasoningIndicator && !chatPureMode;
+    final showStreamingBubble = chatState.shouldShowStreamingBubble;
+    final listItemCount = messages.length +
+        (showStreamingBubble ? 1 : 0) +
+        (showStatusIndicator ? 1 : 0) +
+        (showReasoningIndicator ? 1 : 0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
     String? latestAssistantMessageId;
@@ -373,7 +402,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: Stack(
           children: [
-            if (_shouldShowReasoningAtmosphere(chatState))
+            if (!chatPureMode && _shouldShowReasoningAtmosphere(chatState))
               const Positioned.fill(
                 child: IgnorePointer(
                   child: _ReasoningBreathOverlay(),
@@ -411,8 +440,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
-                              !chatState.shouldShowStatusIndicator &&
-                              !chatState.shouldShowReasoningIndicator
+                              !showStatusIndicator &&
+                              !showReasoningIndicator
                           ? _buildQuickActions(context)
                           : ListView.builder(
                               controller: _scrollController,
@@ -425,20 +454,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   context,
                                   chatState,
                                   aiSystemPreferences,
-                                  ref.watch(
-                                    showChatTransparencyCapsuleProvider,
-                                  ),
+                                  showChatTransparencyCapsule,
+                                  showStatusIndicator,
                                 ),
                               ),
                               cacheExtent: 600,
-                              itemCount: chatState.listItemCount,
+                              itemCount: listItemCount,
                               itemBuilder: (context, index) {
-                                final isStatusShowing =
-                                    chatState.shouldShowStatusIndicator;
+                                final isStatusShowing = showStatusIndicator;
                                 final isReasoningShowing =
-                                    chatState.shouldShowReasoningIndicator;
-                                final isSendingShowing =
-                                    chatState.shouldShowStreamingBubble;
+                                    showReasoningIndicator;
+                                final isSendingShowing = showStreamingBubble;
 
                                 if (isStatusShowing && index == 0) {
                                   return Padding(
@@ -499,20 +525,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                               padding: const EdgeInsets.only(
                                                 bottom: DS.spacing12,
                                               ),
-                                              child: ExpertRoundtableWidget(
-                                                routingPreview:
-                                                    chatState.routingPreview,
-                                                turns:
-                                                    chatState.roundtableTurns,
-                                              ),
+                                              child: chatPureMode
+                                                  ? const SizedBox.shrink()
+                                                  : ExpertRoundtableWidget(
+                                                      routingPreview: chatState
+                                                          .routingPreview,
+                                                      turns: chatState
+                                                          .roundtableTurns,
+                                                      collapseId:
+                                                          'stream:${chatState.activeRunId ?? chatState.reasoningStartTime ?? 'preview'}',
+                                                    ),
                                             ),
                                           _StreamingBubble(
                                             content: chatState.streamingContent,
                                           ),
-                                          AgentWorkflowPanel(
-                                            liveActivities:
-                                                chatState.agentActivities,
-                                          ),
+                                          if (!chatPureMode)
+                                            AgentWorkflowPanel(
+                                              liveActivities:
+                                                  chatState.agentActivities,
+                                            ),
                                         ],
                                       ),
                                     );
@@ -951,6 +982,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ChatState chatState,
     TransparencyPreferences aiSystemPreferences,
     bool showChatTransparencyCapsule,
+    bool showStatusIndicator,
   ) {
     final isCompactMobile = _isCompactMobileContext(context);
 
@@ -981,7 +1013,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         : DS.touchTargetMinSize - DS.spacing4;
 
     // IntentPredictionBar height (when visible)
-    if (chatState.shouldShowStatusIndicator) {
+    if (showStatusIndicator) {
       padding += isSmallScreen
           ? DS.touchTargetMinSize
           : DS.touchTargetMinSize + DS.spacing8;
@@ -1035,6 +1067,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
     final showChatTransparencyCapsule =
         ref.watch(showChatTransparencyCapsuleProvider);
+    final chatPureMode = ref.watch(chatPureModeProvider);
     final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
@@ -1071,6 +1104,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           if (showAiSystemPanel &&
               showChatTransparencyCapsule &&
+              !chatPureMode &&
               aiSystemPreferences.displayMode !=
                   TransparencyDisplayMode.detailOnly)
             Padding(
@@ -1290,6 +1324,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ref.watch(showChatPredictionDockProvider);
             final showChatTransparencyCapsule =
                 ref.watch(showChatTransparencyCapsuleProvider);
+            final chatPureMode = ref.watch(chatPureModeProvider);
             final media = MediaQuery.of(sheetContext);
             final maxSheetHeight = media.size.height * 0.82;
             final bottomInset = media.viewInsets.bottom;
@@ -1379,6 +1414,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
                                   value: preferences.enabled,
                                   onChanged: notifier.setEnabled,
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildAiSettingTile(
+                                  title: '纯净模式',
+                                  subtitle: '聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。',
+                                  value: chatPureMode,
+                                  onChanged: (value) => ref
+                                      .read(chatPureModeProvider.notifier)
+                                      .setEnabled(value),
                                 ),
                                 const SizedBox(height: DS.spacing12),
                                 _buildAiSettingTile(

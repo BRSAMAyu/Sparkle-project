@@ -22,6 +22,7 @@ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
@@ -38,6 +39,7 @@ import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 class ChatBubble extends ConsumerStatefulWidget {
@@ -76,14 +78,18 @@ class ChatBubble extends ConsumerStatefulWidget {
 class _ChatBubbleState extends ConsumerState<ChatBubble>
     with TickerProviderStateMixin {
   static const int _maxResponseFeedbackSelections = 200;
+  static const Duration _informationalAccessoryLifetime = Duration(seconds: 5);
   static final LinkedHashMap<String, String> _responseFeedbackSelections =
       LinkedHashMap<String, String>();
+  static final Set<String> _collapsedInformationalMessageIds = <String>{};
   late AnimationController _entryController;
   late Animation<double> _scale;
   late Animation<Offset> _position;
+  Timer? _informationalCollapseTimer;
 
   bool _showHeart = false;
   bool _isPressed = false;
+  late bool _showExpandedInformationalAccessories;
 
   bool get _isFreshUserBubble {
     if (widget.message is! ChatMessageModel) {
@@ -122,9 +128,35 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         (status == 'GENERATING' || status == 'THINKING');
   }
 
+  String? get _messageId => widget.message is ChatMessageModel
+      ? (widget.message as ChatMessageModel).id
+      : null;
+
+  bool get _isAssistantChatMessage {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    return (widget.message as ChatMessageModel).role == MessageRole.assistant;
+  }
+
+  bool _shouldShowExpandedInformationalAccessoriesInitially() {
+    if (!_isAssistantChatMessage || _messageId == null) {
+      return false;
+    }
+    if (_collapsedInformationalMessageIds.contains(_messageId)) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    return widget.isLatestAssistantMessage ||
+        DateTime.now().difference(message.createdAt) <=
+            const Duration(seconds: 10);
+  }
+
   @override
   void initState() {
     super.initState();
+    _showExpandedInformationalAccessories =
+        _shouldShowExpandedInformationalAccessoriesInitially();
     final isFreshUserBubble = _isFreshUserBubble;
     final isFreshAssistantBubble = _isFreshAssistantBubble;
     _entryController = AnimationController(
@@ -169,12 +201,44 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     );
 
     unawaited(_entryController.forward());
+    _scheduleInformationalAccessoryCollapse();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previousId = oldWidget.message is ChatMessageModel
+        ? (oldWidget.message as ChatMessageModel).id
+        : null;
+    if (previousId != _messageId) {
+      _informationalCollapseTimer?.cancel();
+      _showExpandedInformationalAccessories =
+          _shouldShowExpandedInformationalAccessoriesInitially();
+      _scheduleInformationalAccessoryCollapse();
+    }
   }
 
   @override
   void dispose() {
+    _informationalCollapseTimer?.cancel();
     _entryController.dispose();
     super.dispose();
+  }
+
+  void _scheduleInformationalAccessoryCollapse() {
+    if (!_isAssistantChatMessage || !_showExpandedInformationalAccessories) {
+      return;
+    }
+    _informationalCollapseTimer = Timer(
+      _informationalAccessoryLifetime,
+      () {
+        if (!mounted || _messageId == null) return;
+        setState(() {
+          _showExpandedInformationalAccessories = false;
+        });
+        _collapsedInformationalMessageIds.add(_messageId!);
+      },
+    );
   }
 
   bool get _isUser {
@@ -467,9 +531,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   Widget build(BuildContext context) {
     if (_isRevoked) return _buildRevokedPlaceholder();
 
+    final chatPureMode = ref.watch(chatPureModeProvider);
     final chatMessage = widget.message is ChatMessageModel
         ? widget.message as ChatMessageModel
         : null;
+    final showExpandedInformationalAccessories =
+        _showExpandedInformationalAccessories && !chatPureMode;
     final isUser = _isUser;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     final reduceMotion = context.reduceMotion;
@@ -522,6 +589,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         chatMessage?.agentCollaboration?['simulation_deep_link']?.toString();
     final reportDeepLink =
         chatMessage?.agentCollaboration?['report_deep_link']?.toString();
+    final sourceChatSessionId =
+        chatMessage?.agentCollaboration?['source_chat_session_id']?.toString();
     final primaryAgentId = widget.message is ChatMessageModel
         ? ((widget.message as ChatMessageModel)
                 .agentCollaboration?['primary_agent']
@@ -623,18 +692,24 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (!isUser &&
+                                    if (!chatPureMode &&
+                                        !isUser &&
                                         primaryAgentId != null &&
                                         primaryAgentId.isNotEmpty)
-                                      AssistantAgentBadge(
-                                        agentId: primaryAgentId,
-                                        displayName:
-                                            primarySnapshot?['display_name']
-                                                ?.toString(),
-                                        colorHex: primarySnapshot?['color']
-                                            ?.toString(),
-                                        iconName: primarySnapshot?['icon']
-                                            ?.toString(),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: DS.spacing8,
+                                        ),
+                                        child: AssistantAgentBadge(
+                                          agentId: primaryAgentId,
+                                          displayName:
+                                              primarySnapshot?['display_name']
+                                                  ?.toString(),
+                                          colorHex: primarySnapshot?['color']
+                                              ?.toString(),
+                                          iconName: primarySnapshot?['icon']
+                                              ?.toString(),
+                                        ),
                                       ),
                                     if (widget.message is PrivateMessageInfo &&
                                         (widget.message as PrivateMessageInfo)
@@ -646,7 +721,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                         (widget.message as PrivateMessageInfo)
                                             .quotedMessage!,
                                       ),
-                                    if (widget.message is ChatMessageModel &&
+                                    if (!chatPureMode &&
+                                        widget.message is ChatMessageModel &&
                                         (widget.message as ChatMessageModel)
                                                 .reasoningSteps !=
                                             null)
@@ -732,14 +808,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ),
                               ),
                             ),
-                            if (_metadataWidgets.isNotEmpty ||
-                                (widget.message is ChatMessageModel &&
-                                    ((widget.message as ChatMessageModel)
-                                                .aiStatus !=
-                                            null ||
-                                        (widget.message as ChatMessageModel)
-                                                .meta !=
-                                            null)))
+                            if (!chatPureMode &&
+                                (_metadataWidgets.isNotEmpty ||
+                                    (widget.message is ChatMessageModel &&
+                                        ((widget.message as ChatMessageModel)
+                                                    .aiStatus !=
+                                                null ||
+                                            (widget.message as ChatMessageModel)
+                                                    .meta !=
+                                                null))))
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -762,7 +839,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   onWidgetAction: widget.onWidgetAction,
                                 ),
                               ),
-                            if (!isUser && modeSuggestion != null)
+                            if (!chatPureMode &&
+                                !isUser &&
+                                modeSuggestion != null &&
+                                showExpandedInformationalAccessories)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -773,7 +853,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   suggestion: modeSuggestion,
                                 ),
                               ),
-                            if (!isUser && orchestrationTrace != null)
+                            if (!chatPureMode &&
+                                !isUser &&
+                                orchestrationTrace != null &&
+                                showExpandedInformationalAccessories)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -784,7 +867,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   traceData: orchestrationTrace,
                                 ),
                               ),
-                            if (!isUser &&
+                            if (!chatPureMode &&
+                                !isUser &&
                                 (routingPreview != null ||
                                     roundtableTurns.isNotEmpty))
                               Padding(
@@ -797,9 +881,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   routingPreview: routingPreview,
                                   turns: roundtableTurns,
                                   compact: true,
+                                  collapseId: chatMessage?.id,
                                 ),
                               ),
-                            if (!isUser &&
+                            if (!chatPureMode &&
+                                !isUser &&
                                 predictionPreview != null &&
                                 predictionPreview.isNotEmpty)
                               Padding(
@@ -808,13 +894,35 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   right: 8.0,
                                   left: 8.0,
                                 ),
-                                child: _buildTheaterPreviewCard(
-                                  context,
-                                  preview: predictionPreview,
-                                  deepLink: theaterDeepLink,
-                                ),
+                                child: showExpandedInformationalAccessories
+                                    ? _buildTheaterPreviewCard(
+                                        context,
+                                        preview: predictionPreview,
+                                        deepLink: theaterDeepLink,
+                                        sourceChatSessionId:
+                                            sourceChatSessionId,
+                                      )
+                                    : _buildInsightShortcutPill(
+                                        title: '查看推演详情',
+                                        icon: Icons.auto_graph_rounded,
+                                        onTap: () => context.push(
+                                          _resolveInsightDeepLink(
+                                            deepLink: theaterDeepLink,
+                                            fallbackPath: TheaterRoutes.theater,
+                                            fallbackQuery: {
+                                              'topic':
+                                                  predictionPreview['topic']
+                                                          ?.toString() ??
+                                                      '当前学习主题',
+                                            },
+                                            sourceChatSessionId:
+                                                sourceChatSessionId,
+                                          ),
+                                        ),
+                                      ),
                               ),
-                            if (!isUser &&
+                            if (!chatPureMode &&
+                                !isUser &&
                                 simulationPreview != null &&
                                 simulationPreview.isNotEmpty)
                               Padding(
@@ -823,13 +931,40 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   right: 8.0,
                                   left: 8.0,
                                 ),
-                                child: _buildSimulationPreviewCard(
-                                  context,
-                                  preview: simulationPreview,
-                                  deepLink: simulationDeepLink,
-                                ),
+                                child: showExpandedInformationalAccessories
+                                    ? _buildSimulationPreviewCard(
+                                        context,
+                                        preview: simulationPreview,
+                                        deepLink: simulationDeepLink,
+                                        sourceChatSessionId:
+                                            sourceChatSessionId,
+                                      )
+                                    : _buildInsightShortcutPill(
+                                        title: '查看模拟详情',
+                                        icon: Icons.groups_rounded,
+                                        onTap: () => context.push(
+                                          _resolveInsightDeepLink(
+                                            deepLink: simulationDeepLink,
+                                            fallbackPath:
+                                                SimulationRoutes.simulation,
+                                            fallbackQuery: {
+                                              'topic':
+                                                  simulationPreview['topic']
+                                                          ?.toString() ??
+                                                      '当前学习主题',
+                                              'scenario_key': simulationPreview[
+                                                          'scenario_key']
+                                                      ?.toString() ??
+                                                  'study_group',
+                                            },
+                                            sourceChatSessionId:
+                                                sourceChatSessionId,
+                                          ),
+                                        ),
+                                      ),
                               ),
-                            if (!isUser &&
+                            if (!chatPureMode &&
+                                !isUser &&
                                 reportPreview != null &&
                                 reportPreview.isNotEmpty)
                               Padding(
@@ -838,17 +973,29 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   right: 8.0,
                                   left: 8.0,
                                 ),
-                                child: _buildReportPreviewCard(
-                                  context,
-                                  preview: reportPreview,
-                                  deepLink: reportDeepLink,
-                                ),
+                                child: showExpandedInformationalAccessories
+                                    ? _buildReportPreviewCard(
+                                        context,
+                                        preview: reportPreview,
+                                        deepLink: reportDeepLink,
+                                        sourceChatSessionId:
+                                            sourceChatSessionId,
+                                      )
+                                    : _buildCompactReportPreviewPill(
+                                        context,
+                                        preview: reportPreview,
+                                        deepLink: reportDeepLink,
+                                        sourceChatSessionId:
+                                            sourceChatSessionId,
+                                      ),
                               ),
-                            if (!isUser &&
+                            if (!chatPureMode &&
+                                !isUser &&
                                 agentActivities.isEmpty &&
                                 ((collaborationNarrative != null &&
                                         collaborationNarrative.isNotEmpty) ||
-                                    agentsInvolved.isNotEmpty))
+                                    agentsInvolved.isNotEmpty) &&
+                                showExpandedInformationalAccessories)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
@@ -862,82 +1009,94 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   activitySnapshots: agentActivities,
                                 ),
                               ),
-                            if (!isUser && agentActivities.isNotEmpty)
+                            if (!chatPureMode &&
+                                !isUser &&
+                                agentActivities.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   top: 8.0,
                                   right: 8.0,
                                   left: 8.0,
                                 ),
-                                child: AgentWorkflowPanel(
-                                  snapshotActivities: agentActivities,
-                                  narrative: collaborationNarrative,
-                                ),
+                                child: showExpandedInformationalAccessories
+                                    ? AgentWorkflowPanel(
+                                        snapshotActivities: agentActivities,
+                                        narrative: collaborationNarrative,
+                                      )
+                                    : _buildStaticAccessoryPill(
+                                        icon: Icons.hub_rounded,
+                                        label: '协作过程',
+                                      ),
                               ),
-                            ..._informationalWidgets.map(
-                              (w) => Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildInformationalWidget(w),
-                              ),
-                            ),
-                            ..._actionableWidgets.map(
-                              (w) {
-                                final actionable = (w.data['id'] ??
-                                        w.data['tool_result_id'] ??
-                                        w.data['intervention_id'] ??
-                                        w.data['request_id']) !=
-                                    null;
-                                return Padding(
+                            if (!chatPureMode)
+                              ..._informationalWidgets.map(
+                                (w) => Padding(
                                   padding: const EdgeInsets.only(
                                     top: 8.0,
                                     right: 8.0,
                                     left: 8.0,
                                   ),
-                                  child: ActionCard(
-                                    action: w,
-                                    onConfirm: actionable &&
-                                            widget.onActionConfirm != null
-                                        ? () => widget.onActionConfirm!(w)
-                                        : null,
-                                    onDismiss: actionable &&
-                                            widget.onActionDismiss != null
-                                        ? () => widget.onActionDismiss!(w)
-                                        : null,
-                                    onConfirmTasks: (toolResultId) async {
-                                      final planId =
-                                          w.data['plan_id']?.toString() ??
-                                              w.data['planId']?.toString();
-                                      await _confirmGeneratedTasks(
-                                        toolResultId: toolResultId,
-                                        planId: planId,
-                                      );
-                                    },
-                                    onConfirmAllTasks: (toolResultId) async {
-                                      final planId =
-                                          w.data['plan_id']?.toString() ??
-                                              w.data['planId']?.toString();
-                                      await _confirmGeneratedTasks(
-                                        toolResultId: toolResultId,
-                                        planId: planId,
-                                      );
-                                    },
-                                    onPlanNavigation: (planId) {
-                                      unawaited(
-                                        ref
-                                            .read(planListProvider.notifier)
-                                            .refresh(),
-                                      );
-                                    },
-                                    onWidgetAction: widget.onWidgetAction,
-                                  ),
-                                );
-                              },
-                            ),
-                            if (!isUser) _buildResponseFeedbackRow(context),
+                                  child: showExpandedInformationalAccessories
+                                      ? _buildInformationalWidget(w)
+                                      : _buildInformationalWidgetPill(w),
+                                ),
+                              ),
+                            if (!chatPureMode)
+                              ..._actionableWidgets.map(
+                                (w) {
+                                  final actionable = (w.data['id'] ??
+                                          w.data['tool_result_id'] ??
+                                          w.data['intervention_id'] ??
+                                          w.data['request_id']) !=
+                                      null;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 8.0,
+                                      right: 8.0,
+                                      left: 8.0,
+                                    ),
+                                    child: ActionCard(
+                                      action: w,
+                                      onConfirm: actionable &&
+                                              widget.onActionConfirm != null
+                                          ? () => widget.onActionConfirm!(w)
+                                          : null,
+                                      onDismiss: actionable &&
+                                              widget.onActionDismiss != null
+                                          ? () => widget.onActionDismiss!(w)
+                                          : null,
+                                      onConfirmTasks: (toolResultId) async {
+                                        final planId =
+                                            w.data['plan_id']?.toString() ??
+                                                w.data['planId']?.toString();
+                                        await _confirmGeneratedTasks(
+                                          toolResultId: toolResultId,
+                                          planId: planId,
+                                        );
+                                      },
+                                      onConfirmAllTasks: (toolResultId) async {
+                                        final planId =
+                                            w.data['plan_id']?.toString() ??
+                                                w.data['planId']?.toString();
+                                        await _confirmGeneratedTasks(
+                                          toolResultId: toolResultId,
+                                          planId: planId,
+                                        );
+                                      },
+                                      onPlanNavigation: (planId) {
+                                        unawaited(
+                                          ref
+                                              .read(planListProvider.notifier)
+                                              .refresh(),
+                                        );
+                                      },
+                                      onWidgetAction: widget.onWidgetAction,
+                                    ),
+                                  );
+                                },
+                              ),
+                            if (!chatPureMode && !isUser)
+                              _buildResponseFeedbackRow(context),
                           ],
                         ),
                         if (_showHeart) _buildHeartAnimation(context),
@@ -962,7 +1121,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
                 if (isUser) _buildMessageStatus(),
-                if (!isUser &&
+                if (!chatPureMode &&
+                    !isUser &&
                     widget.message is ChatMessageModel &&
                     (widget.message as ChatMessageModel).meta != null)
                   _buildTimingBadge((widget.message as ChatMessageModel).meta),
@@ -1016,19 +1176,69 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
   }
 
+  Widget _buildInformationalWidgetPill(WidgetPayload widgetPayload) {
+    switch (widgetPayload.type) {
+      case 'plan_context_summary':
+        return _buildStaticAccessoryPill(
+          icon: Icons.summarize_outlined,
+          label: '计划上下文',
+        );
+      case 'plan_state':
+        return _buildStaticAccessoryPill(
+          icon: Icons.flag_outlined,
+          label: '计划状态',
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildInsightShortcutPill({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) =>
+      ChatAccessoryPill(
+        icon: icon,
+        label: title,
+        onTap: onTap,
+        emphasize: true,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+      );
+
+  Widget _buildStaticAccessoryPill({
+    required IconData icon,
+    required String label,
+  }) =>
+      ChatAccessoryPill(
+        icon: icon,
+        label: label,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+      );
+
   Widget _buildTheaterPreviewCard(
     BuildContext context, {
     required Map<String, dynamic> preview,
     required String? deepLink,
+    required String? sourceChatSessionId,
   }) {
     final topic = preview['topic']?.toString() ?? '当前学习主题';
     final paths = (preview['paths'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
-    final resolvedDeepLink = (deepLink?.isNotEmpty ?? false)
-        ? deepLink!
-        : '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(topic)}';
+    final resolvedDeepLink = _resolveInsightDeepLink(
+      deepLink: deepLink,
+      fallbackPath: TheaterRoutes.theater,
+      fallbackQuery: {'topic': topic},
+      sourceChatSessionId: sourceChatSessionId,
+    );
     return _InsightLinkCard(
       icon: Icons.auto_graph_rounded,
       title: '查看推演详情',
@@ -1040,6 +1250,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 '${item['title'] ?? '路径'} · 掌握度 ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
           )
           .toList(),
+      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
       onTap: () => context.push(resolvedDeepLink),
     );
   }
@@ -1048,6 +1259,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     BuildContext context, {
     required Map<String, dynamic> preview,
     required String? deepLink,
+    required String? sourceChatSessionId,
   }) {
     final topic = preview['topic']?.toString() ?? '当前学习主题';
     final scenarioKey = preview['scenario_key']?.toString() ?? 'study_group';
@@ -1055,9 +1267,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
-    final resolvedDeepLink = (deepLink?.isNotEmpty ?? false)
-        ? deepLink!
-        : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(topic)}&scenario_key=${Uri.encodeComponent(scenarioKey)}';
+    final resolvedDeepLink = _resolveInsightDeepLink(
+      deepLink: deepLink,
+      fallbackPath: SimulationRoutes.simulation,
+      fallbackQuery: {
+        'topic': topic,
+        'scenario_key': scenarioKey,
+      },
+      sourceChatSessionId: sourceChatSessionId,
+    );
     return _InsightLinkCard(
       icon: Icons.groups_rounded,
       title: '查看模拟详情',
@@ -1068,6 +1286,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             (item) => '${item['speaker'] ?? '参与者'}: ${item['message'] ?? ''}',
           )
           .toList(),
+      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
       onTap: () => context.push(resolvedDeepLink),
     );
   }
@@ -1076,6 +1295,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     BuildContext context, {
     required Map<String, dynamic> preview,
     required String? deepLink,
+    required String? sourceChatSessionId,
   }) {
     final report = LearningReport.fromJson(preview);
     final highlights = (preview['highlights'] as List<dynamic>? ?? const [])
@@ -1083,9 +1303,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .where((item) => item.isNotEmpty)
         .toList();
     final summary = preview['summary']?.toString() ?? '查看最新学习报告';
-    final resolvedDeepLink = (deepLink?.isNotEmpty ?? false)
-        ? deepLink!
-        : ReportRoutes.learningReport;
+    final resolvedDeepLink = _resolveInsightDeepLink(
+      deepLink: deepLink,
+      fallbackPath: ReportRoutes.learningReport,
+      fallbackQuery: const <String, String>{},
+      sourceChatSessionId: sourceChatSessionId,
+    );
     return _InsightLinkCard(
       icon: Icons.article_outlined,
       title: '查看学习报告',
@@ -1099,14 +1322,62 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                     '${item.nodeName} · 掌握度 ${item.masteryScore.toStringAsFixed(0)}%',
               )
               .toList(),
+      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
       onTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
-          unawaited(context.push(ReportRoutes.learningReport, extra: report));
+          unawaited(context.push(resolvedDeepLink, extra: report));
           return;
         }
         unawaited(context.push(resolvedDeepLink));
       },
     );
+  }
+
+  Widget _buildCompactReportPreviewPill(
+    BuildContext context, {
+    required Map<String, dynamic> preview,
+    required String? deepLink,
+    required String? sourceChatSessionId,
+  }) {
+    final report = LearningReport.fromJson(preview);
+    final resolvedDeepLink = _resolveInsightDeepLink(
+      deepLink: deepLink,
+      fallbackPath: ReportRoutes.learningReport,
+      fallbackQuery: const <String, String>{},
+      sourceChatSessionId: sourceChatSessionId,
+    );
+    return _buildInsightShortcutPill(
+      title: '查看学习报告',
+      icon: Icons.article_outlined,
+      onTap: () {
+        if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
+          unawaited(context.push(resolvedDeepLink, extra: report));
+          return;
+        }
+        unawaited(context.push(resolvedDeepLink));
+      },
+    );
+  }
+
+  String _resolveInsightDeepLink({
+    required String? deepLink,
+    required String fallbackPath,
+    required Map<String, String> fallbackQuery,
+    required String? sourceChatSessionId,
+  }) {
+    final baseUri = Uri.parse(
+      (deepLink?.isNotEmpty ?? false)
+          ? deepLink!
+          : Uri(path: fallbackPath, queryParameters: fallbackQuery).toString(),
+    );
+    final query = Map<String, String>.from(baseUri.queryParameters);
+    if ((sourceChatSessionId?.isNotEmpty ?? false) &&
+        !query.containsKey('source_chat_session_id')) {
+      query['source_chat_session_id'] = sourceChatSessionId!;
+    }
+    return baseUri
+        .replace(queryParameters: query.isEmpty ? null : query)
+        .toString();
   }
 
   Widget _buildTimingBadge(MessageMeta? meta) {
@@ -1181,10 +1452,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final isNegative = selection == 'down';
 
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.only(top: DS.spacing8),
       child: Wrap(
-        spacing: DS.spacing8,
-        runSpacing: DS.spacing8,
+        spacing: DS.spacing6,
+        runSpacing: DS.spacing6,
         children: [
           _buildFeedbackChip(
             context,
@@ -1248,47 +1519,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required IconData icon,
     required bool selected,
     required VoidCallback? onTap,
-  }) {
-    final bgColor = selected
-        ? DS.brandPrimary.withValues(alpha: 0.16)
-        : DS.surfaceSecondary;
-    final fgColor = selected ? DS.brandPrimary : DS.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DS.borderRadiusFull,
-      child: Container(
+  }) =>
+      ChatAccessoryPill(
+        icon: icon,
+        label: label,
+        onTap: onTap,
+        selected: selected,
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing10,
           vertical: DS.spacing6,
         ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(
-            color: selected
-                ? DS.brandPrimary.withValues(alpha: 0.4)
-                : DS.borderSubtle,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: DS.iconSizeSm, color: fgColor),
-            const SizedBox(width: DS.spacing6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: fgColor,
-                fontWeight:
-                    selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 
   String _formatDurationBadge(int durationMs) {
     final seconds = durationMs / 1000.0;
@@ -1837,6 +2078,7 @@ class _InsightLinkCard extends StatelessWidget {
     required this.subtitle,
     required this.bullets,
     required this.onTap,
+    this.caption,
   });
 
   final IconData icon;
@@ -1844,16 +2086,17 @@ class _InsightLinkCard extends StatelessWidget {
   final String subtitle;
   final List<String> bullets;
   final VoidCallback onTap;
+  final String? caption;
 
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: DS.surfaceSecondary,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: DS.brandPrimary.withValues(alpha: 0.14),
             ),
@@ -1864,34 +2107,60 @@ class _InsightLinkCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(icon, size: 18, color: DS.brandPrimary),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, size: 18),
+                  const Icon(Icons.chevron_right_rounded, size: 16),
                 ],
               ),
-              const SizedBox(height: 6),
+              if (caption != null && caption!.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.info.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    caption!,
+                    style: TextStyle(
+                      color: DS.info,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: DS.spacing4),
               Text(
                 subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: DS.textSecondary,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
               if (bullets.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ...bullets.take(3).map(
+                const SizedBox(height: DS.spacing6),
+                ...bullets.take(2).map(
                       (line) => Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           '• $line',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12.5),
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                       ),
                     ),
@@ -2045,23 +2314,13 @@ class _CollaborationSignatureCard extends StatelessWidget {
         context,
       );
       widgets.add(
-        Container(
+        ChatAccessoryPill(
+          icon: Icons.person_outline_rounded,
+          label: label,
+          accentColor: color,
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing8,
-            vertical: DS.spacing4,
-          ),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: color.withValues(alpha: 0.18)),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+            vertical: DS.spacing6,
           ),
         ),
       );

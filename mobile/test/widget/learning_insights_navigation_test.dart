@@ -77,7 +77,7 @@ void main() {
   });
 
   group('learning insights navigation', () {
-    testWidgets('insight hub shortcuts open overview with focused panel',
+    testWidgets('insight hub shortcuts open destination pages directly',
         (tester) async {
       final router = GoRouter(
         initialLocation: '/',
@@ -88,9 +88,19 @@ void main() {
           ),
           GoRoute(
             path: '/learning/insights',
-            builder: (context, state) => Text(
-              'overview-${state.uri.queryParameters['initialPanel'] ?? 'none'}',
-            ),
+            builder: (context, state) => const Text('overview-none'),
+          ),
+          GoRoute(
+            path: '/theater',
+            builder: (context, state) => Text(state.uri.toString()),
+          ),
+          GoRoute(
+            path: '/simulation',
+            builder: (context, state) => const Text('simulation-direct'),
+          ),
+          GoRoute(
+            path: '/learning-report',
+            builder: (context, state) => const Text('report-direct'),
           ),
         ],
       );
@@ -122,7 +132,9 @@ void main() {
                   'type': 'theater_route_adopted',
                   'description': '已根据推演创建计划',
                   'metadata': <String, dynamic>{
-                    'title': '线性代数',
+                    'title': '稳扎稳打',
+                    'deep_link':
+                        '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1',
                   },
                 },
                 <String, dynamic>{
@@ -158,7 +170,10 @@ void main() {
       await tester.tap(find.text('推演剧场'));
       await tester.pumpAndSettle();
 
-      expect(find.text('overview-theater'), findsOneWidget);
+      expect(
+        find.text('/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('overview opens child routes and returns back to overview',

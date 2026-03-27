@@ -21,7 +21,9 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(ref.read(notificationCenterProvider.notifier).loadNotifications());
+      unawaited(
+        ref.read(notificationCenterProvider.notifier).loadNotifications(),
+      );
     });
   }
 
@@ -38,7 +40,8 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           .where(
             (item) =>
                 (item.type ?? '').startsWith('theater_') ||
-                item.type == 'learning_report_ready',
+                item.type == 'learning_report_ready' ||
+                item.type == 'simulation_session_ready',
           )
           .map(
             (item) => _InsightEntry(
@@ -53,7 +56,8 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           .where(
             (item) =>
                 (item['type']?.toString().startsWith('theater_') ?? false) ||
-                item['type']?.toString() == 'learning_report_ready',
+                item['type']?.toString() == 'learning_report_ready' ||
+                item['type']?.toString() == 'simulation_session_ready',
           )
           .map(
             (item) => _InsightEntry(
@@ -77,7 +81,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
         dedupedEntries.add(entry);
       }
     }
-    final recentEntries = dedupedEntries.take(3).toList();
+    final recentEntries = dedupedEntries.take(2).toList();
 
     if (recentEntries.isEmpty) {
       return const SizedBox.shrink();
@@ -87,21 +91,53 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '最近洞察',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: Icon(
+                    Icons.auto_graph_rounded,
+                    size: 16,
+                    color: DS.brandPrimary,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    '最近洞察',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                Text(
+                  '${recentEntries.length} 条',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(height: DS.spacing12),
+            const SizedBox(height: DS.spacing8),
             ...recentEntries.map(
               (item) => _InsightRow(
                 icon: item.type == 'learning_report_ready'
                     ? Icons.article_outlined
-                    : Icons.auto_graph_rounded,
+                    : item.type == 'simulation_session_ready'
+                        ? Icons.groups_rounded
+                        : Icons.auto_graph_rounded,
                 title: item.title,
                 subtitle: item.subtitle,
                 onTap: () => _openNotificationInsight(
@@ -138,20 +174,34 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
     if (type == 'learning_report_ready') {
       final payload = metadata['report_payload'];
       if (payload is Map<String, dynamic>) {
-        unawaited(context.push(
-          ReportRoutes.learningReport,
-          extra: LearningReport.fromJson(payload),
-        ),);
+        unawaited(
+          context.push(
+            ReportRoutes.learningReport,
+            extra: LearningReport.fromJson(payload),
+          ),
+        );
         return;
       }
       if (payload is Map) {
-        unawaited(context.push(
-          ReportRoutes.learningReport,
-          extra: LearningReport.fromJson(Map<String, dynamic>.from(payload)),
-        ),);
+        unawaited(
+          context.push(
+            ReportRoutes.learningReport,
+            extra: LearningReport.fromJson(Map<String, dynamic>.from(payload)),
+          ),
+        );
         return;
       }
       unawaited(context.push('/notification-center'));
+      return;
+    }
+
+    if (type == 'simulation_session_ready') {
+      final deepLink = metadata['deep_link']?.toString();
+      if (deepLink != null && deepLink.isNotEmpty) {
+        unawaited(context.push(deepLink));
+        return;
+      }
+      unawaited(context.push('/simulation'));
       return;
     }
 
@@ -196,45 +246,45 @@ class _InsightRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 18, color: DS.brandPrimary),
+                child: Icon(icon, size: 16, color: DS.brandPrimary),
               ),
-              const SizedBox(width: DS.spacing12),
+              const SizedBox(width: DS.spacing10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: DS.textSecondary,
-                        fontSize: DS.fontSizeSm,
+                        fontSize: DS.fontSizeXs,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: DS.spacing8),
-              const Icon(Icons.chevron_right_rounded, size: 18),
+              const SizedBox(width: DS.spacing6),
+              const Icon(Icons.chevron_right_rounded, size: 16),
             ],
           ),
         ),

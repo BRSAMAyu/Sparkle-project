@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -19,10 +20,12 @@ class SimulationScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialTopic,
     this.initialScenarioKey,
+    this.initialSourceChatSessionId,
   });
 
   final String? initialTopic;
   final String? initialScenarioKey;
+  final String? initialSourceChatSessionId;
 
   @override
   ConsumerState<SimulationScreen> createState() => _SimulationScreenState();
@@ -45,6 +48,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   List<SimulationParticipantModel>? _pausedParticipants;
   List<SimulationRoundModel>? _pausedRounds;
   String? _pausedInsightSummary;
+  String? _pausedInteractionPrompt;
+  List<String>? _pausedSuggestedReplies;
 
   @override
   void initState() {
@@ -118,6 +123,16 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     final insightSummary = _isPlaybackPaused
         ? (_pausedInsightSummary ?? liveInsightSummary)
         : liveInsightSummary;
+    final interactionPrompt = _isPlaybackPaused
+        ? (_pausedInteractionPrompt ??
+            session?.interactionPrompt ??
+            state.liveInteractionPrompt)
+        : (session?.interactionPrompt ?? state.liveInteractionPrompt);
+    final suggestedReplies = _isPlaybackPaused
+        ? (_pausedSuggestedReplies ??
+            session?.suggestedReplies ??
+            state.liveSuggestedReplies)
+        : (session?.suggestedReplies ?? state.liveSuggestedReplies);
     final roundCount = rounds.length;
     final expectedRounds = _expectedRoundsForScenario(
       session?.scenarioKey ?? _selectedScenarioKey,
@@ -174,6 +189,16 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if ((widget.initialSourceChatSessionId ?? '')
+                            .trim()
+                            .isNotEmpty) ...[
+                          ChatContinuityBanner(
+                            sourceChatSessionId:
+                                widget.initialSourceChatSessionId!.trim(),
+                            subtitle: '这一轮模拟来自你刚才的聊天桥接。点右侧按钮就能带着上下文回到原对话继续追问。',
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         _SimulationComposer(
                           topicController: _topicController,
                           selectedScenarioKey: _selectedScenarioKey,
@@ -248,11 +273,22 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                         const SizedBox(height: 14),
                         _SimulationTimelineCard(
                           rounds: rounds,
+                          participants: participants,
                           isLoading: state.isLoading,
                           topic: _topicController.text.trim(),
                           controller: _roundsScrollController,
                           height: timelineHeight,
                         ),
+                        if ((interactionPrompt?.isNotEmpty ?? false) &&
+                            suggestedReplies.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          _SimulationInteractionCard(
+                            prompt: interactionPrompt!,
+                            suggestedReplies: suggestedReplies,
+                            onReplySelected: (reply) =>
+                                unawaited(_continueInChat(reply)),
+                          ),
+                        ],
                         if ((insightSummary?.isNotEmpty ?? false) ||
                             session != null) ...[
                           const SizedBox(height: 14),
@@ -303,6 +339,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       _pausedParticipants = null;
       _pausedRounds = null;
       _pausedInsightSummary = null;
+      _pausedInteractionPrompt = null;
+      _pausedSuggestedReplies = null;
       _isInsightExpanded = false;
     });
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -326,10 +364,17 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             List<SimulationParticipantModel>.from(liveParticipants);
         _pausedRounds = List<SimulationRoundModel>.from(liveRounds);
         _pausedInsightSummary = liveInsightSummary;
+        _pausedInteractionPrompt =
+            session?.interactionPrompt ?? state.liveInteractionPrompt;
+        _pausedSuggestedReplies = List<String>.from(
+          session?.suggestedReplies ?? state.liveSuggestedReplies,
+        );
       } else {
         _pausedParticipants = null;
         _pausedRounds = null;
         _pausedInsightSummary = null;
+        _pausedInteractionPrompt = null;
+        _pausedSuggestedReplies = null;
       }
     });
     unawaited(
@@ -398,6 +443,15 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             '学习场景模拟\n主题：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? session.scenarioKey}\n洞察：${session.insightSummary}',
       ),
     );
+  }
+
+  Future<void> _continueInChat(String reply) async {
+    final query = <String, String>{
+      'prompt': reply,
+      if ((widget.initialSourceChatSessionId ?? '').trim().isNotEmpty)
+        'session_id': widget.initialSourceChatSessionId!.trim(),
+    };
+    await context.push(Uri(path: '/chat', queryParameters: query).toString());
   }
 }
 
@@ -697,6 +751,82 @@ class _RecommendedSeedCard extends StatelessWidget {
       );
 }
 
+class _SimulationInteractionCard extends StatelessWidget {
+  const _SimulationInteractionCard({
+    required this.prompt,
+    required this.suggestedReplies,
+    required this.onReplySelected,
+  });
+
+  final String prompt;
+  final List<String> suggestedReplies;
+  final ValueChanged<String> onReplySelected;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        borderColor: DS.warning.withValues(alpha: 0.18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.person_pin_circle_outlined,
+                    color: DS.warning,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '轮到你加入这场讨论',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              prompt,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestedReplies
+                  .take(3)
+                  .map(
+                    (reply) => ActionChip(
+                      label: Text(reply),
+                      onPressed: () => onReplySelected(reply),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '点任一回复，会把这句话带回 AI 对话继续展开。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ],
+        ),
+      );
+}
+
 class _SimulationStatusCard extends StatelessWidget {
   const _SimulationStatusCard({
     required this.progress,
@@ -870,6 +1000,7 @@ class _StatusBadge extends StatelessWidget {
 class _SimulationTimelineCard extends StatelessWidget {
   const _SimulationTimelineCard({
     required this.rounds,
+    required this.participants,
     required this.isLoading,
     required this.topic,
     required this.controller,
@@ -877,71 +1008,106 @@ class _SimulationTimelineCard extends StatelessWidget {
   });
 
   final List<SimulationRoundModel> rounds;
+  final List<SimulationParticipantModel> participants;
   final bool isLoading;
   final String topic;
   final ScrollController controller;
   final double height;
 
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '讨论时间线',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        topic.isEmpty ? '开始后会实时出现每一轮讨论。' : '主题：$topic',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: height,
-              child: rounds.isEmpty
-                  ? _SimulationEmptyState(isLoading: isLoading)
-                  : ListView.separated(
-                      controller: controller,
-                      itemCount: rounds.length,
-                      separatorBuilder: (context, index) => _RoundDivider(
-                        round: rounds[index].round,
-                      ),
-                      itemBuilder: (context, index) {
-                        final round = rounds[index];
-                        return SimulationChatBubble(
-                          key: ValueKey(
-                            '${round.round}-${round.speaker}-${round.message}',
+  Widget build(BuildContext context) {
+    final participantByName = <String, SimulationParticipantModel>{
+      for (final participant in participants) participant.name: participant,
+    };
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '讨论时间线',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                          speaker: round.speaker,
-                          message: round.message,
-                          round: round.round,
-                        );
-                      },
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      topic.isEmpty ? '开始后会实时出现每一轮讨论。' : '主题：$topic',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (participants.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.62),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: participants
+                    .take(4)
+                    .map(
+                      (participant) => _ParticipantSnapshotPill(
+                        participant: participant,
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ],
-        ),
-      );
+          const SizedBox(height: 12),
+          SizedBox(
+            height: height,
+            child: rounds.isEmpty
+                ? _SimulationEmptyState(isLoading: isLoading)
+                : ListView.separated(
+                    controller: controller,
+                    itemCount: rounds.length,
+                    separatorBuilder: (context, index) => _RoundDivider(
+                      round: rounds[index].round,
+                    ),
+                    itemBuilder: (context, index) {
+                      final round = rounds[index];
+                      return SimulationChatBubble(
+                        key: ValueKey(
+                          '${round.round}-${round.speaker}-${round.message}',
+                        ),
+                        speaker: round.speaker,
+                        participant: participantByName[round.speaker],
+                        message: round.message,
+                        round: round.round,
+                        replyToSpeaker: round.replyToSpeaker,
+                        turnGoal: round.turnGoal,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SimulationInsightTray extends StatelessWidget {
@@ -1151,12 +1317,74 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(widget.participant.name),
+                Text(
+                  widget.participant.name,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
               ],
             ),
           ),
         ),
       );
+}
+
+class _ParticipantSnapshotPill extends StatelessWidget {
+  const _ParticipantSnapshotPill({
+    required this.participant,
+  });
+
+  final SimulationParticipantModel participant;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _accentForName(participant.name);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            participant.name,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          if (participant.roleHint.isNotEmpty ||
+              (participant.stance?.isNotEmpty ?? false)) ...[
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (participant.roleHint.isNotEmpty) participant.roleHint,
+                if (participant.stance?.isNotEmpty ?? false)
+                  participant.stance!,
+              ].join(' · '),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _accentForName(String name) {
+    final palette = <Color>[
+      DS.info,
+      DS.success,
+      DS.warning,
+      DS.brandPrimary,
+      DS.accent,
+    ];
+    return palette[name.hashCode.abs() % palette.length];
+  }
 }
 
 class _SimulationEmptyState extends StatelessWidget {
