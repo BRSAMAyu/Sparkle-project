@@ -124,6 +124,38 @@ class OpenClawClient:
         except Exception:
             return False
 
+    async def list_nodes(
+        self,
+        *,
+        connected_only: bool = True,
+        last_connected: str | None = None,
+    ) -> dict[str, Any]:
+        if self._config.transport != "gateway_ws" or not self._ws_client:
+            return {"items": []}
+        return await self._ws_client.list_nodes(
+            connected_only=connected_only,
+            last_connected=last_connected,
+        )
+
+    async def invoke_node(
+        self,
+        *,
+        node_id: str,
+        command: str,
+        params: dict[str, Any] | None = None,
+        invoke_timeout_ms: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        if self._config.transport != "gateway_ws" or not self._ws_client:
+            raise OpenClawConfigurationError("Node invocation requires Gateway WS transport")
+        return await self._ws_client.invoke_node(
+            node_id=node_id,
+            command=command,
+            params=params or {},
+            invoke_timeout_ms=invoke_timeout_ms,
+            idempotency_key=idempotency_key,
+        )
+
 
 class OpenClawError(Exception):
     """Base OpenClaw adapter error."""

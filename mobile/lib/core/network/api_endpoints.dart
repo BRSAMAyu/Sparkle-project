@@ -66,6 +66,8 @@ class ApiEndpoints {
   static const String executionHealth = '/executions/health';
   static String classifyTaskExecution(String taskId) =>
       '/executions/tasks/$taskId/classify';
+  static String executionTemplates(String taskId) =>
+      '/executions/tasks/$taskId/templates';
   static String handoffTaskExecution(String taskId) =>
       '/executions/tasks/$taskId/handoff';
   static String taskExecutionIntents(String taskId) =>

@@ -28,6 +28,8 @@ class HandoffRequest(BaseModel):
     policy: dict[str, Any] | None = Field(default=None, description="Policy override")
     success_criteria: dict[str, Any] | None = Field(default=None, description="Success criteria override")
     result_contract: dict[str, Any] | None = Field(default=None, description="Result contract override")
+    template_id: str | None = Field(default=None, description="Execution template id")
+    preferred_node_id: str | None = Field(default=None, description="Preferred OpenClaw node id")
 
 
 class HandbackRequest(BaseModel):
@@ -50,15 +52,68 @@ class ExecutionIntentResponse(BaseModel):
     plan_id: str | None
     execution_mode: str
     executor: str
+    target_env: str | None = None
     status: str
     trust_level: str
     external_run_id: str | None
     goal: str
+    template_id: str | None = None
+    template_name: str | None = None
+    strategy_variant: str | None = None
+    target_node_id: str | None = None
+    target_node_label: str | None = None
+    approval_policy: str | None = None
     error_category: str | None
     error_message: str | None
     dispatched_at: str | None
     completed_at: str | None
     created_at: str | None
+
+
+class ExecutionTemplateResponse(BaseModel):
+    template_id: str
+    name: str
+    description: str
+    execution_mode: str
+    target_env: str
+    match_score: float
+    match_reasons: list[str]
+    required_node_command: str | None = None
+
+
+class ExecutionNodeResponse(BaseModel):
+    node_id: str
+    name: str
+    platform: str
+    connected: bool
+    commands: list[str]
+    caps: list[str]
+
+
+class NodeInvokeRequest(BaseModel):
+    command: str
+    params: dict[str, Any] | None = None
+    invoke_timeout_ms: int | None = None
+    idempotency_key: str | None = None
+
+
+class ExecutionQualityVariantResponse(BaseModel):
+    variant_id: str
+    variant_name: str
+    is_control: bool
+    configuration: dict[str, Any]
+    sample_size: int
+    success_rate: float
+    avg_quality: float
+    avg_latency: float
+
+
+class ExecutionQualitySummaryResponse(BaseModel):
+    experiment_id: str | None = None
+    experiment_name: str
+    status: str
+    sample_size_collected: int
+    variants: list[ExecutionQualityVariantResponse]
 
 
 class ClassifyResponse(BaseModel):
@@ -86,16 +141,26 @@ class ExecutionRecordResponse(BaseModel):
 
 def _intent_to_response(intent: ExecutionIntent) -> ExecutionIntentResponse:
     payload = intent.to_dict()
+    policy = payload.get("policy") or intent.policy or {}
+    template_metadata = policy.get("template_metadata") or {}
+    quality_strategy = policy.get("quality_strategy") or {}
     return ExecutionIntentResponse(
         id=payload["id"],
         task_id=payload["task_id"],
         plan_id=payload["plan_id"],
         execution_mode=payload["execution_mode"],
         executor=payload["executor"],
+        target_env=payload["target_env"],
         status=payload["status"],
         trust_level=payload["trust_level"],
         external_run_id=payload["external_run_id"],
         goal=payload["goal"],
+        template_id=template_metadata.get("template_id"),
+        template_name=template_metadata.get("template_name"),
+        strategy_variant=quality_strategy.get("variant_name"),
+        target_node_id=policy.get("target_node_id"),
+        target_node_label=policy.get("target_node_label"),
+        approval_policy=policy.get("approval_policy"),
         error_category=payload["error_category"],
         error_message=payload["error_message"],
         dispatched_at=payload["dispatched_at"],
@@ -171,6 +236,8 @@ async def handoff_task(
             policy=request.policy,
             success_criteria=request.success_criteria,
             result_contract=request.result_contract,
+            template_id=request.template_id,
+            preferred_node_id=request.preferred_node_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -178,6 +245,20 @@ async def handoff_task(
         raise HTTPException(status_code=500, detail=f"Execution failed: {str(exc)}") from exc
 
     return _intent_to_response(intent)
+
+
+@router.get("/tasks/{task_id}/templates", response_model=list[ExecutionTemplateResponse])
+async def list_execution_templates(
+    task_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExecutionService(db=db)
+    try:
+        templates = await service.list_templates(task_id=task_id, user_id=current_user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [ExecutionTemplateResponse(**template) for template in templates]
 
 
 @router.get("/{intent_id}", response_model=ExecutionIntentResponse)

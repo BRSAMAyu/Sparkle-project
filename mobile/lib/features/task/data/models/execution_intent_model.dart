@@ -95,6 +95,13 @@ class ExecutionIntentModel {
     required this.trustLevel,
     required this.goal,
     this.planId,
+    this.targetEnv,
+    this.templateId,
+    this.templateName,
+    this.strategyVariant,
+    this.targetNodeId,
+    this.targetNodeLabel,
+    this.approvalPolicy,
     this.externalRunId,
     this.errorCategory,
     this.errorMessage,
@@ -110,8 +117,15 @@ class ExecutionIntentModel {
         planId: json['plan_id'] as String?,
         executionMode: _parseExecutionMode(json['execution_mode'] as String?),
         executor: json['executor'] as String? ?? 'manual',
+        targetEnv: json['target_env'] as String?,
         status: _parseExecutionStatus(json['status'] as String?),
         trustLevel: _parseTrustLevel(json['trust_level'] as String?),
+        templateId: json['template_id'] as String?,
+        templateName: json['template_name'] as String?,
+        strategyVariant: json['strategy_variant'] as String?,
+        targetNodeId: json['target_node_id'] as String?,
+        targetNodeLabel: json['target_node_label'] as String?,
+        approvalPolicy: json['approval_policy'] as String?,
         externalRunId: json['external_run_id'] as String?,
         goal: json['goal'] as String? ?? '',
         errorCategory: json['error_category'] as String?,
@@ -126,8 +140,15 @@ class ExecutionIntentModel {
   final String? planId;
   final ExecutionMode executionMode;
   final String executor;
+  final String? targetEnv;
   final ExecutionIntentStatus status;
   final ExecutionTrustLevel trustLevel;
+  final String? templateId;
+  final String? templateName;
+  final String? strategyVariant;
+  final String? targetNodeId;
+  final String? targetNodeLabel;
+  final String? approvalPolicy;
   final String? externalRunId;
   final String goal;
   final String? errorCategory;

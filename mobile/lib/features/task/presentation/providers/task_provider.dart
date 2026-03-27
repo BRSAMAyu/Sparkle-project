@@ -16,6 +16,7 @@ import 'package:sparkle/features/calendar/presentation/providers/calendar_provid
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
+import 'package:sparkle/features/task/data/models/execution_template_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -37,6 +38,8 @@ class TaskListState {
     this.recommendedTasks = const [],
     this.taskExecutions = const {},
     this.taskExecutionRecords = const {},
+    this.taskExecutionTemplates = const {},
+    this.selectedExecutionTemplateIds = const {},
     this.handoffInFlight = const <String>{},
     this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
@@ -48,6 +51,8 @@ class TaskListState {
   final List<TaskModel> recommendedTasks;
   final Map<String, ExecutionIntentModel> taskExecutions;
   final Map<String, ExecutionRecordModel> taskExecutionRecords;
+  final Map<String, List<ExecutionTemplateModel>> taskExecutionTemplates;
+  final Map<String, String> selectedExecutionTemplateIds;
   final Set<String> handoffInFlight;
   final Set<String> executionDecisionInFlight;
   final TaskFilter? currentFilter;
@@ -60,6 +65,8 @@ class TaskListState {
     List<TaskModel>? recommendedTasks,
     Map<String, ExecutionIntentModel>? taskExecutions,
     Map<String, ExecutionRecordModel>? taskExecutionRecords,
+    Map<String, List<ExecutionTemplateModel>>? taskExecutionTemplates,
+    Map<String, String>? selectedExecutionTemplateIds,
     Set<String>? handoffInFlight,
     Set<String>? executionDecisionInFlight,
     TaskFilter? currentFilter,
@@ -73,6 +80,10 @@ class TaskListState {
         recommendedTasks: recommendedTasks ?? this.recommendedTasks,
         taskExecutions: taskExecutions ?? this.taskExecutions,
         taskExecutionRecords: taskExecutionRecords ?? this.taskExecutionRecords,
+        taskExecutionTemplates:
+            taskExecutionTemplates ?? this.taskExecutionTemplates,
+        selectedExecutionTemplateIds:
+            selectedExecutionTemplateIds ?? this.selectedExecutionTemplateIds,
         handoffInFlight: handoffInFlight ?? this.handoffInFlight,
         executionDecisionInFlight:
             executionDecisionInFlight ?? this.executionDecisionInFlight,
@@ -486,6 +497,49 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     }
   }
 
+  Future<List<ExecutionTemplateModel>> loadTaskExecutionTemplates(
+    String taskId,
+  ) async {
+    if (!isServerTaskId(taskId)) return const [];
+
+    try {
+      final templates = await _taskRepository.listExecutionTemplates(taskId);
+      if (!mounted) return templates;
+      final nextTemplates = Map<String, List<ExecutionTemplateModel>>.from(
+        state.taskExecutionTemplates,
+      );
+      nextTemplates[taskId] = templates;
+
+      final nextSelected = Map<String, String>.from(
+        state.selectedExecutionTemplateIds,
+      );
+      final existingSelection = nextSelected[taskId];
+      if (templates.isEmpty) {
+        nextSelected.remove(taskId);
+      } else if (existingSelection == null ||
+          templates.every((template) => template.templateId != existingSelection)) {
+        nextSelected[taskId] = templates.first.templateId;
+      }
+
+      state = state.copyWith(
+        taskExecutionTemplates: nextTemplates,
+        selectedExecutionTemplateIds: nextSelected,
+      );
+      return templates;
+    } catch (e) {
+      debugPrint('Failed to load execution templates for $taskId: $e');
+      return const [];
+    }
+  }
+
+  void selectExecutionTemplate(String taskId, String templateId) {
+    final nextSelected = Map<String, String>.from(
+      state.selectedExecutionTemplateIds,
+    );
+    nextSelected[taskId] = templateId;
+    state = state.copyWith(selectedExecutionTemplateIds: nextSelected);
+  }
+
   Future<ExecutionIntentModel?> handoffTaskToAi(
     String taskId, {
     String? goal,
@@ -510,7 +564,12 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     }
 
     try {
-      final intent = await _taskRepository.handoffTask(taskId, goal: goal);
+      final selectedTemplateId = state.selectedExecutionTemplateIds[taskId];
+      final intent = await _taskRepository.handoffTask(
+        taskId,
+        goal: goal,
+        templateId: selectedTemplateId,
+      );
       if (!mounted) return intent;
 
       _setTaskExecution(taskId, intent);
@@ -571,24 +630,21 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     );
   }
 
-  Future<ExecutionRecordModel?> confirmTaskExecutionResult(
-      String taskId) async {
-    return _decideExecutionResult(
-      taskId,
-      decision: (recordId) => _taskRepository.confirmExecutionResult(recordId),
-    );
-  }
+  Future<ExecutionRecordModel?> confirmTaskExecutionResult(String taskId) =>
+      _decideExecutionResult(
+        taskId,
+        decision: _taskRepository.confirmExecutionResult,
+      );
 
   Future<ExecutionRecordModel?> rejectTaskExecutionResult(
     String taskId, {
     String? reason,
-  }) async {
-    return _decideExecutionResult(
-      taskId,
-      decision: (recordId) =>
-          _taskRepository.rejectExecutionResult(recordId, reason: reason),
-    );
-  }
+  }) =>
+      _decideExecutionResult(
+        taskId,
+        decision: (recordId) =>
+            _taskRepository.rejectExecutionResult(recordId, reason: reason),
+      );
 
   void _updateTask(String taskId, TaskModel Function(TaskModel) updater) {
     state = state.copyWith(
@@ -650,8 +706,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       return state.taskExecutionRecords[taskId];
     }
 
-    final intent = state.taskExecutions[taskId] ??
-        await loadTaskExecutionState(taskId, includeRecord: true);
+    final intent = state.taskExecutions[taskId] ?? await loadTaskExecutionState(taskId);
     if (intent == null) {
       state = state.copyWith(error: '没有可处理的 AI 执行记录');
       return null;
@@ -673,7 +728,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       final updatedRecord = await decision(record.id);
       if (!mounted) return updatedRecord;
       _setTaskExecutionRecord(taskId, updatedRecord);
-      await loadTaskExecutionState(taskId, includeRecord: true);
+      await loadTaskExecutionState(taskId);
       await _refreshTaskFromServer(taskId);
       return updatedRecord;
     } catch (e) {

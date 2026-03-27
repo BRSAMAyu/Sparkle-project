@@ -22,6 +22,7 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
+import 'package:sparkle/features/task/data/models/execution_template_model.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -109,6 +110,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           ref
               .read(taskListProvider.notifier)
               .loadTaskExecutionState(activeTask.id),
+        );
+        unawaited(
+          ref
+              .read(taskListProvider.notifier)
+              .loadTaskExecutionTemplates(activeTask.id),
         );
         _startExecutionPolling(activeTask.id);
 
@@ -1616,6 +1622,20 @@ class _BottomControls extends ConsumerWidget {
     return preview.isEmpty ? null : preview;
   }
 
+  String? _executionMetaPreview(ExecutionIntentModel? intent) {
+    if (intent == null) return null;
+    final parts = <String>[
+      if (intent.templateName != null && intent.templateName!.isNotEmpty)
+        '模板 ${intent.templateName}',
+      if (intent.strategyVariant != null && intent.strategyVariant!.isNotEmpty)
+        '策略 ${intent.strategyVariant}',
+      if (intent.targetNodeLabel != null && intent.targetNodeLabel!.isNotEmpty)
+        '节点 ${intent.targetNodeLabel}',
+    ];
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
+
   String _handoffButtonText(ExecutionIntentModel? intent, bool isLoading) {
     if (isLoading) return 'AI 接管中...';
     switch (intent?.status) {
@@ -1648,6 +1668,16 @@ class _BottomControls extends ConsumerWidget {
     final executionRecord = ref.watch(
       taskListProvider.select((state) => state.taskExecutionRecords[task.id]),
     );
+    final executionTemplates = ref.watch(
+      taskListProvider.select(
+        (state) => state.taskExecutionTemplates[task.id] ?? const <ExecutionTemplateModel>[],
+      ),
+    );
+    final selectedTemplateId = ref.watch(
+      taskListProvider.select(
+        (state) => state.selectedExecutionTemplateIds[task.id],
+      ),
+    );
     final isHandoffLoading = ref.watch(
       taskListProvider
           .select((state) => state.handoffInFlight.contains(task.id)),
@@ -1668,6 +1698,7 @@ class _BottomControls extends ConsumerWidget {
     final statusColor =
         _executionStatusColor(executionIntent, isHandoffLoading);
     final outputPreview = _executionOutputPreview(executionRecord);
+    final metaPreview = _executionMetaPreview(executionIntent);
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -1675,6 +1706,68 @@ class _BottomControls extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (supportsAiHandoff &&
+              executionTemplates.isNotEmpty &&
+              (executionIntent == null || executionIntent.isTerminal)) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '推荐执行模板',
+                style: DS.bodySmall.copyWith(
+                  color: DS.neutral700,
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: executionTemplates
+                  .take(3)
+                  .map(
+                    (template) => ChoiceChip(
+                      label: Text('${template.name} · ${template.modeLabel}'),
+                      selected: selectedTemplateId == template.templateId,
+                      onSelected: (_) {
+                        ref
+                            .read(taskListProvider.notifier)
+                            .selectExecutionTemplate(task.id, template.templateId);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+            if (executionTemplates.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  executionTemplates
+                          .firstWhere(
+                            (template) =>
+                                template.templateId ==
+                                (selectedTemplateId ?? executionTemplates.first.templateId),
+                            orElse: () => executionTemplates.first,
+                          )
+                          .description
+                          .trim()
+                          .isEmpty
+                      ? 'AI 会按当前选中的模板组织执行。'
+                      : executionTemplates
+                          .firstWhere(
+                            (template) =>
+                                template.templateId ==
+                                (selectedTemplateId ?? executionTemplates.first.templateId),
+                            orElse: () => executionTemplates.first,
+                          )
+                          .description,
+                  style: DS.bodySmall.copyWith(color: DS.neutral600),
+                ),
+              ),
+            ],
+            const SizedBox(height: DS.spacing12),
+          ],
           if (showExecutionStatus) ...[
             Container(
               width: double.infinity,
@@ -1731,6 +1824,16 @@ class _BottomControls extends ConsumerWidget {
                             outputPreview,
                             style: DS.bodySmall.copyWith(
                               color: DS.neutral700,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                          ),
+                        ],
+                        if (metaPreview != null) ...[
+                          const SizedBox(height: DS.spacing6),
+                          Text(
+                            metaPreview,
+                            style: DS.bodySmall.copyWith(
+                              color: DS.neutral600,
                               fontWeight: DS.fontWeightMedium,
                             ),
                           ),

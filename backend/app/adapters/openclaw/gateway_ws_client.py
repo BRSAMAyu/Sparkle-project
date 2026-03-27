@@ -320,6 +320,43 @@ class OpenClawGatewayWebSocketClient:
         except Exception:
             return False
 
+    async def list_nodes(
+        self,
+        *,
+        connected_only: bool = True,
+        last_connected: str | None = None,
+    ) -> dict[str, Any]:
+        async with self._connect() as websocket:
+            await self._handshake(websocket)
+            params: dict[str, Any] = {
+                "connected": connected_only,
+            }
+            if last_connected:
+                params["lastConnected"] = last_connected
+            return await self._rpc(websocket, method="node.list", params=params)
+
+    async def invoke_node(
+        self,
+        *,
+        node_id: str,
+        command: str,
+        params: dict[str, Any] | None = None,
+        invoke_timeout_ms: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        async with self._connect() as websocket:
+            await self._handshake(websocket)
+            payload: dict[str, Any] = {
+                "nodeId": node_id,
+                "command": command,
+                "params": params or {},
+            }
+            if invoke_timeout_ms is not None:
+                payload["timeoutMs"] = invoke_timeout_ms
+            if idempotency_key:
+                payload["idempotencyKey"] = idempotency_key
+            return await self._rpc(websocket, method="node.invoke", params=payload)
+
     async def _await_run_state(
         self,
         websocket,

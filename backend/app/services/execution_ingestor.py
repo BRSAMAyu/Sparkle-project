@@ -16,6 +16,7 @@ from app.core.event_bus import event_bus
 from app.core.event_types import (
     EXECUTION_APPROVAL_DECISION,
     EXECUTION_HANDED_BACK,
+    EXECUTION_QUALITY_RECORDED,
     EXECUTION_RESULT_INGESTED,
     EXECUTION_STATUS_CHANGED,
     EXECUTION_WAITING_APPROVAL,
@@ -23,10 +24,11 @@ from app.core.event_types import (
 from app.core.execution_trust import ExecutionTrustEngine, TrustEvaluation
 from app.core.task_monitor import task_monitor_service
 from app.models.background_task import BackgroundTaskStatus, BackgroundTaskType
-from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus, TrustLevel
+from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus, ExecutionMode, TrustLevel
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus
 from app.services.execution_learning_service import ExecutionLearningService
+from app.services.execution_quality_service import ExecutionQualityService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
 DELEGATED_COMPLETION_NOTE = "Completed by delegated OpenClaw execution"
@@ -49,6 +51,7 @@ class ExecutionIngestor:
         )
         self._plan_record_service = PlanExecutionRecordService(db)
         self._learning_service = ExecutionLearningService(db=db, redis=redis)
+        self._quality_service = ExecutionQualityService(db)
 
     async def ingest(
         self,
@@ -59,6 +62,7 @@ class ExecutionIngestor:
     ) -> ExecutionRecord:
         parsed = self._parser.parse(raw_result)
         parsed = self._validate_parsed_output_contract(parsed=parsed, result_contract=intent.result_contract or {})
+        parsed = self._apply_local_hybrid_gate(intent=intent, parsed=parsed, user_confirmed=user_confirmed)
         parsed_for_evaluation = (
             self._materialize_confirmed_result(parsed)
             if user_confirmed
@@ -238,6 +242,24 @@ class ExecutionIngestor:
             intent=intent,
             record=record,
             reason=reason,
+        )
+        await self._quality_service.record_outcome(
+            intent=intent,
+            record=record,
+            outcome="handed_back",
+        )
+        await event_bus.publish(
+            EXECUTION_QUALITY_RECORDED,
+            {
+                "event_type": EXECUTION_QUALITY_RECORDED,
+                "user_id": str(user_id),
+                "execution_intent_id": str(intent.id),
+                "execution_record_id": str(record.id),
+                "variant_name": ((intent.policy or {}).get("quality_strategy") or {}).get("variant_name"),
+                "outcome": "handed_back",
+                "quality_score": record.quality_score,
+                "timestamp": _utcnow().isoformat(),
+            },
         )
         return record
 
@@ -425,6 +447,24 @@ class ExecutionIngestor:
                 record=record,
                 parsed=parsed,
             )
+        await self._quality_service.record_outcome(
+            intent=intent,
+            record=record,
+            outcome=intent.status.value,
+        )
+        await event_bus.publish(
+            EXECUTION_QUALITY_RECORDED,
+            {
+                "event_type": EXECUTION_QUALITY_RECORDED,
+                "user_id": str(intent.user_id),
+                "execution_intent_id": str(intent.id),
+                "execution_record_id": str(record.id),
+                "variant_name": ((intent.policy or {}).get("quality_strategy") or {}).get("variant_name"),
+                "outcome": intent.status.value,
+                "quality_score": record.quality_score,
+                "timestamp": _utcnow().isoformat(),
+            },
+        )
 
     async def _complete_task_safely(self, *, task: Task) -> None:
         task.status = TaskStatus.COMPLETED
@@ -530,6 +570,30 @@ class ExecutionIngestor:
         confirmed["error_message"] = None
         confirmed["raw_status"] = "confirmed"
         return confirmed
+
+    def _apply_local_hybrid_gate(
+        self,
+        *,
+        intent: ExecutionIntent,
+        parsed: dict[str, Any],
+        user_confirmed: bool,
+    ) -> dict[str, Any]:
+        if user_confirmed or intent.execution_mode != ExecutionMode.HYBRID:
+            return parsed
+
+        approval_policy = str((intent.policy or {}).get("approval_policy") or "")
+        if approval_policy not in {"require_before_completion", "require_for_side_effects"}:
+            return parsed
+        if not parsed.get("success"):
+            return parsed
+
+        gated = dict(parsed)
+        gated["requires_approval"] = True
+        gated["approval_requests"] = max(int(gated.get("approval_requests") or 0), 1)
+        gated["success"] = False
+        gated["error_message"] = "Waiting for final user confirmation"
+        gated["raw_status"] = "hybrid_review_required"
+        return gated
 
     def _validate_parsed_output_contract(
         self,

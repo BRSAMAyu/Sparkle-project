@@ -184,3 +184,61 @@ async def test_gateway_ws_resolve_approval_resumes_run(monkeypatch) -> None:
     assert response["output"][0]["content"][0]["text"] == '{"summary":"approved"}'
     assert websocket.sent[1]["method"] == "exec.approval.resolve"
     assert websocket.sent[2]["method"] == "agent.wait"
+
+
+@pytest.mark.asyncio
+async def test_gateway_ws_list_nodes_and_invoke(monkeypatch) -> None:
+    list_socket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-1", "ts": 1}},
+            {"type": "res", "id": "sparkle-1", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {
+                "type": "res",
+                "id": "sparkle-2",
+                "ok": True,
+                "payload": {
+                    "items": [
+                        {
+                            "nodeId": "node-1",
+                            "name": "MacBook",
+                            "platform": "macos",
+                            "connected": True,
+                            "commands": ["system.run"],
+                        }
+                    ]
+                },
+            },
+        ]
+    )
+    invoke_socket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-2", "ts": 2}},
+            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {
+                "type": "res",
+                "id": "sparkle-4",
+                "ok": True,
+                "payload": {"ok": True, "result": {"stdout": "clean"}},
+            },
+        ]
+    )
+    connections = iter([_FakeConnect(list_socket), _FakeConnect(invoke_socket)])
+    monkeypatch.setattr(
+        "app.adapters.openclaw.gateway_ws_client.websockets.connect",
+        lambda *args, **kwargs: next(connections),
+    )
+
+    client = OpenClawGatewayWebSocketClient(_make_config())
+    nodes = await client.list_nodes()
+    result = await client.invoke_node(
+        node_id="node-1",
+        command="system.run",
+        params={"raw": "git status"},
+        invoke_timeout_ms=15000,
+        idempotency_key="node-invoke-1",
+    )
+
+    assert nodes["items"][0]["nodeId"] == "node-1"
+    assert result["ok"] is True
+    assert list_socket.sent[1]["method"] == "node.list"
+    assert invoke_socket.sent[1]["method"] == "node.invoke"

@@ -18,8 +18,11 @@ from app.core.event_bus import event_bus
 from app.core.event_types import (
     EXECUTION_DELEGATED,
     EXECUTION_HANDED_BACK,
+    EXECUTION_NODE_SELECTED,
+    EXECUTION_QUALITY_RECORDED,
     EXECUTION_RESULT_INGESTED,
     EXECUTION_STATUS_CHANGED,
+    EXECUTION_TEMPLATE_SELECTED,
 )
 from app.core.execution_router import ExecutionRouter, RoutingDecision
 from app.core.execution_trust import ExecutionTrustEngine, TrustEvaluation
@@ -37,6 +40,9 @@ from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus
 from app.services.execution_ingestor import ExecutionIngestor
 from app.services.execution_learning_service import ExecutionLearningService
+from app.services.execution_node_service import ExecutionNodeService
+from app.services.execution_quality_service import ExecutionQualityService
+from app.services.execution_template_service import ExecutionTemplateService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
 
@@ -62,9 +68,13 @@ class ExecutionService:
         self._plan_record_service = PlanExecutionRecordService(db)
         self._ingestor = ExecutionIngestor(db=db, redis=redis)
         self._learning_service = ExecutionLearningService(db=db, redis=redis)
+        self._template_service = ExecutionTemplateService()
+        self._node_service = ExecutionNodeService(self._client)
+        self._quality_service = ExecutionQualityService(db)
 
     async def get_health(self) -> dict[str, Any]:
         reachable = await self._client.health_check() if self._client else False
+        nodes = await self._node_service.list_nodes(connected_only=True) if self._client else []
         return {
             "openclaw_enabled": self._config.enabled,
             "gateway_url": self._config.gateway_url if self._config.enabled else None,
@@ -73,6 +83,10 @@ class ExecutionService:
             "reachable": reachable,
             "supports_approvals": True,
             "ingestion_layer": "execution_ingestor",
+            "connected_nodes": len(nodes),
+            "supports_nodes": self._config.transport == "gateway_ws",
+            "supports_templates": True,
+            "supports_quality_loop": True,
         }
 
     async def classify_task(self, *, task_id: UUID, user_id: UUID) -> RoutingDecision:
@@ -89,24 +103,115 @@ class ExecutionService:
         policy: dict[str, Any] | None = None,
         success_criteria: dict[str, Any] | None = None,
         result_contract: dict[str, Any] | None = None,
+        template_id: str | None = None,
+        preferred_node_id: str | None = None,
     ) -> ExecutionIntent:
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
         await self._ensure_no_active_intent(task_id=task.id, user_id=user_id)
         execution_goal = (goal or task.title or "").strip()
+        selected_template = None
+        template_payload: dict[str, Any] | None = None
+        if template_id:
+            selected_template = self._template_service.get_definition(template_id)
+            template_payload = self._template_service.apply_template(
+                task=task,
+                template_id=template_id,
+                goal_override=execution_goal,
+            )
+        elif not success_criteria and not result_contract:
+            auto_template = self._template_service.auto_select(task=task, goal_override=execution_goal)
+            if auto_template is not None:
+                selected_template = auto_template.definition
+                template_payload = self._template_service.apply_template(
+                    task=task,
+                    template_id=auto_template.definition.template_id,
+                    goal_override=execution_goal,
+                )
+
         decision = self._router.classify(
             task_type=task.type.value if task.type else "",
             goal=execution_goal,
             has_side_effects=self._infer_side_effects(execution_goal),
-            has_clear_criteria=bool(success_criteria),
+            has_clear_criteria=bool(success_criteria or (template_payload or {}).get("success_criteria")),
             task_tags=task.tags or [],
         )
+        if selected_template is not None and template_payload is not None:
+            decision = RoutingDecision(
+                execution_mode=template_payload["execution_mode"],
+                target_env=template_payload["target_env"],
+                reason=f"template_selected:{selected_template.template_id}",
+                confidence=max(decision.confidence, 0.82),
+                risk_flags=list(decision.risk_flags),
+            )
         if decision.execution_mode == ExecutionMode.HUMAN:
             raise ValueError(f"Task is not eligible for AI execution: {decision.reason}")
 
-        intent_instructions = self._build_instructions(task, instructions)
-        intent_policy = policy or self._default_policy(decision.target_env)
-        intent_success = success_criteria or {"type": "non_empty"}
-        intent_contract = result_contract or {}
+        intent_instructions = self._build_instructions(
+            task,
+            template_instructions=(template_payload or {}).get("instructions"),
+            extra_instructions=instructions,
+        )
+        intent_policy = self._merge_dicts(
+            self._default_policy(decision.target_env),
+            (template_payload or {}).get("policy"),
+            policy or {},
+        )
+        intent_success = self._merge_dicts(
+            (template_payload or {}).get("success_criteria"),
+            success_criteria or {"type": "non_empty"},
+        )
+        intent_contract = self._merge_dicts(
+            (template_payload or {}).get("result_contract"),
+            result_contract or {},
+        )
+
+        strategy = await self._quality_service.assign_strategy(
+            user_id=user_id,
+            target_env=decision.target_env.value if decision.target_env else "general",
+            execution_mode=decision.execution_mode,
+            template_id=selected_template.template_id if selected_template else None,
+        )
+        intent_policy["quality_strategy"] = strategy.to_policy_payload()
+        self._apply_strategy_to_payload(
+            strategy=strategy,
+            instructions=intent_instructions,
+            policy=intent_policy,
+            result_contract=intent_contract,
+        )
+
+        required_node_command = str(
+            intent_policy.get("target_node_command")
+            or intent_policy.get("required_node_command")
+            or (template_payload or {}).get("required_node_command")
+            or ""
+        ) or None
+        selected_node = None
+        try:
+            selected_node = await self._node_service.select_node(
+                preferred_node_id=preferred_node_id,
+                required_command=required_node_command,
+                target_env=decision.target_env,
+            )
+        except ValueError:
+            raise
+        except Exception as exc:
+            logger.warning("Execution node discovery failed for task {}: {}", task.id, exc)
+            if required_node_command:
+                raise ValueError(
+                    f"Task requires a node with {required_node_command} capability, but none is available."
+                ) from exc
+        if required_node_command and selected_node is None:
+            raise ValueError(
+                f"Task requires a node with {required_node_command} capability, but none is available."
+            )
+        if selected_node is not None:
+            intent_policy = self._merge_dicts(
+                intent_policy,
+                self._node_service.build_policy_patch(
+                    node=selected_node,
+                    required_command=required_node_command,
+                ),
+            )
         idempotency_key = self._build_idempotency_key(task)
 
         intent = ExecutionIntent(
@@ -148,6 +253,33 @@ class ExecutionService:
                 "timestamp": _utcnow().isoformat(),
             },
         )
+        if selected_template is not None:
+            await event_bus.publish(
+                EXECUTION_TEMPLATE_SELECTED,
+                {
+                    "event_type": EXECUTION_TEMPLATE_SELECTED,
+                    "user_id": str(user_id),
+                    "task_id": str(task.id),
+                    "execution_intent_id": str(intent.id),
+                    "template_id": selected_template.template_id,
+                    "template_name": selected_template.name,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
+        if selected_node is not None:
+            await event_bus.publish(
+                EXECUTION_NODE_SELECTED,
+                {
+                    "event_type": EXECUTION_NODE_SELECTED,
+                    "user_id": str(user_id),
+                    "task_id": str(task.id),
+                    "execution_intent_id": str(intent.id),
+                    "node_id": selected_node.node_id,
+                    "node_name": selected_node.name,
+                    "node_platform": selected_node.platform,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
         await self._publish_monitor_progress(
             intent=intent,
             status=BackgroundTaskStatus.PENDING,
@@ -230,6 +362,8 @@ class ExecutionService:
         policy: dict[str, Any] | None = None,
         success_criteria: dict[str, Any] | None = None,
         result_contract: dict[str, Any] | None = None,
+        template_id: str | None = None,
+        preferred_node_id: str | None = None,
     ) -> ExecutionIntent:
         intent = await self.create_intent(
             task_id=task_id,
@@ -239,6 +373,8 @@ class ExecutionService:
             policy=policy,
             success_criteria=success_criteria,
             result_contract=result_contract,
+            template_id=template_id,
+            preferred_node_id=preferred_node_id,
         )
         return await self.dispatch(intent_id=intent.id, user_id=user_id)
 
@@ -257,6 +393,43 @@ class ExecutionService:
             .order_by(desc(ExecutionIntent.created_at))
         )
         return list(result.scalars().all())
+
+    async def list_templates(self, *, task_id: UUID, user_id: UUID) -> list[dict[str, Any]]:
+        task = await self._get_user_task(task_id=task_id, user_id=user_id)
+        matches = self._template_service.list_templates(task=task)
+        return [match.to_dict() for match in matches]
+
+    async def list_nodes(
+        self,
+        *,
+        connected_only: bool = True,
+        last_connected: str | None = None,
+    ) -> list[dict[str, Any]]:
+        nodes = await self._node_service.list_nodes(
+            connected_only=connected_only,
+            last_connected=last_connected,
+        )
+        return [node.to_dict() for node in nodes]
+
+    async def invoke_node(
+        self,
+        *,
+        node_id: str,
+        command: str,
+        params: dict[str, Any] | None = None,
+        invoke_timeout_ms: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        return await self._node_service.invoke_node(
+            node_id=node_id,
+            command=command,
+            params=params,
+            invoke_timeout_ms=invoke_timeout_ms,
+            idempotency_key=idempotency_key,
+        )
+
+    async def get_quality_summary(self) -> dict[str, Any]:
+        return await self._quality_service.get_summary()
 
     async def get_execution_record(self, *, intent_id: UUID, user_id: UUID) -> ExecutionRecord | None:
         intent = await self._get_user_intent(intent_id=intent_id, user_id=user_id)
@@ -358,10 +531,28 @@ class ExecutionService:
             progress=1.0,
             progress_message="Execution canceled",
         )
+        record = await self.get_execution_record(intent_id=intent.id, user_id=user_id)
+        if record is not None:
+            await self._quality_service.record_outcome(intent=intent, record=record, outcome="canceled")
+            await event_bus.publish(
+                EXECUTION_QUALITY_RECORDED,
+                {
+                    "event_type": EXECUTION_QUALITY_RECORDED,
+                    "user_id": str(user_id),
+                    "execution_intent_id": str(intent.id),
+                    "execution_record_id": str(record.id),
+                    "variant_name": ((intent.policy or {}).get("quality_strategy") or {}).get("variant_name"),
+                    "outcome": "canceled",
+                    "quality_score": record.quality_score,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
         return intent
 
     async def handback(self, *, intent_id: UUID, user_id: UUID, reason: str | None = None) -> ExecutionIntent:
         intent = await self._get_user_intent(intent_id=intent_id, user_id=user_id)
+        if intent.status in self._terminal_statuses():
+            raise ValueError("Execution is already terminal")
         task = await self._get_user_task(task_id=intent.task_id, user_id=user_id)
 
         old_status = intent.status
@@ -393,6 +584,22 @@ class ExecutionService:
             progress=1.0,
             progress_message="Execution returned to user",
         )
+        record = await self.get_execution_record(intent_id=intent.id, user_id=user_id)
+        if record is not None:
+            await self._quality_service.record_outcome(intent=intent, record=record, outcome="handed_back")
+            await event_bus.publish(
+                EXECUTION_QUALITY_RECORDED,
+                {
+                    "event_type": EXECUTION_QUALITY_RECORDED,
+                    "user_id": str(user_id),
+                    "execution_intent_id": str(intent.id),
+                    "execution_record_id": str(record.id),
+                    "variant_name": ((intent.policy or {}).get("quality_strategy") or {}).get("variant_name"),
+                    "outcome": "handed_back",
+                    "quality_score": record.quality_score,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
         await self._learning_service.handle_handed_back(
             intent=intent,
             reason=reason,
@@ -533,30 +740,85 @@ class ExecutionService:
         plan_id = str(task.plan_id) if task.plan_id else "noplan"
         return f"{plan_id}:{task.id}:{uuid.uuid4().hex[:8]}"
 
-    def _build_instructions(self, task: Task, extra_instructions: list[str] | None) -> list[str]:
-        instructions = list(extra_instructions or [])
+    def _build_instructions(
+        self,
+        task: Task,
+        *,
+        template_instructions: list[str] | None,
+        extra_instructions: list[str] | None,
+    ) -> list[str]:
+        instructions = list(template_instructions or [])
+        instructions.extend(extra_instructions or [])
         if task.guide_content:
             instructions.append(f"Reference guide: {task.guide_content[:500]}")
-        return instructions
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for item in instructions:
+            normalized = str(item).strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            deduped.append(normalized)
+        return deduped
 
     def _default_policy(self, target_env: ExecutionTargetEnv | None) -> dict[str, Any]:
         allowed_tools: list[str] = []
         if target_env == ExecutionTargetEnv.BROWSER:
             allowed_tools = ["browser"]
         elif target_env == ExecutionTargetEnv.DOCUMENT:
-            allowed_tools = ["browser"]
+            allowed_tools = ["browser", "read"]
         elif target_env == ExecutionTargetEnv.API:
             allowed_tools = ["http"]
+        elif target_env == ExecutionTargetEnv.SHELL:
+            allowed_tools = ["exec", "read"]
 
         return {
             "allow_exec": False,
             "allowed_tools": allowed_tools,
             "allowed_domains": [],
+            "approval_policy": "deny",
         }
 
     def _infer_side_effects(self, goal: str) -> bool:
         side_effect_keywords = {"更新", "修改", "提交", "发送", "发布", "删除", "创建", "写入"}
         return any(keyword in goal for keyword in side_effect_keywords)
+
+    def _apply_strategy_to_payload(
+        self,
+        *,
+        strategy,
+        instructions: list[str],
+        policy: dict[str, Any],
+        result_contract: dict[str, Any],
+    ) -> None:
+        configuration = strategy.configuration or {}
+        for instruction in configuration.get("instruction_suffixes", []):
+            if instruction not in instructions:
+                instructions.append(str(instruction))
+
+        artifact_types = configuration.get("artifact_types")
+        if artifact_types:
+            existing = list(result_contract.get("artifact_types") or [])
+            for artifact_type in artifact_types:
+                if artifact_type not in existing:
+                    existing.append(artifact_type)
+            result_contract["artifact_types"] = existing
+
+        timeout_multiplier = configuration.get("timeout_multiplier")
+        if timeout_multiplier:
+            policy["timeout_multiplier"] = timeout_multiplier
+
+    def _merge_dicts(self, *values: dict[str, Any] | None) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
+        for value in values:
+            if not value:
+                continue
+            for key, item in value.items():
+                if isinstance(item, dict) and isinstance(merged.get(key), dict):
+                    merged[key] = self._merge_dicts(merged.get(key), item)
+                else:
+                    merged[key] = item
+        return merged
 
     def _build_evaluation_input(self, parsed: dict[str, Any]) -> dict[str, Any]:
         evaluation_input = dict(parsed)

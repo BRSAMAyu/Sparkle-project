@@ -94,6 +94,32 @@ class IntentTranslator:
         if not policy.get("allow_exec", False):
             lines.append("DO NOT execute shell commands or scripts.")
 
+        approval_policy = policy.get("approval_policy")
+        if approval_policy:
+            lines.append(f"Approval policy: {approval_policy}")
+
+        template_metadata = policy.get("template_metadata") or {}
+        if template_metadata.get("template_name"):
+            lines.append(f"Use template behavior: {template_metadata['template_name']}")
+
+        quality_strategy = policy.get("quality_strategy") or {}
+        if quality_strategy.get("variant_name"):
+            lines.append(f"Execution strategy variant: {quality_strategy['variant_name']}")
+        for extra_instruction in quality_strategy.get("configuration", {}).get("instruction_suffixes", []):
+            lines.append(str(extra_instruction))
+
+        target_node_label = policy.get("target_node_label")
+        target_node_command = policy.get("target_node_command")
+        if target_node_label:
+            node_line = f"Prefer node: {target_node_label}"
+            if target_node_command:
+                node_line += f" using command {target_node_command}"
+            lines.append(node_line)
+
+        hybrid_plan = policy.get("hybrid_plan") or {}
+        if hybrid_plan:
+            lines.append(f"Hybrid execution stage: {hybrid_plan.get('stage', 'unknown')}")
+
         lines.extend(
             [
                 "DO NOT send messages, emails, or make purchases.",

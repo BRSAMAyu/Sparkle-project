@@ -60,6 +60,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   List<_HistoricalReportEntry> _cachedHistoryEntries = const [];
   bool _historyCacheLoaded = false;
 
+  bool get _aiAnalysisInitiallyExpanded => false;
+
   @override
   void initState() {
     super.initState();
@@ -499,6 +501,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             _AnimatedReportSection(
               delay: 420,
               child: ExpansionTile(
+                initiallyExpanded: _aiAnalysisInitiallyExpanded,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),

@@ -7,6 +7,7 @@ import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
+import 'package:sparkle/features/task/data/models/execution_template_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
@@ -112,6 +113,7 @@ class TaskRepository {
     String taskId, {
     String? goal,
     List<String>? instructions,
+    String? templateId,
   }) async {
     if (DemoDataService.isDemoMode) {
       return ExecutionIntentModel.fromJson({
@@ -122,6 +124,7 @@ class TaskRepository {
         'status': 'succeeded',
         'trust_level': 'validated',
         'goal': goal ?? 'Demo AI handoff',
+        'template_name': templateId,
         'created_at': DateTime.now().toIso8601String(),
         'completed_at': DateTime.now().toIso8601String(),
       });
@@ -132,6 +135,8 @@ class TaskRepository {
         if (goal != null && goal.trim().isNotEmpty) 'goal': goal.trim(),
         if (instructions != null && instructions.isNotEmpty)
           'instructions': instructions,
+        if (templateId != null && templateId.trim().isNotEmpty)
+          'template_id': templateId.trim(),
       };
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.handoffTaskExecution(taskId),
@@ -142,6 +147,42 @@ class TaskRepository {
       return ExecutionIntentModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'handoffTask');
+    }
+  }
+
+  Future<List<ExecutionTemplateModel>> listExecutionTemplates(
+    String taskId,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      return [
+        const ExecutionTemplateModel(
+          templateId: 'web_research_brief',
+          name: '网页调研简报',
+          description: '适合搜索与总结',
+          executionMode: ExecutionMode.agent,
+          targetEnv: 'browser',
+          matchScore: 0.91,
+          matchReasons: ['keyword:搜索'],
+        ),
+      ];
+    }
+
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.executionTemplates(taskId),
+      );
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'listExecutionTemplates',
+      );
+      return data
+          .map(
+            (json) =>
+                ExecutionTemplateModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'listExecutionTemplates');
     }
   }
 

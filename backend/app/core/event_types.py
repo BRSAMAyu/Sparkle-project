@@ -11,6 +11,9 @@ EXECUTION_WAITING_APPROVAL = "execution.waiting_approval"
 EXECUTION_APPROVAL_DECISION = "execution.approval_decision"
 EXECUTION_RESULT_INGESTED = "execution.result_ingested"
 EXECUTION_HANDED_BACK = "execution.handed_back"
+EXECUTION_TEMPLATE_SELECTED = "execution.template_selected"
+EXECUTION_NODE_SELECTED = "execution.node_selected"
+EXECUTION_QUALITY_RECORDED = "execution.quality_recorded"
 
 __all__ = [
     "CAPSULE_FEEDBACK_SUBMITTED",
@@ -22,4 +25,7 @@ __all__ = [
     "EXECUTION_APPROVAL_DECISION",
     "EXECUTION_RESULT_INGESTED",
     "EXECUTION_HANDED_BACK",
+    "EXECUTION_TEMPLATE_SELECTED",
+    "EXECUTION_NODE_SELECTED",
+    "EXECUTION_QUALITY_RECORDED",
 ]
