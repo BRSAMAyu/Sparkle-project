@@ -181,3 +181,5 @@ async def test_learning_report_uses_chat_inference_for_intro_diagnostic(monkeypa
     assert payload["mastery"][0]["node_name"] == "Rust 所有权"
     assert payload["patterns"][0]["raw_pattern_name"] == "chat_inferred_bootstrap_friction"
     assert payload["chat_inference"]["goal_summary"] == "想系统学 Rust"
+    assert payload["trigger_summary"]["mode"] == "baseline_ready"
+    assert payload["action_cards"][0]["deep_link"].startswith("/theater?topic=")

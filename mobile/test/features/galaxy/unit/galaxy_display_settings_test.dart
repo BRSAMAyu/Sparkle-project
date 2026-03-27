@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
-import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 void main() {
   group('GalaxyDisplaySettings', () {
@@ -10,7 +9,6 @@ void main() {
         'textFadeThreshold': 2.0,
         'nodeSizeScale': 0.5,
         'linkThicknessScale': 1.2,
-        'showArrows': false,
         'centerForce': 0.0022,
         'repelForce': 15000,
         'linkForce': 0.051,
@@ -21,7 +19,6 @@ void main() {
       expect(settings.textFadeThreshold, kGalaxyTextFadeThresholdMax);
       expect(settings.nodeSizeScale, kGalaxyNodeSizeScaleMin);
       expect(settings.linkThicknessScale, 1.2);
-      expect(settings.showArrows, isFalse);
       expect(settings.centerForce, 0.0022);
       expect(settings.repelForce, 15000);
       expect(settings.linkForce, 0.051);
@@ -60,21 +57,6 @@ void main() {
         ),
         1,
       );
-    });
-
-    test('show arrows only affects directed prerequisite edges', () {
-      const hiddenArrows = GalaxyDisplaySettings(showArrows: false);
-      const visibleArrows = GalaxyDisplaySettings(showArrows: true);
-
-      expect(
-        hiddenArrows.showsArrowFor(EdgeRelationType.prerequisite),
-        isFalse,
-      );
-      expect(
-        visibleArrows.showsArrowFor(EdgeRelationType.prerequisite),
-        isTrue,
-      );
-      expect(visibleArrows.showsArrowFor(EdgeRelationType.related), isFalse);
     });
 
     test('spotlight fades outer graph but keeps anchor and neighbors strong',

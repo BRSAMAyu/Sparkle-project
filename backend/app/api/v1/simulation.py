@@ -22,6 +22,10 @@ class SimulationRunRequest(BaseModel):
     scenario_key: str = Field(default="study_group", description="场景模板 key")
 
 
+class SimulationContinueRequest(BaseModel):
+    user_response: str = Field(..., min_length=1, description="用户在互动节点给出的回应")
+
+
 class SimulationSeedResponse(BaseModel):
     topic: str
     context: str
@@ -106,6 +110,59 @@ async def stream_learning_simulation(
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
             yield "event: done\n"
             yield "data: {\"status\":\"completed\"}\n\n"
+        except Exception as exc:
+            yield "event: error\n"
+            yield f"data: {json.dumps({'message': str(exc)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/sessions/{session_id}/continue")
+async def continue_learning_simulation(
+    session_id: str,
+    request: SimulationContinueRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    engine = SimulationEngine(db)
+    try:
+        session = await engine.continue_run(
+            session_id=session_id,
+            user_response=request.user_response,
+            user_id=UUID(user_id),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return session.to_dict()
+
+
+@router.post("/sessions/{session_id}/continue/stream")
+async def continue_learning_simulation_stream(
+    session_id: str,
+    request: SimulationContinueRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    engine = SimulationEngine(db)
+
+    async def event_generator():
+        try:
+            async for event_name, payload in engine.continue_stream(
+                session_id=session_id,
+                user_response=request.user_response,
+                user_id=UUID(user_id),
+            ):
+                yield f"event: {event_name}\n"
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            yield "event: done\n"
+            yield "data: {\"status\":\"completed\"}\n\n"
+        except ValueError as exc:
+            yield "event: error\n"
+            yield f"data: {json.dumps({'message': str(exc), 'status_code': 404}, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield "event: error\n"
             yield f"data: {json.dumps({'message': str(exc)}, ensure_ascii=False)}\n\n"

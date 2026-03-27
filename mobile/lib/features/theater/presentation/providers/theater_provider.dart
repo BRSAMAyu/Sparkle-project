@@ -154,7 +154,11 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
   }
 
   void selectRoute(String routeId) {
-    state = state.copyWith(selectedRouteId: routeId, clearWhatIf: true);
+    state = state.copyWith(
+      selectedRouteId: routeId,
+      timelineIndex: 0,
+      clearWhatIf: true,
+    );
     _syncOverlay();
   }
 
@@ -163,9 +167,17 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
   }
 
   Future<void> runWhatIfForStep(String stepNodeId) async {
+    await runWhatIfForSteps(<String>[stepNodeId]);
+  }
+
+  Future<void> runWhatIfForSteps(List<String> stepNodeIds) async {
     final prediction = state.prediction;
     final route = state.selectedRoute;
-    if (prediction == null || route == null) {
+    final normalizedStepIds = stepNodeIds
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    if (prediction == null || route == null || normalizedStepIds.isEmpty) {
       return;
     }
     state = state.copyWith(isLoading: true, clearError: true);
@@ -173,7 +185,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       final result = await _repository.simulateWhatIf(
         predictionId: prediction.predictionId,
         routeId: route.id,
-        skipNodeId: stepNodeId,
+        skipNodeIds: normalizedStepIds,
       );
       state = state.copyWith(
         isLoading: false,
@@ -185,6 +197,36 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         error: _resolveErrorMessage(
           e,
           fallbackMessage: '这次 What-If 没有成功生成，你可以稍后再试。',
+        ),
+      );
+    }
+  }
+
+  Future<void> recordActualOutcome({
+    double? actualCompletionRate,
+    double? actualMastery,
+  }) async {
+    final prediction = state.prediction;
+    if (prediction == null) {
+      return;
+    }
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final summary = await _repository.recordActuals(
+        predictionId: prediction.predictionId,
+        actualCompletionRate: actualCompletionRate,
+        actualMastery: actualMastery,
+      );
+      state = state.copyWith(
+        isLoading: false,
+        accuracySummary: summary,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '记录推演结果失败，你可以稍后再试。',
         ),
       );
     }
@@ -222,7 +264,9 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     await adoptSelectedRouteWithSource();
   }
 
-  Future<void> adoptSelectedRouteWithSource({String? sourceChatSessionId}) async {
+  Future<void> adoptSelectedRouteWithSource({
+    String? sourceChatSessionId,
+  }) async {
     final prediction = state.prediction;
     final route = state.selectedRoute;
     if (prediction == null || route == null) {

@@ -1844,12 +1844,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               );
               setSheetState(() {});
             },
-            onShowArrowsChanged: (value) {
-              notifier.updateWith(
-                (current) => current.copyWith(showArrows: value),
-              );
-              setSheetState(() {});
-            },
             onCenterForceChanged: (value) {
               notifier.updateWith(
                 (current) => current.copyWith(centerForce: value),

@@ -22,7 +22,8 @@ class TheaterGenerateRequest(BaseModel):
 class TheaterWhatIfRequest(BaseModel):
     prediction_id: str
     route_id: str
-    skip_node_id: str
+    skip_node_id: str | None = None
+    skip_node_ids: list[str] = Field(default_factory=list)
 
 
 class TheaterSnapshotRequest(BaseModel):
@@ -72,6 +73,7 @@ async def generate_theater_what_if(
         prediction_id=request.prediction_id,
         route_id=request.route_id,
         skip_node_id=request.skip_node_id,
+        skip_node_ids=request.skip_node_ids,
     )
 
 

@@ -532,6 +532,21 @@ async def test_adopt_prediction_enqueues_update_and_writes_back_to_chat(db_sessi
         "app.services.theater.prediction_theater_service.PlanService.create",
         AsyncMock(return_value=fake_plan),
     )
+    created_task_counter = {"value": 0}
+
+    async def fake_task_create(db, obj_in, user_id):
+        del db, user_id
+        created_task_counter["value"] += 1
+        return SimpleNamespace(
+            id=uuid4(),
+            title=obj_in.title,
+            type=obj_in.type,
+        )
+
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.TaskService.create",
+        AsyncMock(side_effect=fake_task_create),
+    )
     monkeypatch.setattr(
         "app.services.theater.prediction_theater_service.cache_service.set",
         AsyncMock(return_value=True),
@@ -559,12 +574,16 @@ async def test_adopt_prediction_enqueues_update_and_writes_back_to_chat(db_sessi
     ).scalars().all()
 
     assert result["plan_id"] == str(plan_id)
+    assert len(result["created_tasks"]) >= 3
+    assert len(result["checkpoint_dates"]) >= 1
+    assert created_task_counter["value"] >= len(result["created_tasks"])
     assert any(message.role == MessageRole.SYSTEM for message in persisted_messages)
     assert any("已根据推演创建计划" in message.content for message in persisted_messages)
     update_payload = enqueue_mock.await_args.args[1]
     assert update_payload["type"] == "theater_route_adopted"
     assert update_payload["metadata"]["plan_id"] == str(plan_id)
     assert update_payload["metadata"]["route_id"] == route_id
+    assert len(update_payload["metadata"]["created_tasks"]) >= 3
 
 
 @pytest.mark.asyncio
@@ -623,9 +642,14 @@ async def test_learning_report_generate_enqueues_ready_update(monkeypatch):
     payload = await agent.generate_report(user_id)
 
     assert payload["markdown"] == "# 学习分析报告"
+    assert payload["diagnosis_cards"]
+    assert payload["action_cards"]
+    assert payload["trend_overview"]["headline"]
+    assert payload["trigger_summary"]["title"]
     update_payload = enqueue_mock.await_args.args[1]
     assert update_payload["type"] == "learning_report_ready"
     assert update_payload["metadata"]["report_payload"]["report_id"] == payload["report_id"]
+    assert update_payload["title"] == payload["trigger_summary"]["title"]
 
 
 def test_learning_report_preview_uses_pattern_summary_when_mastery_missing():
@@ -648,6 +672,7 @@ def test_learning_report_preview_uses_pattern_summary_when_mastery_missing():
 
     assert preview["summary"].startswith("当前最影响推进节奏的是 夜间能量错配循环")
     assert preview["highlights"] == ["夜间能量错配循环"]
+    assert preview["action_cards"] == []
 
 
 @pytest.mark.asyncio
@@ -710,8 +735,77 @@ async def test_learning_report_generate_uses_starter_focus_for_cold_start(monkey
     payload = await agent.generate_report(user_id)
 
     assert payload["starter_focus"][0]["topic"] == "把 特征值 变成第一轮可执行练习"
+    assert payload["trigger_summary"]["mode"] == "baseline_ready"
     assert payload["mastery"][0]["node_name"] == "把 特征值 变成第一轮可执行练习"
     assert payload["patterns"][0]["pattern_name"] == "学习基线尚在建立"
+
+
+def test_learning_report_builds_structured_dashboard_payload():
+    agent = LearningReportAgent(db=AsyncMock())
+
+    diagnosis_cards = agent._build_diagnosis_cards(
+        mastery=[
+            {"node_name": "行列式", "mastery_score": 52},
+            {"node_name": "特征值", "mastery_score": 81},
+        ],
+        patterns=[
+            {
+                "pattern_name": "夜间能量错配循环",
+                "description": "高强度任务经常被拖到晚上。",
+                "solution_text": "把最费脑的任务前移到白天。",
+            }
+        ],
+        timeline=[
+            {
+                "node_name": "行列式",
+                "study_minutes": 30,
+                "mastery_delta": 3,
+                "created_at": "2026-03-26T08:00:00+00:00",
+            },
+            {
+                "node_name": "特征值",
+                "study_minutes": 40,
+                "mastery_delta": 7,
+                "created_at": "2026-03-19T08:00:00+00:00",
+            },
+        ],
+        chat_inference={"topics": ["行列式"]},
+    )
+    trend_overview = agent._build_trend_overview(
+        mastery=[
+            {"node_name": "行列式", "mastery_score": 52},
+            {"node_name": "特征值", "mastery_score": 81},
+        ],
+        timeline=[
+            {
+                "node_name": "行列式",
+                "study_minutes": 30,
+                "mastery_delta": 3,
+                "created_at": "2026-03-26T08:00:00+00:00",
+            },
+            {
+                "node_name": "特征值",
+                "study_minutes": 40,
+                "mastery_delta": 7,
+                "created_at": "2026-03-19T08:00:00+00:00",
+            },
+        ],
+    )
+    action_cards = agent._build_action_cards(
+        mastery=[
+            {"node_name": "行列式", "mastery_score": 52},
+            {"node_name": "特征值", "mastery_score": 81},
+        ],
+        patterns=[{"pattern_name": "夜间能量错配循环"}],
+        starter_focus=[],
+        chat_inference={"topics": ["行列式"]},
+    )
+
+    assert diagnosis_cards[0]["tag"] == "weak_spot"
+    assert any(card["tag"] == "pattern" for card in diagnosis_cards)
+    assert trend_overview["history_points"]
+    assert trend_overview["comparisons"]
+    assert action_cards[0]["kind"] == "theater"
 
 
 def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():

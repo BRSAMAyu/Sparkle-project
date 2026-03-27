@@ -1284,22 +1284,6 @@ class StarMapPainter extends CustomPainter {
       } else {
         canvas.drawPath(renderedPath, paint);
       }
-
-      if (displaySettings.showsArrowFor(edge.relationType) &&
-          edge.reveal >= 0.999) {
-        _drawArrowHead(
-          canvas,
-          renderedPath,
-          edge.targetColor,
-          edge.strokeWidth,
-        );
-        _drawPathTailDashes(
-          canvas: canvas,
-          path: renderedPath,
-          color: edge.targetColor,
-          strokeWidth: edge.strokeWidth * 0.86,
-        );
-      }
     }
   }
 
@@ -2171,69 +2155,6 @@ class StarMapPainter extends CustomPainter {
           ..strokeWidth = width,
       );
     }
-  }
-
-  void _drawPathTailDashes({
-    required Canvas canvas,
-    required Path path,
-    required Color color,
-    required double strokeWidth,
-  }) {
-    final metrics = path.computeMetrics().toList(growable: false);
-    if (metrics.isEmpty) {
-      return;
-    }
-    final metric = metrics.first;
-    final tailStart = metric.length * 0.8;
-    final tailPath = metric.extractPath(tailStart, metric.length);
-    _drawDashedPath(
-      canvas: canvas,
-      path: tailPath,
-      paint: Paint()
-        ..color = color.withValues(alpha: color.a * 0.78)
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = strokeWidth,
-      dashLength: 5,
-      gapLength: 4,
-    );
-  }
-
-  void _drawArrowHead(
-    Canvas canvas,
-    Path path,
-    Color color,
-    double strokeWidth,
-  ) {
-    final metrics = path.computeMetrics().toList(growable: false);
-    if (metrics.isEmpty) {
-      return;
-    }
-
-    final metric = metrics.first;
-    final tangent = metric.getTangentForOffset(
-      math.max(0, metric.length - 8),
-    );
-    if (tangent == null) {
-      return;
-    }
-
-    final direction = tangent.vector / tangent.vector.distance;
-    final normal = Offset(-direction.dy, direction.dx);
-    final tip = tangent.position;
-    final size = math.max(5.0, strokeWidth * 4.8);
-    final pathArrow = Path()
-      ..moveTo(tip.dx, tip.dy)
-      ..lineTo(
-        tip.dx - direction.dx * size + normal.dx * size * 0.45,
-        tip.dy - direction.dy * size + normal.dy * size * 0.45,
-      )
-      ..lineTo(
-        tip.dx - direction.dx * size - normal.dx * size * 0.45,
-        tip.dy - direction.dy * size - normal.dy * size * 0.45,
-      )
-      ..close();
-    canvas.drawPath(pathArrow, Paint()..color = color.withValues(alpha: 0.88));
   }
 
   void _drawDashedCircle({

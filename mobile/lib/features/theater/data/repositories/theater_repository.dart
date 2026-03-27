@@ -42,8 +42,7 @@ class TheaterRepositoryException implements Exception {
         (rawMessage?.isNotEmpty ?? false) ? rawMessage! : fallbackMessage;
     return TheaterRepositoryException(
       message: message,
-      errorCode:
-          payload?['error_code']?.toString() ??
+      errorCode: payload?['error_code']?.toString() ??
           detailMap?['error_code']?.toString(),
       statusCode: error.response?.statusCode,
     );
@@ -95,7 +94,7 @@ class TheaterRepository {
   Future<TheaterWhatIfResult> simulateWhatIf({
     required String predictionId,
     required String routeId,
-    required String skipNodeId,
+    required List<String> skipNodeIds,
   }) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -103,7 +102,8 @@ class TheaterRepository {
         data: {
           'prediction_id': predictionId,
           'route_id': routeId,
-          'skip_node_id': skipNodeId,
+          if (skipNodeIds.isNotEmpty) 'skip_node_id': skipNodeIds.first,
+          'skip_node_ids': skipNodeIds,
         },
       );
       return TheaterWhatIfResult.fromJson(response.data ?? const {});

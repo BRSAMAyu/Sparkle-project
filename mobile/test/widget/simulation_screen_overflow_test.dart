@@ -36,6 +36,28 @@ class _FakeSimulationRepository implements SimulationRepository {
     required String scenarioKey,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async =>
+      const SimulationSessionModel(
+        id: 's-overflow',
+        scenarioKey: 'study_group',
+        state: 'COMPLETED',
+        topic: '特征值与特征向量',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '已完成',
+      );
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
 }
 
 class _StaticSimulationNotifier extends SimulationNotifier {

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from app.core.agent_persona import build_agent_persona
@@ -149,16 +151,40 @@ class LearningReportAgent:
             "starter_focus": starter_focus,
             "chat_inference": chat_inference,
         }
+        payload["diagnosis_cards"] = self._build_diagnosis_cards(
+            mastery=mastery,
+            patterns=patterns,
+            timeline=timeline,
+            chat_inference=chat_inference,
+        )
+        payload["trend_overview"] = self._build_trend_overview(
+            mastery=mastery,
+            timeline=timeline,
+        )
+        payload["action_cards"] = self._build_action_cards(
+            mastery=mastery,
+            patterns=patterns,
+            starter_focus=starter_focus,
+            chat_inference=chat_inference,
+        )
+        payload["trigger_summary"] = self._build_trigger_summary(
+            mastery=mastery,
+            patterns=patterns,
+            timeline=timeline,
+            starter_focus=starter_focus,
+            trigger_source=trigger_source,
+        )
         payload["report_preview"] = self._build_report_preview(payload)
         self.logger.log_jsonl(report_id, {"stage": "final", "payload": payload})
         self.logger.log_text(report_id, "Learning report generated successfully.")
+        update_title, update_description = self._build_update_copy(payload["trigger_summary"])
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
                 update_type="learning_report_ready",
                 category="learning_insight",
-                title="学习分析报告已就绪",
-                description="你可以查看最新的知识掌握度分析与行动建议。",
+                title=update_title,
+                description=update_description,
                 priority="medium",
                 metadata={
                     "report_id": report_id,
@@ -347,6 +373,11 @@ class LearningReportAgent:
         mastery = list(payload.get("mastery") or [])
         patterns = list(payload.get("patterns") or [])
         sections = [str(item) for item in list(payload.get("sections") or []) if str(item).strip()]
+        action_cards = [
+            dict(item)
+            for item in list(payload.get("action_cards") or [])
+            if isinstance(item, dict)
+        ]
         weak_nodes = [
             str(item.get("node_name") or "").strip()
             for item in mastery[:3]
@@ -374,7 +405,388 @@ class LearningReportAgent:
             "mastery": mastery,
             "summary": summary,
             "highlights": highlights,
+            "action_cards": action_cards[:2],
+            "trigger_summary": payload.get("trigger_summary") or {},
         }
+
+    def _build_diagnosis_cards(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        cards: list[dict[str, Any]] = []
+        sorted_mastery = sorted(
+            mastery,
+            key=lambda item: self._mastery_score(item),
+        )
+        weakest = sorted_mastery[0] if sorted_mastery else None
+        strongest = sorted_mastery[-1] if sorted_mastery else None
+        if weakest and str(weakest.get("node_name") or "").strip():
+            topic = str(weakest.get("node_name") or "").strip()
+            cards.append(
+                {
+                    "id": "weak-spot",
+                    "title": "优先补强",
+                    "headline": f"{topic} {round(self._mastery_score(weakest))}%",
+                    "summary": "这是当前最值得先收口的薄弱点，优先补它能最快改善整体推进阻力。",
+                    "evidence": [
+                        f"当前掌握度约 {round(self._mastery_score(weakest))}%",
+                        "建议先回到定义、例题和前置关系，再重新做一轮专项练习。",
+                    ],
+                    "severity": "high",
+                    "cta_label": "去推演这个薄弱点",
+                    "deep_link": self._theater_link(topic),
+                    "tag": "weak_spot",
+                }
+            )
+        if strongest and str(strongest.get("node_name") or "").strip():
+            topic = str(strongest.get("node_name") or "").strip()
+            cards.append(
+                {
+                    "id": "strong-spot",
+                    "title": "可放大强项",
+                    "headline": f"{topic} {round(self._mastery_score(strongest))}%",
+                    "summary": "这个知识点已经相对稳定，适合拿来做迁移练习，带动相关节点一起提升。",
+                    "evidence": [
+                        f"当前掌握度约 {round(self._mastery_score(strongest))}%",
+                        "可以优先用它做综合题、迁移题或讲解复述。",
+                    ],
+                    "severity": "low",
+                    "cta_label": "去知识星图扩展它",
+                    "deep_link": "/galaxy",
+                    "tag": "strong_spot",
+                }
+            )
+        if patterns:
+            pattern = patterns[0]
+            cards.append(
+                {
+                    "id": "behavior-pattern",
+                    "title": "当前学习模式",
+                    "headline": str(pattern.get("pattern_name") or "学习节奏待调整").strip(),
+                    "summary": str(pattern.get("description") or "最近的学习推进方式里有一个值得先修正的惯性。").strip(),
+                    "evidence": [
+                        str(pattern.get("solution_text") or "先做一次低门槛试跑，把行动节奏收敛起来。").strip()
+                    ],
+                    "severity": "medium",
+                    "cta_label": "去做一场学习仿真",
+                    "deep_link": self._simulation_link(
+                        self._best_action_topic(mastery=mastery, chat_inference=chat_inference),
+                    ),
+                    "tag": "pattern",
+                }
+            )
+        trend_overview = self._build_trend_overview(mastery=mastery, timeline=timeline)
+        comparisons = list(trend_overview.get("comparisons") or [])
+        if comparisons:
+            comparison = comparisons[0]
+            cards.append(
+                {
+                    "id": "trend-signal",
+                    "title": "趋势信号",
+                    "headline": str(comparison.get("label") or "近期趋势").strip(),
+                    "summary": str(comparison.get("summary") or trend_overview.get("summary") or "").strip(),
+                    "evidence": [
+                        f"掌握度变化 {float(comparison.get('delta_mastery') or 0.0):+.1f}",
+                        f"学习投入变化 {int(comparison.get('delta_study_minutes') or 0):+d} 分钟",
+                    ],
+                    "severity": "info",
+                    "cta_label": "查看 Sprint 历史",
+                    "deep_link": "/sprint/history",
+                    "tag": "trend",
+                }
+            )
+        return cards[:4]
+
+    def _build_trend_overview(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        current_average = self._average_mastery(mastery)
+        dated_rows: list[tuple[datetime, dict[str, Any]]] = []
+        for item in timeline:
+            created_at = self._parse_datetime(item.get("created_at"))
+            if created_at is None:
+                continue
+            dated_rows.append((created_at, item))
+        buckets: dict[int, dict[str, Any]] = {}
+        now = datetime.now(UTC)
+        for created_at, item in dated_rows:
+            delta_days = max(0, (now - created_at).days)
+            bucket_index = min(delta_days // 7, 2)
+            bucket = buckets.setdefault(
+                bucket_index,
+                {
+                    "label": {0: "本周", 1: "上周", 2: "上上周"}[bucket_index],
+                    "study_minutes": 0,
+                    "mastery_delta": 0.0,
+                },
+            )
+            bucket["study_minutes"] += self._timeline_minutes(item)
+            bucket["mastery_delta"] += self._timeline_delta(item)
+        history_points: list[dict[str, Any]] = []
+        if buckets:
+            for bucket_index in (2, 1, 0):
+                if bucket_index not in buckets:
+                    continue
+                bucket = buckets[bucket_index]
+                future_deltas = sum(float(buckets[idx]["mastery_delta"]) for idx in range(bucket_index))
+                average_mastery = max(0.0, min(current_average - future_deltas, 100.0))
+                history_points.append(
+                    {
+                        "label": bucket["label"],
+                        "average_mastery": round(average_mastery, 1),
+                        "study_minutes": int(bucket["study_minutes"]),
+                        "mastery_delta": round(float(bucket["mastery_delta"]), 1),
+                    }
+                )
+        else:
+            history_points.append(
+                {
+                    "label": "当前",
+                    "average_mastery": round(current_average, 1),
+                    "study_minutes": sum(self._timeline_minutes(item) for item in timeline[:5]),
+                    "mastery_delta": round(sum(self._timeline_delta(item) for item in timeline[:5]), 1),
+                }
+            )
+        comparisons: list[dict[str, Any]] = []
+        for previous, current in zip(history_points, history_points[1:]):
+            delta_mastery = float(current["average_mastery"]) - float(previous["average_mastery"])
+            delta_minutes = int(current["study_minutes"]) - int(previous["study_minutes"])
+            direction = "up" if delta_mastery > 1 else "down" if delta_mastery < -1 else "flat"
+            comparisons.append(
+                {
+                    "label": f"{current['label']} vs {previous['label']}",
+                    "summary": self._trend_summary_text(
+                        delta_mastery=delta_mastery,
+                        delta_minutes=delta_minutes,
+                    ),
+                    "delta_mastery": round(delta_mastery, 1),
+                    "delta_study_minutes": delta_minutes,
+                    "direction": direction,
+                }
+            )
+        headline = (
+            f"最近一轮掌握度约 {round(current_average)}%"
+            if mastery
+            else "正在从基线数据建立第一条趋势曲线"
+        )
+        summary = (
+            comparisons[-1]["summary"]
+            if comparisons
+            else "再积累一到两份报告后，这里会形成更清晰的周趋势对比。"
+        )
+        return {
+            "headline": headline,
+            "summary": summary,
+            "history_points": history_points,
+            "comparisons": comparisons,
+        }
+
+    def _build_action_cards(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        starter_focus: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        topic = self._best_action_topic(
+            mastery=mastery,
+            chat_inference=chat_inference,
+            starter_focus=starter_focus,
+        )
+        cards = [
+            {
+                "id": "open-theater",
+                "title": f"先推演 {topic}" if topic else "先做一次推演",
+                "summary": "把当前最薄弱或最想突破的主题先拆成路径，再决定先补哪一块。",
+                "cta_label": "打开推演剧场",
+                "deep_link": self._theater_link(topic),
+                "kind": "theater",
+                "priority": "high",
+                "badge": "优先",
+            },
+            {
+                "id": "run-simulation",
+                "title": "来一场学习仿真",
+                "summary": (
+                    f"围绕 {topic} 模拟一次讨论、质疑和复述过程，快速验证你现在卡在哪一步。"
+                    if topic
+                    else "用一场仿真把概念理解、表达和质疑过程都跑一遍。"
+                ),
+                "cta_label": "打开学习仿真",
+                "deep_link": self._simulation_link(topic),
+                "kind": "simulation",
+                "priority": "medium",
+                "badge": "互动",
+            },
+            {
+                "id": "open-galaxy",
+                "title": "回到知识星图收口",
+                "summary": "先看前置关系和当前掌握梯度，避免继续盲目铺开学习范围。",
+                "cta_label": "打开知识星图",
+                "deep_link": "/galaxy",
+                "kind": "galaxy",
+                "priority": "medium",
+            },
+        ]
+        if patterns:
+            cards.append(
+                {
+                    "id": "review-sprint",
+                    "title": "回看 Sprint 节奏",
+                    "summary": "把这次报告里的行为模式和最近任务推进节奏对照一下，更容易找到真正的阻塞点。",
+                    "cta_label": "查看 Sprint 历史",
+                    "deep_link": "/sprint/history",
+                    "kind": "plan",
+                    "priority": "low",
+                }
+            )
+        return cards[:4]
+
+    def _build_trigger_summary(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        patterns: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
+        starter_focus: list[dict[str, Any]],
+        trigger_source: str,
+    ) -> dict[str, Any]:
+        normalized_source = str(trigger_source or "api").strip().lower()
+        if starter_focus and (
+            not mastery
+            or any(
+                str(item.get("raw_pattern_name") or "").strip()
+                in {"baseline_building", "chat_inferred_bootstrap_friction"}
+                for item in patterns
+                if isinstance(item, dict)
+            )
+        ):
+            return {
+                "mode": "baseline_ready",
+                "title": "已建立第一版学习基线",
+                "summary": "虽然历史数据还少，但系统已经根据你最近的主题和起步信号生成了可执行的第一版报告。",
+            }
+        if patterns:
+            pattern_name = str(patterns[0].get("pattern_name") or "").strip()
+            return {
+                "mode": "bottleneck",
+                "title": "检测到学习瓶颈",
+                "summary": (
+                    f"当前最影响推进节奏的是 {pattern_name}，这份报告会优先告诉你该先改哪一步。"
+                    if pattern_name
+                    else "系统检测到最近学习推进有明显阻塞，这份报告会先聚焦最该收口的地方。"
+                ),
+            }
+        trend = self._build_trend_overview(mastery=mastery, timeline=timeline)
+        comparisons = list(trend.get("comparisons") or [])
+        if comparisons and float(comparisons[-1].get("delta_mastery") or 0.0) >= 5:
+            return {
+                "mode": "breakthrough",
+                "title": "最近出现了一次可放大的突破",
+                "summary": "系统检测到掌握度正在上升，这份报告会告诉你该如何把这波提升放大成稳定进步。",
+            }
+        return {
+            "mode": "manual" if normalized_source == "api" else normalized_source,
+            "title": "学习分析报告已就绪",
+            "summary": "这份报告已经整理好当前掌握度、趋势和下一步建议，适合直接开始执行。",
+        }
+
+    def _build_update_copy(self, trigger_summary: dict[str, Any]) -> tuple[str, str]:
+        title = str(trigger_summary.get("title") or "学习分析报告已就绪").strip() or "学习分析报告已就绪"
+        summary = (
+            str(trigger_summary.get("summary") or "").strip()
+            or "你可以查看最新的知识掌握度分析与行动建议。"
+        )
+        return title, summary
+
+    @staticmethod
+    def _mastery_score(item: dict[str, Any]) -> float:
+        return float(item.get("mastery_score") or item.get("score") or 0.0)
+
+    def _average_mastery(self, mastery: list[dict[str, Any]]) -> float:
+        if not mastery:
+            return 48.0
+        return sum(self._mastery_score(item) for item in mastery) / len(mastery)
+
+    @staticmethod
+    def _timeline_minutes(item: dict[str, Any]) -> int:
+        return int(item.get("study_minutes") or item.get("minutes") or 0)
+
+    @staticmethod
+    def _timeline_delta(item: dict[str, Any]) -> float:
+        return float(item.get("mastery_delta") or 0.0)
+
+    @staticmethod
+    def _parse_datetime(raw: Any) -> datetime | None:
+        text = str(raw or "").strip()
+        if not text:
+            return None
+        normalized = text.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+    def _best_action_topic(
+        self,
+        *,
+        mastery: list[dict[str, Any]],
+        chat_inference: dict[str, Any],
+        starter_focus: list[dict[str, Any]] | None = None,
+    ) -> str:
+        if mastery:
+            weakest = min(mastery, key=self._mastery_score)
+            topic = str(weakest.get("node_name") or "").strip()
+            if topic:
+                return topic
+        if starter_focus:
+            for item in starter_focus:
+                topic = str(item.get("topic") or "").strip()
+                if topic:
+                    return topic
+        for topic in list(chat_inference.get("topics") or []):
+            normalized = str(topic).strip()
+            if normalized:
+                return normalized
+        return "当前学习主题"
+
+    @staticmethod
+    def _theater_link(topic: str) -> str:
+        normalized = str(topic).strip() or "当前学习主题"
+        return f"/theater?topic={quote(normalized)}"
+
+    @staticmethod
+    def _simulation_link(topic: str) -> str:
+        normalized = str(topic).strip() or "当前学习主题"
+        return f"/simulation?topic={quote(normalized)}&scenario_key=study_group"
+
+    @staticmethod
+    def _trend_summary_text(*, delta_mastery: float, delta_minutes: int) -> str:
+        if delta_mastery >= 5:
+            return (
+                f"掌握度比上一阶段提升了 {delta_mastery:.1f}，而且学习投入变化 {delta_minutes:+d} 分钟，"
+                "说明这轮节奏值得继续放大。"
+            )
+        if delta_mastery <= -5:
+            return (
+                f"掌握度比上一阶段回落了 {abs(delta_mastery):.1f}，说明最近需要先收口范围，"
+                "避免继续分散投入。"
+            )
+        return (
+            f"掌握度整体较为平稳，投入变化 {delta_minutes:+d} 分钟。"
+            "接下来更适合围绕一个薄弱点做集中突破。"
+        )
 
     def _fallback_reflection(
         self,

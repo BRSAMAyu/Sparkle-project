@@ -6,13 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
+import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
@@ -68,6 +73,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               masteryItemCount: widget.report.mastery.length,
             ),
       );
+      unawaited(_celebrateReportMilestone());
     });
   }
 
@@ -129,14 +135,37 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         filteredHistory.length > 1 ? filteredHistory[1].report : null;
     final strongestNode = _strongestMasteryNode(report);
     final weakestNode = _weakestMasteryNode(report);
-    final trendPoints = filteredHistory
-        .map((entry) => _averageMastery(entry.report) / 100)
-        .toList()
-        .reversed
-        .toList();
+    final structuredTrendPoints =
+        report.trendOverview?.historyPoints ?? const [];
+    final trendPoints = structuredTrendPoints.isNotEmpty
+        ? structuredTrendPoints
+            .map((point) => (point.averageMastery / 100).clamp(0.0, 1.0))
+            .toList()
+        : filteredHistory
+            .map((entry) => _averageMastery(entry.report) / 100)
+            .toList()
+            .reversed
+            .toList();
+    final trendLabels = structuredTrendPoints.isNotEmpty
+        ? structuredTrendPoints.map((point) => point.label).toList()
+        : filteredHistory
+            .map(
+              (entry) => '${entry.createdAt.month}/${entry.createdAt.day}',
+            )
+            .toList()
+            .reversed
+            .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('学习分析报告')),
+      appBar: AppBar(
+        title: const Text('学习分析报告'),
+        actions: [
+          IconButton(
+            onPressed: () => unawaited(_showReportShareSheet(report)),
+            icon: const Icon(Icons.share_outlined),
+          ),
+        ],
+      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -160,6 +189,15 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               ChatContinuityBanner(
                 sourceChatSessionId: widget.initialSourceChatSessionId!.trim(),
                 subtitle: '这份报告来自你刚才的对话桥接，你可以回到原会话继续追问策略、任务和下一步安排。',
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (report.triggerSummary != null) ...[
+              _AnimatedReportSection(
+                delay: 0,
+                child: _ReportTriggerBanner(
+                  triggerSummary: report.triggerSummary!,
+                ),
               ),
               const SizedBox(height: 14),
             ],
@@ -215,12 +253,14 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             _AnimatedReportSection(
               delay: 50,
               child: _ReportDiagnosisStrip(
+                diagnosisCards: report.diagnosisCards,
                 strongestNode: strongestNode,
                 weakestNode: weakestNode,
                 averageMastery: averageMastery,
                 previousAverageMastery: previousReport == null
                     ? null
                     : _averageMastery(previousReport),
+                onCardTap: _showDiagnosisDetail,
               ),
             ),
             const SizedBox(height: 14),
@@ -238,19 +278,44 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    if (filteredHistory.length > 1)
+                    if ((report.trendOverview?.headline ?? '').isNotEmpty) ...[
+                      Text(
+                        report.trendOverview!.headline,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        report.trendOverview!.summary,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                      ),
+                      if (report.trendOverview!.comparisons.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: report.trendOverview!.comparisons
+                              .map(
+                                (item) => _TrendComparisonChip(
+                                  comparison: item,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                        const SizedBox(height: 12),
+                      ] else
+                        const SizedBox(height: 12),
+                    ],
+                    if (trendPoints.length > 1)
                       SizedBox(
                         height: 140,
                         child: _MasteryTrendChart(
                           values: trendPoints,
-                          labels: filteredHistory
-                              .map(
-                                (entry) =>
-                                    '${entry.createdAt.month}/${entry.createdAt.day}',
-                              )
-                              .toList()
-                              .reversed
-                              .toList(),
+                          labels: trendLabels,
                         ),
                       )
                     else
@@ -265,6 +330,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             _AnimatedReportSection(
               delay: 180,
               child: _ReportActionCard(
+                actionCards: report.actionCards,
                 weakestNode: weakestNode,
                 strongestNode: strongestNode,
                 onOpenGalaxy: () => context.push(GalaxyRoutes.home),
@@ -273,8 +339,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     : () => context.push(
                           '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
                         ),
+                onOpenSimulation: () => context.push(
+                  '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
+                ),
                 onOpenSprintHistory: () =>
                     context.push(PlanRoutes.sprintHistory),
+                onActionTap: _openReportDeepLink,
               ),
             ),
             const SizedBox(height: 14),
@@ -458,6 +528,43 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _celebrateReportMilestone() async {
+    await MirofishMilestoneService.celebrateIfFirstTime(
+      context,
+      ref,
+      kind: MirofishMilestoneKind.firstReport,
+      onShare: () {
+        Navigator.of(context).pop();
+        unawaited(_showReportShareSheet(widget.report));
+      },
+    );
+  }
+
+  Future<void> _showReportShareSheet(LearningReport report) async {
+    final weakest = _weakestMasteryNode(report);
+    final averageMastery = _averageMastery(report).round();
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.learningReport,
+        resourceId: report.reportId,
+        title: '学习报告 · 平均掌握度 $averageMastery%',
+        subtitle: weakest == null ? '本轮学习分析摘要' : '优先补强 ${weakest.nodeName}',
+        description: report.markdown,
+        metadata: <String, dynamic>{
+          'active_plans': report.sections.length,
+          'unlocked_achievements': report.diagnosisCards.length,
+          'flame_brightness': '${report.mastery.length} 个维度',
+        },
+        shareMessage: weakest == null
+            ? '我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 $averageMastery%。'
+            : '我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 ${weakest.nodeName}。',
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
     );
   }
 
@@ -719,6 +826,131 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     );
   }
 
+  Future<void> _showDiagnosisDetail(LearningReportDiagnosticCard card) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) {
+        final accent = _diagnosisAccent(
+          card.severity,
+          Theme.of(sheetContext).colorScheme,
+        );
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  card.title,
+                  style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  card.headline,
+                  style:
+                      Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  card.summary,
+                  style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.5,
+                      ),
+                ),
+                if (card.evidence.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    '证据与建议',
+                    style:
+                        Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...card.evidence.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Icon(
+                              Icons.fiber_manual_record_rounded,
+                              size: 10,
+                              color: accent,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.45,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    if ((card.deepLink ?? '').isNotEmpty &&
+                        (card.ctaLabel ?? '').isNotEmpty)
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            unawaited(_openReportDeepLink(card.deepLink!));
+                          },
+                          icon: const Icon(Icons.rocket_launch_rounded),
+                          label: Text(card.ctaLabel!),
+                        ),
+                      ),
+                    if ((card.deepLink ?? '').isNotEmpty &&
+                        (card.ctaLabel ?? '').isNotEmpty)
+                      const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: const Icon(Icons.check_circle_outline_rounded),
+                        label: const Text('知道了'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openReportDeepLink(String deepLink) async {
+    final normalized = deepLink.trim();
+    if (normalized.isEmpty || !mounted) {
+      return;
+    }
+    await context.push(normalized);
+  }
+
   String _masteryLabel(double score) {
     if (score >= 80) {
       return '掌握稳定';
@@ -758,6 +990,19 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       return Icons.timeline_rounded;
     }
     return Icons.priority_high_rounded;
+  }
+
+  Color _diagnosisAccent(String severity, ColorScheme scheme) {
+    switch (severity) {
+      case 'high':
+        return scheme.error;
+      case 'medium':
+        return DS.warning;
+      case 'low':
+        return DS.success;
+      default:
+        return DS.info;
+    }
   }
 }
 
@@ -819,22 +1064,88 @@ class _MasteryTrendChart extends StatelessWidget {
 
 class _ReportDiagnosisStrip extends StatelessWidget {
   const _ReportDiagnosisStrip({
+    required this.diagnosisCards,
     required this.strongestNode,
     required this.weakestNode,
     required this.averageMastery,
     required this.previousAverageMastery,
+    required this.onCardTap,
   });
 
+  final List<LearningReportDiagnosticCard> diagnosisCards;
   final LearningMasteryDatum? strongestNode;
   final LearningMasteryDatum? weakestNode;
   final double averageMastery;
   final double? previousAverageMastery;
+  final ValueChanged<LearningReportDiagnosticCard> onCardTap;
 
   @override
   Widget build(BuildContext context) {
     final delta = previousAverageMastery == null
         ? null
         : averageMastery - previousAverageMastery!;
+    final cards = diagnosisCards.isNotEmpty
+        ? diagnosisCards
+            .map(
+              (item) => _DiagnosisCard(
+                title: item.title,
+                headline: item.headline,
+                body: item.summary,
+                icon: _diagnosisIcon(item.severity),
+                accent: _diagnosisAccent(
+                  item.severity,
+                  Theme.of(context).colorScheme,
+                ),
+                tag: item.tag,
+                onTap: () => onCardTap(item),
+              ),
+            )
+            .toList()
+        : <Widget>[
+            _DiagnosisCard(
+              title: '当前强项',
+              headline: strongestNode == null
+                  ? '待生成'
+                  : '${strongestNode!.nodeName} ${strongestNode!.masteryScore.round()}%',
+              body: strongestNode == null
+                  ? '生成更多学习记录后，这里会出现最稳的知识点。'
+                  : '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。',
+              icon: Icons.trending_up_rounded,
+              accent: DS.success,
+            ),
+            _DiagnosisCard(
+              title: '主要短板',
+              headline: weakestNode == null
+                  ? '待生成'
+                  : '${weakestNode!.nodeName} ${weakestNode!.masteryScore.round()}%',
+              body: weakestNode == null
+                  ? '当前还没有足够数据定位短板。'
+                  : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
+              icon: Icons.priority_high_rounded,
+              accent: Theme.of(context).colorScheme.error,
+            ),
+            _DiagnosisCard(
+              title: '整体趋势',
+              headline: delta == null
+                  ? '等待历史对比'
+                  : '${delta >= 0 ? '+' : ''}${delta.round()}%',
+              body: delta == null
+                  ? '再积累一到两份报告后，这里会显示你的连续变化趋势。'
+                  : delta >= 0
+                      ? '掌握度在继续抬升，接下来更适合做巩固和迁移。'
+                      : '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。',
+              icon: delta == null
+                  ? Icons.timeline_rounded
+                  : delta >= 0
+                      ? Icons.north_east_rounded
+                      : Icons.south_east_rounded,
+              accent: delta == null
+                  ? DS.info
+                  : delta >= 0
+                      ? DS.brandPrimary
+                      : DS.warning,
+            ),
+          ];
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       child: Column(
@@ -858,55 +1169,37 @@ class _ReportDiagnosisStrip extends StatelessWidget {
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: [
-              _DiagnosisCard(
-                title: '当前强项',
-                headline: strongestNode == null
-                    ? '待生成'
-                    : '${strongestNode!.nodeName} ${strongestNode!.masteryScore.round()}%',
-                body: strongestNode == null
-                    ? '生成更多学习记录后，这里会出现最稳的知识点。'
-                    : '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。',
-                icon: Icons.trending_up_rounded,
-                accent: DS.success,
-              ),
-              _DiagnosisCard(
-                title: '主要短板',
-                headline: weakestNode == null
-                    ? '待生成'
-                    : '${weakestNode!.nodeName} ${weakestNode!.masteryScore.round()}%',
-                body: weakestNode == null
-                    ? '当前还没有足够数据定位短板。'
-                    : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
-                icon: Icons.priority_high_rounded,
-                accent: Theme.of(context).colorScheme.error,
-              ),
-              _DiagnosisCard(
-                title: '整体趋势',
-                headline: delta == null
-                    ? '等待历史对比'
-                    : '${delta >= 0 ? '+' : ''}${delta.round()}%',
-                body: delta == null
-                    ? '再积累一到两份报告后，这里会显示你的连续变化趋势。'
-                    : delta >= 0
-                        ? '掌握度在继续抬升，接下来更适合做巩固和迁移。'
-                        : '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。',
-                icon: delta == null
-                    ? Icons.timeline_rounded
-                    : delta >= 0
-                        ? Icons.north_east_rounded
-                        : Icons.south_east_rounded,
-                accent: delta == null
-                    ? DS.info
-                    : delta >= 0
-                        ? DS.brandPrimary
-                        : DS.warning,
-              ),
-            ],
+            children: cards,
           ),
         ],
       ),
     );
+  }
+
+  IconData _diagnosisIcon(String severity) {
+    switch (severity) {
+      case 'high':
+        return Icons.priority_high_rounded;
+      case 'medium':
+        return Icons.psychology_alt_rounded;
+      case 'low':
+        return Icons.trending_up_rounded;
+      default:
+        return Icons.insights_rounded;
+    }
+  }
+
+  Color _diagnosisAccent(String severity, ColorScheme scheme) {
+    switch (severity) {
+      case 'high':
+        return scheme.error;
+      case 'medium':
+        return DS.warning;
+      case 'low':
+        return DS.success;
+      default:
+        return DS.info;
+    }
   }
 }
 
@@ -917,6 +1210,8 @@ class _DiagnosisCard extends StatelessWidget {
     required this.body,
     required this.icon,
     required this.accent,
+    this.tag,
+    this.onTap,
   });
 
   final String title;
@@ -924,68 +1219,166 @@ class _DiagnosisCard extends StatelessWidget {
   final String body;
   final IconData icon;
   final Color accent;
+  final String? tag;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 220,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              accent.withValues(alpha: 0.14),
-              Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accent.withValues(alpha: 0.14),
+                Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: accent.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if ((tag ?? '').isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    tag!,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              Icon(icon, color: accent),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                headline,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                body,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accent.withValues(alpha: 0.14)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: accent),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              headline,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              body,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.45,
-                  ),
-            ),
-          ],
         ),
       );
 }
 
+class _ReportTriggerBanner extends StatelessWidget {
+  const _ReportTriggerBanner({
+    required this.triggerSummary,
+  });
+
+  final LearningReportTriggerSummary triggerSummary;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (triggerSummary.mode) {
+      'bottleneck' => Theme.of(context).colorScheme.error,
+      'breakthrough' => DS.success,
+      'baseline_ready' => DS.info,
+      _ => Theme.of(context).colorScheme.primary,
+    };
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      borderColor: accent.withValues(alpha: 0.22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              switch (triggerSummary.mode) {
+                'bottleneck' => Icons.warning_amber_rounded,
+                'breakthrough' => Icons.auto_awesome_rounded,
+                'baseline_ready' => Icons.flag_circle_rounded,
+                _ => Icons.insights_rounded,
+              },
+              color: accent,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  triggerSummary.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  triggerSummary.summary,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ReportActionCard extends StatelessWidget {
   const _ReportActionCard({
+    required this.actionCards,
     required this.weakestNode,
     required this.strongestNode,
     required this.onOpenGalaxy,
     required this.onOpenTheater,
+    required this.onOpenSimulation,
     required this.onOpenSprintHistory,
+    required this.onActionTap,
   });
 
+  final List<LearningReportActionCard> actionCards;
   final LearningMasteryDatum? weakestNode;
   final LearningMasteryDatum? strongestNode;
   final VoidCallback onOpenGalaxy;
   final VoidCallback? onOpenTheater;
+  final VoidCallback onOpenSimulation;
   final VoidCallback onOpenSprintHistory;
+  final ValueChanged<String> onActionTap;
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
@@ -1011,31 +1404,168 @@ class _ReportActionCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                FilledButton.icon(
-                  onPressed: onOpenGalaxy,
-                  icon: const Icon(Icons.auto_graph_rounded),
-                  label: const Text('打开知识星图'),
-                ),
-                if (onOpenTheater != null)
-                  FilledButton.tonalIcon(
-                    onPressed: onOpenTheater,
-                    icon: const Icon(Icons.theater_comedy_outlined),
-                    label: Text('推演 ${weakestNode!.nodeName}'),
+            if (actionCards.isNotEmpty)
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: actionCards
+                    .map(
+                      (item) => _ActionSuggestionTile(
+                        actionCard: item,
+                        onTap: () => onActionTap(item.deepLink),
+                      ),
+                    )
+                    .toList(),
+              )
+            else
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  FilledButton.icon(
+                    onPressed: onOpenGalaxy,
+                    icon: const Icon(Icons.auto_graph_rounded),
+                    label: const Text('打开知识星图'),
                   ),
-                OutlinedButton.icon(
-                  onPressed: onOpenSprintHistory,
-                  icon: const Icon(Icons.history_rounded),
-                  label: const Text('查看 Sprint 历史'),
-                ),
-              ],
-            ),
+                  if (onOpenTheater != null)
+                    FilledButton.tonalIcon(
+                      onPressed: onOpenTheater,
+                      icon: const Icon(Icons.theater_comedy_outlined),
+                      label: Text('推演 ${weakestNode!.nodeName}'),
+                    ),
+                  FilledButton.tonalIcon(
+                    onPressed: onOpenSimulation,
+                    icon: const Icon(Icons.groups_rounded),
+                    label: const Text('打开学习仿真'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onOpenSprintHistory,
+                    icon: const Icon(Icons.history_rounded),
+                    label: const Text('查看 Sprint 历史'),
+                  ),
+                ],
+              ),
           ],
         ),
       );
+}
+
+class _ActionSuggestionTile extends StatelessWidget {
+  const _ActionSuggestionTile({
+    required this.actionCard,
+    required this.onTap,
+  });
+
+  final LearningReportActionCard actionCard;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (actionCard.kind) {
+      'theater' => DS.brandPrimary,
+      'simulation' => DS.info,
+      'galaxy' => DS.success,
+      'plan' => DS.warning,
+      _ => Theme.of(context).colorScheme.primary,
+    };
+    return Container(
+      width: 240,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if ((actionCard.badge ?? '').isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                actionCard.badge!,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          Text(
+            actionCard.title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            actionCard.summary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onTap,
+            icon: const Icon(Icons.arrow_forward_rounded),
+            label: Text(actionCard.ctaLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendComparisonChip extends StatelessWidget {
+  const _TrendComparisonChip({
+    required this.comparison,
+  });
+
+  final LearningTrendComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (comparison.direction) {
+      'up' => DS.success,
+      'down' => Theme.of(context).colorScheme.error,
+      _ => DS.info,
+    };
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            comparison.label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            comparison.summary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TrendHistoryEmptyState extends StatelessWidget {

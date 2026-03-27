@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
+import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
@@ -42,6 +46,7 @@ class _KnowledgeTheaterScreenState
   bool _showCelebration = false;
   bool _playCelebration = false;
   bool _isTimelinePlaying = false;
+  String? _selectedNodeId;
 
   @override
   void initState() {
@@ -54,9 +59,19 @@ class _KnowledgeTheaterScreenState
         final previousPlanId = previous?.adoptionResult?.planId;
         final nextPlanId = next.adoptionResult?.planId;
         if (nextPlanId == null || nextPlanId == previousPlanId) {
-          return;
+        } else {
+          _triggerAdoptionCelebration();
         }
-        _triggerAdoptionCelebration();
+
+        final previousPredictionId = previous?.prediction?.predictionId;
+        final nextPrediction = next.prediction;
+        if (nextPrediction != null &&
+            nextPrediction.predictionId != previousPredictionId) {
+          _selectedNodeId = nextPrediction.graphNodes.isEmpty
+              ? null
+              : nextPrediction.graphNodes.first.id;
+          unawaited(_celebrateTheaterMilestone(nextPrediction));
+        }
       },
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -188,7 +203,9 @@ class _KnowledgeTheaterScreenState
         title: const Text('知识推演剧场'),
         actions: [
           IconButton(
-            onPressed: state.snapshot == null ? null : _shareSnapshotSummary,
+            onPressed: prediction == null
+                ? null
+                : () => unawaited(_showTheaterShareSheet()),
             icon: const Icon(Icons.share_outlined),
           ),
           IconButton(
@@ -276,11 +293,15 @@ class _KnowledgeTheaterScreenState
                                   timeline: timeline,
                                   timelineIndex: timelineIndex,
                                   focusNodeIds: focusNodeIds,
+                                  selectedNodeId: _selectedNodeId,
                                   isTimelinePlaying: _isTimelinePlaying,
+                                  recommendedRouteId:
+                                      prediction.recommendedRouteId,
                                   whatIfResult: state.whatIfResult,
                                   snapshot: state.snapshot,
                                   adoptionResult: state.adoptionResult,
                                   accuracySummary: state.accuracySummary,
+                                  accuracyTracking: prediction.accuracyTracking,
                                   isLoading: state.isLoading,
                                   isAdopting: state.isAdopting,
                                   isSavingSnapshot: state.isSavingSnapshot,
@@ -317,10 +338,10 @@ class _KnowledgeTheaterScreenState
                                           ),
                                   onRunWhatIf: route == null
                                       ? null
-                                      : (nodeId) => unawaited(
+                                      : (nodeIds) => unawaited(
                                             ref
                                                 .read(theaterProvider.notifier)
-                                                .runWhatIfForStep(nodeId),
+                                                .runWhatIfForSteps(nodeIds),
                                           ),
                                   onSaveSnapshot: () => unawaited(
                                     ref
@@ -328,19 +349,10 @@ class _KnowledgeTheaterScreenState
                                         .saveSnapshot(),
                                   ),
                                   onNodeTap: (node) => unawaited(
-                                    _showNodeDetailSheet(
-                                      node: node,
-                                      selectedRoute: route,
-                                      onRunWhatIf: route == null
-                                          ? null
-                                          : (nodeId) => unawaited(
-                                                ref
-                                                    .read(
-                                                      theaterProvider.notifier,
-                                                    )
-                                                    .runWhatIfForStep(nodeId),
-                                              ),
-                                    ),
+                                    _handleNodeTap(node, route),
+                                  ),
+                                  onRecordActual: () => unawaited(
+                                    _showActualOutcomeSheet(),
                                   ),
                                   onEdgeLongPress: (edge, globalPosition) =>
                                       unawaited(
@@ -358,6 +370,8 @@ class _KnowledgeTheaterScreenState
                   child: _AdoptionSuccessOverlay(
                     planName: state.adoptionResult!.planName,
                     planId: state.adoptionResult!.planId,
+                    createdTasks: state.adoptionResult!.createdTasks,
+                    checkpointDates: state.adoptionResult!.checkpointDates,
                     onDismiss: () => setState(() => _showCelebration = false),
                   ),
                 ),
@@ -368,20 +382,151 @@ class _KnowledgeTheaterScreenState
     );
   }
 
-  Future<void> _shareSnapshotSummary() async {
+  Future<void> _showTheaterShareSheet() async {
     final state = ref.read(theaterProvider);
-    final snapshot = state.snapshot;
     final route = state.selectedRoute;
     final prediction = state.prediction;
-    if (snapshot == null || route == null || prediction == null) {
+    if (prediction == null) {
       return;
     }
-    await share_plus.SharePlus.instance.share(
-      share_plus.ShareParams(
-        text:
-            '知识推演剧场\n主题：${prediction.topic}\n路径：${route.title}\n摘要：${route.summary}',
+    final shareRoute = route ?? prediction.paths.firstOrNull;
+    final shareNode = prediction.graphNodes.isEmpty
+        ? null
+        : prediction.graphNodes.firstWhere(
+            (item) => item.id == prediction.targetNodeId,
+            orElse: () => prediction.graphNodes.first,
+          );
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: shareRoute != null
+            ? ShareableContentType.planProgress
+            : ShareableContentType.knowledgeNode,
+        resourceId: shareRoute?.id ?? shareNode?.id ?? prediction.predictionId,
+        title: shareRoute?.title ?? shareNode?.name ?? prediction.targetName,
+        subtitle: shareRoute?.summary ?? prediction.topic,
+        description: '推演主题：${prediction.topic}',
+        metadata: <String, dynamic>{
+          'progress': ((shareRoute?.estimatedCompletionRate ?? 0.72) * 100)
+              .round(),
+          'mastery': (shareRoute?.estimatedMastery ??
+                  shareNode?.predictedMastery ??
+                  72)
+              .round(),
+          'learning_time': shareRoute?.dailyMinutes ?? prediction.horizonDays,
+          'connections': prediction.graphEdges.length,
+        },
+        shareMessage:
+            '我刚在 Sparkle 推演了一条学习路径：${prediction.topic}\n${shareRoute?.title ?? prediction.targetName}\n${shareRoute?.summary ?? '先把关键节点和风险看清楚，再决定怎么学。'}',
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
+      onCommunityShare: () => unawaited(
+        showShareResourceSheet(
+          context,
+          resourceType: state.adoptionResult != null
+              ? 'plan'
+              : 'knowledge_node',
+          resourceId:
+              state.adoptionResult?.planId ??
+                  shareNode?.id ??
+                  prediction.targetNodeId,
+          title: state.adoptionResult?.planName ??
+              shareRoute?.title ??
+              shareNode?.name ??
+              prediction.targetName,
+          subtitle: prediction.topic,
+        ),
       ),
     );
+  }
+
+  Future<void> _celebrateTheaterMilestone(TheaterPrediction prediction) async {
+    await MirofishMilestoneService.celebrateIfFirstTime(
+      context,
+      ref,
+      kind: MirofishMilestoneKind.firstTheater,
+      onShare: () {
+        Navigator.of(context).pop();
+        unawaited(_showTheaterShareSheet());
+      },
+    );
+  }
+
+  Future<void> _showActualOutcomeSheet() async {
+    final completionController = ValueNotifier<double>(0.72);
+    final masteryController = ValueNotifier<double>(0.74);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '记录 7 天后的真实表现',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。',
+                style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+              const SizedBox(height: 18),
+              ValueListenableBuilder<double>(
+                valueListenable: completionController,
+                builder: (context, value, _) => _ActualMetricSlider(
+                  label: '真实完成率',
+                  value: value,
+                  onChanged: (next) => completionController.value = next,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<double>(
+                valueListenable: masteryController,
+                builder: (context, value, _) => _ActualMetricSlider(
+                  label: '真实掌握度',
+                  value: value,
+                  onChanged: (next) => masteryController.value = next,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(
+                          ref
+                              .read(theaterProvider.notifier)
+                              .recordActualOutcome(
+                                actualCompletionRate:
+                                    completionController.value,
+                                actualMastery: masteryController.value * 100,
+                              ),
+                        );
+                      },
+                      child: const Text('提交校准'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    completionController.dispose();
+    masteryController.dispose();
   }
 
   Future<void> _showNodeDetailSheet({
@@ -492,6 +637,22 @@ class _KnowledgeTheaterScreenState
           ),
         );
       },
+    );
+  }
+
+  Future<void> _handleNodeTap(
+    TheaterGraphNode node,
+    TheaterPathOption? selectedRoute,
+  ) async {
+    setState(() => _selectedNodeId = node.id);
+    await _showNodeDetailSheet(
+      node: node,
+      selectedRoute: selectedRoute,
+      onRunWhatIf: selectedRoute == null
+          ? null
+          : (nodeId) => unawaited(
+                ref.read(theaterProvider.notifier).runWhatIfForStep(nodeId),
+              ),
     );
   }
 
@@ -609,6 +770,82 @@ class _NodeStatChip extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: chipAccent,
                 ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedNodeBanner extends StatelessWidget {
+  const _SelectedNodeBanner({required this.node});
+
+  final TheaterGraphNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final masteryDelta = node.predictedMastery - node.currentMastery;
+    final accent = switch (node.riskLevel) {
+      'high' => DS.error,
+      'medium' => DS.warning,
+      _ => DS.success,
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            accent.withValues(alpha: 0.12),
+            Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '已选节点 · ${node.name}',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            node.description.isEmpty ? '点击节点可查看详细推演说明。' : node.description,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _NodeStatChip(
+                label: '当前',
+                value: '${node.currentMastery.round()}%',
+                accent: accent,
+              ),
+              _NodeStatChip(
+                label: '预测',
+                value: '${node.predictedMastery.round()}%',
+                accent: accent,
+              ),
+              _NodeStatChip(
+                label: '提升',
+                value:
+                    '${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}%',
+                accent: masteryDelta >= 0 ? DS.success : DS.error,
+              ),
+            ],
           ),
         ],
       ),
@@ -879,11 +1116,14 @@ class _PredictionView extends StatelessWidget {
     required this.timeline,
     required this.timelineIndex,
     required this.focusNodeIds,
+    required this.selectedNodeId,
     required this.isTimelinePlaying,
+    required this.recommendedRouteId,
     required this.whatIfResult,
     required this.snapshot,
     required this.adoptionResult,
     required this.accuracySummary,
+    required this.accuracyTracking,
     required this.isLoading,
     required this.isAdopting,
     required this.isSavingSnapshot,
@@ -895,6 +1135,7 @@ class _PredictionView extends StatelessWidget {
     required this.onAdopt,
     required this.onRunWhatIf,
     required this.onSaveSnapshot,
+    required this.onRecordActual,
     required this.onNodeTap,
     required this.onEdgeLongPress,
     super.key,
@@ -905,11 +1146,14 @@ class _PredictionView extends StatelessWidget {
   final List<TheaterTimelineFrame> timeline;
   final int timelineIndex;
   final List<String> focusNodeIds;
+  final String? selectedNodeId;
   final bool isTimelinePlaying;
+  final String recommendedRouteId;
   final TheaterWhatIfResult? whatIfResult;
   final TheaterSnapshot? snapshot;
   final TheaterAdoptionResult? adoptionResult;
   final TheaterAccuracySummary? accuracySummary;
+  final TheaterAccuracyTracking? accuracyTracking;
   final bool isLoading;
   final bool isAdopting;
   final bool isSavingSnapshot;
@@ -919,8 +1163,9 @@ class _PredictionView extends StatelessWidget {
   final VoidCallback onToggleTimelinePlayback;
   final VoidCallback onResetTimelinePlayback;
   final VoidCallback? onAdopt;
-  final ValueChanged<String>? onRunWhatIf;
+  final ValueChanged<List<String>>? onRunWhatIf;
   final VoidCallback onSaveSnapshot;
+  final VoidCallback onRecordActual;
   final ValueChanged<TheaterGraphNode> onNodeTap;
   final void Function(TheaterGraphEdge edge, Offset globalPosition)
       onEdgeLongPress;
@@ -928,6 +1173,15 @@ class _PredictionView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final route = selectedRoute;
+    final selectedNode = prediction.graphNodes
+        .where((node) => node.id == selectedNodeId)
+        .firstOrNull;
+    final routeTimeline = route == null
+        ? timeline
+        : timeline.where((frame) => frame.routeId == route.id).toList();
+    final safeTimelineIndex = routeTimeline.isEmpty
+        ? 0
+        : timelineIndex.clamp(0, routeTimeline.length - 1);
     return ListView(
       children: [
         _SectionEntrance(
@@ -992,6 +1246,10 @@ class _PredictionView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (selectedNode != null) ...[
+                  _SelectedNodeBanner(node: selectedNode),
+                  const SizedBox(height: 12),
+                ],
                 ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: InteractiveViewer(
@@ -1002,6 +1260,11 @@ class _PredictionView extends StatelessWidget {
                       nodes: prediction.graphNodes,
                       edges: prediction.graphEdges,
                       focusNodeIds: focusNodeIds,
+                      selectedNodeId: selectedNodeId,
+                      routeNodeIds: route?.steps
+                              .map((step) => step.nodeId)
+                              .toList() ??
+                          const <String>[],
                       onNodeTap: onNodeTap,
                       onEdgeLongPress: onEdgeLongPress,
                     ),
@@ -1016,13 +1279,14 @@ class _PredictionView extends StatelessWidget {
           _SectionEntrance(
             delay: 220,
             child: _TimelineSection(
-              timeline: timeline,
-              selectedIndex: timelineIndex,
+              timeline: routeTimeline,
+              selectedIndex: safeTimelineIndex,
               turns: prediction.discussionTurns,
               isPlaying: isTimelinePlaying,
               onSelected: onTimelineSelected,
               onTogglePlayback: onToggleTimelinePlayback,
               onReset: onResetTimelinePlayback,
+              branchTimeline: whatIfResult?.branchTimeline ?? const [],
             ),
           ),
         ],
@@ -1032,6 +1296,7 @@ class _PredictionView extends StatelessWidget {
           child: _RouteSection(
             routes: prediction.paths,
             selectedRouteId: route?.id,
+            recommendedRouteId: recommendedRouteId,
             onSelect: onRouteSelected,
             onAdopt: onAdopt,
             isAdopting: isAdopting,
@@ -1067,7 +1332,16 @@ class _PredictionView extends StatelessWidget {
           const SizedBox(height: 14),
           _SectionEntrance(
             delay: 720,
-            child: _AccuracyCard(summary: accuracySummary!),
+            child: _AccuracyCard(summary: accuracySummary),
+          ),
+        ] else if (accuracyTracking != null) ...[
+          const SizedBox(height: 14),
+          _SectionEntrance(
+            delay: 720,
+            child: _AccuracyCard.pending(
+              tracking: accuracyTracking,
+              onRecordActual: onRecordActual,
+            ),
           ),
         ],
         if (error != null) ...[
@@ -1329,6 +1603,7 @@ class _TimelineSection extends StatelessWidget {
     required this.onSelected,
     required this.onTogglePlayback,
     required this.onReset,
+    required this.branchTimeline,
   });
 
   final List<TheaterTimelineFrame> timeline;
@@ -1338,6 +1613,7 @@ class _TimelineSection extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final VoidCallback onTogglePlayback;
   final VoidCallback onReset;
+  final List<TheaterTimelineFrame> branchTimeline;
 
   @override
   Widget build(BuildContext context) {
@@ -1349,6 +1625,10 @@ class _TimelineSection extends StatelessWidget {
                     turns.isEmpty ? 0 : turns.length - 1,
                   ),
             );
+    final currentFrame = timeline.isEmpty ? null : timeline[selectedIndex];
+    final branchFrame = branchTimeline.isEmpty
+        ? null
+        : branchTimeline[selectedIndex.clamp(0, branchTimeline.length - 1)];
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       child: Column(
@@ -1365,7 +1645,7 @@ class _TimelineSection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '自动播放会按时间顺序推进焦点节点，你也可以手动点选任一阶段并点击图中节点查看详情。',
+                '现在可以按天拖动预测进度，直接对比基线路径和 What-If 分支的差异。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -1395,79 +1675,48 @@ class _TimelineSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value:
-                  timeline.isEmpty ? 0 : (selectedIndex + 1) / timeline.length,
-              minHeight: 7,
+          if (timeline.isNotEmpty) ...[
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+              ),
+              child: Slider(
+                value: selectedIndex.toDouble(),
+                max: (timeline.length - 1).toDouble(),
+                divisions: timeline.length - 1,
+                label: timeline[selectedIndex].label,
+                onChanged: (value) => onSelected(value.round()),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 96,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: timeline.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final frame = timeline[index];
-                final isSelected = index == selectedIndex;
-                return InkWell(
-                  onTap: () => onSelected(index),
-                  borderRadius: BorderRadius.circular(18),
-                  child: Ink(
-                    width: 108,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHigh,
-                          ),
-                          child: Icon(
-                            Icons.adjust_rounded,
-                            size: 16,
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          frame.label,
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'T${index + 1}',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: DS.textSecondary,
-                                  ),
-                        ),
-                      ],
-                    ),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimelineMetricTile(
+                    label: '当前预测掌握度',
+                    value:
+                        '${timeline[selectedIndex].projectedMastery.round()}%',
+                    accent: DS.success,
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _TimelineMetricTile(
+                    label: '当前预测完成率',
+                    value:
+                        '${(timeline[selectedIndex].projectedCompletionRate * 100).round()}%',
+                    accent: DS.info,
+                  ),
+                ),
+              ],
             ),
-          ),
+            if (branchFrame != null) ...[
+              const SizedBox(height: 10),
+              _BranchDeltaCard(
+                baseline: timeline[selectedIndex],
+                branch: branchFrame,
+              ),
+            ],
+          ],
           if (summaryTurn != null) ...[
             const SizedBox(height: 10),
             Container(
@@ -1488,7 +1737,7 @@ class _TimelineSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '当前阶段：${timeline[selectedIndex].label} · 聚焦 ${timeline[selectedIndex].focusNodeIds.length} 个关键节点',
+              '当前阶段：${currentFrame?.label ?? ''} · ${currentFrame?.activeStepTitle ?? '等待推演'} · ${currentFrame?.compareLabel ?? ''}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -1504,6 +1753,7 @@ class _RouteSection extends StatefulWidget {
   const _RouteSection({
     required this.routes,
     required this.selectedRouteId,
+    required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
     required this.isAdopting,
@@ -1512,6 +1762,7 @@ class _RouteSection extends StatefulWidget {
 
   final List<TheaterPathOption> routes;
   final String? selectedRouteId;
+  final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
   final bool isAdopting;
@@ -1608,6 +1859,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       key: const ValueKey('compare'),
                       routes: widget.routes,
                       selectedRouteId: widget.selectedRouteId,
+                      recommendedRouteId: widget.recommendedRouteId,
                       pageController: _pageController,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
@@ -1617,6 +1869,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       key: const ValueKey('list'),
                       routes: widget.routes,
                       selectedRouteId: widget.selectedRouteId,
+                      recommendedRouteId: widget.recommendedRouteId,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
                       isAdopting: widget.isAdopting,
@@ -1624,12 +1877,34 @@ class _RouteSectionState extends State<_RouteSection> {
             ),
             if (widget.adoptionResult != null) ...[
               const SizedBox(height: 10),
-              Text(
-                '已创建计划：${widget.adoptionResult!.planName}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.success,
-                      fontWeight: FontWeight.w700,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: DS.success.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '已创建计划：${widget.adoptionResult!.planName}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.success,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
+                    if (widget.adoptionResult!.createdTasks.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '首周任务：${widget.adoptionResult!.createdTasks.take(3).map((item) => item.title).join('、')}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ],
@@ -1641,6 +1916,7 @@ class _RouteListView extends StatelessWidget {
   const _RouteListView({
     required this.routes,
     required this.selectedRouteId,
+    required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
     required this.isAdopting,
@@ -1649,6 +1925,7 @@ class _RouteListView extends StatelessWidget {
 
   final List<TheaterPathOption> routes;
   final String? selectedRouteId;
+  final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
   final bool isAdopting;
@@ -1657,6 +1934,7 @@ class _RouteListView extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: routes.map((route) {
           final isSelected = route.id == selectedRouteId;
+          final isRecommended = route.id == recommendedRouteId;
           return AnimatedContainer(
             duration: DS.durationNormal,
             margin: const EdgeInsets.only(bottom: 12),
@@ -1689,12 +1967,22 @@ class _RouteListView extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          route.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                route.title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            if (isRecommended) ...[
+                              const SizedBox(width: 8),
+                              const _MetricPill(label: '推荐'),
+                            ],
+                          ],
                         ),
                       ),
                       if (isSelected)
@@ -1726,6 +2014,7 @@ class _RouteListView extends StatelessWidget {
                       ),
                       _MetricPill(label: '日均 ${route.dailyMinutes} 分钟'),
                       _MetricPill(label: '${route.risks.length} 个风险点'),
+                      _MetricPill(label: '综合 ${route.routeScore.round()} 分'),
                     ],
                   ),
                 ],
@@ -1740,6 +2029,7 @@ class _RouteComparePager extends StatelessWidget {
   const _RouteComparePager({
     required this.routes,
     required this.selectedRouteId,
+    required this.recommendedRouteId,
     required this.pageController,
     required this.onSelect,
     required this.onAdopt,
@@ -1749,6 +2039,7 @@ class _RouteComparePager extends StatelessWidget {
 
   final List<TheaterPathOption> routes;
   final String? selectedRouteId;
+  final String recommendedRouteId;
   final PageController pageController;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
@@ -1774,6 +2065,7 @@ class _RouteComparePager extends StatelessWidget {
             },
             itemBuilder: (context, index) {
               final route = routes[index];
+              final isRecommended = route.id == recommendedRouteId;
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: Container(
@@ -1803,6 +2095,10 @@ class _RouteComparePager extends StatelessWidget {
                                     fontWeight: FontWeight.w800,
                                   ),
                             ),
+                            if (isRecommended) ...[
+                              const SizedBox(height: 6),
+                              const _MetricPill(label: '推荐基线'),
+                            ],
                             const SizedBox(height: 10),
                             _RouteMetricRow(
                               label: '完成率',
@@ -1820,6 +2116,10 @@ class _RouteComparePager extends StatelessWidget {
                             _RouteMetricRow(
                               label: '风险数',
                               value: '${route.risks.length}',
+                            ),
+                            _RouteMetricRow(
+                              label: '综合分',
+                              value: '${route.routeScore.round()}',
                             ),
                             const Spacer(),
                             FilledButton(
@@ -1990,6 +2290,96 @@ class _MetricPill extends StatelessWidget {
       );
 }
 
+class _TimelineMetricTile extends StatelessWidget {
+  const _TimelineMetricTile({
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
+
+  final String label;
+  final String value;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _BranchDeltaCard extends StatelessWidget {
+  const _BranchDeltaCard({
+    required this.baseline,
+    required this.branch,
+  });
+
+  final TheaterTimelineFrame baseline;
+  final TheaterTimelineFrame branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final masteryDelta = branch.projectedMastery - baseline.projectedMastery;
+    final completionDelta =
+        branch.projectedCompletionRate - baseline.projectedCompletionRate;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'What-If 分支对比',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '掌握度 ${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}% · 完成率 ${(completionDelta * 100).round()}%',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: masteryDelta >= 0 ? DS.success : DS.warning,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? 'What-If'}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WhatIfSection extends StatefulWidget {
   const _WhatIfSection({
     required this.route,
@@ -1999,7 +2389,7 @@ class _WhatIfSection extends StatefulWidget {
 
   final TheaterPathOption route;
   final TheaterWhatIfResult? result;
-  final ValueChanged<String>? onRun;
+  final ValueChanged<List<String>>? onRun;
 
   @override
   State<_WhatIfSection> createState() => _WhatIfSectionState();
@@ -2145,8 +2535,8 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                 ? null
                 : () => widget.onRun!(
                       selectedSteps.isEmpty
-                          ? _defaultCandidate.nodeId
-                          : selectedSteps.first.nodeId,
+                          ? <String>[_defaultCandidate.nodeId]
+                          : selectedSteps.map((step) => step.nodeId).toList(),
                     ),
             icon: const Icon(Icons.alt_route),
             label: Text(
@@ -2165,12 +2555,21 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '原始 ${widget.route.estimatedMastery.round()}% / ${(widget.route.estimatedCompletionRate * 100).round()}%'
+                    '原始 ${widget.result!.originalMastery.round()}% / ${(widget.result!.originalCompletionRate * 100).round()}%'
                     '  →  调整后 ${widget.result!.predictedMastery.round()}% / ${(widget.result!.predictedCompletionRate * 100).round()}%',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                   ),
+                  if ((widget.result!.branchLabel ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.result!.branchLabel!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   ...widget.result!.consequences.map(
                     (item) => Padding(
@@ -2186,6 +2585,16 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                           height: 1.4,
                         ),
                   ),
+                  if (widget.result!.remainingPath.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '分支剩余路径：${widget.result!.remainingPath.map((item) => item.nodeName).join(' → ')}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -2337,6 +2746,35 @@ class _DiscussionSection extends StatelessWidget {
       );
 }
 
+class _ActualMetricSlider extends StatelessWidget {
+  const _ActualMetricSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label)),
+              Text('${(value * 100).round()}%'),
+            ],
+          ),
+          Slider(
+            value: value.clamp(0.0, 1.0),
+            onChanged: onChanged,
+          ),
+        ],
+      );
+}
+
 class _SnapshotSection extends StatelessWidget {
   const _SnapshotSection({
     required this.snapshot,
@@ -2386,9 +2824,19 @@ class _SnapshotSection extends StatelessWidget {
 }
 
 class _AccuracyCard extends StatelessWidget {
-  const _AccuracyCard({required this.summary});
+  const _AccuracyCard({
+    required this.summary,
+  })  : tracking = null,
+        onRecordActual = null;
 
-  final TheaterAccuracySummary summary;
+  const _AccuracyCard.pending({
+    required this.tracking,
+    required this.onRecordActual,
+  }) : summary = null;
+
+  final TheaterAccuracySummary? summary;
+  final TheaterAccuracyTracking? tracking;
+  final VoidCallback? onRecordActual;
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
@@ -2403,12 +2851,35 @@ class _AccuracyCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '预测 ${(summary.predictedCompletionRate * 100).round()}% / ${summary.predictedMastery.round()}%，'
-              ' 实际 ${(summary.actualCompletionRate * 100).round()}% / ${summary.actualMastery.round()}%',
-            ),
-            const SizedBox(height: 6),
-            Text('准确度 ${(summary.accuracyScore * 100).round()}%'),
+            if (summary != null) ...[
+              Text(
+                '预测 ${(summary!.predictedCompletionRate * 100).round()}% / ${summary!.predictedMastery.round()}%，'
+                ' 实际 ${(summary!.actualCompletionRate * 100).round()}% / ${summary!.actualMastery.round()}%',
+              ),
+              const SizedBox(height: 6),
+              Text('准确度 ${(summary!.accuracyScore * 100).round()}%'),
+            ] else if (tracking != null) ...[
+              Text(
+                tracking!.summaryHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '建议回填日期：${tracking!.dueOn}',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              FilledButton.tonalIcon(
+                onPressed: onRecordActual,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('记录实际表现'),
+              ),
+            ],
           ],
         ),
       );
@@ -2418,11 +2889,15 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
   const _AdoptionSuccessOverlay({
     required this.planName,
     required this.planId,
+    required this.createdTasks,
+    required this.checkpointDates,
     required this.onDismiss,
   });
 
   final String planName;
   final String planId;
+  final List<TheaterTaskBrief> createdTasks;
+  final List<Map<String, dynamic>> checkpointDates;
   final VoidCallback onDismiss;
 
   @override
@@ -2470,6 +2945,52 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                           color: DS.textSecondary,
                         ),
                   ),
+                  if (createdTasks.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '首周任务',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          ...createdTasks.take(3).map(
+                                (task) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    '• ${task.title}',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                              ),
+                          if (checkpointDates.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '检查点：${checkpointDates.map((item) => item['date']).join('、')}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Row(
                     children: [

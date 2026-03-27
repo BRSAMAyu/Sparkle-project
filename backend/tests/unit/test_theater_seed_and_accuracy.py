@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -617,6 +618,117 @@ async def test_build_discussion_accepts_list_payload(monkeypatch, db_session):
     assert turns[0]["related_node_ids"] == ["node-1"]
 
 
+def test_theater_timeline_builds_daily_frames():
+    service = PredictionTheaterService(db=AsyncMock())
+    option = TheaterPathOption(
+        id="path_foundation",
+        title="稳扎稳打",
+        summary="先补前置。",
+        strategy_type="foundation",
+        expert_ids=["galaxy_guide"],
+        estimated_completion_rate=0.82,
+        estimated_mastery=78.0,
+        daily_minutes=40,
+        risks=["节奏稳，但需要连续性。"],
+        steps=[
+            TheaterPathStep(
+                index=1,
+                node_id="node-1",
+                node_name="行列式",
+                rationale="先补前置。",
+                current_mastery=42.0,
+                predicted_mastery=63.0,
+                risk_level="high",
+                estimated_minutes=35,
+                day_label="Day 1",
+            ),
+            TheaterPathStep(
+                index=2,
+                node_id="node-2",
+                node_name="特征值",
+                rationale="推进目标节点。",
+                current_mastery=55.0,
+                predicted_mastery=78.0,
+                risk_level="medium",
+                estimated_minutes=45,
+                day_label="Day 7",
+            ),
+        ],
+    )
+
+    timeline = service._build_timeline(
+        [option],
+        [{"turn_index": 0, "content": "先补前置。"}],
+        horizon_days=7,
+    )
+
+    assert len(timeline) == 7
+    assert timeline[0]["day_index"] == 1
+    assert timeline[-1]["day_index"] == 7
+    assert timeline[0]["route_id"] == "path_foundation"
+    assert timeline[-1]["projected_mastery"] >= timeline[0]["projected_mastery"]
+    assert timeline[0]["compare_label"] == "推荐基线"
+
+
+@pytest.mark.asyncio
+async def test_simulate_what_if_accepts_multiple_skips(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+    monkeypatch.setattr(
+        service,
+        "_get_prediction_or_raise",
+        AsyncMock(
+            return_value={
+                "target_name": "线性代数",
+                "paths": [
+                    {
+                        "id": "route-a",
+                        "estimated_mastery": 82.0,
+                        "estimated_completion_rate": 0.88,
+                        "steps": [
+                            {
+                                "index": 1,
+                                "node_id": "node-1",
+                                "node_name": "行列式",
+                                "risk_level": "high",
+                                "current_mastery": 38.0,
+                                "estimated_minutes": 35,
+                            },
+                            {
+                                "index": 2,
+                                "node_id": "node-2",
+                                "node_name": "特征值",
+                                "risk_level": "medium",
+                                "current_mastery": 48.0,
+                                "estimated_minutes": 40,
+                            },
+                            {
+                                "index": 3,
+                                "node_id": "node-3",
+                                "node_name": "特征向量",
+                                "risk_level": "medium",
+                                "current_mastery": 61.0,
+                                "estimated_minutes": 45,
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+    )
+
+    result = await service.simulate_what_if(
+        user_id=uuid4(),
+        prediction_id="prediction-1",
+        route_id="route-a",
+        skip_node_ids=["node-1", "node-2"],
+    )
+
+    assert result["skip_node_names"] == ["行列式", "特征值"]
+    assert len(result["branch_timeline"]) >= 4
+    assert len(result["remaining_path"]) == 1
+    assert result["predicted_mastery"] < result["original_mastery"]
+
+
 @pytest.mark.asyncio
 async def test_simulation_api_rejects_invalid_scenario_key():
     app = _build_test_app()
@@ -633,3 +745,116 @@ async def test_simulation_api_rejects_invalid_scenario_key():
 
     assert response.status_code == 422
     assert "Unsupported simulation scenario" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_simulation_engine_waits_for_user_and_continues(monkeypatch):
+    engine = SimulationEngine(db=None)
+    decisions = iter(
+        [
+            SimpleNamespace(
+                speaker="优等生",
+                reply_target="",
+                turn_goal="open",
+                real_time_insight="先建立一个共同框架。",
+                round_target=4,
+                should_pause_for_user=True,
+                should_end=False,
+                interaction_type="choice",
+                interaction_prompt="你会先支持哪种拆解方式？",
+                interaction_options=["优等生", "提问者"],
+                suggested_replies=["我会先画出前置依赖，再做一道题。"],
+            ),
+            SimpleNamespace(
+                speaker="提问者",
+                reply_target="你",
+                turn_goal="synthesize",
+                real_time_insight="用户已经给出判断，现在适合把讨论收束成行动。",
+                round_target=5,
+                should_pause_for_user=False,
+                should_end=True,
+                interaction_type="choice",
+                interaction_prompt="",
+                interaction_options=[],
+                suggested_replies=[],
+            ),
+        ]
+    )
+
+    async def fake_generate_participants(**kwargs):
+        del kwargs
+        return [
+            {"name": "优等生", "role_hint": "先搭框架", "stance": "supportive", "persona": {}},
+            {"name": "提问者", "role_hint": "追问盲点", "stance": "challenging", "persona": {}},
+        ]
+
+    async def fake_moderate_next_turn(**kwargs):
+        del kwargs
+        return next(decisions)
+
+    async def fake_generate_agent_round(**kwargs):
+        moderator_decision = kwargs["moderator_decision"]
+        return {
+            "round": len(kwargs["rounds"]) + 1,
+            "speaker": moderator_decision.speaker,
+            "message": f"{moderator_decision.speaker} 围绕当前思路继续推进。",
+            "reply_to_speaker": moderator_decision.reply_target,
+            "turn_goal": moderator_decision.turn_goal,
+            "speaker_type": "agent",
+        }
+
+    monkeypatch.setattr(
+        "app.services.simulation.simulation_engine.generate_participants",
+        fake_generate_participants,
+    )
+    monkeypatch.setattr(engine, "_moderate_next_turn", fake_moderate_next_turn)
+    monkeypatch.setattr(engine, "_generate_agent_round", fake_generate_agent_round)
+
+    first_pass_events = [
+        event
+        async for event in engine.stream(
+            topic="特征值与特征向量",
+            scenario_key="study_group",
+            await_user_input=True,
+        )
+    ]
+
+    interaction_event = next(payload for event_name, payload in first_pass_events if event_name == "interaction")
+    waiting_session = next(payload["session"] for event_name, payload in first_pass_events if event_name == "complete")
+
+    assert interaction_event["state"] == "WAITING_FOR_USER"
+    assert waiting_session["pending_interaction"]["prompt"] == "你会先支持哪种拆解方式？"
+
+    second_pass_events = [
+        event
+        async for event in engine.continue_stream(
+            session_id=waiting_session["id"],
+            user_response="我会先画出前置依赖，再做一道题。",
+            await_user_input=True,
+        )
+    ]
+
+    user_round_payload = next(payload for event_name, payload in second_pass_events if event_name == "round")
+    completed_session = next(payload["session"] for event_name, payload in second_pass_events if event_name == "complete")
+
+    assert user_round_payload["round"]["speaker"] == "你"
+    assert completed_session["state"] == "COMPLETED"
+    assert any(item["speaker"] == "你" for item in completed_session["rounds"])
+
+
+@pytest.mark.asyncio
+async def test_simulation_continue_api_returns_404_when_session_missing():
+    app = _build_test_app()
+    app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: object()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/simulation/sessions/missing-session/continue",
+            json={"user_response": "我会先画图再推导"},
+        )
+
+    app.dependency_overrides = {}
+
+    assert response.status_code == 404
+    assert "not found or expired" in response.json()["detail"]

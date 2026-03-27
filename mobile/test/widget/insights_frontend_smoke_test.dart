@@ -55,6 +55,28 @@ class _FakeSimulationRepository implements SimulationRepository {
     required String scenarioKey,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async =>
+      const SimulationSessionModel(
+        id: 's-1',
+        scenarioKey: 'study_group',
+        state: 'COMPLETED',
+        topic: '特征值与特征向量',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '已完成模拟',
+      );
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
 }
 
 class _StaticSimulationNotifier extends SimulationNotifier {
@@ -222,6 +244,48 @@ void main() {
           LearningMasteryDatum(nodeName: '行列式', masteryScore: 58),
           LearningMasteryDatum(nodeName: '线性变换', masteryScore: 71),
         ],
+        diagnosisCards: <LearningReportDiagnosticCard>[
+          LearningReportDiagnosticCard(
+            id: 'weak-spot',
+            title: '优先补强',
+            headline: '行列式 58%',
+            summary: '这是当前最值得先收口的薄弱点。',
+            evidence: <String>['当前掌握度偏低', '建议先回到定义和例题'],
+            severity: 'high',
+          ),
+        ],
+        actionCards: <LearningReportActionCard>[
+          LearningReportActionCard(
+            id: 'open-theater',
+            title: '先推演 行列式',
+            summary: '先拆路径再决定练习顺序。',
+            ctaLabel: '打开推演剧场',
+            deepLink: '/theater?topic=%E8%A1%8C%E5%88%97%E5%BC%8F',
+            kind: 'theater',
+            badge: '优先',
+          ),
+        ],
+        trendOverview: LearningReportTrendOverview(
+          headline: '最近一轮掌握度约 72%',
+          summary: '掌握度整体稳中有升。',
+          historyPoints: <LearningTrendPoint>[
+            LearningTrendPoint(label: '上周', averageMastery: 66),
+            LearningTrendPoint(label: '本周', averageMastery: 72),
+          ],
+          comparisons: <LearningTrendComparison>[
+            LearningTrendComparison(
+              label: '本周 vs 上周',
+              summary: '掌握度提升了 6 个点。',
+              deltaMastery: 6,
+              direction: 'up',
+            ),
+          ],
+        ),
+        triggerSummary: LearningReportTriggerSummary(
+          mode: 'baseline_ready',
+          title: '已建立第一版学习基线',
+          summary: '系统已经整理出一版可执行的诊断仪表盘。',
+        ),
       );
 
       await tester.pumpWidget(
@@ -235,8 +299,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习分析报告'), findsOneWidget);
+      expect(find.text('已建立第一版学习基线'), findsOneWidget);
       expect(find.text('诊断摘要'), findsOneWidget);
-      expect(find.text('趋势会随着更多报告自动补全'), findsOneWidget);
+      expect(find.text('掌握度趋势'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('掌握度雷达图'),
         120,
@@ -249,6 +314,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('下一步行动'), findsOneWidget);
+      expect(find.text('先推演 行列式'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('关键指标'),
         240,

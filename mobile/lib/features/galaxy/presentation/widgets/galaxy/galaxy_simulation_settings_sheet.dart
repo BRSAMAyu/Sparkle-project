@@ -10,7 +10,6 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
     required this.onTextFadeThresholdChanged,
     required this.onNodeSizeScaleChanged,
     required this.onLinkThicknessScaleChanged,
-    required this.onShowArrowsChanged,
     required this.onCenterForceChanged,
     required this.onRepelForceChanged,
     required this.onLinkForceChanged,
@@ -25,7 +24,6 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
   final ValueChanged<double> onTextFadeThresholdChanged;
   final ValueChanged<double> onNodeSizeScaleChanged;
   final ValueChanged<double> onLinkThicknessScaleChanged;
-  final ValueChanged<bool> onShowArrowsChanged;
   final ValueChanged<double> onCenterForceChanged;
   final ValueChanged<double> onRepelForceChanged;
   final ValueChanged<double> onLinkForceChanged;
@@ -135,46 +133,8 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _SectionTitle(
-                              title: '显示',
-                              subtitle: '控制文字显隐、节点大小、连线粗细与箭头方向。',
-                              isDarkMode: isDarkMode,
-                            ),
-                            _SliderTile(
-                              label: '文字显现阈值',
-                              valueLabel:
-                                  settings.textFadeThreshold.toStringAsFixed(2),
-                              value: settings.textFadeThreshold,
-                              min: kGalaxyTextFadeThresholdMin,
-                              max: kGalaxyTextFadeThresholdMax,
-                              onChanged: onTextFadeThresholdChanged,
-                            ),
-                            _SliderTile(
-                              label: '节点尺寸',
-                              valueLabel:
-                                  '${settings.nodeSizeScale.toStringAsFixed(2)}x',
-                              value: settings.nodeSizeScale,
-                              min: kGalaxyNodeSizeScaleMin,
-                              max: kGalaxyNodeSizeScaleMax,
-                              onChanged: onNodeSizeScaleChanged,
-                            ),
-                            _SliderTile(
-                              label: '连线粗细',
-                              valueLabel:
-                                  '${settings.linkThicknessScale.toStringAsFixed(2)}x',
-                              value: settings.linkThicknessScale,
-                              min: kGalaxyLinkThicknessScaleMin,
-                              max: kGalaxyLinkThicknessScaleMax,
-                              onChanged: onLinkThicknessScaleChanged,
-                            ),
-                            _ToggleTile(
-                              label: '显示方向箭头',
-                              value: settings.showArrows,
-                              onChanged: onShowArrowsChanged,
-                            ),
-                            const SizedBox(height: 12),
-                            _SectionTitle(
-                              title: '力场',
-                              subtitle: '调整图谱聚拢感、节点排斥感，以及连线的牵引力度。',
+                              title: '常用调整',
+                              subtitle: '第一眼只保留最常用、最直接影响整体体验的四项。',
                               isDarkMode: isDarkMode,
                             ),
                             _SliderTile(
@@ -204,21 +164,6 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               onChanged: onLinkForceChanged,
                             ),
                             _SliderTile(
-                              label: '连线距离',
-                              valueLabel:
-                                  settings.linkDistance.toStringAsFixed(0),
-                              value: settings.linkDistance,
-                              min: kGalaxyLinkDistanceMin,
-                              max: kGalaxyLinkDistanceMax,
-                              onChanged: onLinkDistanceChanged,
-                            ),
-                            const SizedBox(height: 12),
-                            _SectionTitle(
-                              title: '动画',
-                              subtitle: '在不改变构建顺序的前提下，微调星图回放节奏。',
-                              isDarkMode: isDarkMode,
-                            ),
-                            _SliderTile(
                               label: '回放速度',
                               valueLabel:
                                   '${settings.replaySpeed.toStringAsFixed(1)}x',
@@ -226,6 +171,57 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               min: kGalaxyReplaySpeedMin,
                               max: kGalaxyReplaySpeedMax,
                               onChanged: onReplaySpeedChanged,
+                            ),
+                            const SizedBox(height: 12),
+                            _SectionTitle(
+                              title: '高级调整',
+                              subtitle: '需要微调视觉密度时再展开，默认不用第一眼看到。',
+                              isDarkMode: isDarkMode,
+                            ),
+                            _ExpandablePanel(
+                              title: '展开高级选项',
+                              isDarkMode: isDarkMode,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _SliderTile(
+                                    label: '文字显现阈值',
+                                    valueLabel: settings.textFadeThreshold
+                                        .toStringAsFixed(2),
+                                    value: settings.textFadeThreshold,
+                                    min: kGalaxyTextFadeThresholdMin,
+                                    max: kGalaxyTextFadeThresholdMax,
+                                    onChanged: onTextFadeThresholdChanged,
+                                  ),
+                                  _SliderTile(
+                                    label: '节点尺寸',
+                                    valueLabel:
+                                        '${settings.nodeSizeScale.toStringAsFixed(2)}x',
+                                    value: settings.nodeSizeScale,
+                                    min: kGalaxyNodeSizeScaleMin,
+                                    max: kGalaxyNodeSizeScaleMax,
+                                    onChanged: onNodeSizeScaleChanged,
+                                  ),
+                                  _SliderTile(
+                                    label: '连线粗细',
+                                    valueLabel:
+                                        '${settings.linkThicknessScale.toStringAsFixed(2)}x',
+                                    value: settings.linkThicknessScale,
+                                    min: kGalaxyLinkThicknessScaleMin,
+                                    max: kGalaxyLinkThicknessScaleMax,
+                                    onChanged: onLinkThicknessScaleChanged,
+                                  ),
+                                  _SliderTile(
+                                    label: '连线距离',
+                                    valueLabel: settings.linkDistance
+                                        .toStringAsFixed(0),
+                                    value: settings.linkDistance,
+                                    min: kGalaxyLinkDistanceMin,
+                                    max: kGalaxyLinkDistanceMax,
+                                    onChanged: onLinkDistanceChanged,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -348,44 +344,45 @@ class _SliderTile extends StatelessWidget {
   }
 }
 
-class _ToggleTile extends StatelessWidget {
-  const _ToggleTile({
-    required this.label,
-    required this.value,
-    required this.onChanged,
+class _ExpandablePanel extends StatelessWidget {
+  const _ExpandablePanel({
+    required this.title,
+    required this.isDarkMode,
+    required this.child,
   });
 
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
+  final String title;
+  final bool isDarkMode;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: Color.alphaBlend(
-            colorScheme.primary.withValues(alpha: 0.03),
-            Theme.of(context).colorScheme.surface,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-          ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colorScheme.primary.withValues(alpha: 0.03),
+          Theme.of(context).colorScheme.surface,
         ),
-        child: SwitchListTile.adaptive(
-          value: value,
-          onChanged: onChanged,
-          contentPadding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          iconColor: isDarkMode ? Colors.white70 : colorScheme.primary,
+          collapsedIconColor: isDarkMode ? Colors.white54 : colorScheme.primary,
           title: Text(
-            label,
+            title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
+          children: [child],
         ),
       ),
     );

@@ -6,8 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/share_poster_service.dart';
+import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
+import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -37,9 +41,14 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     'knowledge_debate': '知识辩论',
     'historical_roleplay': '历史角色扮演',
     'socratic_dialogue': '苏格拉底式对话',
+    'case_analysis': '案例拆解',
+    'what_if_path': 'What-If 推演',
+    'concept_map_build': '概念图共建',
+    'error_diagnosis': '错因诊断',
   };
 
   final _topicController = TextEditingController();
+  final _interactionController = TextEditingController();
   final _roundsScrollController = ScrollController();
   late String _selectedScenarioKey;
   late final ProviderSubscription<SimulationState> _simulationSubscription;
@@ -75,6 +84,17 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
           );
         }
+
+        final previousSession = previous?.session;
+        final nextSession = next.session;
+        final completedNow = nextSession != null &&
+            nextSession.state.toUpperCase() == 'COMPLETED' &&
+            (previousSession == null ||
+                previousSession.id != nextSession.id ||
+                previousSession.state.toUpperCase() != 'COMPLETED');
+        if (completedNow) {
+          unawaited(_celebrateSimulationMilestone(nextSession));
+        }
       },
     );
     if ((widget.initialTopic ?? '').trim().isNotEmpty) {
@@ -102,6 +122,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void dispose() {
     _simulationSubscription.close();
     _topicController.dispose();
+    _interactionController.dispose();
     _roundsScrollController.dispose();
     super.dispose();
   }
@@ -133,14 +154,27 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             session?.suggestedReplies ??
             state.liveSuggestedReplies)
         : (session?.suggestedReplies ?? state.liveSuggestedReplies);
+    final pendingInteraction = _isPlaybackPaused
+        ? (session?.pendingInteraction ?? state.activeInteraction)
+        : (session?.pendingInteraction ?? state.activeInteraction);
     final roundCount = rounds.length;
     final expectedRounds = _expectedRoundsForScenario(
       session?.scenarioKey ?? _selectedScenarioKey,
     );
+    final plannedRoundCount = (session?.plannedRoundCount ?? 0) > 0
+        ? session!.plannedRoundCount
+        : expectedRounds;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('学习场景模拟'),
+        actions: [
+          if (session != null)
+            IconButton(
+              onPressed: () => unawaited(_showSimulationShareSheet(session)),
+              icon: const Icon(Icons.ios_share_rounded),
+            ),
+        ],
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
@@ -251,7 +285,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           progress: state.progress,
                           engineState: state.engineState,
                           roundCount: roundCount,
-                          expectedRounds: expectedRounds,
+                          expectedRounds: plannedRoundCount,
                           isRunning: state.isLoading || state.progress > 0,
                           isPaused: _isPlaybackPaused,
                           hasBufferedUpdates: _isPlaybackPaused &&
@@ -259,6 +293,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                                   liveParticipants.length >
                                       participants.length),
                           participants: participants,
+                          activeSpeaker:
+                              rounds.isEmpty ? null : rounds.last.speaker,
                           onTogglePause: _togglePlaybackPause,
                         ),
                         if (state.error != null) ...[
@@ -274,18 +310,33 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                         _SimulationTimelineCard(
                           rounds: rounds,
                           participants: participants,
+                          activeSpeaker:
+                              rounds.isEmpty ? null : rounds.last.speaker,
                           isLoading: state.isLoading,
                           topic: _topicController.text.trim(),
                           controller: _roundsScrollController,
                           height: timelineHeight,
                         ),
                         if ((interactionPrompt?.isNotEmpty ?? false) &&
-                            suggestedReplies.isNotEmpty) ...[
+                            (suggestedReplies.isNotEmpty ||
+                                (pendingInteraction?.options.isNotEmpty ??
+                                    false))) ...[
                           const SizedBox(height: 14),
                           _SimulationInteractionCard(
                             prompt: interactionPrompt!,
+                            interactionType:
+                                pendingInteraction?.interactionType ??
+                                    session?.interactionType,
                             suggestedReplies: suggestedReplies,
+                            options: pendingInteraction?.options ?? const [],
+                            isSubmitting: state.isContinuing,
+                            textController: _interactionController,
                             onReplySelected: (reply) =>
+                                unawaited(_continueSimulation(reply)),
+                            onSubmitText: () => unawaited(
+                              _continueSimulation(_interactionController.text),
+                            ),
+                            onContinueInChat: (reply) =>
                                 unawaited(_continueInChat(reply)),
                           ),
                         ],
@@ -410,6 +461,11 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         return 5;
       case 'historical_roleplay':
         return 6;
+      case 'case_analysis':
+      case 'what_if_path':
+      case 'concept_map_build':
+      case 'error_diagnosis':
+        return 5;
       case 'socratic_dialogue':
         return 4;
       default:
@@ -445,6 +501,44 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     );
   }
 
+  Future<void> _showSimulationShareSheet(SimulationSessionModel session) async {
+    await showUniversalShareSheet(
+      context,
+      payload: UniversalSharePayload(
+        contentType: ShareableContentType.learningReport,
+        resourceId: 'simulation-${session.id}',
+        title: '学习场景模拟 · ${session.topic}',
+        subtitle: _scenarioLabels[session.scenarioKey] ?? session.scenarioKey,
+        description: session.insightSummary,
+        metadata: <String, dynamic>{
+          'active_plans': session.rounds.length,
+          'unlocked_achievements': session.participants.length,
+          'flame_brightness':
+              session.participants.map((item) => item.name).take(3).join('、'),
+        },
+        shareMessage:
+            '我刚在 Sparkle 跑了一场学习仿真：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? session.scenarioKey}\n洞察：${session.insightSummary}',
+      ),
+      onGenerateCard: (payload) =>
+          SharePosterService().generatePoster(context, payload),
+      onCommunityShare: () => unawaited(_shareSession(session)),
+    );
+  }
+
+  Future<void> _celebrateSimulationMilestone(
+    SimulationSessionModel session,
+  ) async {
+    await MirofishMilestoneService.celebrateIfFirstTime(
+      context,
+      ref,
+      kind: MirofishMilestoneKind.firstSimulation,
+      onShare: () {
+        Navigator.of(context).pop();
+        unawaited(_showSimulationShareSheet(session));
+      },
+    );
+  }
+
   Future<void> _continueInChat(String reply) async {
     final query = <String, String>{
       'prompt': reply,
@@ -452,6 +546,15 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         'session_id': widget.initialSourceChatSessionId!.trim(),
     };
     await context.push(Uri(path: '/chat', queryParameters: query).toString());
+  }
+
+  Future<void> _continueSimulation(String reply) async {
+    final normalized = reply.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    _interactionController.clear();
+    await ref.read(simulationProvider.notifier).continueSimulation(normalized);
   }
 }
 
@@ -754,13 +857,25 @@ class _RecommendedSeedCard extends StatelessWidget {
 class _SimulationInteractionCard extends StatelessWidget {
   const _SimulationInteractionCard({
     required this.prompt,
+    required this.textController,
     required this.suggestedReplies,
+    required this.options,
+    required this.isSubmitting,
     required this.onReplySelected,
+    required this.onSubmitText,
+    required this.onContinueInChat,
+    this.interactionType,
   });
 
   final String prompt;
+  final String? interactionType;
+  final TextEditingController textController;
   final List<String> suggestedReplies;
+  final List<String> options;
+  final bool isSubmitting;
   final ValueChanged<String> onReplySelected;
+  final VoidCallback onSubmitText;
+  final ValueChanged<String> onContinueInChat;
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
@@ -801,6 +916,28 @@ class _SimulationInteractionCard extends StatelessWidget {
                     height: 1.5,
                   ),
             ),
+            if ((interactionType ?? '').isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _StatusBadge(
+                icon: Icons.touch_app_rounded,
+                label: '互动模式：${_interactionLabel(interactionType)}',
+              ),
+            ],
+            if (options.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: options
+                    .take(4)
+                    .map(
+                      (option) => Chip(
+                        label: Text(option),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -810,14 +947,48 @@ class _SimulationInteractionCard extends StatelessWidget {
                   .map(
                     (reply) => ActionChip(
                       label: Text(reply),
-                      onPressed: () => onReplySelected(reply),
+                      onPressed:
+                          isSubmitting ? null : () => onReplySelected(reply),
                     ),
                   )
                   .toList(),
             ),
             const SizedBox(height: 10),
+            TextField(
+              controller: textController,
+              enabled: !isSubmitting,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: '或者输入你的判断',
+                hintText: '例如：我会先补几何直觉，再回来刷一道题验证',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => onSubmitText(),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: isSubmitting ? null : onSubmitText,
+                  icon: const Icon(Icons.send_rounded),
+                  label: Text(isSubmitting ? '继续生成中...' : '继续这场模拟'),
+                ),
+                if (suggestedReplies.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: isSubmitting
+                        ? null
+                        : () => onContinueInChat(suggestedReplies.first),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded),
+                    label: const Text('带去聊天继续'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Text(
-              '点任一回复，会把这句话带回 AI 对话继续展开。',
+              '建议先在这里继续一轮，让角色真正回应你的判断；如果你想切回主对话，也可以走聊天入口。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -825,6 +996,17 @@ class _SimulationInteractionCard extends StatelessWidget {
           ],
         ),
       );
+
+  String _interactionLabel(String? raw) {
+    switch (raw) {
+      case 'open_question':
+        return '开放追问';
+      case 'vote':
+        return '站队投票';
+      default:
+        return '选择判断';
+    }
+  }
 }
 
 class _SimulationStatusCard extends StatelessWidget {
@@ -837,6 +1019,7 @@ class _SimulationStatusCard extends StatelessWidget {
     required this.isPaused,
     required this.hasBufferedUpdates,
     required this.participants,
+    required this.activeSpeaker,
     required this.onTogglePause,
   });
 
@@ -848,6 +1031,7 @@ class _SimulationStatusCard extends StatelessWidget {
   final bool isPaused;
   final bool hasBufferedUpdates;
   final List<SimulationParticipantModel> participants;
+  final String? activeSpeaker;
   final VoidCallback onTogglePause;
 
   @override
@@ -938,6 +1122,7 @@ class _SimulationStatusCard extends StatelessWidget {
                     return _AnimatedParticipantChip(
                       participant: participant,
                       accent: _accentForName(participant.name),
+                      isActive: participant.name == activeSpeaker,
                     );
                   },
                 ),
@@ -1001,6 +1186,7 @@ class _SimulationTimelineCard extends StatelessWidget {
   const _SimulationTimelineCard({
     required this.rounds,
     required this.participants,
+    required this.activeSpeaker,
     required this.isLoading,
     required this.topic,
     required this.controller,
@@ -1009,6 +1195,7 @@ class _SimulationTimelineCard extends StatelessWidget {
 
   final List<SimulationRoundModel> rounds;
   final List<SimulationParticipantModel> participants;
+  final String? activeSpeaker;
   final bool isLoading;
   final String topic;
   final ScrollController controller;
@@ -1071,6 +1258,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                     .map(
                       (participant) => _ParticipantSnapshotPill(
                         participant: participant,
+                        isActive: participant.name == activeSpeaker,
                       ),
                     )
                     .toList(),
@@ -1100,6 +1288,9 @@ class _SimulationTimelineCard extends StatelessWidget {
                         round: round.round,
                         replyToSpeaker: round.replyToSpeaker,
                         turnGoal: round.turnGoal,
+                        isSpotlighted:
+                            round.speaker == activeSpeaker &&
+                            index == rounds.length - 1,
                       );
                     },
                   ),
@@ -1258,10 +1449,12 @@ class _AnimatedParticipantChip extends StatefulWidget {
   const _AnimatedParticipantChip({
     required this.participant,
     required this.accent,
+    this.isActive = false,
   });
 
   final SimulationParticipantModel participant;
   final Color accent;
+  final bool isActive;
 
   @override
   State<_AnimatedParticipantChip> createState() =>
@@ -1293,11 +1486,30 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest
-                  .withValues(alpha: 0.72),
+              gradient: LinearGradient(
+                colors: [
+                  widget.accent.withValues(alpha: widget.isActive ? 0.2 : 0.1),
+                  Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.84),
+                ],
+              ),
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: widget.accent.withValues(
+                  alpha: widget.isActive ? 0.34 : 0.14,
+                ),
+              ),
+              boxShadow: widget.isActive
+                  ? [
+                      BoxShadow(
+                        color: widget.accent.withValues(alpha: 0.14),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1319,8 +1531,19 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
                 const SizedBox(width: 8),
                 Text(
                   widget.participant.name,
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight:
+                            widget.isActive ? FontWeight.w800 : FontWeight.w600,
+                      ),
                 ),
+                if (widget.isActive) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.wifi_tethering_rounded,
+                    size: 15,
+                    color: widget.accent,
+                  ),
+                ],
               ],
             ),
           ),
@@ -1331,9 +1554,11 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
 class _ParticipantSnapshotPill extends StatelessWidget {
   const _ParticipantSnapshotPill({
     required this.participant,
+    this.isActive = false,
   });
 
   final SimulationParticipantModel participant;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -1341,20 +1566,40 @@ class _ParticipantSnapshotPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.76),
+        gradient: LinearGradient(
+          colors: [
+            accent.withValues(alpha: isActive ? 0.14 : 0.08),
+            Theme.of(context).colorScheme.surface.withValues(alpha: 0.76),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.14)),
+        border: Border.all(
+          color: accent.withValues(alpha: isActive ? 0.34 : 0.14),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            participant.name,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w800,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? Icons.mic_rounded : Icons.person_rounded,
+                size: 14,
+                color: accent,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  participant.name,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
+              ),
+            ],
           ),
           if (participant.roleHint.isNotEmpty ||
               (participant.stance?.isNotEmpty ?? false)) ...[

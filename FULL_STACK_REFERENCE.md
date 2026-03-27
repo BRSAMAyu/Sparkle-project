@@ -70,6 +70,8 @@ High-risk corrections applied during this audit and refresh:
   - `GET /api/v1/profile/system-updates`
   - `GET /api/v1/simulation/recommended-seeds`
   - `POST /api/v1/theater/predictions/generate`
+  - `POST /api/v1/simulation/sessions/{session_id}/continue`
+  - `POST /api/v1/simulation/sessions/{session_id}/continue/stream`
   - `POST /api/v1/ws/ticket`
 - Learning insight/profile contracts were re-verified live on `2026-03-27` after the latest MiroFish alignment pass:
   - `GET /api/v1/profile/context` now backfills `knowledge_summary` from error-book/task/study data when `UserNodeStatus` rows are sparse, instead of returning an effectively empty context.
@@ -82,6 +84,11 @@ High-risk corrections applied during this audit and refresh:
   - `open_report` + `report_preview` + `report_deep_link` are emitted in `full_text` events
   - Theater / Simulation / Report all use short-circuit bridge execution instead of full chat generation
   - Bridge deep links now preserve `source_chat_session_id` across Theater / Simulation / Report so downstream screens can return to the originating chat session.
+  - The chat bubble now renders MiroFish bridge results as inline experience cards instead of plain link-only previews:
+    - Theater cards show route bullets plus “继续在对话里” follow-up chips
+    - Simulation cards show round preview plus one-tap “继续模拟一轮 / 让我来回答” prompts that reuse the current chat session
+    - Report cards surface trigger badges, structured action buttons, and prompt chips for immediate follow-up
+  - Report inline action buttons now also preserve `source_chat_session_id`, so jumping from chat into Theater / Simulation / Report subflows keeps continuity back to the same conversation.
   - Local benchmark on `2026-03-27` measured representative prompts at approximately:
     - Theater preview: `~1.8s`
     - Simulation preview: `~4.8s`
@@ -92,13 +99,31 @@ High-risk corrections applied during this audit and refresh:
     - Learning Report: `low` via `instant_preview` mode in chat bridge, while API-triggered full reports remain richer/slower
 - MiroFish interaction/persistence behavior was re-verified live on `2026-03-27`:
   - `POST /api/v1/simulation/run` now returns `interaction_prompt` + `suggested_replies` at session level, and each round carries `reply_to_speaker` + `turn_goal`.
+  - `POST /api/v1/simulation/run/stream` can now stop in `WAITING_FOR_USER`, emit an `interaction` SSE event, and hand the current session back to the client without discarding participant memory.
+  - `POST /api/v1/simulation/sessions/{session_id}/continue` and `/continue/stream` resume the same simulation session after the learner replies, preserving participant memory, prior rounds, and the moderator's dynamic round target.
+  - Supported simulation scenarios now include `case_analysis`, `what_if_path`, `concept_map_build`, and `error_diagnosis` in addition to the earlier four templates.
   - `GET /api/v1/profile/system-updates` now includes `simulation_session_ready` entries with `session_payload`, `interaction_prompt`, `suggested_replies`, and a deep link back to `/simulation`.
   - `POST /api/v1/theater/predictions/generate` now tolerates free-text prompts such as `帮我推演特征值与特征向量`; current local graph maps that phrase to target node `线性代数` instead of returning `400`.
   - If no usable knowledge-graph node can be resolved at all, Theater now falls back to `free_mode` path generation instead of failing. In that mode the API keeps `target_name`, omits `target_node_id`, and still returns usable `paths`, `timeline`, and preview metadata.
   - Chat-bridge Theater previews now omit `target_node_id` in deep links when the result came from `free_mode`, so `/theater` can reopen safely without tripping UUID validation on the next request.
+  - Theater 2.0 responses now expose a daily `timeline` per route instead of only coarse milestones. Each frame includes `day_index`, `route_id`, `projected_mastery`, `projected_completion_rate`, `active_step_node_id`, `active_step_title`, `compare_label`, and `branch_type`, so the mobile timeline player can scrub day-by-day progression.
+  - `POST /api/v1/theater/predictions/{prediction_id}/what-if` now accepts both single-node `skip_node_id` and multi-node `skip_node_ids`. The response includes `original_mastery`, `original_completion_rate`, `remaining_path`, `branch_timeline`, `branch_label`, and `branch_focus_node_ids` for side-by-side branch comparison.
+  - `POST /api/v1/theater/predictions/{prediction_id}/adopt` now closes the loop by creating first-week tasks and checkpoint dates in the same transaction. The response includes `created_tasks`, `checkpoint_dates`, and `review_due_on`, and the corresponding `theater_route_adopted` system update carries the same metadata.
+  - `POST /api/v1/theater/predictions/{prediction_id}/actual-outcome` now updates cached `accuracy_tracking` status from `pending` to `recorded`, allowing the Theater screen to switch from the reminder card to a calibration summary after the learner backfills real outcomes.
   - `GET /api/v1/simulation/recommended-seeds` cold start now prefers `onboarding_profile` seeds derived from `user_learning_profiles` / active-plan subject hints before falling back to generic starter graph seeds.
   - `POST /api/v1/learning-reports/generate` now uses recent user chat messages as a cold-start evidence source. When mastery/timeline are empty, the API can emit `starter_focus` from `chat_inference` and synthesize an intro diagnostic instead of a blank baseline report.
+  - Learning Report 2.0 payloads now include `diagnosis_cards`, `trend_overview`, `action_cards`, and `trigger_summary`, so the mobile app can render an interactive dashboard instead of relying on Markdown alone.
+  - `diagnosis_cards` carry `headline`, `summary`, `evidence`, and optional `deep_link` / `cta_label`; the current app uses them to open bottom-sheet evidence cards and jump directly into Theater, Simulation, Galaxy, or Sprint history.
+  - `trend_overview.history_points` provides report-native trend points, while `trend_overview.comparisons` describes deltas such as `本周 vs 上周` with `delta_mastery`, `delta_study_minutes`, and `direction`.
+  - `action_cards` now provide one-click execution links for `theater`, `simulation`, `galaxy`, and `plan` follow-ups, including chat/cold-start reports.
+  - `trigger_summary` distinguishes `baseline_ready`, `bottleneck`, `breakthrough`, and `manual` report origins. The API accepts `trigger_source` on `POST /api/v1/learning-reports/generate`, and the resulting `learning_report_ready` system update title/description now reflect that trigger mode.
   - `GET /api/v1/profile/system-updates` now also includes `theater_prediction_ready` entries with a deep link back to `/theater`.
+  - Phase 5 UX polish is now wired on the mobile side:
+    - Simulation bubbles highlight the current speaker, render role-aware avatars/stance labels, and keep the latest speaker spotlight in both the participant strip and timeline feed.
+    - Theater graph rendering now accepts `selectedNodeId` plus route node highlights, and the painter uses mastery-aware gradients, selected-node emphasis, and route-edge emphasis instead of a single static node style.
+    - Theater now exposes a share sheet backed by the universal poster flow. If a route has already been adopted, the community-share action reuses the created `plan_id`; otherwise it falls back to sharing the target knowledge node.
+    - Learning Report now exposes the same poster-based share sheet from the app bar, so the dashboard payload can be exported as a polished summary instead of raw markdown text.
+    - First successful Simulation / Theater / Learning Report visits now trigger a persisted local MiroFish milestone celebration on mobile (`mirofish_first_simulation`, `mirofish_first_theater`, `mirofish_first_report`), deduped through `SharedPreferences` and recorded into the app event stream as `entity_execution` events with `entity_type=mirofish_milestone`.
 - Focus statistics now use UTC-consistent boundaries in the backend service layer, matching how sessions are persisted.
 - Decay timemachine now returns non-empty projections even for users without pre-existing `UserNodeStatus` rows, avoiding empty-state contract breaks during local acceptance.
 - Vocabulary lookup/package behavior is now locally acceptance-safe:

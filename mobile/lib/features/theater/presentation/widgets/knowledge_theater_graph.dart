@@ -13,6 +13,8 @@ class KnowledgeTheaterGraph extends StatefulWidget {
     required this.nodes,
     required this.edges,
     this.focusNodeIds = const <String>[],
+    this.routeNodeIds = const <String>[],
+    this.selectedNodeId,
     this.onNodeTap,
     this.onEdgeLongPress,
     super.key,
@@ -21,6 +23,8 @@ class KnowledgeTheaterGraph extends StatefulWidget {
   final List<TheaterGraphNode> nodes;
   final List<TheaterGraphEdge> edges;
   final List<String> focusNodeIds;
+  final List<String> routeNodeIds;
+  final String? selectedNodeId;
   final ValueChanged<TheaterGraphNode>? onNodeTap;
   final void Function(TheaterGraphEdge edge, Offset globalPosition)?
       onEdgeLongPress;
@@ -62,7 +66,9 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.nodes != widget.nodes ||
         oldWidget.edges != widget.edges ||
-        oldWidget.focusNodeIds != widget.focusNodeIds) {
+        oldWidget.focusNodeIds != widget.focusNodeIds ||
+        oldWidget.routeNodeIds != widget.routeNodeIds ||
+        oldWidget.selectedNodeId != widget.selectedNodeId) {
       _rebuildLayout();
     }
   }
@@ -173,6 +179,8 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
                       edges: widget.edges,
                       positions: _positions,
                       focusNodeIds: widget.focusNodeIds.toSet(),
+                      routeNodeIds: widget.routeNodeIds.toSet(),
+                      selectedNodeId: widget.selectedNodeId,
                       pulseValue: _pulseController.value,
                       backgroundColors: <Color>[
                         Theme.of(context)
@@ -309,6 +317,8 @@ class _KnowledgeTheaterPainter extends CustomPainter {
     required this.edges,
     required this.positions,
     required this.focusNodeIds,
+    required this.routeNodeIds,
+    required this.selectedNodeId,
     required this.pulseValue,
     required this.backgroundColors,
     required this.edgeColor,
@@ -323,6 +333,8 @@ class _KnowledgeTheaterPainter extends CustomPainter {
   final List<TheaterGraphEdge> edges;
   final Map<String, Offset> positions;
   final Set<String> focusNodeIds;
+  final Set<String> routeNodeIds;
+  final String? selectedNodeId;
   final double pulseValue;
   final List<Color> backgroundColors;
   final Color edgeColor;
@@ -360,13 +372,19 @@ class _KnowledgeTheaterPainter extends CustomPainter {
         ..quadraticBezierTo(control.dx, control.dy, p2.dx, p2.dy);
       final isFocused = focusNodeIds.contains(edge.sourceId) &&
           focusNodeIds.contains(edge.targetId);
+      final isRouteEdge = routeNodeIds.contains(edge.sourceId) &&
+          routeNodeIds.contains(edge.targetId);
       canvas.drawPath(
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = isFocused ? 3.2 : (1.2 + edge.strength * 1.8)
-          ..color = (isFocused ? focusEdgeColor : edgeColor)
-              .withValues(alpha: isFocused ? 0.92 : 0.38),
+          ..strokeWidth = isFocused
+              ? 3.2
+              : (isRouteEdge ? 2.6 : (1.2 + edge.strength * 1.8))
+          ..color = (isFocused
+                  ? focusEdgeColor
+                  : (isRouteEdge ? labelColor : edgeColor))
+              .withValues(alpha: isFocused ? 0.92 : (isRouteEdge ? 0.62 : 0.38)),
       );
     }
 
@@ -377,43 +395,71 @@ class _KnowledgeTheaterPainter extends CustomPainter {
       }
       final point = center + world;
       final isFocused = focusNodeIds.isEmpty || focusNodeIds.contains(node.id);
+      final isRouteNode = routeNodeIds.contains(node.id);
+      final isSelected = node.id == selectedNodeId;
       final color = _riskColor(node.riskLevel);
+      final masteryColor = Color.lerp(
+            highRiskColor.withValues(alpha: 0.88),
+            lowRiskColor.withValues(alpha: 0.94),
+            (node.predictedMastery / 100).clamp(0.0, 1.0),
+          ) ??
+          color;
       final radius = 18.0 +
           ((node.predictedMastery - node.currentMastery) / 18)
               .clamp(0, 8)
               .toDouble();
-      final pulseRadius = radius + 8 + (pulseValue * 8);
-      final pulseAlpha = isFocused ? (0.16 + (pulseValue * 0.14)) : 0.06;
+      final pulseRadius = radius + (isSelected ? 14 : 8) + (pulseValue * 8);
+      final pulseAlpha = isSelected
+          ? (0.22 + (pulseValue * 0.18))
+          : (isFocused ? (0.16 + (pulseValue * 0.14)) : 0.06);
 
       canvas
         ..drawCircle(
           point,
           pulseRadius,
-          Paint()..color = color.withValues(alpha: pulseAlpha),
+          Paint()..color = masteryColor.withValues(alpha: pulseAlpha),
         )
         ..drawCircle(
           point,
-          radius + 10,
-          Paint()..color = color.withValues(alpha: isFocused ? 0.24 : 0.08),
+          radius + (isSelected ? 14 : 10),
+          Paint()
+            ..color = masteryColor.withValues(
+              alpha: isSelected
+                  ? 0.26
+                  : (isFocused ? 0.24 : (isRouteNode ? 0.16 : 0.08)),
+            ),
         )
         ..drawCircle(
           point,
           radius,
           Paint()
             ..shader = RadialGradient(
-              colors: <Color>[Colors.white, color],
+              colors: <Color>[Colors.white, masteryColor],
             ).createShader(
               Rect.fromCircle(center: point, radius: radius),
             ),
         );
 
+      if (isSelected || isRouteNode) {
+        canvas.drawCircle(
+          point,
+          radius + 3,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isSelected ? 2.4 : 1.4
+            ..color = labelColor.withValues(alpha: isSelected ? 0.72 : 0.34),
+        );
+      }
+
       final textPainter = TextPainter(
         text: TextSpan(
           text: node.name,
           style: TextStyle(
-            color: labelColor.withValues(alpha: isFocused ? 0.96 : 0.72),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+            color: labelColor.withValues(
+              alpha: isSelected ? 1 : (isFocused ? 0.96 : 0.72),
+            ),
+            fontSize: isSelected ? 11.5 : 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
         maxLines: 1,
@@ -444,5 +490,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
       oldDelegate.edges != edges ||
       oldDelegate.positions != positions ||
       oldDelegate.focusNodeIds != focusNodeIds ||
+      oldDelegate.routeNodeIds != routeNodeIds ||
+      oldDelegate.selectedNodeId != selectedNodeId ||
       oldDelegate.pulseValue != pulseValue;
 }

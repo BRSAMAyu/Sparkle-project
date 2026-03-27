@@ -46,15 +46,43 @@ class SimulationRepository {
   Stream<SimulationStreamEventModel> streamSimulation({
     required String topic,
     required String scenarioKey,
-  }) => _apiClient
-      .postStream(
+  }) =>
+      _apiClient.postStream(
         '/simulation/run/stream',
         data: {
           'topic': topic,
           'scenario_key': scenarioKey,
         },
-      )
-      .map(
+      ).map(
+        (event) => SimulationStreamEventModel.fromJson(
+          event.event,
+          event.jsonData ?? const {},
+        ),
+      );
+
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/simulation/sessions/$sessionId/continue',
+      data: {
+        'user_response': userResponse,
+      },
+    );
+    return SimulationSessionModel.fromJson(response.data ?? const {});
+  }
+
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      _apiClient.postStream(
+        '/simulation/sessions/$sessionId/continue/stream',
+        data: {
+          'user_response': userResponse,
+        },
+      ).map(
         (event) => SimulationStreamEventModel.fromJson(
           event.event,
           event.jsonData ?? const {},

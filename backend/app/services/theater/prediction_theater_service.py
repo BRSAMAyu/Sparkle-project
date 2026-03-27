@@ -17,7 +17,9 @@ from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import PlanType
+from app.models.task import TaskType
 from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
 from app.services.insight_copy import present_pattern_name
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_fallback_utils import analysis_llm
@@ -25,6 +27,7 @@ from app.services.plan_service import PlanService
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.cognitive_service import CognitiveService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.task_service import TaskService
 
 
 def _utcnow() -> datetime:
@@ -116,6 +119,7 @@ class TheaterPathStep:
     risk_level: str
     estimated_minutes: int
     day_label: str
+    checkpoint_label: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -128,6 +132,7 @@ class TheaterPathStep:
             "risk_level": self.risk_level,
             "estimated_minutes": self.estimated_minutes,
             "day_label": self.day_label,
+            "checkpoint_label": self.checkpoint_label,
         }
 
 
@@ -143,6 +148,9 @@ class TheaterPathOption:
     daily_minutes: int
     risks: list[str]
     steps: list[TheaterPathStep]
+    route_score: float = 0.0
+    checkpoint_days: list[int] | None = None
+    week_one_tasks: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,6 +163,9 @@ class TheaterPathOption:
             "estimated_mastery": round(self.estimated_mastery, 2),
             "daily_minutes": self.daily_minutes,
             "risks": self.risks,
+            "route_score": round(self.route_score, 2),
+            "checkpoint_days": list(self.checkpoint_days or []),
+            "week_one_tasks": list(self.week_one_tasks or []),
             "steps": [step.to_dict() for step in self.steps],
         }
 
@@ -294,7 +305,12 @@ class PredictionTheaterService:
                 graph_bundle=graph_bundle,
                 pattern_names=pattern_names,
             )
-        timeline = self._build_timeline(options, discussion)
+        generated_at = _utcnow()
+        timeline = self._build_timeline(
+            options,
+            discussion,
+            horizon_days=max(7, min(horizon_days, 30)),
+        )
 
         prediction_id = str(uuid4())
         payload = {
@@ -303,12 +319,18 @@ class PredictionTheaterService:
             "target_node_id": target_context.target_node_id,
             "target_name": target_context.name,
             "horizon_days": horizon_days,
-            "generated_at": _utcnow().isoformat(),
+            "generated_at": generated_at.isoformat(),
             "paths": [option.to_dict() for option in options],
             "discussion_turns": discussion,
             "graph": graph_bundle,
             "timeline": timeline,
             "selected_prediction": selected_prediction,
+            "recommended_route_id": options[0].id if options else "",
+            "target_resolution_mode": target_context.resolution_mode,
+            "accuracy_tracking": self._build_accuracy_tracking(
+                prediction_id=prediction_id,
+                generated_at=generated_at,
+            ),
             "routing_notes": {
                 "patterns": pattern_names,
                 "recommended_entry": options[0].title if options else "稳扎稳打",
@@ -487,20 +509,28 @@ class PredictionTheaterService:
         user_id: UUID,
         prediction_id: str,
         route_id: str,
-        skip_node_id: str,
+        skip_node_id: str | None = None,
+        skip_node_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         cached = await self._get_prediction_or_raise(prediction_id)
         selected_route = self._find_route(cached, route_id)
-        skipped_step = self._find_step(selected_route, skip_node_id)
+        skipped_steps = self._find_steps(
+            selected_route,
+            skip_node_ids=list(skip_node_ids or ([skip_node_id] if skip_node_id else [])),
+        )
+        skipped_step = skipped_steps[0]
         target_name = str(cached.get("target_name") or "")
 
         downstream = [
             step for step in list(selected_route.get("steps") or [])
-            if int(step.get("index") or 0) > int(skipped_step.get("index") or 0)
+            if int(step.get("index") or 0) > min(int(item.get("index") or 0) for item in skipped_steps)
         ]
-        mastery_penalty = 8 + (len(downstream) * 3)
+        mastery_penalty = 6 + (len(downstream) * 2.5) + sum(
+            5 if str(step.get("risk_level") or "") == "high" else (3 if str(step.get("risk_level") or "") == "medium" else 1.5)
+            for step in skipped_steps
+        )
         predicted_mastery = _clamp(float(selected_route.get("estimated_mastery") or 0.0) - mastery_penalty, 5.0, 100.0)
-        completion_penalty = 0.08 + (len(downstream) * 0.03)
+        completion_penalty = 0.05 + (len(downstream) * 0.025) + (len(skipped_steps) * 0.03)
         predicted_completion = _clamp(
             float(selected_route.get("estimated_completion_rate") or 0.0) - completion_penalty,
             0.15,
@@ -508,23 +538,32 @@ class PredictionTheaterService:
         )
 
         consequence_lines = [
-            f"跳过 {skipped_step.get('node_name')} 后，{target_name} 的推导链会变短，但中间校验点也会减少。",
+            f"跳过 {'、'.join(str(step.get('node_name') or '') for step in skipped_steps)} 后，{target_name} 的推导链会变短，但中间校验点也会减少。",
         ]
         if downstream:
             consequence_lines.append(
                 f"最容易受影响的是 {downstream[0].get('node_name')}，因为它默认依赖前一步的符号感和方法熟练度。"
             )
-        if float(skipped_step.get("current_mastery") or 0.0) < 60:
-            consequence_lines.append("当前这个节点本身仍偏弱，直接跳过会放大后面“看得懂但做不稳”的风险。")
+        if any(float(step.get("current_mastery") or 0.0) < 60 for step in skipped_steps):
+            consequence_lines.append("被跳过的节点里仍有偏弱环节，直接跳过会放大后面“看得懂但做不稳”的风险。")
 
         suggestion = (
             f"建议不要完全跳过 {skipped_step.get('node_name')}，可以把它压缩成 {max(20, int(skipped_step.get('estimated_minutes') or 30) // 2)} 分钟速览。"
         )
+        remaining_path = [
+            step
+            for step in list(selected_route.get("steps") or [])
+            if str(step.get("node_id") or "") not in {str(item.get("node_id") or "") for item in skipped_steps}
+        ]
         result = {
             "prediction_id": prediction_id,
             "route_id": route_id,
-            "skip_node_id": skip_node_id,
+            "skip_node_id": str(skipped_step.get("node_id") or ""),
             "skip_node_name": skipped_step.get("node_name"),
+            "skip_node_ids": [str(step.get("node_id") or "") for step in skipped_steps],
+            "skip_node_names": [str(step.get("node_name") or "") for step in skipped_steps],
+            "original_mastery": round(float(selected_route.get("estimated_mastery") or 0.0), 2),
+            "original_completion_rate": round(float(selected_route.get("estimated_completion_rate") or 0.0), 4),
             "predicted_mastery": round(predicted_mastery, 2),
             "predicted_completion_rate": round(predicted_completion, 4),
             "delta_mastery": round(predicted_mastery - float(selected_route.get("estimated_mastery") or 0.0), 2),
@@ -534,6 +573,15 @@ class PredictionTheaterService:
             ),
             "consequences": consequence_lines,
             "suggestion": suggestion,
+            "remaining_path": remaining_path,
+            "branch_label": f"跳过 {'、'.join(str(step.get('node_name') or '') for step in skipped_steps)}",
+            "branch_focus_node_ids": [str(step.get("node_id") or "") for step in skipped_steps[:2]],
+            "branch_timeline": self._build_branch_timeline(
+                route=selected_route,
+                skipped_steps=skipped_steps,
+                predicted_mastery=predicted_mastery,
+                predicted_completion=predicted_completion,
+            ),
             "user_id": str(user_id),
         }
         return result
@@ -608,6 +656,25 @@ class PredictionTheaterService:
         }
         self.db.add(plan)
 
+        created_tasks = await self._create_week_one_tasks(
+            user_id=user_id,
+            plan_id=plan.id,
+            route=selected_route,
+            target_name=target_name,
+        )
+        checkpoint_dates = self._build_checkpoint_schedule(
+            route=selected_route,
+            created_tasks=created_tasks,
+        )
+        review_due_on = (date.today() + timedelta(days=7)).isoformat()
+        plan.source_metadata = {
+            **(plan.source_metadata or {}),
+            "created_tasks": created_tasks,
+            "checkpoint_dates": checkpoint_dates,
+            "review_due_on": review_due_on,
+        }
+        self.db.add(plan)
+
         risk_steps = [step for step in steps if str(step.get("risk_level") or "") in {"medium", "high"}]
         for step in risk_steps[:3]:
             node_id = step.get("node_id")
@@ -651,14 +718,17 @@ class PredictionTheaterService:
         except Exception:
             pass
 
-        deep_link = f"/theater?{urlencode({'topic': str(cached.get('topic') or ''), 'target_node_id': str(cached.get('target_node_id') or '')})}"
+        query = {"topic": str(cached.get("topic") or "")}
+        if cached.get("target_node_id"):
+            query["target_node_id"] = str(cached.get("target_node_id"))
+        deep_link = f"/theater?{urlencode(query)}"
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
                 update_type="theater_route_adopted",
                 category="learning_insight",
                 title=f"已采纳推演路径「{selected_route.get('title')}」",
-                description=f"已根据推演创建计划「{plan.name}」",
+                description=f"已根据推演创建计划「{plan.name}」，并拆出首周任务与检查点。",
                 priority="medium",
                 metadata={
                     "prediction_id": prediction_id,
@@ -666,6 +736,9 @@ class PredictionTheaterService:
                     "plan_id": str(plan.id),
                     "title": str(selected_route.get("title") or plan.name),
                     "deep_link": deep_link,
+                    "created_tasks": created_tasks,
+                    "checkpoint_dates": checkpoint_dates,
+                    "review_due_on": review_due_on,
                 },
             ),
         )
@@ -688,6 +761,9 @@ class PredictionTheaterService:
             "plan_id": str(plan.id),
             "plan_name": plan.name,
             "source_metadata": plan.source_metadata,
+            "created_tasks": created_tasks,
+            "checkpoint_dates": checkpoint_dates,
+            "review_due_on": review_due_on,
         }
 
     async def _write_back_to_chat(
@@ -749,6 +825,16 @@ class PredictionTheaterService:
         )
         if not summary:
             raise ValueError("Prediction record not found")
+        cached["accuracy_tracking"] = {
+            **dict(cached.get("accuracy_tracking") or {}),
+            "status": "recorded",
+            "recorded_at": _utcnow().isoformat(),
+        }
+        await cache_service.set(
+            f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}",
+            cached,
+            ttl=self.accuracy.TTL_SECONDS,
+        )
         return summary
 
     async def get_accuracy_summary(self, prediction_id: str) -> dict[str, Any] | None:
@@ -1135,6 +1221,7 @@ class PredictionTheaterService:
             ordered_backbone = [item for item in strategy["order"] if isinstance(item, dict)]
             steps: list[TheaterPathStep] = []
             total_steps = max(len(ordered_backbone), 1)
+            checkpoint_days = self._checkpoint_days_for_horizon(horizon_days)
             for step_index, item in enumerate(ordered_backbone, start=1):
                 node_id = str(item.get("id") or "")
                 current_mastery = mastery_map.get(node_id, 0.0)
@@ -1149,6 +1236,11 @@ class PredictionTheaterService:
                     node_name=str(item.get("name") or "当前节点"),
                     is_target=bool(item.get("is_target")),
                 )
+                checkpoint_label = (
+                    f"Checkpoint · Day {day_slot}"
+                    if day_slot in checkpoint_days or step_index == total_steps
+                    else None
+                )
                 steps.append(
                     TheaterPathStep(
                         index=step_index,
@@ -1160,6 +1252,7 @@ class PredictionTheaterService:
                         risk_level=risk_level,
                         estimated_minutes=estimated_minutes,
                         day_label=f"Day {day_slot}",
+                        checkpoint_label=checkpoint_label,
                     )
                 )
 
@@ -1178,6 +1271,12 @@ class PredictionTheaterService:
                 risks.append(f"近期行为模式提示：{pattern_names[0]} 可能影响这条路径的稳定执行。")
             if node_names:
                 risks.append(f"{node_names[min(len(node_names) - 1, 0)]} 的掌握情况会决定后续理解是否顺滑。")
+            route_score = self._route_score(
+                completion_rate=completion_rate,
+                estimated_mastery=estimated_mastery,
+                risks=risks,
+                strategy_type=str(strategy["strategy_type"]),
+            )
             options.append(
                 TheaterPathOption(
                     id=str(strategy["id"]),
@@ -1189,6 +1288,9 @@ class PredictionTheaterService:
                     estimated_mastery=estimated_mastery,
                     daily_minutes=session_minutes,
                     risks=risks[:3],
+                    route_score=route_score,
+                    checkpoint_days=checkpoint_days,
+                    week_one_tasks=self._week_one_task_blueprints(steps=steps, target_name=target_name),
                     steps=steps,
                 )
             )
@@ -1250,19 +1352,242 @@ class PredictionTheaterService:
             )
         return normalized or fallback
 
-    def _build_timeline(self, options: list[TheaterPathOption], discussion: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _build_timeline(
+        self,
+        options: list[TheaterPathOption],
+        discussion: list[dict[str, Any]],
+        *,
+        horizon_days: int,
+    ) -> list[dict[str, Any]]:
         frames: list[dict[str, Any]] = []
-        for index, option in enumerate(options):
+        baseline = options[0] if options else None
+        for option in options:
+            start_mastery = (
+                sum(step.current_mastery for step in option.steps) / max(len(option.steps), 1)
+            )
+            for day in range(1, max(horizon_days, 1) + 1):
+                progress_ratio = day / max(horizon_days, 1)
+                step_index = min(
+                    len(option.steps) - 1,
+                    max(0, int(progress_ratio * max(len(option.steps), 1)) - 1),
+                )
+                active_step = option.steps[step_index] if option.steps else None
+                projected_mastery = _clamp(
+                    start_mastery + ((option.estimated_mastery - start_mastery) * (progress_ratio ** 0.86)),
+                    0,
+                    100,
+                )
+                projected_completion = _clamp(
+                    option.estimated_completion_rate * (progress_ratio ** 0.94),
+                    0.02,
+                    option.estimated_completion_rate,
+                )
+                focus_node_ids = [
+                    step.node_id
+                    for step in option.steps[max(0, step_index - 1): step_index + 2]
+                ]
+                comparison_delta = (
+                    option.estimated_mastery - baseline.estimated_mastery
+                    if baseline is not None
+                    else 0.0
+                )
+                frames.append(
+                    {
+                        "index": len(frames),
+                        "label": f"Day {day}",
+                        "day_index": day,
+                        "route_id": option.id,
+                        "focus_node_ids": focus_node_ids,
+                        "discussion_turn_index": min(day - 1, max(len(discussion) - 1, 0)),
+                        "projected_mastery": round(projected_mastery, 2),
+                        "projected_completion_rate": round(projected_completion, 4),
+                        "active_step_node_id": active_step.node_id if active_step else "",
+                        "active_step_title": active_step.node_name if active_step else option.title,
+                        "compare_label": (
+                            "推荐基线"
+                            if baseline is not None and option.id == baseline.id
+                            else f"相对推荐 {comparison_delta:+.0f}%"
+                        ),
+                        "branch_type": "baseline",
+                    }
+                )
+        return frames
+
+    @staticmethod
+    def _checkpoint_days_for_horizon(horizon_days: int) -> list[int]:
+        return sorted({1, min(3, horizon_days), min(7, horizon_days), horizon_days})
+
+    @staticmethod
+    def _route_score(
+        *,
+        completion_rate: float,
+        estimated_mastery: float,
+        risks: list[str],
+        strategy_type: str,
+    ) -> float:
+        penalty = len(risks) * 2.5
+        if strategy_type == "breakthrough":
+            penalty += 2
+        return _clamp((completion_rate * 100 * 0.46) + (estimated_mastery * 0.54) - penalty, 0, 100)
+
+    def _week_one_task_blueprints(
+        self,
+        *,
+        steps: list[TheaterPathStep],
+        target_name: str,
+    ) -> list[dict[str, Any]]:
+        blueprints: list[dict[str, Any]] = []
+        for step in steps[:3]:
+            blueprints.append(
+                {
+                    "title": f"{step.day_label} · 推进 {step.node_name}",
+                    "node_id": step.node_id,
+                    "estimated_minutes": step.estimated_minutes,
+                    "day_label": step.day_label,
+                    "checkpoint_label": step.checkpoint_label,
+                    "summary": f"围绕 {target_name} 补齐 {step.node_name}，并把 {step.rationale}",
+                }
+            )
+        return blueprints
+
+    def _build_branch_timeline(
+        self,
+        *,
+        route: dict[str, Any],
+        skipped_steps: list[dict[str, Any]],
+        predicted_mastery: float,
+        predicted_completion: float,
+    ) -> list[dict[str, Any]]:
+        remaining_steps = [
+            step
+            for step in list(route.get("steps") or [])
+            if str(step.get("node_id") or "") not in {str(item.get("node_id") or "") for item in skipped_steps}
+        ]
+        day_count = max(len(remaining_steps), 4)
+        original_mastery = float(route.get("estimated_mastery") or predicted_mastery)
+        original_completion = float(route.get("estimated_completion_rate") or predicted_completion)
+        frames: list[dict[str, Any]] = []
+        for day in range(1, day_count + 1):
+            progress_ratio = day / day_count
+            active_step = remaining_steps[min(len(remaining_steps) - 1, max(day - 1, 0))] if remaining_steps else {}
+            mastery_value = original_mastery + ((predicted_mastery - original_mastery) * progress_ratio)
+            completion_value = original_completion + ((predicted_completion - original_completion) * progress_ratio)
             frames.append(
                 {
-                    "index": index,
-                    "label": option.title,
-                    "route_id": option.id,
-                    "focus_node_ids": [step.node_id for step in option.steps[:3]],
-                    "discussion_turn_index": min(index, max(len(discussion) - 1, 0)),
+                    "index": day - 1,
+                    "label": f"Day {day}",
+                    "day_index": day,
+                    "route_id": str(route.get("id") or ""),
+                    "focus_node_ids": [str(active_step.get("node_id") or "")] if active_step else [],
+                    "discussion_turn_index": 0,
+                    "projected_mastery": round(mastery_value, 2),
+                    "projected_completion_rate": round(completion_value, 4),
+                    "active_step_node_id": str(active_step.get("node_id") or ""),
+                    "active_step_title": str(active_step.get("node_name") or "分支推演"),
+                    "compare_label": "What-If 分支",
+                    "branch_type": "what_if",
                 }
             )
         return frames
+
+    async def _create_week_one_tasks(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        route: dict[str, Any],
+        target_name: str,
+    ) -> list[dict[str, Any]]:
+        created: list[dict[str, Any]] = []
+        for index, step in enumerate(list(route.get("steps") or [])[:3]):
+            node_id = self._maybe_uuid(step.get("node_id"))
+            due_date = date.today() + timedelta(days=min(index * 2, 6))
+            task = await TaskService.create(
+                self.db,
+                TaskCreate(
+                    title=f"{step.get('day_label') or f'Day {index + 1}'} · 推进 {step.get('node_name') or target_name}",
+                    type=TaskType.LEARNING,
+                    plan_id=plan_id,
+                    tags=["theater_path", str(route.get("strategy_type") or "route")],
+                    estimated_minutes=int(step.get("estimated_minutes") or 30),
+                    difficulty=2 if str(step.get("risk_level") or "") == "low" else 3,
+                    energy_cost=2,
+                    guide_content=str(step.get("rationale") or ""),
+                    due_date=due_date,
+                    knowledge_node_id=node_id,
+                ),
+                user_id,
+            )
+            created.append(
+                {
+                    "task_id": str(task.id),
+                    "title": task.title,
+                    "due_date": due_date.isoformat(),
+                    "task_type": task.type.value,
+                    "node_id": str(node_id) if node_id else "",
+                }
+            )
+        for checkpoint_day in self._checkpoint_days_for_horizon(7)[1:3]:
+            due_date = date.today() + timedelta(days=checkpoint_day - 1)
+            task = await TaskService.create(
+                self.db,
+                TaskCreate(
+                    title=f"Checkpoint · 回看 {target_name} 的推演进度",
+                    type=TaskType.REFLECTION,
+                    plan_id=plan_id,
+                    tags=["theater_checkpoint"],
+                    estimated_minutes=15,
+                    difficulty=1,
+                    energy_cost=1,
+                    guide_content="回看本周路径执行情况，对比推演预期与真实推进差异。",
+                    due_date=due_date,
+                ),
+                user_id,
+            )
+            created.append(
+                {
+                    "task_id": str(task.id),
+                    "title": task.title,
+                    "due_date": due_date.isoformat(),
+                    "task_type": task.type.value,
+                    "node_id": "",
+                }
+            )
+        return created
+
+    def _build_checkpoint_schedule(
+        self,
+        *,
+        route: dict[str, Any],
+        created_tasks: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        del route
+        checkpoints: list[dict[str, Any]] = []
+        for item in created_tasks:
+            if item.get("task_type") != TaskType.REFLECTION.value:
+                continue
+            checkpoints.append(
+                {
+                    "label": item.get("title"),
+                    "date": item.get("due_date"),
+                    "task_id": item.get("task_id"),
+                }
+            )
+        return checkpoints
+
+    @staticmethod
+    def _build_accuracy_tracking(
+        *,
+        prediction_id: str,
+        generated_at: datetime,
+    ) -> dict[str, Any]:
+        due_on = (generated_at.date() + timedelta(days=7)).isoformat()
+        return {
+            "prediction_id": prediction_id,
+            "status": "pending_feedback",
+            "due_on": due_on,
+            "summary_hint": "建议在 7 天后回填真实完成率和掌握度，检查这次推演是否命中。",
+        }
 
     def _fallback_discussion(
         self,
@@ -1321,6 +1646,28 @@ class PredictionTheaterService:
             if isinstance(step, dict) and str(step.get("node_id") or "") == node_id:
                 return step
         raise ValueError("Requested node not found in the route")
+
+    @staticmethod
+    def _find_steps(route: dict[str, Any], skip_node_ids: list[str]) -> list[dict[str, Any]]:
+        normalized_ids = [str(node_id).strip() for node_id in skip_node_ids if str(node_id).strip()]
+        matched = [
+            step
+            for step in list(route.get("steps") or [])
+            if isinstance(step, dict) and str(step.get("node_id") or "") in normalized_ids
+        ]
+        if matched:
+            return matched
+        fallback = list(route.get("steps") or [])
+        if fallback and isinstance(fallback[0], dict):
+            return [fallback[0]]
+        raise ValueError("Requested node not found in the route")
+
+    @staticmethod
+    def _maybe_uuid(value: Any) -> UUID | None:
+        try:
+            return UUID(str(value))
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def _step_rationale(*, strategy_type: str, node_name: str, is_target: bool) -> str:

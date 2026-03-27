@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
-import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 const double kGalaxyTextFadeThresholdMin = 0.18;
 const double kGalaxyTextFadeThresholdMax = 1.05;
@@ -23,21 +22,19 @@ const double kGalaxyReplaySpeedMax = 2.4;
 @immutable
 class GalaxyDisplaySettings {
   const GalaxyDisplaySettings({
-    this.textFadeThreshold = 0.58,
-    this.nodeSizeScale = 0.94,
-    this.linkThicknessScale = 0.92,
-    this.showArrows = true,
-    this.centerForce = 0.0016,
-    this.repelForce = 12000,
-    this.linkForce = 0.045,
-    this.linkDistance = 128,
-    this.replaySpeed = 0.82,
+    this.textFadeThreshold = 0.54,
+    this.nodeSizeScale = 0.98,
+    this.linkThicknessScale = 0.9,
+    this.centerForce = 0.0019,
+    this.repelForce = 9600,
+    this.linkForce = 0.056,
+    this.linkDistance = 116,
+    this.replaySpeed = 1.0,
   });
 
   final double textFadeThreshold;
   final double nodeSizeScale;
   final double linkThicknessScale;
-  final bool showArrows;
   final double centerForce;
   final double repelForce;
   final double linkForce;
@@ -48,7 +45,6 @@ class GalaxyDisplaySettings {
         'textFadeThreshold': textFadeThreshold,
         'nodeSizeScale': nodeSizeScale,
         'linkThicknessScale': linkThicknessScale,
-        'showArrows': showArrows,
         'centerForce': centerForce,
         'repelForce': repelForce,
         'linkForce': linkForce,
@@ -77,7 +73,6 @@ class GalaxyDisplaySettings {
           min: kGalaxyLinkThicknessScaleMin,
           max: kGalaxyLinkThicknessScaleMax,
         ),
-        showArrows: json['showArrows'] as bool? ?? true,
         centerForce: _readDouble(
           json['centerForce'],
           fallback: const GalaxyDisplaySettings().centerForce,
@@ -118,7 +113,6 @@ class GalaxyDisplaySettings {
     double? textFadeThreshold,
     double? nodeSizeScale,
     double? linkThicknessScale,
-    bool? showArrows,
     double? centerForce,
     double? repelForce,
     double? linkForce,
@@ -129,7 +123,6 @@ class GalaxyDisplaySettings {
         textFadeThreshold: textFadeThreshold ?? this.textFadeThreshold,
         nodeSizeScale: nodeSizeScale ?? this.nodeSizeScale,
         linkThicknessScale: linkThicknessScale ?? this.linkThicknessScale,
-        showArrows: showArrows ?? this.showArrows,
         centerForce: centerForce ?? this.centerForce,
         repelForce: repelForce ?? this.repelForce,
         linkForce: linkForce ?? this.linkForce,
@@ -167,9 +160,6 @@ class GalaxyDisplaySettings {
     return ((scale - start) / (end - start)).clamp(0.0, 1.0);
   }
 
-  bool showsArrowFor(EdgeRelationType relationType) =>
-      showArrows && relationType == EdgeRelationType.prerequisite;
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -178,7 +168,6 @@ class GalaxyDisplaySettings {
           textFadeThreshold == other.textFadeThreshold &&
           nodeSizeScale == other.nodeSizeScale &&
           linkThicknessScale == other.linkThicknessScale &&
-          showArrows == other.showArrows &&
           centerForce == other.centerForce &&
           repelForce == other.repelForce &&
           linkForce == other.linkForce &&
@@ -190,7 +179,6 @@ class GalaxyDisplaySettings {
         textFadeThreshold,
         nodeSizeScale,
         linkThicknessScale,
-        showArrows,
         centerForce,
         repelForce,
         linkForce,

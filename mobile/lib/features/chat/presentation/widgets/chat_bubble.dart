@@ -18,6 +18,7 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/grapheme_utils.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
@@ -392,6 +393,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   void _showContextMenu(BuildContext context) {
     if (_isRevoked || !mounted) return;
+    final chatPureMode = ref.read(chatPureModeProvider);
     final isSelfVisibleAgentDraft = widget.message is PrivateMessageInfo &&
         isPrivateAgentMessage(widget.message as PrivateMessageInfo) &&
         ((widget.message as PrivateMessageInfo)
@@ -482,6 +484,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       );
                     },
                   ),
+                if (chatPureMode && _hasPureModeHiddenAccessoryContent)
+                  ListTile(
+                    leading: const Icon(Icons.layers_outlined),
+                    title: const Text('查看附加内容'),
+                    subtitle: const Text('在纯净模式下临时展开任务卡和快捷入口'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showPureModeAccessorySheet(context);
+                    },
+                  ),
                 if (widget.onQuote != null &&
                     widget.message is PrivateMessageInfo)
                   ListTile(
@@ -520,6 +532,155 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   ),
                 const SizedBox(height: DS.sm),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _hasPureModeHiddenAccessoryContent {
+    if (widget.message is! ChatMessageModel) {
+      return false;
+    }
+    final message = widget.message as ChatMessageModel;
+    final collaboration = message.agentCollaboration ?? const {};
+    final hasPreviewShortcut =
+        collaboration['prediction_preview'] is Map<dynamic, dynamic> ||
+            collaboration['simulation_preview'] is Map<dynamic, dynamic> ||
+            collaboration['report_preview'] is Map<dynamic, dynamic>;
+    return _actionableWidgets.isNotEmpty || hasPreviewShortcut;
+  }
+
+  void _showPureModeAccessorySheet(BuildContext context) {
+    if (widget.message is! ChatMessageModel) {
+      return;
+    }
+    final chatMessage = widget.message as ChatMessageModel;
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map<dynamic, dynamic>) {
+        return Map<String, dynamic>.from(value);
+      }
+      return null;
+    }
+
+    final predictionPreview =
+        asMap(chatMessage.agentCollaboration?['prediction_preview']);
+    final simulationPreview =
+        asMap(chatMessage.agentCollaboration?['simulation_preview']);
+    final reportPreview =
+        asMap(chatMessage.agentCollaboration?['report_preview']);
+    final theaterDeepLink =
+        chatMessage.agentCollaboration?['deep_link']?.toString();
+    final simulationDeepLink =
+        chatMessage.agentCollaboration?['simulation_deep_link']?.toString();
+    final reportDeepLink =
+        chatMessage.agentCollaboration?['report_deep_link']?.toString();
+    final sourceChatSessionId =
+        chatMessage.agentCollaboration?['source_chat_session_id']?.toString();
+
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.overlay30.withValues(alpha: 0),
+        isScrollControlled: true,
+        builder: (sheetContext) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(sheetContext).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '附加内容',
+                    style:
+                        Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  if (_actionableWidgets.isNotEmpty) ...[
+                    ..._actionableWidgets.map(
+                      (w) {
+                        final actionable = (w.data['id'] ??
+                                w.data['tool_result_id'] ??
+                                w.data['intervention_id'] ??
+                                w.data['request_id']) !=
+                            null;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: DS.spacing12),
+                          child: ActionCard(
+                            action: w,
+                            onConfirm:
+                                actionable && widget.onActionConfirm != null
+                                    ? () => widget.onActionConfirm!(w)
+                                    : null,
+                            onDismiss:
+                                actionable && widget.onActionDismiss != null
+                                    ? () => widget.onActionDismiss!(w)
+                                    : null,
+                            onConfirmTasks: (toolResultId) async {
+                              final planId = w.data['plan_id']?.toString() ??
+                                  w.data['planId']?.toString();
+                              await _confirmGeneratedTasks(
+                                toolResultId: toolResultId,
+                                planId: planId,
+                              );
+                            },
+                            onConfirmAllTasks: (toolResultId) async {
+                              final planId = w.data['plan_id']?.toString() ??
+                                  w.data['planId']?.toString();
+                              await _confirmGeneratedTasks(
+                                toolResultId: toolResultId,
+                                planId: planId,
+                              );
+                            },
+                            onPlanNavigation: (planId) {
+                              unawaited(
+                                ref.read(planListProvider.notifier).refresh(),
+                              );
+                            },
+                            onWidgetAction: widget.onWidgetAction,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  if (predictionPreview != null && predictionPreview.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: DS.spacing8),
+                      child: _buildTheaterPreviewCard(
+                        sheetContext,
+                        preview: predictionPreview,
+                        deepLink: theaterDeepLink,
+                        sourceChatSessionId: sourceChatSessionId,
+                      ),
+                    ),
+                  if (simulationPreview != null && simulationPreview.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: DS.spacing8),
+                      child: _buildSimulationPreviewCard(
+                        sheetContext,
+                        preview: simulationPreview,
+                        deepLink: simulationDeepLink,
+                        sourceChatSessionId: sourceChatSessionId,
+                      ),
+                    ),
+                  if (reportPreview != null && reportPreview.isNotEmpty)
+                    _buildReportPreviewCard(
+                      sheetContext,
+                      preview: reportPreview,
+                      deepLink: reportDeepLink,
+                      sourceChatSessionId: sourceChatSessionId,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1222,6 +1383,131 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       );
 
+  Future<void> _continueInlinePrompt(String prompt) async {
+    final normalized = prompt.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    await ref.read(chatProvider.notifier).sendMessage(normalized);
+  }
+
+  List<_InlinePromptAction> _theaterPromptActions(
+    Map<String, dynamic> preview,
+  ) {
+    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final paths = (preview['paths'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final actions = <_InlinePromptAction>[
+      _InlinePromptAction(
+        label: '继续细化这条路径',
+        prompt: '继续围绕「$topic」细化第一周最该先做的步骤。',
+        onTap: () => _continueInlinePrompt(
+          '继续围绕「$topic」细化第一周最该先做的步骤。',
+        ),
+      ),
+    ];
+    if (paths.length >= 2) {
+      actions.add(
+        _InlinePromptAction(
+          label: '比较两条路线',
+          prompt:
+              '比较一下「${paths[0]['title'] ?? '路线 A'}」和「${paths[1]['title'] ?? '路线 B'}」的取舍。',
+          onTap: () => _continueInlinePrompt(
+            '比较一下「${paths[0]['title'] ?? '路线 A'}」和「${paths[1]['title'] ?? '路线 B'}」的取舍。',
+          ),
+        ),
+      );
+    } else {
+      actions.add(
+        _InlinePromptAction(
+          label: '先补什么前置',
+          prompt: '如果我现在就开始学「$topic」，最该先补的前置是什么？',
+          onTap: () => _continueInlinePrompt(
+            '如果我现在就开始学「$topic」，最该先补的前置是什么？',
+          ),
+        ),
+      );
+    }
+    return actions;
+  }
+
+  List<_InlinePromptAction> _simulationPromptActions(
+    Map<String, dynamic> preview,
+  ) {
+    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final actions = <_InlinePromptAction>[
+      _InlinePromptAction(
+        label: '继续模拟一轮',
+        prompt: '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。',
+        onTap: () => _continueInlinePrompt(
+          '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。',
+        ),
+      ),
+    ];
+    if (rounds.isNotEmpty) {
+      final speaker = rounds.first['speaker']?.toString() ?? '其中一个角色';
+      actions.add(
+        _InlinePromptAction(
+          label: '让我来回答',
+          prompt: '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。',
+          onTap: () => _continueInlinePrompt(
+            '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。',
+          ),
+        ),
+      );
+    }
+    return actions;
+  }
+
+  List<_InlinePromptAction> _reportPromptActions(
+    Map<String, dynamic> preview,
+  ) {
+    final report = LearningReport.fromJson(preview);
+    final highlight = (preview['highlights'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .cast<String?>()
+        .firstWhere((item) => item != null, orElse: () => null);
+    final actions = <_InlinePromptAction>[
+      _InlinePromptAction(
+        label: '排今天行动顺序',
+        prompt: '根据这份学习报告，帮我排一个今天就能开始的行动顺序。',
+        onTap: () => _continueInlinePrompt(
+          '根据这份学习报告，帮我排一个今天就能开始的行动顺序。',
+        ),
+      ),
+    ];
+    if ((highlight ?? '').isNotEmpty) {
+      actions.add(
+        _InlinePromptAction(
+          label: '展开重点问题',
+          prompt: '展开讲讲为什么「$highlight」最值得先处理。',
+          onTap: () => _continueInlinePrompt(
+            '展开讲讲为什么「$highlight」最值得先处理。',
+          ),
+        ),
+      );
+    } else if (report.mastery.isNotEmpty) {
+      actions.add(
+        _InlinePromptAction(
+          label: '先补哪一块',
+          prompt: '根据这份报告，先帮我解释为什么「${report.mastery.first.nodeName}」应该优先处理。',
+          onTap: () => _continueInlinePrompt(
+            '根据这份报告，先帮我解释为什么「${report.mastery.first.nodeName}」应该优先处理。',
+          ),
+        ),
+      );
+    }
+    return actions;
+  }
+
   Widget _buildTheaterPreviewCard(
     BuildContext context, {
     required Map<String, dynamic> preview,
@@ -1239,9 +1525,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       fallbackQuery: {'topic': topic},
       sourceChatSessionId: sourceChatSessionId,
     );
+    final promptActions = _theaterPromptActions(preview);
     return _InsightLinkCard(
       icon: Icons.auto_graph_rounded,
-      title: '查看推演详情',
+      title: '推演剧场',
       subtitle: topic,
       bullets: paths
           .take(3)
@@ -1252,6 +1539,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           .toList(),
       caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
       onTap: () => context.push(resolvedDeepLink),
+      promptActions: promptActions,
+      primaryLabel: '查看完整版',
+      onPrimaryTap: () => context.push(resolvedDeepLink),
+      secondaryLabel: '继续在对话里',
+      onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
 
@@ -1276,9 +1568,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       },
       sourceChatSessionId: sourceChatSessionId,
     );
+    final promptActions = _simulationPromptActions(preview);
     return _InsightLinkCard(
       icon: Icons.groups_rounded,
-      title: '查看模拟详情',
+      title: '学习仿真',
       subtitle: topic,
       bullets: rounds
           .take(3)
@@ -1288,6 +1581,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           .toList(),
       caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
       onTap: () => context.push(resolvedDeepLink),
+      promptActions: promptActions,
+      primaryLabel: '进入仿真',
+      onPrimaryTap: () => context.push(resolvedDeepLink),
+      secondaryLabel: '继续在对话里',
+      onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
 
@@ -1303,6 +1601,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .where((item) => item.isNotEmpty)
         .toList();
     final summary = preview['summary']?.toString() ?? '查看最新学习报告';
+    final triggerSummary = report.triggerSummary;
+    final promptActions = _reportPromptActions(preview);
     final resolvedDeepLink = _resolveInsightDeepLink(
       deepLink: deepLink,
       fallbackPath: ReportRoutes.learningReport,
@@ -1330,6 +1630,34 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         }
         unawaited(context.push(resolvedDeepLink));
       },
+      badgeLabel: triggerSummary?.title,
+      promptActions: promptActions,
+      actionButtons: report.actionCards
+          .take(2)
+          .map(
+            (item) => _InlineActionButton(
+              label: item.ctaLabel,
+              onTap: () => context.push(
+                _resolveInsightDeepLink(
+                  deepLink: item.deepLink,
+                  fallbackPath: ReportRoutes.learningReport,
+                  fallbackQuery: const <String, String>{},
+                  sourceChatSessionId: sourceChatSessionId,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      primaryLabel: '查看完整报告',
+      onPrimaryTap: () {
+        if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
+          unawaited(context.push(resolvedDeepLink, extra: report));
+          return;
+        }
+        unawaited(context.push(resolvedDeepLink));
+      },
+      secondaryLabel: '继续在对话里',
+      onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
 
@@ -2079,6 +2407,13 @@ class _InsightLinkCard extends StatelessWidget {
     required this.bullets,
     required this.onTap,
     this.caption,
+    this.badgeLabel,
+    this.promptActions = const [],
+    this.actionButtons = const [],
+    this.primaryLabel,
+    this.onPrimaryTap,
+    this.secondaryLabel,
+    this.onSecondaryTap,
   });
 
   final IconData icon;
@@ -2087,6 +2422,13 @@ class _InsightLinkCard extends StatelessWidget {
   final List<String> bullets;
   final VoidCallback onTap;
   final String? caption;
+  final String? badgeLabel;
+  final List<_InlinePromptAction> promptActions;
+  final List<_InlineActionButton> actionButtons;
+  final String? primaryLabel;
+  final VoidCallback? onPrimaryTap;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -2141,6 +2483,27 @@ class _InsightLinkCard extends StatelessWidget {
                   ),
                 ),
               ],
+              if (badgeLabel != null && badgeLabel!.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badgeLabel!,
+                    style: TextStyle(
+                      color: DS.brandPrimary,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.spacing4),
               Text(
                 subtitle,
@@ -2165,10 +2528,100 @@ class _InsightLinkCard extends StatelessWidget {
                       ),
                     ),
               ],
+              if (actionButtons.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: actionButtons
+                      .map(
+                        (item) => FilledButton.tonalIcon(
+                          onPressed: item.onTap,
+                          icon:
+                              const Icon(Icons.arrow_outward_rounded, size: 16),
+                          label: Text(item.label),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+              if (promptActions.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  '继续在对话里',
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing6),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: promptActions
+                      .map(
+                        (item) => ActionChip(
+                          avatar: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 16,
+                          ),
+                          label: Text(item.label),
+                          onPressed: item.onTap,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+              if ((primaryLabel ?? '').isNotEmpty ||
+                  (secondaryLabel ?? '').isNotEmpty) ...[
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    if ((primaryLabel ?? '').isNotEmpty && onPrimaryTap != null)
+                      FilledButton.icon(
+                        onPressed: onPrimaryTap,
+                        icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                        label: Text(primaryLabel!),
+                      ),
+                    if ((secondaryLabel ?? '').isNotEmpty &&
+                        onSecondaryTap != null)
+                      OutlinedButton.icon(
+                        onPressed: onSecondaryTap,
+                        icon: const Icon(Icons.forum_rounded, size: 16),
+                        label: Text(secondaryLabel!),
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       );
+}
+
+class _InlinePromptAction {
+  const _InlinePromptAction({
+    required this.label,
+    required this.prompt,
+    this.onTap,
+  });
+
+  final String label;
+  final String prompt;
+  final VoidCallback? onTap;
+}
+
+class _InlineActionButton {
+  const _InlineActionButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
 }
 
 Color _chatBubbleHexToColor(String hex, BuildContext context) {

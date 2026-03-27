@@ -77,6 +77,7 @@ class SimulationRoundModel {
     required this.message,
     this.replyToSpeaker,
     this.turnGoal,
+    this.speakerType,
   });
 
   factory SimulationRoundModel.fromJson(Map<String, dynamic> json) =>
@@ -86,6 +87,7 @@ class SimulationRoundModel {
         message: json['message']?.toString() ?? '',
         replyToSpeaker: json['reply_to_speaker']?.toString(),
         turnGoal: json['turn_goal']?.toString(),
+        speakerType: json['speaker_type']?.toString(),
       );
 
   final int round;
@@ -93,6 +95,43 @@ class SimulationRoundModel {
   final String message;
   final String? replyToSpeaker;
   final String? turnGoal;
+  final String? speakerType;
+}
+
+class SimulationInteractionModel {
+  const SimulationInteractionModel({
+    required this.id,
+    required this.interactionType,
+    required this.prompt,
+    this.suggestedReplies = const [],
+    this.options = const [],
+    this.targetRound = 0,
+    this.status,
+  });
+
+  factory SimulationInteractionModel.fromJson(Map<String, dynamic> json) =>
+      SimulationInteractionModel(
+        id: json['id']?.toString() ?? '',
+        interactionType: json['interaction_type']?.toString() ?? 'choice',
+        prompt: json['prompt']?.toString() ?? '',
+        suggestedReplies:
+            (json['suggested_replies'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
+        options: (json['options'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        targetRound: (json['target_round'] as num?)?.toInt() ?? 0,
+        status: json['status']?.toString(),
+      );
+
+  final String id;
+  final String interactionType;
+  final String prompt;
+  final List<String> suggestedReplies;
+  final List<String> options;
+  final int targetRound;
+  final String? status;
 }
 
 class SimulationSessionModel {
@@ -106,6 +145,10 @@ class SimulationSessionModel {
     required this.insightSummary,
     this.interactionPrompt,
     this.suggestedReplies = const [],
+    this.interactionType,
+    this.interactionOptions = const [],
+    this.plannedRoundCount = 0,
+    this.pendingInteraction,
   });
 
   factory SimulationSessionModel.fromJson(Map<String, dynamic> json) =>
@@ -128,6 +171,17 @@ class SimulationSessionModel {
             (json['suggested_replies'] as List<dynamic>? ?? const [])
                 .map((item) => item.toString())
                 .toList(),
+        interactionType: json['interaction_type']?.toString(),
+        interactionOptions:
+            (json['interaction_options'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
+        plannedRoundCount: (json['planned_round_count'] as num?)?.toInt() ?? 0,
+        pendingInteraction: json['pending_interaction'] is Map<String, dynamic>
+            ? SimulationInteractionModel.fromJson(
+                json['pending_interaction'] as Map<String, dynamic>,
+              )
+            : null,
       );
 
   final String id;
@@ -139,6 +193,10 @@ class SimulationSessionModel {
   final String insightSummary;
   final String? interactionPrompt;
   final List<String> suggestedReplies;
+  final String? interactionType;
+  final List<String> interactionOptions;
+  final int plannedRoundCount;
+  final SimulationInteractionModel? pendingInteraction;
 
   SimulationSessionModel copyWith({
     String? id,
@@ -150,6 +208,10 @@ class SimulationSessionModel {
     String? insightSummary,
     String? interactionPrompt,
     List<String>? suggestedReplies,
+    String? interactionType,
+    List<String>? interactionOptions,
+    int? plannedRoundCount,
+    SimulationInteractionModel? pendingInteraction,
   }) =>
       SimulationSessionModel(
         id: id ?? this.id,
@@ -161,6 +223,10 @@ class SimulationSessionModel {
         insightSummary: insightSummary ?? this.insightSummary,
         interactionPrompt: interactionPrompt ?? this.interactionPrompt,
         suggestedReplies: suggestedReplies ?? this.suggestedReplies,
+        interactionType: interactionType ?? this.interactionType,
+        interactionOptions: interactionOptions ?? this.interactionOptions,
+        plannedRoundCount: plannedRoundCount ?? this.plannedRoundCount,
+        pendingInteraction: pendingInteraction ?? this.pendingInteraction,
       );
 }
 
@@ -177,6 +243,7 @@ class SimulationStreamEventModel {
     this.message,
     this.interactionPrompt,
     this.suggestedReplies = const [],
+    this.interaction,
   });
 
   factory SimulationStreamEventModel.fromJson(
@@ -212,6 +279,11 @@ class SimulationStreamEventModel {
             (json['suggested_replies'] as List<dynamic>? ?? const [])
                 .map((item) => item.toString())
                 .toList(),
+        interaction: json['interaction'] is Map<String, dynamic>
+            ? SimulationInteractionModel.fromJson(
+                json['interaction'] as Map<String, dynamic>,
+              )
+            : null,
       );
 
   final String event;
@@ -225,4 +297,5 @@ class SimulationStreamEventModel {
   final String? message;
   final String? interactionPrompt;
   final List<String> suggestedReplies;
+  final SimulationInteractionModel? interaction;
 }

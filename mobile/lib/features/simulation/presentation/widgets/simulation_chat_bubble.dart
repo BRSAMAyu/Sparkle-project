@@ -13,6 +13,7 @@ class SimulationChatBubble extends StatefulWidget {
     this.participant,
     this.replyToSpeaker,
     this.turnGoal,
+    this.isSpotlighted = false,
   });
 
   final String speaker;
@@ -21,6 +22,7 @@ class SimulationChatBubble extends StatefulWidget {
   final SimulationParticipantModel? participant;
   final String? replyToSpeaker;
   final String? turnGoal;
+  final bool isSpotlighted;
 
   @override
   State<SimulationChatBubble> createState() => _SimulationChatBubbleState();
@@ -111,7 +113,9 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                   begin: isLeftAligned ? Alignment.topLeft : Alignment.topRight,
                   end: Alignment.bottomCenter,
                   colors: [
-                    accent.withValues(alpha: 0.14),
+                    accent.withValues(
+                      alpha: widget.isSpotlighted ? 0.22 : 0.14,
+                    ),
                     scheme.surfaceContainerHighest.withValues(alpha: 0.92),
                   ],
                 ),
@@ -121,11 +125,18 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                   bottomLeft: Radius.circular(isLeftAligned ? 8 : 20),
                   bottomRight: Radius.circular(isLeftAligned ? 20 : 8),
                 ),
-                border: Border.all(color: accent.withValues(alpha: 0.16)),
+                border: Border.all(
+                  color: accent.withValues(
+                    alpha: widget.isSpotlighted ? 0.32 : 0.16,
+                  ),
+                  width: widget.isSpotlighted ? 1.4 : 1,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: accent.withValues(alpha: 0.08),
-                    blurRadius: 20,
+                    color: accent.withValues(
+                      alpha: widget.isSpotlighted ? 0.16 : 0.08,
+                    ),
+                    blurRadius: widget.isSpotlighted ? 28 : 20,
                     offset: const Offset(0, 8),
                   ),
                 ],
@@ -133,6 +144,40 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (widget.isSpotlighted) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.mic_rounded,
+                            size: 14,
+                            color: accent,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '当前焦点发言',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (widget.replyToSpeaker?.isNotEmpty ?? false) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 10),
@@ -186,12 +231,10 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
-                          child: Text(
-                            widget.speaker.isEmpty ? '?' : widget.speaker[0],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          child: Icon(
+                            _speakerIcon(participant),
+                            color: Colors.white,
+                            size: 18,
                           ),
                         ),
                       ),
@@ -226,7 +269,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                     ),
                                   if (participant?.stance?.isNotEmpty ?? false)
                                     _MetaPill(
-                                      label: participant!.stance!,
+                                      label: '立场 ${participant!.stance!}',
                                       foreground: DS.textSecondary,
                                       background:
                                           scheme.surface.withValues(alpha: 0.9),
@@ -318,7 +361,10 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                         if (widget.replyToSpeaker?.isNotEmpty ?? false)
                           _MetaPill(label: '回应 ${widget.replyToSpeaker}'),
                         if (widget.turnGoal?.isNotEmpty ?? false)
-                          _MetaPill(label: '目标 ${widget.turnGoal}'),
+                          _MetaPill(
+                            icon: Icons.flag_rounded,
+                            label: _turnGoalLabel(widget.turnGoal!),
+                          ),
                       ],
                     ),
                   ],
@@ -361,6 +407,39 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
         return '起步图谱';
       default:
         return source;
+    }
+  }
+
+  IconData _speakerIcon(SimulationParticipantModel? participant) {
+    final role = participant?.roleHint.toLowerCase() ?? '';
+    final stance = participant?.stance?.toLowerCase() ?? '';
+    if (role.contains('质疑') || stance.contains('反')) {
+      return Icons.gavel_rounded;
+    }
+    if (role.contains('联想') || role.contains('创意')) {
+      return Icons.auto_awesome_rounded;
+    }
+    if (role.contains('导航') || role.contains('教练')) {
+      return Icons.explore_rounded;
+    }
+    if (role.contains('分析') || role.contains('专家')) {
+      return Icons.psychology_alt_rounded;
+    }
+    return Icons.person_rounded;
+  }
+
+  String _turnGoalLabel(String turnGoal) {
+    switch (turnGoal) {
+      case 'challenge':
+        return '提出质疑';
+      case 'synthesize':
+        return '整合观点';
+      case 'open':
+        return '打开话题';
+      case 'guide_user':
+        return '邀请用户作答';
+      default:
+        return '目标 $turnGoal';
     }
   }
 }

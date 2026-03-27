@@ -50,6 +50,28 @@ class _FakeSimulationRepository implements SimulationRepository {
     required String scenarioKey,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async =>
+      const SimulationSessionModel(
+        id: 's-1',
+        scenarioKey: 'study_group',
+        state: 'COMPLETED',
+        topic: '特征值与特征向量',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '已完成模拟',
+      );
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
 }
 
 class _StaticSimulationNotifier extends SimulationNotifier {
@@ -171,7 +193,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1'),
+        find.text(
+            '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1'),
         findsOneWidget,
       );
     });

@@ -15,6 +15,7 @@ router = APIRouter(prefix="/learning-reports", tags=["learning-reports"])
 
 class LearningReportRequest(BaseModel):
     section_limit: int = Field(default=5, ge=2, le=5)
+    trigger_source: str = Field(default="api", min_length=1, max_length=32)
 
 
 @router.post("/generate")
@@ -24,4 +25,8 @@ async def generate_learning_report(
     db: AsyncSession = Depends(get_db),
 ):
     agent = LearningReportAgent(db)
-    return await agent.generate_report(UUID(user_id), section_limit=request.section_limit)
+    return await agent.generate_report(
+        UUID(user_id),
+        section_limit=request.section_limit,
+        trigger_source=request.trigger_source,
+    )

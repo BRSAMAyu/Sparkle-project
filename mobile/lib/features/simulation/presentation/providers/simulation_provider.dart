@@ -8,6 +8,7 @@ import 'package:sparkle/features/simulation/data/repositories/simulation_reposit
 class SimulationState {
   const SimulationState({
     this.isLoading = false,
+    this.isContinuing = false,
     this.isLoadingRecommendations = false,
     this.session,
     this.error,
@@ -20,9 +21,11 @@ class SimulationState {
     this.liveInsightSummary,
     this.liveInteractionPrompt,
     this.liveSuggestedReplies = const [],
+    this.activeInteraction,
   });
 
   final bool isLoading;
+  final bool isContinuing;
   final bool isLoadingRecommendations;
   final SimulationSessionModel? session;
   final String? error;
@@ -35,9 +38,13 @@ class SimulationState {
   final String? liveInsightSummary;
   final String? liveInteractionPrompt;
   final List<String> liveSuggestedReplies;
+  final SimulationInteractionModel? activeInteraction;
+
+  bool get isAwaitingUserInput => engineState == 'WAITING_FOR_USER';
 
   SimulationState copyWith({
     bool? isLoading,
+    bool? isContinuing,
     bool? isLoadingRecommendations,
     SimulationSessionModel? session,
     String? error,
@@ -50,14 +57,17 @@ class SimulationState {
     String? liveInsightSummary,
     String? liveInteractionPrompt,
     List<String>? liveSuggestedReplies,
+    SimulationInteractionModel? activeInteraction,
     bool clearError = false,
     bool clearSession = false,
     bool clearSessionId = false,
     bool clearLiveInsightSummary = false,
     bool clearLiveInteractionPrompt = false,
+    bool clearActiveInteraction = false,
   }) =>
       SimulationState(
         isLoading: isLoading ?? this.isLoading,
+        isContinuing: isContinuing ?? this.isContinuing,
         isLoadingRecommendations:
             isLoadingRecommendations ?? this.isLoadingRecommendations,
         session: clearSession ? null : session ?? this.session,
@@ -75,6 +85,9 @@ class SimulationState {
             ? null
             : liveInteractionPrompt ?? this.liveInteractionPrompt,
         liveSuggestedReplies: liveSuggestedReplies ?? this.liveSuggestedReplies,
+        activeInteraction: clearActiveInteraction
+            ? null
+            : activeInteraction ?? this.activeInteraction,
       );
 }
 
@@ -127,6 +140,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       clearLiveInsightSummary: true,
       clearLiveInteractionPrompt: true,
       liveSuggestedReplies: const [],
+      clearActiveInteraction: true,
     );
     unawaited(
       _ref.read(appEventStreamServiceProvider).recordSimulationStarted(
@@ -157,10 +171,65 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveInsightSummary: session.insightSummary,
           liveInteractionPrompt: session.interactionPrompt,
           liveSuggestedReplies: session.suggestedReplies,
+          activeInteraction: session.pendingInteraction,
         );
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> continueSimulation(String userResponse) async {
+    final sessionId = state.sessionId ?? state.session?.id;
+    final topic = state.session?.topic ?? '';
+    final scenarioKey = state.session?.scenarioKey ?? 'study_group';
+    if ((sessionId ?? '').isEmpty || userResponse.trim().isEmpty) {
+      return;
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isContinuing: true,
+      clearError: true,
+      engineState: 'RUNNING',
+      clearLiveInteractionPrompt: true,
+      liveSuggestedReplies: const [],
+      clearActiveInteraction: true,
+    );
+
+    try {
+      await for (final event in _repository.continueSimulationStream(
+        sessionId: sessionId!,
+        userResponse: userResponse.trim(),
+      )) {
+        _applyStreamEvent(event, topic: topic, scenarioKey: scenarioKey);
+      }
+      if (state.session == null || state.session?.id != sessionId) {
+        final session = await _repository.continueSimulation(
+          sessionId: sessionId,
+          userResponse: userResponse.trim(),
+        );
+        state = state.copyWith(
+          isLoading: false,
+          isContinuing: false,
+          session: session,
+          sessionId: session.id,
+          engineState: session.state,
+          progress: 1,
+          liveParticipants: session.participants,
+          liveRounds: session.rounds,
+          liveInsightSummary: session.insightSummary,
+          liveInteractionPrompt: session.interactionPrompt,
+          liveSuggestedReplies: session.suggestedReplies,
+          activeInteraction: session.pendingInteraction,
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isContinuing: false,
+        error: e.toString(),
+      );
     }
   }
 
@@ -191,6 +260,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             engineState: event.state,
             interactionPrompt: event.interactionPrompt,
             suggestedReplies: event.suggestedReplies,
+            pendingInteraction: event.interaction,
           ),
         );
         return;
@@ -212,6 +282,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveSuggestedReplies: event.suggestedReplies.isNotEmpty
               ? event.suggestedReplies
               : state.liveSuggestedReplies,
+          activeInteraction: event.interaction ?? state.activeInteraction,
           session: _draftSession(
             topic: topic,
             scenarioKey: scenarioKey,
@@ -225,6 +296,70 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             suggestedReplies: event.suggestedReplies.isNotEmpty
                 ? event.suggestedReplies
                 : state.liveSuggestedReplies,
+            pendingInteraction: event.interaction ?? state.activeInteraction,
+          ),
+        );
+        return;
+      case 'insight':
+        state = state.copyWith(
+          sessionId: event.sessionId,
+          engineState: event.state,
+          progress: event.progress ?? state.progress,
+          liveInsightSummary: event.message ?? state.liveInsightSummary,
+          session: _draftSession(
+            topic: topic,
+            scenarioKey: scenarioKey,
+            sessionId: event.sessionId,
+            participants: state.liveParticipants,
+            rounds: state.liveRounds,
+            engineState: event.state,
+            insightSummary: event.message ?? state.liveInsightSummary,
+            interactionPrompt: state.liveInteractionPrompt,
+            suggestedReplies: state.liveSuggestedReplies,
+            pendingInteraction: state.activeInteraction,
+          ),
+        );
+        return;
+      case 'interaction':
+        final interaction = event.interaction;
+        final interactionReplies =
+            interaction?.suggestedReplies ?? const <String>[];
+        state = state.copyWith(
+          isLoading: false,
+          isContinuing: false,
+          sessionId: event.sessionId,
+          engineState: event.state,
+          progress: event.progress ?? state.progress,
+          liveParticipants: event.participants.isNotEmpty
+              ? event.participants
+              : state.liveParticipants,
+          liveRounds: event.rounds.isNotEmpty ? event.rounds : state.liveRounds,
+          liveInteractionPrompt: interaction?.prompt ??
+              event.interactionPrompt ??
+              state.liveInteractionPrompt,
+          liveSuggestedReplies: interactionReplies.isNotEmpty
+              ? interactionReplies
+              : (event.suggestedReplies.isNotEmpty
+                  ? event.suggestedReplies
+                  : state.liveSuggestedReplies),
+          activeInteraction: interaction,
+          session: _draftSession(
+            topic: topic,
+            scenarioKey: scenarioKey,
+            sessionId: event.sessionId,
+            participants: event.participants.isNotEmpty
+                ? event.participants
+                : state.liveParticipants,
+            rounds: event.rounds.isNotEmpty ? event.rounds : state.liveRounds,
+            engineState: event.state,
+            insightSummary: state.liveInsightSummary,
+            interactionPrompt: interaction?.prompt ??
+                event.interactionPrompt ??
+                state.liveInteractionPrompt,
+            suggestedReplies: interactionReplies.isNotEmpty
+                ? interactionReplies
+                : state.liveSuggestedReplies,
+            pendingInteraction: interaction,
           ),
         );
         return;
@@ -232,6 +367,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         final session = event.session;
         state = state.copyWith(
           isLoading: false,
+          isContinuing: false,
           session: session,
           sessionId: session?.id ?? event.sessionId,
           engineState: session?.state ?? event.state,
@@ -245,17 +381,21 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveSuggestedReplies: (session?.suggestedReplies.isNotEmpty ?? false)
               ? session!.suggestedReplies
               : state.liveSuggestedReplies,
+          activeInteraction:
+              session?.pendingInteraction ?? state.activeInteraction,
         );
         return;
       case 'error':
         state = state.copyWith(
           isLoading: false,
+          isContinuing: false,
           error: event.message ?? '模拟生成失败',
         );
         return;
       case 'done':
         state = state.copyWith(
           isLoading: false,
+          isContinuing: false,
           progress: state.progress == 0 ? 1 : state.progress,
         );
         return;
@@ -274,6 +414,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     String? insightSummary,
     String? interactionPrompt,
     List<String>? suggestedReplies,
+    SimulationInteractionModel? pendingInteraction,
   }) =>
       SimulationSessionModel(
         id: sessionId ?? state.sessionId ?? '',
@@ -286,6 +427,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             insightSummary ?? state.liveInsightSummary ?? '模拟进行中，正在汇总当前讨论洞察...',
         interactionPrompt: interactionPrompt ?? state.liveInteractionPrompt,
         suggestedReplies: suggestedReplies ?? state.liveSuggestedReplies,
+        pendingInteraction: pendingInteraction ?? state.activeInteraction,
       );
 }
 
