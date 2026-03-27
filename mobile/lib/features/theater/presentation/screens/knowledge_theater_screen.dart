@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
+import 'package:sparkle/core/widgets/mirofish_stage_header.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
@@ -244,7 +245,7 @@ class _KnowledgeTheaterScreenState
                         ChatContinuityBanner(
                           sourceChatSessionId:
                               widget.initialSourceChatSessionId!.trim(),
-                          subtitle: '这次推演来自刚才的聊天桥接。你可以随时回到原对话继续追问路径、风险和具体行动。',
+                          subtitle: '这次推演承接了你刚才的探索流程。你可以随时回到原对话继续追问路径、风险和具体行动。',
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -537,6 +538,9 @@ class _KnowledgeTheaterScreenState
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     final canRunWhatIf =
         selectedRoute?.steps.any((step) => step.nodeId == node.id) ?? false;
+    final matchedStep = selectedRoute?.steps
+        .where((step) => step.nodeId == node.id)
+        .firstOrNull;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -593,6 +597,63 @@ class _KnowledgeTheaterScreenState
                     ),
                   ],
                 ),
+                if (matchedStep != null) ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    '它在当前路径里的作用',
+                    style:
+                        Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${matchedStep.dayLabel} · 第 ${matchedStep.index} 步',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                color: _riskColor(node.riskLevel, scheme),
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          matchedStep.rationale,
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.45,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '下一步动作：先用约 ${matchedStep.estimatedMinutes} 分钟处理这个节点，再进入后续步骤。',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: DS.textSecondary,
+                                height: 1.45,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Wrap(
                   spacing: 10,
@@ -871,27 +932,46 @@ class _ComposerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.card,
-      borderColor: DS.info.withValues(alpha: 0.14),
-      child: Column(
+    final topSuggestions = suggestions
+        .where((seed) => seed.topic.trim().isNotEmpty)
+        .take(3)
+        .toList();
+    return MirofishStageHeader(
+      icon: Icons.travel_explore_rounded,
+      eyebrow: 'Prediction Theater',
+      title: '先定目标，再看清多条路径',
+      subtitle: '把一个学习目标交给 AI，剧场会先拆关键节点，再比较路径、风险和日程投入。',
+      metrics: <MirofishStageMetric>[
+        MirofishStageMetric(
+          label: '当前目标',
+          value: controller.text.trim().isEmpty ? '等待输入' : controller.text.trim(),
+          accent: DS.info,
+          icon: Icons.flag_rounded,
+        ),
+        MirofishStageMetric(
+          label: '推荐切入',
+          value: topSuggestions.isEmpty ? '输入后即可开始' : topSuggestions.first.topic,
+          accent: DS.warning,
+          icon: Icons.lightbulb_rounded,
+        ),
+        MirofishStageMetric(
+          label: '输出结果',
+          value: '路径 + 风险 + 检查点',
+          accent: DS.success,
+          icon: Icons.route_rounded,
+        ),
+      ],
+      primaryLabel: isLoading ? '推演中...' : '开始推演',
+      onPrimaryTap: isLoading ? null : onSubmit,
+      secondaryLabel:
+          topSuggestions.length > 1 ? '试试 ${topSuggestions[1].topic}' : null,
+      onSecondaryTap: topSuggestions.length > 1
+          ? () => onSuggestionTap(topSuggestions[1].topic)
+          : null,
+      accent: DS.info,
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '让 AI 帮你推演多条学习路径',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '你可以输入一个学习目标，也可以直接点选下方最近最值得推演的主题。',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textSecondary,
-                  height: 1.4,
-                ),
-          ),
-          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -919,7 +999,7 @@ class _ComposerCard extends StatelessWidget {
               FilledButton.icon(
                 onPressed: isLoading ? null : onSubmit,
                 icon: const Icon(Icons.auto_awesome),
-                label: Text(isLoading ? '推演中' : '开始'),
+                label: Text(isLoading ? '推演中' : '生成'),
               ),
             ],
           ),
@@ -1186,27 +1266,45 @@ class _PredictionView extends StatelessWidget {
       children: [
         _SectionEntrance(
           delay: 0,
-          child: GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prediction.topic,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '围绕 ${prediction.targetName}，AI 正在帮你比较多条学习路径、关键风险和知识依赖。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.45,
-                      ),
-                ),
-              ],
-            ),
+          child: MirofishStageHeader(
+            icon: Icons.auto_graph_rounded,
+            eyebrow: 'Prediction Summary',
+            title: prediction.topic,
+            subtitle: route == null
+                ? '围绕 ${prediction.targetName}，先看推荐路径、关键风险和知识依赖，再决定采纳哪一种方案。'
+                : '当前正在查看「${route.title}」，重点是 ${route.summary}',
+            metrics: <MirofishStageMetric>[
+              MirofishStageMetric(
+                label: '推荐路径',
+                value: prediction.paths
+                        .firstWhere(
+                          (item) => item.id == prediction.recommendedRouteId,
+                          orElse: () => prediction.paths.first,
+                        )
+                        .title,
+                accent: DS.success,
+                icon: Icons.star_rounded,
+              ),
+              MirofishStageMetric(
+                label: '时间跨度',
+                value: '${prediction.horizonDays} 天',
+                accent: DS.info,
+                icon: Icons.schedule_rounded,
+              ),
+              MirofishStageMetric(
+                label: '图谱规模',
+                value: '${prediction.graphNodes.length} 节点',
+                accent: DS.warning,
+                icon: Icons.hub_rounded,
+              ),
+            ],
+            primaryLabel: route == null ? '查看推荐路径' : '采纳当前路径',
+            onPrimaryTap: route == null
+                ? () => onRouteSelected(prediction.recommendedRouteId)
+                : onAdopt,
+            secondaryLabel: '保存快照',
+            onSecondaryTap: onSaveSnapshot,
+            accent: DS.brandPrimary,
           ),
         ),
         const SizedBox(height: 14),
@@ -1303,6 +1401,17 @@ class _PredictionView extends StatelessWidget {
             adoptionResult: adoptionResult,
           ),
         ),
+        if (route != null && prediction.paths.length > 1) ...[
+          const SizedBox(height: 14),
+          _SectionEntrance(
+            delay: 380,
+            child: _RouteComparisonCard(
+              selectedRoute: route,
+              recommendedRouteId: recommendedRouteId,
+              alternatives: prediction.paths.where((item) => item.id != route.id).toList(),
+            ),
+          ),
+        ],
         if (route != null) ...[
           const SizedBox(height: 14),
           _SectionEntrance(
@@ -1583,11 +1692,11 @@ class _SectionEntranceState extends State<_SectionEntrance> {
 
   @override
   Widget build(BuildContext context) => AnimatedSlide(
-        duration: DS.durationNormal,
+        duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
         curve: Curves.easeOutCubic,
         offset: _visible ? Offset.zero : const Offset(0, 0.06),
         child: AnimatedOpacity(
-          duration: DS.durationNormal,
+          duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
           opacity: _visible ? 1 : 0,
           child: widget.child,
         ),
@@ -1676,6 +1785,44 @@ class _TimelineSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (timeline.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.68),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentFrame?.label ?? '当前帧',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: DS.brandPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    currentFrame?.activeStepTitle ?? '等待路径生成',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    currentFrame?.compareLabel ?? '基线预测',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
@@ -2328,6 +2475,131 @@ class _TimelineMetricTile extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _RouteComparisonCard extends StatelessWidget {
+  const _RouteComparisonCard({
+    required this.selectedRoute,
+    required this.recommendedRouteId,
+    required this.alternatives,
+  });
+
+  final TheaterPathOption selectedRoute;
+  final String recommendedRouteId;
+  final List<TheaterPathOption> alternatives;
+
+  @override
+  Widget build(BuildContext context) {
+    final compareRoute = alternatives.firstWhere(
+      (item) => item.id == recommendedRouteId,
+      orElse: () => alternatives.first,
+    );
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '路径对比',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 14),
+          Table(
+            columnWidths: const <int, TableColumnWidth>{
+              0: FlexColumnWidth(1.15),
+              1: FlexColumnWidth(),
+              2: FlexColumnWidth(),
+            },
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            children: [
+              _comparisonRow(
+                context,
+                '指标',
+                selectedRoute.title,
+                compareRoute.title,
+                header: true,
+              ),
+              _comparisonRow(
+                context,
+                '预计掌握度',
+                '${selectedRoute.estimatedMastery.round()}%',
+                '${compareRoute.estimatedMastery.round()}%',
+              ),
+              _comparisonRow(
+                context,
+                '时间投入',
+                '${selectedRoute.dailyMinutes} 分/天',
+                '${compareRoute.dailyMinutes} 分/天',
+              ),
+              _comparisonRow(
+                context,
+                '风险等级',
+                _routeRiskLabel(selectedRoute),
+                _routeRiskLabel(compareRoute),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  TableRow _comparisonRow(
+    BuildContext context,
+    String metric,
+    String left,
+    String right, {
+    bool header = false,
+  }) {
+    final style = header
+        ? Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            )
+        : Theme.of(context).textTheme.bodySmall?.copyWith(
+              height: 1.4,
+            );
+    return TableRow(
+      children: [
+        _comparisonCell(metric, style, DS.textSecondary, header: header),
+        _comparisonCell(left, style, null, header: header),
+        _comparisonCell(right, style, null, header: header),
+      ],
+    );
+  }
+
+  Widget _comparisonCell(
+    String text,
+    TextStyle? style,
+    Color? color, {
+    bool header = false,
+  }) =>
+      Padding(
+        padding: EdgeInsets.only(bottom: header ? 10 : 12, right: 8),
+        child: Text(
+          text,
+          style: style?.copyWith(color: color ?? style.color),
+        ),
+      );
+
+  String _routeRiskLabel(TheaterPathOption route) {
+    if (route.risks.isEmpty) {
+      return '低';
+    }
+    if (route.risks.length >= 2) {
+      return '中高';
+    }
+    return '中';
+  }
 }
 
 class _BranchDeltaCard extends StatelessWidget {

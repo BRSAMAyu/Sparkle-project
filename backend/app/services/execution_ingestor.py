@@ -26,6 +26,7 @@ from app.models.background_task import BackgroundTaskStatus, BackgroundTaskType
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus, TrustLevel
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus
+from app.services.execution_learning_service import ExecutionLearningService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
 DELEGATED_COMPLETION_NOTE = "Completed by delegated OpenClaw execution"
@@ -47,6 +48,7 @@ class ExecutionIngestor:
             auto_trust_success_rate=settings.OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE,
         )
         self._plan_record_service = PlanExecutionRecordService(db)
+        self._learning_service = ExecutionLearningService(db=db, redis=redis)
 
     async def ingest(
         self,
@@ -146,6 +148,12 @@ class ExecutionIngestor:
                 success=bool(parsed.get("success")),
                 error_category=intent.error_category,
             )
+            if parsed.get("success"):
+                await self._learning_service.handle_trusted_execution(
+                    intent=intent,
+                    record=record,
+                    parsed=parsed,
+                )
 
         await event_bus.publish(
             EXECUTION_APPROVAL_DECISION,
@@ -225,6 +233,11 @@ class ExecutionIngestor:
             progress=1.0,
             progress_message="Execution rejected and returned to user",
             error_message=intent.error_message,
+        )
+        await self._learning_service.handle_handed_back(
+            intent=intent,
+            record=record,
+            reason=reason,
         )
         return record
 
@@ -406,6 +419,12 @@ class ExecutionIngestor:
             },
             error_message=intent.error_message,
         )
+        if intent.trust_level == TrustLevel.TRUSTED and parsed.get("success"):
+            await self._learning_service.handle_trusted_execution(
+                intent=intent,
+                record=record,
+                parsed=parsed,
+            )
 
     async def _complete_task_safely(self, *, task: Task) -> None:
         task.status = TaskStatus.COMPLETED

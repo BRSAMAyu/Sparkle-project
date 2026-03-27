@@ -301,6 +301,11 @@ void main() {
       expect(find.text('学习分析报告'), findsOneWidget);
       expect(find.text('已建立第一版学习基线'), findsOneWidget);
       expect(find.text('诊断摘要'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('掌握度趋势'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('掌握度趋势'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('掌握度雷达图'),

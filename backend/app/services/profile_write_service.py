@@ -184,6 +184,7 @@ class ProfileWriteService:
             return prefs.version or 0
 
         prefs = await self.pref_service.update_inferred(user_id, filtered_updates)
+        preference_version = prefs.version or 0
 
         for key, value in filtered_updates.items():
             try:
@@ -196,7 +197,6 @@ class ProfileWriteService:
                     source_type="ai_inferred",
                 )
             except Exception as exc:
-                await self.db.rollback()
                 logger.warning(
                     "Inferred preference history write failed user_id=%s pref_key=%s error=%s",
                     user_id,
@@ -207,10 +207,10 @@ class ProfileWriteService:
         await self._publish_preference_updated_event(
             user_id=user_id,
             pref_keys=list(filtered_updates.keys()),
-            preference_version=prefs.version or 0,
+            preference_version=preference_version,
             source=source,
         )
-        return prefs.version or 0
+        return preference_version
 
     async def remove_inferred_preference(
         self,

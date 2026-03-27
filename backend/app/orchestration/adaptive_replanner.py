@@ -4,6 +4,7 @@ AdaptiveReplanner - Automatic plan adjustments and replanning trigger.
 from __future__ import annotations
 
 import uuid
+import re
 from dataclasses import dataclass
 from datetime import timezone, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -150,6 +151,23 @@ class CognitivePatternTrigger:
         if any(token in name for token in ["完美主义", "perfection"]) or "80分" in description:
             add("quality_bar", "eighty_percent", "检测到完美主义阻塞")
             add("guidance_style", "good_enough", "检测到完美主义阻塞")
+
+        if any(token in name for token in ["delegation aversion", "委派抗拒", "delegation_takeback"]):
+            add("auto_delegate_suggestion", False, "检测到用户对 AI 委派存在明显抗拒")
+            add("require_human_confirmation", True, "检测到用户对 AI 委派存在明显抗拒")
+
+        if any(token in name for token in ["delegation trust building", "委派信任建立"]):
+            add("auto_delegate_suggestion", True, "检测到用户已建立对 AI 委派的稳定信任")
+
+        if any(token in name for token in ["execution time learning", "ai duration", "委派时长学习"]):
+            multiplier_match = re.search(r"multiplier=([0-9]+(?:\.[0-9]+)?)", pattern.description or "")
+            if multiplier_match:
+                try:
+                    multiplier = float(multiplier_match.group(1))
+                except ValueError:
+                    multiplier = None
+                if multiplier is not None:
+                    add("ai_duration_multiplier", round(multiplier, 2), "根据近期委派执行结果校准 AI 执行时长")
 
         if (
             any(token in name for token in ["blindspot", "前置知识不足", "基础不足", "知识缺口"])

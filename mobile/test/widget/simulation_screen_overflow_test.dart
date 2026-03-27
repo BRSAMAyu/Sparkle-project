@@ -171,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('学习场景模拟'), findsOneWidget);
-    expect(find.text('讨论时间线'), findsOneWidget);
+    expect(find.text('当前讨论流'), findsOneWidget);
     expect(find.text('轮到你加入这场讨论'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
+import 'package:sparkle/core/widgets/mirofish_stage_header.dart';
 import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
@@ -229,7 +230,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           ChatContinuityBanner(
                             sourceChatSessionId:
                                 widget.initialSourceChatSessionId!.trim(),
-                            subtitle: '这一轮模拟来自你刚才的聊天桥接。点右侧按钮就能带着上下文回到原对话继续追问。',
+                            subtitle: '这一轮模拟承接了你刚才的探索流程。点右侧按钮就能带着上下文回到原对话继续追问。',
                           ),
                           const SizedBox(height: 14),
                         ],
@@ -576,58 +577,40 @@ class _SimulationComposer extends StatelessWidget {
   final VoidCallback onRun;
 
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        borderColor: DS.info.withValues(alpha: 0.16),
-        child: Column(
+  Widget build(BuildContext context) {
+    final activeLabel = scenarioLabels[selectedScenarioKey] ?? selectedScenarioKey;
+    return MirofishStageHeader(
+        icon: Icons.groups_rounded,
+        eyebrow: 'Learning Simulation',
+        title: '把一个主题拉进真实讨论现场',
+        subtitle: '先决定场景，再让不同角色围绕同一主题给出观点、追问和挑战，最后沉淀成下一步行动。',
+        metrics: <MirofishStageMetric>[
+          MirofishStageMetric(
+            label: '当前场景',
+            value: activeLabel,
+            accent: DS.info,
+            icon: Icons.theater_comedy_rounded,
+          ),
+          MirofishStageMetric(
+            label: '当前目标',
+            value:
+                topicController.text.trim().isEmpty ? '等待输入' : topicController.text.trim(),
+            accent: DS.warning,
+            icon: Icons.flag_rounded,
+          ),
+          MirofishStageMetric(
+            label: '互动方式',
+            value: '角色讨论 + 你来接话',
+            accent: DS.success,
+            icon: Icons.touch_app_rounded,
+          ),
+        ],
+        primaryLabel: state.isLoading ? '模拟进行中...' : '开始模拟',
+        onPrimaryTap: state.isLoading ? null : onRun,
+        accent: DS.info,
+        footer: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        DS.info.withValues(alpha: 0.92),
-                        DS.brandPrimary.withValues(alpha: 0.82),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.groups_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '把一个知识点拉进真实讨论现场',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '先设定主题和讨论场景，系统会自动召集角色、逐轮生成观点并沉淀洞察。',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.45,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
             TextField(
               controller: topicController,
               textInputAction: TextInputAction.go,
@@ -670,7 +653,7 @@ class _SimulationComposer extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: state.isLoading ? null : onRun,
                   icon: const Icon(Icons.play_circle_outline_rounded),
-                  label: Text(state.isLoading ? '模拟进行中...' : '开始模拟'),
+                  label: Text(state.isLoading ? '模拟进行中...' : '生成舞台'),
                 ),
                 if (topicController.text.trim().isNotEmpty)
                   OutlinedButton.icon(
@@ -683,6 +666,7 @@ class _SimulationComposer extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class _RecommendedSeedStrip extends StatelessWidget {
@@ -877,10 +861,36 @@ class _SimulationInteractionCard extends StatelessWidget {
   final VoidCallback onSubmitText;
   final ValueChanged<String> onContinueInChat;
 
+  Color _interactionAccent(String? raw) {
+    switch (raw) {
+      case 'challenge':
+        return DS.warning;
+      case 'forced_choice':
+      case 'vote':
+        return DS.brandPrimary;
+      default:
+        return DS.info;
+    }
+  }
+
+  IconData _interactionIcon(String? raw) {
+    switch (raw) {
+      case 'challenge':
+        return Icons.bolt_rounded;
+      case 'forced_choice':
+      case 'vote':
+        return Icons.rule_rounded;
+      default:
+        return Icons.record_voice_over_rounded;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
+  Widget build(BuildContext context) {
+    final accent = _interactionAccent(interactionType);
+    return GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
-        borderColor: DS.warning.withValues(alpha: 0.18),
+        borderColor: accent.withValues(alpha: 0.18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -890,12 +900,12 @@ class _SimulationInteractionCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: DS.warning.withValues(alpha: 0.12),
+                    color: accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.person_pin_circle_outlined,
-                    color: DS.warning,
+                    _interactionIcon(interactionType),
+                    color: accent,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -908,6 +918,14 @@ class _SimulationInteractionCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '先接住这一步，角色才会真正回应你的判断，而不是继续各说各话。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -931,8 +949,26 @@ class _SimulationInteractionCard extends StatelessWidget {
                 children: options
                     .take(4)
                     .map(
-                      (option) => Chip(
-                        label: Text(option),
+                      (option) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: Text(
+                          option,
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: accent,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
                       ),
                     )
                     .toList(),
@@ -988,7 +1024,7 @@ class _SimulationInteractionCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '建议先在这里继续一轮，让角色真正回应你的判断；如果你想切回主对话，也可以走聊天入口。',
+              '建议先在这里继续一轮，让角色真正回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -996,6 +1032,7 @@ class _SimulationInteractionCard extends StatelessWidget {
           ],
         ),
       );
+  }
 
   String _interactionLabel(String? raw) {
     switch (raw) {
@@ -1110,6 +1147,11 @@ class _SimulationStatusCard extends StatelessWidget {
                         : Icons.pause_circle_outline_rounded,
                     label: hasBufferedUpdates ? '后台仍在继续生成' : '前台已暂停播放',
                   ),
+                if ((activeSpeaker ?? '').isNotEmpty)
+                  _StatusBadge(
+                    icon: Icons.mic_rounded,
+                    label: '当前焦点：$activeSpeaker',
+                  ),
               ],
             ),
             if (participants.isNotEmpty) ...[
@@ -1222,14 +1264,18 @@ class _SimulationTimelineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '讨论时间线',
+                      '当前讨论流',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      topic.isEmpty ? '开始后会实时出现每一轮讨论。' : '主题：$topic',
+                      topic.isEmpty
+                          ? '开始后会实时出现每一轮讨论。'
+                          : activeSpeaker == null
+                              ? '主题：$topic'
+                              : '主题：$topic · 当前发言 ${activeSpeaker!}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

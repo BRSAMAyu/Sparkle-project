@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
+import 'package:sparkle/core/widgets/mirofish_stage_header.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
@@ -209,28 +210,41 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             ],
             _AnimatedReportSection(
               delay: 0,
-              child: GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.card,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '本轮学习画像',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '把掌握度、重点薄弱项和整体趋势放在一个仪表盘里，方便你迅速把握当前状态。',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: DS.textSecondary,
-                            height: 1.45,
-                          ),
-                    ),
-                    if (history.length > 1) ...[
-                      const SizedBox(height: 16),
-                      SegmentedButton<_ReportRange>(
+              child: MirofishStageHeader(
+                icon: Icons.insights_rounded,
+                eyebrow: 'Learning Report',
+                title: _reportHeroTitle(
+                  weakestNode: weakestNode,
+                  strongestNode: strongestNode,
+                  averageMastery: averageMastery,
+                ),
+                subtitle: _reportHeroSubtitle(
+                  weakestNode: weakestNode,
+                  strongestNode: strongestNode,
+                  averageMastery: averageMastery,
+                  previousAverageMastery: previousReport == null
+                      ? null
+                      : _averageMastery(previousReport),
+                ),
+                metrics: _reportHeroMetrics(
+                  averageMastery: averageMastery,
+                  weakestNode: weakestNode,
+                  strongestNode: strongestNode,
+                  previousAverageMastery: previousReport == null
+                      ? null
+                      : _averageMastery(previousReport),
+                ),
+                primaryLabel:
+                    weakestNode == null ? '查看 Sprint 历史' : '优先处理 ${weakestNode.nodeName}',
+                onPrimaryTap: weakestNode == null
+                    ? () => context.push(PlanRoutes.sprintHistory)
+                    : () => context.push(
+                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                        ),
+                secondaryLabel: '查看历史节奏',
+                onSecondaryTap: () => context.push(PlanRoutes.sprintHistory),
+                footer: history.length > 1
+                    ? SegmentedButton<_ReportRange>(
                         segments: const [
                           ButtonSegment<_ReportRange>(
                             value: _ReportRange.week,
@@ -249,10 +263,9 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         onSelectionChanged: (selection) {
                           setState(() => _range = selection.first);
                         },
-                      ),
-                    ],
-                  ],
-                ),
+                      )
+                    : null,
+                accent: DS.info,
               ),
             ),
             const SizedBox(height: 14),
@@ -598,6 +611,92 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       ..sort((a, b) => a.masteryScore.compareTo(b.masteryScore));
     return sorted.first;
   }
+
+  String _reportHeroTitle({
+    required LearningMasteryDatum? weakestNode,
+    required LearningMasteryDatum? strongestNode,
+    required double averageMastery,
+  }) {
+    if (weakestNode != null) {
+      return '当前最该先收口的是 ${weakestNode.nodeName}';
+    }
+    if (strongestNode != null) {
+      return '你的稳定区已经开始成形';
+    }
+    return '学习基线已经建立';
+  }
+
+  String _reportHeroSubtitle({
+    required LearningMasteryDatum? weakestNode,
+    required LearningMasteryDatum? strongestNode,
+    required double averageMastery,
+    required double? previousAverageMastery,
+  }) {
+    final delta = previousAverageMastery == null
+        ? null
+        : _averageDelta(averageMastery, previousAverageMastery);
+    if (weakestNode != null && delta != null) {
+      return delta >= 0
+          ? '整体掌握度还在抬升，但 ${weakestNode.nodeName} 依然是最容易拖慢进度的环节，优先补它最划算。'
+          : '最近节奏有一点回落，先别继续铺开范围，优先把 ${weakestNode.nodeName} 重新拉稳。';
+    }
+    if (strongestNode != null) {
+      return '这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。';
+    }
+    return '先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。';
+  }
+
+  List<MirofishStageMetric> _reportHeroMetrics({
+    required double averageMastery,
+    required LearningMasteryDatum? weakestNode,
+    required LearningMasteryDatum? strongestNode,
+    required double? previousAverageMastery,
+  }) {
+    final metrics = <MirofishStageMetric>[
+      MirofishStageMetric(
+        label: '平均掌握度',
+        value: '${averageMastery.round()}%',
+        accent: DS.info,
+        icon: Icons.stacked_line_chart_rounded,
+      ),
+    ];
+    if (weakestNode != null) {
+      metrics.add(
+        MirofishStageMetric(
+          label: '优先补强',
+          value: '${weakestNode.nodeName} ${weakestNode.masteryScore.round()}%',
+          accent: DS.warning,
+          icon: Icons.flag_circle_rounded,
+        ),
+      );
+    }
+    if (strongestNode != null) {
+      metrics.add(
+        MirofishStageMetric(
+          label: '当前强项',
+          value:
+              '${strongestNode.nodeName} ${strongestNode.masteryScore.round()}%',
+          accent: DS.success,
+          icon: Icons.north_east_rounded,
+        ),
+      );
+    } else if (previousAverageMastery != null) {
+      final delta = _averageDelta(averageMastery, previousAverageMastery);
+      metrics.add(
+        MirofishStageMetric(
+          label: '变化趋势',
+          value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
+          accent: delta >= 0 ? DS.success : DS.warning,
+          icon: delta >= 0
+              ? Icons.trending_up_rounded
+              : Icons.trending_down_rounded,
+        ),
+      );
+    }
+    return metrics.take(3).toList();
+  }
+
+  double _averageDelta(double current, double previous) => current - previous;
 
   LearningReport _resolveActiveReport(LearningReport fallbackReport) {
     if (!_isPlaceholderReport(fallbackReport)) {
@@ -1085,6 +1184,17 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
     setState(() => _selectedIndex = rawIndex);
   }
 
+  bool _shouldShowLabelAt(int index) {
+    if (widget.labels.length <= 5) {
+      return true;
+    }
+    if (index == 0 || index == widget.labels.length - 1) {
+      return true;
+    }
+    final step = widget.labels.length >= 9 ? 3 : 2;
+    return index % step == 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.values.length < 2) {
@@ -1253,11 +1363,11 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
         ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: widget.labels
+          children: widget.labels.asMap().entries
               .map(
-                (label) => Expanded(
+                (entry) => Expanded(
                   child: Text(
-                    label,
+                    _shouldShowLabelAt(entry.key) ? entry.value : ' ',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -2109,11 +2219,11 @@ class _AnimatedReportSectionState extends State<_AnimatedReportSection> {
 
   @override
   Widget build(BuildContext context) => AnimatedSlide(
-        duration: DS.durationNormal,
+        duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
         curve: Curves.easeOutCubic,
         offset: _visible ? Offset.zero : const Offset(0, 0.04),
         child: AnimatedOpacity(
-          duration: DS.durationNormal,
+          duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
           opacity: _visible ? 1 : 0,
           child: widget.child,
         ),

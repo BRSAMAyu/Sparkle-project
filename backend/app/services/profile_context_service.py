@@ -66,6 +66,16 @@ class ProfileContextService:
             "task.difficulty.start_easy",
             "llm.feedback.emphasize_progress",
         ],
+        "delegation_aversion": [
+            "execution.delegate.require_confirmation",
+            "task.execution.recommend_human_first",
+        ],
+        "delegation_trust_building": [
+            "execution.delegate.suggest_when_safe",
+        ],
+        "execution_time_learning": [
+            "task.execution.adjust_ai_duration",
+        ],
     }
 
     RISK_SIGNAL_MAP: dict[str, list[str]] = {
@@ -76,6 +86,7 @@ class ProfileContextService:
         "cognitive_blindspot": ["risk.knowledge_gap"],
         "focus_decay": ["risk.focus_fatigue"],
         "doubt_driven_revision": ["risk.overcorrection"],
+        "delegation_aversion": ["risk.delegation_takeback"],
     }
 
     def __init__(self, db: AsyncSession, redis=None):
@@ -116,8 +127,13 @@ class ProfileContextService:
 
     async def _get_preferences(self, user_id: UUID) -> dict[str, Any]:
         prefs = await self.pref_service.get_preferences(user_id)
+        explicit = dict(prefs.explicit or {}) if prefs else {}
+        inferred = dict(prefs.inferred or {}) if prefs else {}
+        merged = dict(inferred)
+        merged.update(explicit)
         return {
-            "explicit": prefs.explicit if prefs else {},
+            "explicit": merged,
+            "inferred": inferred,
             "version": prefs.version if prefs else 0,
         }
 

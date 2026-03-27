@@ -1619,6 +1619,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     return deduped.take(3).toList();
   }
 
+  String _bridgeCaption(String? sourceChatSessionId) =>
+      (sourceChatSessionId?.isNotEmpty ?? false)
+          ? '承接刚才的对话'
+          : '可以先在对话里继续细化';
+
   List<_InlinePromptAction> _theaterPromptActions(
     Map<String, dynamic> preview,
   ) {
@@ -1833,10 +1838,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 '${item['title'] ?? '路径'} · 掌握度 ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
           )
           .toList(),
-      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
+      caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '查看完整版',
+      primaryLabel: '打开推演剧场',
       onPrimaryTap: () => context.push(resolvedDeepLink),
       secondaryLabel: '继续在对话里',
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
@@ -1875,10 +1880,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             (item) => '${item['speaker'] ?? '参与者'}: ${item['message'] ?? ''}',
           )
           .toList(),
-      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
+      caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '进入仿真',
+      primaryLabel: '打开学习仿真',
       onPrimaryTap: () => context.push(resolvedDeepLink),
       secondaryLabel: '继续在对话里',
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
@@ -1918,7 +1923,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                     '${item.nodeName} · 掌握度 ${item.masteryScore.toStringAsFixed(0)}%',
               )
               .toList(),
-      caption: (sourceChatSessionId?.isNotEmpty ?? false) ? '承接当前对话' : null,
+      caption: _bridgeCaption(sourceChatSessionId),
       onTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
           unawaited(context.push(resolvedDeepLink, extra: report));
@@ -1944,7 +1949,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             ),
           )
           .toList(),
-      primaryLabel: '查看完整报告',
+      primaryLabel: '打开完整报告',
       onPrimaryTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
           unawaited(context.push(resolvedDeepLink, extra: report));

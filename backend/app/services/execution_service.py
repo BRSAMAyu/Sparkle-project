@@ -36,6 +36,7 @@ from app.models.execution_intent import (
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus
 from app.services.execution_ingestor import ExecutionIngestor
+from app.services.execution_learning_service import ExecutionLearningService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
 
@@ -60,6 +61,7 @@ class ExecutionService:
         self._parser = ResultParser()
         self._plan_record_service = PlanExecutionRecordService(db)
         self._ingestor = ExecutionIngestor(db=db, redis=redis)
+        self._learning_service = ExecutionLearningService(db=db, redis=redis)
 
     async def get_health(self) -> dict[str, Any]:
         reachable = await self._client.health_check() if self._client else False
@@ -390,6 +392,10 @@ class ExecutionService:
             status=BackgroundTaskStatus.CANCELLED,
             progress=1.0,
             progress_message="Execution returned to user",
+        )
+        await self._learning_service.handle_handed_back(
+            intent=intent,
+            reason=reason,
         )
         return intent
 
