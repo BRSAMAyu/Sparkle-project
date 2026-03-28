@@ -13,6 +13,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
+import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_result_renderer.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
@@ -1617,6 +1618,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildExecutionSummary(BuildContext context, WidgetPayload action) {
+    final copy = ExecutionCopy.of(context);
     final l10n = context.l10n;
     final status = action.data['status']?.toString() ?? 'success';
     final impact = action.data['impact_summary']?.toString() ?? '';
@@ -1653,6 +1655,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final qualityScore =
         (action.data['quality_score'] as num?)?.toDouble() ?? 0.0;
     final comparisonSummary = action.data['comparison_summary'];
+    final selfVerification = _executionSummaryPreviewData(
+      action.data['self_verification'],
+    );
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
         ? comparisonSummary['headline']?.toString() ?? '结果对比'
         : comparisonSummary != null
@@ -1722,7 +1727,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         if (resultPreview != null) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '结果预览',
+            copy.resultPreview,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral900,
@@ -1771,11 +1776,29 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ],
             ),
           ),
+          if (comparisonSummary is Map<String, dynamic> &&
+              (comparisonSummary['highlights'] as List<dynamic>? ?? const [])
+                  .isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            ...((comparisonSummary['highlights'] as List<dynamic>? ?? const [])
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing4),
+                    child: Text(
+                      '• $item',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.neutral700,
+                            height: 1.45,
+                          ),
+                    ),
+                  ),
+                )),
+          ],
         ],
         if (replaySteps.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '执行回放',
+            copy.executionReplay,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral900,
@@ -1794,7 +1817,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             validationTotal > 0) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '自验证',
+            copy.selfVerification,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral900,
@@ -1815,8 +1838,38 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   icon: Icons.fact_check_rounded,
                   label: '质量 ${(qualityScore * 100).round()}%',
                 ),
+              if (selfVerification != null &&
+                  (selfVerification['score'] as num?) != null)
+                _buildMetaChip(
+                  icon: Icons.verified_user_rounded,
+                  label:
+                      '自检 ${(((selfVerification['score'] as num?) ?? 0) * 100).round()}%',
+                ),
             ],
           ),
+          if (selfVerification != null &&
+              (selfVerification['summary']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing10),
+              decoration: BoxDecoration(
+                color: switch (selfVerification['verdict']) {
+                  'ready' => DS.success.withValues(alpha: 0.08),
+                  'needs_revision' => DS.error.withValues(alpha: 0.08),
+                  _ => DS.warning.withValues(alpha: 0.08),
+                },
+                borderRadius: DS.borderRadius12,
+              ),
+              child: Text(
+                selfVerification['summary'].toString(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral800,
+                      height: 1.45,
+                    ),
+              ),
+            ),
+          ],
           if (qualityWarnings.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             ...qualityWarnings.map(
@@ -1856,6 +1909,46 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 ),
               ),
             ),
+          ],
+          if (selfVerification != null &&
+              (selfVerification['checklist'] as List<dynamic>? ?? const [])
+                  .isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            ...((selfVerification['checklist'] as List<dynamic>? ?? const [])
+                .whereType<Map<dynamic, dynamic>>()
+                .map(Map<String, dynamic>.from)
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          item['passed'] == true
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.error_outline_rounded,
+                          size: 16,
+                          color: item['passed'] == true
+                              ? DS.semanticSuccess
+                              : DS.warning,
+                        ),
+                        const SizedBox(width: DS.spacing8),
+                        Expanded(
+                          child: Text(
+                            '${item['label'] ?? '检查项'}：${item['detail'] ?? ''}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: DS.neutral700,
+                                  height: 1.45,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
           ],
         ],
         if (nextAction.isNotEmpty) ...[

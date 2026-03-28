@@ -25,7 +25,7 @@ type localBlacklistCache struct {
 	mu             sync.RWMutex
 	jtiSet         map[string]time.Time // JTI -> expiry time
 	userRevoked    map[string]localRevocation
-	cleanupRunning bool                 // Prevent goroutine leak
+	cleanupRunning bool // Prevent goroutine leak
 }
 
 type localRevocation struct {

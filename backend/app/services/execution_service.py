@@ -58,6 +58,10 @@ class ExecutionService:
 
     _shared_classify_cache: dict[str, tuple[RoutingDecision, float]] = {}
     _classify_cache_ttl_seconds = 300.0
+    _failure_counts: dict[str, int] = {}
+    _degraded_users: dict[str, float] = {}
+    _degradation_threshold = 3
+    _degradation_window_seconds = 1800.0
 
     def __init__(self, db: AsyncSession, redis=None):
         self._db = db
@@ -82,24 +86,38 @@ class ExecutionService:
         self._classify_cache_ttl = self.__class__._classify_cache_ttl_seconds
 
     async def get_health(self) -> dict[str, Any]:
-        reachable = await self._client.health_check() if self._client else False
+        health_snapshot = await self._client.health_snapshot() if self._client else {"reachable": False}
         nodes = await self._node_service.list_nodes(connected_only=True) if self._client else []
+        degradation = self.get_degradation_snapshot()
         return {
             "openclaw_enabled": self._config.enabled,
             "gateway_url": self._config.gateway_url if self._config.enabled else None,
             "transport": self._config.transport,
             "ws_url": self._config.ws_url if self._config.transport == "gateway_ws" else None,
-            "reachable": reachable,
+            "reachable": bool(health_snapshot.get("reachable")),
+            "latency_ms": health_snapshot.get("latency_ms"),
+            "message": health_snapshot.get("message"),
             "supports_approvals": True,
             "ingestion_layer": "execution_ingestor",
             "connected_nodes": len(nodes),
             "supports_nodes": self._config.transport == "gateway_ws",
             "supports_templates": True,
             "supports_quality_loop": True,
+            "capabilities": list(health_snapshot.get("capabilities") or []),
+            "degraded_user_count": degradation["degraded_user_count"],
+            "degradation_threshold": degradation["degradation_threshold"],
         }
 
     async def classify_task(self, *, task_id: UUID, user_id: UUID) -> RoutingDecision:
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
+        if self._is_user_degraded(user_id):
+            return RoutingDecision(
+                execution_mode=ExecutionMode.HUMAN,
+                target_env=ExecutionTargetEnv.HUMAN,
+                reason="execution_temporarily_degraded",
+                confidence=0.98,
+                risk_flags=["degraded_due_to_consecutive_failures"],
+            )
         task_type = getattr(task.type, "value", task.type) or ""
         task_description = getattr(task, "description", "") or ""
         task_tags = getattr(task, "tags", None) or []
@@ -143,6 +161,11 @@ class ExecutionService:
         preferred_node_id: str | None = None,
     ) -> ExecutionIntent:
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
+        if self._is_user_degraded(user_id):
+            task.execution_mode = ExecutionMode.HUMAN.value
+            self._db.add(task)
+            await self._db.commit()
+            raise ValueError("AI execution is temporarily degraded after consecutive failures")
         await self._ensure_no_active_intent(task_id=task.id, user_id=user_id)
         execution_goal = (goal or task.title or "").strip()
         selected_template = None
@@ -362,6 +385,12 @@ class ExecutionService:
             raw_response = await self._client.execute(request_body, **execute_kwargs)
             await self._ingestor.ingest(intent=intent, raw_result=raw_response)
             await self._db.refresh(intent)
+            if intent.status in {
+                ExecutionIntentStatus.WAITING_APPROVAL,
+                ExecutionIntentStatus.SUCCEEDED,
+                ExecutionIntentStatus.PARTIAL,
+            }:
+                self._clear_failure_state(user_id)
             return intent
         except OpenClawTimeout as exc:
             await self._mark_intent_failure(
@@ -498,13 +527,17 @@ class ExecutionService:
                 timeout_seconds=intent.timeout_seconds,
                 event_callback=lambda frame: self._handle_gateway_stream_event(intent, frame),
             )
-            return await self._ingestor.ingest(
+            confirmed = await self._ingestor.ingest(
                 intent=intent,
                 raw_result=raw_response,
                 user_confirmed=raw_response.get("status") != "requires_action",
             )
+            self._clear_failure_state(user_id)
+            return confirmed
 
-        return await self._ingestor.confirm_result(record_id=record_id, user_id=user_id)
+        confirmed = await self._ingestor.confirm_result(record_id=record_id, user_id=user_id)
+        self._clear_failure_state(user_id)
+        return confirmed
 
     async def reject_result(
         self,
@@ -567,6 +600,7 @@ class ExecutionService:
             progress=1.0,
             progress_message="Execution canceled",
         )
+        self._clear_failure_state(user_id)
         record = await self.get_execution_record(intent_id=intent.id, user_id=user_id)
         if record is not None:
             await self._quality_service.record_outcome(intent=intent, record=record, outcome="canceled")
@@ -620,6 +654,7 @@ class ExecutionService:
             progress=1.0,
             progress_message="Execution returned to user",
         )
+        self._clear_failure_state(user_id)
         record = await self.get_execution_record(intent_id=intent.id, user_id=user_id)
         if record is not None:
             await self._quality_service.record_outcome(intent=intent, record=record, outcome="handed_back")
@@ -1047,6 +1082,12 @@ class ExecutionService:
             progress_message=error_message,
             error_message=error_message,
         )
+        degraded = self._record_failure(intent.user_id)
+        if degraded:
+            task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
+            task.execution_mode = ExecutionMode.HUMAN.value
+            self._db.add(task)
+            await self._db.commit()
 
     async def _publish_status_event(
         self,
@@ -1105,3 +1146,43 @@ class ExecutionService:
             ExecutionIntentStatus.TIMED_OUT,
             ExecutionIntentStatus.HANDED_BACK,
         }
+
+    def get_degradation_snapshot(self) -> dict[str, Any]:
+        self._cleanup_degradation_state()
+        return {
+            "degraded_user_count": len(self.__class__._degraded_users),
+            "failure_counts": dict(self.__class__._failure_counts),
+            "degraded_users": dict(self.__class__._degraded_users),
+            "degradation_threshold": self.__class__._degradation_threshold,
+            "degradation_window_seconds": self.__class__._degradation_window_seconds,
+        }
+
+    def _is_user_degraded(self, user_id: UUID) -> bool:
+        self._cleanup_degradation_state()
+        return str(user_id) in self.__class__._degraded_users
+
+    def _record_failure(self, user_id: UUID) -> bool:
+        self._cleanup_degradation_state()
+        key = str(user_id)
+        next_count = self.__class__._failure_counts.get(key, 0) + 1
+        self.__class__._failure_counts[key] = next_count
+        if next_count >= self.__class__._degradation_threshold:
+            self.__class__._degraded_users[key] = time.time() + self.__class__._degradation_window_seconds
+            return True
+        return False
+
+    def _clear_failure_state(self, user_id: UUID) -> None:
+        key = str(user_id)
+        self.__class__._failure_counts.pop(key, None)
+        self.__class__._degraded_users.pop(key, None)
+
+    def _cleanup_degradation_state(self) -> None:
+        now = time.time()
+        expired = [
+            key
+            for key, expires_at in self.__class__._degraded_users.items()
+            if expires_at <= now
+        ]
+        for key in expired:
+            self.__class__._degraded_users.pop(key, None)
+            self.__class__._failure_counts.pop(key, None)

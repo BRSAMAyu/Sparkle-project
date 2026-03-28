@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -103,7 +103,24 @@ class _TaskCardState extends ConsumerState<TaskCard> {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
         );
-        return true;
+        return await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('确认完成任务？'),
+                content: Text('将“${widget.task.title}”标记为已完成。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: const Text('确认'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
       },
       onResize: () {
         _hasEmittedDragStart = false;

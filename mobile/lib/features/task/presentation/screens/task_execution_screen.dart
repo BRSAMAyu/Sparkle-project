@@ -11,6 +11,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
@@ -24,6 +25,7 @@ import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
@@ -37,6 +39,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -1386,6 +1389,24 @@ class _BottomControls extends ConsumerWidget {
     }
   }
 
+  Future<void> _queueHandoffTask(
+    BuildContext context,
+    WidgetRef ref, {
+    String? templateId,
+  }) async {
+    final connection = ref.read(openClawConnectionProvider);
+    await connection.queueExecutionRequest(
+      taskId: task.id,
+      templateId: templateId,
+      goal: task.title,
+      source: 'task_execution_screen',
+      priority: 1,
+    );
+    if (!context.mounted) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    AppFeedback.info(context, ExecutionCopy.engineOfflineQueuedMessage);
+  }
+
   Future<void> _confirmAiResult(BuildContext context, WidgetRef ref) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     final record = await ref
@@ -1655,6 +1676,7 @@ class _BottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = ExecutionCopy.of(context);
     final executionIntent = ref.watch(
       taskListProvider.select((state) => state.taskExecutions[task.id]),
     );
@@ -1680,8 +1702,20 @@ class _BottomControls extends ConsumerWidget {
         (state) => state.executionDecisionInFlight.contains(task.id),
       ),
     );
+    final connection = ref.watch(openClawConnectionProvider);
+    final isClawConnected = connection.isConnected;
+    final isClawConfigured = connection.config.isConfigured;
+    final queuedRequestCount = connection.queuedRequestCount;
     final supportsAiHandoff = isServerTaskId(task.id);
     final canHandoff = supportsAiHandoff &&
+        isClawConnected &&
+        task.status != TaskStatus.completed &&
+        task.status != TaskStatus.abandoned &&
+        (executionIntent == null || executionIntent.isTerminal) &&
+        !isHandoffLoading;
+    final canQueueHandoff = supportsAiHandoff &&
+        !isClawConnected &&
+        isClawConfigured &&
         task.status != TaskStatus.completed &&
         task.status != TaskStatus.abandoned &&
         (executionIntent == null || executionIntent.isTerminal) &&
@@ -1731,6 +1765,78 @@ class _BottomControls extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: DS.spacing8),
+          ],
+          if (supportsAiHandoff &&
+              (executionIntent == null || executionIntent.isTerminal) &&
+              !isClawConnected) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                border: Border.all(
+                  color: DS.warning.withValues(alpha: 0.18),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isClawConfigured
+                            ? Icons.cloud_queue_rounded
+                            : Icons.link_off_rounded,
+                        size: 18,
+                        color: DS.warning,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          isClawConfigured
+                              ? copy.engineCurrentlyOffline
+                              : copy.engineNotConnected,
+                          style: DS.bodyMedium.copyWith(
+                            color: DS.warning,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.spacing6),
+                  Text(
+                    isClawConfigured
+                        ? '你仍然可以先把任务加入等待队列，等引擎恢复后再批量提交。'
+                        : '先到设置里完成 OpenClaw 连接，AI 执行入口才会真正生效。',
+                    style: DS.bodySmall.copyWith(
+                      color: DS.neutral700,
+                      height: 1.45,
+                    ),
+                  ),
+                  if (queuedRequestCount > 0) ...[
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '当前已有 $queuedRequestCount 个任务在等待队列中。',
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: DS.spacing8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.push(UserRoutes.openClawSettings),
+                      icon: const Icon(Icons.settings_rounded, size: 16),
+                      label: Text(isClawConfigured ? '查看连接与队列' : '前往连接设置'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.spacing12),
           ],
           if (showExecutionStatus) ...[
             SparkleStaggerItem(
@@ -1815,7 +1921,7 @@ class _BottomControls extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
           ],
-          if (executionIntent?.isWaitingApproval == true &&
+          if ((executionIntent?.isWaitingApproval ?? false) &&
               executionRecord != null) ...[
             ExecutionApprovalCard(
               record: executionRecord,
@@ -1830,9 +1936,23 @@ class _BottomControls extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: CustomButton.secondary(
-                text: _handoffButtonText(executionIntent, isHandoffLoading),
-                icon: Icons.smart_toy_outlined,
-                onPressed: canHandoff ? () => _handoffTask(context, ref) : null,
+                text: canQueueHandoff
+                    ? copy.queueAction
+                    : isClawConfigured
+                        ? _handoffButtonText(executionIntent, isHandoffLoading)
+                        : copy.connectEngineAction,
+                icon: canQueueHandoff
+                    ? Icons.cloud_queue_rounded
+                    : Icons.smart_toy_outlined,
+                onPressed: canHandoff
+                    ? () => _handoffTask(context, ref)
+                    : canQueueHandoff
+                        ? () => _queueHandoffTask(
+                              context,
+                              ref,
+                              templateId: selectedTemplateId,
+                            )
+                        : null,
                 isLoading: isHandoffLoading,
               ),
             ),

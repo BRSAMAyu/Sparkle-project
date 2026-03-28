@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
+import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_result_renderer.dart';
 
 class ExecutionApprovalCard extends StatefulWidget {
@@ -66,10 +67,24 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = ExecutionCopy.of(context);
     final parsedOutput =
         widget.record.resultPreview ??
         widget.record.parsedOutput ??
         const <String, dynamic>{};
+    final selfVerification = widget.record.selfVerification;
+    final changedFields =
+        (widget.record.comparisonSummary?['changed_fields'] as List<dynamic>? ??
+                const [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+    final comparisonHighlights =
+        (widget.record.comparisonSummary?['highlights'] as List<dynamic>? ??
+                const [])
+            .map((item) => '$item')
+            .where((item) => item.isNotEmpty)
+            .toList();
 
     return SparkleStaggerItem(
       index: 0,
@@ -133,7 +148,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '结果预览',
+                    copy.resultPreview,
                     style: DS.bodySmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.textSecondary,
@@ -148,7 +163,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                   const SizedBox(height: DS.spacing8),
                   TextButton(
                     onPressed: () => setState(() => _expanded = !_expanded),
-                    child: Text(_expanded ? '收起详情' : '查看详情'),
+                    child: Text(_expanded ? copy.collapseDetails : copy.viewDetails),
                   ),
                   if (widget.record.comparisonSummary != null) ...[
                     const SizedBox(height: DS.spacing8),
@@ -161,6 +176,30 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                           '',
                       color: DS.info,
                     ),
+                    if (comparisonHighlights.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing8),
+                      ...comparisonHighlights.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: DS.spacing4),
+                          child: Text(
+                            '• $item',
+                            style: DS.bodySmall.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (changedFields.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing8),
+                      ...changedFields.take(_expanded ? 6 : 3).map(
+                        (field) => Padding(
+                          padding: const EdgeInsets.only(bottom: DS.spacing6),
+                          child: _FieldChangeTile(field: field),
+                        ),
+                      ),
+                    ],
                   ],
                   if (widget.record.qualityWarnings.isNotEmpty) ...[
                     const SizedBox(height: DS.spacing8),
@@ -168,17 +207,40 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                       (warning) => Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing6),
                         child: _InfoPanel(
-                          title: '自验证提示',
+                          title: copy.selfVerificationHint,
                           message: warning['message']?.toString() ?? '',
                           color: DS.semanticWarning,
                         ),
                       ),
                     ),
                   ],
+                  if (selfVerification != null) ...[
+                    const SizedBox(height: DS.spacing8),
+                    _InfoPanel(
+                      title: copy.selfVerification,
+                      message: selfVerification['summary']?.toString() ?? '',
+                      color: switch (selfVerification['verdict']) {
+                        'ready' => DS.semanticSuccess,
+                        'needs_revision' => DS.semanticError,
+                        _ => DS.warning,
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    ...((selfVerification['checklist'] as List<dynamic>? ??
+                            const [])
+                        .whereType<Map<dynamic, dynamic>>()
+                        .map(Map<String, dynamic>.from)
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: DS.spacing6),
+                            child: _ChecklistTile(item: item),
+                          ),
+                        )),
+                  ],
                   if (widget.record.replaySteps.isNotEmpty) ...[
                     const SizedBox(height: DS.spacing8),
                     Text(
-                      '执行回放',
+                      copy.executionReplay,
                       style: DS.bodySmall.copyWith(
                         fontWeight: DS.fontWeightBold,
                         color: DS.textSecondary,
@@ -218,7 +280,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                       ),
                     ),
                     child: Text(
-                      '退回修改',
+                      copy.rejectResult,
                       style: DS.bodyMedium.copyWith(color: DS.semanticError),
                     ),
                   ),
@@ -255,7 +317,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                             ),
                           )
                         : Text(
-                            '采纳结果',
+                            copy.adoptResult,
                             style: DS.bodyMedium.copyWith(color: DS.white),
                           ),
                   ),
@@ -368,6 +430,99 @@ class _ReplayStepTile extends StatelessWidget {
               '${(durationMs / 1000).toStringAsFixed(durationMs >= 1000 ? 1 : 0)}s',
               style: DS.bodySmall.copyWith(color: DS.textTertiary),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistTile extends StatelessWidget {
+  const _ChecklistTile({required this.item});
+
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final passed = item['passed'] == true;
+    final color = passed ? DS.semanticSuccess : DS.warning;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          passed ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: DS.spacing8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item['label']?.toString() ?? '检查项',
+                style: DS.bodySmall.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              if ((item['detail']?.toString() ?? '').isNotEmpty)
+                Text(
+                  item['detail'].toString(),
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FieldChangeTile extends StatelessWidget {
+  const _FieldChangeTile({required this.field});
+
+  final Map<String, dynamic> field;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing10),
+      decoration: BoxDecoration(
+        color: DS.surfacePrimary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            field['field']?.toString() ?? '字段变化',
+            style: DS.bodySmall.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+          if ((field['previous']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing4),
+            Text(
+              '上次：${field['previous']}',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+          if ((field['current']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing2),
+            Text(
+              '这次：${field['current']}',
+              style: DS.bodySmall.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
         ],
       ),
     );

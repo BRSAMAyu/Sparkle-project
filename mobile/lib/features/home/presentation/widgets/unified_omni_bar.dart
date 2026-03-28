@@ -27,6 +27,13 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 const double _kUnifiedOmniInputHeight = 52;
 const double _kUnifiedPredictionHeight = 36;
 const double _kUnifiedAgentPanelHeight = 44;
+const Set<String> _kShellRootPaths = {
+  '/home',
+  '/galaxy',
+  '/chat',
+  '/community',
+  '/profile',
+};
 
 class UnifiedOmniBar extends ConsumerStatefulWidget {
   const UnifiedOmniBar({
@@ -54,6 +61,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   bool _isLoading = false;
   double? _lastReportedHeight;
   EnhancedIntentType? _intentType;
+  Timer? _intentDebounceTimer;
 
   late final AnimationController _glowController;
   late final Animation<double> _glowAnimation;
@@ -95,6 +103,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
 
   @override
   void dispose() {
+    _intentDebounceTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _glowController.dispose();
@@ -400,7 +409,13 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     final newIntent = result?.type;
     final hasText = text.isNotEmpty;
 
-    ref.read(intentPredictionProvider.notifier).onInputChanged(text);
+    _intentDebounceTimer?.cancel();
+    _intentDebounceTimer = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) {
+        return;
+      }
+      ref.read(intentPredictionProvider.notifier).onInputChanged(text);
+    });
 
     if (newIntent != _intentType || hasText != _hasText) {
       setState(() {
@@ -470,7 +485,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
       ).toString();
       final router = GoRouter.of(context);
       final currentPath = GoRouterState.of(context).uri.path;
-      if (currentPath == '/chat') {
+      if (_kShellRootPaths.contains(currentPath)) {
         router.go(target);
       } else {
         await router.push(target);

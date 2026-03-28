@@ -83,7 +83,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     unawaited(_communityEventsSub?.cancel());
     _communityEventsSub = stream.listen(
       _handleCommunityEvent,
-      onError: (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('MainNavigationShell community stream error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      },
     );
   }
 
@@ -95,7 +98,12 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         if (decoded is Map<String, dynamic>) {
           payload = decoded;
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        debugPrint(
+          'MainNavigationShell failed to decode community event: $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
     } else if (event is Map<String, dynamic>) {
       payload = event;
     } else if (event is Map) {
@@ -122,7 +130,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       return;
     }
 
-    final wsEvent = chat.AchievementUnlockEvent(achievementData: achievementMap);
+    final wsEvent =
+        chat.AchievementUnlockEvent(achievementData: achievementMap);
     final result =
         ref.read(achievementProvider.notifier).handleAchievementUnlock(wsEvent);
     if (result == null) {

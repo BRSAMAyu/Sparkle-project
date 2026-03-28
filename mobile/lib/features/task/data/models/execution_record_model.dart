@@ -17,6 +17,7 @@ class ExecutionRecordModel {
     this.qualityWarnings = const [],
     this.replaySteps = const [],
     this.comparisonSummary,
+    this.selfVerification,
   });
 
   factory ExecutionRecordModel.fromJson(Map<String, dynamic> json) =>
@@ -50,6 +51,9 @@ class ExecutionRecordModel {
         comparisonSummary: json['comparison_summary'] is Map
             ? Map<String, dynamic>.from(json['comparison_summary'] as Map)
             : null,
+        selfVerification: json['self_verification'] is Map
+            ? Map<String, dynamic>.from(json['self_verification'] as Map)
+            : null,
       );
 
   final String id;
@@ -69,6 +73,7 @@ class ExecutionRecordModel {
   final List<Map<String, dynamic>> qualityWarnings;
   final List<Map<String, dynamic>> replaySteps;
   final Map<String, dynamic>? comparisonSummary;
+  final Map<String, dynamic>? selfVerification;
 
   bool get hasStructuredOutput =>
       parsedOutput != null && parsedOutput!.isNotEmpty;

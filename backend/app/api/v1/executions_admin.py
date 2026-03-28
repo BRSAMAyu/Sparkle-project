@@ -34,6 +34,8 @@ class AdminExecutionHealthResponse(BaseModel):
     supports_nodes: bool
     supports_templates: bool
     supports_quality_loop: bool
+    degraded_user_count: int = 0
+    degradation_threshold: int = 0
 
 
 class AdminExecutionDashboardResponse(BaseModel):
@@ -45,6 +47,8 @@ class AdminExecutionDashboardResponse(BaseModel):
     by_type: dict[str, dict[str, float | int]]
     approval_request_count: int
     delegation_trend: str
+    degraded_user_count: int = 0
+    degradation_threshold: int = 0
 
 
 @router.get("/health", response_model=AdminExecutionHealthResponse)
@@ -102,4 +106,6 @@ async def execution_dashboard(
         by_type=dict(profile.get("by_type", {})),
         approval_request_count=int(profile.get("approval_request_count", 0)),
         delegation_trend=str(profile.get("delegation_trend", "stable")),
+        degraded_user_count=int(health.get("degraded_user_count", 0)),
+        degradation_threshold=int(health.get("degradation_threshold", 0)),
     )

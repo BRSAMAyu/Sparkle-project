@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -193,7 +194,12 @@ class DagExecutionSignal {
         if (decoded is Map<String, dynamic>) {
           data = decoded;
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        debugPrint(
+          'DagExecutionSignal.fromDynamic failed to decode payload: $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
     } else if (raw is Map<String, dynamic>) {
       data = raw;
     }

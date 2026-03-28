@@ -751,10 +751,8 @@ class TaskRepository {
         ApiEndpoints.taskFeedback(taskId),
         data: feedback.toJson(),
       );
-    } on DioException {
-      // Feedback is optional - fail silently
-      // Log for debugging but don't throw
-      return;
+    } on DioException catch (e) {
+      return _handleDioError(e, 'submitTaskFeedback');
     }
   }
 
@@ -781,13 +779,11 @@ class TaskRepository {
       );
       final payload = response.data;
       if (payload == null) {
-        return null;
+        return const TaskFeedbackResponse(success: true);
       }
       return TaskFeedbackResponse.fromJson(payload);
-    } on DioException {
-      // Feedback is optional - fail silently
-      // Log for debugging but don't throw
-      return null;
+    } on DioException catch (e) {
+      return _handleDioError(e, 'submitTaskFeedbackWithResponse');
     }
   }
 

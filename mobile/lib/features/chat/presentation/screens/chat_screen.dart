@@ -83,6 +83,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_handleScroll);
     ref
       ..listenManual(
         chatProvider.select((state) => state.messages),
@@ -257,10 +258,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     unawaited(BgmService.setReadingActivity(false));
     unawaited(BgmService.setThinkingActivity(false));
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      unawaited(ref.read(chatProvider.notifier).loadMoreHistory());
+    }
   }
 
   @override

@@ -9,9 +9,11 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:uuid/uuid.dart';
 
 class FocusMainScreen extends ConsumerWidget {
   const FocusMainScreen({super.key});
+  static const Uuid _uuid = Uuid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -147,7 +149,7 @@ class FocusMainScreen extends ConsumerWidget {
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
                   );
                   final dummyTask = TaskModel(
-                    id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
+                    id: 'quick_focus_${_uuid.v4()}',
                     userId: '',
                     title: context.l10n.focusFreeFocus,
                     type: TaskType.learning,
@@ -236,7 +238,7 @@ class FocusMainScreen extends ConsumerWidget {
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
                 );
                 final dummyTask = TaskModel(
-                  id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
+                  id: 'quick_focus_${_uuid.v4()}',
                   userId: '',
                   title: context.l10n.focusQuickStart,
                   type: TaskType.learning,

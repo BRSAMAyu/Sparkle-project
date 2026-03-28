@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,27 +105,138 @@ class OpenClawConnectionInfo {
       );
 }
 
+class OpenClawPairingSession {
+  const OpenClawPairingSession({
+    required this.code,
+    required this.createdAt,
+    required this.expiresAt,
+  });
+
+  factory OpenClawPairingSession.fromJson(Map<String, dynamic> json) =>
+      OpenClawPairingSession(
+        code: json['code']?.toString() ?? '',
+        createdAt:
+            DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+                DateTime.now(),
+        expiresAt:
+            DateTime.tryParse(json['expires_at']?.toString() ?? '') ??
+                DateTime.now().add(const Duration(minutes: 10)),
+      );
+
+  final String code;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'created_at': createdAt.toIso8601String(),
+        'expires_at': expiresAt.toIso8601String(),
+      };
+}
+
+class OpenClawQueuedRequest {
+  const OpenClawQueuedRequest({
+    required this.id,
+    required this.taskId,
+    required this.enqueuedAt,
+    this.goal,
+    this.templateId,
+    this.source = 'task_execution',
+    this.priority = 0,
+  });
+
+  factory OpenClawQueuedRequest.fromJson(Map<String, dynamic> json) =>
+      OpenClawQueuedRequest(
+        id: json['id']?.toString() ?? '',
+        taskId: json['task_id']?.toString() ?? '',
+        goal: json['goal']?.toString(),
+        templateId: json['template_id']?.toString(),
+        source: json['source']?.toString() ?? 'task_execution',
+        priority: (json['priority'] as num?)?.toInt() ?? 0,
+        enqueuedAt:
+            DateTime.tryParse(json['enqueued_at']?.toString() ?? '') ??
+                DateTime.now(),
+      );
+
+  final String id;
+  final String taskId;
+  final String? goal;
+  final String? templateId;
+  final String source;
+  final int priority;
+  final DateTime enqueuedAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'task_id': taskId,
+        'goal': goal,
+        'template_id': templateId,
+        'source': source,
+        'priority': priority,
+        'enqueued_at': enqueuedAt.toIso8601String(),
+      };
+}
+
 class OpenClawConnectionService extends ChangeNotifier {
   static const _configKey = 'openclaw_connection_config';
+  static const _pairingKey = 'openclaw_pairing_session';
+  static const _queueKey = 'openclaw_execution_queue';
   static const _healthCheckInterval = Duration(seconds: 30);
 
   OpenClawConnectionConfig _config = OpenClawConnectionConfig.empty;
   OpenClawConnectionInfo _info = const OpenClawConnectionInfo();
+  OpenClawPairingSession? _pairingSession;
+  List<OpenClawQueuedRequest> _queuedRequests = const [];
   Timer? _healthTimer;
 
   OpenClawConnectionConfig get config => _config;
   OpenClawConnectionInfo get info => _info;
+  OpenClawPairingSession? get pairingSession =>
+      (_pairingSession?.isExpired ?? false) ? null : _pairingSession;
+  List<OpenClawQueuedRequest> get queuedRequests =>
+      List.unmodifiable(_queuedRequests);
+  int get queuedRequestCount => _queuedRequests.length;
   bool get isConnected => _info.status == OpenClawConnectionStatus.connected;
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_configKey);
-    if (raw == null || raw.isEmpty) return;
+    final rawPairing = prefs.getString(_pairingKey);
+    final rawQueue = prefs.getString(_queueKey);
 
     try {
-      _config = OpenClawConnectionConfig.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
+      if (raw != null && raw.isNotEmpty) {
+        _config = OpenClawConnectionConfig.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>,
+        );
+      }
+      if (rawPairing != null && rawPairing.isNotEmpty) {
+        _pairingSession = OpenClawPairingSession.fromJson(
+          jsonDecode(rawPairing) as Map<String, dynamic>,
+        );
+        if (_pairingSession?.isExpired ?? false) {
+          _pairingSession = null;
+          await prefs.remove(_pairingKey);
+        }
+      }
+      if (rawQueue != null && rawQueue.isNotEmpty) {
+        final decoded = jsonDecode(rawQueue);
+        if (decoded is List) {
+          _queuedRequests = decoded
+              .whereType<Map<dynamic, dynamic>>()
+              .map((item) => OpenClawQueuedRequest.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),)
+              .toList()
+            ..sort((a, b) {
+              final byPriority = b.priority.compareTo(a.priority);
+              if (byPriority != 0) return byPriority;
+              return a.enqueuedAt.compareTo(b.enqueuedAt);
+            });
+        }
+      }
       notifyListeners();
       if (_config.isConfigured) {
         unawaited(checkHealth());
@@ -134,6 +246,91 @@ class OpenClawConnectionService extends ChangeNotifier {
       _config = OpenClawConnectionConfig.empty;
       _info = const OpenClawConnectionInfo();
     }
+  }
+
+  Future<void> queueExecutionRequest({
+    required String taskId,
+    String? goal,
+    String? templateId,
+    String source = 'task_execution',
+    int priority = 0,
+  }) async {
+    final existingIndex = _queuedRequests.indexWhere(
+      (item) =>
+          item.taskId == taskId &&
+          item.goal == goal &&
+          item.templateId == templateId,
+    );
+    if (existingIndex != -1) {
+      return;
+    }
+
+    _queuedRequests = [
+      ..._queuedRequests,
+      OpenClawQueuedRequest(
+        id: '${taskId}_${DateTime.now().millisecondsSinceEpoch}',
+        taskId: taskId,
+        goal: goal,
+        templateId: templateId,
+        source: source,
+        priority: priority,
+        enqueuedAt: DateTime.now(),
+      ),
+    ]..sort((a, b) {
+        final byPriority = b.priority.compareTo(a.priority);
+        if (byPriority != 0) return byPriority;
+        return a.enqueuedAt.compareTo(b.enqueuedAt);
+      });
+    await _persistQueue();
+    notifyListeners();
+  }
+
+  Future<void> removeQueuedRequest(String id) async {
+    _queuedRequests =
+        _queuedRequests.where((request) => request.id != id).toList();
+    await _persistQueue();
+    notifyListeners();
+  }
+
+  Future<void> clearQueuedRequests() async {
+    _queuedRequests = const [];
+    await _persistQueue();
+    notifyListeners();
+  }
+
+  Future<OpenClawPairingSession> startPairing() async {
+    final random = Random.secure();
+    final code = List.generate(6, (_) => random.nextInt(10)).join();
+    final session = OpenClawPairingSession(
+      code: code,
+      createdAt: DateTime.now(),
+      expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+    );
+    _pairingSession = session;
+    await _persistPairing();
+    notifyListeners();
+    return session;
+  }
+
+  Future<void> completePairing(String deviceToken) async {
+    final trimmed = deviceToken.trim();
+    if (trimmed.isEmpty) return;
+    _config = _config.copyWith(
+      deviceToken: trimmed,
+      pairedAt: DateTime.now(),
+    );
+    _pairingSession = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_configKey, jsonEncode(_config.toJson()));
+    await prefs.remove(_pairingKey);
+    notifyListeners();
+  }
+
+  Future<void> cancelPairing() async {
+    _pairingSession = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pairingKey);
+    notifyListeners();
   }
 
   Future<bool> configure(OpenClawConnectionConfig newConfig) async {
@@ -184,9 +381,11 @@ class OpenClawConnectionService extends ChangeNotifier {
     _healthTimer = null;
     _config = OpenClawConnectionConfig.empty;
     _info = const OpenClawConnectionInfo();
+    _pairingSession = null;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_configKey);
+    await prefs.remove(_pairingKey);
     notifyListeners();
   }
 
@@ -266,6 +465,26 @@ class OpenClawConnectionService extends ChangeNotifier {
       capabilities.add('质量闭环');
     }
     return capabilities.toSet().toList();
+  }
+
+  Future<void> _persistQueue() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _queueKey,
+      jsonEncode(_queuedRequests.map((item) => item.toJson()).toList()),
+    );
+  }
+
+  Future<void> _persistPairing() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_pairingSession == null) {
+      await prefs.remove(_pairingKey);
+      return;
+    }
+    await prefs.setString(
+      _pairingKey,
+      jsonEncode(_pairingSession!.toJson()),
+    );
   }
 
   void _startHealthMonitor() {

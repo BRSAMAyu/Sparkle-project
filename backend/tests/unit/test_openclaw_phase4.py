@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.adapters.openclaw.client import OpenClawError
 from app.models.execution_intent import (
     ExecutionIntent,
     ExecutionIntentStatus,
@@ -430,3 +431,75 @@ async def test_classify_task_uses_short_ttl_cache(
 
     assert first.execution_mode == second.execution_mode
     assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_consecutive_failures_trigger_degraded_manual_mode(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+    monkeypatch,
+) -> None:
+    async def _execute(self, request_body, *, timeout_seconds=None, event_callback=None):
+        raise OpenClawError("openclaw unavailable")
+
+    monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.execute", _execute)
+
+    user = User(
+        username="phase4degraded",
+        email="phase4degraded@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = ExecutionService(db=db_session)
+    ExecutionService._failure_counts.clear()
+    ExecutionService._degraded_users.clear()
+
+    for index in range(3):
+        task = Task(
+            user_id=user.id,
+            title=f"调研任务 {index}",
+            type=TaskType.OCR,
+            tags=["research"],
+            estimated_minutes=20,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.PENDING,
+        )
+        db_session.add(task)
+        await db_session.commit()
+        await db_session.refresh(task)
+
+        intent = await service.handoff_to_openclaw(
+            task_id=task.id,
+            user_id=user.id,
+            template_id="web_research_brief",
+        )
+        assert intent.status == ExecutionIntentStatus.FAILED
+
+    snapshot = service.get_degradation_snapshot()
+    assert snapshot["degraded_user_count"] == 1
+    assert snapshot["failure_counts"][str(user.id)] >= 3
+
+    blocked_task = Task(
+        user_id=user.id,
+        title="第 4 个任务",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(blocked_task)
+    await db_session.commit()
+    await db_session.refresh(blocked_task)
+
+    decision = await service.classify_task(task_id=blocked_task.id, user_id=user.id)
+    assert decision.execution_mode == ExecutionMode.HUMAN
+    with pytest.raises(ValueError, match="temporarily degraded"):
+        await service.create_intent(task_id=blocked_task.id, user_id=user.id)

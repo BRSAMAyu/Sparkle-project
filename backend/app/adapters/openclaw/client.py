@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
@@ -111,18 +112,59 @@ class OpenClawClient:
         await self._ws_client.cancel_run(session_key=session_key, run_id=run_id)
 
     async def health_check(self) -> bool:
+        snapshot = await self.health_snapshot()
+        return bool(snapshot.get("reachable"))
+
+    async def health_snapshot(self) -> dict[str, Any]:
         if self._config.transport == "gateway_ws":
             if not self._ws_client:
-                return False
-            return await self._ws_client.health_check()
+                return {
+                    "reachable": False,
+                    "transport": "gateway_ws",
+                    "message": "Gateway WS transport is not initialized",
+                }
+            reachable = await self._ws_client.health_check()
+            return {
+                "reachable": reachable,
+                "transport": "gateway_ws",
+                "capabilities": ["实时生命周期", "节点调用", "审批回传"] if reachable else [],
+                "message": "gateway_ws" if reachable else "Gateway WS health check failed",
+            }
         if not self._config.enabled or not self._base_url:
-            return False
+            return {
+                "reachable": False,
+                "transport": self._config.transport,
+                "message": "OpenClaw integration is disabled",
+            }
         try:
+            started_at = time.monotonic()
             async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as http:
-                response = await http.get(f"{self._base_url}/v1/models")
-            return response.status_code == 200
-        except Exception:
-            return False
+                response = await http.get(
+                    f"{self._base_url}/health",
+                    headers=self._auth_headers(),
+                )
+            latency_ms = int((time.monotonic() - started_at) * 1000)
+            if response.status_code != 200:
+                return {
+                    "reachable": False,
+                    "transport": self._config.transport,
+                    "latency_ms": latency_ms,
+                    "message": f"HTTP {response.status_code}",
+                }
+
+            payload = response.json() if response.content else {}
+            if not isinstance(payload, dict):
+                payload = {}
+            payload.setdefault("reachable", True)
+            payload.setdefault("transport", self._config.transport)
+            payload["latency_ms"] = latency_ms
+            return payload
+        except Exception as exc:
+            return {
+                "reachable": False,
+                "transport": self._config.transport,
+                "message": str(exc),
+            }
 
     async def list_nodes(
         self,
@@ -155,6 +197,12 @@ class OpenClawClient:
             invoke_timeout_ms=invoke_timeout_ms,
             idempotency_key=idempotency_key,
         )
+
+    def _auth_headers(self) -> dict[str, str]:
+        headers: dict[str, str] = {}
+        if self._config.auth_token:
+            headers["Authorization"] = f"Bearer {self._config.auth_token}"
+        return headers
 
 
 class OpenClawError(Exception):

@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gorilla/websocket"
-	"github.com/sparkle/gateway/internal/service"
+	"time"
 )
 
 func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn, writer *wsSafeWriter) bool {
@@ -42,9 +42,11 @@ func (h *ChatOrchestrator) Registry() *ConnectionRegistry {
 	return h.wsRegistry
 }
 
-func writeConnectionLimitClose(writer service.JSONWriteCloser, conn *websocket.Conn) {
-	if writer != nil {
-		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"))
-	}
+func writeConnectionLimitClose(_ *wsSafeWriter, conn *websocket.Conn) {
+	_ = conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"),
+		time.Now().Add(time.Second),
+	)
 	_ = conn.Close()
 }

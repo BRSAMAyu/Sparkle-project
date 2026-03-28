@@ -1086,6 +1086,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// 当前连接状态
   WsConnectionState get connectionState => _connectionState;
 
+  static const int _pendingMessageLimit = 50;
+
   /// 是否已连接
   bool get isConnected => _connectionState == WsConnectionState.connected;
 
@@ -1146,10 +1148,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     } else {
       _log('⏳ Message queued (not connected yet)');
       // TRACKED(TD-001): Pending limit
-      if (_pendingMessages.length >= 50) {
-        _pendingMessages.removeAt(0); // Drop oldest
-      }
-      _pendingMessages.add(messagePayload);
+      _enqueuePendingMessage(messagePayload);
     }
 
     return controller.stream;
@@ -1534,6 +1533,54 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
   }
 
+  void _enqueuePendingMessage(Map<String, dynamic> payload) {
+    if (_pendingMessages.length >= _pendingMessageLimit) {
+      final droppedPayload = _pendingMessages.removeAt(0);
+      _notifyPendingPayloadFailure(
+        droppedPayload,
+        ErrorEvent(
+          code: 'PENDING_QUEUE_OVERFLOW',
+          message:
+              '有未发送消息因队列已满被丢弃 / A pending message was dropped because the queue is full.',
+          retryable: false,
+        ),
+      );
+    }
+    _pendingMessages.add(payload);
+  }
+
+  void _notifyPendingPayloadFailure(
+    Map<String, dynamic> payload,
+    ErrorEvent event,
+  ) {
+    final requestId = payload['request_id']?.toString();
+    if (requestId == null || requestId.isEmpty) {
+      return;
+    }
+    _routeEventToRequest(requestId, event);
+  }
+
+  void _failPendingMessages({
+    required String code,
+    required String message,
+  }) {
+    if (_pendingMessages.isEmpty) {
+      return;
+    }
+    final pending = List<Map<String, dynamic>>.from(_pendingMessages);
+    _pendingMessages.clear();
+    for (final payload in pending) {
+      _notifyPendingPayloadFailure(
+        payload,
+        ErrorEvent(
+          code: code,
+          message: message,
+          retryable: false,
+        ),
+      );
+    }
+  }
+
   /// 处理接收到的消息
   Future<void> _handleIncomingMessage(dynamic data) async {
     if (_disposed) return;
@@ -1626,20 +1673,17 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
+        final droppedCount = _pendingMessages.length;
         _log(
-          '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure',
+          '⚠️ Discarding $droppedCount pending messages due to auth failure',
         );
-        _broadcastErrorToActiveRequests(
-          ErrorEvent(
-            code: 'MESSAGES_LOST',
-            message: l10n.chatPendingMessagesFailed(
-              _pendingMessages.length,
-            ),
-            retryable: false,
+        _failPendingMessages(
+          code: 'MESSAGES_LOST',
+          message: l10n.chatPendingMessagesFailed(
+            '有 $droppedCount 条未发送消息因登录失效被丢弃 / $droppedCount pending messages were dropped because authentication expired.',
           ),
         );
       }
-      _pendingMessages.clear();
       return;
     }
 
@@ -1695,20 +1739,17 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
+        final droppedCount = _pendingMessages.length;
         _log(
-          '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure',
+          '⚠️ Discarding $droppedCount pending messages due to token refresh failure',
         );
-        _broadcastErrorToActiveRequests(
-          ErrorEvent(
-            code: 'MESSAGES_LOST',
-            message: l10n.chatPendingMessagesFailed(
-              _pendingMessages.length,
-            ),
-            retryable: false,
+        _failPendingMessages(
+          code: 'MESSAGES_LOST',
+          message: l10n.chatPendingMessagesFailed(
+            '有 $droppedCount 条未发送消息因刷新登录失败被丢弃 / $droppedCount pending messages were dropped because token refresh failed.',
           ),
         );
       }
-      _pendingMessages.clear();
     } finally {
       _isRefreshingToken = false;
     }
@@ -1948,11 +1989,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     );
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
-      // TRACKED(TD-001): Pending limit
-      if (_pendingMessages.length >= 50) {
-        _pendingMessages.removeAt(0); // Drop oldest
-      }
-      _pendingMessages.add(payload);
+      _enqueuePendingMessage(payload);
       return;
     }
 
@@ -1969,10 +2006,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       span.end();
     } catch (e) {
       _log('❌ Send failed: $e');
-      if (_pendingMessages.length >= 50) {
-        _pendingMessages.removeAt(0);
-      }
-      _pendingMessages.add(payload);
+      _enqueuePendingMessage(payload);
       _handleConnectionError(e);
     }
   }

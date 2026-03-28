@@ -82,7 +82,10 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await _apiClient.get<dynamic>('/background-tasks');
-      final items = ApiResponseParser.unwrapList(response.data, action: 'fetchBackgroundTasks');
+      final items = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'fetchBackgroundTasks',
+      );
       final tasks = items
           .whereType<Map<String, dynamic>>()
           .map(BackgroundTaskModel.fromJson)
@@ -122,7 +125,10 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
     try {
       await _apiClient.post<dynamic>('/background-tasks/$taskId/retry');
       await fetchTasks();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('TaskMonitor retryTask failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   /// Start polling for updates (every 5 seconds)
@@ -161,7 +167,8 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 /// Provider for background tasks
 final backgroundTaskProvider =
     StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>(
-        (ref) => BackgroundTaskNotifier(ref.watch(apiClientProvider)),);
+  (ref) => BackgroundTaskNotifier(ref.watch(apiClientProvider)),
+);
 
 /// Task monitor screen
 class TaskMonitorScreen extends ConsumerStatefulWidget {
@@ -224,7 +231,8 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
 
   Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) => Builder(
         builder: (context) => Container(
-          padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
+          padding:
+              const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
           child: Wrap(
             spacing: DS.sm,
             children: BackgroundTaskFilter.values.map((filter) {
@@ -232,19 +240,19 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
               return FilterChip(
                 label: Text(filter.label(context)),
                 selected: isSelected,
-              onSelected: (_) {
-                ref.read(backgroundTaskProvider.notifier).setFilter(filter);
-              },
-              backgroundColor: DS.brandPrimary10,
-              selectedColor: DS.primaryBase.withValues(alpha: 0.3),
-              checkmarkColor: DS.primaryBase,
-              labelStyle: TextStyle(
-                color: isSelected ? DS.primaryBase : DS.brandPrimary70,
-                fontSize: 13,
-              ),
-              side: BorderSide.none,
-            );
-          }).toList(),
+                onSelected: (_) {
+                  ref.read(backgroundTaskProvider.notifier).setFilter(filter);
+                },
+                backgroundColor: DS.brandPrimary10,
+                selectedColor: DS.primaryBase.withValues(alpha: 0.3),
+                checkmarkColor: DS.primaryBase,
+                labelStyle: TextStyle(
+                  color: isSelected ? DS.primaryBase : DS.brandPrimary70,
+                  fontSize: 13,
+                ),
+                side: BorderSide.none,
+              );
+            }).toList(),
           ),
         ),
       );

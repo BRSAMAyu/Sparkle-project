@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -106,10 +108,10 @@ class ExecutionResultRenderer extends StatelessWidget {
   }
 
   static Map<String, dynamic> _withoutLinkFields(Map<String, dynamic> output) {
-    final sanitized = Map<String, dynamic>.from(output);
-    sanitized.remove('urls');
-    sanitized.remove('links');
-    sanitized.remove('sources');
+    final sanitized = Map<String, dynamic>.from(output)
+      ..remove('urls')
+      ..remove('links')
+      ..remove('sources');
     return sanitized;
   }
 
@@ -133,15 +135,13 @@ class _PlainTextBlock extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return SelectableText(
+  Widget build(BuildContext context) => SelectableText(
       text.isEmpty ? '暂无文本结果。' : text,
       style: DS.bodySmall.copyWith(
         color: DS.textPrimary,
         height: 1.5,
       ),
     );
-  }
 }
 
 class _StructuredBlock extends StatelessWidget {
@@ -333,7 +333,7 @@ class _LinkListBlock extends StatelessWidget {
 
   String _domainOf(String url) {
     final uri = Uri.tryParse(url);
-    return uri?.host.isNotEmpty == true ? uri!.host : url;
+    return (uri?.host.isNotEmpty ?? false) ? uri!.host : url;
   }
 
   @override
@@ -464,8 +464,7 @@ class _ArtifactTile extends StatelessWidget {
     return Icons.insert_drive_file_outlined;
   }
 
-  bool _isImage(String type) =>
-      type.contains('image') || type.contains('screenshot');
+  bool _isImage(String type) => type.contains('image') || type.contains('screenshot');
 
   @override
   Widget build(BuildContext context) {
@@ -486,8 +485,26 @@ class _ArtifactTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: DS.spacing10),
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('附件预览即将推出')),
+          if (_isImage(type) && url.isNotEmpty) {
+            showDialog<void>(
+              context: context,
+              builder: (_) => _ImageArtifactPreviewDialog(
+                title: name,
+                imageUrl: url,
+              ),
+            );
+            return;
+          }
+          showModalBottomSheet<void>(
+            context: context,
+            showDragHandle: true,
+            backgroundColor: DS.surfacePrimary,
+            builder: (_) => _ArtifactPreviewSheet(
+              artifact: artifact,
+              title: name,
+              url: url,
+              type: type,
+            ),
           );
         },
         borderRadius: BorderRadius.circular(12),
@@ -544,6 +561,193 @@ class _ArtifactTile extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageArtifactPreviewDialog extends StatelessWidget {
+  const _ImageArtifactPreviewDialog({
+    required this.title,
+    required this.imageUrl,
+  });
+
+  final String title;
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: DS.surfacePrimary,
+      insetPadding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              DS.spacing12,
+              DS.spacing8,
+              DS.spacing8,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DS.bodyMedium.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 240,
+                    width: 320,
+                    color: DS.surfaceTertiary,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image_outlined),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+              onPressed: () {
+                unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('附件链接已复制')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('复制链接'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtifactPreviewSheet extends StatelessWidget {
+  const _ArtifactPreviewSheet({
+    required this.artifact,
+    required this.title,
+    required this.url,
+    required this.type,
+  });
+
+  final Map<String, dynamic> artifact;
+  final String title;
+  final String url;
+  final String type;
+
+  String _previewText() {
+    final preview = artifact['preview']?.toString();
+    if ((preview ?? '').trim().isNotEmpty) return preview!.trim();
+    final content = artifact['content']?.toString();
+    if ((content ?? '').trim().isNotEmpty) return content!.trim();
+    final pages = artifact['pages'];
+    if (pages is List && pages.isNotEmpty) {
+      return pages.take(3).map((item) => '$item').join('\n');
+    }
+    return '当前附件类型为 ${type.isEmpty ? 'unknown' : type}，还没有更详细的预览内容。';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = _previewText();
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '类型：${type.isEmpty ? '未知附件' : type}',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+            if (url.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing4),
+              Text(
+                url,
+                style: DS.bodySmall.copyWith(
+                  color: DS.info,
+                  height: 1.45,
+                ),
+              ),
+            ],
+            const SizedBox(height: DS.spacing12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SelectableText(
+                preview,
+                style: DS.bodySmall.copyWith(
+                  color: DS.textPrimary,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.spacing12),
+            Row(
+              children: [
+                if (url.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () {
+                      unawaited(Clipboard.setData(ClipboardData(text: url)));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('附件链接已复制')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text('复制链接'),
+                  ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('完成'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

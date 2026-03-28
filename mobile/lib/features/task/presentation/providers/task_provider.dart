@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show
@@ -23,6 +24,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -517,7 +519,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       if (templates.isEmpty) {
         nextSelected.remove(taskId);
       } else if (existingSelection == null ||
-          templates.every((template) => template.templateId != existingSelection)) {
+          templates
+              .every((template) => template.templateId != existingSelection)) {
         nextSelected[taskId] = templates.first.templateId;
       }
 
@@ -565,6 +568,28 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
     try {
       final selectedTemplateId = state.selectedExecutionTemplateIds[taskId];
+      final connection = _ref.read(openClawConnectionProvider);
+      if (!connection.isConnected) {
+        if (connection.config.isConfigured) {
+          await connection.queueExecutionRequest(
+            taskId: taskId,
+            goal: goal,
+            templateId: selectedTemplateId,
+            source: 'task_provider',
+            priority: 1,
+          );
+          if (mounted) {
+            state =
+                state.copyWith(error: ExecutionCopy.engineOfflineQueuedMessage);
+          }
+          return null;
+        }
+        if (mounted) {
+          state =
+              state.copyWith(error: ExecutionCopy.engineNotConnectedMessage);
+        }
+        return null;
+      }
       final intent = await _taskRepository.handoffTask(
         taskId,
         goal: goal,
@@ -595,6 +620,37 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         _setHandoffLoading(taskId, false);
       }
     }
+  }
+
+  Future<int> drainQueuedAiHandoffs() async {
+    final connection = _ref.read(openClawConnectionProvider);
+    if (!connection.isConnected || connection.queuedRequests.isEmpty) {
+      return 0;
+    }
+
+    var dispatched = 0;
+    for (final request in connection.queuedRequests) {
+      try {
+        final intent = await _taskRepository.handoffTask(
+          request.taskId,
+          goal: request.goal,
+          templateId: request.templateId,
+        );
+        if (!mounted) return dispatched;
+        _setTaskExecution(request.taskId, intent);
+        final record = await _taskRepository.getExecutionRecord(intent.id);
+        if (mounted) {
+          _setTaskExecutionRecord(request.taskId, record);
+        }
+        await connection.removeQueuedRequest(request.id);
+        dispatched += 1;
+      } catch (e) {
+        if (mounted) {
+          state = state.copyWith(error: e.toString());
+        }
+      }
+    }
+    return dispatched;
   }
 
   Future<void> reorderTasks(int oldIndex, int newIndex) async {
@@ -706,7 +762,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       return state.taskExecutionRecords[taskId];
     }
 
-    final intent = state.taskExecutions[taskId] ?? await loadTaskExecutionState(taskId);
+    final intent =
+        state.taskExecutions[taskId] ?? await loadTaskExecutionState(taskId);
     if (intent == null) {
       state = state.copyWith(error: '没有可处理的 AI 执行记录');
       return null;
@@ -757,29 +814,15 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> submitTaskFeedback(
     String taskId,
     TaskFeedbackSubmission feedback,
-  ) async {
-    try {
-      await _taskRepository.submitTaskFeedback(taskId, feedback);
-    } catch (e) {
-      // Feedback is optional - fail silently
-      // Don't update state or show errors
-    }
-  }
+  ) =>
+      _taskRepository.submitTaskFeedback(taskId, feedback);
 
   /// Submit task feedback and get response with preference updates
   Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
     String taskId,
     TaskFeedbackSubmission feedback,
   ) async {
-    try {
-      return await _taskRepository.submitTaskFeedbackWithResponse(
-        taskId,
-        feedback,
-      );
-    } catch (e) {
-      // Feedback is optional - fail silently
-      return null;
-    }
+    return _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
   }
 
   /// Record user interaction with a next action suggestion

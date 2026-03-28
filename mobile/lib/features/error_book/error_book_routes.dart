@@ -26,76 +26,81 @@ Page<dynamic> _buildTransitionPage({
 
 class ErrorBookRoutes {
   static List<RouteBase> get routes => [
-    GoRoute(
-        path: '/errors',
-        name: 'errors',
-        pageBuilder: (context, state) {
-          final dimensionCode = state.uri.queryParameters['dimension'];
-          CognitiveDimension? dimension;
-          if (dimensionCode != null) {
-            try {
-              dimension = CognitiveDimension.values.firstWhere(
-                (e) => e.code == dimensionCode,
-              );
-            } catch (_) {}
-          }
-          return _buildTransitionPage(
-            state: state,
-            child: SceneAudioScope(
-              policy: const SceneAudioPolicy(track: BgmTrack.task),
-              child: ErrorListScreen(filterByDimension: dimension),
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/errors/new',
-        name: 'addError',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const SceneAudioScope(
-            policy: SceneAudioPolicy(track: BgmTrack.task),
-            child: AddErrorScreen(),
-          ),
-          type: SharedAxisTransitionType.scaled,
+        GoRoute(
+          path: '/errors',
+          name: 'errors',
+          pageBuilder: (context, state) {
+            final dimensionCode = state.uri.queryParameters['dimension'];
+            CognitiveDimension? dimension;
+            if (dimensionCode != null) {
+              try {
+                dimension = CognitiveDimension.values.firstWhere(
+                  (e) => e.code == dimensionCode,
+                );
+              } catch (error, stackTrace) {
+                debugPrint(
+                  'ErrorBookRoutes invalid dimension "$dimensionCode": $error',
+                );
+                debugPrintStack(stackTrace: stackTrace);
+              }
+            }
+            return _buildTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(track: BgmTrack.task),
+                child: ErrorListScreen(filterByDimension: dimension),
+              ),
+            );
+          },
         ),
-      ),
-      GoRoute(
-        path: '/errors/:id',
-        name: 'errorDetail',
-        pageBuilder: (context, state) {
-          // id is a required path parameter, so it won't be null
-          final errorId = state.pathParameters['id']!;
-          return _buildTransitionPage(
+        GoRoute(
+          path: '/errors/new',
+          name: 'addError',
+          pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: SceneAudioScope(
-              policy: const SceneAudioPolicy(track: BgmTrack.task),
-              child: ErrorDetailScreen(errorId: errorId),
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/review',
-        name: 'review',
-        pageBuilder: (context, state) {
-          final modeCode = state.uri.queryParameters['mode'] ?? 'today';
-          final subjectCode = state.uri.queryParameters['subject'];
-
-          final mode = ReviewMode.values.firstWhere(
-            (m) => m.code == modeCode,
-            orElse: () => ReviewMode.today,
-          );
-
-          return _buildTransitionPage(
-            state: state,
-            child: SceneAudioScope(
-              policy: const SceneAudioPolicy(track: BgmTrack.task),
-              child: ReviewScreen(mode: mode, subjectCode: subjectCode),
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(track: BgmTrack.task),
+              child: AddErrorScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
-          );
-        },
-      ),
-  ];
+          ),
+        ),
+        GoRoute(
+          path: '/errors/:id',
+          name: 'errorDetail',
+          pageBuilder: (context, state) {
+            // id is a required path parameter, so it won't be null
+            final errorId = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(track: BgmTrack.task),
+                child: ErrorDetailScreen(errorId: errorId),
+              ),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/review',
+          name: 'review',
+          pageBuilder: (context, state) {
+            final modeCode = state.uri.queryParameters['mode'] ?? 'today';
+            final subjectCode = state.uri.queryParameters['subject'];
+
+            final mode = ReviewMode.values.firstWhere(
+              (m) => m.code == modeCode,
+              orElse: () => ReviewMode.today,
+            );
+
+            return _buildTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(track: BgmTrack.task),
+                child: ReviewScreen(mode: mode, subjectCode: subjectCode),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
+        ),
+      ];
 }

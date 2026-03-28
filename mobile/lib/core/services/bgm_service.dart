@@ -1618,7 +1618,12 @@ class BgmService {
       try {
         await player.seek(Duration.zero);
         await player.resume();
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        debugPrint(
+          'BgmService failed to restart single-track playback: $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
       return;
     }
     if (_currentCatalogEntry != null) {

@@ -557,6 +557,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         ),
       if ((validation['comparison_summary']?.toString() ?? '').isNotEmpty)
         'comparison_summary': validation['comparison_summary'],
+      if (_parseJsonMap(validation['self_verification']) != null)
+        'self_verification': _parseJsonMap(validation['self_verification']),
       if (qualityScore != null) 'quality_score': qualityScore,
       if (stepsTotal > 0) 'validation_passed': stepsPassed,
       if (stepsTotal > 0) 'validation_total': stepsTotal,

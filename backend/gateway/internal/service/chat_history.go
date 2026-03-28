@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/db"
 )
 
 const (
@@ -340,12 +339,18 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 	if offset >= len(messages) {
 		return []ChatHistoryMessage{}, nil
 	}
-
-	end := offset + limit
-	if end > len(messages) {
-		end = len(messages)
+	start := len(messages) - offset - limit
+	if start < 0 {
+		start = 0
 	}
-	return messages[offset:end], nil
+	end := len(messages) - offset
+	if end < 0 {
+		end = 0
+	}
+	if start >= end {
+		return []ChatHistoryMessage{}, nil
+	}
+	return messages[start:end], nil
 }
 
 // getMessagesFromDB fetches messages from PostgreSQL as fallback
@@ -378,31 +383,47 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 		return []ChatHistoryMessage{}, nil
 	}
 
-	// Use the generated SQLC query
-	queries := db.New(s.pool)
-	dbMessages, err := queries.GetSessionMessagesFromDB(ctx, db.GetSessionMessagesFromDBParams{
-		SessionID: sessionUUID,
-		UserID:    userUUID,
-		Limit:     int32(limit),
-		Offset:    int32(offset),
-	})
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, session_id, user_id, role, content, created_at
+		FROM chat_messages
+		WHERE session_id = $1 AND user_id = $2
+		ORDER BY created_at DESC
+		LIMIT $3 OFFSET $4
+	`, sessionUUID, userUUID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	// Convert to ChatHistoryMessage format
-	messages := make([]ChatHistoryMessage, 0, len(dbMessages))
-	for _, dbMsg := range dbMessages {
+	messages := make([]ChatHistoryMessage, 0, limit)
+	for rows.Next() {
+		var (
+			id        pgtype.UUID
+			dbSession pgtype.UUID
+			dbUser    pgtype.UUID
+			role      string
+			content   string
+			createdAt pgtype.Timestamptz
+		)
+		if err := rows.Scan(&id, &dbSession, &dbUser, &role, &content, &createdAt); err != nil {
+			return nil, err
+		}
 		messages = append(messages, ChatHistoryMessage{
-			ID:        dbMsg.ID.String(),
-			SessionID: dbMsg.SessionID.String(),
-			UserID:    dbMsg.UserID.String(),
-			Role:      string(dbMsg.Role),
-			Content:   dbMsg.Content,
-			Timestamp: fmt.Sprintf("%d", dbMsg.CreatedAt.Time.Unix()),
+			ID:        id.String(),
+			SessionID: dbSession.String(),
+			UserID:    dbUser.String(),
+			Role:      role,
+			Content:   content,
+			Timestamp: fmt.Sprintf("%d", createdAt.Time.Unix()),
 		})
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
+	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
+		messages[left], messages[right] = messages[right], messages[left]
+	}
 	return messages, nil
 }
 

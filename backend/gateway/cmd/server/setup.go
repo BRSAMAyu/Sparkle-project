@@ -67,23 +67,23 @@ type serviceBundle struct {
 }
 
 type handlerBundle struct {
-	wsFactory                *handler.WebSocketFactory
-	wsTicketHandler          *handler.WSTicketHandler
-	chatHistoryHandler       *handler.ChatHistoryHandler
-	fileEventHandler         *handler.FileEventHandler
-	chatOrchestrator         *handler.ChatOrchestrator
-	signalPushHandler        *handler.SignalPushHandler
-	groupChatHandler         *handler.GroupChatHandler
-	errorBookHandler         *handler.ErrorBookHandler
-	chaosHandler             *handler.ChaosHandler
-	fileHandler              *handler.FileHandler
+	wsFactory               *handler.WebSocketFactory
+	wsTicketHandler         *handler.WSTicketHandler
+	chatHistoryHandler      *handler.ChatHistoryHandler
+	fileEventHandler        *handler.FileEventHandler
+	chatOrchestrator        *handler.ChatOrchestrator
+	signalPushHandler       *handler.SignalPushHandler
+	groupChatHandler        *handler.GroupChatHandler
+	errorBookHandler        *handler.ErrorBookHandler
+	chaosHandler            *handler.ChaosHandler
+	fileHandler             *handler.FileHandler
 	interventionPushHandler *handler.InterventionPushHandler
 	dataConsistencyHandler  *handler.DataConsistencyHandler
-	sttHandler               *handler.STTHandler
-	wsProxy                  *handler.WebSocketProxy
-	authHandler              *handler.AuthHandler
-	galaxyHandler            *handler.GalaxyHandler
-	proxyRoutesHandler       *handler.ProxyRoutesHandler
+	sttHandler              *handler.STTHandler
+	wsProxy                 *handler.WebSocketProxy
+	authHandler             *handler.AuthHandler
+	galaxyHandler           *handler.GalaxyHandler
+	proxyRoutesHandler      *handler.ProxyRoutesHandler
 }
 
 type cqrsBundle struct {
@@ -253,22 +253,22 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)
 
 	return &handlerBundle{
-		wsFactory:                wsFactory,
-		wsTicketHandler:          wsTicketHandler,
-		chatHistoryHandler:       chatHistoryHandler,
-		fileEventHandler:         fileEventHandler,
-		chatOrchestrator:         chatOrchestrator,
-		signalPushHandler:        signalPushHandler,
-		groupChatHandler:         groupChatHandler,
-		errorBookHandler:         errorBookHandler,
-		chaosHandler:             chaosHandler,
-		fileHandler:              fileHandler,
+		wsFactory:               wsFactory,
+		wsTicketHandler:         wsTicketHandler,
+		chatHistoryHandler:      chatHistoryHandler,
+		fileEventHandler:        fileEventHandler,
+		chatOrchestrator:        chatOrchestrator,
+		signalPushHandler:       signalPushHandler,
+		groupChatHandler:        groupChatHandler,
+		errorBookHandler:        errorBookHandler,
+		chaosHandler:            chaosHandler,
+		fileHandler:             fileHandler,
 		interventionPushHandler: interventionPushHandler,
 		dataConsistencyHandler:  dataConsistencyHandler,
-		sttHandler:               sttHandler,
-		wsProxy:                  wsProxy,
-		authHandler:              authHandler,
-		galaxyHandler:            galaxyHandler,
+		sttHandler:              sttHandler,
+		wsProxy:                 wsProxy,
+		authHandler:             authHandler,
+		galaxyHandler:           galaxyHandler,
 	}, nil
 }
 

@@ -15,47 +15,47 @@ import (
 )
 
 type Config struct {
-	Port                        string  `mapstructure:"PORT"`
-	DatabaseURL                 string  `mapstructure:"DATABASE_URL"`
-	PostgresHost                string  `mapstructure:"POSTGRES_HOST"`
-	PostgresPort                int     `mapstructure:"POSTGRES_PORT"`
-	PostgresUser                string  `mapstructure:"POSTGRES_USER"`
-	PostgresPassword            string  `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDB                  string  `mapstructure:"POSTGRES_DB"`
-	AgentAddress                string  `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled             bool    `mapstructure:"AGENT_TLS_ENABLED"`
-	AgentTLSCACertPath          string  `mapstructure:"AGENT_TLS_CA_CERT"`
-	AgentTLSServerName          string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure            bool    `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds          int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret                   string  `mapstructure:"JWT_SECRET"`
-	JWTIssuer                   string  `mapstructure:"JWT_ISSUER"`
-	JWTAudience                 string  `mapstructure:"JWT_AUDIENCE"`
-	JWTAccessTokenExpireMinutes int     `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
-	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
-	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
-	WSTicketTTLSeconds          int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
-	WSTicketRateRPS             float64 `mapstructure:"WS_TICKET_RATE_RPS"`
-	WSTicketRateBurst           int     `mapstructure:"WS_TICKET_RATE_BURST"`
-	WSMaxMessageBytes           int64   `mapstructure:"WS_MAX_MESSAGE_BYTES"`
-	WSMessageRateRPS            float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
-	WSMessageRateBurst          int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
-	WSMaxConnections            int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
-	WSGlobalMaxConnections      int     `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
-	RedisURL                    string  `mapstructure:"REDIS_URL"`
-	RedisHost                   string  `mapstructure:"REDIS_HOST"`
-	RedisPort                   int     `mapstructure:"REDIS_PORT"`
-	RedisPassword               string  `mapstructure:"REDIS_PASSWORD"`
-	RedisFailClosed             bool    `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
-	BackendURL                  string  `mapstructure:"BACKEND_URL"`
-	AppleClientID               string  `mapstructure:"APPLE_CLIENT_ID"`
-	AdminSecret                 string  `mapstructure:"ADMIN_SECRET"`
-	RabbitMQURL                 string  `mapstructure:"RABBITMQ_URL"`
-	InternalAPIKey              string  `mapstructure:"INTERNAL_API_KEY"`
+	Port                        string   `mapstructure:"PORT"`
+	DatabaseURL                 string   `mapstructure:"DATABASE_URL"`
+	PostgresHost                string   `mapstructure:"POSTGRES_HOST"`
+	PostgresPort                int      `mapstructure:"POSTGRES_PORT"`
+	PostgresUser                string   `mapstructure:"POSTGRES_USER"`
+	PostgresPassword            string   `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB                  string   `mapstructure:"POSTGRES_DB"`
+	AgentAddress                string   `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled             bool     `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath          string   `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSServerName          string   `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure            bool     `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds          int      `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret                   string   `mapstructure:"JWT_SECRET"`
+	JWTIssuer                   string   `mapstructure:"JWT_ISSUER"`
+	JWTAudience                 string   `mapstructure:"JWT_AUDIENCE"`
+	JWTAccessTokenExpireMinutes int      `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
+	JWTRefreshTokenExpireDays   int      `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
+	AllowWsQueryToken           bool     `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	WSTicketTTLSeconds          int      `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	WSTicketRateRPS             float64  `mapstructure:"WS_TICKET_RATE_RPS"`
+	WSTicketRateBurst           int      `mapstructure:"WS_TICKET_RATE_BURST"`
+	WSMaxMessageBytes           int64    `mapstructure:"WS_MAX_MESSAGE_BYTES"`
+	WSMessageRateRPS            float64  `mapstructure:"WS_MESSAGE_RATE_RPS"`
+	WSMessageRateBurst          int      `mapstructure:"WS_MESSAGE_RATE_BURST"`
+	WSMaxConnections            int      `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
+	WSGlobalMaxConnections      int      `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
+	RedisURL                    string   `mapstructure:"REDIS_URL"`
+	RedisHost                   string   `mapstructure:"REDIS_HOST"`
+	RedisPort                   int      `mapstructure:"REDIS_PORT"`
+	RedisPassword               string   `mapstructure:"REDIS_PASSWORD"`
+	RedisFailClosed             bool     `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
+	BackendURL                  string   `mapstructure:"BACKEND_URL"`
+	AppleClientID               string   `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret                 string   `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL                 string   `mapstructure:"RABBITMQ_URL"`
+	InternalAPIKey              string   `mapstructure:"INTERNAL_API_KEY"`
 	InternalIPWhitelist         []string `mapstructure:"INTERNAL_IP_WHITELIST"`
-	ChaosEnabled                bool    `mapstructure:"CHAOS_ENABLED"`
-	ChaosAllowProd              bool    `mapstructure:"CHAOS_ALLOW_PROD"`
-	ToxiproxyURL                string  `mapstructure:"TOXIPROXY_URL"`
+	ChaosEnabled                bool     `mapstructure:"CHAOS_ENABLED"`
+	ChaosAllowProd              bool     `mapstructure:"CHAOS_ALLOW_PROD"`
+	ToxiproxyURL                string   `mapstructure:"TOXIPROXY_URL"`
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
@@ -563,8 +563,8 @@ func Load() *Config {
 		cfg.RedisFailClosed = true
 	}
 	if !cfg.IsDevelopment() {
-		if !viper.IsSet("MINIO_ACCESS_KEY") || !viper.IsSet("MINIO_SECRET_KEY") {
-			log.Fatal("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be explicitly configured in non-development environments.")
+		if strings.TrimSpace(cfg.MinioAccessKey) == "" || strings.TrimSpace(cfg.MinioSecretKey) == "" {
+			log.Fatal("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be non-empty in non-development environments.")
 		}
 		if strings.TrimSpace(cfg.MinioAccessKey) == "minioadmin" || strings.TrimSpace(cfg.MinioSecretKey) == "minioadmin" {
 			log.Fatal("Refusing to start with default MinIO credentials in non-development environments.")

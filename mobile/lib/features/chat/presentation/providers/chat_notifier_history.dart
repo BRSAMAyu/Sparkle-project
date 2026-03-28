@@ -29,14 +29,13 @@ extension ChatNotifierHistory on ChatNotifier {
     );
   }
 
-  String _dateKey(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
+  String _dateKey(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
     // P0修复: 取消之前的加载请求，防止快速切换会话时竞态条件
-    _historyLoadOperation?.cancel();
+    unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;
 
     // P0修复: 防止重复加载同一会话
@@ -70,7 +69,9 @@ extension ChatNotifierHistory on ChatNotifier {
       _chatRepository.getConversationHistory(conversationId).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          debugPrint('[ChatHistory] Load timeout for $conversationId, falling back to empty history');
+          debugPrint(
+            '[ChatHistory] Load timeout for $conversationId, falling back to empty history',
+          );
           return <ChatMessageModel>[];
         },
       ),
@@ -162,7 +163,7 @@ extension ChatNotifierHistory on ChatNotifier {
 
       state = state.copyWith(
         isLoadingMore: false,
-        messages: [...state.messages, ...moreMessages],
+        messages: [...moreMessages, ...state.messages],
         hasMoreMessages: hasMore,
       );
     } catch (e) {

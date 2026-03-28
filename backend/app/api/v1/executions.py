@@ -133,10 +133,15 @@ class ExecutionConnectionStatusResponse(BaseModel):
     gateway_url: str | None = None
     transport: str | None = None
     ws_url: str | None = None
+    latency_ms: int | None = None
+    message: str | None = None
+    capabilities: list[str] = Field(default_factory=list)
     connected_nodes: int
     supports_nodes: bool
     supports_templates: bool
     supports_quality_loop: bool
+    degraded_user_count: int = 0
+    degradation_threshold: int = 0
 
 
 class ExecutionProfileTypeSummaryResponse(BaseModel):
@@ -164,6 +169,7 @@ class ExecutionRecordResponse(BaseModel):
     quality_score: float | None
     parsed_output: dict | None
     artifacts: list[Any]
+    tool_calls_count: int = 0
     duration_ms: int | None
     validation_passed: int | None
     validation_total: int | None
@@ -174,6 +180,7 @@ class ExecutionRecordResponse(BaseModel):
     quality_warnings: list[dict[str, Any]] = Field(default_factory=list)
     replay_steps: list[dict[str, Any]] = Field(default_factory=list)
     comparison_summary: dict[str, Any] | None = None
+    self_verification: dict[str, Any] | None = None
 
 
 def _intent_to_response(intent: ExecutionIntent) -> ExecutionIntentResponse:
@@ -214,6 +221,7 @@ async def _record_to_response(
     payload = record.to_dict()
     validator = ExecutionResultValidator()
     previous_record = None
+    intent = None
     if record.task_id:
         previous_stmt = (
             select(ExecutionRecord)
@@ -227,6 +235,7 @@ async def _record_to_response(
             .limit(1)
         )
         previous_record = (await db.execute(previous_stmt)).scalar_one_or_none()
+    intent = await db.get(ExecutionIntent, record.execution_intent_id)
 
     quality_warnings = []
     if isinstance(record.raw_response, dict):
@@ -246,6 +255,7 @@ async def _record_to_response(
         quality_score=payload["quality_score"],
         parsed_output=payload["parsed_output"],
         artifacts=payload["artifacts"],
+        tool_calls_count=int(payload.get("tool_calls_count", 0) or 0),
         duration_ms=payload["duration_ms"],
         validation_passed=payload.get("validation_passed"),
         validation_total=payload.get("validation_total"),
@@ -258,6 +268,12 @@ async def _record_to_response(
         comparison_summary=validator.build_comparison_summary(
             current_record=record,
             previous_record=previous_record,
+        ),
+        self_verification=validator.build_self_verification(
+            parsed_output=payload["parsed_output"],
+            artifacts=payload["artifacts"],
+            result_contract=(intent.result_contract if intent else {}) or {},
+            quality_warnings=quality_warnings,
         ),
     )
 
@@ -282,10 +298,15 @@ async def execution_connection_status(
         gateway_url=health.get("gateway_url"),
         transport=health.get("transport"),
         ws_url=health.get("ws_url"),
+        latency_ms=health.get("latency_ms"),
+        message=health.get("message"),
+        capabilities=list(health.get("capabilities") or []),
         connected_nodes=int(health.get("connected_nodes", 0)),
         supports_nodes=bool(health.get("supports_nodes")),
         supports_templates=bool(health.get("supports_templates")),
         supports_quality_loop=bool(health.get("supports_quality_loop")),
+        degraded_user_count=int(health.get("degraded_user_count", 0)),
+        degradation_threshold=int(health.get("degradation_threshold", 0)),
     )
 
 

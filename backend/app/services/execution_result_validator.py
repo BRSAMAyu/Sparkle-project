@@ -234,11 +234,106 @@ class ExecutionResultValidator:
             headline = "这次结果与上次接近"
             summary = "质量和执行复杂度基本持平，可以按相同标准快速审阅。"
 
+        current_output = self._record_output_map(current_record)
+        previous_output = self._record_output_map(previous_record)
+        changed_fields = self._diff_fields(current_output, previous_output)
+        highlights = self._build_comparison_highlights(changed_fields)
+
         return {
             "headline": headline,
             "summary": summary,
             "quality_delta": quality_delta,
             "tool_delta": tool_delta,
+            "changed_fields": changed_fields[:6],
+            "highlights": highlights[:4],
+            "current_preview": self._truncate(self._stringify(current_output), limit=220),
+            "previous_preview": self._truncate(self._stringify(previous_output), limit=220),
+        }
+
+    def build_self_verification(
+        self,
+        *,
+        parsed_output: dict[str, Any] | None,
+        artifacts: list[dict[str, Any]] | None = None,
+        result_contract: dict[str, Any] | None = None,
+        quality_warnings: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        parsed_output = parsed_output or {}
+        artifacts = list(artifacts or [])
+        result_contract = result_contract or {}
+        quality_warnings = list(quality_warnings or [])
+
+        text = self._stringify(parsed_output).strip()
+        required_fields = list(result_contract.get("required_fields") or [])
+        expected_artifacts = list(result_contract.get("artifact_types") or [])
+        missing_fields = [
+            field for field in required_fields if parsed_output.get(field) in (None, "", [], {})
+        ]
+        has_sources = any(
+            parsed_output.get(key) not in (None, "", [], {})
+            for key in ("sources", "links", "urls")
+        )
+        has_high_warning = any(
+            str(item.get("severity") or "").lower() in {"high", "error"}
+            for item in quality_warnings
+        )
+
+        checklist = [
+            {
+                "label": "结果正文可读",
+                "passed": bool(text),
+                "detail": "结果里包含可读文本或结构化内容。"
+                if text
+                else "没有检测到可读正文。",
+            },
+            {
+                "label": "关键字段齐全",
+                "passed": not missing_fields,
+                "detail": "已覆盖模板要求的关键字段。"
+                if not missing_fields
+                else f"缺少字段：{', '.join(missing_fields)}。",
+            },
+            {
+                "label": "附件产物已返回",
+                "passed": not expected_artifacts or bool(artifacts),
+                "detail": "模板期望的附件已返回。"
+                if (not expected_artifacts or artifacts)
+                else "模板期望附件，但本次结果没有附件。",
+            },
+            {
+                "label": "来源信息可追溯",
+                "passed": has_sources or "sources" not in required_fields,
+                "detail": "结果提供了来源或链接。"
+                if (has_sources or "sources" not in required_fields)
+                else "缺少来源信息，建议人工补查。",
+            },
+        ]
+        passed_count = sum(1 for item in checklist if item["passed"])
+        score = round(passed_count / len(checklist), 2) if checklist else 0.0
+        recommendations = [
+            item["detail"] for item in checklist if not item["passed"]
+        ] + [
+            item.get("message", "")
+            for item in quality_warnings[:2]
+            if str(item.get("message") or "").strip()
+        ]
+
+        if score >= 0.9 and not has_high_warning:
+            verdict = "ready"
+            summary = "结果结构完整，可以优先复核关键结论后直接采纳。"
+        elif score >= 0.6:
+            verdict = "review"
+            summary = "结果已经成形，但还有几个点值得你快速复核。"
+        else:
+            verdict = "needs_revision"
+            summary = "结果缺口较多，建议先退回修改或补充来源。"
+
+        return {
+            "score": score,
+            "verdict": verdict,
+            "summary": summary,
+            "checklist": checklist,
+            "recommendations": recommendations[:4],
         }
 
     def build_validation_summary(self, validation_result: Any) -> dict[str, Any]:
@@ -294,6 +389,52 @@ class ExecutionResultValidator:
         if isinstance(value, dict):
             return ", ".join(f"{key}={self._stringify(item)}" for key, item in list(value.items())[:3])
         return str(value)
+
+    def _record_output_map(self, record: Any | None) -> dict[str, Any]:
+        if record is None:
+            return {}
+        parsed_output = getattr(record, "parsed_output", None)
+        if isinstance(parsed_output, dict):
+            return parsed_output
+        return {}
+
+    def _diff_fields(
+        self,
+        current: dict[str, Any],
+        previous: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        changed: list[dict[str, Any]] = []
+        keys = set(current.keys()) | set(previous.keys())
+        for key in sorted(keys):
+            current_value = self._stringify(current.get(key))
+            previous_value = self._stringify(previous.get(key))
+            if current_value == previous_value:
+                continue
+            changed.append(
+                {
+                    "field": key,
+                    "current": self._truncate(current_value, limit=120),
+                    "previous": self._truncate(previous_value, limit=120),
+                },
+            )
+        return changed
+
+    def _build_comparison_highlights(
+        self,
+        changed_fields: list[dict[str, Any]],
+    ) -> list[str]:
+        highlights: list[str] = []
+        for item in changed_fields[:4]:
+            field = item.get("field", "字段")
+            current = str(item.get("current") or "").strip()
+            previous = str(item.get("previous") or "").strip()
+            if previous and current:
+                highlights.append(f"{field}：从“{previous}”调整为“{current}”")
+            elif current:
+                highlights.append(f"{field}：新增“{current}”")
+            elif previous:
+                highlights.append(f"{field}：移除了“{previous}”")
+        return highlights
 
     def _truncate(self, value: str, limit: int = 160) -> str:
         text = value.strip()

@@ -68,12 +68,17 @@ async def test_user_execution_connection_status_is_available(db_session, monkeyp
             "transport": "gateway_ws",
             "ws_url": "ws://openclaw.local",
             "reachable": True,
+            "latency_ms": 42,
+            "message": "gateway_ws",
+            "capabilities": ["实时生命周期", "节点调用"],
             "supports_approvals": True,
             "ingestion_layer": "execution_ingestor",
             "connected_nodes": 2,
             "supports_nodes": True,
             "supports_templates": True,
             "supports_quality_loop": True,
+            "degraded_user_count": 1,
+            "degradation_threshold": 3,
         }
 
     monkeypatch.setattr("app.api.v1.executions.ExecutionService.get_health", fake_health)
@@ -89,6 +94,9 @@ async def test_user_execution_connection_status_is_available(db_session, monkeyp
     assert resp.status_code == 200
     payload = resp.json()
     assert payload["reachable"] is True
+    assert payload["latency_ms"] == 42
+    assert payload["capabilities"]
+    assert payload["degraded_user_count"] == 1
     assert payload["connected_nodes"] == 2
     app.dependency_overrides = {}
 
@@ -254,6 +262,8 @@ async def test_execution_admin_dashboard_available_for_superuser(db_session, mon
             "supports_nodes": True,
             "supports_templates": True,
             "supports_quality_loop": True,
+            "degraded_user_count": 2,
+            "degradation_threshold": 3,
         }
 
     async def fake_profile(self, *, days=30):
@@ -289,5 +299,7 @@ async def test_execution_admin_dashboard_available_for_superuser(db_session, mon
     payload = resp.json()
     assert payload["total_executions"] == 12
     assert payload["connected_nodes"] == 1
+    assert payload["degraded_user_count"] == 2
+    assert payload["degradation_threshold"] == 3
     assert payload["delegation_trend"] == "increasing"
     app.dependency_overrides = {}

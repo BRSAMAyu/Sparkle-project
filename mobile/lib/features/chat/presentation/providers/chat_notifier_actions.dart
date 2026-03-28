@@ -108,9 +108,22 @@ extension ChatNotifierActions on ChatNotifier {
                   : null,
             );
         if (intent == null) {
+          final message = _ref.read(taskListProvider).error ?? 'AI 执行发起失败';
+          if (message.contains('等待队列')) {
+            state = state.copyWith(
+              lastActionStatus: 'queued',
+              lastActionMessage: message,
+            );
+            _queueNavigation(
+              _actionString(payload, 'route').isNotEmpty
+                  ? _actionString(payload, 'route')
+                  : '${TaskRoutes.home}/$taskId/execute?origin=chat',
+            );
+            return;
+          }
           state = state.copyWith(
             lastActionStatus: 'failed',
-            lastActionMessage: _ref.read(taskListProvider).error ?? 'AI 执行发起失败',
+            lastActionMessage: message,
           );
           return;
         }

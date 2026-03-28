@@ -147,27 +147,53 @@ def test_execution_result_validator_builds_comparison_summary() -> None:
     validator = ExecutionResultValidator()
 
     class _Record:
-        def __init__(self, *, quality_score, tool_calls_count, trust_level):
+        def __init__(self, *, quality_score, tool_calls_count, trust_level, parsed_output):
             self.quality_score = quality_score
             self.tool_calls_count = tool_calls_count
             self.trust_level = trust_level
+            self.parsed_output = parsed_output
 
     summary = validator.build_comparison_summary(
         current_record=_Record(
             quality_score=0.91,
             tool_calls_count=2,
             trust_level="validated",
+            parsed_output={"summary": "新的摘要", "sources": ["a", "b"]},
         ),
         previous_record=_Record(
             quality_score=0.76,
             tool_calls_count=4,
             trust_level="raw",
+            parsed_output={"summary": "旧的摘要"},
         ),
     )
 
     assert summary is not None
     assert summary["quality_delta"] > 0
     assert "更稳" in summary["headline"]
+    assert summary["changed_fields"]
+    assert summary["highlights"]
+
+
+def test_execution_result_validator_builds_self_verification() -> None:
+    validator = ExecutionResultValidator()
+
+    verification = validator.build_self_verification(
+        parsed_output={
+            "summary": "一份足够完整的调研摘要",
+            "sources": [{"url": "https://example.com"}],
+        },
+        artifacts=[],
+        result_contract={
+            "required_fields": ["summary", "sources"],
+            "artifact_types": [],
+        },
+        quality_warnings=[],
+    )
+
+    assert verification["verdict"] in {"ready", "review"}
+    assert verification["score"] > 0.5
+    assert len(verification["checklist"]) >= 3
 
 
 @pytest.mark.asyncio
