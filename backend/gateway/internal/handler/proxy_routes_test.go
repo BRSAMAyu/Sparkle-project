@@ -130,6 +130,12 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"POST /api/v1/plans/:id/archive",
 	}
 
+	expectedTelemetryRoutes := []string{
+		"POST /api/v1/client-telemetry/events",
+		"POST /api/v1/client-telemetry/events/batch",
+		"GET /api/v1/client-telemetry/summary",
+	}
+
 	// Verify at least some routes are registered
 	routeMap := make(map[string]bool)
 	for _, route := range routes {
@@ -158,6 +164,12 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 
 	// Check plans routes
 	for _, expected := range expectedPlansRoutes {
+		if !routeMap[expected] {
+			t.Errorf("Expected route %s not found", expected)
+		}
+	}
+
+	for _, expected := range expectedTelemetryRoutes {
 		if !routeMap[expected] {
 			t.Errorf("Expected route %s not found", expected)
 		}

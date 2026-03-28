@@ -17,6 +17,7 @@ import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
+import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 import 'package:sparkle/features/simulation/presentation/widgets/simulation_chat_bubble.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 
@@ -37,16 +38,7 @@ class SimulationScreen extends ConsumerStatefulWidget {
 }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
-  static const Map<String, String> _scenarioLabels = {
-    'study_group': '虚拟学习小组',
-    'knowledge_debate': '知识辩论',
-    'historical_roleplay': '历史角色扮演',
-    'socratic_dialogue': '苏格拉底式对话',
-    'case_analysis': '案例拆解',
-    'what_if_path': 'What-If 推演',
-    'concept_map_build': '概念图共建',
-    'error_diagnosis': '错因诊断',
-  };
+  static const Map<String, String> _scenarioLabels = simulationScenarioLabels;
 
   final _topicController = TextEditingController();
   final _interactionController = TextEditingController();
@@ -487,8 +479,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     return LearningReport(
       reportId: 'simulation-${session.id}',
       markdown:
-          '# 仿真洞察报告\n\n主题：${session.topic}\n\n## 关键洞察\n- ${session.insightSummary}\n- 参与者：${session.participants.map((e) => e.name).join('、')}',
-      sections: const ['Executive Summary', '学习场景洞察'],
+          '# 仿真洞察报告\n\n主题：${session.topic}\n\n## 关键洞察\n- ${localizeSimulationText(session.insightSummary)}\n- 参与者：${session.participants.map((e) => e.name).join('、')}',
+      sections: const ['摘要概览', '学习场景洞察'],
       mastery: participants,
     );
   }
@@ -497,7 +489,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     await share_plus.SharePlus.instance.share(
       share_plus.ShareParams(
         text:
-            '学习场景模拟\n主题：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? session.scenarioKey}\n洞察：${session.insightSummary}',
+            '学习场景模拟\n主题：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}\n洞察：${localizeSimulationText(session.insightSummary)}',
       ),
     );
   }
@@ -509,8 +501,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         contentType: ShareableContentType.learningReport,
         resourceId: 'simulation-${session.id}',
         title: '学习场景模拟 · ${session.topic}',
-        subtitle: _scenarioLabels[session.scenarioKey] ?? session.scenarioKey,
-        description: session.insightSummary,
+        subtitle: _scenarioLabels[session.scenarioKey] ??
+            localizeSimulationScenario(session.scenarioKey),
+        description: localizeSimulationText(session.insightSummary),
         metadata: <String, dynamic>{
           'active_plans': session.rounds.length,
           'unlocked_achievements': session.participants.length,
@@ -518,7 +511,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               session.participants.map((item) => item.name).take(3).join('、'),
         },
         shareMessage:
-            '我刚在 Sparkle 跑了一场学习仿真：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? session.scenarioKey}\n洞察：${session.insightSummary}',
+            '我刚在 Sparkle 跑了一场学习仿真：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}\n洞察：${localizeSimulationText(session.insightSummary)}',
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -534,7 +527,6 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       ref,
       kind: MirofishMilestoneKind.firstSimulation,
       onShare: () {
-        Navigator.of(context).pop();
         unawaited(_showSimulationShareSheet(session));
       },
     );
@@ -578,10 +570,11 @@ class _SimulationComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeLabel = scenarioLabels[selectedScenarioKey] ?? selectedScenarioKey;
+    final activeLabel = scenarioLabels[selectedScenarioKey] ??
+        localizeSimulationScenario(selectedScenarioKey);
     return MirofishStageHeader(
         icon: Icons.groups_rounded,
-        eyebrow: 'Learning Simulation',
+        eyebrow: '学习场景模拟',
         title: '把一个主题拉进真实讨论现场',
         subtitle: '先决定场景，再让不同角色围绕同一主题给出观点、追问和挑战，最后沉淀成下一步行动。',
         metrics: <MirofishStageMetric>[
@@ -741,7 +734,9 @@ class _RecommendedSeedStrip extends StatelessWidget {
                     seed: seeds[index],
                     scenarioLabel:
                         scenarioLabels[seeds[index].suggestedScenario] ??
-                            seeds[index].suggestedScenario,
+                            localizeSimulationScenario(
+                              seeds[index].suggestedScenario,
+                            ),
                     onStart: () => onStartSeed(seeds[index]),
                     onOpenTheater: () => onOpenTheater(seeds[index]),
                   ),
@@ -791,7 +786,7 @@ class _RecommendedSeedCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              seed.context,
+              localizeSimulationText(seed.context),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -806,12 +801,16 @@ class _RecommendedSeedCard extends StatelessWidget {
               children: [
                 Chip(label: Text(scenarioLabel)),
                 if (seed.suggestedExperts.isNotEmpty)
-                  Chip(label: Text(seed.suggestedExperts.first)),
+                  Chip(
+                    label: Text(
+                      localizeSimulationRoleHint(seed.suggestedExperts.first),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              seed.tensionPoint,
+              localizeSimulationText(seed.tensionPoint),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -888,6 +887,15 @@ class _SimulationInteractionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _interactionAccent(interactionType);
+    final localizedPrompt = localizeSimulationText(prompt);
+    final localizedSuggestedReplies = suggestedReplies
+        .map(localizeSimulationText)
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+    final localizedOptions = options
+        .map(localizeSimulationText)
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
     return GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         borderColor: accent.withValues(alpha: 0.18),
@@ -929,7 +937,7 @@ class _SimulationInteractionCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              prompt,
+              localizedPrompt,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     height: 1.5,
                   ),
@@ -941,12 +949,12 @@ class _SimulationInteractionCard extends StatelessWidget {
                 label: '互动模式：${_interactionLabel(interactionType)}',
               ),
             ],
-            if (options.isNotEmpty) ...[
+            if (localizedOptions.isNotEmpty) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: options
+                children: localizedOptions
                     .take(4)
                     .map(
                       (option) => Container(
@@ -978,7 +986,7 @@ class _SimulationInteractionCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: suggestedReplies
+              children: localizedSuggestedReplies
                   .take(3)
                   .map(
                     (reply) => ActionChip(
@@ -1012,11 +1020,11 @@ class _SimulationInteractionCard extends StatelessWidget {
                   icon: const Icon(Icons.send_rounded),
                   label: Text(isSubmitting ? '继续生成中...' : '继续这场模拟'),
                 ),
-                if (suggestedReplies.isNotEmpty)
+                if (localizedSuggestedReplies.isNotEmpty)
                   OutlinedButton.icon(
                     onPressed: isSubmitting
                         ? null
-                        : () => onContinueInChat(suggestedReplies.first),
+                        : () => onContinueInChat(localizedSuggestedReplies.first),
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
                     label: const Text('带去聊天继续'),
                   ),
@@ -1100,7 +1108,7 @@ class _SimulationStatusCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        engineState == null ? '准备中' : '当前状态：$engineState',
+                        localizeSimulationEngineState(engineState),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                             ),
@@ -1275,7 +1283,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                           ? '开始后会实时出现每一轮讨论。'
                           : activeSpeaker == null
                               ? '主题：$topic'
-                              : '主题：$topic · 当前发言 ${activeSpeaker!}',
+                              : '主题：$topic · 当前发言 ${localizeSimulationText(activeSpeaker!)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1401,7 +1409,7 @@ class _SimulationInsightTray extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          previewText,
+                          localizeSimulationText(previewText),
                           maxLines: expanded ? 6 : 2,
                           overflow: expanded
                               ? TextOverflow.visible
@@ -1488,7 +1496,7 @@ class _SimulationInsightTray extends StatelessWidget {
       '总轮次：${session.rounds.length} 轮，适合沉淀为下一步推演或复盘报告。',
     ];
     if (session.rounds.isNotEmpty) {
-      points.add('开场重点：${session.rounds.first.message}');
+      points.add('开场重点：${localizeSimulationText(session.rounds.first.message)}');
     }
     return points.take(3).toList();
   }
@@ -1612,6 +1620,8 @@ class _ParticipantSnapshotPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _accentForName(participant.name);
+    final localizedRoleHint = localizeSimulationRoleHint(participant.roleHint);
+    final localizedStance = localizeSimulationStance(participant.stance);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -1650,14 +1660,12 @@ class _ParticipantSnapshotPill extends StatelessWidget {
               ),
             ],
           ),
-          if (participant.roleHint.isNotEmpty ||
-              (participant.stance?.isNotEmpty ?? false)) ...[
+          if (localizedRoleHint.isNotEmpty || localizedStance.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               [
-                if (participant.roleHint.isNotEmpty) participant.roleHint,
-                if (participant.stance?.isNotEmpty ?? false)
-                  participant.stance!,
+                if (localizedRoleHint.isNotEmpty) localizedRoleHint,
+                if (localizedStance.isNotEmpty) localizedStance,
               ].join(' · '),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: DS.textSecondary,

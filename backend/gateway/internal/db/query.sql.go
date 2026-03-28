@@ -929,7 +929,7 @@ func (q *Queries) GetSnapshotCount(ctx context.Context, projectionName string) (
 
 const getTaskByID = `-- name: GetTaskByID :one
 
-SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, subtasks_total, subtasks_completed, id, created_at, updated_at, deleted_at FROM tasks WHERE id = $1 AND deleted_at IS NULL
+SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, subtasks_total, subtasks_completed, id, created_at, updated_at, deleted_at, order_index, execution_mode FROM tasks WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -965,6 +965,8 @@ func (q *Queries) GetTaskByID(ctx context.Context, id pgtype.UUID) (Task, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.OrderIndex,
+		&i.ExecutionMode,
 	)
 	return i, err
 }
@@ -1183,7 +1185,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserNodeStatus = `-- name: GetUserNodeStatus :one
-SELECT user_id, node_id, mastery_score, bkt_mastery_prob, bkt_last_updated_at, total_minutes, total_study_minutes, study_count, is_unlocked, is_collapsed, is_favorite, last_study_at, last_interacted_at, decay_paused, next_review_at, revision, first_unlock_at, created_at, updated_at FROM user_node_status WHERE user_id = $1 AND node_id = $2
+SELECT user_id, node_id, mastery_score, bkt_mastery_prob, bkt_last_updated_at, total_minutes, total_study_minutes, study_count, is_unlocked, is_collapsed, is_favorite, last_study_at, last_interacted_at, decay_paused, next_review_at, revision, first_unlock_at, created_at, updated_at, learning_path_snapshot FROM user_node_status WHERE user_id = $1 AND node_id = $2
 `
 
 type GetUserNodeStatusParams struct {
@@ -1214,6 +1216,7 @@ func (q *Queries) GetUserNodeStatus(ctx context.Context, arg GetUserNodeStatusPa
 		&i.FirstUnlockAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LearningPathSnapshot,
 	)
 	return i, err
 }

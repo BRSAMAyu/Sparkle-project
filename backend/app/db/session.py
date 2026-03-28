@@ -26,7 +26,7 @@ def _sanitize_asyncpg_url(url: str) -> tuple[str, str | None, str | None]:
     sslrootcert = query.pop("sslrootcert", None)
     if sslmode is None and sslrootcert is None:
         return url, None, None
-    return str(parsed.set(query=query)), sslmode, sslrootcert
+    return parsed.set(query=query).render_as_string(hide_password=False), sslmode, sslrootcert
 
 
 def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None):

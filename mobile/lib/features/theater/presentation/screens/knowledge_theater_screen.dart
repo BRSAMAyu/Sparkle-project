@@ -448,7 +448,6 @@ class _KnowledgeTheaterScreenState
       ref,
       kind: MirofishMilestoneKind.firstTheater,
       onShare: () {
-        Navigator.of(context).pop();
         unawaited(_showTheaterShareSheet());
       },
     );

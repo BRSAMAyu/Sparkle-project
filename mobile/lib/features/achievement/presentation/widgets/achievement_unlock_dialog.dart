@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
@@ -285,6 +285,28 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     );
   }
 
+  void _dismissUnlockDialog() {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
+  void _handleClose() {
+    _dismissUnlockDialog();
+    widget.onClose?.call();
+  }
+
+  void _handleShare() {
+    _dismissUnlockDialog();
+    widget.onShare?.call();
+  }
+
+  void _handleViewRewards() {
+    _dismissUnlockDialog();
+    widget.onViewRewards?.call();
+  }
+
   int _confettiParticleCount(AchievementRarity rarity) => switch (rarity) {
         AchievementRarity.common => 0,
         AchievementRarity.rare => 25,
@@ -469,19 +491,14 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                           icon: Icons.close,
                           label: '关闭',
                           isPrimary: false,
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            widget.onClose?.call();
-                          },
+                          onPressed: _handleClose,
                         ),
                         const SizedBox(height: DS.spacing12),
                         _buildActionButton(
                           icon: Icons.share,
                           label: '分享',
                           isPrimary: true,
-                          onPressed: () {
-                            widget.onShare?.call();
-                          },
+                          onPressed: _handleShare,
                         ),
                       ],
                     )
@@ -490,24 +507,21 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                       children: [
                         if (widget.onViewRewards != null) ...[
                           Expanded(
-                            child: _buildActionButton(
-                              icon: Icons.workspace_premium_outlined,
-                              label: '查看奖励',
-                              isPrimary: true,
-                              onPressed: widget.onViewRewards!,
-                            ),
+                          child: _buildActionButton(
+                            icon: Icons.workspace_premium_outlined,
+                            label: '查看奖励',
+                            isPrimary: true,
+                            onPressed: _handleViewRewards,
                           ),
-                          const SizedBox(width: DS.spacing12),
-                        ],
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                      ],
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.close,
                             label: '关闭',
                             isPrimary: false,
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              widget.onClose?.call();
-                            },
+                            onPressed: _handleClose,
                           ),
                         ),
                         const SizedBox(width: DS.spacing12),
@@ -516,9 +530,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                             icon: Icons.share,
                             label: '分享',
                             isPrimary: true,
-                            onPressed: () {
-                              widget.onShare?.call();
-                            },
+                            onPressed: _handleShare,
                           ),
                         ),
                       ],

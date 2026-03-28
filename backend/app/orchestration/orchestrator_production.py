@@ -861,6 +861,7 @@ class ProductionChatOrchestrator:
                         system_prompt=base_system_prompt,
                         user_message=user_message,
                         tools=tools,
+                        conversation_history=(conversation_context or {}).get("messages", []),
                         user_context=user_context_data,
                     ):
                         if chunk.type == "text":

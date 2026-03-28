@@ -1,6 +1,6 @@
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -341,7 +341,7 @@ async def test_simulation_engine_generates_rounds_as_replies(monkeypatch):
     assert round_item["speaker"] == "提问者"
     assert round_item["reply_to_speaker"] == "优等生"
     assert round_item["turn_goal"] == "extend"
-    assert "Reply target: 优等生" in captured["prompt"]
+    assert "回应对象：优等生" in captured["prompt"]
 
 
 def test_simulation_engine_round_target_respects_scenario_cap():
@@ -363,6 +363,21 @@ def test_simulation_engine_round_target_respects_scenario_cap():
         )
         == 6
     )
+
+
+def test_simulation_engine_latest_exchange_uses_chinese_round_copy():
+    exchange = SimulationEngine._latest_exchange(
+        [
+            {
+                "round": 1,
+                "speaker": "学习伙伴",
+                "message": "先把问题拆开来看。",
+            }
+        ]
+    )
+
+    assert "第 1 轮" in exchange
+    assert "Round" not in exchange
 
 
 @pytest.mark.asyncio
@@ -946,3 +961,26 @@ async def test_simulation_continue_api_returns_404_when_session_missing():
 
     assert response.status_code == 404
     assert "not found or expired" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_onboarding_survives_missing_learning_profile_table():
+    db = AsyncMock()
+    profile_error = RuntimeError('relation "user_learning_profiles" does not exist')
+
+    user_result = MagicMock()
+    user_result.first.return_value = ("小宇", None, 0.55, 0.82)
+
+    plan_result = MagicMock()
+    plan_result.all.return_value = [("线性代数", "线代入门")]
+
+    db.execute = AsyncMock(side_effect=[profile_error, user_result, plan_result])
+    db.rollback = AsyncMock()
+
+    extractor = SeedExtractor(db=db)
+
+    seeds = await extractor._onboarding_seeds(uuid4())
+
+    assert seeds
+    assert any("线性代数" in seed.topic for seed in seeds)
+    db.rollback.assert_awaited_once()

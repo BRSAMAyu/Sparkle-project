@@ -41,7 +41,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
             connect_args["ssl"] = False
         elif sslmode in ("require", "verify-ca", "verify-full"):
             connect_args["ssl"] = True
-        db_url = str(parsed.set(query=query))
+        db_url = parsed.set(query=query).render_as_string(hide_password=False)
 
     engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
 

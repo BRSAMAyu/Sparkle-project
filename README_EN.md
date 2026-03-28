@@ -79,6 +79,17 @@ Random matching — shallow community
 
 ---
 
+## Recent Upgrades
+
+| Upgrade | What It Enables Now | Shipped Reality |
+|:--------|:--------------------|:----------------|
+| **Mirofish Group Agent System** | Group-agent collaboration now lands in product flows, not just chat demos | Bridge paths now connect Insight Hub, Simulation, Knowledge Theater, and Learning Report |
+| **Fuller AI Loop** | Clarify, plan, review, approve, execute, and replan now behave as one production chain | `ExecutablePlan`, `StateSnapshot`, `VersionConflict`, `PlanReview`, HITL, and DAG execution are on the main path |
+| **OpenClaw Execution Loop** | Sparkle now moves from “advice” to “delegated execution with review and return flow” | Task handoff, offline queueing, device pairing, approval, result comparison, self-verification, and failure degradation are implemented |
+| **Multi-Sensory Refinement** | BGM, motion, haptics, touch ergonomics, and calmer accessibility modes now feel like one system | Route-aware BGM, stage overrides, settings controls, semantic haptics, responsive modals, and accessibility degradation are live across key flows |
+
+---
+
 ## Core Capabilities
 
 <table>
@@ -89,7 +100,7 @@ Random matching — shallow community
 
 Not just answering — diagnosing your cognitive state.
 
-When you say "this is hard", it analyzes your knowledge gaps, dynamically adjusts explanation depth, recommends targeted exercises, and tracks comprehension. 10+ specialized Agents collaborate dynamically to decompose complex problems.
+When you say "this is hard", it analyzes knowledge gaps, adapts explanation depth, recommends targeted practice, and tracks comprehension. That chain now runs through Sparkle's production orchestration path with plan generation, review, user approval, execution, and replanning.
 
 </td>
 <td width="50%" valign="top">
@@ -109,7 +120,7 @@ Each concept is a star, mastery determines brightness, relationships form conste
 
 Six task types, AI-recommended based on your cognitive profile.
 
-Learn, Review, Practice, Project, Reading, Custom — with built-in focus timer and mindfulness mode. Task completion auto-updates your profile, creating a learning flywheel.
+Learn, Review, Practice, Project, Reading, Custom — with built-in focus timer and mindfulness mode. When a task is suitable for AI delegation, it can move into the OpenClaw flow with approval, comparison, self-verification, and profile feedback.
 
 </td>
 <td width="50%" valign="top">
@@ -125,11 +136,11 @@ Streaks build habits. Milestones record breakthroughs. Growth contracts provide 
 <tr>
 <td width="50%" valign="top">
 
-### Community Learning
+### Mirofish Group Agent System
 
-Intelligent matching based on cognitive profiles.
+Turning multi-agent orchestration into a real product surface.
 
-Accountability partners with similar thinking styles, study squads for long-term growth, sprint groups for goal focus, sync check-ins for mutual accountability.
+Mirofish brings group-agent collaboration into real user journeys. Chat can short-circuit into Insight Hub, Simulation, Knowledge Theater, and Learning Report so prediction, scenario modeling, reporting, and next actions happen in one connected experience.
 
 </td>
 <td width="50%" valign="top">
@@ -138,7 +149,7 @@ Accountability partners with similar thinking styles, study squads for long-term
 
 A unified immersive experience design system.
 
-Context-aware BGM and ambient audio that shifts with each screen. Semantic haptic feedback makes every interaction tangible. Entrance animations and celebration systems make growth visible. Graceful accessibility degradation.
+Context-aware BGM and ambient audio shift with each screen and support page-level plus stage-level overrides. Semantic haptics make interactions tangible. Motion intensity, celebration states, and accessibility modes are tuned as one coherent system.
 
 </td>
 </tr>
@@ -153,9 +164,12 @@ Sparkle's competitive edge isn't any single feature — it's the **combinatorial
 | Technical Barrier | Implementation | Industry Status |
 |:-----------------|:---------------|:----------------|
 | **Dual-Core Architecture** | Execution Core + Cognitive Core collaborate in real-time | Most products have a single conversation pipeline |
+| **Self-Built Main Orchestrator + LangGraph Planning Layer** | Core production control stays in Sparkle; LangGraph handles complex planning, multi-expert collaboration, and replanning | Many products hand business control directly to an agent framework |
 | **Evidence-Based 4D Profile** | Knowledge, Cognition, Motivation, Social — each backed by behavioral evidence | Typically static tags or simple statistics |
 | **GraphRAG Hybrid Retrieval** | pgvector semantic search + Apache AGE graph traversal, fused ranking | Pure vector retrieval, no relational reasoning |
+| **Mirofish Productized Group Agents** | Public expert catalog, custom experts/teams, bridge previews, deep links into report/simulation/theater surfaces | Most products stop at “multi-agent chat UI” |
 | **LangGraph Multi-Agent Orchestration** | 10+ Agent state machine, handoff, snapshots, interruptible streaming | Single Agent or simple chains |
+| **OpenClaw Execution Loop** | Handoff, offline queue, pairing, approval, comparison, self-verification, degradation | Most products stop at advice or one-shot automation |
 | **7-Stage Growth Loop** | Sense > Clarify > Plan > Execute > Reflect > Reinforce > Adapt | Linear task flows, no closed loop |
 | **Unified Multi-Sensory UX** | 5 experience profiles + sensory budget + particle budget + a11y degradation | Scattered animations, no system design |
 
@@ -166,41 +180,50 @@ Sparkle's competitive edge isn't any single feature — it's the **combinatorial
 ```
                           ┌──────────────────────────┐
                           │     Flutter Mobile App    │
-                          │   Riverpod  Design System │
-                          │ Multi-Sensory Experience  │
+                          │ Riverpod Design System V2 │
+                          │ Mirofish · Multi-Sensory  │
                           └────────────┬─────────────┘
                                        │
                                 WebSocket / HTTP
                                        │
                           ┌────────────┴─────────────┐
                           │       Go Gateway          │
-                          │  Auth  Rate-Limit  Cache  │
-                          │  WebSocket  gRPC Bridge   │
+                          │ Auth Rate-Limit Cache WS  │
+                          │  HTTP · gRPC · Chatflow   │
                           └────────────┬─────────────┘
                                        │
                                    gRPC (TLS)
                                        │
                           ┌────────────┴─────────────┐
                           │    Python AI Engine       │
-                          │  LangGraph Orchestrator   │
-                          │  GraphRAG  Cognitive Core │
-                          │  Tool Registry  Celery    │
+                          │ Self-Built Orchestrator   │
+                          │ LangGraph · GraphRAG      │
+                          │ Execution Service · Celery│
                           └──┬─────────┬──────────┬──┘
                              │         │          │
-                      ┌──────┴──┐  ┌───┴───┐  ┌──┴───┐
-                      │ PG 16   │  │ Redis │  │ MinIO│
-                      │pgvector │  │ 7+    │  │      │
-                      │AGE Graph│  │       │  │      │
-                      └─────────┘  └───────┘  └──────┘
+                      ┌──────┴──┐  ┌───┴───┐  ┌──┴──────┐
+                      │ PG 16   │  │ Redis │  │ MinIO   │
+                      │pgvector │  │ 7+    │  │         │
+                      │AGE Graph│  │       │  │         │
+                      └─────────┘  └───────┘  └─────────┘
+                                       │
+                             External Execution
+                                       │
+                          ┌────────────┴─────────────┐
+                          │   OpenClaw Gateway/Nodes  │
+                          │ Queue Pairing Approval    │
+                          │ Replay Compare Verify     │
+                          └───────────────────────────┘
 ```
 
-**Why three layers?**
+**Why three layers plus an external executor?**
 
 - **Flutter** handles presentation and experience only — no business logic
 - **Go Gateway** handles high-concurrency connections, auth, caching — no AI reasoning
-- **Python Engine** handles all AI intelligence — no user authentication
+- **Python Engine** handles orchestration, planning, review, and execution control — no user authentication
+- **OpenClaw** is an external executor and does not own Sparkle's business brain
 
-Each layer has clear responsibilities and scales independently. The Gateway handles 10K+ WebSocket connections while the Engine scales AI compute horizontally.
+Each layer has clear responsibilities and scales independently. The Gateway handles 10K+ WebSocket connections, the Engine scales AI compute horizontally, and OpenClaw closes the digital execution loop.
 
 ---
 
@@ -224,9 +247,9 @@ Sparkle's core innovation splits the AI system into two collaborative cores:
                  Event Bus · Context Agg · Sync
 ```
 
-The **Execution Core** handles "getting things done": defining goals, assessing feasibility, breaking down plans, providing execution guidance, adjusting strategies based on reality.
+The **Execution Core** handles "getting things done": defining goals, assessing feasibility, breaking down plans, reviewing strategies, dispatching execution, collecting results, and replanning based on reality.
 
-The **Cognitive Core** handles "understanding the user": continuously updating the 4D profile, accumulating long/short-term memory, perceiving thinking patterns through the Cognitive Prism, recognizing emotional states for personalized motivation.
+The **Cognitive Core** handles "understanding the user": continuously updating the 4D profile, accumulating long/short-term memory, perceiving thinking patterns through the Cognitive Prism, recognizing emotional states for personalized motivation, and feeding execution outcomes back into future strategy.
 
 The two cores don't run in isolation — they collaborate in real-time through an event bus. Execution results update the cognitive profile; cognitive understanding shapes execution strategy.
 
@@ -329,7 +352,7 @@ Breaking through traditional RAG limitations by fusing semantic vector search wi
 <details>
 <summary><b>LangGraph Multi-Agent Orchestration</b> (click to expand)</summary>
 
-10+ specialized Agents collaborate dynamically:
+10+ specialized Agents collaborate dynamically, and are now further productized as the `Mirofish` group agent system:
 
 ```
   User Input → Orchestrator (Intent → Split → Dispatch → Aggregate)
@@ -348,6 +371,9 @@ Breaking through traditional RAG limitations by fusing semantic vector search wi
 - **State snapshots**: Checkpoint/resume for long tasks
 - **PONR confirmation**: High-risk operations require user approval
 - **Full observability**: Complete execution traces and decision chains
+- **Expert and team catalog**: Public experts plus custom experts and custom teams
+- **Multiple collaboration modes**: `auto / sequential / parallel / debate / delegation`
+- **Mirofish bridge path**: Chat can short-circuit into Simulation, Theater, and Report surfaces
 
 </details>
 
@@ -359,9 +385,10 @@ Not scattered animations — a **unified experience design system**:
 | Layer | Capability | Details |
 |:------|:-----------|:--------|
 | **Experience Profiles** | 5 scene presets | Productive dashboard, AI conversation, immersive focus, warm social, celebration |
-| **Audio Policy** | Page-level BGM + stage override | SceneAudioScope manages uniformly, no hard-cuts allowed |
+| **Audio Policy** | Page-level BGM + stage override | SceneAudioScope manages uniformly with preload, fade, and settings controls |
 | **Motion Primitives** | Staggered entry, attention pulse, exit transition | SparkleStagger / AttentionPulse / ExitTransition |
 | **Haptic Feedback** | 27 semantic events | Same action triggers same feedback everywhere, global sensory budget |
+| **Touch & Layout** | Minimum touch targets + responsive modals | Stable on narrow screens, large text, and calmer-stimulus scenarios |
 | **Celebration System** | 3 intensity tiers + rarity glow | Global particle budget, auto-degrades on low-end devices |
 | **Accessibility** | reduceMotion / large font / semantic labels | All enhancements degrade gracefully |
 
@@ -465,11 +492,12 @@ Sparkle-project/
 │   │   ├── core/                       # Core infrastructure
 │   │   │   ├── design/                 # Design System V2 (tokens, components, motion)
 │   │   │   ├── experience/             # Experience profile system
-│   │   │   └── services/               # Global services (BGM, haptics, audio policy)
+│   │   │   └── services/               # Global services (BGM, haptics, audio policy, OpenClaw connection)
 │   │   ├── features/                   # Feature modules (35 domain modules)
 │   │   │   ├── chat/                   # AI conversation
 │   │   │   ├── task/                   # Task management
 │   │   │   ├── galaxy/                 # Knowledge galaxy
+│   │   │   ├── mirofish/               # Mirofish group-agent UI support
 │   │   │   ├── focus/                  # Focus mode
 │   │   │   ├── achievement/            # Achievement system
 │   │   │   ├── community/              # Community
@@ -487,6 +515,7 @@ Sparkle-project/
 │   │
 │   └── app/                            # Python AI engine
 │       ├── orchestration/              # LangGraph orchestration
+│       ├── adapters/openclaw/          # OpenClaw execution adapter layer
 │       ├── services/                   # gRPC service implementations
 │       ├── tools/                      # AI tool registry
 │       └── core/                       # Core (context, event bus, profiles)
@@ -507,11 +536,15 @@ Sparkle-project/
 | Document | Description | Audience |
 |:---------|:------------|:---------|
 | [CLAUDE.md](CLAUDE.md) | Dev guide, architecture rules, code patterns | Developers |
+| [AI System & Task Loop](docs/00_项目概览/AI系统与任务闭环对齐文档_2026-03-10.md) | Main orchestration path, review, approval, and replanning loop | Developers / Product |
 | [Technical Architecture](docs/00_项目概览/02_技术架构.md) | 3-layer architecture deep dive | Developers |
 | [Knowledge Galaxy Design](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG implementation details | Developers |
 | [API Design](docs/02_技术设计文档/05_API设计.md) | gRPC + WebSocket interfaces | Developers |
+| [OpenClaw Execution Review](docs/architecture/SPARKLE_OPENCLAW_ALIGNMENT_REVIEW_v1.5.md) | Handoff, approval, comparison, self-verification, degradation | Developers / Product |
+| [Mirofish Verification Checklist](docs/verification/本地发布前完整签收清单_2026-03-21.md) | Acceptance scope for Mirofish and linked product flows | Developers / QA |
 | [CHANGELOG](CHANGELOG.md) | Version history | Everyone |
 | [Frontend Experience Spec](docs/engineering/前端改进对齐文档_2026-03-22.md) | Multi-sensory experience system spec | Frontend devs |
+| [Last Five Multi-Sensory Rounds](mobile/docs/multisensory_recent_five_rounds_alignment.md) | Recent BGM, motion, haptics, and settings refinements | Frontend devs |
 
 ---
 

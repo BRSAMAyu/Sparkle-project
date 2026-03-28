@@ -4,6 +4,8 @@ from typing import Any
 
 from loguru import logger
 from redis.asyncio import Redis
+from redis.commands.search.field import NumericField, TagField, TextField, VectorField
+from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 
 from app.config import settings
@@ -26,11 +28,84 @@ class RedisSearchClient:
         )
         self.index_name = "idx:knowledge"
 
+    @staticmethod
+    def _is_missing_index_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        return "no such index" in lowered or "unknown index name" in lowered
+
+    @staticmethod
+    def _is_search_module_unavailable(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        return "unknown command" in lowered or "module" in lowered and "not found" in lowered
+
+    def _build_index_schema(self):
+        return (
+            TextField("$.content", as_name="content", weight=1.0),
+            TextField("$.keywords", as_name="keywords", weight=2.0),
+            TagField("$.parent_id", as_name="parent_id"),
+            TextField("$.parent_name", as_name="parent_name"),
+            NumericField("$.subject_id", as_name="subject_id"),
+            NumericField("$.importance", as_name="importance"),
+            VectorField(
+                "$.vector",
+                "HNSW",
+                {
+                    "TYPE": "FLOAT32",
+                    "DIM": settings.EMBEDDING_DIM,
+                    "DISTANCE_METRIC": "COSINE",
+                    "M": 16,
+                    "EF_CONSTRUCTION": 200,
+                },
+                as_name="vector",
+            ),
+        )
+
+    async def ensure_index(self) -> bool:
+        try:
+            await self.redis.ft(self.index_name).info()
+            return True
+        except Exception as exc:
+            if not self._is_missing_index_error(exc):
+                if self._is_search_module_unavailable(exc):
+                    logger.warning(f"Redis search module unavailable while checking index {self.index_name}: {exc}")
+                else:
+                    logger.warning(f"Failed to inspect Redis search index {self.index_name}: {exc}")
+                return False
+
+        try:
+            await self.redis.ft(self.index_name).create_index(
+                self._build_index_schema(),
+                definition=IndexDefinition(prefix=["sparkle:chunk:"], index_type=IndexType.JSON),
+            )
+            logger.info(f"Created missing Redis search index {self.index_name}")
+            return True
+        except Exception as exc:
+            lowered = str(exc).lower()
+            if "index already exists" in lowered:
+                return True
+            if self._is_search_module_unavailable(exc):
+                logger.warning(f"Redis search module unavailable while creating index {self.index_name}: {exc}")
+            else:
+                logger.warning(f"Failed to create Redis search index {self.index_name}: {exc}")
+            return False
+
     async def search(self, query: Query, query_params: dict[str, Any] | None = None):
         """Execute a search query"""
         try:
             return await self.redis.ft(self.index_name).search(query, query_params)
         except Exception as e:
+            if self._is_missing_index_error(e):
+                logger.warning(f"Redis search index {self.index_name} missing, attempting initialization")
+                if await self.ensure_index():
+                    try:
+                        return await self.redis.ft(self.index_name).search(query, query_params)
+                    except Exception as retry_exc:
+                        logger.warning(f"Redis search retry failed after index initialization: {retry_exc}")
+                        return None
+                return None
+            if self._is_search_module_unavailable(e):
+                logger.warning(f"Redis search module unavailable: {e}")
+                return None
             logger.error(f"Redis search failed: {e}")
             return None
 

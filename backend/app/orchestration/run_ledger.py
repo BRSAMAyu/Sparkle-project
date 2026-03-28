@@ -136,6 +136,8 @@ class RunLedgerStore:
     async def load_events(cls, redis_client, trace_id: str) -> list[dict[str, Any]]:
         if not redis_client or not trace_id:
             return []
+        if not hasattr(redis_client, "lrange"):
+            return []
         raw_items = await redis_client.lrange(cls.events_key(trace_id), 0, -1)
         events: list[dict[str, Any]] = []
         for raw in raw_items or []:
@@ -318,8 +320,10 @@ class RunLedgerStore:
         summary_payload = json.dumps(summary, ensure_ascii=False)
         event_payload = json.dumps(event, ensure_ascii=False)
         await redis_client.setex(cls.summary_key(trace_id), ttl, summary_payload)
-        await redis_client.rpush(cls.events_key(trace_id), event_payload)
-        await redis_client.expire(cls.events_key(trace_id), ttl)
+        if hasattr(redis_client, "rpush"):
+            await redis_client.rpush(cls.events_key(trace_id), event_payload)
+            if hasattr(redis_client, "expire"):
+                await redis_client.expire(cls.events_key(trace_id), ttl)
         session_id = str(summary.get("session_id") or "")
         response_id = str(summary.get("response_id") or "")
         if session_id:

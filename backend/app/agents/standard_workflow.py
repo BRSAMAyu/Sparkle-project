@@ -891,10 +891,18 @@ def _resolve_recent_memory_answer(conversation_context: dict[str, Any] | None, u
         return None
 
     question_match = re.search(r"(?:我刚才说的)?我的(?P<key>[\w\u4e00-\u9fa5]{1,12})是什么", normalized_question)
-    if not question_match:
+    english_question_match = re.search(
+        r"what(?:'s| is) my (?P<key>[a-z][a-z0-9 _-]{0,40})\??",
+        normalized_question.strip().lower(),
+    )
+    if not question_match and not english_question_match:
         return None
 
-    memory_key = question_match.group("key").strip()
+    memory_key = (
+        question_match.group("key").strip()
+        if question_match
+        else re.sub(r"\s+", " ", english_question_match.group("key").strip().lower())
+    )
     messages = (conversation_context or {}).get("messages", []) if isinstance(conversation_context, dict) else []
 
     for message in reversed(messages):
@@ -907,16 +915,54 @@ def _resolve_recent_memory_answer(conversation_context: dict[str, Any] | None, u
             r"(?:记住)?我的(?P<key>[\w\u4e00-\u9fa5]{1,12})是(?P<value>[^，。！？\n]+)",
             content,
         )
-        if not fact_match:
+        english_fact_match = re.search(
+            r"(?:remember\s+)?my (?P<key>[a-z][a-z0-9 _-]{0,40}) is (?P<value>[^,.!?\n]+)",
+            content.strip().lower(),
+        )
+        fact_key = ""
+        value = ""
+        if fact_match:
+            fact_key = fact_match.group("key").strip()
+            value = fact_match.group("value").strip().strip("“”\"'")
+        elif english_fact_match:
+            fact_key = re.sub(r"\s+", " ", english_fact_match.group("key").strip().lower())
+            value = english_fact_match.group("value").strip().strip("“”\"'")
+        else:
             continue
-        if fact_match.group("key").strip() != memory_key:
+        if fact_key != memory_key:
             continue
-        value = fact_match.group("value").strip().strip("“”\"'")
         if value in {"什么", "多少", "谁", "哪", "哪里", "几点", "几号", "怎么"}:
             continue
         return value
 
     return None
+
+
+def _select_recent_conversation_messages(
+    conversation_context: dict[str, Any] | None,
+    state_messages: list[dict[str, Any]] | None,
+    current_user_message: str,
+    *,
+    limit: int = 6,
+) -> list[dict[str, Any]]:
+    messages = []
+    if isinstance(conversation_context, dict):
+        raw_messages = conversation_context.get("messages") or []
+        if isinstance(raw_messages, list):
+            messages = [msg for msg in raw_messages if isinstance(msg, dict)]
+    if not messages and isinstance(state_messages, list):
+        messages = [msg for msg in state_messages if isinstance(msg, dict)]
+    if limit > 0:
+        messages = messages[-limit:]
+
+    if (
+        messages
+        and str(messages[-1].get("role") or "") == "user"
+        and str(messages[-1].get("content") or "").strip() == str(current_user_message or "").strip()
+    ):
+        messages = messages[:-1]
+
+    return messages
 
 
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
@@ -1160,7 +1206,12 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
         prompt_conversation_context = {
             # For generic standard Q&A, keep only the current in-session turns to
             # avoid dragging historical plan/task state into concept explanations.
-            "messages": list(state.messages or [])[-6:],
+            "messages": _select_recent_conversation_messages(
+                conversation_context,
+                list(state.messages or []),
+                user_message,
+                limit=6,
+            ),
         }
     else:
         prompt_user_context = (
@@ -1380,6 +1431,7 @@ Ask about their available time and current tasks if needed.
             system_prompt=system_prompt,
             user_message=user_message,
             tools=effective_tools,
+            conversation_history=prompt_conversation_context.get("messages", []),
             user_context=user_context,
         ):
             if chunk.type == "text":

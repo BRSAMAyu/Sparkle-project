@@ -25,38 +25,33 @@ func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
 	}
 }
 
-// TestConnectionRegistryUnregisterGuardsAgainstReconnectRace verifies that
-// Unregister is a no-op when the stored connection has already been replaced
-// by a newer one (the reconnect race).
-func TestConnectionRegistryUnregisterGuardsAgainstReconnectRace(t *testing.T) {
+func TestConnectionRegistryAllowsMultipleConnectionsPerUser(t *testing.T) {
 	registry := NewConnectionRegistry(nil, nil, 0)
 	connA := &websocket.Conn{}
 	connB := &websocket.Conn{}
 
-	// Simulate: connA registered, then replaced by connB directly in the map
-	// (bypassing Register to avoid calling Close on a zero-value Conn).
-	registry.mu.Lock()
-	registry.connections["user-1"] = &connectionEntry{conn: connA}
-	registry.mu.Unlock()
+	registry.Register("user-1", connA, nil)
+	registry.Register("user-1", connB, nil)
 
-	registry.mu.Lock()
-	registry.connections["user-1"] = &connectionEntry{conn: connB}
-	registry.mu.Unlock()
+	if got := registry.Count(); got != 2 {
+		t.Fatalf("expected 2 active connections, got %d", got)
+	}
 
-	// connA's goroutine fires its deferred Unregister — must NOT evict connB.
 	registry.Unregister("user-1", connA)
+	if got := registry.Count(); got != 1 {
+		t.Fatalf("expected 1 active connection after unregistering connA, got %d", got)
+	}
 
 	got, ok := registry.Get("user-1")
 	if !ok {
-		t.Fatal("connB should still be registered after stale Unregister(connA)")
+		t.Fatal("connB should still be registered")
 	}
 	if got != connB {
-		t.Fatal("expected connB to remain; got a different connection")
+		t.Fatal("expected connB to remain active")
 	}
 
-	// connB's goroutine fires its deferred Unregister — must remove the entry.
 	registry.Unregister("user-1", connB)
 	if _, ok := registry.Get("user-1"); ok {
-		t.Fatal("connB should be unregistered")
+		t.Fatal("expected all user-1 connections to be unregistered")
 	}
 }

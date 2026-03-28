@@ -103,17 +103,18 @@ void main() {
                   participants: <SimulationParticipantModel>[
                     SimulationParticipantModel(
                       name: '数学专家',
-                      roleHint: '分析',
+                      roleHint: 'analyst',
                       persona: <String, dynamic>{},
                     ),
                     SimulationParticipantModel(
                       name: '反方辩手',
-                      roleHint: '质疑',
+                      roleHint: 'challenger',
+                      stance: 'opposing',
                       persona: <String, dynamic>{},
                     ),
                     SimulationParticipantModel(
                       name: '学习伙伴',
-                      roleHint: '联想',
+                      roleHint: 'questioner',
                       persona: <String, dynamic>{},
                     ),
                   ],
@@ -170,9 +171,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('学习场景模拟'), findsOneWidget);
+    expect(find.text('学习场景模拟'), findsWidgets);
     expect(find.text('当前讨论流'), findsOneWidget);
     expect(find.text('轮到你加入这场讨论'), findsOneWidget);
+    expect(find.textContaining('分析者'), findsWidgets);
+    expect(find.textContaining('反方质疑'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

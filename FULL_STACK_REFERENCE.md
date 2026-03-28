@@ -12,6 +12,24 @@
 
 This document was re-audited against the repository source tree and the live local stack on `2026-03-27`.
 
+Incremental refresh on `2026-03-28`:
+- This file remains a reference map, not the final acceptance checklist.
+- Latest acceptance truth now also includes the incremental audit recorded in:
+  - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
+- Commands re-run during the `2026-03-28` incremental refresh:
+  - `cd backend && ./.venv/bin/pytest tests/unit/test_response_feedback_service.py tests/integration/test_websocket_full_stack.py`
+  - `cd backend/gateway && go test ./internal/handler ./internal/agent ./internal/api/v1`
+  - `cd backend && ./.venv/bin/pytest tests/unit/test_mirofish_phase0_acceptance.py tests/unit/test_mirofish_wiring_finish.py tests/unit/test_theater_seed_and_accuracy.py tests/unit/test_openclaw_phase0.py tests/unit/test_openclaw_phase1.py tests/unit/test_openclaw_phase2.py tests/unit/test_openclaw_phase3.py tests/unit/test_openclaw_phase4.py tests/unit/test_openclaw_gateway_ws.py tests/unit/test_openclaw_admin_api.py`
+  - `cd mobile && flutter test test/widget/mirofish_wiring_finish_test.dart test/widget/insights_frontend_smoke_test.dart test/widget/learning_insights_navigation_test.dart test/widget/simulation_interaction_continue_test.dart test/widget/theater_phase2_widget_test.dart test/widget/unified_settings_bgm_test.dart test/core/services/bgm_service_test.dart`
+- Additional verified conclusions from the `2026-03-28` refresh:
+  - AI chat WebSocket path now passes multi-turn context and concurrent-connection acceptance in the live local stack.
+  - MiroFish backend acceptance/unit coverage for Theater / Simulation / Learning Report passed (`103` tests in the targeted suite).
+  - OpenClaw Phase 0~4 + Gateway WS + admin/user execution API remain green in the targeted backend suite.
+  - Mobile MiroFish / Learning Insights / Theater / Unified Settings / BGM widget coverage passed (`18` targeted tests).
+- Known remaining gaps before full final acceptance:
+  - `client-telemetry` still returns `404` in the local stack.
+  - Final full-system signoff still requires the broader E2E, real-device, DATA, FF, and CEL sections in the checklist to be completed with evidence.
+
 This refresh is aligned with:
 - `docs/contracts/openapi_snapshot.json` regenerated on `2026-03-27`
 - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`

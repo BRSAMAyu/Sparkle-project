@@ -60,23 +60,24 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   void _setupAchievementListener() {
     unawaited(ref.read(visualElementProvider.notifier).refresh());
     _subscribeToCommunityEvents(ref.read(communityEventsStreamProvider));
-    ref.listenManual<Stream<dynamic>>(
-      communityEventsStreamProvider,
-      (previous, next) {
-        _subscribeToCommunityEvents(next);
-      },
-    );
-    ref.listenManual(
-      pendingAchievementUnlockProvider,
-      (previous, next) {
-        if (next != null &&
-            next != previous &&
-            mounted &&
-            !_isShowingAchievementDialog) {
-          unawaited(_showAchievementDialog(next.event, next.comboCount));
-        }
-      },
-    );
+    ref
+      ..listenManual<Stream<dynamic>>(
+        communityEventsStreamProvider,
+        (previous, next) {
+          _subscribeToCommunityEvents(next);
+        },
+      )
+      ..listenManual(
+        pendingAchievementUnlockProvider,
+        (previous, next) {
+          if (next != null &&
+              next != previous &&
+              mounted &&
+              !_isShowingAchievementDialog) {
+            unawaited(_showAchievementDialog(next.event, next.comboCount));
+          }
+        },
+      );
   }
 
   void _subscribeToCommunityEvents(Stream<dynamic> stream) {
@@ -160,7 +161,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         event,
         comboCount: comboCount,
         onShare: () {
-          Navigator.of(context).pop(); // Close unlock dialog first
           unawaited(
             showAchievementShareSheet(
               context,
@@ -170,7 +170,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           );
         },
         onViewRewards: () {
-          Navigator.of(context).pop();
           unawaited(context.push('/achievements/${event.achievementId}'));
         },
       );

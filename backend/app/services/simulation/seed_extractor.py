@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -71,6 +73,35 @@ class SeedExtractor:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _is_missing_learning_profile_table(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        return "user_learning_profiles" in lowered and (
+            "does not exist" in lowered or "undefinedtable" in lowered or "no such table" in lowered
+        )
+
+    async def _load_learning_profile_row(self, user_id: UUID):
+        try:
+            result = await self.db.execute(
+                select(
+                    UserLearningProfile.id,
+                    UserLearningProfile.subject_distribution,
+                    UserLearningProfile.preferred_duration_minutes,
+                    UserLearningProfile.preferred_difficulty,
+                ).where(UserLearningProfile.user_id == user_id)
+            )
+            return result.first()
+        except Exception as exc:
+            if not self._is_missing_learning_profile_table(exc):
+                raise
+
+            logger.warning(
+                f"user_learning_profiles table missing during seed extraction for {user_id}; using degraded onboarding context"
+            )
+            with suppress(Exception):
+                await self.db.rollback()
+            return None
 
     async def get_cached_or_generate(
         self,
@@ -561,16 +592,7 @@ class SeedExtractor:
         return ranked[: max(limit, 1)]
 
     async def _onboarding_seeds(self, user_id: UUID) -> list[SimulationSeed]:
-        profile_row = (
-            await self.db.execute(
-                select(
-                    UserLearningProfile.id,
-                    UserLearningProfile.subject_distribution,
-                    UserLearningProfile.preferred_duration_minutes,
-                    UserLearningProfile.preferred_difficulty,
-                ).where(UserLearningProfile.user_id == user_id)
-            )
-        ).first()
+        profile_row = await self._load_learning_profile_row(user_id)
         user_row = (
             await self.db.execute(
                 select(User.nickname, User.full_name, User.curiosity_preference, User.depth_preference).where(

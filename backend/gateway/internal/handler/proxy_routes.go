@@ -367,6 +367,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered background-tasks proxy routes")
 
+	// ==================== Client Telemetry Routes ====================
+	clientTelemetry := api.Group("/client-telemetry")
+	clientTelemetry.Use(authMiddleware)
+	{
+		clientTelemetry.POST("/events", h.proxyWithHeaders)
+		clientTelemetry.POST("/events/batch", h.proxyWithHeaders)
+		clientTelemetry.GET("/summary", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered client-telemetry proxy routes")
+
 	// ==================== Predictive Routes ====================
 	predictive := api.Group("/predictive")
 	predictive.Use(authMiddleware)

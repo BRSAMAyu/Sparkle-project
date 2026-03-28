@@ -385,6 +385,7 @@ async def chat_stream(
             system_prompt=system_prompt,
             user_message=request.message,
             tools=tool_registry.get_openai_tools_schema(),
+            conversation_history=llm_conversation_history,
             user_context=user_context,
         ):
             if chunk.type == "text":

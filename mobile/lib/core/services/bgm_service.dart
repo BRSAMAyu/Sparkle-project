@@ -400,91 +400,93 @@ class BgmService {
   static const Map<BgmTrack, List<String>> _classicalAssetPlaylists =
       <BgmTrack, List<String>>{
     BgmTrack.dashboard: <String>[
-      _homeMorningAsset,
       _dashboardAsset,
       _warmAsset,
+      _thinkingAsset,
     ],
     BgmTrack.chat: <String>[
-      _chatAmbientAsset,
       _thinkingAsset,
-      _profileReflectAsset,
+      _dashboardAsset,
     ],
     BgmTrack.plan: <String>[
-      _calendarPlanAsset,
-      _taskFlowAsset,
-      _profileReflectAsset,
+      _dashboardAsset,
+      _thinkingAsset,
+      _airyAsset,
     ],
     BgmTrack.task: <String>[
-      _taskFlowAsset,
-      _calendarPlanAsset,
-      _pianoAsset,
+      _dashboardAsset,
+      _thinkingAsset,
+      _airyAsset,
     ],
     BgmTrack.calendar: <String>[
-      _calendarPlanAsset,
-      _taskFlowAsset,
-      _pianoAsset,
+      _dashboardAsset,
+      _airyAsset,
+      _thinkingAsset,
     ],
     BgmTrack.community: <String>[
-      _communityJazzAsset,
+      _warmAsset,
+      _dashboardAsset,
+      _thinkingAsset,
+    ],
+    BgmTrack.achievement: <String>[
+      _warmAsset,
+      _airyAsset,
+      _thinkingAsset,
+    ],
+    BgmTrack.galaxy: <String>[
+      _airyAsset,
+      _thinkingAsset,
+      _dashboardAsset,
+    ],
+    BgmTrack.insights: <String>[
+      _thinkingAsset,
       _dashboardAsset,
       _warmAsset,
     ],
-    BgmTrack.achievement: <String>[
-      _achievementWarmAsset,
-      _celebrationAsset,
+    BgmTrack.seeds: <String>[
+      _thinkingAsset,
+      _dashboardAsset,
       _warmAsset,
     ],
-    BgmTrack.galaxy: <String>[
-      _galaxySpaceAsset,
-      _insightsHarpAsset,
+    BgmTrack.tools: <String>[
+      _dashboardAsset,
+      _thinkingAsset,
       _airyAsset,
     ],
-    BgmTrack.insights: <String>[
-      _insightsHarpAsset,
-      _thinkingAsset,
-      _profileReflectAsset,
-    ],
-    BgmTrack.seeds: <String>[
-      _seedsNatureAsset,
-      _calendarPlanAsset,
-      _profileReflectAsset,
-    ],
-    BgmTrack.tools: <String>[
-      _calendarPlanAsset,
-      _taskFlowAsset,
-      _pianoAsset,
-    ],
     BgmTrack.profile: <String>[
-      _profileReflectAsset,
-      _chatAmbientAsset,
-      _insightsHarpAsset,
+      _thinkingAsset,
+      _warmAsset,
+      _dashboardAsset,
     ],
     BgmTrack.focusStart: <String>[
-      _focusDeepAsset,
-      _focusBinauralAsset,
+      _airyAsset,
+      _thinkingAsset,
+      _fallbackBgmAssetPath,
     ],
     BgmTrack.focus: <String>[
-      _focusBinauralAsset,
-      _focusDeepAsset,
+      _airyAsset,
+      _thinkingAsset,
+      _fallbackBgmAssetPath,
     ],
     BgmTrack.focusDeep: <String>[
-      _focusDeepAsset,
-      _focusBinauralAsset,
+      _airyAsset,
+      _thinkingAsset,
+      _fallbackBgmAssetPath,
     ],
     BgmTrack.thinking: <String>[
       _thinkingAsset,
-      _chatAmbientAsset,
-      _insightsHarpAsset,
+      _dashboardAsset,
+      _airyAsset,
     ],
     BgmTrack.celebration: <String>[
-      _achievementWarmAsset,
-      _celebrationAsset,
       _warmAsset,
+      _airyAsset,
+      _thinkingAsset,
     ],
     BgmTrack.visualUnlock: <String>[
-      _achievementWarmAsset,
-      _celebrationAsset,
       _warmAsset,
+      _airyAsset,
+      _thinkingAsset,
     ],
   };
 
@@ -1002,6 +1004,16 @@ class BgmService {
   }) async =>
       (await _resolveSelection(track, force: force, paletteOverride: palette))
           .reason;
+
+  @visibleForTesting
+  static Future<String> debugResolveSelectionAssetPath(
+    BgmTrack track, {
+    bool force = false,
+    BgmPalette? palette,
+  }) async =>
+      (await _resolveSelection(track, force: force, paletteOverride: palette))
+          .source
+          .path;
 
   @visibleForTesting
   static Future<double> debugEffectiveDuckFactor() => _effectiveDuckFactor();
@@ -1775,141 +1787,145 @@ class BgmService {
     switch (track) {
       case BgmTrack.dashboard:
         return switch (palette) {
-          BgmPalette.adaptive => _homeMorningAsset,
-          BgmPalette.classical => _homeMorningAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.adaptive => _dashboardAsset,
+          BgmPalette.classical => _dashboardAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
         };
       case BgmTrack.plan:
         return switch (palette) {
-          BgmPalette.classical => _calendarPlanAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _dashboardAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _calendarPlanAsset,
+          BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.chat:
         return switch (palette) {
-          BgmPalette.classical => _chatAmbientAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _thinkingAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _chatAmbientAsset,
+          _ => _thinkingAsset,
         };
       case BgmTrack.community:
         return switch (palette) {
-          BgmPalette.classical => _communityJazzAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _warmAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
-          BgmPalette.warm => _communityAsset,
-          BgmPalette.adaptive => _communityJazzAsset,
+          BgmPalette.warm => _warmAsset,
+          BgmPalette.adaptive => _warmAsset,
         };
       case BgmTrack.task:
         return switch (palette) {
-          BgmPalette.classical => _taskFlowAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _dashboardAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _taskFlowAsset,
+          BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.calendar:
         return switch (palette) {
-          BgmPalette.classical => _calendarPlanAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _dashboardAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _calendarPlanAsset,
+          BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.achievement:
         return switch (palette) {
-          BgmPalette.classical => _achievementWarmAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.airy => _celebrationAsset,
+          BgmPalette.classical => _warmAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _achievementWarmAsset,
+          BgmPalette.adaptive => _warmAsset,
         };
       case BgmTrack.galaxy:
         return switch (palette) {
-          BgmPalette.classical => _galaxySpaceAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _airyAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
-          BgmPalette.warm => _celebrationAsset,
-          BgmPalette.adaptive => _galaxySpaceAsset,
+          BgmPalette.warm => _warmAsset,
+          BgmPalette.adaptive => _airyAsset,
         };
       case BgmTrack.celebration:
         return switch (palette) {
-          BgmPalette.classical => _achievementWarmAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.airy => _celebrationAsset,
+          BgmPalette.classical => _warmAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _achievementWarmAsset,
+          BgmPalette.adaptive => _warmAsset,
         };
       case BgmTrack.insights:
         return switch (palette) {
-          BgmPalette.classical => _insightsHarpAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _thinkingAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _insightsHarpAsset,
+          _ => _thinkingAsset,
         };
       case BgmTrack.seeds:
         return switch (palette) {
-          BgmPalette.classical => _seedsNatureAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _thinkingAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _seedsNatureAsset,
+          _ => _thinkingAsset,
         };
       case BgmTrack.tools:
         return switch (palette) {
-          BgmPalette.classical => _calendarPlanAsset,
-          BgmPalette.piano => _pianoAsset,
+          BgmPalette.classical => _dashboardAsset,
+          BgmPalette.piano => _thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _taskFlowAsset,
+          BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.profile:
         return switch (palette) {
-          BgmPalette.classical => _profileReflectAsset,
+          BgmPalette.classical => _thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.adaptive => _profileReflectAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.adaptive => _thinkingAsset,
         };
       case BgmTrack.focusStart:
         return switch (palette) {
-          BgmPalette.classical => _focusDeepAsset,
+          BgmPalette.classical => _airyAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.adaptive => _focusDeepAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.adaptive => _airyAsset,
         };
       case BgmTrack.focus:
         return switch (palette) {
-          BgmPalette.classical => _focusBinauralAsset,
-          _ => _focusBinauralAsset,
+          BgmPalette.classical => _airyAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.warm => _warmAsset,
+          _ => _airyAsset,
         };
       case BgmTrack.focusDeep:
         return switch (palette) {
-          BgmPalette.classical => _focusDeepAsset,
-          _ => _focusDeepAsset,
+          BgmPalette.classical => _airyAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.warm => _warmAsset,
+          _ => _airyAsset,
         };
       case BgmTrack.thinking:
         return switch (palette) {
           BgmPalette.classical => _thinkingAsset,
           BgmPalette.adaptive => _thinkingAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.airy => _insightsHarpAsset,
-          BgmPalette.warm => _chatAmbientAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.airy => _airyAsset,
+          BgmPalette.warm => _warmAsset,
         };
       case BgmTrack.visualUnlock:
         return switch (palette) {
-          BgmPalette.classical => _achievementWarmAsset,
-          BgmPalette.piano => _pianoAsset,
-          BgmPalette.airy => _celebrationAsset,
+          BgmPalette.classical => _warmAsset,
+          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.adaptive => _achievementWarmAsset,
+          BgmPalette.adaptive => _warmAsset,
         };
     }
   }

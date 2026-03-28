@@ -18,6 +18,38 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: ag_catalog; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA ag_catalog;
+
+
+ALTER SCHEMA ag_catalog OWNER TO postgres;
+
+--
+-- Name: sparkle_galaxy; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA sparkle_galaxy;
+
+
+ALTER SCHEMA sparkle_galaxy OWNER TO postgres;
+
+--
+-- Name: age; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS age WITH SCHEMA ag_catalog;
+
+
+--
+-- Name: EXTENSION age; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION age IS 'AGE database extension';
+
+
+--
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -130,6 +162,36 @@ CREATE TYPE avatarstatus AS ENUM (
 
 
 ALTER TYPE avatarstatus OWNER TO postgres;
+
+--
+-- Name: backgroundtaskstatus; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE backgroundtaskstatus AS ENUM (
+    'PENDING',
+    'RUNNING',
+    'COMPLETED',
+    'FAILED',
+    'CANCELLED'
+);
+
+
+ALTER TYPE backgroundtaskstatus OWNER TO postgres;
+
+--
+-- Name: backgroundtasktype; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE backgroundtasktype AS ENUM (
+    'AI_GENERATION',
+    'DATA_SYNC',
+    'PLAN_GENERATION',
+    'GALAXY_EXPANSION',
+    'TASK_BATCH'
+);
+
+
+ALTER TYPE backgroundtasktype OWNER TO postgres;
 
 --
 -- Name: contractstatus; Type: TYPE; Schema: public; Owner: postgres
@@ -628,13 +690,13 @@ CREATE TABLE accountability_partnership (
     initiator_goal text NOT NULL,
     partner_goal text,
     check_in_days integer DEFAULT 1 NOT NULL,
-    slot_type accountabilityslottype DEFAULT 'core'::accountabilityslottype NOT NULL,
     status accountabilitystatus DEFAULT 'pending'::accountabilitystatus NOT NULL,
     started_at timestamp with time zone,
     ended_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
+    deleted_at timestamp with time zone,
+    slot_type accountabilityslottype DEFAULT 'core'::accountabilityslottype NOT NULL
 );
 
 
@@ -677,6 +739,53 @@ CREATE TABLE achievements (
 
 
 ALTER TABLE achievements OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE agent_execution_stats (
+    id integer NOT NULL,
+    user_id uuid NOT NULL,
+    session_id character varying(255) NOT NULL,
+    request_id character varying(255) NOT NULL,
+    agent_type character varying(50) NOT NULL,
+    agent_name character varying(100),
+    started_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone,
+    duration_ms integer,
+    status character varying(20) NOT NULL,
+    tool_name character varying(100),
+    operation character varying(255),
+    extra_metadata jsonb,
+    error_message text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE agent_execution_stats OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE agent_execution_stats_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE agent_execution_stats_id_seq OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE agent_execution_stats_id_seq OWNED BY agent_execution_stats.id;
+
 
 --
 -- Name: alembic_version; Type: TABLE; Schema: public; Owner: postgres
@@ -771,6 +880,30 @@ CREATE TABLE arbitration_decisions (
 ALTER TABLE arbitration_decisions OWNER TO postgres;
 
 --
+-- Name: asset_suggestion_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE asset_suggestion_logs (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    user_id uuid NOT NULL,
+    session_id character varying(64),
+    policy_id character varying(50) NOT NULL,
+    trigger_event character varying(100) NOT NULL,
+    evidence_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    decision character varying(20) NOT NULL,
+    decision_reason character varying(255),
+    user_response character varying(20) DEFAULT 'PENDING'::character varying,
+    response_at timestamp without time zone,
+    cooldown_until timestamp without time zone,
+    asset_id uuid
+);
+
+
+ALTER TABLE asset_suggestion_logs OWNER TO postgres;
+
+--
 -- Name: auth_audit_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -788,6 +921,32 @@ CREATE TABLE auth_audit_log (
 
 
 ALTER TABLE auth_audit_log OWNER TO postgres;
+
+--
+-- Name: background_tasks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE background_tasks (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    task_type backgroundtasktype NOT NULL,
+    name character varying(255) NOT NULL,
+    status backgroundtaskstatus DEFAULT 'PENDING'::backgroundtaskstatus NOT NULL,
+    progress double precision DEFAULT '0'::double precision,
+    progress_message text,
+    result_data jsonb,
+    error_message text,
+    related_entity_id uuid,
+    related_entity_type character varying(50),
+    external_task_id character varying(255),
+    completed_at timestamp without time zone
+);
+
+
+ALTER TABLE background_tasks OWNER TO postgres;
 
 --
 -- Name: behavior_patterns; Type: TABLE; Schema: public; Owner: postgres
@@ -1223,6 +1382,53 @@ CREATE TABLE curiosity_capsules (
 ALTER TABLE curiosity_capsules OWNER TO postgres;
 
 --
+-- Name: custom_expert_profiles; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE custom_expert_profiles (
+    user_id uuid NOT NULL,
+    name character varying(120) NOT NULL,
+    description character varying(500),
+    system_prompt text NOT NULL,
+    base_expert_id character varying(100),
+    preferred_model_key character varying(100),
+    preferred_model_tier character varying(40),
+    reasoning_mode character varying(40) DEFAULT 'balanced'::character varying NOT NULL,
+    source character varying(40) DEFAULT 'user_defined'::character varying NOT NULL,
+    metadata_json json,
+    is_enabled boolean DEFAULT true NOT NULL,
+    deleted_at timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE custom_expert_profiles OWNER TO postgres;
+
+--
+-- Name: custom_expert_teams; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE custom_expert_teams (
+    user_id uuid NOT NULL,
+    name character varying(120) NOT NULL,
+    description character varying(500),
+    collaboration_mode character varying(40) DEFAULT 'auto'::character varying NOT NULL,
+    expert_ids json NOT NULL,
+    answer_expert_ids json,
+    metadata_json json,
+    is_enabled boolean DEFAULT true NOT NULL,
+    deleted_at timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE custom_expert_teams OWNER TO postgres;
+
+--
 -- Name: data_access_logs; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1466,6 +1672,74 @@ CREATE TABLE evolution_predictions (
 
 
 ALTER TABLE evolution_predictions OWNER TO postgres;
+
+--
+-- Name: execution_intents; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE execution_intents (
+    id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at timestamp without time zone,
+    plan_id uuid,
+    task_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    execution_mode character varying(20) DEFAULT 'human'::character varying NOT NULL,
+    executor character varying(20) DEFAULT 'manual'::character varying NOT NULL,
+    goal text NOT NULL,
+    instructions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    target_env character varying(20),
+    policy jsonb DEFAULT '{}'::jsonb NOT NULL,
+    success_criteria jsonb DEFAULT '{}'::jsonb NOT NULL,
+    result_contract jsonb DEFAULT '{}'::jsonb NOT NULL,
+    timeout_seconds integer DEFAULT 300 NOT NULL,
+    status character varying(30) DEFAULT 'draft'::character varying NOT NULL,
+    trust_level character varying(20) DEFAULT 'raw'::character varying NOT NULL,
+    external_run_id character varying(255),
+    idempotency_key character varying(255) NOT NULL,
+    error_category character varying(100),
+    error_message text,
+    dispatched_at timestamp without time zone,
+    completed_at timestamp without time zone
+);
+
+
+ALTER TABLE execution_intents OWNER TO postgres;
+
+--
+-- Name: execution_records; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE execution_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at timestamp without time zone,
+    execution_intent_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    task_id uuid,
+    executor_type character varying(50) DEFAULT 'openclaw'::character varying NOT NULL,
+    external_run_id character varying(255),
+    raw_response jsonb DEFAULT '{}'::jsonb NOT NULL,
+    parsed_output jsonb,
+    artifacts jsonb DEFAULT '[]'::jsonb NOT NULL,
+    trust_level character varying(20) DEFAULT 'raw'::character varying NOT NULL,
+    validation_passed integer,
+    validation_total integer,
+    quality_score double precision,
+    duration_ms integer,
+    token_usage jsonb,
+    tool_calls_count integer DEFAULT 0,
+    approval_requested integer DEFAULT 0,
+    error_category character varying(100),
+    error_message text,
+    execution_started_at timestamp without time zone,
+    execution_completed_at timestamp without time zone
+);
+
+
+ALTER TABLE execution_records OWNER TO postgres;
 
 --
 -- Name: expansion_feedback; Type: TABLE; Schema: public; Owner: postgres
@@ -1952,6 +2226,46 @@ CREATE TABLE knowledge_nodes (
 
 
 ALTER TABLE knowledge_nodes OWNER TO postgres;
+
+--
+-- Name: learning_assets; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE learning_assets (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    source_file_id uuid,
+    status character varying(20) DEFAULT 'INBOX'::character varying NOT NULL,
+    asset_kind character varying(20) DEFAULT 'WORD'::character varying NOT NULL,
+    headword character varying(255) NOT NULL,
+    definition text,
+    translation text,
+    example text,
+    language_code character varying(10) DEFAULT 'en'::character varying NOT NULL,
+    inbox_expires_at timestamp without time zone,
+    snapshot_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    snapshot_schema_version integer DEFAULT 1 NOT NULL,
+    provenance_json jsonb DEFAULT '{}'::jsonb,
+    provenance_updated_at timestamp without time zone,
+    selection_fp character varying(64),
+    anchor_fp character varying(64),
+    doc_fp character varying(64),
+    norm_version character varying(20) DEFAULT 'v1'::character varying NOT NULL,
+    match_profile character varying(50),
+    review_due_at timestamp without time zone,
+    review_count integer DEFAULT 0 NOT NULL,
+    review_success_rate double precision DEFAULT '0'::double precision NOT NULL,
+    last_seen_at timestamp without time zone,
+    lookup_count integer DEFAULT 1 NOT NULL,
+    star_count integer DEFAULT 0 NOT NULL,
+    ignored_count integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE learning_assets OWNER TO postgres;
 
 --
 -- Name: legal_holds; Type: TABLE; Schema: public; Owner: postgres
@@ -3004,6 +3318,23 @@ CREATE TABLE seed_libraries (
 ALTER TABLE seed_libraries OWNER TO postgres;
 
 --
+-- Name: seed_library_ratings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE seed_library_ratings (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    user_id uuid NOT NULL,
+    library_id uuid NOT NULL,
+    score double precision NOT NULL,
+    comment text
+);
+
+
+ALTER TABLE seed_library_ratings OWNER TO postgres;
+
+--
 -- Name: semantic_links; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3046,7 +3377,9 @@ CREATE TABLE shared_resources (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
-    knowledge_node_id uuid
+    knowledge_node_id uuid,
+    seed_library_id uuid,
+    seed_item_id uuid
 );
 
 
@@ -3543,7 +3876,9 @@ CREATE TABLE tasks (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    order_index integer NOT NULL,
+    execution_mode character varying(20)
 );
 
 
@@ -3565,7 +3900,9 @@ CREATE TABLE token_usage (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    model_tier character varying(40),
+    ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL
 );
 
 
@@ -3934,7 +4271,8 @@ CREATE TABLE user_node_status (
     revision integer NOT NULL,
     first_unlock_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    learning_path_snapshot json
 );
 
 
@@ -4018,7 +4356,8 @@ CREATE TABLE user_settings (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL
 );
 
 
@@ -4346,6 +4685,449 @@ CREATE TABLE word_books (
 ALTER TABLE word_books OWNER TO postgres;
 
 --
+-- Name: _ag_label_edge; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy._ag_label_edge (
+    id ag_catalog.graphid NOT NULL,
+    start_id ag_catalog.graphid NOT NULL,
+    end_id ag_catalog.graphid NOT NULL,
+    properties ag_catalog.agtype DEFAULT ag_catalog.agtype_build_map() NOT NULL
+);
+
+
+ALTER TABLE sparkle_galaxy._ag_label_edge OWNER TO postgres;
+
+--
+-- Name: APPLICATION; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."APPLICATION" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."APPLICATION" OWNER TO postgres;
+
+--
+-- Name: APPLICATION_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."APPLICATION_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."APPLICATION_id_seq" OWNER TO postgres;
+
+--
+-- Name: APPLICATION_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."APPLICATION_id_seq" OWNED BY sparkle_galaxy."APPLICATION".id;
+
+
+--
+-- Name: APPLIES_TO; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."APPLIES_TO" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."APPLIES_TO" OWNER TO postgres;
+
+--
+-- Name: APPLIES_TO_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" OWNER TO postgres;
+
+--
+-- Name: APPLIES_TO_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" OWNED BY sparkle_galaxy."APPLIES_TO".id;
+
+
+--
+-- Name: INTERESTED_IN; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."INTERESTED_IN" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."INTERESTED_IN" OWNER TO postgres;
+
+--
+-- Name: INTERESTED_IN_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" OWNER TO postgres;
+
+--
+-- Name: INTERESTED_IN_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" OWNED BY sparkle_galaxy."INTERESTED_IN".id;
+
+
+--
+-- Name: _ag_label_vertex; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy._ag_label_vertex (
+    id ag_catalog.graphid NOT NULL,
+    properties ag_catalog.agtype DEFAULT ag_catalog.agtype_build_map() NOT NULL
+);
+
+
+ALTER TABLE sparkle_galaxy._ag_label_vertex OWNER TO postgres;
+
+--
+-- Name: KnowledgeNode; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."KnowledgeNode" (
+)
+INHERITS (sparkle_galaxy._ag_label_vertex);
+
+
+ALTER TABLE sparkle_galaxy."KnowledgeNode" OWNER TO postgres;
+
+--
+-- Name: KnowledgeNode_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" OWNER TO postgres;
+
+--
+-- Name: KnowledgeNode_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" OWNED BY sparkle_galaxy."KnowledgeNode".id;
+
+
+--
+-- Name: MASTERED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."MASTERED" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."MASTERED" OWNER TO postgres;
+
+--
+-- Name: MASTERED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."MASTERED_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."MASTERED_id_seq" OWNER TO postgres;
+
+--
+-- Name: MASTERED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."MASTERED_id_seq" OWNED BY sparkle_galaxy."MASTERED".id;
+
+
+--
+-- Name: PREREQUISITE; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."PREREQUISITE" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."PREREQUISITE" OWNER TO postgres;
+
+--
+-- Name: PREREQUISITE_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" OWNER TO postgres;
+
+--
+-- Name: PREREQUISITE_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" OWNED BY sparkle_galaxy."PREREQUISITE".id;
+
+
+--
+-- Name: RELATED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."RELATED" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."RELATED" OWNER TO postgres;
+
+--
+-- Name: RELATED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."RELATED_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."RELATED_id_seq" OWNER TO postgres;
+
+--
+-- Name: RELATED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."RELATED_id_seq" OWNED BY sparkle_galaxy."RELATED".id;
+
+
+--
+-- Name: STUDIED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."STUDIED" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."STUDIED" OWNER TO postgres;
+
+--
+-- Name: STUDIED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."STUDIED_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."STUDIED_id_seq" OWNER TO postgres;
+
+--
+-- Name: STUDIED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."STUDIED_id_seq" OWNED BY sparkle_galaxy."STUDIED".id;
+
+
+--
+-- Name: STUDIES; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."STUDIES" (
+)
+INHERITS (sparkle_galaxy._ag_label_edge);
+
+
+ALTER TABLE sparkle_galaxy."STUDIES" OWNER TO postgres;
+
+--
+-- Name: STUDIES_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."STUDIES_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."STUDIES_id_seq" OWNER TO postgres;
+
+--
+-- Name: STUDIES_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."STUDIES_id_seq" OWNED BY sparkle_galaxy."STUDIES".id;
+
+
+--
+-- Name: User; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."User" (
+)
+INHERITS (sparkle_galaxy._ag_label_vertex);
+
+
+ALTER TABLE sparkle_galaxy."User" OWNER TO postgres;
+
+--
+-- Name: User_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."User_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."User_id_seq" OWNER TO postgres;
+
+--
+-- Name: User_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."User_id_seq" OWNED BY sparkle_galaxy."User".id;
+
+
+--
+-- Name: __SchemaSeed; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE TABLE sparkle_galaxy."__SchemaSeed" (
+)
+INHERITS (sparkle_galaxy._ag_label_vertex);
+
+
+ALTER TABLE sparkle_galaxy."__SchemaSeed" OWNER TO postgres;
+
+--
+-- Name: __SchemaSeed_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" OWNER TO postgres;
+
+--
+-- Name: __SchemaSeed_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" OWNED BY sparkle_galaxy."__SchemaSeed".id;
+
+
+--
+-- Name: _ag_label_edge_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy._ag_label_edge_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy._ag_label_edge_id_seq OWNER TO postgres;
+
+--
+-- Name: _ag_label_edge_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy._ag_label_edge_id_seq OWNED BY sparkle_galaxy._ag_label_edge.id;
+
+
+--
+-- Name: _ag_label_vertex_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 281474976710655
+    CACHE 1;
+
+
+ALTER SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq OWNER TO postgres;
+
+--
+-- Name: _ag_label_vertex_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq OWNED BY sparkle_galaxy._ag_label_vertex.id;
+
+
+--
+-- Name: _label_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
+--
+
+CREATE SEQUENCE sparkle_galaxy._label_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 65535
+    CACHE 1
+    CYCLE;
+
+
+ALTER SEQUENCE sparkle_galaxy._label_id_seq OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_execution_stats ALTER COLUMN id SET DEFAULT nextval('agent_execution_stats_id_seq'::regclass);
+
+
+--
 -- Name: crdt_operation_log id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -4371,6 +5153,174 @@ ALTER TABLE ONLY subjects ALTER COLUMN id SET DEFAULT nextval('subjects_id_seq':
 --
 
 ALTER TABLE ONLY user_tool_history ALTER COLUMN id SET DEFAULT nextval('user_tool_history_id_seq'::regclass);
+
+
+--
+-- Name: APPLICATION id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."APPLICATION" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'APPLICATION'::name))::integer, nextval('sparkle_galaxy."APPLICATION_id_seq"'::regclass));
+
+
+--
+-- Name: APPLICATION properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."APPLICATION" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: APPLIES_TO id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."APPLIES_TO" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'APPLIES_TO'::name))::integer, nextval('sparkle_galaxy."APPLIES_TO_id_seq"'::regclass));
+
+
+--
+-- Name: APPLIES_TO properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."APPLIES_TO" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: INTERESTED_IN id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."INTERESTED_IN" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'INTERESTED_IN'::name))::integer, nextval('sparkle_galaxy."INTERESTED_IN_id_seq"'::regclass));
+
+
+--
+-- Name: INTERESTED_IN properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."INTERESTED_IN" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: KnowledgeNode id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."KnowledgeNode" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'KnowledgeNode'::name))::integer, nextval('sparkle_galaxy."KnowledgeNode_id_seq"'::regclass));
+
+
+--
+-- Name: KnowledgeNode properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."KnowledgeNode" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: MASTERED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."MASTERED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'MASTERED'::name))::integer, nextval('sparkle_galaxy."MASTERED_id_seq"'::regclass));
+
+
+--
+-- Name: MASTERED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."MASTERED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: PREREQUISITE id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."PREREQUISITE" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'PREREQUISITE'::name))::integer, nextval('sparkle_galaxy."PREREQUISITE_id_seq"'::regclass));
+
+
+--
+-- Name: PREREQUISITE properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."PREREQUISITE" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: RELATED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."RELATED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'RELATED'::name))::integer, nextval('sparkle_galaxy."RELATED_id_seq"'::regclass));
+
+
+--
+-- Name: RELATED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."RELATED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: STUDIED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."STUDIED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'STUDIED'::name))::integer, nextval('sparkle_galaxy."STUDIED_id_seq"'::regclass));
+
+
+--
+-- Name: STUDIED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."STUDIED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: STUDIES id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."STUDIES" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'STUDIES'::name))::integer, nextval('sparkle_galaxy."STUDIES_id_seq"'::regclass));
+
+
+--
+-- Name: STUDIES properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."STUDIES" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: User id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."User" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'User'::name))::integer, nextval('sparkle_galaxy."User_id_seq"'::regclass));
+
+
+--
+-- Name: User properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."User" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: __SchemaSeed id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."__SchemaSeed" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '__SchemaSeed'::name))::integer, nextval('sparkle_galaxy."__SchemaSeed_id_seq"'::regclass));
+
+
+--
+-- Name: __SchemaSeed properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy."__SchemaSeed" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
+
+
+--
+-- Name: _ag_label_edge id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy._ag_label_edge ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '_ag_label_edge'::name))::integer, nextval('sparkle_galaxy._ag_label_edge_id_seq'::regclass));
+
+
+--
+-- Name: _ag_label_vertex id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy._ag_label_vertex ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '_ag_label_vertex'::name))::integer, nextval('sparkle_galaxy._ag_label_vertex_id_seq'::regclass));
 
 
 --
@@ -4430,6 +5380,14 @@ ALTER TABLE ONLY achievements
 
 
 --
+-- Name: agent_execution_stats agent_execution_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_execution_stats
+    ADD CONSTRAINT agent_execution_stats_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: alembic_version alembic_version_pkc; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4462,11 +5420,27 @@ ALTER TABLE ONLY arbitration_decisions
 
 
 --
+-- Name: asset_suggestion_logs asset_suggestion_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: auth_audit_log auth_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY auth_audit_log
     ADD CONSTRAINT auth_audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: background_tasks background_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY background_tasks
+    ADD CONSTRAINT background_tasks_pkey PRIMARY KEY (id);
 
 
 --
@@ -4622,6 +5596,22 @@ ALTER TABLE ONLY curiosity_capsules
 
 
 --
+-- Name: custom_expert_profiles custom_expert_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY custom_expert_profiles
+    ADD CONSTRAINT custom_expert_profiles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: custom_expert_teams custom_expert_teams_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY custom_expert_teams
+    ADD CONSTRAINT custom_expert_teams_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: data_access_logs data_access_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4707,6 +5697,38 @@ ALTER TABLE ONLY event_store
 
 ALTER TABLE ONLY evolution_predictions
     ADD CONSTRAINT evolution_predictions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: execution_intents execution_intents_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_intents
+    ADD CONSTRAINT execution_intents_idempotency_key_key UNIQUE (idempotency_key);
+
+
+--
+-- Name: execution_intents execution_intents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_intents
+    ADD CONSTRAINT execution_intents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: execution_records execution_records_execution_intent_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_records
+    ADD CONSTRAINT execution_records_execution_intent_id_key UNIQUE (execution_intent_id);
+
+
+--
+-- Name: execution_records execution_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_records
+    ADD CONSTRAINT execution_records_pkey PRIMARY KEY (id);
 
 
 --
@@ -4875,6 +5897,14 @@ ALTER TABLE ONLY jobs
 
 ALTER TABLE ONLY knowledge_nodes
     ADD CONSTRAINT knowledge_nodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: learning_assets learning_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY learning_assets
+    ADD CONSTRAINT learning_assets_pkey PRIMARY KEY (id);
 
 
 --
@@ -5214,6 +6244,14 @@ ALTER TABLE ONLY seed_libraries
 
 
 --
+-- Name: seed_library_ratings seed_library_ratings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY seed_library_ratings
+    ADD CONSTRAINT seed_library_ratings_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: semantic_links semantic_links_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5467,6 +6505,14 @@ ALTER TABLE ONLY post_likes
 
 ALTER TABLE ONLY response_feedback
     ADD CONSTRAINT uq_response_feedback_user_response UNIQUE (user_id, response_id);
+
+
+--
+-- Name: seed_library_ratings uq_seed_library_ratings_user_library; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY seed_library_ratings
+    ADD CONSTRAINT uq_seed_library_ratings_user_library UNIQUE (user_id, library_id);
 
 
 --
@@ -5758,6 +6804,22 @@ ALTER TABLE ONLY word_books
 
 
 --
+-- Name: _ag_label_edge _ag_label_edge_pkey; Type: CONSTRAINT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy._ag_label_edge
+    ADD CONSTRAINT _ag_label_edge_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: _ag_label_vertex _ag_label_vertex_pkey; Type: CONSTRAINT; Schema: sparkle_galaxy; Owner: postgres
+--
+
+ALTER TABLE ONLY sparkle_galaxy._ag_label_vertex
+    ADD CONSTRAINT _ag_label_vertex_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_accountability_checkin_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5811,6 +6873,20 @@ CREATE INDEX idx_achievements_type_rarity ON achievements USING btree (type, rar
 --
 
 CREATE INDEX idx_auth_audit_user_occurred ON auth_audit_log USING btree (user_id, occurred_at);
+
+
+--
+-- Name: idx_background_tasks_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_background_tasks_type ON background_tasks USING btree (task_type);
+
+
+--
+-- Name: idx_background_tasks_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_background_tasks_user_status ON background_tasks USING btree (user_id, status);
 
 
 --
@@ -5884,6 +6960,13 @@ CREATE INDEX idx_claim_user ON group_task_claims USING btree (user_id);
 
 
 --
+-- Name: idx_cognitive_fragments_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_cognitive_fragments_embedding_hnsw ON cognitive_fragments USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
+
+
+--
 -- Name: idx_context_budget_profiles_intent; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -5902,6 +6985,20 @@ CREATE INDEX idx_context_pack_runs_intent ON context_pack_runs USING btree (inte
 --
 
 CREATE INDEX idx_context_pack_runs_user_created ON context_pack_runs USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_custom_expert_profiles_user_enabled; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_custom_expert_profiles_user_enabled ON custom_expert_profiles USING btree (user_id, is_enabled);
+
+
+--
+-- Name: idx_custom_expert_teams_user_enabled; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_custom_expert_teams_user_enabled ON custom_expert_teams USING btree (user_id, is_enabled);
 
 
 --
@@ -5972,6 +7069,69 @@ CREATE INDEX idx_errors_user_review ON error_records USING btree (user_id, next_
 --
 
 CREATE INDEX idx_event_store_aggregate ON event_store USING btree (aggregate_type, aggregate_id, sequence_number);
+
+
+--
+-- Name: idx_exec_intent_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_intent_created ON execution_intents USING btree (created_at);
+
+
+--
+-- Name: idx_exec_intent_external_run; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_intent_external_run ON execution_intents USING btree (external_run_id);
+
+
+--
+-- Name: idx_exec_intent_plan; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_intent_plan ON execution_intents USING btree (plan_id);
+
+
+--
+-- Name: idx_exec_intent_task; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_intent_task ON execution_intents USING btree (task_id);
+
+
+--
+-- Name: idx_exec_intent_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_intent_user_status ON execution_intents USING btree (user_id, status);
+
+
+--
+-- Name: idx_exec_record_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_record_created ON execution_records USING btree (created_at);
+
+
+--
+-- Name: idx_exec_record_intent; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_record_intent ON execution_records USING btree (execution_intent_id);
+
+
+--
+-- Name: idx_exec_record_trust; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_record_trust ON execution_records USING btree (trust_level);
+
+
+--
+-- Name: idx_exec_record_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_exec_record_user ON execution_records USING btree (user_id);
 
 
 --
@@ -6133,6 +7293,41 @@ CREATE INDEX idx_jobs_status_timeout ON jobs USING btree (status, timeout_at) WH
 --
 
 CREATE INDEX idx_jobs_user_id ON jobs USING btree (user_id);
+
+
+--
+-- Name: idx_learning_assets_headword; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_headword ON learning_assets USING btree (headword);
+
+
+--
+-- Name: idx_learning_assets_inbox_expires; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_inbox_expires ON learning_assets USING btree (inbox_expires_at) WHERE ((status)::text = 'INBOX'::text);
+
+
+--
+-- Name: idx_learning_assets_review_due; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_review_due ON learning_assets USING btree (user_id, review_due_at) WHERE (((status)::text = 'ACTIVE'::text) AND (review_due_at IS NOT NULL));
+
+
+--
+-- Name: idx_learning_assets_selection_fp; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_selection_fp ON learning_assets USING btree (user_id, selection_fp);
+
+
+--
+-- Name: idx_learning_assets_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_user_status ON learning_assets USING btree (user_id, status);
 
 
 --
@@ -6486,6 +7681,20 @@ CREATE INDEX idx_share_resource_plan ON shared_resources USING btree (plan_id);
 
 
 --
+-- Name: idx_share_resource_seed_item; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_seed_item ON shared_resources USING btree (seed_item_id);
+
+
+--
+-- Name: idx_share_resource_seed_library; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_seed_library ON shared_resources USING btree (seed_library_id);
+
+
+--
 -- Name: idx_share_target_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6511,6 +7720,20 @@ CREATE INDEX idx_subtasks_parent_task_id ON subtasks USING btree (parent_task_id
 --
 
 CREATE INDEX idx_subtasks_status ON subtasks USING btree (status);
+
+
+--
+-- Name: idx_suggestion_log_policy; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_suggestion_log_policy ON asset_suggestion_logs USING btree (policy_id);
+
+
+--
+-- Name: idx_suggestion_log_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_suggestion_log_user_created ON asset_suggestion_logs USING btree (user_id, created_at);
 
 
 --
@@ -6567,6 +7790,13 @@ CREATE INDEX idx_tasks_user_created_at ON tasks USING btree (user_id, created_at
 --
 
 CREATE INDEX idx_tasks_user_id ON tasks USING btree (user_id);
+
+
+--
+-- Name: idx_tasks_user_order_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tasks_user_order_index ON tasks USING btree (user_id, order_index);
 
 
 --
@@ -6885,6 +8115,41 @@ CREATE INDEX ix_achievements_type ON achievements USING btree (type);
 
 
 --
+-- Name: ix_agent_execution_stats_agent_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_execution_stats_agent_type ON agent_execution_stats USING btree (agent_type);
+
+
+--
+-- Name: ix_agent_execution_stats_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_execution_stats_created_at ON agent_execution_stats USING btree (created_at);
+
+
+--
+-- Name: ix_agent_execution_stats_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_execution_stats_session_id ON agent_execution_stats USING btree (session_id);
+
+
+--
+-- Name: ix_agent_execution_stats_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_execution_stats_user_id ON agent_execution_stats USING btree (user_id);
+
+
+--
+-- Name: ix_agent_stats_user_agent_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_user_agent_type ON agent_execution_stats USING btree (user_id, agent_type);
+
+
+--
 -- Name: ix_appeals_appeal_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7008,6 +8273,13 @@ CREATE INDEX ix_auth_audit_log_occurred_at ON auth_audit_log USING btree (occurr
 --
 
 CREATE INDEX ix_auth_audit_log_user_id ON auth_audit_log USING btree (user_id);
+
+
+--
+-- Name: ix_background_tasks_external_task_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_background_tasks_external_task_id ON background_tasks USING btree (external_task_id);
 
 
 --
@@ -7358,6 +8630,55 @@ CREATE INDEX ix_curiosity_capsules_related_task_id ON curiosity_capsules USING b
 --
 
 CREATE INDEX ix_curiosity_capsules_user_id ON curiosity_capsules USING btree (user_id);
+
+
+--
+-- Name: ix_custom_expert_profiles_base_expert_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_profiles_base_expert_id ON custom_expert_profiles USING btree (base_expert_id);
+
+
+--
+-- Name: ix_custom_expert_profiles_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_profiles_deleted_at ON custom_expert_profiles USING btree (deleted_at);
+
+
+--
+-- Name: ix_custom_expert_profiles_preferred_model_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_profiles_preferred_model_key ON custom_expert_profiles USING btree (preferred_model_key);
+
+
+--
+-- Name: ix_custom_expert_profiles_preferred_model_tier; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_profiles_preferred_model_tier ON custom_expert_profiles USING btree (preferred_model_tier);
+
+
+--
+-- Name: ix_custom_expert_profiles_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_profiles_user_id ON custom_expert_profiles USING btree (user_id);
+
+
+--
+-- Name: ix_custom_expert_teams_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_teams_deleted_at ON custom_expert_teams USING btree (deleted_at);
+
+
+--
+-- Name: ix_custom_expert_teams_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_custom_expert_teams_user_id ON custom_expert_teams USING btree (user_id);
 
 
 --
@@ -8880,6 +10201,20 @@ CREATE INDEX ix_seed_libraries_visibility ON seed_libraries USING btree (visibil
 
 
 --
+-- Name: ix_seed_library_ratings_library_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_seed_library_ratings_library_id ON seed_library_ratings USING btree (library_id);
+
+
+--
+-- Name: ix_seed_library_ratings_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_seed_library_ratings_user_id ON seed_library_ratings USING btree (user_id);
+
+
+--
 -- Name: ix_semantic_links_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9853,6 +11188,13 @@ CREATE INDEX ix_word_books_word ON word_books USING btree (word);
 
 
 --
+-- Name: uq_execution_intents_active_task; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_execution_intents_active_task ON execution_intents USING btree (user_id, task_id) WHERE ((deleted_at IS NULL) AND ((status)::text = ANY ((ARRAY['draft'::character varying, 'ready'::character varying, 'dispatched'::character varying, 'running'::character varying, 'waiting_approval'::character varying])::text[])));
+
+
+--
 -- Name: uq_memory_preferences_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9984,6 +11326,22 @@ ALTER TABLE ONLY achievements
 
 ALTER TABLE ONLY achievements
     ADD CONSTRAINT achievements_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES achievements(id);
+
+
+--
+-- Name: asset_suggestion_logs asset_suggestion_logs_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES learning_assets(id) ON DELETE SET NULL;
+
+
+--
+-- Name: asset_suggestion_logs asset_suggestion_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -10203,6 +11561,22 @@ ALTER TABLE ONLY curiosity_capsules
 
 
 --
+-- Name: custom_expert_profiles custom_expert_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY custom_expert_profiles
+    ADD CONSTRAINT custom_expert_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: custom_expert_teams custom_expert_teams_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY custom_expert_teams
+    ADD CONSTRAINT custom_expert_teams_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: data_access_logs data_access_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10267,6 +11641,54 @@ ALTER TABLE ONLY error_records
 
 
 --
+-- Name: execution_intents execution_intents_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_intents
+    ADD CONSTRAINT execution_intents_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL;
+
+
+--
+-- Name: execution_intents execution_intents_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_intents
+    ADD CONSTRAINT execution_intents_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_intents execution_intents_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_intents
+    ADD CONSTRAINT execution_intents_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_records execution_records_execution_intent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_records
+    ADD CONSTRAINT execution_records_execution_intent_id_fkey FOREIGN KEY (execution_intent_id) REFERENCES execution_intents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_records execution_records_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_records
+    ADD CONSTRAINT execution_records_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: execution_records execution_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY execution_records
+    ADD CONSTRAINT execution_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: expansion_feedback expansion_feedback_expansion_queue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10296,6 +11718,22 @@ ALTER TABLE ONLY expansion_feedback
 
 ALTER TABLE ONLY ab_experiments
     ADD CONSTRAINT fk_ab_experiments_winning_variant_id FOREIGN KEY (winning_variant_id) REFERENCES ab_experiment_variants(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shared_resources fk_shared_resources_seed_item_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resources
+    ADD CONSTRAINT fk_shared_resources_seed_item_id FOREIGN KEY (seed_item_id) REFERENCES seed_items(id);
+
+
+--
+-- Name: shared_resources fk_shared_resources_seed_library_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resources
+    ADD CONSTRAINT fk_shared_resources_seed_library_id FOREIGN KEY (seed_library_id) REFERENCES seed_libraries(id);
 
 
 --
@@ -10576,6 +12014,22 @@ ALTER TABLE ONLY knowledge_nodes
 
 ALTER TABLE ONLY knowledge_nodes
     ADD CONSTRAINT knowledge_nodes_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES subjects(id);
+
+
+--
+-- Name: learning_assets learning_assets_source_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY learning_assets
+    ADD CONSTRAINT learning_assets_source_file_id_fkey FOREIGN KEY (source_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+
+
+--
+-- Name: learning_assets learning_assets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY learning_assets
+    ADD CONSTRAINT learning_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -10992,6 +12446,22 @@ ALTER TABLE ONLY seed_items
 
 ALTER TABLE ONLY seed_libraries
     ADD CONSTRAINT seed_libraries_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: seed_library_ratings seed_library_ratings_library_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY seed_library_ratings
+    ADD CONSTRAINT seed_library_ratings_library_id_fkey FOREIGN KEY (library_id) REFERENCES seed_libraries(id) ON DELETE CASCADE;
+
+
+--
+-- Name: seed_library_ratings seed_library_ratings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY seed_library_ratings
+    ADD CONSTRAINT seed_library_ratings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11557,4 +13027,5 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
+
 

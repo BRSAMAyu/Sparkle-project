@@ -85,7 +85,7 @@ def create_optimized_engine() -> AsyncEngine:
             engine_config["connect_args"]["ssl"] = False
         elif sslmode in ("require", "verify-ca", "verify-full"):
             engine_config["connect_args"]["ssl"] = True
-        db_url = str(parsed.set(query=query))
+        db_url = parsed.set(query=query).render_as_string(hide_password=False)
 
     # 创建引擎
     engine = create_async_engine(

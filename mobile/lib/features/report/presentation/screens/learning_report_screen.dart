@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -592,7 +592,6 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       ref,
       kind: MirofishMilestoneKind.firstReport,
       onShare: () {
-        Navigator.of(context).pop();
         unawaited(_showReportShareSheet(widget.report));
       },
     );
@@ -2338,8 +2337,7 @@ class _ReportStatCard extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
+  Widget build(BuildContext context) => Expanded(
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
@@ -2380,7 +2378,6 @@ class _ReportStatCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _AnimatedReportSection extends StatefulWidget {

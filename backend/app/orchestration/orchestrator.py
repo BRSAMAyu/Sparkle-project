@@ -1514,6 +1514,7 @@ class ChatOrchestrator(
                         route_decision=route_decision,
                         plan_switched=plan_switched,
                         plan_id=plan_id,
+                        plan_context=plan_context,
                         user_context_payload=user_context_payload,
                         total_prompt_tokens=total_prompt_tokens,
                         total_completion_tokens=total_completion_tokens,

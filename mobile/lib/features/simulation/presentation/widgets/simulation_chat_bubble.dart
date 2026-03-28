@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
+import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 
 class SimulationChatBubble extends StatefulWidget {
   const SimulationChatBubble({
@@ -62,7 +63,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
   void _startReveal() {
     _timer?.cancel();
     _visibleLength = 0;
-    final message = widget.message;
+    final message = localizeSimulationText(widget.message);
     if (message.isEmpty) {
       return;
     }
@@ -88,9 +89,20 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     final accent = _accentForSpeaker(widget.speaker);
     final isLeftAligned = widget.speaker.hashCode.isEven;
     final participant = widget.participant;
-    final revealed = widget.message.substring(
+    final localizedMessage = localizeSimulationText(widget.message);
+    final localizedRoleHint = localizeSimulationRoleHint(
+      participant?.roleHint ?? '',
+    );
+    final localizedStance = localizeSimulationStance(participant?.stance);
+    final localizedAnchor = localizeSimulationText(
+      participant?.contextAnchor ?? '',
+    );
+    final localizedReplyTarget = localizeSimulationText(
+      widget.replyToSpeaker ?? '',
+    );
+    final revealed = localizedMessage.substring(
       0,
-      _visibleLength.clamp(0, widget.message.length),
+      _visibleLength.clamp(0, localizedMessage.length),
     );
 
     return AnimatedSlide(
@@ -200,7 +212,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              '承接 ${widget.replyToSpeaker} 的观点',
+                              '承接 $localizedReplyTarget 的观点',
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -253,23 +265,23 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                     color: accent,
                                   ),
                             ),
-                            if ((participant?.roleHint.isNotEmpty ?? false) ||
-                                (participant?.stance?.isNotEmpty ?? false)) ...[
+                            if (localizedRoleHint.isNotEmpty ||
+                                localizedStance.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
                                 children: [
-                                  if (participant?.roleHint.isNotEmpty ?? false)
+                                  if (localizedRoleHint.isNotEmpty)
                                     _MetaPill(
-                                      label: participant!.roleHint,
+                                      label: localizedRoleHint,
                                       foreground: accent,
                                       background:
                                           accent.withValues(alpha: 0.12),
                                     ),
-                                  if (participant?.stance?.isNotEmpty ?? false)
+                                  if (localizedStance.isNotEmpty)
                                     _MetaPill(
-                                      label: '立场 ${participant!.stance!}',
+                                      label: '立场 $localizedStance',
                                       foreground: DS.textSecondary,
                                       background:
                                           scheme.surface.withValues(alpha: 0.9),
@@ -337,7 +349,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              participant!.contextAnchor!,
+                              localizedAnchor,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -359,11 +371,11 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                       runSpacing: 6,
                       children: [
                         if (widget.replyToSpeaker?.isNotEmpty ?? false)
-                          _MetaPill(label: '回应 ${widget.replyToSpeaker}'),
+                          _MetaPill(label: '回应 $localizedReplyTarget'),
                         if (widget.turnGoal?.isNotEmpty ?? false)
                           _MetaPill(
                             icon: Icons.flag_rounded,
-                            label: _turnGoalLabel(widget.turnGoal!),
+                            label: localizeSimulationTurnGoal(widget.turnGoal!),
                           ),
                       ],
                     ),
@@ -395,24 +407,13 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     return palette[speaker.hashCode.abs() % palette.length];
   }
 
-  String _sourceLabel(String source) {
-    switch (source) {
-      case 'galaxy':
-        return '知识星图';
-      case 'tasks':
-        return '任务记录';
-      case 'plan':
-        return '学习计划';
-      case 'starter_graph':
-        return '起步图谱';
-      default:
-        return source;
-    }
-  }
+  String _sourceLabel(String source) => localizeSimulationSource(source);
 
   IconData _speakerIcon(SimulationParticipantModel? participant) {
-    final role = participant?.roleHint.toLowerCase() ?? '';
-    final stance = participant?.stance?.toLowerCase() ?? '';
+    final role = localizeSimulationRoleHint(participant?.roleHint ?? '')
+        .toLowerCase();
+    final stance = localizeSimulationStance(participant?.stance)
+        .toLowerCase();
     if (role.contains('质疑') || stance.contains('反')) {
       return Icons.gavel_rounded;
     }
@@ -426,21 +427,6 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
       return Icons.psychology_alt_rounded;
     }
     return Icons.person_rounded;
-  }
-
-  String _turnGoalLabel(String turnGoal) {
-    switch (turnGoal) {
-      case 'challenge':
-        return '提出质疑';
-      case 'synthesize':
-        return '整合观点';
-      case 'open':
-        return '打开话题';
-      case 'guide_user':
-        return '邀请用户作答';
-      default:
-        return '目标 $turnGoal';
-    }
   }
 }
 

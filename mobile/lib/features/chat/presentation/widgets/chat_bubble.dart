@@ -36,6 +36,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
+import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -1707,7 +1708,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       ),
     ];
     if (rounds.isNotEmpty) {
-      final speaker = rounds.first['speaker']?.toString() ?? '其中一个角色';
+      final speaker = localizeSimulationText(
+        rounds.first['speaker']?.toString() ?? '其中一个角色',
+      );
       actions.add(
         _InlinePromptAction(
           label: '让我来回答',
@@ -1870,14 +1873,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       sourceChatSessionId: sourceChatSessionId,
     );
     final promptActions = _simulationPromptActions(preview);
+    final scenarioLabel = localizeSimulationScenario(scenarioKey);
     return _InsightLinkCard(
       icon: Icons.groups_rounded,
       title: '学习仿真',
-      subtitle: topic,
+      subtitle: '$topic · $scenarioLabel',
       bullets: rounds
           .take(3)
           .map(
-            (item) => '${item['speaker'] ?? '参与者'}: ${item['message'] ?? ''}',
+            (item) =>
+                '${localizeSimulationText(item['speaker']?.toString() ?? '参与者')}: ${localizeSimulationText(item['message']?.toString() ?? '')}',
           )
           .toList(),
       caption: _bridgeCaption(sourceChatSessionId),

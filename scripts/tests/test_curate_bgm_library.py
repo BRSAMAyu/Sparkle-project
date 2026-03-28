@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -29,11 +30,14 @@ class CurateBgmLibraryTests(unittest.TestCase):
                 name="Album A",
                 scene_tags=("dashboard",),
                 palette_tags=("adaptive",),
+                include_patterns=(),
+                exclude_patterns=(),
                 energy=0.3,
                 density=0.2,
                 base_gain=0.9,
                 loopable=True,
                 release_approved=False,
+                minimum_duration_seconds=75.0,
             )
             discovered = MODULE.discover_audio_files(Path(temp_dir), [rule])
 
@@ -53,11 +57,14 @@ class CurateBgmLibraryTests(unittest.TestCase):
                 name="Requested",
                 scene_tags=("chat",),
                 palette_tags=("adaptive",),
+                include_patterns=(),
+                exclude_patterns=(),
                 energy=0.2,
                 density=0.2,
                 base_gain=0.9,
                 loopable=False,
                 release_approved=True,
+                minimum_duration_seconds=75.0,
             )
             discovered = MODULE.discover_audio_files(Path(temp_dir), [rule])
 
@@ -72,13 +79,17 @@ class CurateBgmLibraryTests(unittest.TestCase):
                 name="Album B",
                 scene_tags=("focus", "minimal"),
                 palette_tags=("airy",),
+                include_patterns=(),
+                exclude_patterns=(),
                 energy=0.1,
                 density=0.1,
                 base_gain=0.88,
                 loopable=True,
                 release_approved=True,
+                minimum_duration_seconds=75.0,
             )
-            catalog = MODULE.build_catalog_entries({rule: [source]})
+            with mock.patch.object(MODULE, "probe_duration_seconds", return_value=96.0):
+                catalog = MODULE.build_catalog_entries({rule: [source]})
 
             self.assertEqual(len(catalog), 1)
             entry = catalog[0]
@@ -87,6 +98,54 @@ class CurateBgmLibraryTests(unittest.TestCase):
             self.assertEqual(entry["paletteTags"], ["airy"])
             self.assertTrue(entry["releaseApproved"])
             self.assertTrue(str(entry["assetPath"]).startswith("audio/bgm/curated/"))
+
+    def test_short_track_is_not_release_approved(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "Album D" / "short_loop.m4a"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"audio")
+            rule = MODULE.AlbumRule(
+                name="Album D",
+                scene_tags=("reading", "soft"),
+                palette_tags=("classical",),
+                include_patterns=(),
+                exclude_patterns=(),
+                energy=0.2,
+                density=0.18,
+                base_gain=0.9,
+                loopable=False,
+                release_approved=True,
+                minimum_duration_seconds=75.0,
+            )
+            with mock.patch.object(MODULE, "probe_duration_seconds", return_value=17.0):
+                catalog = MODULE.build_catalog_entries({rule: [source]})
+
+            self.assertEqual(len(catalog), 1)
+            self.assertFalse(catalog[0]["releaseApproved"])
+
+    def test_include_and_exclude_patterns_filter_album_tracks(self) -> None:
+        files = [
+            Path("/tmp/Album/01 Nocturne.m4a"),
+            Path("/tmp/Album/02 Waltz.m4a"),
+            Path("/tmp/Album/03 Nocturne Alt.m4a"),
+        ]
+        rule = MODULE.AlbumRule(
+            name="Album E",
+            scene_tags=("reading",),
+            palette_tags=("classical",),
+            include_patterns=("*Nocturne*",),
+            exclude_patterns=("*Alt*",),
+            energy=0.2,
+            density=0.18,
+            base_gain=0.9,
+            loopable=False,
+            release_approved=True,
+            minimum_duration_seconds=75.0,
+        )
+
+        filtered = MODULE.filter_rule_files(files, rule)
+
+        self.assertEqual([path.name for path in filtered], ["01 Nocturne.m4a"])
 
     def test_write_catalog_drops_internal_source_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

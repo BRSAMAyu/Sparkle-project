@@ -531,42 +531,40 @@ class SimulationEngine:
                 {
                     "role": "system",
                     "content": (
-                        "You are the moderator of a multi-agent learning simulation.\n"
-                        "## Your Role\n"
-                        "Guide a productive discussion among experts and the learner.\n\n"
-                        "## Decision Criteria\n"
-                        "- Speaker selection: choose the expert whose expertise is most relevant to the current turn_goal. "
-                        "Rotate speakers to avoid repetition.\n"
-                        "- should_pause_for_user: true when the discussion reaches a key decision point, "
-                        "a provocative question is raised, or after 2 or more consecutive agent turns without user input.\n"
-                        "- should_end: true when the discussion has converged on a clear insight, "
-                        "the topic is exhausted, or the learner has engaged meaningfully 2 or more times.\n"
-                        "- interaction_type: use open_question for reflection, forced_choice for concrete decisions, "
-                        "and challenge for provocative counterpoints.\n\n"
-                        "## Scenario Adaptation\n"
-                        "- study_group: encourage collaborative synthesis\n"
-                        "- knowledge_debate: amplify disagreements and require evidence\n"
-                        "- socratic_dialogue: build question chains that deepen thinking\n"
-                        "- case_analysis: ground discussion in concrete scenarios\n"
-                        "- what_if_path: explore hypothetical branches\n"
-                        "- concept_map_build: focus on connection-building\n"
-                        "- error_diagnosis: prioritize root-cause analysis\n\n"
-                        "Return strict JSON with keys speaker, reply_target, turn_goal, real_time_insight, "
+                        "你是一场多 Agent 学习仿真的主持人。\n"
+                        "你的任务是让讨论有推进感、有分歧、有收束，并且对中文用户自然友好。\n\n"
+                        "## 决策标准\n"
+                        "- speaker: 选择当前最适合接棒的角色，避免连续重复由同一角色主导。\n"
+                        "- should_pause_for_user: 当讨论来到关键判断点、出现明显分歧，或已经连续两轮以上没有用户参与时设为 true。\n"
+                        "- should_end: 当讨论已经形成清晰洞察、用户已经有效参与，或该话题的主要分歧已经被说透时设为 true。\n"
+                        "- interaction_type: open_question 用于开放反思，forced_choice 用于具体判断，challenge 用于邀请用户回应尖锐观点。\n\n"
+                        "## 场景适配\n"
+                        "- study_group: 更强调协作式整合\n"
+                        "- knowledge_debate: 放大分歧并要求依据\n"
+                        "- socratic_dialogue: 用连续追问加深思考\n"
+                        "- case_analysis: 紧贴具体案例与决策节点\n"
+                        "- what_if_path: 对比不同选择的后果\n"
+                        "- concept_map_build: 重点说清概念依赖与连接\n"
+                        "- error_diagnosis: 优先锁定根因与修补动作\n\n"
+                        "## 语言要求\n"
+                        "- real_time_insight、interaction_prompt、interaction_options、suggested_replies 必须使用自然、简体中文。\n"
+                        "- speaker、reply_target、turn_goal、interaction_type 保持机器可读格式，不要翻译成中文键值。\n"
+                        "- 不要输出英文教学腔，不要使用生硬直译。\n\n"
+                        "只返回严格 JSON，键必须包含 speaker, reply_target, turn_goal, real_time_insight, "
                         "round_target, should_pause_for_user, should_end, interaction_type, interaction_prompt, "
-                        "interaction_options, suggested_replies."
+                        "interaction_options, suggested_replies。"
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Topic: {topic}\n"
-                        f"Scenario: {scenario_key}\n"
-                        f"Current round count: {len(rounds)}\n"
-                        f"Current round target: {planned_round_count}\n"
-                        f"Participants:\n{participant_prompt}\n"
-                        f"Transcript:\n{transcript}\n"
-                        "Decide who should speak next, whether it is time to ask the user to join, "
-                        "and whether the discussion has already converged."
+                        f"主题：{topic}\n"
+                        f"场景：{scenario_key}\n"
+                        f"当前轮次：{len(rounds)}\n"
+                        f"计划轮次：{planned_round_count}\n"
+                        f"参与者：\n{participant_prompt}\n"
+                        f"最近讨论：\n{transcript}\n"
+                        "请判断下一位发言者、是否该邀请用户加入，以及讨论是否已经可以收束。"
                     ),
                 },
             ],
@@ -699,30 +697,31 @@ class SimulationEngine:
                 {
                     "role": "system",
                     "content": (
-                        "Return strict JSON with keys message, reply_to_speaker, turn_goal. "
-                        "You are a single participant in a multi-agent learning simulation. "
-                        "Respond with a short but vivid turn that reflects your memory, stance, and strategy."
+                        "你是学习仿真中的一个参与角色。"
+                        "请只返回严格 JSON，包含 message, reply_to_speaker, turn_goal 三个键。"
+                        "其中 message 必须使用自然、简体中文，语气像真实讨论，不要写成英文或翻译腔。"
+                        "reply_to_speaker 保持参与者名字；turn_goal 保持机器可读的内部标识。"
+                        "你的发言要短而有推进感，能体现角色记忆、立场和策略。"
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Topic: {topic}\n"
-                        f"Scenario: {scenario_key}\n"
-                        f"Speaker: {speaker.name}\n"
-                        f"Role hint: {speaker.role_hint}\n"
-                        f"Stance: {speaker.stance}\n"
-                        f"Strategy: {speaker.strategy}\n"
-                        f"Response policy: {speaker.response_policy}\n"
-                        f"Context anchor: {speaker.context_anchor or 'none'}\n"
-                        f"Personal memory: {speaker.memory[-5:]}\n"
-                        f"Room state:\n{room_state}\n"
-                        f"Other participants recent viewpoints:\n{cross_agent_summary or 'No recent cross-agent summary.'}\n"
-                        f"Transcript:\n{transcript}\n"
-                        f"Reply target: {moderator_decision.reply_target or 'the room'}\n"
-                        f"Moderator wants you to reply to: {moderator_decision.reply_target or 'the room'}\n"
-                        f"Turn goal: {moderator_decision.turn_goal}\n"
-                        "Generate one concise turn."
+                        f"主题：{topic}\n"
+                        f"场景：{scenario_key}\n"
+                        f"发言角色：{speaker.name}\n"
+                        f"角色提示：{speaker.role_hint}\n"
+                        f"立场：{speaker.stance}\n"
+                        f"策略：{speaker.strategy}\n"
+                        f"回应策略：{speaker.response_policy}\n"
+                        f"语境锚点：{speaker.context_anchor or '无'}\n"
+                        f"个人记忆：{speaker.memory[-5:]}\n"
+                        f"房间状态：\n{room_state}\n"
+                        f"其他角色最近观点：\n{cross_agent_summary or '暂无'}\n"
+                        f"最近讨论：\n{transcript}\n"
+                        f"回应对象：{moderator_decision.reply_target or '全场'}\n"
+                        f"本轮目标：{moderator_decision.turn_goal}\n"
+                        "请生成一句简洁但有推进感的中文发言。"
                     ),
                 },
             ],
@@ -893,10 +892,10 @@ class SimulationEngine:
     @staticmethod
     def _latest_exchange(rounds: list[dict[str, Any]], limit: int = 3) -> str:
         if not rounds:
-            return "No exchange yet."
+            return "讨论还没有开始。"
         recent = rounds[-max(limit, 1):]
         return "\n".join(
-            f"Round {item.get('round')}: {item.get('speaker')} -> {item.get('message')}"
+            f"第 {item.get('round')} 轮：{item.get('speaker')} -> {item.get('message')}"
             for item in recent
         )
 

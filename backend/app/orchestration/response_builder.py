@@ -87,6 +87,7 @@ class ResponseBuilderMixin:
         route_decision: RouteDecision,
         plan_switched: bool,
         plan_id: uuid.UUID | None,
+        plan_context: dict[str, Any] | None,
         user_context_payload: dict[str, Any] | None,
         total_prompt_tokens: int,
         total_completion_tokens: int,
@@ -401,7 +402,7 @@ class ResponseBuilderMixin:
         )
         task_context = self._derive_task_context_for_execution(
             task_context=final_state.context_data.get("task_context"),
-            plan_context=plan_context,
+            plan_context=plan_context or final_state.context_data.get("plan_context"),
             user_context_payload=user_context_payload,
         )
         execution_suggestion = await self._detect_execution_suggestion(

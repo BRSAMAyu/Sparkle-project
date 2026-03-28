@@ -1,219 +1,467 @@
 {
   "entries": [
     {
-      "id": "home_morning_dashboard",
-      "assetPath": "audio/bgm/home_morning.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["dashboard", "home", "warm", "stable"],
-      "paletteTags": ["adaptive", "warm", "classical"],
-      "energy": 0.30,
-      "density": 0.26,
-      "baseGain": 0.96,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "chat_ambient_reading",
-      "assetPath": "audio/bgm/chat_ambient.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["chat", "reading", "soft", "assistant"],
-      "paletteTags": ["adaptive", "classical", "warm"],
-      "energy": 0.22,
-      "density": 0.18,
-      "baseGain": 0.92,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "task_flow_productive",
-      "assetPath": "audio/bgm/task_flow.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["task", "plan", "structured", "flow"],
-      "paletteTags": ["adaptive", "classical"],
-      "energy": 0.42,
-      "density": 0.34,
-      "baseGain": 0.95,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "calendar_plan_productive",
-      "assetPath": "audio/bgm/calendar_plan.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["calendar", "plan", "structured", "light"],
-      "paletteTags": ["adaptive", "classical"],
-      "energy": 0.34,
-      "density": 0.28,
-      "baseGain": 0.94,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "community_jazz_social",
-      "assetPath": "audio/bgm/community_jazz.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["community", "social", "warm", "light"],
-      "paletteTags": ["adaptive", "warm", "classical"],
-      "energy": 0.46,
-      "density": 0.40,
-      "baseGain": 0.98,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "achievement_warm_uplift",
-      "assetPath": "audio/bgm/achievement_warm.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["achievement", "celebration", "uplift", "warm"],
-      "paletteTags": ["adaptive", "warm", "classical"],
-      "energy": 0.58,
-      "density": 0.46,
-      "baseGain": 1.02,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "galaxy_space_exploration",
-      "assetPath": "audio/bgm/galaxy_space.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["galaxy", "space", "exploration", "airy"],
-      "paletteTags": ["adaptive", "airy"],
-      "energy": 0.36,
-      "density": 0.28,
-      "baseGain": 0.96,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "insights_harp_reflection",
-      "assetPath": "audio/bgm/insights_harp.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["insights", "reflective", "mist", "reading"],
-      "paletteTags": ["adaptive", "classical", "airy"],
-      "energy": 0.24,
-      "density": 0.22,
-      "baseGain": 0.93,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "seeds_nature_growth",
-      "assetPath": "audio/bgm/seeds_nature.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["seeds", "nature", "growth", "soft"],
-      "paletteTags": ["adaptive", "airy", "warm"],
-      "energy": 0.26,
-      "density": 0.25,
-      "baseGain": 0.92,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "profile_reflect_personal",
-      "assetPath": "audio/bgm/profile_reflect.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["profile", "personal", "reflective", "soft"],
-      "paletteTags": ["adaptive", "classical", "warm"],
-      "energy": 0.23,
-      "density": 0.20,
-      "baseGain": 0.91,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "focus_deep_preparation",
-      "assetPath": "audio/bgm/focus_deep.m4a",
-      "album": "Sparkle Bundled Focus",
-      "sceneTags": ["focus", "start", "deep", "minimal"],
-      "paletteTags": ["adaptive", "classical", "airy"],
-      "energy": 0.14,
-      "density": 0.12,
-      "baseGain": 0.90,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "focus_binaural_execution",
-      "assetPath": "audio/bgm/focus_binaural.m4a",
-      "album": "Sparkle Bundled Focus",
-      "sceneTags": ["focus", "deep", "immersive", "minimal"],
-      "paletteTags": ["adaptive", "classical", "airy"],
-      "energy": 0.10,
-      "density": 0.10,
-      "baseGain": 0.88,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "thinking_reflective",
-      "assetPath": "audio/bgm/thinking.m4a",
-      "album": "Sparkle Bundled Essentials",
-      "sceneTags": ["thinking", "reading", "soft", "reflective"],
-      "paletteTags": ["adaptive", "classical", "airy"],
-      "energy": 0.20,
-      "density": 0.16,
-      "baseGain": 0.90,
-      "loopable": true,
-      "releaseApproved": true
-    },
-    {
-      "id": "classical_piano_companion",
-      "assetPath": "audio/bgm/classical_piano_loop.m4a",
-      "album": "Sparkle Bundled Palette",
-      "sceneTags": ["reading", "profile", "soft", "classical"],
-      "paletteTags": ["piano", "classical"],
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_1_1_02_chopin_nocturne_2_in_e_flat_op_9_2_ct_109",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_1__01_1_02_chopin_nocturne_2_in_e_flat_op_9_2_ct_109.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 1]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
       "energy": 0.18,
       "density": 0.14,
-      "baseGain": 0.89,
-      "loopable": true,
+      "baseGain": 0.88,
+      "loopable": false,
       "releaseApproved": true
     },
     {
-      "id": "oceanic_drift_airy",
-      "assetPath": "audio/bgm/oceanic_drift.m4a",
-      "album": "Sparkle Bundled Palette",
-      "sceneTags": ["airy", "dashboard", "galaxy", "calendar"],
-      "paletteTags": ["airy", "adaptive"],
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_1_1_08_chopin_nocturne_8_in_d_flat_op_27_2_ct_115",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_1__02_1_08_chopin_nocturne_8_in_d_flat_op_27_2_ct_115.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 1]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_1_1_10_chopin_nocturne_10_in_a_flat_op_32_2_ct_117",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_1__03_1_10_chopin_nocturne_10_in_a_flat_op_32_2_ct_117.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 1]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "6_7_8_2_05_mozart_piano_sonata_7_in_c_k_309_2_andante_un_poco_adagio",
+      "assetPath": "audio/bgm/curated/6_7_8__01_2_05_mozart_piano_sonata_7_in_c_k_309_2_andante_un_poco_adagio.m4a",
+      "album": "钢琴内田光子/莫扎特第6、7、8钢琴奏鸣曲",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "calm",
+        "plan",
+        "task",
+        "calendar",
+        "dashboard"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.2,
+      "density": 0.18,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "6_7_8_2_08_mozart_piano_sonata_8_in_a_minor_k_310_2_andante_cantable_con_espressione",
+      "assetPath": "audio/bgm/curated/6_7_8__02_2_08_mozart_piano_sonata_8_in_a_minor_k_310_2_andante_cantable_con_espressione.m4a",
+      "album": "钢琴内田光子/莫扎特第6、7、8钢琴奏鸣曲",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "calm",
+        "plan",
+        "task",
+        "calendar",
+        "dashboard"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.2,
+      "density": 0.18,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "compilations_07",
+      "assetPath": "audio/bgm/curated/compilations__01_07.m4a",
+      "album": "Compilations/大師•古琴",
+      "sceneTags": [
+        "insights",
+        "reflection",
+        "exploration",
+        "meditative",
+        "gallery",
+        "profile"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.16,
+      "density": 0.12,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "compilations_11",
+      "assetPath": "audio/bgm/curated/compilations__02_11.m4a",
+      "album": "Compilations/大師•古琴",
+      "sceneTags": [
+        "insights",
+        "reflection",
+        "exploration",
+        "meditative",
+        "gallery",
+        "profile"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.16,
+      "density": 0.12,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "track_05",
+      "assetPath": "audio/bgm/curated/track__01_05.m4a",
+      "album": "吕思清/吕思清小提琴独奏_ 爱的主题",
+      "sceneTags": [
+        "warm",
+        "achievement",
+        "celebration",
+        "reflection",
+        "story",
+        "social"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "warm"
+      ],
+      "energy": 0.24,
+      "density": 0.18,
+      "baseGain": 0.86,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "track_06",
+      "assetPath": "audio/bgm/curated/track__02_06.m4a",
+      "album": "吕思清/吕思清小提琴独奏_ 爱的主题",
+      "sceneTags": [
+        "warm",
+        "achievement",
+        "celebration",
+        "reflection",
+        "story",
+        "social"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "warm"
+      ],
+      "energy": 0.24,
+      "density": 0.18,
+      "baseGain": 0.86,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "track_09",
+      "assetPath": "audio/bgm/curated/track__03_09.m4a",
+      "album": "吕思清/吕思清小提琴独奏_ 爱的主题",
+      "sceneTags": [
+        "warm",
+        "achievement",
+        "celebration",
+        "reflection",
+        "story",
+        "social"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "warm"
+      ],
+      "energy": 0.24,
+      "density": 0.18,
+      "baseGain": 0.86,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "the_best_of_cinema_music_01_nausicaa",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__01_01_nausicaa.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
       "energy": 0.28,
-      "density": 0.21,
-      "baseGain": 0.93,
-      "loopable": true,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
       "releaseApproved": true
     },
     {
-      "id": "sunset_walk_warm",
-      "assetPath": "audio/bgm/sunset_walk.m4a",
-      "album": "Sparkle Bundled Palette",
-      "sceneTags": ["warm", "profile", "dashboard", "community"],
-      "paletteTags": ["warm", "adaptive"],
-      "energy": 0.36,
-      "density": 0.30,
-      "baseGain": 0.95,
-      "loopable": true,
+      "id": "the_best_of_cinema_music_05_hana_bi",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__02_05_hana_bi.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
+      "energy": 0.28,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
       "releaseApproved": true
     },
     {
-      "id": "relax_background_glow",
-      "assetPath": "audio/bgm/relax_background1.m4a",
-      "album": "Sparkle Bundled Legacy",
-      "sceneTags": ["dashboard", "insights", "stable", "warm"],
-      "paletteTags": ["adaptive", "warm"],
-      "energy": 0.32,
-      "density": 0.24,
-      "baseGain": 0.94,
-      "loopable": true,
+      "id": "the_best_of_cinema_music_06_kids_return",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__03_06_kids_return.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
+      "energy": 0.28,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
       "releaseApproved": true
     },
     {
-      "id": "heavenly_loop_celebration",
-      "assetPath": "audio/bgm/heavenly_loop.m4a",
-      "album": "Sparkle Bundled Legacy",
-      "sceneTags": ["celebration", "galaxy", "uplift", "airy"],
-      "paletteTags": ["adaptive", "airy", "warm"],
-      "energy": 0.52,
-      "density": 0.38,
-      "baseGain": 1.00,
-      "loopable": true,
+      "id": "the_best_of_cinema_music_09_one_summer_s_day",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__04_09_one_summer_s_day.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
+      "energy": 0.28,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "the_best_of_cinema_music_10_summer",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__05_10_summer.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
+      "energy": 0.28,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "the_best_of_cinema_music_13_my_neighbour_totoro",
+      "assetPath": "audio/bgm/curated/the_best_of_cinema_music__06_13_my_neighbour_totoro.m4a",
+      "album": "久石譲/The Best of Cinema Music",
+      "sceneTags": [
+        "dashboard",
+        "warm",
+        "home",
+        "social",
+        "community",
+        "story",
+        "reflection",
+        "exploration"
+      ],
+      "paletteTags": [
+        "adaptive",
+        "warm",
+        "classical",
+        "airy"
+      ],
+      "energy": 0.28,
+      "density": 0.2,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "tokyo_quartet_beethoven_9_tokyo_sq_02_ii_no_14_andante_con_moto",
+      "assetPath": "audio/bgm/curated/tokyo_quartet_beethoven_9_tokyo_sq__01_02_ii_no_14_andante_con_moto.m4a",
+      "album": "Tokyo Quartet/Beethoven 弦楽四重奏曲 第9番　Tokyo SQ",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "reflection",
+        "deep"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.2,
+      "density": 0.18,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "tokyo_quartet_beethoven_9_tokyo_sq_06_3_ii_andante_con_moto_quasi_allegretto",
+      "assetPath": "audio/bgm/curated/tokyo_quartet_beethoven_9_tokyo_sq__02_06_3_ii_andante_con_moto_quasi_allegretto.m4a",
+      "album": "Tokyo Quartet/Beethoven 弦楽四重奏曲 第9番　Tokyo SQ",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "reflection",
+        "deep"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.2,
+      "density": 0.18,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "tokyo_quartet_beethoven_9_tokyo_sq_07_3_iii_menuetto_grazioso",
+      "assetPath": "audio/bgm/curated/tokyo_quartet_beethoven_9_tokyo_sq__03_07_3_iii_menuetto_grazioso.m4a",
+      "album": "Tokyo Quartet/Beethoven 弦楽四重奏曲 第9番　Tokyo SQ",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "reflection",
+        "deep"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.2,
+      "density": 0.18,
+      "baseGain": 0.84,
+      "loopable": false,
       "releaseApproved": true
     }
   ]

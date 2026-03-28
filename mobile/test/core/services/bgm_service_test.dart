@@ -106,6 +106,18 @@ void main() {
     expect(reason, contains('内置兜底'));
   });
 
+  test('piano palette avoids short loop fallback for chat scenes', () async {
+    BgmService.debugSetCatalogEntries(const []);
+
+    final assetPath = await BgmService.debugResolveSelectionAssetPath(
+      BgmTrack.chat,
+      force: true,
+      palette: BgmPalette.piano,
+    );
+
+    expect(assetPath, 'audio/bgm/thinking.m4a');
+  });
+
   test('missing insights asset falls back to bundled mapping reason', () async {
     BgmService.debugSetCatalogEntries(const []);
     BgmService.debugMarkAssetMissing('audio/bgm/insights_harp.m4a');

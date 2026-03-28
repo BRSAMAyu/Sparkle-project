@@ -910,7 +910,8 @@ class LLMService:
         if conversation_history:
             messages.extend(conversation_history)
 
-        messages.append({"role": "user", "content": user_message})
+        if not self._history_ends_with_user_message(conversation_history, user_message):
+            messages.append({"role": "user", "content": user_message})
 
         if not self.provider:
             raise HTTPException(
@@ -1059,16 +1060,18 @@ class LLMService:
         system_prompt: str,
         user_message: str,
         tools: list[dict[str, Any]],
+        conversation_history: list[dict[str, Any]] | None = None,
         user_context: dict[str, Any] | None = None,
         temperature: float = 0.7,
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
         """
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
+        messages = [{"role": "system", "content": system_prompt}]
+        if conversation_history:
+            messages.extend(conversation_history)
+        if not self._history_ends_with_user_message(conversation_history, user_message):
+            messages.append({"role": "user", "content": user_message})
         temperature = self._resolve_temperature(user_context, temperature)
 
         if not self.provider:
@@ -1180,6 +1183,21 @@ class LLMService:
             return float(llm_profile.get("temperature", default))
         except (TypeError, ValueError):
             return default
+
+    @staticmethod
+    def _history_ends_with_user_message(
+        conversation_history: list[dict[str, Any]] | None,
+        user_message: str,
+    ) -> bool:
+        if not conversation_history:
+            return False
+        last_message = conversation_history[-1]
+        if not isinstance(last_message, dict):
+            return False
+        return (
+            str(last_message.get("role") or "") == "user"
+            and str(last_message.get("content") or "").strip() == str(user_message or "").strip()
+        )
 
     def is_thinking_mode(self) -> bool:
         """

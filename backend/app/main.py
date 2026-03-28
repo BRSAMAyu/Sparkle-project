@@ -25,6 +25,7 @@ from app.api.v1.health import set_start_time
 from app.api.v1.router import api_router
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.redis_search_client import redis_search_client
 from app.core.exceptions import SparkleException
 from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
@@ -96,6 +97,11 @@ async def lifespan(app: FastAPI):
     pending_actions_store.set_redis(cache_service.redis)
     # Initialize WebSocket Redis
     await manager.init_redis()
+    if cache_service.redis:
+        try:
+            await redis_search_client.ensure_index()
+        except Exception as e:
+            logger.warning(f"Failed to ensure Redis search index at startup (non-fatal): {e}")
 
     event_bus = None
     preference_consumer_task = None

@@ -12,7 +12,7 @@ import (
 // ConnectionRegistry centralizes WebSocket connection lifecycle management.
 type ConnectionRegistry struct {
 	mu          sync.RWMutex
-	connections map[string]*connectionEntry
+	connections map[string]map[*websocket.Conn]*connectionEntry
 	signalHub   *service.SignalHub
 	chatHistory *service.ChatHistoryService
 	maxActive   int
@@ -25,7 +25,7 @@ type connectionEntry struct {
 
 func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.ChatHistoryService, maxActive int) *ConnectionRegistry {
 	return &ConnectionRegistry{
-		connections: make(map[string]*connectionEntry),
+		connections: make(map[string]map[*websocket.Conn]*connectionEntry),
 		signalHub:   signalHub,
 		chatHistory: chatHistory,
 		maxActive:   maxActive,
@@ -35,15 +35,19 @@ func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.Ch
 func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn, writer service.JSONWriteCloser) bool {
 	r.mu.Lock()
 	if r.maxActive > 0 {
-		if _, exists := r.connections[userID]; !exists && len(r.connections) >= r.maxActive {
+		totalActive := 0
+		for _, entries := range r.connections {
+			totalActive += len(entries)
+		}
+		if totalActive >= r.maxActive {
 			r.mu.Unlock()
 			return false
 		}
 	}
-	if existing, ok := r.connections[userID]; ok && existing.conn != conn {
-		_ = existing.conn.Close()
+	if r.connections[userID] == nil {
+		r.connections[userID] = make(map[*websocket.Conn]*connectionEntry)
 	}
-	r.connections[userID] = &connectionEntry{conn: conn, writer: writer}
+	r.connections[userID][conn] = &connectionEntry{conn: conn, writer: writer}
 	r.mu.Unlock()
 
 	if r.signalHub != nil && writer != nil {
@@ -60,15 +64,20 @@ func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn, write
 
 func (r *ConnectionRegistry) Unregister(userID string, conn *websocket.Conn) {
 	r.mu.Lock()
-	// Only remove if the stored connection is the same one being unregistered.
-	// Guard against the reconnect race: Register replaces and closes the old conn;
-	// the old goroutine's deferred Unregister must not evict the replacement.
-	entry := r.connections[userID]
-	if entry == nil || entry.conn != conn {
+	userEntries := r.connections[userID]
+	if userEntries == nil {
 		r.mu.Unlock()
 		return
 	}
-	delete(r.connections, userID)
+	entry := userEntries[conn]
+	if entry == nil {
+		r.mu.Unlock()
+		return
+	}
+	delete(userEntries, conn)
+	if len(userEntries) == 0 {
+		delete(r.connections, userID)
+	}
 	r.mu.Unlock()
 
 	if r.signalHub != nil && entry.writer != nil {
@@ -85,55 +94,71 @@ func (r *ConnectionRegistry) Unregister(userID string, conn *websocket.Conn) {
 func (r *ConnectionRegistry) Get(userID string) (*websocket.Conn, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	entry, ok := r.connections[userID]
-	if !ok || entry == nil {
+	entries, ok := r.connections[userID]
+	if !ok || len(entries) == 0 {
 		return nil, false
 	}
-	return entry.conn, true
+	for conn := range entries {
+		return conn, true
+	}
+	return nil, false
 }
 
 func (r *ConnectionRegistry) GetWriter(userID string) (service.JSONWriteCloser, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	entry, ok := r.connections[userID]
-	if !ok || entry == nil || entry.writer == nil {
+	entries, ok := r.connections[userID]
+	if !ok || len(entries) == 0 {
 		return nil, false
 	}
-	return entry.writer, true
+	for _, entry := range entries {
+		if entry != nil && entry.writer != nil {
+			return entry.writer, true
+		}
+	}
+	return nil, false
 }
 
 // Count returns the number of active connections.
 func (r *ConnectionRegistry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return len(r.connections)
+	total := 0
+	for _, entries := range r.connections {
+		total += len(entries)
+	}
+	return total
 }
 
 // DrainAll sends a CloseGoingAway frame to every connection and closes it.
 // It blocks until all connections are closed or the timeout expires.
 func (r *ConnectionRegistry) DrainAll(timeout time.Duration) {
 	r.mu.Lock()
-	snapshot := make(map[string]*websocket.Conn, len(r.connections))
-	for k, v := range r.connections {
-		if v != nil && v.conn != nil {
-			snapshot[k] = v.conn
+	snapshot := make(map[string][]*websocket.Conn, len(r.connections))
+	for userID, entries := range r.connections {
+		for _, entry := range entries {
+			if entry != nil && entry.conn != nil {
+				snapshot[userID] = append(snapshot[userID], entry.conn)
+			}
 		}
 	}
 	r.mu.Unlock()
 
 	deadline := time.Now().Add(timeout)
-	for userID, conn := range snapshot {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
+	for userID, conns := range snapshot {
+		for _, conn := range conns {
+			remaining := time.Until(deadline)
+			if remaining <= 0 {
+				_ = conn.Close()
+				continue
+			}
+			_ = conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
+				deadline,
+			)
 			_ = conn.Close()
-			continue
 		}
-		_ = conn.WriteControl(
-			websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
-			deadline,
-		)
-		_ = conn.Close()
 		r.mu.Lock()
 		delete(r.connections, userID)
 		r.mu.Unlock()

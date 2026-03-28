@@ -1,8 +1,41 @@
 # Sparkle 全系统验收报告
 
-**验收时间**: 2026-03-18 13:30
+> 历史说明：
+> 本文主体仍保留 `2026-03-18` 的阶段性验收快照，不应再单独作为当前最终签收结论引用。
+> 当前最新验收事实请以以下文档为准：
+> - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`
+> - `/Users/brsama/code/GitHub/Sparkle-project/FULL_STACK_REFERENCE.md`
+
+**原始验收时间**: 2026-03-18 13:30
 **当前分支**: `本地全量收尾`
 **最新提交**: `50b14181` - 种子库全链路贯通
+
+---
+
+## 2026-03-28 增量更新
+
+本轮相对于本报告原始版本，新增确认了以下事实：
+
+- AI 对话 WebSocket 主链已完成一次新的真实本地回归：
+  - `多轮上下文记忆`
+  - `同用户并发连接`
+  - `响应反馈闭环`
+- MiroFish 已补充专项验证：
+  - 后端 `103 passed`
+  - 移动端 MiroFish / Learning Insights / Theater / Unified Settings / BGM widget `18 passed`
+- OpenClaw 已补充专项验证：
+  - Phase 0 ~ 4
+  - Gateway WS
+  - admin / user execution API
+- Go Gateway 相关回归通过：
+  - `go test ./internal/handler ./internal/agent ./internal/api/v1`
+
+当前不能直接据此报告判定“全系统最终验收成功”，原因仍包括：
+
+- 全模块人工点击签收未完整闭环
+- 真机高风险能力未完成最终签收
+- `client-telemetry` 在本地栈中仍为 `404`
+- 第 21~25 节 E2E / DATA / API / FF / CEL 仍需统一证据归档
 
 ---
 

@@ -1,4 +1,5 @@
 {
+  "minimumDurationSeconds": 75,
   "albums": [
     {
       "name": "Album Name Here",
@@ -8,7 +9,8 @@
       "density": 0.24,
       "baseGain": 0.94,
       "loopable": false,
-      "releaseApproved": false
+      "releaseApproved": false,
+      "minimumDurationSeconds": 90
     }
   ]
 }
