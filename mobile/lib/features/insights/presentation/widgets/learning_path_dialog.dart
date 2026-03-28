@@ -65,156 +65,159 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
   Widget build(BuildContext context) {
     final pathAsync = ref.watch(learningPathProvider(widget.targetNodeId));
     final mediaQuery = MediaQuery.of(context);
-    // Cap list height so the bottom sheet never overflows the screen.
-    // Subtract viewPadding + approximate modal chrome (handle + title + padding).
-    final maxListHeight = (mediaQuery.size.height -
+    final maxDialogHeight = (mediaQuery.size.height -
             mediaQuery.viewPadding.top -
             mediaQuery.viewPadding.bottom) *
-        0.5;
+        0.76;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '目标：${widget.targetNodeName}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: DS.textSecondary,
-              ),
-        ),
-        if (_inlineStatus != null || _inlineError != null) ...[
-          const SizedBox(height: DS.md),
-          _LearningPathInlineFeedback(
-            message: _inlineError ?? _inlineStatus!,
-            isError: _inlineError != null,
-            isLoading: _isBusy,
-            onDismiss: _isBusy ? null : _clearInlineFeedback,
+    return SizedBox(
+      height: maxDialogHeight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '目标：${widget.targetNodeName}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.textSecondary,
+                ),
           ),
-        ],
-        const SizedBox(height: DS.lg),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxListHeight),
-          child: pathAsync.when(
-            data: (path) {
-              final coreNodes = path
-                  .where((node) => !node.isOptional)
-                  .toList(growable: false);
-              final optionalNodes =
-                  path.where((node) => node.isOptional).toList(growable: false);
+          if (_inlineStatus != null || _inlineError != null) ...[
+            const SizedBox(height: DS.md),
+            _LearningPathInlineFeedback(
+              message: _inlineError ?? _inlineStatus!,
+              isError: _inlineError != null,
+              isLoading: _isBusy,
+              onDismiss: _isBusy ? null : _clearInlineFeedback,
+            ),
+          ],
+          const SizedBox(height: DS.lg),
+          Expanded(
+            child: pathAsync.when(
+              data: (path) {
+                final coreNodes = path
+                    .where((node) => !node.isOptional)
+                    .toList(growable: false);
+                final optionalNodes = path
+                    .where((node) => node.isOptional)
+                    .toList(growable: false);
 
-              if (coreNodes.isEmpty && optionalNodes.isEmpty) {
-                return const Center(
-                  child: Text('无需前置知识，可以直接开始学习！'),
+                if (coreNodes.isEmpty && optionalNodes.isEmpty) {
+                  return const Center(
+                    child: Text('无需前置知识，可以直接开始学习！'),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (coreNodes.isNotEmpty) ...[
+                        Text(
+                          '主干路径',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: DS.md),
+                        ...List.generate(coreNodes.length, (index) {
+                          final node = coreNodes[index];
+                          final isLast = index == coreNodes.length - 1;
+                          return _buildTimelineItem(context, node, isLast);
+                        }),
+                      ],
+                      if (optionalNodes.isNotEmpty) ...[
+                        const SizedBox(height: DS.sm),
+                        _buildOptionalNodesSection(context, optionalNodes),
+                      ],
+                    ],
+                  ),
                 );
-              }
-
-              return ListView(
-                shrinkWrap: true,
-                children: [
-                  if (coreNodes.isNotEmpty) ...[
-                    Text(
-                      '主干路径',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: DS.md),
-                    ...List.generate(coreNodes.length, (index) {
-                      final node = coreNodes[index];
-                      final isLast = index == coreNodes.length - 1;
-                      return _buildTimelineItem(context, node, isLast);
-                    }),
-                  ],
-                  if (optionalNodes.isNotEmpty) ...[
-                    const SizedBox(height: DS.sm),
-                    _buildOptionalNodesSection(context, optionalNodes),
-                  ],
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => _LearningPathLoadError(
-              message: '加载失败：$err',
-              onRetry: () =>
-                  ref.invalidate(learningPathProvider(widget.targetNodeId)),
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => _LearningPathLoadError(
+                message: '加载失败：$err',
+                onRetry: () =>
+                    ref.invalidate(learningPathProvider(widget.targetNodeId)),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: DS.spacing16),
-        GraphiteCardSurface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '生成方式',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: DS.xs),
-              Text(
-                '快速任务路径不会占用计划额度，适合先生成几张可以立刻执行的任务卡；完整计划会创建正式方案。',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
-              ),
-              const SizedBox(height: DS.md),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 420;
-                  final taskButton = SparkleButton(
-                    label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
-                    icon: _isGeneratingTaskPath
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.bolt),
-                    expand: true,
-                    onPressed:
-                        _isBusy ? null : () => _handleCreateTaskPath(context),
-                    loading: _isGeneratingTaskPath,
-                  );
-                  final planButton = SparkleButton(
-                    label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
-                    icon: _isGeneratingFullPlan
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.auto_awesome),
-                    expand: true,
-                    variant: ButtonVariant.secondary,
-                    onPressed:
-                        _isBusy ? null : () => _handleCreateFullPlan(context),
-                    loading: _isGeneratingFullPlan,
-                  );
-                  if (compact) {
-                    return Column(
+          const SizedBox(height: DS.spacing16),
+          GraphiteCardSurface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '生成方式',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: DS.xs),
+                Text(
+                  '快速任务路径不会占用计划额度，适合先生成几张可以立刻执行的任务卡；完整计划会创建正式方案。',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.md),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 420;
+                    final taskButton = SparkleButton(
+                      label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                      icon: _isGeneratingTaskPath
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.bolt),
+                      expand: true,
+                      onPressed:
+                          _isBusy ? null : () => _handleCreateTaskPath(context),
+                      loading: _isGeneratingTaskPath,
+                    );
+                    final planButton = SparkleButton(
+                      label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                      icon: _isGeneratingFullPlan
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      expand: true,
+                      variant: ButtonVariant.secondary,
+                      onPressed:
+                          _isBusy ? null : () => _handleCreateFullPlan(context),
+                      loading: _isGeneratingFullPlan,
+                    );
+                    if (compact) {
+                      return Column(
+                        children: [
+                          taskButton,
+                          const SizedBox(height: DS.sm),
+                          planButton,
+                        ],
+                      );
+                    }
+                    return Row(
                       children: [
-                        taskButton,
-                        const SizedBox(height: DS.sm),
-                        planButton,
+                        Expanded(child: taskButton),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(child: planButton),
                       ],
                     );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(child: taskButton),
-                      const SizedBox(width: DS.spacing12),
-                      Expanded(child: planButton),
-                    ],
-                  );
-                },
-              ),
-            ],
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -661,7 +664,8 @@ class _LearningPathNodeSummary extends StatelessWidget {
                     label: '可选拓展',
                   ),
                 if (_LearningPathDialogState._relationLabel(
-                        node.relationType) !=
+                      node.relationType,
+                    ) !=
                     null)
                   _MetaChip(
                     icon: Icons.hub_rounded,

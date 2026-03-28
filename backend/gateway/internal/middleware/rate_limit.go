@@ -18,12 +18,12 @@ const defaultMaxVisitors = 10000
 // RateLimiter 速率限制器
 type RateLimiter struct {
 	visitors           map[string]*visitor
-	mu               sync.RWMutex
+	mu                 sync.RWMutex
 	rate               rate.Limit // 每秒允许的请求数
-	burst            int        // 突发请求容量
-	maxVisitors       int
-	cleanupIntervalSec int    // 清理间隔(秒)
-	expirySec          int    // 访客过期时间(秒)
+	burst              int        // 突发请求容量
+	maxVisitors        int
+	cleanupIntervalSec int           // 清理间隔(秒)
+	expirySec          int           // 访客过期时间(秒)
 	stopCh             chan struct{} // 停止信号通道，用于优雅关闭
 }
 
@@ -407,15 +407,22 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 		if clientID == "" {
 			clientID = "ip:" + c.ClientIP()
 		}
+		routePath := c.FullPath()
+		if routePath == "" {
+			routePath = c.Request.URL.Path
+		}
+		// Scope buckets by route so noisy endpoints like telemetry do not
+		// starve unrelated interactive flows behind the same simulator IP.
+		limitKey := clientID + ":" + c.Request.Method + ":" + routePath
 
 		var allowed bool
 		var remaining int64
 
 		if config.UseSlidingWindow && swRL != nil {
-			allowedSW, remSW, err := swRL.Allow(c.Request.Context(), clientID)
+			allowedSW, remSW, err := swRL.Allow(c.Request.Context(), limitKey)
 			if err != nil {
 				log.Printf("[HybridRateLimiter] Redis sliding window error: %v, falling back to local", err)
-				limiter := localRL.getVisitor(clientID)
+				limiter := localRL.getVisitor(limitKey)
 				allowed = limiter.Allow()
 				remaining = int64(limiter.Tokens())
 			} else {
@@ -424,15 +431,15 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 			}
 		} else if distRL != nil {
 			var err error
-			allowed, remaining, err = distRL.Allow(c.Request.Context(), clientID)
+			allowed, remaining, err = distRL.Allow(c.Request.Context(), limitKey)
 			if err != nil {
 				log.Printf("[HybridRateLimiter] Redis error: %v, falling back to local", err)
-				limiter := localRL.getVisitor(clientID)
+				limiter := localRL.getVisitor(limitKey)
 				allowed = limiter.Allow()
 				remaining = int64(limiter.Tokens())
 			}
 		} else {
-			limiter := localRL.getVisitor(clientID)
+			limiter := localRL.getVisitor(limitKey)
 			allowed = limiter.Allow()
 			remaining = int64(limiter.Tokens())
 		}
@@ -454,32 +461,32 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 
 // SlidingWindowRateLimitMiddleware uses sliding window algorithm for rate limiting
 func SlidingWindowRateLimitMiddleware(rdb *redis.Client, window time.Duration, limit int) gin.HandlerFunc {
-    swl := NewSlidingWindowRateLimiter(rdb, window, limit, "ratelimit")
+	swl := NewSlidingWindowRateLimiter(rdb, window, limit, "ratelimit")
 
-    return func(c *gin.Context) {
-        clientID := c.GetString("user_id")
-        if clientID == "" {
-            clientID = "ip:" + c.ClientIP()
-        }
+	return func(c *gin.Context) {
+		clientID := c.GetString("user_id")
+		if clientID == "" {
+			clientID = "ip:" + c.ClientIP()
+		}
 
-        allowed, remaining, err := swl.Allow(c.Request.Context(), clientID)
-        if err != nil {
-            log.Printf("[SlidingWindowRateLimiter] Error: %v", err)
-        }
+		allowed, remaining, err := swl.Allow(c.Request.Context(), clientID)
+		if err != nil {
+			log.Printf("[SlidingWindowRateLimiter] Error: %v", err)
+		}
 
-        if !allowed {
-            c.JSON(http.StatusTooManyRequests, gin.H{
-                "error":    "rate_limit_exceeded",
-                "message":  "请求过于频繁，请稍后再试",
-                "limit":     limit,
-                "remaining": remaining,
-            })
-            c.Abort()
-            return
-        }
+		if !allowed {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":     "rate_limit_exceeded",
+				"message":   "请求过于频繁，请稍后再试",
+				"limit":     limit,
+				"remaining": remaining,
+			})
+			c.Abort()
+			return
+		}
 
-        c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
-        c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
-        c.Next()
-    }
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		c.Next()
+	}
 }

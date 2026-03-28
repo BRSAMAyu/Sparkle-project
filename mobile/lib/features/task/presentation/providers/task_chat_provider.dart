@@ -16,11 +16,12 @@ class TaskChatState {
     bool? isLoading,
     List<ChatMessageModel>? messages,
     String? error,
+    bool clearError = false,
   }) =>
       TaskChatState(
         isLoading: isLoading ?? this.isLoading,
         messages: messages ?? this.messages,
-        error: error ?? this.error,
+        error: clearError ? null : error ?? this.error,
       );
 }
 
@@ -47,6 +48,7 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       isLoading: true,
+      clearError: true,
     );
 
     try {
@@ -70,6 +72,7 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
       state = state.copyWith(
         messages: [...state.messages, aiMsg],
         isLoading: false,
+        clearError: true,
       );
     } catch (e) {
       state = state.copyWith(

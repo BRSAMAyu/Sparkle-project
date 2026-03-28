@@ -109,9 +109,29 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		learningPaths.GET("/:target_node_id", h.proxyWithHeaders)
 		learningPaths.POST("/:target_node_id/plan", h.proxyWithHeaders)
+		learningPaths.POST("/:target_node_id/task-path", h.proxyWithHeaders)
 		learningPaths.POST("/:target_node_id/full-plan", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered learning paths proxy routes")
+
+	// ==================== Chat Routes ====================
+	chat := api.Group("/chat")
+	chat.Use(authMiddleware)
+	{
+		chat.POST("", h.proxyWithHeaders)
+		chat.POST("/stream", h.proxyWithHeaders)
+		chat.POST("/confirm", h.proxyWithHeaders)
+		chat.POST("/task/:task_id", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered chat proxy routes")
+
+	// ==================== Users Routes ====================
+	users := api.Group("/users")
+	users.Use(authMiddleware)
+	{
+		users.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered users proxy routes")
 
 	// ==================== Achievements Routes ====================
 	achievements := api.Group("/achievements")
@@ -159,6 +179,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered suggestions proxy routes")
 
+	// ==================== Experiments Routes ====================
+	experiments := api.Group("/experiments")
+	experiments.Use(authMiddleware)
+	{
+		experiments.Any("/*path", h.proxyWithHeaders)
+		experiments.Any("", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered experiments proxy routes")
+
 	// ==================== Agent Stats Routes ====================
 	agentStats := api.Group("/agent-stats")
 	agentStats.Use(authMiddleware)
@@ -174,6 +203,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		assets.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered assets proxy routes")
+
+	// ==================== Multi-Agent Routes ====================
+	multiAgent := api.Group("/multi-agent")
+	multiAgent.Use(authMiddleware)
+	{
+		multiAgent.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered multi-agent proxy routes")
 
 	// NOTE: /goals and /reflections routes are intentionally omitted —
 	// no Python backend implementation exists yet. Add here when implemented.
@@ -317,6 +354,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// Share Resources
 		community.POST("/share", h.proxyWithHeaders)
 		community.POST("/share/:share_id/adopt", h.proxyWithHeaders)
+		community.POST("/shared-resources/:shared_resource_id/adopt", h.proxyWithHeaders)
 		// Encryption
 		community.POST("/encryption/keys", h.proxyWithHeaders)
 		community.GET("/encryption/keys/:user_id", h.proxyWithHeaders)
@@ -367,6 +405,87 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered background-tasks proxy routes")
 
+	// ==================== Reviews Routes ====================
+	reviews := api.Group("/reviews")
+	reviews.Use(authMiddleware)
+	{
+		reviews.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered reviews proxy routes")
+
+	// ==================== Statistics Routes ====================
+	stats := api.Group("/stats")
+	stats.Use(authMiddleware)
+	{
+		stats.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered statistics proxy routes")
+
+	// ==================== Events Routes ====================
+	events := api.Group("/events")
+	events.Use(authMiddleware)
+	{
+		events.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered events proxy routes")
+
+	// ==================== Signals Routes ====================
+	signals := api.Group("/signals")
+	signals.Use(authMiddleware)
+	{
+		signals.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered signals proxy routes")
+
+	// ==================== Preferences Routes ====================
+	preferences := api.Group("/preferences")
+	preferences.Use(authMiddleware)
+	{
+		preferences.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered preferences proxy routes")
+
+	// ==================== Devices Routes ====================
+	devices := api.Group("/devices")
+	devices.Use(authMiddleware)
+	{
+		devices.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered devices proxy routes")
+
+	// ==================== OmniBar Routes ====================
+	omnibar := api.Group("/omnibar")
+	omnibar.Use(authMiddleware)
+	{
+		omnibar.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered omnibar proxy routes")
+
+	// ==================== Prediction Routes ====================
+	prediction := api.Group("/prediction")
+	prediction.Use(authMiddleware)
+	{
+		prediction.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered prediction proxy routes")
+
+	// ==================== Multi-Intent Routes ====================
+	multiIntent := api.Group("/multi-intent")
+	multiIntent.Use(authMiddleware)
+	{
+		multiIntent.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered multi-intent proxy routes")
+
+	// ==================== Subjects Routes ====================
+	subjects := api.Group("/subjects")
+	subjects.Use(authMiddleware)
+	{
+		subjects.Any("", h.proxyWithHeaders)
+		subjects.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered subjects proxy routes")
+
 	// ==================== Client Telemetry Routes ====================
 	clientTelemetry := api.Group("/client-telemetry")
 	clientTelemetry.Use(authMiddleware)
@@ -407,6 +526,38 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		stt.POST("/transcribe", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered STT proxy routes")
+
+	// ==================== Focus Routes ====================
+	focus := api.Group("/focus")
+	focus.Use(authMiddleware)
+	{
+		focus.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered focus proxy routes")
+
+	// ==================== Vocabulary Routes ====================
+	vocabulary := api.Group("/vocabulary")
+	vocabulary.Use(authMiddleware)
+	{
+		vocabulary.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered vocabulary proxy routes")
+
+	// ==================== Translation Routes ====================
+	translation := api.Group("/translation")
+	translation.Use(authMiddleware)
+	{
+		translation.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered translation proxy routes")
+
+	// ==================== Decay TimeMachine Routes ====================
+	decay := api.Group("/decay")
+	decay.Use(authMiddleware)
+	{
+		decay.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered decay proxy routes")
 
 	// ==================== WebSocket Monitoring Routes ====================
 	ws := api.Group("/ws")
@@ -462,6 +613,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	visualElements := api.Group("/visual-elements")
 	visualElements.Use(authMiddleware)
 	{
+		visualElements.Any("", h.proxyWithHeaders)
 		visualElements.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered visual-elements proxy routes")

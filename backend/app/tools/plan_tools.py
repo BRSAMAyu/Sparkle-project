@@ -16,7 +16,7 @@ from app.models.plan import PlanType as ModelPlanType
 from app.models.task import TaskType as ModelTaskType
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.schemas.plan import PlanCreate
-from app.schemas.task import TaskCreate
+from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_fallback_utils import plan_llm
 from app.services.plan_service import PlanService
@@ -268,7 +268,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     task_create = TaskCreate(
                         title=validated.title,
                         description=validated.description,
-                        type=ModelTaskType(validated.type.upper()),
+                        type=coerce_task_type(validated.type, default=ModelTaskType.LEARNING),
                         estimated_minutes=validated.estimated_minutes,
                         difficulty=self._infer_difficulty(validated.type, validated.priority),
                         energy_cost=1,

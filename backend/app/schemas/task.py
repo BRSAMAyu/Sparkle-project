@@ -12,6 +12,47 @@ from app.schemas.common import BaseSchema
 
 # ========== Request Schemas ==========
 
+TASK_TYPE_ALIAS_MAP = {
+    "learning": "LEARNING",
+    "training": "TRAINING",
+    "errorfix": "ERROR_FIX",
+    "error_fix": "ERROR_FIX",
+    "reflection": "REFLECTION",
+    "social": "SOCIAL",
+    "planning": "PLANNING",
+    "study": "LEARNING",
+    "review": "TRAINING",
+    "practice": "TRAINING",
+    "homework": "PLANNING",
+    "exam": "REFLECTION",
+    "other": "LEARNING",
+}
+
+
+def coerce_task_type(
+    value: TaskType | str | Enum | None,
+    *,
+    default: TaskType | None = None,
+) -> TaskType | None:
+    if value is None:
+        return default
+    if isinstance(value, TaskType):
+        return value
+
+    raw_value = getattr(value, "value", value)
+    if not isinstance(raw_value, str):
+        return default
+
+    normalized = raw_value.strip()
+    if not normalized:
+        return default
+
+    mapped = TASK_TYPE_ALIAS_MAP.get(normalized.lower(), normalized.upper())
+    try:
+        return TaskType(mapped)
+    except Exception:
+        return default
+
 
 class TaskCreate(BaseModel):
     """Create task"""
@@ -32,33 +73,8 @@ class TaskCreate(BaseModel):
     @field_validator("type", mode="before")
     @classmethod
     def _normalize_task_type(cls, value):
-        if isinstance(value, TaskType):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return value
-            lowered = normalized.lower()
-            alias_map = {
-                "learning": "LEARNING",
-                "training": "TRAINING",
-                "errorfix": "ERROR_FIX",
-                "error_fix": "ERROR_FIX",
-                "reflection": "REFLECTION",
-                "social": "SOCIAL",
-                "planning": "PLANNING",
-                "study": "LEARNING",
-                "review": "TRAINING",
-                "homework": "PLANNING",
-                "exam": "REFLECTION",
-                "other": "LEARNING",
-            }
-            mapped = alias_map.get(lowered, normalized.upper())
-            try:
-                return TaskType(mapped)
-            except Exception:
-                return value
-        return value
+        parsed = coerce_task_type(value)
+        return parsed if parsed is not None else value
 
     @field_validator("due_date", mode="before")
     @classmethod
@@ -237,32 +253,8 @@ class TaskListQuery(BaseModel):
     @field_validator("type", mode="before")
     @classmethod
     def _normalize_query_task_type(cls, value):
-        if value is None:
-            return value
-        if isinstance(value, TaskType):
-            return value
-        if isinstance(value, str):
-            lowered = value.strip().lower()
-            alias_map = {
-                "learning": "LEARNING",
-                "training": "TRAINING",
-                "errorfix": "ERROR_FIX",
-                "error_fix": "ERROR_FIX",
-                "reflection": "REFLECTION",
-                "social": "SOCIAL",
-                "planning": "PLANNING",
-                "study": "LEARNING",
-                "review": "TRAINING",
-                "homework": "PLANNING",
-                "exam": "REFLECTION",
-                "other": "LEARNING",
-            }
-            mapped = alias_map.get(lowered, value.upper())
-            try:
-                return TaskType(mapped)
-            except Exception:
-                return value
-        return value
+        parsed = coerce_task_type(value)
+        return parsed if parsed is not None else value
 
 
 # ========== Suggestion Schemas ==========

@@ -17,7 +17,7 @@ from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task import TaskType as ModelTaskType
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
-from app.schemas.task import TaskUpdate
+from app.schemas.task import TaskUpdate, coerce_task_type
 from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
@@ -83,7 +83,9 @@ class QueryPlanTasksTool(BaseTool):
 
             # Apply type filter
             if params.type_filter:
-                query = query.where(Task.type == ModelTaskType(params.type_filter.value))
+                normalized_type = coerce_task_type(params.type_filter.value, default=None)
+                if normalized_type is not None:
+                    query = query.where(Task.type == normalized_type)
 
             # Order and limit
             query = query.order_by(Task.priority.desc(), Task.created_at.desc()).limit(

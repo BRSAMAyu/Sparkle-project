@@ -8,6 +8,7 @@ class DashboardCardIds {
   static const String focus = 'focus';
   static const String calendar = 'calendar';
   static const String tools = 'tools';
+  static const String openClaw = 'openclaw';
   static const String streak = 'streak';
   static const String nextActions = 'next_actions';
   static const String curiosity = 'curiosity';
@@ -19,6 +20,7 @@ class DashboardCardIds {
     focus,
     calendar,
     tools,
+    openClaw,
     streak,
     nextActions,
     curiosity,
@@ -30,6 +32,7 @@ class DashboardCardIds {
     insights,
     calendar,
     tools,
+    openClaw,
     curiosity,
     seedLibrary,
     longTermPlan,
@@ -64,6 +67,7 @@ class DashboardCardIds {
     curiosity,
     seedLibrary,
     longTermPlan,
+    openClaw,
   ];
 }
 

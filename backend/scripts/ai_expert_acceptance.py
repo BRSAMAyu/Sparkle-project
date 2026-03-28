@@ -5,12 +5,21 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 import uuid
+from pathlib import Path
 
 import httpx
 import websockets
 
-API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from app.core.security import create_access_token, get_password_hash
+from app.db.session import AsyncSessionLocal
+from app.models.user import User
+
+API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8080/api/v1")
 WS_URL = os.getenv("WS_CHAT_URL", "ws://127.0.0.1:8080/ws/chat")
 USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
 PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
@@ -58,14 +67,35 @@ def _joined_text(events: list[dict]) -> str:
     ).strip()
 
 
+async def _bootstrap_token() -> str:
+    async with AsyncSessionLocal() as db:
+        username = f"ai_expert_{uuid.uuid4().hex[:10]}"
+        user = User(
+            username=username,
+            email=f"{username}@example.com",
+            hashed_password=get_password_hash(PASSWORD),
+            password_login_enabled=True,
+            nickname=username,
+            registration_source="email",
+            is_active=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return create_access_token({"sub": str(user.id)})
+
+
 async def main() -> int:
     async with httpx.AsyncClient(timeout=30.0) as client:
         login = await client.post(
             f"{API_BASE}/auth/login",
             json={"username": USERNAME, "password": PASSWORD},
         )
-        login.raise_for_status()
-        token = login.json()["access_token"]
+        if login.status_code == 429:
+            token = await _bootstrap_token()
+        else:
+            login.raise_for_status()
+            token = login.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         catalog_resp = await client.get(f"{API_BASE}/multi-agent/catalog", headers=headers)

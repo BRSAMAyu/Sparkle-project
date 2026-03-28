@@ -187,7 +187,7 @@ LearningPathSnapshotTask _$LearningPathSnapshotTaskFromJson(
       id: json['id'] as String,
       title: json['title'] as String,
       type: json['type'] as String,
-      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 25,
+      estimatedMinutes: (json['estimated_minutes'] as num).toInt(),
       status: json['status'] as String,
       knowledgeNodeId: json['knowledge_node_id'] as String?,
       guideContent: json['guide_content'] as String?,

@@ -29,6 +29,7 @@ from app.models.community import (
     Group,
     GroupMember,
     GroupMessage,
+    GroupMessageRead,
     GroupRole,
     MessageFavorite,
     MessageReport,
@@ -58,6 +59,26 @@ from app.schemas.community import (
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _favorite_load_options():
+    return (
+        selectinload(MessageFavorite.group_message).selectinload(GroupMessage.sender),
+        selectinload(MessageFavorite.group_message)
+        .selectinload(GroupMessage.reply_to)
+        .selectinload(GroupMessage.sender),
+        selectinload(MessageFavorite.group_message)
+        .selectinload(GroupMessage.read_receipts)
+        .selectinload(GroupMessageRead.user),
+        selectinload(MessageFavorite.private_message).selectinload(PrivateMessage.sender),
+        selectinload(MessageFavorite.private_message).selectinload(PrivateMessage.receiver),
+        selectinload(MessageFavorite.private_message)
+        .selectinload(PrivateMessage.reply_to)
+        .selectinload(PrivateMessage.sender),
+        selectinload(MessageFavorite.private_message)
+        .selectinload(PrivateMessage.reply_to)
+        .selectinload(PrivateMessage.receiver),
+    )
 
 
 class EncryptionService:
@@ -105,7 +126,7 @@ class EncryptionService:
                 UserEncryptionKey.user_id == user_id,
                 UserEncryptionKey.is_active,
                 or_(
-                    UserEncryptionKey.expires_at is None,
+                    UserEncryptionKey.expires_at.is_(None),
                     UserEncryptionKey.expires_at > _utcnow()
                 )
             )
@@ -442,8 +463,25 @@ class FavoriteService:
         )
         db.add(favorite)
         await db.flush()
-        await db.refresh(favorite)
         return favorite
+
+    @staticmethod
+    async def get_favorite(
+        db: AsyncSession,
+        user_id: UUID,
+        favorite_id: UUID,
+    ) -> MessageFavorite | None:
+        """获取单个收藏并预加载消息关系，避免响应阶段触发异步懒加载。"""
+        result = await db.execute(
+            select(MessageFavorite)
+            .where(
+                MessageFavorite.id == favorite_id,
+                MessageFavorite.user_id == user_id,
+                MessageFavorite.not_deleted_filter(),
+            )
+            .options(*_favorite_load_options())
+        )
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def remove_favorite(
@@ -478,10 +516,7 @@ class FavoriteService:
         query = select(MessageFavorite).where(
             MessageFavorite.user_id == user_id,
             MessageFavorite.not_deleted_filter()
-        ).options(
-            selectinload(MessageFavorite.group_message),
-            selectinload(MessageFavorite.private_message)
-        ).order_by(desc(MessageFavorite.created_at)).limit(limit).offset(offset)
+        ).options(*_favorite_load_options()).order_by(desc(MessageFavorite.created_at)).limit(limit).offset(offset)
 
         # TRACKED(TD-008): 实现标签过滤 (JSON 数组包含查询)
 
@@ -633,7 +668,7 @@ class MessageSearchService:
         query = select(GroupMessage).where(
             GroupMessage.group_id == group_id,
             GroupMessage.not_deleted_filter(),
-            not GroupMessage.is_revoked
+            GroupMessage.is_revoked.is_(False)
         )
 
         # 应用过滤条件
@@ -695,7 +730,7 @@ class MessageSearchService:
                 func.count(GroupMessage.id).label("message_count")
             ).where(
                 GroupMessage.group_id == group_id,
-                GroupMessage.topic is not None,
+                GroupMessage.topic.is_not(None),
                 GroupMessage.not_deleted_filter()
             ).group_by(GroupMessage.topic).order_by(desc("message_count")).limit(50)
         )
@@ -753,7 +788,7 @@ class OfflineQueueService:
                 OfflineMessageQueue.user_id == user_id,
                 OfflineMessageQueue.status == OfflineMessageStatus.PENDING,
                 or_(
-                    OfflineMessageQueue.expires_at is None,
+                    OfflineMessageQueue.expires_at.is_(None),
                     OfflineMessageQueue.expires_at > _utcnow()
                 )
             ).order_by(OfflineMessageQueue.created_at.asc()).limit(limit)

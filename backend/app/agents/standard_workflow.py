@@ -1,5 +1,7 @@
 from __future__ import annotations
 import asyncio
+import contextlib
+import inspect
 import json
 import re
 import time
@@ -58,7 +60,9 @@ from app.services.llm_service import (
 # Nodes
 # ==========================================
 
-_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS = 90.0
+_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS = 10.0
+_GENERATION_FIRST_CHUNK_TIMEOUT_SECONDS = 18.0
+_GENERATION_CHUNK_TIMEOUT_SECONDS = 45.0
 _STREAM_DELTA_FLUSH_CHARS = 96
 _STREAM_DELTA_FLUSH_SECONDS = 0.12
 _MAX_TOOL_LOOPS_PER_TURN = 2
@@ -1311,6 +1315,22 @@ Ask about their available time and current tasks if needed.
             "如果工具失败，不要原样转述内部错误堆栈；只用一句自然的话说明相关数据暂时不可用，并继续给出可执行建议。"
         )
 
+    chat_mode = str(state.context_data.get("chat_mode", "standard") or "standard").strip()
+    if stream_callback and explicit_runtime and chat_mode.startswith("expert::"):
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details=f"{explicit_runtime['display_name']} 正在整理专业视角...",
+                    current_agent_name=str(explicit_runtime["display_name"] or "Sparkle Expert"),
+                ),
+                metadata={
+                    "selected_experts": json.dumps([explicit_runtime["expert_id"]], ensure_ascii=False),
+                    "expert_entry_source": json.dumps({"mode": "explicit_single"}, ensure_ascii=False),
+                },
+            )
+        )
+
     raw_knowledge_context = state.context_data.get("knowledge_context") or ""
     knowledge_context = (
         ""
@@ -1427,63 +1447,73 @@ Ask about their available time and current tasks if needed.
     try:
         usage_prompt_tokens = 0
         usage_completion_tokens = 0
-        async for chunk in generation_llm.chat_stream_with_tools(
-            system_prompt=system_prompt,
-            user_message=user_message,
-            tools=effective_tools,
-            conversation_history=prompt_conversation_context.get("messages", []),
-            user_context=user_context,
-        ):
-            if chunk.type == "text":
-                full_response += chunk.content
-                if stream_callback:
-                    delta_buffer.append(chunk.content)
-                    now = time.monotonic()
-                    if (
-                        sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
-                        or (now - last_flush_at) >= _STREAM_DELTA_FLUSH_SECONDS
-                    ):
+        generation_stream = generation_llm.chat_stream_with_tools(
+            **_build_generation_stream_kwargs(
+                generation_llm,
+                system_prompt=system_prompt,
+                user_message=user_message,
+                tools=effective_tools,
+                conversation_history=prompt_conversation_context.get("messages", []),
+                user_context=user_context,
+            )
+        )
+        try:
+            async for chunk in _stream_generation_chunks_with_timeout(generation_stream):
+                if chunk.type == "text":
+                    full_response += chunk.content
+                    if stream_callback:
+                        delta_buffer.append(chunk.content)
+                        now = time.monotonic()
+                        if (
+                            sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
+                            or (now - last_flush_at) >= _STREAM_DELTA_FLUSH_SECONDS
+                        ):
+                            first_chunk_sent = await _flush_stream_text_buffer(
+                                stream_callback=stream_callback,
+                                buffer=delta_buffer,
+                                first_chunk_sent=first_chunk_sent,
+                            )
+                            last_flush_at = now
+                elif chunk.type == "tool_call_end":
+                    tool_calls.append(chunk)
+                    if stream_callback:
                         first_chunk_sent = await _flush_stream_text_buffer(
                             stream_callback=stream_callback,
                             buffer=delta_buffer,
                             first_chunk_sent=first_chunk_sent,
                         )
-                        last_flush_at = now
-            elif chunk.type == "tool_call_end":
-                tool_calls.append(chunk)
-                if stream_callback:
-                    first_chunk_sent = await _flush_stream_text_buffer(
-                        stream_callback=stream_callback,
-                        buffer=delta_buffer,
-                        first_chunk_sent=first_chunk_sent,
-                    )
-                    last_flush_at = time.monotonic()
-                    await stream_callback(
-                        agent_service_pb2.ChatResponse(
-                            tool_call=agent_service_pb2.ToolCall(
-                                id=chunk.tool_call_id, name=chunk.tool_name, arguments=json.dumps(chunk.full_arguments)
+                        last_flush_at = time.monotonic()
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                tool_call=agent_service_pb2.ToolCall(
+                                    id=chunk.tool_call_id,
+                                    name=chunk.tool_name,
+                                    arguments=json.dumps(chunk.full_arguments),
+                                )
                             )
                         )
-                    )
-            elif chunk.type == "usage":
-                usage_prompt_tokens = chunk.prompt_tokens or 0
-                usage_completion_tokens = chunk.completion_tokens or 0
-                if stream_callback:
-                    first_chunk_sent = await _flush_stream_text_buffer(
-                        stream_callback=stream_callback,
-                        buffer=delta_buffer,
-                        first_chunk_sent=first_chunk_sent,
-                    )
-                    last_flush_at = time.monotonic()
-                    await stream_callback(
-                        agent_service_pb2.ChatResponse(
-                            usage=agent_service_pb2.Usage(
-                                prompt_tokens=chunk.prompt_tokens or 0,
-                                completion_tokens=chunk.completion_tokens or 0,
-                                total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0),
+                elif chunk.type == "usage":
+                    usage_prompt_tokens = chunk.prompt_tokens or 0
+                    usage_completion_tokens = chunk.completion_tokens or 0
+                    if stream_callback:
+                        first_chunk_sent = await _flush_stream_text_buffer(
+                            stream_callback=stream_callback,
+                            buffer=delta_buffer,
+                            first_chunk_sent=first_chunk_sent,
+                        )
+                        last_flush_at = time.monotonic()
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                usage=agent_service_pb2.Usage(
+                                    prompt_tokens=chunk.prompt_tokens or 0,
+                                    completion_tokens=chunk.completion_tokens or 0,
+                                    total_tokens=(chunk.prompt_tokens or 0) + (chunk.completion_tokens or 0),
+                                )
                             )
                         )
-                    )
+        finally:
+            with contextlib.suppress(Exception):
+                await generation_stream.aclose()
     except Exception as e:
         logger.warning(f"Generation streaming failed, attempting fast rescue response: {e}")
         state.context_data["generation_fallback_reason"] = str(e)
@@ -2326,6 +2356,50 @@ async def _flush_stream_text_buffer(
     return first_chunk_sent
 
 
+async def _stream_generation_chunks_with_timeout(
+    stream,
+    *,
+    first_chunk_timeout: float = _GENERATION_FIRST_CHUNK_TIMEOUT_SECONDS,
+    chunk_timeout: float = _GENERATION_CHUNK_TIMEOUT_SECONDS,
+):
+    """Consume a generation stream with explicit first-token and per-chunk deadlines."""
+    first_chunk = True
+    while True:
+        timeout = first_chunk_timeout if first_chunk else chunk_timeout
+        try:
+            chunk = await asyncio.wait_for(stream.__anext__(), timeout=timeout)
+        except StopAsyncIteration:
+            break
+        first_chunk = False
+        yield chunk
+
+
+def _build_generation_stream_kwargs(
+    llm: Any,
+    *,
+    system_prompt: str,
+    user_message: str,
+    tools: list[dict[str, Any]],
+    conversation_history: list[dict[str, Any]],
+    user_context: dict[str, Any],
+) -> dict[str, Any]:
+    """Call `chat_stream_with_tools` compatibly across old and new test doubles."""
+    kwargs: dict[str, Any] = {
+        "system_prompt": system_prompt,
+        "user_message": user_message,
+        "tools": tools,
+        "user_context": user_context,
+    }
+    try:
+        signature = inspect.signature(llm.chat_stream_with_tools)
+    except (TypeError, ValueError):
+        kwargs["conversation_history"] = conversation_history
+        return kwargs
+    if "conversation_history" in signature.parameters:
+        kwargs["conversation_history"] = conversation_history
+    return kwargs
+
+
 def _select_workflow(intent: str):
     """Select appropriate collaboration workflow based on intent."""
     workflow_mapping = {
@@ -2352,6 +2426,21 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
     if selected_experts:
         try:
             logger.info(f"Executing explicit expert collaboration with experts={selected_experts}")
+            if stream_callback:
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.THINKING,
+                            details=f"已进入专家协作，正在调度 {len(selected_experts)} 位专家...",
+                            active_agent=agent_service_pb2.ORCHESTRATOR,
+                            current_agent_name="Sparkle Orchestrator",
+                        ),
+                        metadata={
+                            "selected_experts": json.dumps(selected_experts, ensure_ascii=False),
+                            "collaboration_mode": "explicit_expert",
+                        },
+                    )
+                )
             result = await _execute_explicit_expert_collaboration(state)
             state.context_data["collaboration_result"] = result
             state.context_data["workflow_type"] = result.workflow_type

@@ -1,5 +1,4 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: unused_element
 
 part of 'community_model.dart';
 
@@ -1593,74 +1592,6 @@ Map<String, dynamic> _$GroupFileShareRequestToJson(
       'tags': instance.tags,
     };
 
-SharedResourceInfo _$SharedResourceInfoFromJson(Map<String, dynamic> json) =>
-    SharedResourceInfo(
-      id: json['id'] as String,
-      resourceType:
-          $enumDecode(_$SharedResourceTypeEnumMap, json['resource_type']),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] == null
-          ? null
-          : DateTime.parse(json['updated_at'] as String),
-      planId: json['plan_id'] as String?,
-      taskId: json['task_id'] as String?,
-      knowledgeNodeId: json['knowledge_node_id'] as String?,
-      seedLibraryId: json['seed_library_id'] as String?,
-      seedItemId: json['seed_item_id'] as String?,
-      cognitiveFragmentId: json['cognitive_fragment_id'] as String?,
-      curiosityCapsuleId: json['curiosity_capsule_id'] as String?,
-      behaviorPatternId: json['behavior_pattern_id'] as String?,
-      permission: json['permission'] as String?,
-      comment: json['comment'] as String?,
-      viewCount: (json['view_count'] as num?)?.toInt(),
-      saveCount: (json['save_count'] as num?)?.toInt(),
-      sharer: json['sharer'] == null
-          ? null
-          : UserBrief.fromJson(json['sharer'] as Map<String, dynamic>),
-      resourceTitle: json['resource_title'] as String?,
-      resourceSummary: json['resource_summary'] as String?,
-      entityCard: json['entity_card'] as Map<String, dynamic>?,
-    );
-
-Map<String, dynamic> _$SharedResourceInfoToJson(SharedResourceInfo instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'resource_type': _$SharedResourceTypeEnumMap[instance.resourceType]!,
-      'created_at': instance.createdAt.toIso8601String(),
-      'updated_at': instance.updatedAt?.toIso8601String(),
-      'plan_id': instance.planId,
-      'task_id': instance.taskId,
-      'knowledge_node_id': instance.knowledgeNodeId,
-      'seed_library_id': instance.seedLibraryId,
-      'seed_item_id': instance.seedItemId,
-      'cognitive_fragment_id': instance.cognitiveFragmentId,
-      'curiosity_capsule_id': instance.curiosityCapsuleId,
-      'behavior_pattern_id': instance.behaviorPatternId,
-      'permission': instance.permission,
-      'comment': instance.comment,
-      'view_count': instance.viewCount,
-      'save_count': instance.saveCount,
-      'sharer': instance.sharer,
-      'resource_title': instance.resourceTitle,
-      'resource_summary': instance.resourceSummary,
-      'entity_card': instance.entityCard,
-    };
-
-const _$SharedResourceTypeEnumMap = {
-  SharedResourceType.task: 'task',
-  SharedResourceType.plan: 'plan',
-  SharedResourceType.knowledgeNode: 'knowledge_node',
-  SharedResourceType.seedLibrary: 'seed_library',
-  SharedResourceType.seedItem: 'seed_item',
-  SharedResourceType.cognitiveFragment: 'cognitive_fragment',
-  SharedResourceType.curiosityCapsule: 'curiosity_capsule',
-  SharedResourceType.cognitivePrismPattern: 'cognitive_prism_pattern',
-  SharedResourceType.fragment: 'fragment',
-  SharedResourceType.capsule: 'capsule',
-  SharedResourceType.achievement: 'achievement',
-  SharedResourceType.file: 'file',
-};
-
 SharedResourceCreate _$SharedResourceCreateFromJson(
         Map<String, dynamic> json) =>
     SharedResourceCreate(
@@ -1678,6 +1609,21 @@ Map<String, dynamic> _$SharedResourceCreateToJson(
       'resource_id': instance.resourceId,
       'group_ids': instance.groupIds,
     };
+
+const _$SharedResourceTypeEnumMap = {
+  SharedResourceType.task: 'task',
+  SharedResourceType.plan: 'plan',
+  SharedResourceType.knowledgeNode: 'knowledge_node',
+  SharedResourceType.seedLibrary: 'seed_library',
+  SharedResourceType.seedItem: 'seed_item',
+  SharedResourceType.cognitiveFragment: 'cognitive_fragment',
+  SharedResourceType.curiosityCapsule: 'curiosity_capsule',
+  SharedResourceType.cognitivePrismPattern: 'cognitive_prism_pattern',
+  SharedResourceType.fragment: 'fragment',
+  SharedResourceType.capsule: 'capsule',
+  SharedResourceType.achievement: 'achievement',
+  SharedResourceType.file: 'file',
+};
 
 UserStatusUpdate _$UserStatusUpdateFromJson(Map<String, dynamic> json) =>
     UserStatusUpdate(

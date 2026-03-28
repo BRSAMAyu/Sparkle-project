@@ -33,8 +33,7 @@ class AccountabilityScreen extends ConsumerWidget {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(myPartnershipsProvider.notifier).load(),
+            onPressed: () => ref.read(myPartnershipsProvider.notifier).load(),
           ),
         ],
       ),
@@ -64,15 +63,13 @@ class AccountabilityScreen extends ConsumerWidget {
             );
           }
 
-          final currentUserId =
-              ref.watch(currentUserProvider)?.id ?? '';
+          final currentUserId = ref.watch(currentUserProvider)?.id ?? '';
 
           return ContentConstraint(
             child: ListView.separated(
               padding: const EdgeInsets.all(DS.spacing16),
               itemCount: partnerships.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: DS.spacing12),
+              separatorBuilder: (_, __) => const SizedBox(height: DS.spacing12),
               itemBuilder: (ctx, i) => _PartnershipCard(
                 partnership: partnerships[i],
                 currentUserId: currentUserId,
@@ -96,13 +93,11 @@ class _PartnershipCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPending =
-        partnership.status == AccountabilityStatus.pending;
+    final isPending = partnership.status == AccountabilityStatus.pending;
     final isActive = partnership.status == AccountabilityStatus.active;
     final isInitiator = partnership.initiatorId == currentUserId;
 
-    final partner =
-        isInitiator ? partnership.partner : partnership.initiator;
+    final partner = isInitiator ? partnership.partner : partnership.initiator;
     final myGoal = isInitiator
         ? partnership.initiatorGoal
         : partnership.partnerGoal ?? '(未设置)';
@@ -133,9 +128,10 @@ class _PartnershipCard extends ConsumerWidget {
                           .substring(0, 1)
                           .toUpperCase(),
                       style: TextStyle(
-                          color: DS.brandPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,),
+                        color: DS.brandPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
@@ -146,8 +142,9 @@ class _PartnershipCard extends ConsumerWidget {
                         Text(
                           partner?.displayName ?? '未知用户',
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: DS.fontSizeBase,),
+                            fontWeight: FontWeight.bold,
+                            fontSize: DS.fontSizeBase,
+                          ),
                         ),
                         const SizedBox(height: DS.xs),
                         _StatusChip(status: partnership.status),
@@ -185,25 +182,35 @@ class _PartnershipCard extends ConsumerWidget {
   }
 
   Future<void> _accept(
-      BuildContext context, WidgetRef ref,) async {
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
-      await ref
+      final updated = await ref
           .read(accountabilityRepositoryProvider)
           .respondToPartnership(partnership.id, accept: true);
       await ref.read(myPartnershipsProvider.notifier).load();
-      if (context.mounted) AppFeedback.success(context, '已接受责任伙伴邀请！');
+      ref.invalidate(accountabilityOverviewProvider);
+      if (!context.mounted) return;
+      AppFeedback.success(context, '已接受责任伙伴邀请！');
+      context.go(
+        CommunityRoutes.accountabilityDetail.replaceFirst(':id', updated.id),
+      );
     } catch (e) {
       if (context.mounted) AppFeedback.error(context, '操作失败: $e');
     }
   }
 
   Future<void> _decline(
-      BuildContext context, WidgetRef ref,) async {
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
       await ref
           .read(accountabilityRepositoryProvider)
           .respondToPartnership(partnership.id, accept: false);
       await ref.read(myPartnershipsProvider.notifier).load();
+      ref.invalidate(accountabilityOverviewProvider);
       if (context.mounted) AppFeedback.info(context, '已拒绝邀请');
     } catch (e) {
       if (context.mounted) AppFeedback.error(context, '操作失败: $e');
@@ -225,17 +232,19 @@ class _StatusChip extends StatelessWidget {
     };
 
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: DS.fontSizeXs,
-              color: color,
-              fontWeight: FontWeight.bold,),),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: DS.fontSizeXs,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
@@ -249,14 +258,20 @@ class _GoalRow extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label: ',
-              style: TextStyle(
-                  fontSize: DS.fontSizeSm, color: DS.textSecondary,),),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: DS.textSecondary,
+            ),
+          ),
           Expanded(
-            child: Text(goal,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: DS.fontSizeSm),),
+            child: Text(
+              goal,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: DS.fontSizeSm),
+            ),
           ),
         ],
       );
@@ -286,13 +301,18 @@ class _StreakRow extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (stats) => Row(
         children: [
-          Icon(Icons.local_fire_department,
-              size: 16, color: DS.brandPrimary,),
+          Icon(
+            Icons.local_fire_department,
+            size: 16,
+            color: DS.brandPrimary,
+          ),
           const SizedBox(width: DS.xs),
           Text(
             '我: ${stats.myStreakDays} 天 · 伙伴: ${stats.partnerStreakDays} 天',
             style: TextStyle(
-                fontSize: DS.fontSizeSm, color: DS.brandPrimary,),
+              fontSize: DS.fontSizeSm,
+              color: DS.brandPrimary,
+            ),
           ),
           const Spacer(),
           if (stats.partnerCheckedInToday)
@@ -303,10 +323,9 @@ class _StreakRow extends ConsumerWidget {
           Text(
             stats.partnerCheckedInToday ? '伙伴已打卡' : '伙伴未打卡',
             style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: stats.partnerCheckedInToday
-                    ? DS.success
-                    : DS.neutral500,),
+              fontSize: DS.fontSizeXs,
+              color: stats.partnerCheckedInToday ? DS.success : DS.neutral500,
+            ),
           ),
         ],
       ),

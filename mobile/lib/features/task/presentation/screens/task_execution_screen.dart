@@ -20,6 +20,7 @@ import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -39,7 +40,6 @@ import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
-import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -59,6 +59,9 @@ LinearGradient _taskWarmActionGradient(BuildContext context) {
     end: Alignment.bottomRight,
   );
 }
+
+final openClawTaskNudgeDismissedProvider = StateProvider<bool>((ref) => false);
+final openClawTaskNudgeExpandedProvider = StateProvider<bool>((ref) => false);
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key, this.origin});
@@ -111,7 +114,34 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activeTask = ref.read(activeTaskProvider);
+      ref.listenManual<String>(
+        openClawConnectionProvider.select(
+          (service) => [
+            service.config.normalizedGatewayUrl,
+            service.config.transport,
+            service.config.authToken ?? '',
+            service.config.deviceToken ?? '',
+            service.info.status.name,
+            '${service.queuedRequestCount}',
+          ].join('|'),
+        ),
+        (previous, next) {
+          if (previous == null || previous == next) return;
+          ref.read(openClawTaskNudgeDismissedProvider.notifier).state = false;
+          ref.read(openClawTaskNudgeExpandedProvider.notifier).state = false;
+        },
+      );
       if (activeTask != null && isServerTaskId(activeTask.id)) {
+        ref.listenManual<ExecutionIntentStatus?>(
+          taskListProvider.select(
+            (state) => state.taskExecutions[activeTask.id]?.status,
+          ),
+          (previous, next) {
+            if (previous == null || previous == next) return;
+            ref.read(openClawTaskNudgeDismissedProvider.notifier).state = false;
+            ref.read(openClawTaskNudgeExpandedProvider.notifier).state = false;
+          },
+        );
         unawaited(
           ref
               .read(taskListProvider.notifier)
@@ -1352,6 +1382,7 @@ class _BottomControls extends ConsumerWidget {
   final void Function(int minutes, String? note) onComplete;
 
   Future<void> _handoffTask(BuildContext context, WidgetRef ref) async {
+    ref.read(openClawTaskNudgeDismissedProvider.notifier).state = false;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
     final intent =
         await ref.read(taskListProvider.notifier).handoffTaskToAi(task.id);
@@ -1423,7 +1454,8 @@ class _BottomControls extends ConsumerWidget {
     AppFeedback.success(context, 'AI 结果已确认，任务状态已同步');
   }
 
-  Future<void> _showRejectReasonSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _showRejectReasonSheet(
+      BuildContext context, WidgetRef ref) async {
     final selectedReason = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1685,7 +1717,9 @@ class _BottomControls extends ConsumerWidget {
     );
     final executionTemplates = ref.watch(
       taskListProvider.select(
-        (state) => state.taskExecutionTemplates[task.id] ?? const <ExecutionTemplateModel>[],
+        (state) =>
+            state.taskExecutionTemplates[task.id] ??
+            const <ExecutionTemplateModel>[],
       ),
     );
     final selectedTemplateId = ref.watch(
@@ -1706,6 +1740,8 @@ class _BottomControls extends ConsumerWidget {
     final isClawConnected = connection.isConnected;
     final isClawConfigured = connection.config.isConfigured;
     final queuedRequestCount = connection.queuedRequestCount;
+    final nudgeDismissed = ref.watch(openClawTaskNudgeDismissedProvider);
+    final nudgeExpanded = ref.watch(openClawTaskNudgeExpandedProvider);
     final supportsAiHandoff = isServerTaskId(task.id);
     final canHandoff = supportsAiHandoff &&
         isClawConnected &&
@@ -1748,33 +1784,36 @@ class _BottomControls extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing8),
             ...executionTemplates.toList().asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: DS.spacing8),
-                child: SparkleStaggerItem(
-                  index: entry.key,
-                  child: ExecutionTemplateCard(
-                    template: entry.value,
-                    isSelected: selectedTemplateId == entry.value.templateId,
-                    onTap: () {
-                      ref
-                          .read(taskListProvider.notifier)
-                          .selectExecutionTemplate(task.id, entry.value.templateId);
-                    },
+                  (entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing8),
+                    child: SparkleStaggerItem(
+                      index: entry.key,
+                      child: ExecutionTemplateCard(
+                        template: entry.value,
+                        isSelected:
+                            selectedTemplateId == entry.value.templateId,
+                        onTap: () {
+                          ref
+                              .read(taskListProvider.notifier)
+                              .selectExecutionTemplate(
+                                  task.id, entry.value.templateId);
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
             const SizedBox(height: DS.spacing8),
           ],
           if (supportsAiHandoff &&
               (executionIntent == null || executionIntent.isTerminal) &&
-              !isClawConnected) ...[
+              !isClawConnected &&
+              !nudgeDismissed) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(DS.spacing12),
+              padding: const EdgeInsets.all(DS.spacing10),
               decoration: BoxDecoration(
                 color: DS.warning.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                borderRadius: BorderRadius.circular(DS.borderRadiusLG),
                 border: Border.all(
                   color: DS.warning.withValues(alpha: 0.18),
                 ),
@@ -1795,44 +1834,107 @@ class _BottomControls extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           isClawConfigured
-                              ? copy.engineCurrentlyOffline
-                              : copy.engineNotConnected,
+                              ? 'OpenClaw 当前离线，可先加入等待队列'
+                              : 'OpenClaw 尚未连接',
                           style: DS.bodyMedium.copyWith(
                             color: DS.warning,
                             fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),
+                      if (isClawConfigured && queuedRequestCount > 0)
+                        Container(
+                          margin: const EdgeInsets.only(right: DS.spacing6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing8,
+                            vertical: DS.spacing4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$queuedRequestCount 队列中',
+                            style: DS.bodySmall.copyWith(
+                              color: DS.warning,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                        ),
+                      TextButton(
+                        onPressed: () => context.push(
+                          '${HomeRoutes.openClawHub}?section=connection',
+                        ),
+                        child: Text(isClawConfigured ? '查看' : '连接'),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          ref
+                              .read(openClawTaskNudgeDismissedProvider.notifier)
+                              .state = true;
+                          ref
+                              .read(openClawTaskNudgeExpandedProvider.notifier)
+                              .state = false;
+                        },
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        color: DS.textSecondary,
+                        tooltip: '关闭提示',
+                      ),
                     ],
                   ),
-                  const SizedBox(height: DS.spacing6),
-                  Text(
-                    isClawConfigured
-                        ? '你仍然可以先把任务加入等待队列，等引擎恢复后再批量提交。'
-                        : '先到设置里完成 OpenClaw 连接，AI 执行入口才会真正生效。',
-                    style: DS.bodySmall.copyWith(
-                      color: DS.neutral700,
-                      height: 1.45,
-                    ),
-                  ),
-                  if (queuedRequestCount > 0) ...[
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      '当前已有 $queuedRequestCount 个任务在等待队列中。',
-                      style: DS.bodySmall.copyWith(
-                        color: DS.textSecondary,
+                  InkWell(
+                    onTap: () {
+                      ref
+                          .read(openClawTaskNudgeExpandedProvider.notifier)
+                          .state = !nudgeExpanded;
+                    },
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: DS.spacing2),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              nudgeExpanded ? '收起说明' : '查看说明',
+                              style: DS.bodySmall.copyWith(
+                                color: DS.textSecondary,
+                                fontWeight: DS.fontWeightSemiBold,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            nudgeExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
+                            color: DS.textSecondary,
+                            size: 18,
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: DS.spacing8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => context.push(UserRoutes.openClawSettings),
-                      icon: const Icon(Icons.settings_rounded, size: 16),
-                      label: Text(isClawConfigured ? '查看连接与队列' : '前往连接设置'),
-                    ),
                   ),
+                  if (nudgeExpanded) ...[
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      isClawConfigured
+                          ? '你仍然可以先把任务加入等待队列，等引擎恢复后在 OpenClaw Hub 里统一重试。'
+                          : '先在 OpenClaw Hub 里完成连接，任务页和聊天页的 AI 委派能力就会真正生效。',
+                      style: DS.bodySmall.copyWith(
+                        color: DS.neutral700,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (queuedRequestCount > 0) ...[
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        '当前已有 $queuedRequestCount 个任务在等待队列中。',
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -1854,7 +1956,8 @@ class _BottomControls extends ConsumerWidget {
                 child: Row(
                   children: [
                     ExecutionStatusIndicator(
-                      status: executionIntent?.status ?? ExecutionIntentStatus.dispatched,
+                      status: executionIntent?.status ??
+                          ExecutionIntentStatus.dispatched,
                       dispatchedAt: executionIntent?.dispatchedAt,
                       size: 52,
                     ),
@@ -1912,7 +2015,8 @@ class _BottomControls extends ConsumerWidget {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(statusColor),
                         ),
                       ),
                   ],
@@ -1952,7 +2056,15 @@ class _BottomControls extends ConsumerWidget {
                               ref,
                               templateId: selectedTemplateId,
                             )
-                        : null,
+                        : () {
+                            ref
+                                .read(
+                                    openClawTaskNudgeDismissedProvider.notifier)
+                                .state = false;
+                            context.push(
+                              '${HomeRoutes.openClawHub}?section=connection',
+                            );
+                          },
                 isLoading: isHandoffLoading,
               ),
             ),

@@ -3182,18 +3182,18 @@ async def add_message_favorite(
     try:
         favorite = await FavoriteService.add_favorite(db, current_user.id, data)
         await db.commit()
+        favorite = await FavoriteService.get_favorite(db, current_user.id, favorite.id)
+        if favorite is None:
+            raise HTTPException(status_code=404, detail="收藏不存在")
 
         # 获取消息预览
         preview = None
-        msg = None
-        if favorite.group_message_id:
-            msg = await db.get(GroupMessage, favorite.group_message_id)
-            if msg:
-                preview = msg.content[:100] if msg.content else None
-        elif favorite.private_message_id:
-            msg = await db.get(PrivateMessage, favorite.private_message_id)
-            if msg:
-                preview = msg.content[:100] if msg.content else None
+        msg = favorite.group_message
+        private_msg = favorite.private_message
+        if msg and msg.content:
+            preview = msg.content[:100]
+        elif private_msg and private_msg.content:
+            preview = private_msg.content[:100]
 
         return MessageFavoriteInfo(
             id=favorite.id,
@@ -3205,8 +3205,8 @@ async def add_message_favorite(
             note=favorite.note,
             tags=favorite.tags,
             message_preview=preview,
-            group_message=_build_message_info(msg) if favorite.group_message_id and msg else None,
-            private_message=_build_private_message_info(msg) if favorite.private_message_id and msg else None,
+            group_message=_build_message_info(msg) if msg else None,
+            private_message=_build_private_message_info(private_msg) if private_msg else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

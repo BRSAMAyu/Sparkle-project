@@ -273,6 +273,16 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> clearUserScopedData() => (super.noSuchMethod(
+        Invocation.method(
+          #clearUserScopedData,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }
 
 /// A class which mocks [WebSocketService].

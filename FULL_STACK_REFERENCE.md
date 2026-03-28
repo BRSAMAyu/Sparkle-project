@@ -21,14 +21,23 @@ Incremental refresh on `2026-03-28`:
   - `cd backend/gateway && go test ./internal/handler ./internal/agent ./internal/api/v1`
   - `cd backend && ./.venv/bin/pytest tests/unit/test_mirofish_phase0_acceptance.py tests/unit/test_mirofish_wiring_finish.py tests/unit/test_theater_seed_and_accuracy.py tests/unit/test_openclaw_phase0.py tests/unit/test_openclaw_phase1.py tests/unit/test_openclaw_phase2.py tests/unit/test_openclaw_phase3.py tests/unit/test_openclaw_phase4.py tests/unit/test_openclaw_gateway_ws.py tests/unit/test_openclaw_admin_api.py`
   - `cd mobile && flutter test test/widget/mirofish_wiring_finish_test.dart test/widget/insights_frontend_smoke_test.dart test/widget/learning_insights_navigation_test.dart test/widget/simulation_interaction_continue_test.dart test/widget/theater_phase2_widget_test.dart test/widget/unified_settings_bgm_test.dart test/core/services/bgm_service_test.dart`
+  - `make env-check`
+  - `make smoke`
+  - `make local-backend-smoke`
 - Additional verified conclusions from the `2026-03-28` refresh:
   - AI chat WebSocket path now passes multi-turn context and concurrent-connection acceptance in the live local stack.
   - MiroFish backend acceptance/unit coverage for Theater / Simulation / Learning Report passed (`103` tests in the targeted suite).
   - OpenClaw Phase 0~4 + Gateway WS + admin/user execution API remain green in the targeted backend suite.
   - Mobile MiroFish / Learning Insights / Theater / Unified Settings / BGM widget coverage passed (`18` targeted tests).
+  - The local backend acceptance entrypoint now passes end-to-end: auth, community, worker queue, file/vector pipeline, gRPC, and WebSocket integration.
+  - Gateway proxy registration now explicitly includes `/client-telemetry/*`; live local verification returned:
+    - `POST /api/v1/client-telemetry/events/batch` -> `200`
+    - `GET /api/v1/client-telemetry/summary?days=7` -> `200`
+    - `GET /api/v1/background-tasks` -> `200`
+  - `user_learning_profiles` is now a live Alembic migration (`oc003c4d5e6f7`) and exists in the local PostgreSQL schema.
+  - Redis Search index `idx:knowledge` is now auto-created on startup and verified live with `FT.INFO idx:knowledge`.
 - Known remaining gaps before full final acceptance:
-  - `client-telemetry` still returns `404` in the local stack.
-  - Final full-system signoff still requires the broader E2E, real-device, DATA, FF, and CEL sections in the checklist to be completed with evidence.
+  - Final full-system signoff still requires the broader manual simulator / real-device / E2E evidence in the checklist to be completed and archived.
 
 This refresh is aligned with:
 - `docs/contracts/openapi_snapshot.json` regenerated on `2026-03-27`

@@ -72,7 +72,10 @@ class VisualElementService:
         element_type: VisualElementType | None = None,
         locale: str | None = None,
     ) -> list[VisualElementResponse]:
-        """获取用户已解锁的视觉元素"""
+        """获取用户已解锁的视觉元素。
+
+        默认视觉元素对所有用户都应可见、可装备，即使历史账号没有初始化解锁记录。
+        """
         # 查询用户解锁的元素
         query = (
             select(VisualElement)
@@ -87,7 +90,23 @@ class VisualElementService:
         query = query.order_by(UserVisualElement.unlocked_at.desc())
 
         result = await self.db.execute(query)
-        elements = result.scalars().all()
+        elements = list(result.scalars().all())
+
+        default_query = select(VisualElement).where(
+            VisualElement.is_default == True,
+            VisualElement.is_active == True,
+        )
+        if element_type:
+            default_query = default_query.where(
+                VisualElement.element_type == element_type,
+            )
+        default_result = await self.db.execute(default_query)
+        defaults = default_result.scalars().all()
+
+        seen_ids = {element.id for element in elements}
+        for element in defaults:
+            if element.id not in seen_ids:
+                elements.append(element)
 
         # 获取用户当前装备
         config = await self._get_or_create_user_config(user_id)
@@ -104,28 +123,44 @@ class VisualElementService:
     ) -> UserVisualConfigResponse:
         """获取用户当前视觉配置"""
         config = await self._get_or_create_user_config(user_id)
+        default_elements = await self._get_default_elements_by_type()
 
         # 获取装备的元素详情
         equipped_background = None
         equipped_particle = None
         equipped_effect = None
 
-        if config.equipped_background_id:
-            bg = await self._get_element_by_id(config.equipped_background_id)
+        background_id = config.equipped_background_id or (
+            default_elements.get(VisualElementType.BACKGROUND).id
+            if default_elements.get(VisualElementType.BACKGROUND)
+            else None
+        )
+        if background_id:
+            bg = await self._get_element_by_id(background_id)
             if bg:
                 equipped_background = self._build_element_response(
                     bg, locale, is_unlocked=True, is_equipped=True
                 )
 
-        if config.equipped_particle_id:
-            pt = await self._get_element_by_id(config.equipped_particle_id)
+        particle_id = config.equipped_particle_id or (
+            default_elements.get(VisualElementType.PARTICLE).id
+            if default_elements.get(VisualElementType.PARTICLE)
+            else None
+        )
+        if particle_id:
+            pt = await self._get_element_by_id(particle_id)
             if pt:
                 equipped_particle = self._build_element_response(
                     pt, locale, is_unlocked=True, is_equipped=True
                 )
 
-        if config.equipped_effect_id:
-            ef = await self._get_element_by_id(config.equipped_effect_id)
+        effect_id = config.equipped_effect_id or (
+            default_elements.get(VisualElementType.EFFECT).id
+            if default_elements.get(VisualElementType.EFFECT)
+            else None
+        )
+        if effect_id:
+            ef = await self._get_element_by_id(effect_id)
             if ef:
                 equipped_effect = self._build_element_response(
                     ef, locale, is_unlocked=True, is_equipped=True
@@ -377,12 +412,28 @@ class VisualElementService:
 
     async def _is_element_unlocked(self, user_id: uuid.UUID, element_id: str) -> bool:
         """检查元素是否已解锁"""
+        element = await self._get_element_by_id(element_id)
+        if element and element.is_default:
+            return True
+
         query = select(UserVisualElement).where(
             UserVisualElement.user_id == user_id,
             UserVisualElement.element_id == element_id,
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none() is not None
+
+    async def _get_default_elements_by_type(self) -> dict[VisualElementType, VisualElement]:
+        query = select(VisualElement).where(
+            VisualElement.is_default == True,
+            VisualElement.is_active == True,
+        )
+        result = await self.db.execute(query)
+        defaults = result.scalars().all()
+        grouped: dict[VisualElementType, VisualElement] = {}
+        for element in defaults:
+            grouped.setdefault(element.element_type, element)
+        return grouped
 
     async def _get_or_create_user_config(self, user_id: uuid.UUID) -> UserVisualConfig:
         """获取或创建用户视觉配置"""

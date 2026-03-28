@@ -29,6 +29,14 @@ from app.tools.registry import tool_registry
 
 router = APIRouter()
 
+TASK_CHAT_ALLOWED_TOOLS = [
+    "breakdown_task",
+    "create_task",
+    "update_task_status",
+    "suggest_quick_task",
+    "get_task_detail",
+]
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -43,6 +51,18 @@ def _normalize_conversation_id(conversation_id: str | None) -> tuple[UUID, str]:
 
     session_id = uuid4()
     return session_id, str(session_id)
+
+
+def _build_task_chat_tools_schema() -> list[dict[str, Any]]:
+    """Limit task chat to task-scoped tools to avoid accidental plan-level detours."""
+    schemas: list[dict[str, Any]] = []
+    for tool_name in TASK_CHAT_ALLOWED_TOOLS:
+        tool = tool_registry.get_tool(tool_name)
+        if tool is None:
+            logger.warning(f"Task chat tool not registered, skipping: {tool_name}")
+            continue
+        schemas.append(tool.to_openai_schema())
+    return schemas
 
 
 class ChatRequest(BaseModel):
@@ -113,7 +133,18 @@ async def chat_with_task_context(
 
     # 3. System Prompt with Task Focus
     system_prompt = build_system_prompt(user_context, "History injected.")
-    system_prompt += f"\n\nCURRENT TASK CONTEXT:\nYou are assisting the user with the task: '{task.title}'. Focus your guidance on completing this specific task."
+    system_prompt += (
+        "\n\nCURRENT TASK CONTEXT:\n"
+        f"You are assisting the user with the task: '{task.title}'. "
+        "Focus your guidance on completing this specific task.\n"
+        "For this task chat, stay task-scoped.\n"
+        "- Prefer using breakdown_task, get_task_detail, suggest_quick_task, "
+        "create_task, and update_task_status.\n"
+        "- Do not query plan-wide state unless the user explicitly asks about "
+        "other tasks or overall plan progress.\n"
+        "- If the task has no valid plan context, continue helping within the "
+        "task itself instead of blocking on plan data."
+    )
 
     # 4. LLM Call (Standard Flow)
     # This duplicates the logic of the main chat endpoint but simplifies for this phase
@@ -122,7 +153,7 @@ async def chat_with_task_context(
     llm_response: LLMResponse = await llm_service.chat_with_tools(
         system_prompt=system_prompt,
         user_message=request.message,
-        tools=tool_registry.get_openai_tools_schema(),
+        tools=_build_task_chat_tools_schema(),
         conversation_history=llm_conversation_history
     )
 
@@ -192,7 +223,8 @@ async def chat_with_task_context(
         session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
-        tool_results=[tr.model_dump() for tr in tool_results]
+        tool_results=[tr.model_dump() for tr in tool_results],
+        task_id=task.id,
     )
 
     return ChatResponse(**response_data, conversation_id=session_id_str)
@@ -838,7 +870,8 @@ async def save_chat_message(
     session_id: UUID,
     user_message: str,
     assistant_message: str,
-    tool_results: list[dict]
+    tool_results: list[dict],
+    task_id: UUID | None = None,
 ):
     """保存聊天消息"""
     session_meta = await db.get(ChatSessionModel, session_id)
@@ -862,6 +895,7 @@ async def save_chat_message(
         session_id=session_id,
         role=MessageRole.USER,
         content=user_message,
+        task_id=task_id,
     )
     db.add(user_msg_db)
 
@@ -872,6 +906,7 @@ async def save_chat_message(
         session_id=session_id,
         role=MessageRole.ASSISTANT,
         content=assistant_message,
+        task_id=task_id,
         actions=tool_results if tool_results else None, # Store tool results as actions
     )
     db.add(assistant_msg_db)

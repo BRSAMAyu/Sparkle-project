@@ -29,13 +29,23 @@
   - admin / user execution API
 - Go Gateway 相关回归通过：
   - `go test ./internal/handler ./internal/agent ./internal/api/v1`
+- 本地运行态收口新增通过：
+  - `make env-check`
+  - `make smoke`
+  - `make local-backend-smoke`
+  - `POST /api/v1/client-telemetry/events/batch` 经 Gateway 返回 `200`
+  - `GET /api/v1/client-telemetry/summary?days=7` 经 Gateway 返回 `200`
+  - `GET /api/v1/background-tasks` 经 Gateway 返回 `200`
+  - `FT.INFO idx:knowledge` 返回正常
+  - `alembic current` = `oc003c4d5e6f7 (head)`
+  - `user_learning_profiles` 表已存在于本地 PostgreSQL
 
 当前不能直接据此报告判定“全系统最终验收成功”，原因仍包括：
 
 - 全模块人工点击签收未完整闭环
 - 真机高风险能力未完成最终签收
-- `client-telemetry` 在本地栈中仍为 `404`
 - 第 21~25 节 E2E / DATA / API / FF / CEL 仍需统一证据归档
+- 用户侧“重拉环境 + 模拟器最终验证”尚未执行完毕
 
 ---
 

@@ -17,7 +17,7 @@ from app.tools.plan_state_tools import (
     GetTaskSummaryParams,
     GetTaskDetailParams,
 )
-from app.models.plan_state import PlanState, PlanStateStatus
+from app.models.plan_state import PlanStateStatus
 
 
 @pytest.fixture
@@ -79,6 +79,7 @@ class TestGetPlanStateTool:
             "app.tools.plan_state_tools.PlanStateService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value
+            mock_service.get_or_create_plan_state = AsyncMock(return_value=mock_state)
             mock_service.get_plan_state = AsyncMock(return_value=mock_state)
 
             result = await tool.execute(params, str(user_id), mock_db)
@@ -89,8 +90,8 @@ class TestGetPlanStateTool:
         assert result.data["resolved_via"] == "primary_fallback"
 
     @pytest.mark.asyncio
-    async def test_returns_error_when_state_not_found(self, mock_db, user_id, plan_id):
-        """Should return error when plan state not found"""
+    async def test_auto_creates_empty_plan_state_when_missing(self, mock_db, user_id, plan_id):
+        """Should self-heal by creating a plan state instead of failing."""
         tool = GetPlanStateTool()
         params = GetPlanStateParams(plan_id=str(plan_id))
 
@@ -110,12 +111,24 @@ class TestGetPlanStateTool:
             "app.tools.plan_state_tools.PlanStateService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_plan_state = AsyncMock(return_value=None)
+            mock_state = MagicMock()
+            mock_state.plan_id = plan_id
+            mock_state.status = PlanStateStatus.ACTIVE.value
+            mock_state.version = 1
+            mock_state.facts = {}
+            mock_state.milestones = []
+            mock_state.task_index = {"total": 1, "completed": 0}
+            mock_state.task_summaries = [{"task_id": str(uuid4()), "title": "占位任务"}]
+            mock_state.feedback_log = []
+            mock_state.constraints = {}
+            mock_service.get_or_create_plan_state = AsyncMock(return_value=mock_state)
+            mock_service.get_plan_state = AsyncMock(return_value=mock_state)
 
             result = await tool.execute(params, str(user_id), mock_db)
 
-        assert result.success is False
-        assert "未找到计划状态" in result.error_message
+        assert result.success is True
+        assert result.data["plan_id"] == str(plan_id)
+        assert result.data["task_summary"]["total"] == 1
 
     @pytest.mark.asyncio
     async def test_returns_plan_state_data(self, mock_db, user_id, plan_id):
@@ -148,6 +161,7 @@ class TestGetPlanStateTool:
             "app.tools.plan_state_tools.PlanStateService"
         ) as mock_service_class:
             mock_service = mock_service_class.return_value
+            mock_service.get_or_create_plan_state = AsyncMock(return_value=mock_state)
             mock_service.get_plan_state = AsyncMock(return_value=mock_state)
 
             result = await tool.execute(params, str(user_id), mock_db)
@@ -157,6 +171,66 @@ class TestGetPlanStateTool:
         assert result.data["version"] == 2
         assert result.data["facts"]["key"] == "value"
         assert result.widget_type == "plan_context_summary"
+
+    @pytest.mark.asyncio
+    async def test_hydrates_empty_state_from_task_sync(self, mock_db, user_id, plan_id):
+        """Should rebuild summaries/index when a plan state exists but is still empty."""
+        tool = GetPlanStateTool()
+        params = GetPlanStateParams(plan_id=str(plan_id))
+
+        mock_plan = MagicMock(spec=Plan)
+        mock_plan.id = plan_id
+        mock_plan.name = "测试计划"
+        mock_plan.is_primary = True
+        mock_plan.is_active = True
+        mock_plan.created_at = datetime.now(timezone.utc)
+        mock_plan.updated_at = datetime.now(timezone.utc)
+        mock_plan.deleted_at = None
+
+        empty_state = MagicMock()
+        empty_state.plan_id = plan_id
+        empty_state.status = PlanStateStatus.ACTIVE.value
+        empty_state.version = 1
+        empty_state.facts = {}
+        empty_state.milestones = []
+        empty_state.task_index = {"total": 0, "completed": 0}
+        empty_state.task_summaries = []
+        empty_state.feedback_log = []
+        empty_state.constraints = {}
+
+        hydrated_state = MagicMock()
+        hydrated_state.plan_id = plan_id
+        hydrated_state.status = PlanStateStatus.ACTIVE.value
+        hydrated_state.version = 1
+        hydrated_state.facts = {}
+        hydrated_state.milestones = []
+        hydrated_state.task_index = {"total": 3, "completed": 1}
+        hydrated_state.task_summaries = [{"task_id": str(uuid4()), "title": "Task 1"}]
+        hydrated_state.feedback_log = []
+        hydrated_state.constraints = {}
+
+        with patch(
+            "app.tools.plan_resolution._fetch_user_plans",
+            AsyncMock(return_value=[mock_plan]),
+        ), patch(
+            "app.tools.plan_state_tools.PlanStateService"
+        ) as mock_service_class, patch(
+            "app.tools.plan_state_tools.TaskStateSyncService"
+        ) as mock_sync_class:
+            mock_service = mock_service_class.return_value
+            mock_service.get_or_create_plan_state = AsyncMock(return_value=empty_state)
+            mock_service.get_plan_state = AsyncMock(return_value=hydrated_state)
+
+            mock_sync = mock_sync_class.return_value
+            mock_sync.rebuild_task_index = AsyncMock()
+            mock_sync.sync_task_summaries = AsyncMock()
+
+            result = await tool.execute(params, str(user_id), mock_db)
+
+        assert result.success is True
+        mock_sync.rebuild_task_index.assert_awaited_once_with(user_id, plan_id)
+        mock_sync.sync_task_summaries.assert_awaited_once_with(user_id, plan_id)
+        assert result.data["task_summary"]["total"] == 3
 
 
 class TestGetTaskSummaryTool:

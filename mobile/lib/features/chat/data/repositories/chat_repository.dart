@@ -116,38 +116,65 @@ class ChatRepository {
         {
           'id': 'demo_conv_1',
           'title': '学习效率与链表复习',
-          'updated_at': DemoDataService().demoChatHistory
+          'updated_at': DemoDataService()
+              .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_1')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
+                  (latest, value) => value.isAfter(latest) ? value : latest)
               .toIso8601String(),
         },
         {
           'id': 'demo_conv_2',
           'title': '动态规划状态转移',
-          'updated_at': DemoDataService().demoChatHistory
+          'updated_at': DemoDataService()
+              .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_2')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
+                  (latest, value) => value.isAfter(latest) ? value : latest)
               .toIso8601String(),
         },
         {
           'id': 'demo_conv_3',
           'title': '计算机网络学习路线',
-          'updated_at': DemoDataService().demoChatHistory
+          'updated_at': DemoDataService()
+              .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_3')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0), (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
+                  (latest, value) => value.isAfter(latest) ? value : latest)
               .toIso8601String(),
         },
       ];
       return conversations;
     }
     final response = await _dio.get<dynamic>('/chat/sessions');
-    final data = ApiResponseParser.unwrapList(response.data,
-        action: 'getRecentConversations',);
+    final data = ApiResponseParser.unwrapList(
+      response.data,
+      action: 'getRecentConversations',
+    );
     return List<Map<String, dynamic>>.from(
-      data.map((item) => item as Map<String, dynamic>),
+      data.map((item) {
+        final raw = Map<String, dynamic>.from(item as Map<String, dynamic>);
+        final sessionId =
+            raw['id']?.toString() ?? raw['session_id']?.toString() ?? '';
+        final updatedAt = raw['updated_at']?.toString() ??
+            raw['last_message_at']?.toString() ??
+            raw['created_at']?.toString();
+        final title = (raw['title']?.toString().trim().isNotEmpty ?? false)
+            ? raw['title']!.toString().trim()
+            : ((raw['task_id']?.toString().isNotEmpty ?? false)
+                ? '任务助手对话'
+                : '历史对话');
+
+        return {
+          ...raw,
+          'id': sessionId,
+          'title': title,
+          'updated_at': updatedAt,
+        };
+      }),
     );
   }
 
@@ -214,21 +241,21 @@ class ChatRepository {
     bool includeReferences = false,
     String? chatMode,
   }) =>
-    // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
-    // 只有历史数据使用预设内容
-    // 使用 WebSocket 服务
-    _wsService.sendMessage(
-      message: message,
-      userId: userId ?? 'anonymous',
-      sessionId: conversationId,
-      requestId: requestId,
-      nickname: nickname,
-      extraContext: extraContext,
-      token: token,
-      fileIds: fileIds,
-      includeReferences: includeReferences,
-      chatMode: chatMode,
-    );
+      // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
+      // 只有历史数据使用预设内容
+      // 使用 WebSocket 服务
+      _wsService.sendMessage(
+        message: message,
+        userId: userId ?? 'anonymous',
+        sessionId: conversationId,
+        requestId: requestId,
+        nickname: nickname,
+        extraContext: extraContext,
+        token: token,
+        fileIds: fileIds,
+        includeReferences: includeReferences,
+        chatMode: chatMode,
+      );
 
   /// 发送 ActionCard 确认/忽略反馈
   void sendActionFeedback({

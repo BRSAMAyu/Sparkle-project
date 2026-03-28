@@ -6,8 +6,8 @@ import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/home/presentation/screens/openclaw_hub_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
-import 'package:sparkle/features/settings/presentation/screens/openclaw_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/admin_operations_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
@@ -152,7 +152,9 @@ class UserRoutes {
           name: 'openClawSettings',
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
-            child: const OpenClawSettingsScreen(),
+            child: const OpenClawHubScreen(
+              initialSection: OpenClawHubSection.connection,
+            ),
           ),
         ),
         GoRoute(

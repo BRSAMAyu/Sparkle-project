@@ -30,12 +30,20 @@ Map<String, dynamic> _$GalaxyEdgeModelToJson(GalaxyEdgeModel instance) =>
 
 const _$EdgeRelationTypeEnumMap = {
   EdgeRelationType.prerequisite: 'prerequisite',
+  EdgeRelationType.prerequisiteOf: 'prerequisite_of',
   EdgeRelationType.derived: 'derived',
+  EdgeRelationType.derivedFrom: 'derived_from',
   EdgeRelationType.related: 'related',
   EdgeRelationType.similar: 'similar',
   EdgeRelationType.contrast: 'contrast',
   EdgeRelationType.application: 'application',
+  EdgeRelationType.appliesTo: 'applies_to',
   EdgeRelationType.example: 'example',
+  EdgeRelationType.exampleOf: 'example_of',
+  EdgeRelationType.explains: 'explains',
+  EdgeRelationType.supports: 'supports',
+  EdgeRelationType.contradicts: 'contradicts',
+  EdgeRelationType.weakAt: 'weak_at',
   EdgeRelationType.parentChild: 'parent_child',
 };
 

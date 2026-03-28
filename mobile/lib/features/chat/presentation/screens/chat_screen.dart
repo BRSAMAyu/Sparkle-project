@@ -11,6 +11,7 @@ import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -34,6 +35,7 @@ import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
@@ -290,6 +292,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         chatState.shouldShowStatusIndicator && !chatPureMode;
     final showReasoningIndicator =
         chatState.shouldShowReasoningIndicator && !chatPureMode;
+    final openClawConnection = ref.watch(openClawConnectionProvider);
+    final showOpenClawAttention = openClawConnection.queuedRequestCount > 0 ||
+        (openClawConnection.config.isConfigured &&
+            !openClawConnection.isConnected);
     final showStreamingBubble = chatState.shouldShowStreamingBubble;
     final listItemCount = messages.length +
         (showStreamingBubble ? 1 : 0) +
@@ -380,6 +386,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
+          SparkleIconButton(
+            icon: _OpenClawAppBarIcon(
+              highlighted: showOpenClawAttention,
+              queueCount: openClawConnection.queuedRequestCount,
+            ),
+            onPressed: () =>
+                context.push('${HomeRoutes.openClawHub}?section=delegate'),
+            semanticLabel: showOpenClawAttention
+                ? 'OpenClaw Hub，有 ${openClawConnection.queuedRequestCount} 个排队任务'
+                : 'OpenClaw Hub',
+            variant: ButtonVariant.ghost,
+          ),
           SparkleIconButton(
             icon: Icon(Icons.tune_rounded, color: DS.textSecondary),
             onPressed: () => _showAiSystemSettings(context),
@@ -952,6 +970,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             ref.read(chatProvider.notifier).sendMessage(
                                   context.l10n.chatQuickActionLongPlanPrompt,
                                 ),
+                          ),
+                        ),
+                        _QuickActionChip(
+                          icon: Icons.cloud_sync_rounded,
+                          label: '交给 OpenClaw',
+                          color: DS.info,
+                          isNarrow: isNarrow,
+                          onTap: () => context.push(
+                            '${HomeRoutes.openClawHub}?section=delegate',
                           ),
                         ),
                         _QuickActionChip(
@@ -1591,6 +1618,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
     }
   }
+}
+
+class _OpenClawAppBarIcon extends StatelessWidget {
+  const _OpenClawAppBarIcon({
+    required this.highlighted,
+    required this.queueCount,
+  });
+
+  final bool highlighted;
+  final int queueCount;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            Icons.cloud_sync_outlined,
+            color: highlighted ? DS.brandPrimaryConst : DS.textSecondary,
+          ),
+          if (highlighted)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: queueCount > 0 ? DS.warning : DS.semanticError,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Center(
+                  child: Text(
+                    queueCount > 0 ? '$queueCount' : '!',
+                    style: DS.bodySmall.copyWith(
+                      color: Colors.white,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
 }
 
 class _ChatHistorySheet extends ConsumerStatefulWidget {

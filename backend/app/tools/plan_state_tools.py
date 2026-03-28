@@ -109,15 +109,21 @@ class GetPlanStateTool(BaseTool):
 
         try:
             service = PlanStateService(db_session)
-            state = await service.get_plan_state(user_uuid, resolved.plan_id)
+            state = await service.get_or_create_plan_state(
+                user_uuid,
+                resolved.plan_id,
+                for_write=False,
+            )
 
-            if state is None:
-                return ToolResult(
-                    success=False,
-                    tool_name=self.name,
-                    error_message=f"未找到计划状态: plan={resolved.plan_name}",
-                    suggestion="请确认该计划仍然有效，或切换到其他计划后重试",
-                )
+            task_index = state.task_index if isinstance(state.task_index, dict) else {}
+            needs_hydration = not state.milestones and not state.task_summaries and task_index.get("total", 0) == 0
+            if needs_hydration:
+                sync_service = TaskStateSyncService(db_session)
+                await sync_service.rebuild_task_index(user_uuid, resolved.plan_id)
+                await sync_service.sync_task_summaries(user_uuid, resolved.plan_id)
+                refreshed = await service.get_plan_state(user_uuid, resolved.plan_id, refresh=True)
+                if refreshed is not None:
+                    state = refreshed
 
             # Build lightweight response (format matches frontend PlanContextData)
             data = {

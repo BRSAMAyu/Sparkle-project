@@ -569,15 +569,27 @@ func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID
 	}
 
 	query := `
-		SELECT cs.id, cs.title, cs.last_message_at, cm.content as preview
-		FROM chat_sessions cs
-		LEFT JOIN LATERAL (
-			SELECT content FROM chat_messages
-			WHERE session_id = cs.id AND user_id = $1
-			ORDER BY created_at DESC LIMIT 1
-		) cm ON true
-		WHERE cs.user_id = $1 AND cs.is_active = true
-		ORDER BY cs.last_message_at DESC
+		WITH session_rollups AS (
+			SELECT
+				cm.session_id::text AS session_id,
+				COALESCE(MAX(cs.title), '') AS title,
+				MAX(cm.created_at) AS last_message_at,
+				(
+					SELECT cm2.content
+					FROM chat_messages cm2
+					WHERE cm2.session_id = cm.session_id AND cm2.user_id = $1
+					ORDER BY cm2.created_at DESC
+					LIMIT 1
+				) AS preview
+			FROM chat_messages cm
+			LEFT JOIN chat_sessions cs ON cs.id = cm.session_id
+			WHERE cm.user_id = $1
+				AND cm.session_id <> '00000000-0000-0000-0000-000000000000'::uuid
+			GROUP BY cm.session_id
+		)
+		SELECT session_id, title, last_message_at, preview
+		FROM session_rollups
+		ORDER BY last_message_at DESC
 		LIMIT $2
 	`
 
@@ -589,7 +601,8 @@ func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID
 
 	summaries := make([]ChatSessionSummary, 0, limit)
 	for rows.Next() {
-		var id, title, lastMessageAt string
+		var id, title string
+		var lastMessageAt time.Time
 		var preview *string
 		if err := rows.Scan(&id, &title, &lastMessageAt, &preview); err != nil {
 			continue
@@ -610,7 +623,7 @@ func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID
 		summaries = append(summaries, ChatSessionSummary{
 			ID:        id,
 			Title:     formattedTitle,
-			UpdatedAt: lastMessageAt,
+			UpdatedAt: lastMessageAt.UTC().Format(time.RFC3339),
 		})
 	}
 

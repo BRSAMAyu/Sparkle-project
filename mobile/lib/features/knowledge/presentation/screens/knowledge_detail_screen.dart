@@ -892,8 +892,16 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final maxSheetHeight = (mediaQuery.size.height -
+            mediaQuery.viewPadding.top -
+            mediaQuery.viewPadding.bottom) *
+        0.72;
+
+    return SizedBox(
+      height: maxSheetHeight,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -903,79 +911,91 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                 ),
           ),
           const SizedBox(height: DS.md),
-          if (_candidates.isEmpty && !_isGenerating)
-            SparkleButton(
-              label: '生成 3 个候选节点',
-              icon: const Icon(Icons.auto_awesome),
-              expand: true,
-              onPressed: _generateCandidates,
-            ),
-          if (_isGenerating)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: DS.spacing24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          if (_error != null) ...[
-            Text(
-              _error!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.error,
-                  ),
-            ),
-            const SizedBox(height: DS.sm),
-          ],
-          if (_candidates.isNotEmpty) ...[
-            ..._candidates.map(
-              (candidate) => Container(
-                margin: const EdgeInsets.only(bottom: DS.spacing12),
-                decoration: BoxDecoration(
-                  color: DS.surfacePanel,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _selectedIds.contains(candidate.candidateId)
-                        ? DS.brandPrimary.withValues(alpha: 0.28)
-                        : DS.neutral200,
-                  ),
-                ),
-                child: CheckboxListTile(
-                  value: _selectedIds.contains(candidate.candidateId),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(candidate.name),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: DS.xs),
-                      Text(candidate.description),
-                      const SizedBox(height: DS.xs),
-                      Wrap(
-                        spacing: DS.spacing8,
-                        runSpacing: DS.spacing8,
-                        children: [
-                          _CandidateMetaChip(
-                              _relationLabel(candidate.relationToTrigger)),
-                          _CandidateMetaChip(
-                              '重要度 ${candidate.importanceLevel}'),
-                          ...candidate.keywords
-                              .take(2)
-                              .map(_CandidateMetaChip.new),
-                        ],
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_candidates.isEmpty && !_isGenerating)
+                    SparkleButton(
+                      label: '生成 3 个候选节点',
+                      icon: const Icon(Icons.auto_awesome),
+                      expand: true,
+                      onPressed: _generateCandidates,
+                    ),
+                  if (_isGenerating)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  if (_error != null) ...[
+                    Text(
+                      _error!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.error,
+                          ),
+                    ),
+                    const SizedBox(height: DS.sm),
+                  ],
+                  if (_candidates.isNotEmpty) ...[
+                    ..._candidates.map(
+                      (candidate) => Container(
+                        margin: const EdgeInsets.only(bottom: DS.spacing12),
+                        decoration: BoxDecoration(
+                          color: DS.surfacePanel,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _selectedIds.contains(candidate.candidateId)
+                                ? DS.brandPrimary.withValues(alpha: 0.28)
+                                : DS.neutral200,
+                          ),
+                        ),
+                        child: CheckboxListTile(
+                          value: _selectedIds.contains(candidate.candidateId),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: Text(candidate.name),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: DS.xs),
+                              Text(candidate.description),
+                              const SizedBox(height: DS.xs),
+                              Wrap(
+                                spacing: DS.spacing8,
+                                runSpacing: DS.spacing8,
+                                children: [
+                                  _CandidateMetaChip(
+                                      _relationLabel(candidate.relationToTrigger)),
+                                  _CandidateMetaChip(
+                                      '重要度 ${candidate.importanceLevel}'),
+                                  ...candidate.keywords
+                                      .take(2)
+                                      .map(_CandidateMetaChip.new),
+                                ],
+                              ),
+                            ],
+                          ),
+                          onChanged: _isApplying
+                              ? null
+                              : (selected) {
+                                  setState(() {
+                                    if (selected == true) {
+                                      _selectedIds.add(candidate.candidateId);
+                                    } else {
+                                      _selectedIds.remove(candidate.candidateId);
+                                    }
+                                  });
+                                },
+                        ),
                       ),
-                    ],
-                  ),
-                  onChanged: _isApplying
-                      ? null
-                      : (selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _selectedIds.add(candidate.candidateId);
-                            } else {
-                              _selectedIds.remove(candidate.candidateId);
-                            }
-                          });
-                        },
-                ),
+                    ),
+                  ],
+                ],
               ),
             ),
+          ),
+          if (_candidates.isNotEmpty) ...[
+            const SizedBox(height: DS.md),
             Wrap(
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
@@ -1001,7 +1021,9 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
             ),
           ],
         ],
-      );
+      ),
+    );
+  }
 }
 
 class _CandidateMetaChip extends StatelessWidget {

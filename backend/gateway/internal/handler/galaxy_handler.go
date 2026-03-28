@@ -80,6 +80,8 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.GET("/heatmap", h.ProxyToBackend)
 		galaxy.GET("/predict", h.ProxyToBackend)
 		galaxy.POST("/predict-next", h.ProxyToBackend)
+		galaxy.POST("/node/:id/expansion/candidates", h.ProxyToBackend)
+		galaxy.POST("/node/:id/expansion/apply", h.ProxyToBackend)
 		galaxy.POST("/node/:id/favorite", h.ProxyToBackend)
 		galaxy.POST("/node/:id/decay/pause", h.ProxyToBackend)
 		galaxy.POST("/nodes/viewport", h.ProxyToBackend)

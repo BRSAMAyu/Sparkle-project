@@ -89,7 +89,7 @@ class NotificationCenterService:
             # Don't show expired interventions
             intervention_stmt = intervention_stmt.where(
                 or_(
-                    InterventionRequest.expires_at is None,
+                    InterventionRequest.expires_at.is_(None),
                     InterventionRequest.expires_at > _utcnow()
                 )
             )

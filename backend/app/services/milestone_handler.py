@@ -333,7 +333,7 @@ class MilestoneHandler:
         User confirms proposal - create actual tasks.
         """
         from app.core.pending_actions import pending_actions_store
-        from app.schemas.task import TaskCreate
+        from app.schemas.task import TaskCreate, coerce_task_type
         from app.services.task_service import TaskService
 
         # Get proposal from pending_actions
@@ -350,10 +350,7 @@ class MilestoneHandler:
             for task_data in proposed_tasks:
                 # Map task type string to enum
                 task_type_str = task_data.get("type", "learning")
-                try:
-                    task_type = ModelTaskType(task_type_str)
-                except ValueError:
-                    task_type = ModelTaskType.LEARNING
+                task_type = coerce_task_type(task_type_str, default=ModelTaskType.LEARNING)
 
                 # Map priority string to int
                 priority_str = task_data.get("priority", "medium")

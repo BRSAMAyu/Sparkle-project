@@ -130,10 +130,46 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"POST /api/v1/plans/:id/archive",
 	}
 
+	expectedLearningPathRoutes := []string{
+		"GET /api/v1/learning-paths/:target_node_id",
+		"POST /api/v1/learning-paths/:target_node_id/plan",
+		"POST /api/v1/learning-paths/:target_node_id/task-path",
+		"POST /api/v1/learning-paths/:target_node_id/full-plan",
+	}
+
+	expectedChatRoutes := []string{
+		"POST /api/v1/chat",
+		"POST /api/v1/chat/stream",
+		"POST /api/v1/chat/confirm",
+		"POST /api/v1/chat/task/:task_id",
+		"GET /api/v1/users/*path",
+	}
+
 	expectedTelemetryRoutes := []string{
 		"POST /api/v1/client-telemetry/events",
 		"POST /api/v1/client-telemetry/events/batch",
 		"GET /api/v1/client-telemetry/summary",
+	}
+
+	expectedAdditionalRoutes := []string{
+		"POST /api/v1/community/shared-resources/:shared_resource_id/adopt",
+		"GET /api/v1/visual-elements",
+		"GET /api/v1/experiments",
+		"GET /api/v1/reviews/*path",
+		"GET /api/v1/stats/*path",
+		"GET /api/v1/events/*path",
+		"GET /api/v1/signals/*path",
+		"GET /api/v1/preferences/*path",
+		"GET /api/v1/devices/*path",
+		"GET /api/v1/omnibar/*path",
+		"GET /api/v1/prediction/*path",
+		"GET /api/v1/multi-intent/*path",
+		"GET /api/v1/multi-agent/*path",
+		"GET /api/v1/subjects",
+		"GET /api/v1/focus/*path",
+		"GET /api/v1/vocabulary/*path",
+		"POST /api/v1/translation/*path",
+		"GET /api/v1/decay/*path",
 	}
 
 	// Verify at least some routes are registered
@@ -169,7 +205,25 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		}
 	}
 
+	for _, expected := range expectedLearningPathRoutes {
+		if !routeMap[expected] {
+			t.Errorf("Expected route %s not found", expected)
+		}
+	}
+
+	for _, expected := range expectedChatRoutes {
+		if !routeMap[expected] {
+			t.Errorf("Expected route %s not found", expected)
+		}
+	}
+
 	for _, expected := range expectedTelemetryRoutes {
+		if !routeMap[expected] {
+			t.Errorf("Expected route %s not found", expected)
+		}
+	}
+
+	for _, expected := range expectedAdditionalRoutes {
 		if !routeMap[expected] {
 			t.Errorf("Expected route %s not found", expected)
 		}

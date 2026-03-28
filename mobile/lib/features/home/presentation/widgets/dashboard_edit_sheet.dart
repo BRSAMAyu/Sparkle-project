@@ -198,6 +198,8 @@ class _EditableCardTile extends StatelessWidget {
         return '日历热力图';
       case DashboardCardIds.tools:
         return '工具快捷';
+      case DashboardCardIds.openClaw:
+        return 'OpenClaw';
       case DashboardCardIds.streak:
         return '连胜卡';
       case DashboardCardIds.nextActions:
@@ -223,6 +225,8 @@ class _EditableCardTile extends StatelessWidget {
         return '查看当月任务热力图';
       case DashboardCardIds.tools:
         return '固定工具快捷入口';
+      case DashboardCardIds.openClaw:
+        return '独立的 AI 执行中心、连接与队列入口';
       case DashboardCardIds.streak:
         return '连续学习成就状态';
       case DashboardCardIds.nextActions:

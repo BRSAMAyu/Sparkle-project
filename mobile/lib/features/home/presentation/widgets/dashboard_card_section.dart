@@ -16,6 +16,7 @@ import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/openclaw_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/seed_library_dashboard_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -92,6 +93,8 @@ class DashboardCardSection extends ConsumerWidget {
         return CalendarHeatmapCard(compact: true, dense: isGridMode);
       case DashboardCardIds.tools:
         return CognitiveToolHubCard(compact: true, dense: isGridMode);
+      case DashboardCardIds.openClaw:
+        return OpenClawHubCard(compact: true, dense: isGridMode);
       case DashboardCardIds.streak:
         return const _DashboardStreakCard();
       case DashboardCardIds.nextActions:

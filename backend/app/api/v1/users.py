@@ -543,6 +543,7 @@ async def delete_account(
         user_id=str(current_user.id),
         ttl_seconds=SESSION_TTL_SECONDS,
     )
+    await db.commit()
     return {"detail": "账号已注销，相关会话已失效"}
 
 

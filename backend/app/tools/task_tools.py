@@ -9,7 +9,7 @@ from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task import TaskType as ModelTaskType
-from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
+from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate, coerce_task_type
 from app.services.focus_service import focus_service
 from app.services.task_service import TaskService
 
@@ -62,7 +62,7 @@ class CreateTaskTool(BaseTool):
             # Note: subject_id is not directly supported in Task model yet, ignoring for now
             task_create = TaskCreate(
                 title=params.title,
-                type=ModelTaskType(params.task_type.value),
+                type=coerce_task_type(params.task_type.value, default=ModelTaskType.LEARNING),
                 estimated_minutes=params.estimated_minutes or 30, # Default to 30 if None
                 guide_content=params.description,
                 priority=params.priority,
@@ -223,7 +223,7 @@ class BatchCreateTasksTool(BaseTool):
             for task_params in params.tasks:
                 task_create = TaskCreate(
                     title=task_params.title,
-                    type=ModelTaskType(task_params.task_type.value),
+                    type=coerce_task_type(task_params.task_type.value, default=ModelTaskType.LEARNING),
                     estimated_minutes=task_params.estimated_minutes or 30,
                     guide_content=task_params.description,
                     priority=task_params.priority,
@@ -317,7 +317,16 @@ class SuggestQuickTaskTool(BaseTool):
             )
 
             if params.preferred_types:
-                query = query.where(Task.type.in_([ModelTaskType(t.value) for t in params.preferred_types]))
+                preferred_types = [
+                    task_type
+                    for task_type in (
+                        coerce_task_type(t.value, default=None)
+                        for t in params.preferred_types
+                    )
+                    if task_type is not None
+                ]
+                if preferred_types:
+                    query = query.where(Task.type.in_(preferred_types))
 
             query = query.order_by(
                 desc(Task.priority),
@@ -437,7 +446,10 @@ class BreakdownTaskTool(BaseTool):
 
                 task_create = TaskCreate(
                     title=title,
-                    type=type_mapping.get(validated.type, ModelTaskType(params.task_type.value)),
+                    type=type_mapping.get(
+                        validated.type,
+                        coerce_task_type(params.task_type.value, default=ModelTaskType.LEARNING),
+                    ),
                     estimated_minutes=minutes,
                     guide_content=f"来自任务拆解：{params.title}",
                     priority=2,

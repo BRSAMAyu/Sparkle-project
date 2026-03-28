@@ -471,14 +471,28 @@ class _PendingRequestsTab extends ConsumerWidget {
                         size: 36,
                         icon: Icon(Icons.check, color: DS.success),
                         onPressed: () async {
-                          await ref
-                              .read(accountabilityRepositoryProvider)
-                              .respondToPartnership(partnership.id,
-                                  accept: true);
-                          await ref
-                              .read(myPartnershipsProvider.notifier)
-                              .load();
-                          ref.invalidate(accountabilityOverviewProvider);
+                          try {
+                            final updated = await ref
+                                .read(accountabilityRepositoryProvider)
+                                .respondToPartnership(
+                                  partnership.id,
+                                  accept: true,
+                                );
+                            await ref
+                                .read(myPartnershipsProvider.notifier)
+                                .load();
+                            ref.invalidate(accountabilityOverviewProvider);
+                            if (!context.mounted) return;
+                            AppFeedback.success(context, '已接受责任伙伴邀请！');
+                            context.go(
+                              CommunityRoutes.accountabilityDetail
+                                  .replaceFirst(':id', updated.id),
+                            );
+                          } catch (e) {
+                            if (context.mounted) {
+                              AppFeedback.error(context, '操作失败: $e');
+                            }
+                          }
                         },
                       ),
                       SparkleIconButton(
@@ -486,14 +500,25 @@ class _PendingRequestsTab extends ConsumerWidget {
                         size: 36,
                         icon: Icon(Icons.close, color: DS.error),
                         onPressed: () async {
-                          await ref
-                              .read(accountabilityRepositoryProvider)
-                              .respondToPartnership(partnership.id,
-                                  accept: false);
-                          await ref
-                              .read(myPartnershipsProvider.notifier)
-                              .load();
-                          ref.invalidate(accountabilityOverviewProvider);
+                          try {
+                            await ref
+                                .read(accountabilityRepositoryProvider)
+                                .respondToPartnership(
+                                  partnership.id,
+                                  accept: false,
+                                );
+                            await ref
+                                .read(myPartnershipsProvider.notifier)
+                                .load();
+                            ref.invalidate(accountabilityOverviewProvider);
+                            if (context.mounted) {
+                              AppFeedback.info(context, '已拒绝邀请');
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              AppFeedback.error(context, '操作失败: $e');
+                            }
+                          }
                         },
                       ),
                     ],

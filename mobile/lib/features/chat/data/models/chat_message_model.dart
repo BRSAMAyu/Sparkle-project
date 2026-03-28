@@ -52,6 +52,8 @@ class ChatMessageModel {
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     final normalized = Map<String, dynamic>.from(json);
     normalized['role'] = _normalizeRoleJsonValue(json['role']);
+    normalized['conversation_id'] =
+        json['conversation_id'] ?? json['session_id'];
     return _$ChatMessageModelFromJson(normalized);
   }
   final String id;

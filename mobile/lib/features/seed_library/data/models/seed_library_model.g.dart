@@ -148,6 +148,34 @@ Map<String, dynamic> _$UserLibrarySubscriptionToJson(
       'updated_at': instance.updatedAt.toIso8601String(),
     };
 
+UpdateSubscriptionRequest _$UpdateSubscriptionRequestFromJson(
+        Map<String, dynamic> json) =>
+    UpdateSubscriptionRequest(
+      isEnabled: json['is_enabled'] as bool?,
+      priority: (json['priority'] as num?)?.toInt(),
+      notes: json['notes'] as String?,
+    );
+
+Map<String, dynamic> _$UpdateSubscriptionRequestToJson(
+        UpdateSubscriptionRequest instance) =>
+    <String, dynamic>{
+      'is_enabled': instance.isEnabled,
+      'priority': instance.priority,
+      'notes': instance.notes,
+    };
+
+RateLibraryRequest _$RateLibraryRequestFromJson(Map<String, dynamic> json) =>
+    RateLibraryRequest(
+      score: (json['score'] as num).toDouble(),
+      comment: json['comment'] as String?,
+    );
+
+Map<String, dynamic> _$RateLibraryRequestToJson(RateLibraryRequest instance) =>
+    <String, dynamic>{
+      'score': instance.score,
+      'comment': instance.comment,
+    };
+
 PaginatedResponse<T> _$PaginatedResponseFromJson<T>(
   Map<String, dynamic> json,
   T Function(Object? json) fromJsonT,
@@ -221,32 +249,4 @@ Map<String, dynamic> _$UpdateLibraryRequestToJson(
       'tags': instance.tags,
       'extra_metadata': instance.extraMetadata,
       'quality_score': instance.qualityScore,
-    };
-
-UpdateSubscriptionRequest _$UpdateSubscriptionRequestFromJson(
-        Map<String, dynamic> json) =>
-    UpdateSubscriptionRequest(
-      isEnabled: json['is_enabled'] as bool?,
-      priority: (json['priority'] as num?)?.toInt(),
-      notes: json['notes'] as String?,
-    );
-
-Map<String, dynamic> _$UpdateSubscriptionRequestToJson(
-        UpdateSubscriptionRequest instance) =>
-    <String, dynamic>{
-      'is_enabled': instance.isEnabled,
-      'priority': instance.priority,
-      'notes': instance.notes,
-    };
-
-RateLibraryRequest _$RateLibraryRequestFromJson(Map<String, dynamic> json) =>
-    RateLibraryRequest(
-      score: (json['score'] as num).toDouble(),
-      comment: json['comment'] as String?,
-    );
-
-Map<String, dynamic> _$RateLibraryRequestToJson(RateLibraryRequest instance) =>
-    <String, dynamic>{
-      'score': instance.score,
-      'comment': instance.comment,
     };
