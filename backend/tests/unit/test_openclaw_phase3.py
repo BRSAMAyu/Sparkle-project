@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -19,6 +20,7 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.orchestration.adaptive_replanner import CognitivePatternTrigger
 from app.services.execution_learning_service import ExecutionLearningService
+from app.services.execution_profile_service import ExecutionProfileService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 
@@ -264,3 +266,272 @@ async def test_cognitive_pattern_trigger_maps_execution_patterns(db_session) -> 
     assert by_param["auto_delegate_suggestion"] is False
     assert by_param["require_human_confirmation"] is True
     assert by_param["ai_duration_multiplier"] == 1.4
+
+
+@pytest.mark.asyncio
+async def test_execution_learning_approval_speed_updates_detail_preference(
+    db_session,
+    mute_learning_side_effects,
+) -> None:
+    user = User(
+        username="phase3speed",
+        email="phase3speed@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="快速确认研究结果",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    intent = ExecutionIntent(
+        user_id=user.id,
+        task_id=task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.BROWSER,
+        policy={},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.SUCCEEDED,
+        trust_level=TrustLevel.TRUSTED,
+        dispatched_at=task.created_at,
+        completed_at=task.created_at + timedelta(seconds=10),
+        idempotency_key=f"speed:{task.id}",
+    )
+    db_session.add(intent)
+    await db_session.commit()
+    await db_session.refresh(intent)
+
+    record = ExecutionRecord(
+        execution_intent_id=intent.id,
+        user_id=user.id,
+        task_id=task.id,
+        executor_type="openclaw",
+        raw_response={"id": "speed-run"},
+        parsed_output={"summary": "done"},
+        artifacts=[],
+        trust_level=TrustLevel.TRUSTED.value,
+    )
+    db_session.add(record)
+    await db_session.commit()
+    await db_session.refresh(record)
+
+    service = ExecutionLearningService(db_session)
+    await service.handle_approval_speed_signal(
+        intent=intent,
+        record=record,
+        approved=True,
+    )
+
+    prefs = await PreferenceService(db_session).get_preferences(user.id)
+    inferred = prefs.inferred or {}
+    assert inferred.get("execution.browser.detail_level") == "concise"
+
+
+@pytest.mark.asyncio
+async def test_execution_learning_quality_signal_persists_acceptance_floor(
+    db_session,
+    mute_learning_side_effects,
+) -> None:
+    user = User(
+        username="phase3quality",
+        email="phase3quality@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="质量阈值学习",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    intent = ExecutionIntent(
+        user_id=user.id,
+        task_id=task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.DOCUMENT,
+        policy={},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.SUCCEEDED,
+        trust_level=TrustLevel.TRUSTED,
+        idempotency_key=f"quality:{task.id}",
+    )
+    db_session.add(intent)
+    await db_session.commit()
+    await db_session.refresh(intent)
+
+    record = ExecutionRecord(
+        execution_intent_id=intent.id,
+        user_id=user.id,
+        task_id=task.id,
+        executor_type="openclaw",
+        raw_response={"id": "quality-run"},
+        parsed_output={"summary": "done"},
+        artifacts=[],
+        trust_level=TrustLevel.TRUSTED.value,
+        quality_score=0.91,
+    )
+    db_session.add(record)
+    await db_session.commit()
+    await db_session.refresh(record)
+
+    service = ExecutionLearningService(db_session)
+    await service.handle_quality_sensitivity(
+        intent=intent,
+        record=record,
+        approved=True,
+    )
+
+    prefs = await PreferenceService(db_session).get_preferences(user.id)
+    inferred = prefs.inferred or {}
+    assert inferred.get("execution.quality_acceptance_floor") == 0.91
+
+
+@pytest.mark.asyncio
+async def test_execution_profile_service_aggregates_recent_summary(db_session) -> None:
+    user = User(
+        username="phase3profile",
+        email="phase3profile@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    browser_task = Task(
+        user_id=user.id,
+        title="网页调研",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+    )
+    document_task = Task(
+        user_id=user.id,
+        title="文档整理",
+        type=TaskType.OCR,
+        tags=["document"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add_all([browser_task, document_task])
+    await db_session.commit()
+    await db_session.refresh(browser_task)
+    await db_session.refresh(document_task)
+
+    intent_1 = ExecutionIntent(
+        user_id=user.id,
+        task_id=browser_task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=browser_task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.BROWSER,
+        policy={"template_metadata": {"template_id": "web_research_brief"}},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.SUCCEEDED,
+        trust_level=TrustLevel.TRUSTED,
+        idempotency_key=f"profile:{browser_task.id}",
+    )
+    intent_2 = ExecutionIntent(
+        user_id=user.id,
+        task_id=document_task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=document_task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.DOCUMENT,
+        policy={"template_metadata": {"template_id": "document_digest"}},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.FAILED,
+        trust_level=TrustLevel.RAW,
+        idempotency_key=f"profile:{document_task.id}",
+    )
+    db_session.add_all([intent_1, intent_2])
+    await db_session.commit()
+    await db_session.refresh(intent_1)
+    await db_session.refresh(intent_2)
+
+    db_session.add_all(
+        [
+            ExecutionRecord(
+                execution_intent_id=intent_1.id,
+                user_id=user.id,
+                task_id=browser_task.id,
+                executor_type="openclaw",
+                raw_response={"id": "profile-run-1"},
+                parsed_output={"summary": "done"},
+                artifacts=[],
+                trust_level=TrustLevel.TRUSTED.value,
+                approval_requested=1,
+            ),
+            ExecutionRecord(
+                execution_intent_id=intent_2.id,
+                user_id=user.id,
+                task_id=document_task.id,
+                executor_type="openclaw",
+                raw_response={"id": "profile-run-2"},
+                parsed_output={"summary": "failed"},
+                artifacts=[],
+                trust_level=TrustLevel.RAW.value,
+                approval_requested=0,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    payload = await ExecutionProfileService(db_session).get_execution_profile(user.id, days=30)
+
+    assert payload["total_executions"] == 2
+    assert payload["success_rate"] == 0.5
+    assert payload["by_type"]["browser"]["success_rate"] == 1.0
+    assert payload["trust_distribution"]["trusted"] == 1
+    assert payload["approval_request_count"] == 1
+    assert payload["estimated_time_saved_minutes"] > 0
+    assert {item[0] for item in payload["top_templates"]} == {
+        "web_research_brief",
+        "document_digest",
+    }

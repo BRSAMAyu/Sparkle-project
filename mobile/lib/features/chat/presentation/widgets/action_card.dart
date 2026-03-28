@@ -13,6 +13,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/execution_result_renderer.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
@@ -536,6 +537,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.cardGradientNeutral;
       case 'execution_summary':
         return DS.infoGradient;
+      case 'execution_suggestion':
+        return LinearGradient(
+          colors: [DS.info, DS.primaryBase],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case 'evolution_card':
         return DS.infoGradient;
       case 'progress_card':
@@ -587,6 +594,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.neutral700;
       case 'execution_summary':
         return DS.info;
+      case 'execution_suggestion':
+        return DS.primaryBase;
       case 'evolution_card':
         return DS.info;
       case 'progress_card':
@@ -639,6 +648,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.nightlight_round;
       case 'execution_summary':
         return Icons.task_alt_rounded;
+      case 'execution_suggestion':
+        return Icons.rocket_launch_rounded;
       case 'evolution_card':
         return Icons.auto_awesome_motion_rounded;
       case 'progress_card':
@@ -681,6 +692,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return l10n.chatActionTitleNightlyReview;
       case 'execution_summary':
         return l10n.chatActionTitleExecutionSummary;
+      case 'execution_suggestion':
+        return 'AI 执行建议';
       case 'evolution_card':
         return l10n.chatActionTitleEvolution;
       case 'progress_card':
@@ -727,6 +740,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'execution_summary') {
       return _buildExecutionSummary(context, action);
+    }
+    if (action.type == 'execution_suggestion') {
+      return _buildExecutionSuggestion(context, action);
     }
     if (action.type == 'evolution_card') {
       return _buildEvolutionCard(context, action);
@@ -936,6 +952,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'continuity_banner':
       case 'mode_explanation':
       case 'execution_summary':
+      case 'execution_suggestion':
         return true;
       default:
         return false;
@@ -1057,9 +1074,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             action.data['label']?.toString() ??
             l10n.viewDetails;
       case 'execution_summary':
+      case 'execution_suggestion':
         return action.data['summary']?.toString() ??
             action.data['title']?.toString() ??
-            l10n.chatActionTitleExecutionSummary;
+            (action.type == 'execution_suggestion'
+                ? 'AI 执行建议'
+                : l10n.chatActionTitleExecutionSummary);
       case 'create_task':
         return '任务';
       case 'create_plan':
@@ -1144,6 +1164,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     switch (type) {
       case 'nightly_review':
       case 'execution_summary':
+      case 'execution_suggestion':
       case 'evolution_card':
       case 'progress_card':
       case 'source_summary':
@@ -1455,7 +1476,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ? null
               : () {
                   unawaited(
-                      context.push(entity.detailRoute ?? '/plans/$planId'));
+                    context.push(entity.detailRoute ?? '/plans/$planId'),
+                  );
                   widget.onPlanNavigation?.call(planId);
                 },
           onShare: planId == null
@@ -1609,6 +1631,38 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       'partial' => DS.warning,
       _ => DS.success,
     };
+    final resultPreview = _executionSummaryPreviewData(
+      action.data['result_preview'],
+    );
+    final replaySteps = (action.data['replay_steps'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final qualityWarnings = (action.data['quality_warnings'] as List<dynamic>? ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    final validationIssues = (action.data['validation_issues'] as List<dynamic>? ?? const [])
+        .map((item) => '$item')
+        .where((item) => item.isNotEmpty)
+        .toList();
+    final validationPassed =
+        (action.data['validation_passed'] as num?)?.toInt() ?? 0;
+    final validationTotal =
+        (action.data['validation_total'] as num?)?.toInt() ?? 0;
+    final qualityScore =
+        (action.data['quality_score'] as num?)?.toDouble() ?? 0.0;
+    final comparisonSummary = action.data['comparison_summary'];
+    final comparisonHeadline = comparisonSummary is Map<String, dynamic>
+        ? comparisonSummary['headline']?.toString() ?? '结果对比'
+        : comparisonSummary != null
+            ? '结果对比'
+            : null;
+    final comparisonBody = comparisonSummary is Map<String, dynamic>
+        ? comparisonSummary['summary']?.toString() ??
+            comparisonSummary['headline']?.toString() ??
+            ''
+        : comparisonSummary?.toString() ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1665,6 +1719,145 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 .toList(),
           ),
         ],
+        if (resultPreview != null) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '结果预览',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: DS.borderRadius12,
+            ),
+            child: ExecutionResultRenderer(
+              parsedOutput: resultPreview,
+            ),
+          ),
+        ],
+        if (comparisonHeadline != null && comparisonBody.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.info.withValues(alpha: 0.08),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.info.withValues(alpha: 0.18)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  comparisonHeadline,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: DS.fontWeightSemibold,
+                        color: DS.info,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  comparisonBody,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral800,
+                        height: 1.45,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (replaySteps.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '执行回放',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...replaySteps.map(
+            (step) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: _buildExecutionReplayStep(context, step),
+            ),
+          ),
+        ],
+        if (qualityWarnings.isNotEmpty ||
+            validationIssues.isNotEmpty ||
+            validationTotal > 0) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '自验证',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (validationTotal > 0)
+                _buildMetaChip(
+                  icon: Icons.rule_rounded,
+                  label: '步骤 $validationPassed/$validationTotal',
+                ),
+              if (qualityScore > 0)
+                _buildMetaChip(
+                  icon: Icons.fact_check_rounded,
+                  label: '质量 ${(qualityScore * 100).round()}%',
+                ),
+            ],
+          ),
+          if (qualityWarnings.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            ...qualityWarnings.map(
+              (warning) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing6),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing10),
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.08),
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(
+                      color: DS.warning.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  child: Text(
+                    warning['message']?.toString() ?? '',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.neutral800,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (validationIssues.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing4),
+            ...validationIssues.map(
+              (issue) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing4),
+                child: Text(
+                  '• $issue',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral700,
+                        height: 1.45,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ],
         if (nextAction.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
@@ -1674,6 +1867,179 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 ),
           ),
         ],
+      ],
+    );
+  }
+
+  Map<String, dynamic>? _executionSummaryPreviewData(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      return {'text': raw.trim()};
+    }
+    return null;
+  }
+
+  Widget _buildExecutionReplayStep(
+    BuildContext context,
+    Map<String, dynamic> step,
+  ) {
+    final status = step['status']?.toString() ?? 'completed';
+    final durationMs = (step['duration_ms'] as num?)?.toInt();
+    final color = status == 'failed' ? DS.semanticError : DS.info;
+    final icon = status == 'failed'
+        ? Icons.error_outline_rounded
+        : Icons.play_circle_outline_rounded;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing10),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius12,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step['label']?.toString() ?? '执行步骤',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: DS.fontWeightSemibold,
+                        color: DS.neutral900,
+                      ),
+                ),
+                if ((step['preview']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    step['preview']!.toString(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.neutral700,
+                          height: 1.45,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (durationMs != null && durationMs > 0)
+            Text(
+              '${(durationMs / 1000).toStringAsFixed(durationMs >= 1000 ? 1 : 0)}s',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral600,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExecutionSuggestion(BuildContext context, WidgetPayload action) {
+    final summary = action.data['summary']?.toString() ?? '';
+    final executionMode = action.data['execution_mode']?.toString() ?? 'agent';
+    final targetEnv = action.data['target_env']?.toString() ?? 'general';
+    final delegatePreference = action.data['delegate_preference'];
+    final route = action.data['route']?.toString() ?? '';
+    final taskId = action.data['task_id']?.toString() ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing10,
+            vertical: DS.spacing6,
+          ),
+          decoration: BoxDecoration(
+            color: DS.primaryBase.withValues(alpha: 0.12),
+            borderRadius: DS.borderRadius8,
+          ),
+          child: Text(
+            executionMode == 'hybrid' ? '需要你审核后完成' : '可直接委派执行',
+            style: TextStyle(
+              color: DS.primaryBase,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                  height: 1.45,
+                ),
+          ),
+        ],
+        const SizedBox(height: DS.spacing12),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            _buildMetaChip(
+              icon: Icons.memory_rounded,
+              label: executionMode == 'hybrid' ? '混合执行' : '自动执行',
+            ),
+            _buildMetaChip(
+              icon: Icons.hub_outlined,
+              label: '环境 ${targetEnv.toUpperCase()}',
+            ),
+            if (delegatePreference != null)
+              _buildMetaChip(
+                icon: Icons.favorite_border_rounded,
+                label: '信任 ${(double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)}',
+              ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing16),
+        Row(
+          children: [
+            Expanded(
+              child: CustomButton.primary(
+                text: '交给 AI 执行',
+                onPressed: () => unawaited(
+                  widget.onWidgetAction?.call(
+                    'handoff_task',
+                    {
+                      ...action.data,
+                      'task_id': taskId,
+                      'route': route,
+                    },
+                  ),
+                ),
+                size: CustomButtonSize.small,
+                customGradient: _getActionGradientFor(action),
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: CustomButton.secondary(
+                text: '查看执行页',
+                onPressed: () => unawaited(
+                  widget.onWidgetAction?.call(
+                    'open_task_execution',
+                    {
+                      ...action.data,
+                      'task_id': taskId,
+                      'route': route,
+                    },
+                  ),
+                ),
+                size: CustomButtonSize.small,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

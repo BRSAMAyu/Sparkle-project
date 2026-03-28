@@ -41,6 +41,7 @@ type Config struct {
 	WSMessageRateRPS            float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
 	WSMessageRateBurst          int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
 	WSMaxConnections            int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
+	WSGlobalMaxConnections      int     `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
 	RedisURL                    string  `mapstructure:"REDIS_URL"`
 	RedisHost                   string  `mapstructure:"REDIS_HOST"`
 	RedisPort                   int     `mapstructure:"REDIS_PORT"`
@@ -51,6 +52,7 @@ type Config struct {
 	AdminSecret                 string  `mapstructure:"ADMIN_SECRET"`
 	RabbitMQURL                 string  `mapstructure:"RABBITMQ_URL"`
 	InternalAPIKey              string  `mapstructure:"INTERNAL_API_KEY"`
+	InternalIPWhitelist         []string `mapstructure:"INTERNAL_IP_WHITELIST"`
 	ChaosEnabled                bool    `mapstructure:"CHAOS_ENABLED"`
 	ChaosAllowProd              bool    `mapstructure:"CHAOS_ALLOW_PROD"`
 	ToxiproxyURL                string  `mapstructure:"TOXIPROXY_URL"`
@@ -380,6 +382,7 @@ func Load() *Config {
 		"WS_MESSAGE_RATE_RPS",
 		"WS_MESSAGE_RATE_BURST",
 		"WS_MAX_CONNECTIONS_PER_USER",
+		"WS_GLOBAL_MAX_CONNECTIONS",
 		"REDIS_URL",
 		"REDIS_HOST",
 		"REDIS_PORT",
@@ -390,6 +393,7 @@ func Load() *Config {
 		"ADMIN_SECRET",
 		"RABBITMQ_URL",
 		"INTERNAL_API_KEY",
+		"INTERNAL_IP_WHITELIST",
 		"CHAOS_ENABLED",
 		"CHAOS_ALLOW_PROD",
 		"TOXIPROXY_URL",
@@ -448,6 +452,7 @@ func Load() *Config {
 	viper.SetDefault("WS_MESSAGE_RATE_RPS", 10.0)
 	viper.SetDefault("WS_MESSAGE_RATE_BURST", 20)
 	viper.SetDefault("WS_MAX_CONNECTIONS_PER_USER", 2)
+	viper.SetDefault("WS_GLOBAL_MAX_CONNECTIONS", 2000)
 	viper.SetDefault("REDIS_URL", "")
 	viper.SetDefault("REDIS_HOST", "sparkle_redis")
 	viper.SetDefault("REDIS_PORT", 6379)
@@ -459,6 +464,7 @@ func Load() *Config {
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)
 	viper.SetDefault("INTERNAL_API_KEY", "")
+	viper.SetDefault("INTERNAL_IP_WHITELIST", "127.0.0.1/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7")
 	viper.SetDefault("CHAOS_ENABLED", false)
 	viper.SetDefault("CHAOS_ALLOW_PROD", false)
 	viper.SetDefault("TOXIPROXY_URL", "http://toxiproxy:8474")
@@ -553,6 +559,17 @@ func Load() *Config {
 	if !cfg.IsDevelopment() && cfg.AgentTLSInsecure {
 		log.Fatal("AGENT_TLS_INSECURE must be false in non-development environments.")
 	}
+	if !cfg.IsDevelopment() && !viper.IsSet("REDIS_FAIL_CLOSED") {
+		cfg.RedisFailClosed = true
+	}
+	if !cfg.IsDevelopment() {
+		if !viper.IsSet("MINIO_ACCESS_KEY") || !viper.IsSet("MINIO_SECRET_KEY") {
+			log.Fatal("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be explicitly configured in non-development environments.")
+		}
+		if strings.TrimSpace(cfg.MinioAccessKey) == "minioadmin" || strings.TrimSpace(cfg.MinioSecretKey) == "minioadmin" {
+			log.Fatal("Refusing to start with default MinIO credentials in non-development environments.")
+		}
+	}
 
 	if cfg.DatabaseURL == "" {
 		host := normalizeLocalDockerHost(cfg.PostgresHost)
@@ -576,6 +593,13 @@ func Load() *Config {
 		cfg.AllowedOrigins = strings.Split(originsStr, ",")
 		for i := range cfg.AllowedOrigins {
 			cfg.AllowedOrigins[i] = strings.TrimSpace(cfg.AllowedOrigins[i])
+		}
+	}
+	whitelistStr := viper.GetString("INTERNAL_IP_WHITELIST")
+	if whitelistStr != "" {
+		cfg.InternalIPWhitelist = strings.Split(whitelistStr, ",")
+		for i := range cfg.InternalIPWhitelist {
+			cfg.InternalIPWhitelist[i] = strings.TrimSpace(cfg.InternalIPWhitelist[i])
 		}
 	}
 

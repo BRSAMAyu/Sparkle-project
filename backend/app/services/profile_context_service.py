@@ -76,6 +76,18 @@ class ProfileContextService:
         "execution_time_learning": [
             "task.execution.adjust_ai_duration",
         ],
+        "execution_type_preference": [
+            "execution.delegate.per_type_routing",
+            "task.execution.type_aware_suggestion",
+        ],
+        "execution_quality_sensitivity": [
+            "execution.result.detail_level_adjust",
+            "execution.trust.quality_threshold_adjust",
+        ],
+        "execution_safety_concern": [
+            "execution.delegate.require_manual_review",
+            "execution.route.prefer_hybrid",
+        ],
     }
 
     RISK_SIGNAL_MAP: dict[str, list[str]] = {

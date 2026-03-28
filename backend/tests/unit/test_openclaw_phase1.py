@@ -17,6 +17,7 @@ from app.models.execution_intent import (
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
+from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_service import ExecutionService
 
 
@@ -96,6 +97,77 @@ def test_result_parser_parses_text_and_json() -> None:
     assert parsed["success"] is True
     assert parsed["parsed_output"] == {"summary": "done", "items": ["a", "b"]}
     assert parsed["tool_calls_count"] == 0
+
+
+def test_execution_result_validator_builds_warnings_and_replay() -> None:
+    validator = ExecutionResultValidator()
+
+    warnings = validator.validate(
+        parsed={
+            "success": True,
+            "output": "ok",
+            "parsed_output": None,
+            "artifacts": [],
+            "tool_calls_count": 0,
+        },
+        result_contract={
+            "required_fields": ["summary"],
+            "artifact_types": ["image"],
+        },
+    )
+    replay_steps = validator.build_replay_steps_from_raw_response(
+        {
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "browser.search",
+                    "arguments": {"query": "sparkle"},
+                },
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": '{"summary":"done"}',
+                        }
+                    ],
+                },
+            ]
+        }
+    )
+
+    assert any(item["code"] == "missing_artifacts" for item in warnings)
+    assert any(item["code"] == "thin_output" for item in warnings)
+    assert len(replay_steps) == 2
+    assert replay_steps[0]["kind"] == "tool_call"
+    assert replay_steps[1]["kind"] == "message"
+
+
+def test_execution_result_validator_builds_comparison_summary() -> None:
+    validator = ExecutionResultValidator()
+
+    class _Record:
+        def __init__(self, *, quality_score, tool_calls_count, trust_level):
+            self.quality_score = quality_score
+            self.tool_calls_count = tool_calls_count
+            self.trust_level = trust_level
+
+    summary = validator.build_comparison_summary(
+        current_record=_Record(
+            quality_score=0.91,
+            tool_calls_count=2,
+            trust_level="validated",
+        ),
+        previous_record=_Record(
+            quality_score=0.76,
+            tool_calls_count=4,
+            trust_level="raw",
+        ),
+    )
+
+    assert summary is not None
+    assert summary["quality_delta"] > 0
+    assert "更稳" in summary["headline"]
 
 
 @pytest.mark.asyncio

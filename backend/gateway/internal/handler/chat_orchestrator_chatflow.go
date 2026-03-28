@@ -379,7 +379,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// Call Python Agent via gRPC (server-side streaming)
 	grpcCtx, grpcSpan := tracer.Start(ctx, "grpc.agent_call")
-	stream, err := h.agentClient.StreamChat(grpcCtx, req)
+	stream, err := h.agentClient.StreamChatWithFallback(grpcCtx, req)
 	grpcSpan.End()
 
 	if err != nil {

@@ -24,13 +24,18 @@ import (
 type localBlacklistCache struct {
 	mu             sync.RWMutex
 	jtiSet         map[string]time.Time // JTI -> expiry time
-	userRevoked    map[string]int64     // userID -> revoked_before timestamp
+	userRevoked    map[string]localRevocation
 	cleanupRunning bool                 // Prevent goroutine leak
+}
+
+type localRevocation struct {
+	timestamp int64
+	expiresAt time.Time
 }
 
 var globalLocalBlacklist = &localBlacklistCache{
 	jtiSet:      make(map[string]time.Time),
-	userRevoked: make(map[string]int64),
+	userRevoked: make(map[string]localRevocation),
 }
 
 // AddJTI adds a JTI to the local blacklist cache
@@ -55,8 +60,15 @@ func (c *localBlacklistCache) IsJTIBlacklisted(jti string) bool {
 // SetUserRevoked sets user-level revocation timestamp
 func (c *localBlacklistCache) SetUserRevoked(userID string, timestamp int64, ttl time.Duration) {
 	c.mu.Lock()
-	c.userRevoked[userID] = timestamp
-	shouldCleanup := !c.cleanupRunning && len(c.jtiSet) > 100
+	expiresAt := time.Now().Add(ttl)
+	if ttl <= 0 {
+		expiresAt = time.Now().Add(24 * time.Hour)
+	}
+	c.userRevoked[userID] = localRevocation{
+		timestamp: timestamp,
+		expiresAt: expiresAt,
+	}
+	shouldCleanup := !c.cleanupRunning && (len(c.jtiSet) > 100 || len(c.userRevoked) > 100)
 	if shouldCleanup {
 		c.cleanupRunning = true
 	}
@@ -72,8 +84,11 @@ func (c *localBlacklistCache) SetUserRevoked(userID string, timestamp int64, ttl
 func (c *localBlacklistCache) GetUserRevoked(userID string) (int64, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	ts, exists := c.userRevoked[userID]
-	return ts, exists
+	entry, exists := c.userRevoked[userID]
+	if !exists || time.Now().After(entry.expiresAt) {
+		return 0, false
+	}
+	return entry.timestamp, true
 }
 
 // cleanupExpired removes expired entries (called in background)
@@ -94,6 +109,15 @@ func (c *localBlacklistCache) cleanupExpired() {
 				delete(c.jtiSet, jti)
 				removed++
 				if removed >= 50 { // Limit per-batch removals
+					break
+				}
+			}
+		}
+		for userID, entry := range c.userRevoked {
+			if now.After(entry.expiresAt) {
+				delete(c.userRevoked, userID)
+				removed++
+				if removed >= 50 {
 					break
 				}
 			}

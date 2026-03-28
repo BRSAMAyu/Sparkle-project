@@ -7,6 +7,7 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/screens/openclaw_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/admin_operations_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
@@ -34,6 +35,7 @@ class UserRoutes {
   static const String systemUpdates = '/profile/system-updates';
   static const String passwordReset = '/profile/password-reset';
   static const String memorySettings = '/profile/memory-settings';
+  static const String openClawSettings = '/profile/openclaw-settings';
   static const String syncCenter = '/profile/sync-center';
   static const String socialAccounts = '/profile/social-accounts';
   static const String sessionManagement = '/profile/sessions';
@@ -143,6 +145,14 @@ class UserRoutes {
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const MemorySettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: openClawSettings,
+          name: 'openClawSettings',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: const OpenClawSettingsScreen(),
           ),
         ),
         GoRoute(

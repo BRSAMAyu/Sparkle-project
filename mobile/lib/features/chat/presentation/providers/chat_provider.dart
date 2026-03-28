@@ -37,6 +37,8 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
@@ -463,6 +465,104 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
+  void _upsertWidget(
+    List<WidgetPayload> target,
+    String type,
+    Map<String, dynamic> data,
+  ) {
+    if (data.isEmpty) return;
+    final index = target.indexWhere((widget) => widget.type == type);
+    final payload = WidgetPayload(type: type, data: data);
+    if (index >= 0) {
+      target[index] = payload;
+    } else {
+      target.add(payload);
+    }
+  }
+
+  void _appendExecutionWidgets(
+    List<WidgetPayload> target,
+    Map<String, dynamic>? metadata,
+  ) {
+    if (metadata == null || metadata.isEmpty) return;
+
+    final suggestion = _parseJsonMap(metadata['execution_suggestion']);
+    if (suggestion != null && suggestion['task_id'] != null) {
+      final taskId = suggestion['task_id'].toString();
+      final targetEnv = suggestion['target_env']?.toString() ?? 'general';
+      final executionMode = suggestion['execution_mode']?.toString() ?? 'agent';
+      final tone = suggestion['tone']?.toString() ?? 'brief_handoff';
+      final reason = suggestion['reason']?.toString() ?? '';
+      _upsertWidget(target, 'execution_suggestion', {
+        'task_id': taskId,
+        'target_env': targetEnv,
+        'execution_mode': executionMode,
+        'tone': tone,
+        'reason': reason,
+        'delegate_preference': suggestion['delegate_preference'],
+        'title': tone == 'detailed_guidance' ? '这一步适合交给 AI 执行' : '我可以直接替你执行这一步',
+        'summary': reason.isNotEmpty
+            ? reason
+            : '这个任务已经具备可委派的结构，Sparkle 可以直接进入执行链路。',
+        'route': '${TaskRoutes.home}/$taskId/execute?origin=chat',
+      });
+    }
+
+    final validation = _parseJsonMap(metadata['execution_validation']);
+    if (validation == null) return;
+    final toolsTotal = (validation['tools_total'] as num?)?.toInt() ?? 0;
+    final toolsSuccessful = (validation['tools_successful'] as num?)?.toInt() ?? 0;
+    final stepsTotal = (validation['steps_total'] as num?)?.toInt() ?? 0;
+    final stepsPassed = (validation['steps_passed'] as num?)?.toInt() ?? 0;
+    final qualityScore = (validation['quality_score'] as num?)?.toDouble();
+    final validationStatus = validation['validation_status']?.toString() ?? '';
+    final aborted = validation['aborted'] == true;
+    final hasMeaningfulValidation = toolsTotal > 0 || stepsTotal > 0 || qualityScore != null;
+    if (!hasMeaningfulValidation) return;
+
+    final failedTools = toolsTotal > 0 ? toolsTotal - toolsSuccessful : 0;
+    final failedSteps = stepsTotal > 0 ? stepsTotal - stepsPassed : 0;
+    final status = aborted || validationStatus == 'failed'
+        ? 'failed'
+        : (failedTools > 0 || failedSteps > 0)
+            ? 'partial'
+            : 'success';
+
+    final affectedObjects = <String>[
+      if (stepsTotal > 0) '步骤 $stepsPassed/$stepsTotal',
+      if (toolsTotal > 0) '工具 $toolsSuccessful/$toolsTotal',
+      if (qualityScore != null) '质量 ${(qualityScore * 100).toStringAsFixed(0)}%',
+    ];
+
+    _upsertWidget(target, 'execution_summary', {
+      'status': status,
+      'impact_summary': status == 'success'
+          ? '这次对话内的执行链路已经完成验证，可以直接把结果嵌回聊天上下文。'
+          : status == 'partial'
+              ? '执行链路部分通过验证，建议先查看结果摘要，再决定是否继续委派。'
+              : '执行链路没有完全达标，Sparkle 会保留人工接管的空间。',
+      'next_action': status == 'success' ? '查看结果摘要' : '人工复核',
+      'affected_objects': affectedObjects,
+      if (_parseJsonMap(validation['result_preview']) != null)
+        'result_preview': _parseJsonMap(validation['result_preview']),
+      if (_parseJsonMapList(validation['replay_steps']).isNotEmpty)
+        'replay_steps': _parseJsonMapList(validation['replay_steps']),
+      if (_parseJsonMapList(validation['quality_warnings']).isNotEmpty)
+        'quality_warnings': _parseJsonMapList(validation['quality_warnings']),
+      if ((validation['validation_issues'] as List?)?.isNotEmpty ?? false)
+        'validation_issues': List<String>.from(
+          (validation['validation_issues'] as List<dynamic>)
+              .map((item) => '$item')
+              .where((item) => item.isNotEmpty),
+        ),
+      if ((validation['comparison_summary']?.toString() ?? '').isNotEmpty)
+        'comparison_summary': validation['comparison_summary'],
+      if (qualityScore != null) 'quality_score': qualityScore,
+      if (stepsTotal > 0) 'validation_passed': stepsPassed,
+      if (stepsTotal > 0) 'validation_total': stepsTotal,
+    });
+  }
+
   WidgetPayload _normalizeWidgetPayload(
     String type,
     Map<String, dynamic> data,
@@ -837,6 +937,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            _appendExecutionWidgets(accumulatedWidgets, metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1022,6 +1123,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            _appendExecutionWidgets(accumulatedWidgets, metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {

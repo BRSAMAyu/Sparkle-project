@@ -54,6 +54,7 @@ from app.core.metrics import (
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,  # noqa: F401
     TOKEN_USAGE,  # noqa: F401
 )
+from app.core.execution_router import ExecutionRouter
 from app.core.pending_actions import pending_actions_store  # noqa: F401
 from app.core.safe_error_messages import build_safe_chat_error
 from app.core.task_manager import task_manager  # noqa: F401
@@ -647,6 +648,106 @@ class ChatOrchestrator(
             if inferred not in requested:
                 requested.append(inferred)
         return requested
+
+    @staticmethod
+    def _derive_task_context_for_execution(
+        *,
+        task_context: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if isinstance(task_context, dict) and task_context:
+            return task_context
+
+        if isinstance(plan_context, dict):
+            active_task_id = plan_context.get("active_task_id") or plan_context.get("task_id")
+            task_description = plan_context.get("task_title") or plan_context.get("title") or ""
+            if active_task_id or task_description:
+                return {
+                    "active_task_id": active_task_id,
+                    "task_type": plan_context.get("task_type") or "general",
+                    "task_description": task_description,
+                }
+
+        if isinstance(user_context_payload, dict):
+            next_actions = user_context_payload.get("next_actions")
+            if isinstance(next_actions, list):
+                for item in next_actions:
+                    if not isinstance(item, dict):
+                        continue
+                    return {
+                        "active_task_id": item.get("id") or item.get("task_id"),
+                        "task_type": item.get("type") or "general",
+                        "task_description": item.get("title") or item.get("content") or "",
+                    }
+        return None
+
+    async def _detect_execution_suggestion(
+        self,
+        *,
+        user_message: str,
+        task_context: dict[str, Any] | None,
+        cognitive_context: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if not settings.OPENCLAW_ENABLED or not task_context:
+            return None
+
+        task_id = task_context.get("active_task_id")
+        if not task_id:
+            return None
+
+        delegation_signals = [
+            "帮我查",
+            "帮我找",
+            "帮我搜",
+            "帮我整理",
+            "帮我总结",
+            "你来做",
+            "交给你",
+            "自动完成",
+            "帮我执行",
+            "help me search",
+            "look up",
+            "find for me",
+            "summarize this",
+        ]
+        message_lower = (user_message or "").lower()
+        if not any(signal in message_lower for signal in delegation_signals):
+            return None
+
+        delegate_preference = 0.5
+        if isinstance(cognitive_context, dict):
+            preferences = cognitive_context.get("preferences")
+            if isinstance(preferences, dict):
+                try:
+                    delegate_preference = float(preferences.get("ai_delegate_preference") or 0.5)
+                except (TypeError, ValueError):
+                    delegate_preference = 0.5
+
+        try:
+            router = ExecutionRouter(openclaw_enabled=True)
+            decision = router.classify(
+                task_type=str(task_context.get("task_type") or "general"),
+                goal=str(task_context.get("task_description") or user_message or ""),
+                has_side_effects=False,
+                has_clear_criteria=False,
+                task_tags=[],
+            )
+            if decision.execution_mode.value not in {"agent", "hybrid"}:
+                return None
+            return {
+                "type": "execution_suggestion",
+                "task_id": str(task_id),
+                "execution_mode": decision.execution_mode.value,
+                "target_env": decision.target_env.value if decision.target_env else None,
+                "reason": decision.reason,
+                "suggested_action": "handoff",
+                "tone": "detailed_guidance" if delegate_preference < 0.45 else "brief_handoff",
+                "delegate_preference": round(delegate_preference, 2),
+            }
+        except Exception as exc:
+            logger.debug("Execution suggestion detection failed: {}", exc)
+            return None
 
     # -----------------------------------------------------------------------
     # process_stream — main entry point (delegates to mixin methods)

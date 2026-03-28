@@ -29,6 +29,7 @@ from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus
 from app.services.execution_learning_service import ExecutionLearningService
 from app.services.execution_quality_service import ExecutionQualityService
+from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
 DELEGATED_COMPLETION_NOTE = "Completed by delegated OpenClaw execution"
@@ -52,6 +53,7 @@ class ExecutionIngestor:
         self._plan_record_service = PlanExecutionRecordService(db)
         self._learning_service = ExecutionLearningService(db=db, redis=redis)
         self._quality_service = ExecutionQualityService(db)
+        self._result_validator = ExecutionResultValidator()
 
     async def ingest(
         self,
@@ -171,6 +173,20 @@ class ExecutionIngestor:
                 "timestamp": _utcnow().isoformat(),
             },
         )
+        await self._learning_service.handle_approval_speed_signal(
+            intent=intent,
+            record=record,
+            approved=True,
+        )
+        await self._learning_service.handle_task_type_delegation_tendency(
+            user_id=user_id,
+            task_type=intent.target_env.value if intent.target_env else "general",
+        )
+        await self._learning_service.handle_quality_sensitivity(
+            intent=intent,
+            record=record,
+            approved=True,
+        )
         return record
 
     async def reject_result(
@@ -243,6 +259,25 @@ class ExecutionIngestor:
             record=record,
             reason=reason,
         )
+        await self._learning_service.handle_approval_speed_signal(
+            intent=intent,
+            record=record,
+            approved=False,
+        )
+        await self._learning_service.handle_task_type_delegation_tendency(
+            user_id=user_id,
+            task_type=intent.target_env.value if intent.target_env else "general",
+        )
+        await self._learning_service.handle_quality_sensitivity(
+            intent=intent,
+            record=record,
+            approved=False,
+        )
+        await self._learning_service.handle_rejection_sentiment(
+            intent=intent,
+            record=record,
+            reason=reason,
+        )
         await self._quality_service.record_outcome(
             intent=intent,
             record=record,
@@ -301,7 +336,12 @@ class ExecutionIngestor:
 
         record.executor_type = intent.executor.value
         record.external_run_id = raw_response.get("id") or record.external_run_id
-        record.raw_response = raw_response
+        enriched_raw_response = dict(raw_response)
+        enriched_raw_response["_sparkle_quality_warnings"] = self._result_validator.validate(
+            parsed=parsed,
+            result_contract=intent.result_contract or {},
+        )
+        record.raw_response = enriched_raw_response
         record.parsed_output = parsed.get("parsed_output")
         record.artifacts = parsed.get("artifacts", [])
         record.trust_level = evaluation.trust_level.value

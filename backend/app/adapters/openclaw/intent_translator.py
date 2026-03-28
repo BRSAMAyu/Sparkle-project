@@ -101,6 +101,8 @@ class IntentTranslator:
         template_metadata = policy.get("template_metadata") or {}
         if template_metadata.get("template_name"):
             lines.append(f"Use template behavior: {template_metadata['template_name']}")
+        if template_metadata.get("optimized_prompt"):
+            lines.append(str(template_metadata["optimized_prompt"]))
 
         quality_strategy = policy.get("quality_strategy") or {}
         if quality_strategy.get("variant_name"):

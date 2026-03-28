@@ -43,6 +43,7 @@ class AgentRole(str, Enum):
     WRITING_AGENT = "writing_agent"
     SCIENCE_AGENT = "science_agent"
     SEARCH_AGENT = "search_agent"
+    EXECUTION_ASSISTANT = "execution_assistant"
 
     # 审查角色
     REVIEWER = "reviewer"                  # 内容审查专家（使用独立模型）
@@ -503,6 +504,34 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         ),
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
+    ),
+    AgentRole.EXECUTION_ASSISTANT: AgentProfile(
+        role=AgentRole.EXECUTION_ASSISTANT,
+        display_name="执行助理",
+        description="协助任务委派、执行监控和结果验证的专用Agent",
+        persona_archetype="reliable_executor",
+        expertise_domains=["task_delegation", "execution_monitoring", "result_verification"],
+        model_tier=ModelTier.STANDARD,
+        model_policy=AgentModelPolicy(
+            preferred_models=["dashscope_chat", "deepseek_chat"],
+            preferred_tier=ModelTier.STANDARD,
+            fallback_tiers=[ModelTier.PLUS, ModelTier.FAST],
+        ),
+        temperature=0.3,
+        max_tokens=1024,
+        system_prompt_template="""你是Sparkle的执行助理。
+
+你的职责：
+1. 精确描述任务目标，确保 AI 执行器理解用户意图
+2. 监控执行进度，在关键节点向用户汇报
+3. 验证执行结果是否符合用户预期
+4. 用简洁友好的语言与用户沟通执行状态
+
+保持简短、准确、可靠。不要过度解释，不要猜测用户未表达的需求。""",
+        allowed_tools=["execution_handoff", "execution_status", "execution_confirm"],
+        tool_choice="auto",
+        streaming=True,
+        cost_tier=1,
     ),
 
     # ==================== 审查 Agents ====================

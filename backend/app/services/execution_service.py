@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -42,6 +44,7 @@ from app.services.execution_ingestor import ExecutionIngestor
 from app.services.execution_learning_service import ExecutionLearningService
 from app.services.execution_node_service import ExecutionNodeService
 from app.services.execution_quality_service import ExecutionQualityService
+from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_template_service import ExecutionTemplateService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 
@@ -52,6 +55,9 @@ def _utcnow() -> datetime:
 
 class ExecutionService:
     """Phase 1 execution service for task handoff and synchronous dispatch."""
+
+    _shared_classify_cache: dict[str, tuple[RoutingDecision, float]] = {}
+    _classify_cache_ttl_seconds = 300.0
 
     def __init__(self, db: AsyncSession, redis=None):
         self._db = db
@@ -71,6 +77,9 @@ class ExecutionService:
         self._template_service = ExecutionTemplateService()
         self._node_service = ExecutionNodeService(self._client)
         self._quality_service = ExecutionQualityService(db)
+        self._result_validator = ExecutionResultValidator()
+        self._classify_cache = self.__class__._shared_classify_cache
+        self._classify_cache_ttl = self.__class__._classify_cache_ttl_seconds
 
     async def get_health(self) -> dict[str, Any]:
         reachable = await self._client.health_check() if self._client else False
@@ -91,7 +100,34 @@ class ExecutionService:
 
     async def classify_task(self, *, task_id: UUID, user_id: UUID) -> RoutingDecision:
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
-        return self._classify_task_entity(task)
+        task_type = getattr(task.type, "value", task.type) or ""
+        task_description = getattr(task, "description", "") or ""
+        task_tags = getattr(task, "tags", None) or []
+        cache_key = hashlib.md5(
+            "|".join(
+                [
+                    str(task_type),
+                    str(task.title or ""),
+                    str(task_description),
+                    ",".join(sorted(str(tag) for tag in task_tags)),
+                ]
+            ).encode("utf-8")
+        ).hexdigest()
+        now = time.time()
+        cached = self._classify_cache.get(cache_key)
+        if cached is not None:
+            decision, cached_at = cached
+            if now - cached_at < self._classify_cache_ttl:
+                return decision
+
+        decision = self._classify_task_entity(task)
+        self._classify_cache[cache_key] = (decision, now)
+        if len(self._classify_cache) > 100:
+            cutoff = now - self._classify_cache_ttl
+            self._classify_cache = {
+                key: value for key, value in self._classify_cache.items() if value[1] >= cutoff
+            }
+        return decision
 
     async def create_intent(
         self,
@@ -847,7 +883,12 @@ class ExecutionService:
 
         record.executor_type = intent.executor.value
         record.external_run_id = raw_response.get("id")
-        record.raw_response = raw_response
+        enriched_raw_response = dict(raw_response)
+        enriched_raw_response["_sparkle_quality_warnings"] = self._result_validator.validate(
+            parsed=parsed,
+            result_contract=intent.result_contract or {},
+        )
+        record.raw_response = enriched_raw_response
         record.parsed_output = parsed.get("parsed_output")
         record.artifacts = parsed.get("artifacts", [])
         record.trust_level = evaluation.trust_level.value

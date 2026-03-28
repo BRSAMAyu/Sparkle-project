@@ -90,6 +90,48 @@ extension ChatNotifierActions on ChatNotifier {
             : (taskId.isNotEmpty ? '/tasks/$taskId/execute' : '');
         _queueNavigation(route);
         return;
+      case 'handoff_task':
+        final taskId = _actionString(payload, 'task_id');
+        if (taskId.isEmpty) {
+          return;
+        }
+        final templateId = _actionString(payload, 'template_id');
+        if (templateId.isNotEmpty) {
+          _ref
+              .read(taskListProvider.notifier)
+              .selectExecutionTemplate(taskId, templateId);
+        }
+        final intent = await _ref.read(taskListProvider.notifier).handoffTaskToAi(
+              taskId,
+              goal: _actionString(payload, 'goal').isNotEmpty
+                  ? _actionString(payload, 'goal')
+                  : null,
+            );
+        if (intent == null) {
+          state = state.copyWith(
+            lastActionStatus: 'failed',
+            lastActionMessage: _ref.read(taskListProvider).error ?? 'AI 执行发起失败',
+          );
+          return;
+        }
+        _queueNavigation(
+          _actionString(payload, 'route').isNotEmpty
+              ? _actionString(payload, 'route')
+              : '${TaskRoutes.home}/$taskId/execute?origin=chat',
+          successMessage: '已开始委派执行',
+        );
+        return;
+      case 'open_task_execution':
+        final taskId = _actionString(payload, 'task_id');
+        if (taskId.isEmpty) {
+          return;
+        }
+        _queueNavigation(
+          _actionString(payload, 'route').isNotEmpty
+              ? _actionString(payload, 'route')
+              : '${TaskRoutes.home}/$taskId/execute?origin=chat',
+        );
+        return;
       case 'start_focus':
         final taskId = _actionString(payload, 'task_id');
         final route = _actionString(payload, 'route').isNotEmpty

@@ -179,7 +179,15 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 }
 
 func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book.Client, error) {
-	agentClient, err := agent.NewClient(cfg)
+	healthCheckInterval := time.Duration(cfg.AgentHealthCheckInterval) * time.Second
+	if healthCheckInterval <= 0 {
+		healthCheckInterval = 10 * time.Second
+	}
+	healthCheckTimeout := time.Duration(cfg.AgentHealthCheckTimeout) * time.Second
+	if healthCheckTimeout <= 0 {
+		healthCheckTimeout = 5 * time.Second
+	}
+	agentClient, err := agent.NewClientWithHealthCheck(cfg, healthCheckInterval, healthCheckTimeout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -402,6 +410,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
+	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 30, 60)
 
 	requestTimeout := 30
 	if cfg.RequestTimeoutSeconds > 0 {
@@ -416,6 +425,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	)
 
 	api := r.Group("/api/v1")
+	api.Use(apiRateLimit)
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
 		api.GET("/health", func(c *gin.Context) {
@@ -478,7 +488,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
 	}
 
-	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
+	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg), middleware.InternalIPWhitelistMiddleware(cfg))
 	{
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
@@ -740,24 +750,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			return
 		}
 
-		authMiddleware(c)
-		if c.IsAborted() {
-			zap.L().Debug("NoRoute: auth middleware aborted",
-				zap.String("path", path),
-				zap.Int("status", c.Writer.Status()))
-			return
-		}
-
-		handler.SetProxyUserContextHeaders(c)
-
-		proxy.abTestMiddleware.AssignVariant()(c)
-		proxy.proxy.ServeHTTP(c.Writer, c.Request)
-		proxy.abTestMiddleware.RecordMetricAfter(c)
-
-		// 记录代理结果
-		zap.L().Debug("NoRoute: proxy completed",
-			zap.String("path", path),
-			zap.Int("status", c.Writer.Status()))
+		c.JSON(http.StatusNotFound, gin.H{"error": "route not found"})
 	})
 
 	return r
@@ -800,6 +793,8 @@ func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
 		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   20,
+		MaxConnsPerHost:       100,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,

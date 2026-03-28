@@ -137,7 +137,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		wsRegistry: NewConnectionRegistry(signalHub, ch),
+		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections),
 	}
 }
 
@@ -239,18 +239,6 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
-	queryUserID := ""
-	if userID == "" {
-		// Fallback: Try query parameter (for Guest mode or WebSocket upgrade requests where headers might be stripped)
-		// SECURITY WARNING: Query parameter authentication is deprecated and will be removed in a future version
-		// Use WebSocket ticket mechanism instead (see websocket_factory.go)
-		queryUserID = c.Query("user_id")
-		if queryUserID != "" {
-			log.Printf("[SECURITY WARNING] WebSocket using deprecated query parameter authentication for user_id. This will be removed in a future version. Use ticket-based authentication instead.")
-			userID = queryUserID
-		}
-	}
-
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
 		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
@@ -258,30 +246,19 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	authToken := c.GetString("auth_token")
-	queryToken := ""
-	if authToken == "" {
-		queryToken = c.Query("token")
-		if queryToken != "" {
-			// SECURITY WARNING: Query token authentication is deprecated
-			// Use ticket-based authentication instead
-			if queryUserID != "" {
-				log.Printf("[SECURITY WARNING] WebSocket using deprecated query token authentication. This will be removed in a future version. Use ticket-based authentication instead.")
-			}
-			authToken = queryToken
-		}
-	}
+	_ = authToken
 
 	log.Printf("WebSocket connected for user: %s", userID)
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
-		if queryUserID != "" || queryToken != "" {
-			authMethod = "query_token_deprecated"
-		} else {
-			authMethod = "unknown"
-		}
+		authMethod = "unknown"
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
-	h.registerConnection(userID, conn, writer)
+	if !h.registerConnection(userID, conn, writer) {
+		metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "global_connection_limit").Inc()
+		writeConnectionLimitClose(writer, conn)
+		return
+	}
 	defer h.unregisterConnection(userID, conn)
 
 	readLimit := int64(0)

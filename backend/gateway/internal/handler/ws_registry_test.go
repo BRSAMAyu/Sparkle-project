@@ -7,7 +7,7 @@ import (
 )
 
 func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
-	registry := NewConnectionRegistry(nil, nil)
+	registry := NewConnectionRegistry(nil, nil, 0)
 	conn := &websocket.Conn{}
 
 	registry.Register("user-1", conn, nil)
@@ -29,7 +29,7 @@ func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
 // Unregister is a no-op when the stored connection has already been replaced
 // by a newer one (the reconnect race).
 func TestConnectionRegistryUnregisterGuardsAgainstReconnectRace(t *testing.T) {
-	registry := NewConnectionRegistry(nil, nil)
+	registry := NewConnectionRegistry(nil, nil, 0)
 	connA := &websocket.Conn{}
 	connB := &websocket.Conn{}
 

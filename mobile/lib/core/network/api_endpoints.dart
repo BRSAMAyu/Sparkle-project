@@ -64,6 +64,10 @@ class ApiEndpoints {
   // Executions
   static const String executions = '/executions';
   static const String executionHealth = '/executions/health';
+  static const String executionConnectionStatus =
+      '/executions/connection/status';
+  static const String executionProfileSummary =
+      '/executions/profile/summary';
   static String classifyTaskExecution(String taskId) =>
       '/executions/tasks/$taskId/classify';
   static String executionTemplates(String taskId) =>

@@ -1196,6 +1196,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   onTap: () => context.push(UserRoutes.syncCenter),
                 ),
               ),
+              const SizedBox(height: DS.spacing12),
+              GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.hub_outlined),
+                  title: const Text('AI执行引擎'),
+                  subtitle: const Text('连接你的 OpenClaw 实例并监控健康状态'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(UserRoutes.openClawSettings),
+                ),
+              ),
               const SizedBox(height: DS.spacing20),
               _buildSectionHeader(Icons.language_rounded, l10n.language),
               const SizedBox(height: DS.spacing12),

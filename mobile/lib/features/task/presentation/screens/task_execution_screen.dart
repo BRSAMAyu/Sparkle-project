@@ -30,6 +30,9 @@ import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/execution_approval_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/execution_status_indicator.dart';
+import 'package:sparkle/features/task/presentation/widgets/execution_template_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -1346,6 +1349,7 @@ class _BottomControls extends ConsumerWidget {
   final void Function(int minutes, String? note) onComplete;
 
   Future<void> _handoffTask(BuildContext context, WidgetRef ref) async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
     final intent =
         await ref.read(taskListProvider.notifier).handoffTaskToAi(task.id);
     if (!context.mounted) return;
@@ -1368,13 +1372,22 @@ class _BottomControls extends ConsumerWidget {
     };
 
     if (intent.status == ExecutionIntentStatus.failed) {
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.error));
       AppFeedback.error(context, feedbackMessage);
     } else {
+      unawaited(
+        SensoryFeedbackService.emit(
+          intent.status == ExecutionIntentStatus.waitingApproval
+              ? SensoryFeedbackEvent.warning
+              : SensoryFeedbackEvent.success,
+        ),
+      );
       AppFeedback.success(context, feedbackMessage);
     }
   }
 
   Future<void> _confirmAiResult(BuildContext context, WidgetRef ref) async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     final record = await ref
         .read(taskListProvider.notifier)
         .confirmTaskExecutionResult(task.id);
@@ -1389,18 +1402,23 @@ class _BottomControls extends ConsumerWidget {
     AppFeedback.success(context, 'AI 结果已确认，任务状态已同步');
   }
 
-  Future<void> _rejectAiResult(BuildContext context, WidgetRef ref) async {
+  Future<void> _showRejectReasonSheet(BuildContext context, WidgetRef ref) async {
+    final selectedReason = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => const _RejectReasonSheet(),
+    );
+    if (!context.mounted || selectedReason == null) return;
     final record = await ref
         .read(taskListProvider.notifier)
-        .rejectTaskExecutionResult(task.id, reason: '用户取回任务');
+        .rejectTaskExecutionResult(task.id, reason: selectedReason);
     if (!context.mounted) return;
-
     if (record == null) {
       final message = ref.read(taskListProvider).error ?? '取回任务失败';
       AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
       return;
     }
-
     AppFeedback.info(context, '任务已交还给你继续处理');
   }
 
@@ -1542,31 +1560,6 @@ class _BottomControls extends ConsumerWidget {
       case ExecutionIntentStatus.unknown:
       case null:
         return DS.primaryBase;
-    }
-  }
-
-  IconData _executionStatusIcon(ExecutionIntentModel? intent, bool isLoading) {
-    if (isLoading) return Icons.smart_toy_outlined;
-    switch (intent?.status) {
-      case ExecutionIntentStatus.succeeded:
-        return Icons.check_circle_outline;
-      case ExecutionIntentStatus.partial:
-        return Icons.pending_actions_outlined;
-      case ExecutionIntentStatus.failed:
-      case ExecutionIntentStatus.timedOut:
-        return Icons.error_outline;
-      case ExecutionIntentStatus.canceled:
-      case ExecutionIntentStatus.handedBack:
-        return Icons.keyboard_return_rounded;
-      case ExecutionIntentStatus.waitingApproval:
-        return Icons.approval_outlined;
-      case ExecutionIntentStatus.draft:
-      case ExecutionIntentStatus.ready:
-      case ExecutionIntentStatus.dispatched:
-      case ExecutionIntentStatus.running:
-      case ExecutionIntentStatus.unknown:
-      case null:
-        return Icons.smart_toy_outlined;
     }
   }
 
@@ -1720,169 +1713,116 @@ class _BottomControls extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: DS.spacing8),
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: executionTemplates
-                  .take(3)
-                  .map(
-                    (template) => ChoiceChip(
-                      label: Text('${template.name} · ${template.modeLabel}'),
-                      selected: selectedTemplateId == template.templateId,
-                      onSelected: (_) {
-                        ref
-                            .read(taskListProvider.notifier)
-                            .selectExecutionTemplate(task.id, template.templateId);
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-            if (executionTemplates.isNotEmpty) ...[
-              const SizedBox(height: DS.spacing8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  executionTemplates
-                          .firstWhere(
-                            (template) =>
-                                template.templateId ==
-                                (selectedTemplateId ?? executionTemplates.first.templateId),
-                            orElse: () => executionTemplates.first,
-                          )
-                          .description
-                          .trim()
-                          .isEmpty
-                      ? 'AI 会按当前选中的模板组织执行。'
-                      : executionTemplates
-                          .firstWhere(
-                            (template) =>
-                                template.templateId ==
-                                (selectedTemplateId ?? executionTemplates.first.templateId),
-                            orElse: () => executionTemplates.first,
-                          )
-                          .description,
-                  style: DS.bodySmall.copyWith(color: DS.neutral600),
+            ...executionTemplates.toList().asMap().entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing8),
+                child: SparkleStaggerItem(
+                  index: entry.key,
+                  child: ExecutionTemplateCard(
+                    template: entry.value,
+                    isSelected: selectedTemplateId == entry.value.templateId,
+                    onTap: () {
+                      ref
+                          .read(taskListProvider.notifier)
+                          .selectExecutionTemplate(task.id, entry.value.templateId);
+                    },
+                  ),
                 ),
               ),
-            ],
-            const SizedBox(height: DS.spacing12),
+            ),
+            const SizedBox(height: DS.spacing8),
           ],
           if (showExecutionStatus) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                border: Border.all(
-                  color: statusColor.withValues(alpha: 0.22),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.spacing8),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceOverlay,
-                      borderRadius: BorderRadius.circular(DS.borderRadiusSM),
-                    ),
-                    child: Icon(
-                      _executionStatusIcon(executionIntent, isHandoffLoading),
-                      color: statusColor,
-                      size: 20,
-                    ),
+            SparkleStaggerItem(
+              index: 0,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.22),
                   ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _executionStatusTitle(
-                            executionIntent,
-                            isHandoffLoading,
-                          ),
-                          style: DS.bodyMedium.copyWith(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing4),
-                        Text(
-                          _executionStatusSubtitle(
-                            executionIntent,
-                            executionRecord,
-                            isHandoffLoading,
-                          ),
-                          style: DS.bodySmall.copyWith(
-                            color: DS.neutral600,
-                          ),
-                        ),
-                        if (outputPreview != null) ...[
-                          const SizedBox(height: DS.spacing8),
+                ),
+                child: Row(
+                  children: [
+                    ExecutionStatusIndicator(
+                      status: executionIntent?.status ?? ExecutionIntentStatus.dispatched,
+                      dispatchedAt: executionIntent?.dispatchedAt,
+                      size: 52,
+                    ),
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            outputPreview,
-                            style: DS.bodySmall.copyWith(
-                              color: DS.neutral700,
-                              fontWeight: DS.fontWeightMedium,
+                            _executionStatusTitle(
+                              executionIntent,
+                              isHandoffLoading,
+                            ),
+                            style: DS.bodyMedium.copyWith(
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
-                        ],
-                        if (metaPreview != null) ...[
-                          const SizedBox(height: DS.spacing6),
+                          const SizedBox(height: DS.spacing4),
                           Text(
-                            metaPreview,
+                            _executionStatusSubtitle(
+                              executionIntent,
+                              executionRecord,
+                              isHandoffLoading,
+                            ),
                             style: DS.bodySmall.copyWith(
                               color: DS.neutral600,
-                              fontWeight: DS.fontWeightMedium,
                             ),
                           ),
+                          if (outputPreview != null) ...[
+                            const SizedBox(height: DS.spacing8),
+                            Text(
+                              outputPreview,
+                              style: DS.bodySmall.copyWith(
+                                color: DS.neutral700,
+                                fontWeight: DS.fontWeightMedium,
+                              ),
+                            ),
+                          ],
+                          if (metaPreview != null) ...[
+                            const SizedBox(height: DS.spacing6),
+                            Text(
+                              metaPreview,
+                              style: DS.bodySmall.copyWith(
+                                color: DS.neutral600,
+                                fontWeight: DS.fontWeightMedium,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
-                  if (isHandoffLoading)
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                       ),
                     ),
-                ],
+                    if (isHandoffLoading)
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.spacing12),
           ],
           if (executionIntent?.isWaitingApproval == true &&
               executionRecord != null) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton.secondary(
-                    text: '取回任务',
-                    icon: Icons.keyboard_return_rounded,
-                    onPressed: isExecutionDecisionLoading
-                        ? null
-                        : () => _rejectAiResult(context, ref),
-                    isLoading: isExecutionDecisionLoading,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: CustomButton.primary(
-                    text: '确认采用 AI 结果',
-                    icon: Icons.approval_outlined,
-                    customGradient: _taskWarmActionGradient(context),
-                    onPressed: isExecutionDecisionLoading
-                        ? null
-                        : () => _confirmAiResult(context, ref),
-                    isLoading: isExecutionDecisionLoading,
-                    size: CustomButtonSize.small,
-                  ),
-                ),
-              ],
+            ExecutionApprovalCard(
+              record: executionRecord,
+              intent: executionIntent!,
+              isLoading: isExecutionDecisionLoading,
+              onConfirm: () => _confirmAiResult(context, ref),
+              onReject: () => _showRejectReasonSheet(context, ref),
             ),
             const SizedBox(height: DS.spacing12),
           ],
@@ -1913,6 +1853,98 @@ class _BottomControls extends ConsumerWidget {
                   text: context.l10n.taskExecutionCompleteTitle,
                   customGradient: _taskWarmActionGradient(context),
                   onPressed: () => _showCompleteDialog(context, ref),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RejectReasonSheet extends StatefulWidget {
+  const _RejectReasonSheet();
+
+  @override
+  State<_RejectReasonSheet> createState() => _RejectReasonSheetState();
+}
+
+class _RejectReasonSheetState extends State<_RejectReasonSheet> {
+  static const List<String> _presetReasons = [
+    '结果不准确',
+    '结果不完整',
+    '安全顾虑',
+    '我想自己做',
+  ];
+
+  String? _selectedReason;
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GraphiteModalSurface(
+      title: '退回原因',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '告诉 Sparkle 为什么这次结果不适合直接采纳，后续会据此调整执行方式。',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: _presetReasons.map((reason) {
+              final selected = _selectedReason == reason;
+              return ChoiceChip(
+                label: Text(reason),
+                selected: selected,
+                onSelected: (_) => setState(() => _selectedReason = reason),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: DS.spacing12),
+          TextField(
+            controller: _controller,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: '补充说明',
+              hintText: '例如：缺少来源、结论太武断、我想保留自己的表达方式',
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          Row(
+            children: [
+              Expanded(
+                child: CustomButton.text(
+                  text: '取消',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: CustomButton.primary(
+                  text: '确认退回',
+                  onPressed: () {
+                    final extra = _controller.text.trim();
+                    final reason = [
+                      _selectedReason,
+                      if (extra.isNotEmpty) extra,
+                    ].whereType<String>().join('；');
+                    Navigator.of(context).pop(
+                      reason.isEmpty ? '用户取回任务' : reason,
+                    );
+                  },
                 ),
               ),
             ],

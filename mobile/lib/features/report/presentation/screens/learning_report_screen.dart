@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
@@ -59,6 +61,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   bool _hasTrackedView = false;
   List<_HistoricalReportEntry> _cachedHistoryEntries = const [];
   bool _historyCacheLoaded = false;
+  Map<String, dynamic>? _executionProfile;
+  bool _executionProfileLoaded = false;
 
   bool get _aiAnalysisInitiallyExpanded => false;
 
@@ -66,6 +70,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   void initState() {
     super.initState();
     unawaited(_bootstrapHistoryCache());
+    unawaited(_loadExecutionProfile());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_hasTrackedView) {
         return;
@@ -120,6 +125,27 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       setState(() {
         _cachedHistoryEntries = const [];
         _historyCacheLoaded = true;
+      });
+    }
+  }
+
+  Future<void> _loadExecutionProfile() async {
+    try {
+      final response = await ref.read(apiClientProvider).get<dynamic>(
+        ApiEndpoints.executionProfileSummary,
+      );
+      final data = response.data;
+      if (!mounted) return;
+      setState(() {
+        _executionProfile = data is Map
+            ? Map<String, dynamic>.from(data)
+            : null;
+        _executionProfileLoaded = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _executionProfileLoaded = true;
       });
     }
   }
@@ -455,6 +481,13 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 ),
               ),
             ),
+            if (_executionProfileLoaded && _executionProfile != null) ...[
+              const SizedBox(height: 14),
+              _AnimatedReportSection(
+                delay: 260,
+                child: _ExecutionStatsSection(profile: _executionProfile!),
+              ),
+            ],
             const SizedBox(height: 14),
             _AnimatedReportSection(
               delay: 320,
@@ -2184,6 +2217,170 @@ class _TrendLegendChip extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _ExecutionStatsSection extends StatelessWidget {
+  const _ExecutionStatsSection({required this.profile});
+
+  final Map<String, dynamic> profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalExecutions = (profile['total_executions'] as num?)?.toInt() ?? 0;
+    if (totalExecutions <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final successRate = (profile['success_rate'] as num?)?.toDouble() ?? 0.0;
+    final timeSaved =
+        (profile['estimated_time_saved_minutes'] as num?)?.toDouble() ?? 0.0;
+    final byType = profile['by_type'] is Map
+        ? Map<String, dynamic>.from(profile['by_type'] as Map)
+        : const <String, dynamic>{};
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.smart_toy_rounded, size: 20, color: DS.info),
+              const SizedBox(width: DS.spacing8),
+              Text(
+                'AI执行助手',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。',
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: DS.spacing12),
+          Row(
+            children: [
+              _ReportStatCard(
+                label: '总执行',
+                value: '$totalExecutions',
+                unit: '次',
+                color: DS.info,
+              ),
+              const SizedBox(width: DS.spacing8),
+              _ReportStatCard(
+                label: '成功率',
+                value: '${(successRate * 100).round()}',
+                unit: '%',
+                color: DS.semanticSuccess,
+              ),
+              const SizedBox(width: DS.spacing8),
+              _ReportStatCard(
+                label: '节省时间',
+                value: timeSaved >= 60
+                    ? (timeSaved / 60).toStringAsFixed(1)
+                    : '${timeSaved.round()}',
+                unit: timeSaved >= 60 ? '小时' : '分钟',
+                color: DS.primaryBase,
+              ),
+            ],
+          ),
+          if (byType.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: byType.entries.map((entry) {
+                final data = entry.value is Map
+                    ? Map<String, dynamic>.from(entry.value as Map)
+                    : const <String, dynamic>{};
+                final count = (data['total'] as num?)?.toInt() ?? 0;
+                final success = (data['success_rate'] as num?)?.toDouble() ?? 0;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${entry.key}: $count次 · ${(success * 100).round()}%',
+                    style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportStatCard extends StatelessWidget {
+  const _ReportStatCard({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: DS.bodySmall.copyWith(color: DS.textTertiary),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: color,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                const SizedBox(width: 2),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    unit,
+                    style: DS.bodySmall.copyWith(
+                      color: color.withValues(alpha: 0.72),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AnimatedReportSection extends StatefulWidget {

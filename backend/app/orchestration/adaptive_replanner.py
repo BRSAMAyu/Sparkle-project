@@ -169,6 +169,16 @@ class CognitivePatternTrigger:
                 if multiplier is not None:
                     add("ai_duration_multiplier", round(multiplier, 2), "根据近期委派执行结果校准 AI 执行时长")
 
+        if any(token in name for token in ["execution type preference", "类型偏好", "type preference"]):
+            add("type_delegation_routing", "adaptive", "检测到用户对不同执行类型有不同委派偏好")
+
+        if any(token in name for token in ["execution quality sensitivity", "质量敏感"]):
+            add("execution_result_detail", "adaptive", "检测到用户对执行结果质量阈值更敏感")
+
+        if any(token in name for token in ["execution safety concern", "安全顾虑"]):
+            add("require_human_confirmation", True, "检测到用户对执行安全存在顾虑")
+            add("auto_delegate_suggestion", False, "检测到用户对执行安全存在顾虑")
+
         if (
             any(token in name for token in ["blindspot", "前置知识不足", "基础不足", "知识缺口"])
             or "前置" in description

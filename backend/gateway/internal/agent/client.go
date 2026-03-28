@@ -84,9 +84,9 @@ func NewClient(cfg *config.Config) (*Client, error) {
 			"waitForReady": true,
 			"retryPolicy": {
 				"MaxAttempts": 4,
-				"InitialBackoff": ".01s",
-				"MaxBackoff": ".1s",
-				"BackoffMultiplier": 1.0,
+				"InitialBackoff": "0.5s",
+				"MaxBackoff": "10s",
+				"BackoffMultiplier": 2.0,
 				"RetryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED"]
 			}
 		}]

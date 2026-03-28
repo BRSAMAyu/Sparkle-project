@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import re
-from statistics import median
 from datetime import timezone, datetime
+from statistics import median
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import event_bus
@@ -170,6 +170,144 @@ class ExecutionLearningService:
             user_id=intent_user_id,
             plan_id=intent_plan_id,
             pattern_name=aversion_pattern_name,
+        )
+
+    async def handle_approval_speed_signal(
+        self,
+        *,
+        intent: ExecutionIntent,
+        record: ExecutionRecord,
+        approved: bool,
+    ) -> None:
+        if not intent.dispatched_at or not intent.completed_at:
+            return
+        decision_latency = max(
+            (intent.completed_at - intent.dispatched_at).total_seconds(),
+            0,
+        )
+        if approved and decision_latency <= 15:
+            await self.profile_write_service.update_inferred_preference(
+                user_id=intent.user_id,
+                updates={
+                    f"execution.{intent.target_env.value if intent.target_env else 'general'}.detail_level": "concise",
+                },
+                source="execution_approval_speed",
+            )
+            await self._create_execution_fragment(
+                intent=intent,
+                record=record,
+                signal_key=f"execution_approval_speed:{intent.id}",
+                content=f"用户在 {int(decision_latency)} 秒内确认了 AI 执行结果，说明对该类委派有较高即时信任。",
+                error_tags=["execution.approval_fast_confirm"],
+                severity=1,
+            )
+        elif (not approved) or decision_latency >= 45:
+            await self.profile_write_service.update_inferred_preference(
+                user_id=intent.user_id,
+                updates={
+                    f"execution.{intent.target_env.value if intent.target_env else 'general'}.detail_level": "detailed",
+                },
+                source="execution_approval_speed",
+            )
+
+    async def handle_task_type_delegation_tendency(
+        self,
+        *,
+        user_id: UUID,
+        task_type: str,
+    ) -> None:
+        normalized = (task_type or "general").lower()
+        stmt = (
+            select(
+                ExecutionIntent.trust_level,
+                func.count(ExecutionIntent.id).label("cnt"),
+            )
+            .where(
+                ExecutionIntent.user_id == user_id,
+                ExecutionIntent.deleted_at.is_(None),
+            )
+            .group_by(ExecutionIntent.trust_level)
+        )
+        rows = (await self.db.execute(stmt)).all()
+        total = sum(int(row.cnt or 0) for row in rows)
+        if total == 0:
+            return
+        trusted = sum(int(row.cnt or 0) for row in rows if row.trust_level == TrustLevel.TRUSTED)
+        delegate_preference = round(trusted / total, 2)
+        await self.profile_write_service.update_inferred_preference(
+            user_id=user_id,
+            updates={f"execution.{normalized}.delegate_preference": delegate_preference},
+            source="task_type_delegation_tendency",
+        )
+        if total >= 5 and delegate_preference < 0.3:
+            await self._upsert_pattern(
+                user_id=user_id,
+                pattern_name="Execution Type Preference",
+                pattern_type="execution",
+                description=(
+                    f"User shows low delegation trust for {normalized} tasks "
+                    f"(trust_rate={delegate_preference:.2f}, sample_size={total})."
+                ),
+                solution_text="Prefer human-first or confirmation-heavy routing for this execution type.",
+                evidence_id=f"{normalized}:{total}",
+                confidence=0.75,
+            )
+
+    async def handle_quality_sensitivity(
+        self,
+        *,
+        intent: ExecutionIntent,
+        record: ExecutionRecord,
+        approved: bool,
+    ) -> None:
+        if record.quality_score is None:
+            return
+        key = "execution.quality_acceptance_floor" if approved else "execution.quality_rejection_ceiling"
+        await self.profile_write_service.update_inferred_preference(
+            user_id=intent.user_id,
+            updates={key: round(float(record.quality_score), 2)},
+            source="execution_quality_sensitivity",
+        )
+        await self._upsert_pattern(
+            user_id=intent.user_id,
+            pattern_name="Execution Quality Sensitivity",
+            pattern_type="execution",
+            description=(
+                f"User {'accepted' if approved else 'rejected'} quality score "
+                f"{float(record.quality_score):.2f} for delegated execution."
+            ),
+            solution_text="Adapt result detail and auto-promotion thresholds to the user's quality tolerance.",
+            evidence_id=str(record.id),
+            confidence=0.72,
+        )
+
+    async def handle_rejection_sentiment(
+        self,
+        *,
+        intent: ExecutionIntent,
+        record: ExecutionRecord | None,
+        reason: str | None,
+    ) -> None:
+        text = (reason or "").strip().lower()
+        if not text:
+            return
+        severity = 1
+        if any(token in text for token in ["安全", "risk", "unsafe", "危险"]):
+            severity = 3
+            await self.profile_write_service.update_inferred_preference(
+                user_id=intent.user_id,
+                updates={"execution.safety_concern_count": 1},
+                source="execution_rejection_sentiment",
+            )
+        elif any(token in text for token in ["不准确", "不对", "错误", "失望"]):
+            severity = 2
+        await self._create_execution_fragment(
+            intent=intent,
+            record=record,
+            signal_key=f"execution_rejection_sentiment:{intent.id}",
+            content=f"用户退回了委派结果，原因倾向为：{reason}",
+            error_tags=["execution.rejection_sentiment"],
+            severity=severity,
         )
 
     async def _create_execution_fragment(

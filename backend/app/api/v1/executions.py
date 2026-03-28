@@ -7,6 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -15,6 +16,8 @@ from app.db.session import get_db
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord
 from app.models.user import User
+from app.services.execution_profile_service import ExecutionProfileService
+from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_service import ExecutionService
 
 router = APIRouter(prefix="/executions", tags=["executions"])
@@ -124,6 +127,36 @@ class ClassifyResponse(BaseModel):
     risk_flags: list[str]
 
 
+class ExecutionConnectionStatusResponse(BaseModel):
+    openclaw_enabled: bool
+    reachable: bool
+    gateway_url: str | None = None
+    transport: str | None = None
+    ws_url: str | None = None
+    connected_nodes: int
+    supports_nodes: bool
+    supports_templates: bool
+    supports_quality_loop: bool
+
+
+class ExecutionProfileTypeSummaryResponse(BaseModel):
+    total: int
+    succeeded: int
+    success_rate: float
+
+
+class ExecutionProfileSummaryResponse(BaseModel):
+    days: int
+    total_executions: int
+    success_rate: float
+    by_type: dict[str, ExecutionProfileTypeSummaryResponse]
+    trust_distribution: dict[str, int]
+    approval_request_count: int
+    top_templates: list[list[Any]]
+    estimated_time_saved_minutes: float | None = None
+    delegation_trend: str
+
+
 class ExecutionRecordResponse(BaseModel):
     id: str
     execution_intent_id: str
@@ -137,6 +170,10 @@ class ExecutionRecordResponse(BaseModel):
     approval_requested: int | None
     error_category: str | None
     error_message: str | None
+    result_preview: dict[str, Any] | None = None
+    quality_warnings: list[dict[str, Any]] = Field(default_factory=list)
+    replay_steps: list[dict[str, Any]] = Field(default_factory=list)
+    comparison_summary: dict[str, Any] | None = None
 
 
 def _intent_to_response(intent: ExecutionIntent) -> ExecutionIntentResponse:
@@ -169,8 +206,39 @@ def _intent_to_response(intent: ExecutionIntent) -> ExecutionIntentResponse:
     )
 
 
-def _record_to_response(record: ExecutionRecord) -> ExecutionRecordResponse:
+async def _record_to_response(
+    record: ExecutionRecord,
+    *,
+    db: AsyncSession,
+) -> ExecutionRecordResponse:
     payload = record.to_dict()
+    validator = ExecutionResultValidator()
+    previous_record = None
+    if record.task_id:
+        previous_stmt = (
+            select(ExecutionRecord)
+            .where(
+                ExecutionRecord.user_id == record.user_id,
+                ExecutionRecord.task_id == record.task_id,
+                ExecutionRecord.deleted_at.is_(None),
+                ExecutionRecord.created_at < record.created_at,
+            )
+            .order_by(desc(ExecutionRecord.created_at))
+            .limit(1)
+        )
+        previous_record = (await db.execute(previous_stmt)).scalar_one_or_none()
+
+    quality_warnings = []
+    if isinstance(record.raw_response, dict):
+        quality_warnings = list(record.raw_response.get("_sparkle_quality_warnings") or [])
+
+    preview_payload = validator.extract_preview(
+        {
+            "parsed_output": payload["parsed_output"],
+            "output": (record.raw_response or {}).get("output"),
+            "artifacts": payload["artifacts"],
+        },
+    )
     return ExecutionRecordResponse(
         id=payload["id"],
         execution_intent_id=payload["execution_intent_id"],
@@ -184,6 +252,13 @@ def _record_to_response(record: ExecutionRecord) -> ExecutionRecordResponse:
         approval_requested=payload.get("approval_requested"),
         error_category=payload["error_category"],
         error_message=payload["error_message"],
+        result_preview=preview_payload,
+        quality_warnings=quality_warnings,
+        replay_steps=validator.build_replay_steps_from_raw_response(record.raw_response or {}),
+        comparison_summary=validator.build_comparison_summary(
+            current_record=record,
+            previous_record=previous_record,
+        ),
     )
 
 
@@ -193,6 +268,38 @@ async def execution_health(
 ):
     service = ExecutionService(db=db)
     return await service.get_health()
+
+
+@router.get("/connection/status", response_model=ExecutionConnectionStatusResponse)
+async def execution_connection_status(
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExecutionService(db=db)
+    health = await service.get_health()
+    return ExecutionConnectionStatusResponse(
+        openclaw_enabled=bool(health.get("openclaw_enabled")),
+        reachable=bool(health.get("reachable")),
+        gateway_url=health.get("gateway_url"),
+        transport=health.get("transport"),
+        ws_url=health.get("ws_url"),
+        connected_nodes=int(health.get("connected_nodes", 0)),
+        supports_nodes=bool(health.get("supports_nodes")),
+        supports_templates=bool(health.get("supports_templates")),
+        supports_quality_loop=bool(health.get("supports_quality_loop")),
+    )
+
+
+@router.get("/profile/summary", response_model=ExecutionProfileSummaryResponse)
+async def execution_profile_summary(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    payload = await ExecutionProfileService(db).get_execution_profile(
+        user_id=current_user.id,
+        days=days,
+    )
+    return ExecutionProfileSummaryResponse(**payload)
 
 
 @router.post("/tasks/{task_id}/classify", response_model=ClassifyResponse)
@@ -286,7 +393,7 @@ async def get_execution_record(
         record = await service.get_execution_record(intent_id=intent_id, user_id=current_user.id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return _record_to_response(record) if record else None
+    return await _record_to_response(record, db=db) if record else None
 
 
 @router.get("/tasks/{task_id}/intents", response_model=list[ExecutionIntentResponse])
@@ -343,7 +450,7 @@ async def confirm_execution_result(
         record = await service.confirm_result(record_id=record_id, user_id=current_user.id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return _record_to_response(record)
+    return await _record_to_response(record, db=db)
 
 
 @router.post("/records/{record_id}/reject", response_model=ExecutionRecordResponse)
@@ -362,4 +469,4 @@ async def reject_execution_result(
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return _record_to_response(record)
+    return await _record_to_response(record, db=db)

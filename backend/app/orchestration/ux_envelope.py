@@ -193,6 +193,18 @@ _MODE_PROFILES: dict[str, PresentationProfile] = {
         blocked_message="我已经调到合适的处理路径，但还需要你确认优先级，否则专家会在错误方向上继续发力。",
         partial_message="综合结论已可用，但有部分专家结果处于降级或待补状态。",
     ),
+    "execution_delegate": PresentationProfile(
+        mode_label="执行委派",
+        companion_frame="我帮你把这个交给AI执行，你可以在完成前随时取回控制权。",
+        answer_kind="delegation_brief",
+        default_retry_options=["换一个方案执行", "我自己来", "修改执行参数"],
+        first_screen_focus="delegation_status",
+        next_actions_title="执行完成后",
+        blocked_title="执行受限",
+        blocked_message="当前任务不适合自动执行，建议手动完成。",
+        partial_message="AI已部分完成执行，你可以在此基础上继续。",
+        next_action_limit=2,
+    ),
 }
 
 
@@ -217,6 +229,8 @@ class UXEnvelopeBuilder:
     ) -> dict[str, dict[str, Any]]:
         context_data = getattr(final_state, "context_data", {}) or {}
         chat_mode = str(context_data.get("chat_mode") or CHAT_MODE_STANDARD)
+        if execution_validation and execution_validation.get("execution_suggestion"):
+            chat_mode = "execution_delegate"
         profile = self._get_profile(chat_mode)
         selected_experts = self._selected_experts(final_state)
         style_decision = self._presentation_style_decision(
@@ -411,6 +425,8 @@ class UXEnvelopeBuilder:
         }
 
     def _get_profile(self, chat_mode: str) -> PresentationProfile:
+        if chat_mode == "execution_delegate":
+            return _MODE_PROFILES["execution_delegate"]
         if chat_mode.startswith("expert::"):
             return PresentationProfile(
                 mode_label="专家直达",
@@ -780,6 +796,8 @@ class UXEnvelopeBuilder:
 
     def _completion_state(self, final_state: Any, executable_plan: Any | None, execution_validation: dict[str, Any] | None) -> str:
         if execution_validation:
+            if execution_validation.get("execution_suggestion"):
+                return "partial"
             failed = execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls") or 0
             total = execution_validation.get("total_steps") or execution_validation.get("total_tool_calls") or 0
             if total and failed and failed < total:

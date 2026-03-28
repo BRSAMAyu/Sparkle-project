@@ -12,6 +12,7 @@ from app.api.v1.executions import (
     ExecutionQualitySummaryResponse,
     ExecutionQualityVariantResponse,
 )
+from app.services.execution_profile_service import ExecutionProfileService
 from app.services.execution_service import ExecutionService
 
 router = APIRouter(
@@ -33,6 +34,17 @@ class AdminExecutionHealthResponse(BaseModel):
     supports_nodes: bool
     supports_templates: bool
     supports_quality_loop: bool
+
+
+class AdminExecutionDashboardResponse(BaseModel):
+    total_executions: int
+    success_rate: float
+    connected_nodes: int
+    trust_distribution: dict[str, int]
+    template_distribution: list[list[str | int]]
+    by_type: dict[str, dict[str, float | int]]
+    approval_request_count: int
+    delegation_trend: str
 
 
 @router.get("/health", response_model=AdminExecutionHealthResponse)
@@ -70,4 +82,24 @@ async def execution_quality_summary(
         status=summary.get("status", "missing"),
         sample_size_collected=int(summary.get("sample_size_collected", 0)),
         variants=variants,
+    )
+
+
+@router.get("/dashboard", response_model=AdminExecutionDashboardResponse)
+async def execution_dashboard(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExecutionService(db=db)
+    health = await service.get_health()
+    profile = await ExecutionProfileService(db).get_execution_profile_for_all_users(days=days)
+    return AdminExecutionDashboardResponse(
+        total_executions=int(profile.get("total_executions", 0)),
+        success_rate=float(profile.get("success_rate", 0.0)),
+        connected_nodes=int(health.get("connected_nodes", 0)),
+        trust_distribution=dict(profile.get("trust_distribution", {})),
+        template_distribution=list(profile.get("top_templates", [])),
+        by_type=dict(profile.get("by_type", {})),
+        approval_request_count=int(profile.get("approval_request_count", 0)),
+        delegation_trend=str(profile.get("delegation_trend", "stable")),
     )

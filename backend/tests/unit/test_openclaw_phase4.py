@@ -379,3 +379,54 @@ async def test_handback_rejects_terminal_intent(
     service = ExecutionService(db=db_session)
     with pytest.raises(ValueError, match="already terminal"):
         await service.handback(intent_id=intent.id, user_id=user.id, reason="too late")
+
+
+@pytest.mark.asyncio
+async def test_classify_task_uses_short_ttl_cache(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+    monkeypatch,
+) -> None:
+    user = User(
+        username="phase4cache",
+        email="phase4cache@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="搜索并整理调研资料",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    service = ExecutionService(db=db_session)
+    second_service = ExecutionService(db=db_session)
+    calls = 0
+    original = ExecutionService._classify_task_entity
+
+    def spy(self, task):
+        nonlocal calls
+        calls += 1
+        return original(self, task)
+
+    monkeypatch.setattr(ExecutionService, "_classify_task_entity", spy)
+    ExecutionService._shared_classify_cache.clear()
+
+    first = await service.classify_task(task_id=task.id, user_id=user.id)
+    second = await second_service.classify_task(task_id=task.id, user_id=user.id)
+
+    assert first.execution_mode == second.execution_mode
+    assert calls == 1

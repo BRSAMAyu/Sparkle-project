@@ -399,8 +399,25 @@ class ResponseBuilderMixin:
             user_id=user_id,
             session_id=session_id,
         )
+        task_context = self._derive_task_context_for_execution(
+            task_context=final_state.context_data.get("task_context"),
+            plan_context=plan_context,
+            user_context_payload=user_context_payload,
+        )
+        execution_suggestion = await self._detect_execution_suggestion(
+            user_message=self._extract_latest_user_message(final_state.messages),
+            task_context=task_context,
+            cognitive_context=(user_context_payload or {}).get("cognitive_context")
+            if isinstance(user_context_payload, dict)
+            else None,
+        )
+        if execution_suggestion:
+            execution_validation = dict(execution_validation or {})
+            execution_validation["execution_suggestion"] = execution_suggestion
         if execution_validation:
             response_metadata["execution_validation"] = execution_validation
+        if execution_suggestion:
+            response_metadata["execution_suggestion"] = execution_suggestion
 
         await self._hydrate_evolution_context(final_state=final_state, user_id=user_id)
         ux_envelope = await ux_envelope_builder.build(

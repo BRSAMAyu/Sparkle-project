@@ -495,6 +495,10 @@ class ValidationEngineMixin:
                     len(getattr(validation_result, "step_validations", []) or []),
                     getattr(validation_result, "aborted", False),
                 )
+                from app.services.execution_result_validator import ExecutionResultValidator
+
+                result_validator = ExecutionResultValidator()
+                validation_summary = result_validator.build_validation_summary(validation_result)
                 return {
                     "validation_status": validation_result.validation_status,
                     "quality_score": validation_result.quality_score,
@@ -503,6 +507,11 @@ class ValidationEngineMixin:
                     "steps_total": len(getattr(validation_result, "step_validations", []) or []),
                     "steps_passed": sum(1 for sv in (getattr(validation_result, "step_validations", []) or []) if sv.passed),
                     "aborted": bool(getattr(validation_result, "aborted", False)),
+                    "result_preview": result_validator.extract_plan_result_preview(plan_result),
+                    "replay_steps": result_validator.build_replay_steps_from_plan_result(plan_result),
+                    "quality_warnings": validation_summary["quality_warnings"],
+                    "validation_issues": validation_summary["validation_issues"],
+                    "comparison_summary": validation_summary["comparison_summary"],
                 }
 
             tool_extractor = ToolResultExtractor()

@@ -24,6 +24,7 @@ class ExecutionTemplateDefinition:
     success_criteria_patch: dict[str, Any] = field(default_factory=dict)
     result_contract_patch: dict[str, Any] = field(default_factory=dict)
     required_node_command: str | None = None
+    optimized_prompt: str | None = None
 
 
 @dataclass(frozen=True)
@@ -150,6 +151,7 @@ class ExecutionTemplateService:
             "template_id": definition.template_id,
             "template_name": definition.name,
             "template_description": definition.description,
+            "optimized_prompt": definition.optimized_prompt,
         }
         policy.setdefault("template_metadata", metadata)
         if definition.required_node_command:
@@ -204,6 +206,12 @@ class ExecutionTemplateService:
                         },
                     },
                 },
+                optimized_prompt=(
+                    "Task: Web Research Brief\n"
+                    "Search, read, and synthesize only public web content.\n"
+                    "Return JSON with summary, key_findings, and sources.\n"
+                    "Prefer concise evidence-backed findings over broad narration."
+                ),
             ),
             ExecutionTemplateDefinition(
                 template_id="document_digest",
@@ -239,6 +247,11 @@ class ExecutionTemplateService:
                         },
                     },
                 },
+                optimized_prompt=(
+                    "Task: Document Digest\n"
+                    "Read the provided document, extract the central summary, highlights, and action_items.\n"
+                    "Call out contradictions or uncertainty explicitly."
+                ),
             ),
             ExecutionTemplateDefinition(
                 template_id="shell_diagnostics",
@@ -275,6 +288,12 @@ class ExecutionTemplateService:
                     },
                 },
                 required_node_command="system.run",
+                optimized_prompt=(
+                    "Task: Shell Diagnostics\n"
+                    "Use read-only diagnostic commands first.\n"
+                    "Return JSON with summary, key_output, and next_steps.\n"
+                    "Avoid destructive or state-changing shell operations."
+                ),
             ),
             ExecutionTemplateDefinition(
                 template_id="browser_form_prepare",
@@ -309,6 +328,11 @@ class ExecutionTemplateService:
                         },
                     },
                 },
+                optimized_prompt=(
+                    "Task: Browser Form Prepare\n"
+                    "Collect the fields, draft the answers, and stop before any irreversible submit action.\n"
+                    "Return draft, fields_to_confirm, and final_action."
+                ),
             ),
             ExecutionTemplateDefinition(
                 template_id="cross_device_capture",
@@ -345,5 +369,10 @@ class ExecutionTemplateService:
                     },
                 },
                 required_node_command="camera.capture",
+                optimized_prompt=(
+                    "Task: Cross Device Capture\n"
+                    "Gather evidence from the target node, summarize what was captured, and recommend the next step.\n"
+                    "If the node is unavailable, explain the blocker clearly."
+                ),
             ),
         ]
