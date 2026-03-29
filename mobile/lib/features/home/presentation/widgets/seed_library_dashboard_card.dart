@@ -26,7 +26,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
       padding: EdgeInsets.zero,
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
+        material: AppMaterials.ceramic(context).copyWith(
           backgroundGradient: LinearGradient(
             colors: [
               DS.success.withValues(alpha: 0.12),

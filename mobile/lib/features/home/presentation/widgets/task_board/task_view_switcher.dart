@@ -23,7 +23,7 @@ class TaskViewSwitcher extends ConsumerWidget {
 
     return MaterialStyler(
       key: ValueKey('task_view_switcher_$brightness'),
-      material: AppMaterials.neoGlass.copyWith(
+      material: AppMaterials.neoGlass(context).copyWith(
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0.5),
       ),
       borderRadius: DS.borderRadius16,

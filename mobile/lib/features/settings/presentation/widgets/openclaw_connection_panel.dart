@@ -10,6 +10,33 @@ import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitiv
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
+class _OpenClawConnectionPreset {
+  const _OpenClawConnectionPreset({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.config,
+  });
+
+  final String id;
+  final String label;
+  final String description;
+  final OpenClawConnectionConfig config;
+}
+
+const _openClawGuestPresets = <_OpenClawConnectionPreset>[
+  _OpenClawConnectionPreset(
+    id: 'guest_local_main',
+    label: '访客模式默认引擎',
+    description: '为本机演示环境准备好的默认连接，适合先快速体验 OpenClaw。',
+    config: OpenClawConnectionConfig(
+      gatewayUrl: 'http://127.0.0.1:18789',
+      authToken: 'd1c836b87e26db7e164522b01bf346a2d7226b17',
+      transport: 'responses_http',
+    ),
+  ),
+];
+
 class OpenClawConnectionPanel extends ConsumerStatefulWidget {
   const OpenClawConnectionPanel({
     super.key,
@@ -37,6 +64,7 @@ class _OpenClawConnectionPanelState
   bool _showSaveHighlight = false;
   String _authMode = 'token';
   String _transport = 'responses_http';
+  String _selectedPresetId = 'custom';
   Timer? _pairingTicker;
   Timer? _saveHighlightTimer;
 
@@ -83,6 +111,7 @@ class _OpenClawConnectionPanelState
     _deviceTokenController.text = config.deviceToken ?? '';
     _authMode = config.isPaired ? 'device' : 'token';
     _transport = config.transport;
+    _selectedPresetId = _matchingPreset(config)?.id ?? 'custom';
     _hydrated = true;
     _lastHydratedSignature = signature;
   }
@@ -91,6 +120,31 @@ class _OpenClawConnectionPanelState
     _formDirty = false;
     _hydrated = true;
     _lastHydratedSignature = _configSignature(service.config);
+    _selectedPresetId = _matchingPreset(service.config)?.id ?? 'custom';
+  }
+
+  _OpenClawConnectionPreset? _matchingPreset(OpenClawConnectionConfig config) {
+    for (final preset in _openClawGuestPresets) {
+      if (preset.config.normalizedGatewayUrl == config.normalizedGatewayUrl &&
+          (preset.config.authToken ?? '') == (config.authToken ?? '') &&
+          preset.config.transport == config.transport &&
+          !config.isPaired) {
+        return preset;
+      }
+    }
+    return null;
+  }
+
+  void _applyPreset(_OpenClawConnectionPreset preset) {
+    _gatewayController.text = preset.config.gatewayUrl;
+    _tokenController.text = preset.config.authToken ?? '';
+    _deviceTokenController.clear();
+    setState(() {
+      _selectedPresetId = preset.id;
+      _authMode = 'token';
+      _transport = preset.config.transport;
+      _formDirty = true;
+    });
   }
 
   void _flashSavedState() {
@@ -307,6 +361,13 @@ class _OpenClawConnectionPanelState
 
     final spacing = widget.compact ? DS.spacing12 : DS.spacing16;
     final copy = ExecutionCopy.of(context);
+    final selectedPreset = _openClawGuestPresets
+        .where((preset) => preset.id == _selectedPresetId)
+        .cast<_OpenClawConnectionPreset?>()
+        .firstWhere(
+          (preset) => preset != null,
+          orElse: () => null,
+        );
     final statusTone = switch (service.info.status) {
       OpenClawConnectionStatus.connected => OpenClawVisualTone.connected,
       OpenClawConnectionStatus.connecting => OpenClawVisualTone.active,
@@ -379,194 +440,272 @@ class _OpenClawConnectionPanelState
             ],
           ),
           SizedBox(height: spacing),
-          TextField(
-            controller: _gatewayController,
-            onChanged: (_) => _markDirty(),
-            decoration: const InputDecoration(
-              labelText: '网关地址',
-              hintText: '例如 http://localhost:8080',
-            ),
-          ),
-          SizedBox(height: spacing),
           Text(
-            '认证方式',
+            '快速接入',
             style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(
-                value: 'token',
-                label: Text('令牌认证'),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              ChoiceChip(
+                label: const Text('自定义配置'),
+                selected: _selectedPresetId == 'custom',
+                onSelected: (_) {
+                  setState(() {
+                    _selectedPresetId = 'custom';
+                  });
+                },
               ),
-              ButtonSegment<String>(
-                value: 'device',
-                label: Text('设备配对'),
+              ..._openClawGuestPresets.map(
+                (preset) => ChoiceChip(
+                  label: Text(preset.label),
+                  selected: _selectedPresetId == preset.id,
+                  onSelected: (_) => _applyPreset(preset),
+                ),
               ),
             ],
-            selected: {_authMode},
-            onSelectionChanged: (selection) {
-              setState(() {
-                _authMode = selection.first;
-                _formDirty = true;
-              });
-            },
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            _authMode == 'device'
-                ? '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'
-                : '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。',
+            selectedPreset?.description ?? '适合你已经有现成的网关地址和认证方式，想自己掌控连接细节时使用。',
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,
             ),
           ),
-          SizedBox(height: spacing),
-          if (_authMode == 'token')
-            TextField(
-              controller: _tokenController,
-              onChanged: (_) => _markDirty(),
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: '认证令牌',
-                hintText: '粘贴 OpenClaw 网关令牌',
+          if (selectedPreset != null) ...[
+            const SizedBox(height: DS.spacing10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.info.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: DS.info.withValues(alpha: 0.16)),
               ),
-            )
-          else ...[
-            TextField(
-              controller: _deviceTokenController,
-              onChanged: (_) => _markDirty(),
-              decoration: const InputDecoration(
-                labelText: '设备令牌',
-                hintText: '配对完成后粘贴设备令牌',
-              ),
-            ),
-            if (pairingSession != null) ...[
-              const SizedBox(height: DS.spacing12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(DS.spacing12),
-                decoration: BoxDecoration(
-                  color: DS.info.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: DS.info.withValues(alpha: 0.18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    color: DS.info,
+                    size: 18,
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '配对码',
-                      style: DS.bodySmall.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                        color: DS.info,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            pairingSession.code,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  letterSpacing: 6,
-                                  fontWeight: DS.fontWeightBold,
-                                ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              ClipboardData(text: pairingSession.code),
-                            );
-                            if (!mounted) return;
-                            _showSnackBar('配对码已复制');
-                          },
-                          icon: const Icon(Icons.copy_rounded),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      _pairingCountdownLabel(pairingSession),
-                      style: DS.bodySmall.copyWith(
-                        color: DS.info,
-                        fontWeight: DS.fontWeightSemiBold,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。',
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      '已选中“${selectedPreset.label}”。连接细节会自动填入，你只需要测试连接或保存即可。',
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: DS.spacing8),
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: [
-                TextButton(
-                  onPressed: () => unawaited(_startPairing(service)),
-                  child: const Text('生成配对码'),
-                ),
-                TextButton(
-                  onPressed: () => unawaited(_completePairing(service)),
-                  child: const Text('完成配对'),
-                ),
-                if (pairingSession != null)
-                  TextButton(
-                    onPressed: () => unawaited(service.cancelPairing()),
-                    child: const Text('取消配对'),
                   ),
-              ],
+                ],
+              ),
             ),
           ],
           SizedBox(height: spacing),
-          Text(
-            '传输协议',
-            style: DS.labelSmall.copyWith(color: DS.textSecondary),
-          ),
-          const SizedBox(height: DS.spacing8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(
-                value: 'responses_http',
-                label: Text('HTTP'),
+          if (_selectedPresetId == 'custom') ...[
+            TextField(
+              controller: _gatewayController,
+              onChanged: (_) => _markDirty(),
+              decoration: const InputDecoration(
+                labelText: '网关地址',
+                hintText: '例如 http://localhost:8080',
               ),
-              ButtonSegment<String>(
-                value: 'gateway_ws',
-                label: Text('WebSocket'),
+            ),
+            SizedBox(height: spacing),
+            Text(
+              '认证方式',
+              style: DS.labelSmall.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.spacing8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment<String>(
+                  value: 'token',
+                  label: Text('令牌认证'),
+                ),
+                ButtonSegment<String>(
+                  value: 'device',
+                  label: Text('设备配对'),
+                ),
+              ],
+              selected: {_authMode},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _authMode = selection.first;
+                  _formDirty = true;
+                });
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              _authMode == 'device'
+                  ? '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'
+                  : '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。',
+              style: DS.bodySmall.copyWith(
+                color: DS.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: spacing),
+            if (_authMode == 'token')
+              TextField(
+                controller: _tokenController,
+                onChanged: (_) => _markDirty(),
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '认证令牌',
+                  hintText: '粘贴 OpenClaw 网关令牌',
+                ),
+              )
+            else ...[
+              TextField(
+                controller: _deviceTokenController,
+                onChanged: (_) => _markDirty(),
+                decoration: const InputDecoration(
+                  labelText: '设备令牌',
+                  hintText: '配对完成后粘贴设备令牌',
+                ),
+              ),
+              if (pairingSession != null) ...[
+                const SizedBox(height: DS.spacing12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: DS.info.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: DS.info.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '配对码',
+                        style: DS.bodySmall.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.info,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              pairingSession.code,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    letterSpacing: 6,
+                                    fontWeight: DS.fontWeightBold,
+                                  ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: pairingSession.code),
+                              );
+                              if (!mounted) return;
+                              _showSnackBar('配对码已复制');
+                            },
+                            icon: const Icon(Icons.copy_rounded),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        _pairingCountdownLabel(pairingSession),
+                        style: DS.bodySmall.copyWith(
+                          color: DS.info,
+                          fontWeight: DS.fontWeightSemiBold,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。',
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  TextButton(
+                    onPressed: () => unawaited(_startPairing(service)),
+                    child: const Text('生成配对码'),
+                  ),
+                  TextButton(
+                    onPressed: () => unawaited(_completePairing(service)),
+                    child: const Text('完成配对'),
+                  ),
+                  if (pairingSession != null)
+                    TextButton(
+                      onPressed: () => unawaited(service.cancelPairing()),
+                      child: const Text('取消配对'),
+                    ),
+                ],
               ),
             ],
-            selected: {_transport},
-            onSelectionChanged: (selection) {
-              setState(() {
-                _transport = selection.first;
-                _formDirty = true;
-              });
-            },
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            _transport == 'gateway_ws'
-                ? 'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'
-                : 'HTTP 更适合手动验证和快速测试连接。',
-            style: DS.bodySmall.copyWith(
-              color: DS.textSecondary,
-              height: 1.45,
+            SizedBox(height: spacing),
+            Text(
+              '传输协议',
+              style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
-          ),
-          SizedBox(height: spacing),
+            const SizedBox(height: DS.spacing8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment<String>(
+                  value: 'responses_http',
+                  label: Text('HTTP'),
+                ),
+                ButtonSegment<String>(
+                  value: 'gateway_ws',
+                  label: Text('WebSocket'),
+                ),
+              ],
+              selected: {_transport},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _transport = selection.first;
+                  _formDirty = true;
+                });
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              _transport == 'gateway_ws'
+                  ? 'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'
+                  : 'HTTP 更适合手动验证和快速测试连接。',
+              style: DS.bodySmall.copyWith(
+                color: DS.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: spacing),
+          ] else ...[
+            OpenClawMetricPill(
+              icon: Icons.login_rounded,
+              label: '已为你准备好默认连接细节',
+              tone: OpenClawVisualTone.connected,
+              emphasized: true,
+            ),
+            SizedBox(height: spacing),
+          ],
           Row(
             children: [
               Expanded(

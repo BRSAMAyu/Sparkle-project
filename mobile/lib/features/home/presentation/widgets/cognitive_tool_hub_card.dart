@@ -68,7 +68,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
       return ClipRRect(
         borderRadius: DS.borderRadius20,
         child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
+          material: AppMaterials.ceramic(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 DS.prismPurple.withValues(alpha: 0.08),
@@ -159,7 +159,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
     return ClipRRect(
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
+        material: AppMaterials.ceramic(context).copyWith(
           backgroundGradient: LinearGradient(
             colors: [
               DS.prismPurple.withValues(alpha: 0.08),

@@ -185,12 +185,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final l10n = AppLocalizations.of(context)!;
     final showFirstGoalEmptyState =
         _shouldShowFirstGoalEmptyState(dashboardState);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     final category = ResponsiveSystem.getCategory(context);
-    final fallbackBottomHeight = 52.0 + (predictions.isNotEmpty ? 36.0 : 0.0);
+    final fallbackBottomHeight = 56.0 +
+        (predictions.isNotEmpty ? (textScale >= 1.2 ? 48.0 : 36.0) : 0.0);
+    final overlayReserveHeight =
+        _bottomOverlayReserveHeight + ((textScale - 1).clamp(0.0, 0.5) * 56);
     final totalBottomHeight =
-        (_bottomOverlayReserveHeight > fallbackBottomHeight
-                ? _bottomOverlayReserveHeight
+        (overlayReserveHeight > fallbackBottomHeight
+                ? overlayReserveHeight
                 : fallbackBottomHeight) +
             DS.spacing16;
 

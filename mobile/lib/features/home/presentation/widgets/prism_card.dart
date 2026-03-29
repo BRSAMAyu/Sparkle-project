@@ -49,7 +49,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
       child: ClipRRect(
         borderRadius: DS.borderRadius20,
         child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
+          material: AppMaterials.ceramic(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 DS.prismPurple.withValues(alpha: 0.08),

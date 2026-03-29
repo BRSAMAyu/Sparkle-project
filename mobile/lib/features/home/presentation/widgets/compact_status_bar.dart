@@ -29,6 +29,7 @@ class CompactStatusBar extends StatelessWidget {
       context,
       dashboardState.weather.type,
     );
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     return ContentConstraint(
       child: Padding(
@@ -41,20 +42,22 @@ class CompactStatusBar extends StatelessWidget {
         child: DashboardEntrance(
           slideOffset: const Offset(0, -0.05),
           child: MaterialStyler(
-            material: AppMaterials.ceramic,
+            material: AppMaterials.ceramic(context),
             borderRadius: DS.borderRadius20,
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,
               vertical: DS.spacing8,
             ),
-            child: SizedBox(
-              height: 48,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: textScale > 1.18 ? 56 : 48,
+              ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
-                  final showUserBadge = width >= 316;
-                  final showFlameChip = width >= 352;
-                  final showWeatherLabel = width >= 390;
+                  final showUserBadge = width >= 316 && textScale < 1.15;
+                  final showFlameChip = width >= 352 && textScale < 1.1;
+                  final showWeatherLabel = width >= 390 && textScale < 1.05;
 
                   return Row(
                     children: [
@@ -144,14 +147,14 @@ class CompactStatusBar extends StatelessWidget {
                         color: weatherPresentation.accent,
                         tintColor: weatherPresentation.softAccent,
                         borderColor: weatherPresentation.borderTint,
-                        maxWidth: showWeatherLabel ? 88 : 32,
+                        maxWidth: showWeatherLabel ? 76 : 32,
                         onTap: () {
                           unawaited(
                             SensoryFeedbackService.emit(
                               SensoryFeedbackEvent.selection,
                             ),
                           );
-                          context.push(HomeRoutes.weatherGuide);
+                          unawaited(context.push(HomeRoutes.weatherGuide));
                         },
                       ),
                       const SizedBox(width: DS.spacing6),

@@ -61,7 +61,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
 
     return MaterialStyler(
       key: ValueKey('intent_prediction_bar_$brightness'),
-      material: AppMaterials.neoGlass.copyWith(
+      material: AppMaterials.neoGlass(context).copyWith(
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0.8),
       ),
       borderRadius: DS.borderRadiusFull,
@@ -137,7 +137,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
   }) =>
       MaterialStyler(
       key: ValueKey('intent_prediction_chat_bar_$brightness'),
-      material: AppMaterials.neoGlass.copyWith(
+      material: AppMaterials.neoGlass(context).copyWith(
         backgroundColor: DS.surfacePanel.withValues(alpha: 0.74),
         borderColor: DS.borderSubtle.withValues(alpha: 0.72),
       ),

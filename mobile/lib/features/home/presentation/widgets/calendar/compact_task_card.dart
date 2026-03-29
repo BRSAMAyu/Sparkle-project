@@ -20,7 +20,7 @@ class CompactTaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialStyler(
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius12,
         padding: EdgeInsets.zero,
         child: InkWell(

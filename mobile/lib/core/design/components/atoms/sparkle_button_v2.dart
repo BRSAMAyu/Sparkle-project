@@ -118,8 +118,8 @@ class SparkleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeManager().current;
-    final info = ResponsiveSystem.getBreakpointInfo(context);
+    final theme = context.sparkleTheme;
+    final info = context.breakpointInfo;
 
     return Semantics(
       label: semanticLabel ?? label,
@@ -377,7 +377,7 @@ class SparkleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeManager().current;
+    final theme = context.sparkleTheme;
 
     return Semantics(
       label: semanticLabel,

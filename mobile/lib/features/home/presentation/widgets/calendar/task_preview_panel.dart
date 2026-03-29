@@ -40,7 +40,7 @@ class TaskPreviewPanel extends ConsumerWidget {
       curve: Curves.easeOut,
       margin: const EdgeInsets.only(top: DS.sm),
       child: MaterialStyler(
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius16,
         padding: const EdgeInsets.all(DS.spacing16),
         child: Column(

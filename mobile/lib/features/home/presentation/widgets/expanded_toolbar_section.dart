@@ -114,7 +114,7 @@ class _ToolButton extends StatelessWidget {
       borderRadius: DS.borderRadius16,
       child: MaterialStyler(
         key: ValueKey('tool_button_${label}_$brightness'),
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius16,
         padding: const EdgeInsets.all(DS.spacing12),
         child: Column(

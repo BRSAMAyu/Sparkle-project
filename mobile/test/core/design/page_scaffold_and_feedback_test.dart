@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await ThemeManager().reset();
+  });
+
   testWidgets('SparklePageScaffold renders child content for page role',
       (tester) async {
     await tester.pumpWidget(
@@ -64,6 +72,34 @@ void main() {
     expect(find.text('card-body'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('page scaffold follows platform brightness in system mode',
+      (tester) async {
+    final manager = ThemeManager();
+    await manager.initialize();
+    await manager.setAppThemeMode(AppThemeMode.system);
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: _SystemThemeHarness(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('theme:light'), findsOneWidget);
+    expect(find.text('token:light'), findsOneWidget);
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    tester.binding.handlePlatformBrightnessChanged();
+    await tester.pumpAndSettle();
+
+    expect(find.text('theme:dark'), findsOneWidget);
+    expect(find.text('token:dark'), findsOneWidget);
+    expect(find.text('card-body'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _ThemeHarness extends StatefulWidget {
@@ -78,29 +114,70 @@ class _ThemeHarnessState extends State<_ThemeHarness> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+        theme: AppThemes.lightTheme,
+        darkTheme: AppThemes.darkTheme,
+        themeMode: _themeMode,
+        home: SparklePageScaffold(
+          role: SparklePageRole.content,
+          child: Column(
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _themeMode = _themeMode == ThemeMode.light
+                        ? ThemeMode.dark
+                        : ThemeMode.light;
+                  });
+                },
+                child: const Text('toggle-theme'),
+              ),
+              const GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
+                child: Text('card-body'),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _SystemThemeHarness extends ConsumerStatefulWidget {
+  const _SystemThemeHarness();
+
+  @override
+  ConsumerState<_SystemThemeHarness> createState() =>
+      _SystemThemeHarnessState();
+}
+
+class _SystemThemeHarnessState extends ConsumerState<_SystemThemeHarness> {
+  @override
+  Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+
+    return MaterialApp(
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
-      themeMode: _themeMode,
+      themeMode: themeMode,
       home: SparklePageScaffold(
         role: SparklePageRole.content,
-        child: Column(
-          children: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _themeMode = _themeMode == ThemeMode.light
-                      ? ThemeMode.dark
-                      : ThemeMode.light;
-                });
-              },
-              child: const Text('toggle-theme'),
-            ),
-            const GraphiteCardSurface(
-              surfaceRole: SparkleSurfaceRole.card,
-              child: Text('card-body'),
-            ),
-          ],
+        child: Builder(
+          builder: (context) {
+            final themeBrightness = Theme.of(context).brightness.name;
+            final tokenBrightness = context.sparkleColors.brightness.name;
+
+            return Column(
+              children: [
+                Text('theme:$themeBrightness'),
+                Text('token:$tokenBrightness'),
+                const GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  child: Text('card-body'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
 }

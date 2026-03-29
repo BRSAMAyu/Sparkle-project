@@ -107,7 +107,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
             DS.spacing10,
           ),
           child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
+            material: AppMaterials.ceramic(context).copyWith(
               backgroundGradient: LinearGradient(
                 colors: [gradientStart, gradientMid, gradientEnd],
                 begin: Alignment.topLeft,
@@ -191,7 +191,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
           DS.spacing10,
         ),
         child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
+          material: AppMaterials.ceramic(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [gradientStart, gradientMid, gradientEnd],
               begin: Alignment.topLeft,

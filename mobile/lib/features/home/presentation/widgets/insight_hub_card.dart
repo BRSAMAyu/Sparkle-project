@@ -267,7 +267,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
     return ClipRRect(
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
+        material: AppMaterials.ceramic(context).copyWith(
           backgroundGradient: LinearGradient(
             colors: [
               DS.info.withValues(alpha: 0.06),

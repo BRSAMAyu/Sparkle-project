@@ -148,7 +148,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
               final glowValue = _shouldReduceMotion
                   ? (_intentType == null ? 0 : 1)
                   : _glowAnimation.value;
-              final material = AppMaterials.neoGlass.copyWith(
+              final material = AppMaterials.neoGlass(context).copyWith(
                 backgroundColor: context.sparkleColors.surfacePrimary
                     .withValues(alpha: 0.14),
                 borderColor: glowColor.withValues(alpha: 0.3 + glowValue * 0.4),

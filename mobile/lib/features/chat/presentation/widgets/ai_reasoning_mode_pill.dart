@@ -20,7 +20,7 @@ class AiReasoningModePill extends ConsumerWidget {
       child: GestureDetector(
         onTap: () => _showReasoningModeSheet(context, ref, mode),
         child: MaterialStyler(
-          material: AppMaterials.neoGlass.copyWith(
+          material: AppMaterials.neoGlass(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 config.color.withValues(alpha: 0.18),

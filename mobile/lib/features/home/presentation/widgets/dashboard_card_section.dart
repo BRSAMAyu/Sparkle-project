@@ -135,7 +135,7 @@ class _DashboardStreakCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
+        material: AppMaterials.ceramic(context).copyWith(
           backgroundGradient: LinearGradient(
             colors: [
               Color.lerp(DS.surfaceSecondary, DS.warning, 0.08)!,

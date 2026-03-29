@@ -118,7 +118,7 @@ class _NotificationBanner extends StatelessWidget {
           onTap: onTap,
           borderRadius: DS.borderRadius16,
           child: MaterialStyler(
-            material: AppMaterials.ceramic,
+            material: AppMaterials.ceramic(context),
             borderRadius: DS.borderRadius16,
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,

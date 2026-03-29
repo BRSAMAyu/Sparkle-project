@@ -26,7 +26,7 @@ class SprintCard extends ConsumerWidget {
       padding: EdgeInsets.zero,
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.lg),
         child: sprint != null

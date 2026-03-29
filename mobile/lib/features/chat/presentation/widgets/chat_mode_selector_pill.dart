@@ -100,7 +100,7 @@ class _UnselectedPill extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
+            material: AppMaterials.ceramic(context).copyWith(
               // Use surfaceTertiary for consistent theming with Dashboard
               backgroundColor: DS.surfaceTertiary,
             ),
@@ -190,7 +190,7 @@ class _SelectedPill extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: MaterialStyler(
-          material: AppMaterials.neoGlass.copyWith(
+          material: AppMaterials.neoGlass(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 mode.color.withValues(alpha: 0.18),

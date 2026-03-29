@@ -19,20 +19,9 @@ class AiStatusCapsule extends StatelessWidget {
   final bool dense;
   final VoidCallback? onTap;
 
-  /// 🔧 安全获取品牌主色，避免SparkleThemeExtension未注册错误
-  Color _safeGetColor(BuildContext context) {
-    try {
-      return ThemeManager().current.colors.brandPrimary;
-    } catch (e) {
-      // Fallback color if SparkleThemeExtension is not registered
-      return DS.brandPrimary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 🔧 修复：安全获取baseColor，避免SparkleThemeExtension未注册错误
-    final baseColor = color ?? _safeGetColor(context);
+    final baseColor = color ?? context.sparkleColors.brandPrimary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = isDark
         ? Color.alphaBlend(

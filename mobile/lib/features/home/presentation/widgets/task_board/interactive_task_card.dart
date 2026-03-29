@@ -27,7 +27,7 @@ class InteractiveTaskCard extends ConsumerWidget {
     final isExpanded = boardState.expandedTaskIds.contains(task.id);
 
     return MaterialStyler(
-      material: AppMaterials.ceramic,
+      material: AppMaterials.ceramic(context),
       borderRadius: DS.borderRadius12,
       padding: EdgeInsets.zero,
       child: Column(

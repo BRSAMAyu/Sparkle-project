@@ -50,7 +50,7 @@ class _AchievementProgressCardState
           DS.spacing10,
         ),
         child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
+          material: AppMaterials.ceramic(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 Color.lerp(

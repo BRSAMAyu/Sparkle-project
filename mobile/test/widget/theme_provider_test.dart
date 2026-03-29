@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 
@@ -10,6 +11,11 @@ void main() {
   Future<void> pumpWithApp(WidgetTester tester, Widget child) async {
     await tester.pumpWidget(MaterialApp(home: child));
   }
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await ThemeManager().reset();
+  });
 
   group('Theme Provider Tests', () {
     // ============================================================
@@ -79,6 +85,42 @@ void main() {
 
         expect(firstInstance, secondInstance);
       });
+
+      test(
+          'themeForBrightness resolves explicit light/dark themes in system mode',
+          () async {
+        final manager = ThemeManager();
+        await manager.initialize();
+        await manager.setAppThemeMode(AppThemeMode.system);
+
+        final explicitLight = manager.themeForBrightness(Brightness.light);
+        final explicitDark = manager.themeForBrightness(Brightness.dark);
+
+        expect(explicitLight.colors.brightness, Brightness.light);
+        expect(explicitDark.colors.brightness, Brightness.dark);
+        expect(explicitLight.colors.surfacePrimary,
+            isNot(equals(explicitDark.colors.surfacePrimary)));
+        expect(explicitLight.colors.textPrimary,
+            isNot(equals(explicitDark.colors.textPrimary)));
+      });
+
+      testWidgets(
+          'manual theme mode is not overridden by platform brightness changes',
+          (WidgetTester tester) async {
+        final manager = ThemeManager();
+        await manager.initialize();
+        await manager.setAppThemeMode(AppThemeMode.dark);
+
+        tester.platformDispatcher.platformBrightnessTestValue =
+            Brightness.light;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+        tester.binding.handlePlatformBrightnessChanged();
+        await tester.pump();
+
+        expect(manager.mode, AppThemeMode.dark);
+        expect(manager.current.colors.brightness, Brightness.dark);
+      });
     });
 
     // ============================================================
@@ -130,7 +172,7 @@ void main() {
         // Since we can't easily trigger a change without interacting with ThemeManager,
         // we assume if it renders once it works.
         // To test notification, we'd need to mock ThemeManager or call its methods.
-        
+
         expect(updateCount, greaterThanOrEqualTo(1));
       });
     });

@@ -167,7 +167,7 @@ class _LearningForecastScreenState
       );
 
   Widget _buildHeader() => MaterialStyler(
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.spacing20),
         child: Row(

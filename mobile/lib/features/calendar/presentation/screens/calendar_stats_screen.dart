@@ -894,7 +894,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
           const SizedBox(height: DS.spacing16),
           MaterialStyler(
-            material: AppMaterials.ceramic,
+            material: AppMaterials.ceramic(context),
             borderRadius: DS.borderRadius20,
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
@@ -946,7 +946,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
           const SizedBox(height: DS.spacing16),
           MaterialStyler(
-            material: AppMaterials.ceramic,
+            material: AppMaterials.ceramic(context),
             borderRadius: DS.borderRadius20,
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
@@ -998,7 +998,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       SizedBox(
         width: 156,
         child: MaterialStyler(
-          material: AppMaterials.ceramic,
+          material: AppMaterials.ceramic(context),
           borderRadius: DS.borderRadius16,
           padding: const EdgeInsets.all(DS.spacing12),
           child: Column(

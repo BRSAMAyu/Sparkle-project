@@ -106,7 +106,7 @@ class _UnselectedPill extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
+            material: AppMaterials.ceramic(context).copyWith(
               // Use surfaceTertiary to match Dashboard ceramic cards
               backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
             ),
@@ -161,7 +161,7 @@ class _SelectedPill extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: MaterialStyler(
-          material: AppMaterials.neoGlass.copyWith(
+          material: AppMaterials.neoGlass(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 planColor.withValues(alpha: 0.18),

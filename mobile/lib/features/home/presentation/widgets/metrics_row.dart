@@ -21,6 +21,8 @@ class MetricsRow extends ConsumerWidget {
     final streakStats = ref.watch(streakStatsProvider);
     final taskState = ref.watch(taskListProvider);
     final taskMetric = _buildTaskMetric(taskState, dashboardState);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final compactMode = textScale >= 1.2;
 
     return ContentConstraint(
       child: Padding(
@@ -31,7 +33,7 @@ class MetricsRow extends ConsumerWidget {
           DS.spacing10,
         ),
         child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
+          material: AppMaterials.ceramic(context).copyWith(
             backgroundGradient: LinearGradient(
               colors: [
                 DS.surfacePrimaryElevated,
@@ -46,7 +48,7 @@ class MetricsRow extends ConsumerWidget {
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
           child: SizedBox(
-            height: 72,
+            height: compactMode ? 82 : 72,
             child: Row(
               children: [
                 Expanded(
@@ -61,6 +63,7 @@ class MetricsRow extends ConsumerWidget {
                       label: '今日专注',
                       icon: Icons.center_focus_strong_rounded,
                       color: DS.brandPrimary,
+                      compact: compactMode,
                       onTap: () => context.push('/focus'),
                     ),
                   ),
@@ -76,6 +79,7 @@ class MetricsRow extends ConsumerWidget {
                       label: '今日任务',
                       icon: Icons.task_alt_rounded,
                       color: DS.success,
+                      compact: compactMode,
                       onTap: () => context.push('/tasks'),
                     ),
                   ),
@@ -91,6 +95,7 @@ class MetricsRow extends ConsumerWidget {
                       label: '连胜',
                       icon: Icons.local_fire_department_rounded,
                       color: DS.warning,
+                      compact: compactMode,
                       onTap: () => context.push('/achievements'),
                     ),
                   ),
@@ -155,6 +160,7 @@ class _MetricCell extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.color,
+    required this.compact,
     required this.onTap,
   });
 
@@ -162,6 +168,7 @@ class _MetricCell extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final bool compact;
   final VoidCallback onTap;
 
   Color _backgroundColor() {
@@ -220,7 +227,10 @@ class _MetricCell extends StatelessWidget {
                         key: ValueKey(value),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.titleLarge.copyWith(
+                        style: (compact
+                                ? context.sparkleTypography.bodyLarge
+                                : context.sparkleTypography.titleLarge)
+                            .copyWith(
                           color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
                         ),

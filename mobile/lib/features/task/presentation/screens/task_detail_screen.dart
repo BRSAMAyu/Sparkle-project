@@ -35,7 +35,7 @@ class TaskDetailScreen extends ConsumerWidget {
 
     // P1: Design System Adoption - Wrap screen in NeoGlass material
     return MaterialStyler(
-      material: AppMaterials.neoGlass,
+      material: AppMaterials.neoGlass(context),
       child: SparklePageScaffold(
         role: SparklePageRole.content,
         child: taskAsync.when(
@@ -629,7 +629,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
         child: ScaleTransition(
           scale: _scaleAnimation,
           child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
+            material: AppMaterials.ceramic(context).copyWith(
               // Inject the gradient tint into the ceramic material
               backgroundColor:
                   widget.gradient.colors.first.withValues(alpha: 0.1),

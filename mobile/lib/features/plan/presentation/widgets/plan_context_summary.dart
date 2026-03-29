@@ -155,7 +155,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
     return SparkleStaggerItem(
       index: 0,
       child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
+        material: AppMaterials.ceramic(context).copyWith(
           backgroundColor: widget.isDark ? DS.neutral900 : DS.neutral100,
           borderColor: statusColor.withValues(alpha: 0.2),
         ),

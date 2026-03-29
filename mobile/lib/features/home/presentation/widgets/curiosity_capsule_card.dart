@@ -28,7 +28,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
     final rawPatterns = capsule.personalizationContext?['based_on_patterns'];
     final localizedPatterns = _localizedPatterns(context, rawPatterns);
     // 1. Resolve base material (NeoGlass)
-    var material = AppMaterials.neoGlass;
+    var material = AppMaterials.neoGlass(context);
 
     // 2. Apply "Highlighted" state modifications
     if (highlighted) {

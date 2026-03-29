@@ -252,7 +252,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
             final glowSpread = isNarrow ? 1.0 : 2.0;
 
             // Base neoGlass material
-            final material = AppMaterials.neoGlass.copyWith(
+            final material = AppMaterials.neoGlass(context).copyWith(
               // Higher opacity for floating dock
               backgroundColor:
                   context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),

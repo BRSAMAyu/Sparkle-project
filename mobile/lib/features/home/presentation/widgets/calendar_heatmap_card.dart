@@ -69,7 +69,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
         GestureDetector(
           onTap: () => context.push('/calendar-stats'),
           child: MaterialStyler(
-            material: AppMaterials.ceramic,
+            material: AppMaterials.ceramic(context),
             borderRadius: DS.borderRadius20,
             padding: const EdgeInsets.all(DS.lg),
             child: Column(
@@ -146,7 +146,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.push('/calendar-stats'),
       child: MaterialStyler(
-        material: AppMaterials.ceramic,
+        material: AppMaterials.ceramic(context),
         borderRadius: DS.borderRadius20,
         padding: EdgeInsets.all(contentPadding),
         child: Column(

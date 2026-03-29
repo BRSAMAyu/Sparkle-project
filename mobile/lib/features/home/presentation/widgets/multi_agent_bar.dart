@@ -42,7 +42,7 @@ class MultiAgentBar extends ConsumerWidget {
     final entryModes = [...multiAgentModes, ...expertModes];
 
     return MaterialStyler(
-      material: AppMaterials.neoGlass.copyWith(
+      material: AppMaterials.neoGlass(context).copyWith(
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0.6),
         borderColor: DS.brandPrimary.withValues(alpha: 0.2),
       ),

@@ -62,12 +62,12 @@ export 'widgets/sparkle_motion_primitives.dart';
 /// MaterialApp 主题配置
 class AppThemes {
   static ThemeData get lightTheme {
-    final theme = ThemeManager().current;
+    final theme = ThemeManager().themeForBrightness(Brightness.light);
     return _buildThemeData(theme, Brightness.light);
   }
 
   static ThemeData get darkTheme {
-    final theme = ThemeManager().current;
+    final theme = ThemeManager().themeForBrightness(Brightness.dark);
     return _buildThemeData(theme, Brightness.dark);
   }
 
@@ -685,7 +685,10 @@ class DS {
   // Deep space colors use surfaceAmbient and surfacePrimary for proper dark mode support
   static Color get deepSpaceStart => _isDark
       ? _blend(
-          _theme.colors.galaxyBackground, _theme.colors.surfaceAmbient, 0.5,)
+          _theme.colors.galaxyBackground,
+          _theme.colors.surfaceAmbient,
+          0.5,
+        )
       : _blend(neutral50, brandSecondary, 0.12);
   static Color get deepSpaceEnd => _isDark
       ? _blend(_theme.colors.galaxyShadow, _theme.colors.surfacePrimary, 0.42)

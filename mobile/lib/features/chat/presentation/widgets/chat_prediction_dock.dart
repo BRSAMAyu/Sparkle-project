@@ -116,7 +116,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     }
 
     return MaterialStyler(
-      material: AppMaterials.neoGlass.copyWith(
+      material: AppMaterials.neoGlass(context).copyWith(
         backgroundColor: DS.surfacePanel.withValues(alpha: 0.72),
         borderColor: DS.borderSubtle.withValues(alpha: 0.8),
         shadows: [
@@ -324,7 +324,7 @@ class _CollapsedDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialStyler(
-        material: AppMaterials.neoGlass.copyWith(
+        material: AppMaterials.neoGlass(context).copyWith(
           backgroundColor: DS.surfacePanel.withValues(alpha: 0.72),
           borderColor: DS.borderSubtle.withValues(alpha: 0.78),
         ),

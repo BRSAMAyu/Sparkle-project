@@ -14,7 +14,7 @@ const _cjkFontFallback = <String>[
 
 /// 主题管理器 - 支持动态切换和持久化
 /// 支持商城皮肤系统
-class ThemeManager extends ChangeNotifier {
+class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
   factory ThemeManager() => _instance;
   ThemeManager._internal();
   static final ThemeManager _instance = ThemeManager._internal();
@@ -36,19 +36,34 @@ class ThemeManager extends ChangeNotifier {
 
   bool _initialized = false;
   bool get initialized => _initialized;
+  bool _observerRegistered = false;
 
   /// 当前主题数据
   SparkleThemeData get current {
     if (!_initialized) {
       return SparkleThemeData.light();
     }
-    return _resolveCurrentTheme();
+    return themeForBrightness(_resolveActiveBrightness());
+  }
+
+  /// 按指定亮度解析主题，避免 MaterialApp.light/darkTheme 误用当前系统亮度。
+  SparkleThemeData themeForBrightness(Brightness brightness) {
+    final baseTheme = brightness == Brightness.light
+        ? SparkleThemeData.light(highContrast: _highContrast)
+        : SparkleThemeData.dark(highContrast: _highContrast);
+
+    if (_equippedSkinId != null && _skinConfig != null) {
+      return _applyShopSkin(baseTheme);
+    }
+
+    return _applyBrandPreset(baseTheme);
   }
 
   /// 初始化 - 加载保存的设置
   Future<void> initialize() async {
     if (_initialized) return;
 
+    _ensureObserverRegistered();
     final prefs = await SharedPreferences.getInstance();
 
     _mode = AppThemeMode
@@ -138,29 +153,21 @@ class ThemeManager extends ChangeNotifier {
   }
 
   /// 解析当前主题
-  SparkleThemeData _resolveCurrentTheme() {
-    Brightness brightness;
-
+  Brightness _resolveActiveBrightness() {
     switch (_mode) {
       case AppThemeMode.light:
-        brightness = Brightness.light;
+        return Brightness.light;
       case AppThemeMode.dark:
-        brightness = Brightness.dark;
+        return Brightness.dark;
       case AppThemeMode.system:
-        brightness =
-            WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        return WidgetsBinding.instance.platformDispatcher.platformBrightness;
     }
+  }
 
-    final baseTheme = brightness == Brightness.light
-        ? SparkleThemeData.light(highContrast: _highContrast)
-        : SparkleThemeData.dark(highContrast: _highContrast);
-
-    // 🆕 优先应用商城皮肤（如果装备了皮肤）
-    if (_equippedSkinId != null && _skinConfig != null) {
-      return _applyShopSkin(baseTheme);
-    }
-
-    return _applyBrandPreset(baseTheme);
+  void _ensureObserverRegistered() {
+    if (_observerRegistered) return;
+    WidgetsBinding.instance.addObserver(this);
+    _observerRegistered = true;
   }
 
   /// 🆕 应用商城皮肤配置
@@ -307,6 +314,13 @@ class ThemeManager extends ChangeNotifier {
     });
     buffer.write('}');
     return buffer.toString();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (_initialized && _mode == AppThemeMode.system) {
+      notifyListeners();
+    }
   }
 
   @override

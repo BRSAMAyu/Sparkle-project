@@ -39,7 +39,7 @@ class NextActionsCard extends ConsumerWidget {
     }
 
     return MaterialStyler(
-      material: AppMaterials.ceramic,
+      material: AppMaterials.ceramic(context),
       borderRadius: DS.borderRadius20,
       padding: const EdgeInsets.all(DS.md),
       child: Column(
@@ -127,7 +127,7 @@ class _CompactNextActions extends StatelessWidget {
     final maxActions = embedded ? 1 : 2;
     final visibleActions = actions.take(maxActions).toList();
     final card = MaterialStyler(
-      material: AppMaterials.ceramic.copyWith(
+      material: AppMaterials.ceramic(context).copyWith(
         backgroundGradient: LinearGradient(
           colors: [
             DS.brandPrimary10,
