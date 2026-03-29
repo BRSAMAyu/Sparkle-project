@@ -147,7 +147,7 @@ class CompactStatusBar extends StatelessWidget {
                         color: weatherPresentation.accent,
                         tintColor: weatherPresentation.softAccent,
                         borderColor: weatherPresentation.borderTint,
-                        maxWidth: showWeatherLabel ? 76 : 32,
+                        maxWidth: showWeatherLabel ? 88 : 32,
                         onTap: () {
                           unawaited(
                             SensoryFeedbackService.emit(
