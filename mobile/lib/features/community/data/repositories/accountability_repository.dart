@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
@@ -17,9 +18,34 @@ class AccountabilityRepository {
   AccountabilityRepository(this._apiClient);
   final ApiClient _apiClient;
 
+  String _extractApiError(Object error, {String fallback = '请求失败'}) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString().trim();
+        if (detail != null && detail.isNotEmpty) {
+          return detail;
+        }
+        final message = data['message']?.toString().trim();
+        if (message != null && message.isNotEmpty) {
+          return message;
+        }
+        final err = data['error']?.toString().trim();
+        if (err != null && err.isNotEmpty) {
+          return err;
+        }
+      }
+      if (error.message != null && error.message!.trim().isNotEmpty) {
+        return error.message!.trim();
+      }
+    }
+    return fallback;
+  }
+
   static const _demoCurrentUserId = MockCommunityRepository.currentUserId;
   static List<AccountabilityPartnershipInfo>? _demoPartnerships;
-  static Map<String, List<AccountabilityCheckinInfo>>? _demoTimelineByPartnership;
+  static Map<String, List<AccountabilityCheckinInfo>>?
+      _demoTimelineByPartnership;
 
   static void _ensureDemoState() {
     if (_demoPartnerships != null && _demoTimelineByPartnership != null) {
@@ -117,23 +143,23 @@ class AccountabilityRepository {
   List<AccountabilityPartnershipInfo> _demoActiveFirstPartnerships() {
     _ensureDemoState();
     return [...?_demoPartnerships]..sort((a, b) {
-      int priority(AccountabilityPartnershipInfo item) {
-        switch (item.status) {
-          case AccountabilityStatus.active:
-            return 0;
-          case AccountabilityStatus.pending:
-            return 1;
-          case AccountabilityStatus.paused:
-            return 2;
-          case AccountabilityStatus.ended:
-            return 3;
+        int priority(AccountabilityPartnershipInfo item) {
+          switch (item.status) {
+            case AccountabilityStatus.active:
+              return 0;
+            case AccountabilityStatus.pending:
+              return 1;
+            case AccountabilityStatus.paused:
+              return 2;
+            case AccountabilityStatus.ended:
+              return 3;
+          }
         }
-      }
 
-      final priorityCompare = priority(a).compareTo(priority(b));
-      if (priorityCompare != 0) return priorityCompare;
-      return b.createdAt.compareTo(a.createdAt);
-    });
+        final priorityCompare = priority(a).compareTo(priority(b));
+        if (priorityCompare != 0) return priorityCompare;
+        return b.createdAt.compareTo(a.createdAt);
+      });
   }
 
   AccountabilityStatsInfo _statsFromPartnership(
@@ -184,7 +210,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 201) {
       final data = ApiResponseParser.unwrapMap(
-          response.data, action: 'requestPartnership',);
+        response.data,
+        action: 'requestPartnership',
+      );
       return AccountabilityPartnershipInfo.fromJson(data);
     }
     throw Exception('Failed to request partnership');
@@ -197,7 +225,9 @@ class AccountabilityRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
-      final index = _demoPartnerships?.indexWhere((item) => item.id == partnershipId) ?? -1;
+      final index =
+          _demoPartnerships?.indexWhere((item) => item.id == partnershipId) ??
+              -1;
       if (index < 0) {
         throw Exception('Demo partnership not found');
       }
@@ -207,10 +237,12 @@ class AccountabilityRepository {
         initiatorId: current.initiatorId,
         partnerId: current.partnerId,
         initiatorGoal: current.initiatorGoal,
-        partnerGoal: accept ? partnerGoal ?? current.partnerGoal : current.partnerGoal,
+        partnerGoal:
+            accept ? partnerGoal ?? current.partnerGoal : current.partnerGoal,
         checkInDays: current.checkInDays,
         slotType: current.slotType,
-        status: accept ? AccountabilityStatus.active : AccountabilityStatus.ended,
+        status:
+            accept ? AccountabilityStatus.active : AccountabilityStatus.ended,
         createdAt: current.createdAt,
         startedAt: accept ? DateTime.now() : current.startedAt,
         endedAt: accept ? null : DateTime.now(),
@@ -225,20 +257,26 @@ class AccountabilityRepository {
       return updated;
     }
 
-    final response = await _apiClient.post<dynamic>(
-      ApiEndpoints.accountabilityRespond(partnershipId),
-      data: {
-        'accept': accept,
-        if (partnerGoal != null && partnerGoal.isNotEmpty)
-          'partner_goal': partnerGoal,
-      },
-    );
-    if (response.statusCode == 200) {
-      final data = ApiResponseParser.unwrapMap(
-          response.data, action: 'respondToPartnership',);
-      return AccountabilityPartnershipInfo.fromJson(data);
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.accountabilityRespond(partnershipId),
+        data: {
+          'accept': accept,
+          if (partnerGoal != null && partnerGoal.isNotEmpty)
+            'partner_goal': partnerGoal,
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = ApiResponseParser.unwrapMap(
+          response.data,
+          action: 'respondToPartnership',
+        );
+        return AccountabilityPartnershipInfo.fromJson(data);
+      }
+      throw Exception('操作失败，请稍后重试');
+    } on DioException catch (error) {
+      throw Exception(_extractApiError(error, fallback: '操作失败，请稍后重试'));
     }
-    throw Exception('Failed to respond to partnership');
   }
 
   Future<List<AccountabilityPartnershipInfo>> getMyPartnerships() async {
@@ -252,10 +290,14 @@ class AccountabilityRepository {
         await _apiClient.get<dynamic>(ApiEndpoints.accountabilityMine);
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(
-          response.data, action: 'getMyPartnerships',);
+        response.data,
+        action: 'getMyPartnerships',
+      );
       return data
-          .map((e) =>
-              AccountabilityPartnershipInfo.fromJson(e as Map<String, dynamic>),)
+          .map(
+            (e) => AccountabilityPartnershipInfo.fromJson(
+                e as Map<String, dynamic>),
+          )
           .toList();
     }
     throw Exception('Failed to load partnerships');
@@ -264,10 +306,11 @@ class AccountabilityRepository {
   Future<AccountabilityOverviewInfo> getOverview() async {
     if (DemoDataService.isDemoMode) {
       final partnerships = _demoActiveFirstPartnerships();
-      final active = partnerships.cast<AccountabilityPartnershipInfo?>().firstWhere(
-            (item) => item?.status == AccountabilityStatus.active,
-            orElse: () => null,
-          );
+      final active =
+          partnerships.cast<AccountabilityPartnershipInfo?>().firstWhere(
+                (item) => item?.status == AccountabilityStatus.active,
+                orElse: () => null,
+              );
       final pending = partnerships
           .where((item) => item.status == AccountabilityStatus.pending)
           .toList();
@@ -369,7 +412,10 @@ class AccountabilityRepository {
               'partner_unlocked': false,
             },
           ],
-          'my_achievements': ['accountability_first_partnership', 'accountability_streak_7'],
+          'my_achievements': [
+            'accountability_first_partnership',
+            'accountability_streak_7'
+          ],
           'partner_achievements': ['accountability_first_partnership'],
           'my_total_unlocked': 2,
           'partner_total_unlocked': 1,
@@ -411,7 +457,8 @@ class AccountabilityRepository {
           'can_nudge': partnership.status == AccountabilityStatus.active,
           'can_share': partnership.status != AccountabilityStatus.ended,
           'can_chat': partnership.status != AccountabilityStatus.ended,
-          'can_open_dashboard': partnership.status == AccountabilityStatus.active,
+          'can_open_dashboard':
+              partnership.status == AccountabilityStatus.active,
         },
       );
     }
@@ -430,15 +477,15 @@ class AccountabilityRepository {
   Future<void> endPartnership(String partnershipId) async {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
-      _demoPartnerships = _demoPartnerships
-          ?.where((item) => item.id != partnershipId)
-          .toList();
+      _demoPartnerships =
+          _demoPartnerships?.where((item) => item.id != partnershipId).toList();
       _demoTimelineByPartnership?.remove(partnershipId);
       return;
     }
 
     await _apiClient.delete<dynamic>(
-        ApiEndpoints.accountabilityEnd(partnershipId),);
+      ApiEndpoints.accountabilityEnd(partnershipId),
+    );
   }
 
   Future<AccountabilityCheckinInfo> dailyCheckin(
@@ -450,7 +497,8 @@ class AccountabilityRepository {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
       final partnershipIndex =
-          _demoPartnerships?.indexWhere((item) => item.id == partnershipId) ?? -1;
+          _demoPartnerships?.indexWhere((item) => item.id == partnershipId) ??
+              -1;
       if (partnershipIndex < 0) {
         throw Exception('Demo partnership not found');
       }
@@ -493,7 +541,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 201) {
       final data = ApiResponseParser.unwrapMap(
-          response.data, action: 'dailyCheckin',);
+        response.data,
+        action: 'dailyCheckin',
+      );
       return AccountabilityCheckinInfo.fromJson(data);
     }
     throw Exception('Failed to check in');
@@ -526,7 +576,9 @@ class AccountabilityRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
-      return [...?_demoTimelineByPartnership?[partnershipId]].take(limit).toList();
+      return [...?_demoTimelineByPartnership?[partnershipId]]
+          .take(limit)
+          .toList();
     }
 
     final response = await _apiClient.get<dynamic>(
@@ -535,10 +587,14 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       final data = ApiResponseParser.unwrapList(
-          response.data, action: 'getTimeline',);
+        response.data,
+        action: 'getTimeline',
+      );
       return data
-          .map((e) =>
-              AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>),)
+          .map(
+            (e) =>
+                AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>),
+          )
           .toList();
     }
     throw Exception('Failed to load timeline');
@@ -561,7 +617,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       return ApiResponseParser.unwrapMap(
-          response.data, action: 'getHeatmap',);
+        response.data,
+        action: 'getHeatmap',
+      );
     }
     throw Exception('Failed to load heatmap');
   }
@@ -569,9 +627,8 @@ class AccountabilityRepository {
   Future<Map<String, dynamic>> likeCheckin(String checkinId) async {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
-      final entries =
-          _demoTimelineByPartnership?.entries.toList() ??
-              <MapEntry<String, List<AccountabilityCheckinInfo>>>[];
+      final entries = _demoTimelineByPartnership?.entries.toList() ??
+          <MapEntry<String, List<AccountabilityCheckinInfo>>>[];
       for (final entry in entries) {
         final index = entry.value.indexWhere((item) => item.id == checkinId);
         if (index >= 0) {
@@ -599,7 +656,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       return ApiResponseParser.unwrapMap(
-          response.data, action: 'likeCheckin',);
+        response.data,
+        action: 'likeCheckin',
+      );
     }
     throw Exception('Failed to like checkin');
   }
@@ -610,9 +669,8 @@ class AccountabilityRepository {
   ) async {
     if (DemoDataService.isDemoMode) {
       _ensureDemoState();
-      final entries =
-          _demoTimelineByPartnership?.entries.toList() ??
-              <MapEntry<String, List<AccountabilityCheckinInfo>>>[];
+      final entries = _demoTimelineByPartnership?.entries.toList() ??
+          <MapEntry<String, List<AccountabilityCheckinInfo>>>[];
       for (final entry in entries) {
         final index = entry.value.indexWhere((item) => item.id == checkinId);
         if (index >= 0) {
@@ -654,7 +712,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       return ApiResponseParser.unwrapMap(
-          response.data, action: 'encourageCheckin',);
+        response.data,
+        action: 'encourageCheckin',
+      );
     }
     throw Exception('Failed to send encouragement');
   }
@@ -719,7 +779,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       return ApiResponseParser.unwrapMap(
-          response.data, action: 'getAchievements',);
+        response.data,
+        action: 'getAchievements',
+      );
     }
     throw Exception('Failed to load achievements');
   }
@@ -742,7 +804,9 @@ class AccountabilityRepository {
     );
     if (response.statusCode == 200) {
       return ApiResponseParser.unwrapMap(
-          response.data, action: 'getPartnershipAchievements',);
+        response.data,
+        action: 'getPartnershipAchievements',
+      );
     }
     throw Exception('Failed to load partnership achievements');
   }

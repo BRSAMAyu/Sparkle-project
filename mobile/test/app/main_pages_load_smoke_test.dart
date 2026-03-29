@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
@@ -96,6 +97,35 @@ void main() {
       expect(find.byIcon(Icons.search), findsOneWidget);
       expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'login screen renders with semantics enabled and keeps guest entry visible',
+        (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+
+      await _pumpPage(
+        tester,
+        const LoginScreen(),
+        overrides: [
+          authProvider.overrideWith((ref) => _FakeLoggedOutAuthNotifier()),
+        ],
+      );
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.data == 'Continue as Guest' ||
+                  widget.data == '继续作为访客'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
     });
 
     testWidgets('profile renders user identity and stats card', (tester) async {
@@ -183,6 +213,15 @@ class _FakeAuthNotifier extends AuthNotifier {
       isAuthenticated: true,
       user: _buildUser(),
     );
+  }
+
+  @override
+  Future<void> checkAuthStatus() async {}
+}
+
+class _FakeLoggedOutAuthNotifier extends AuthNotifier {
+  _FakeLoggedOutAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
+    state = AuthState();
   }
 
   @override

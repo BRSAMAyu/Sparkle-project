@@ -32,7 +32,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  double _bottomOverlayHeight = 52;
+  static const double _bottomOverlayReserveHeight = 148;
 
   SliverToBoxAdapter _staggeredSection({
     required int index,
@@ -177,15 +177,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ];
 
-  void _handleUnifiedOmniBarHeightChanged(double height) {
-    if ((height - _bottomOverlayHeight).abs() < 0.5) {
-      return;
-    }
-    setState(() {
-      _bottomOverlayHeight = height;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -197,10 +188,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final category = ResponsiveSystem.getCategory(context);
     final fallbackBottomHeight = 52.0 + (predictions.isNotEmpty ? 36.0 : 0.0);
-    final totalBottomHeight = (_bottomOverlayHeight > 0
-            ? _bottomOverlayHeight
-            : fallbackBottomHeight) +
-        DS.spacing16;
+    final totalBottomHeight =
+        (_bottomOverlayReserveHeight > fallbackBottomHeight
+                ? _bottomOverlayReserveHeight
+                : fallbackBottomHeight) +
+            DS.spacing16;
 
     // Max width for floating components on larger screens
     final floatingMaxWidth = switch (category) {
@@ -351,7 +343,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                   child: UnifiedOmniBar(
                     hintText: l10n.typeMessage,
-                    onHeightChanged: _handleUnifiedOmniBarHeightChanged,
                   ),
                 ),
               ),

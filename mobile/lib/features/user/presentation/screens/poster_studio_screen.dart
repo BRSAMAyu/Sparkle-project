@@ -91,12 +91,8 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             const SizedBox(height: DS.spacing10),
             LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth < 420 ? 1 : 2;
-                final itemWidth = (constraints.maxWidth -
-                        ((crossAxisCount - 1) * DS.spacing10)) /
-                    crossAxisCount;
-                final itemHeight = crossAxisCount == 1 ? 108.0 : 120.0;
-                final ratio = itemWidth / itemHeight;
+                final crossAxisCount = constraints.maxWidth < 560 ? 1 : 2;
+                final itemHeight = crossAxisCount == 1 ? 124.0 : 136.0;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -105,7 +101,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                     crossAxisCount: crossAxisCount,
                     mainAxisSpacing: DS.spacing10,
                     crossAxisSpacing: DS.spacing10,
-                    childAspectRatio: ratio,
+                    mainAxisExtent: itemHeight,
                   ),
                   itemBuilder: (context, index) {
                     final preset = presets[index];
@@ -232,11 +228,9 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
         if (aTime == null || bTime == null) return 0;
         return bTime.compareTo(aTime);
       });
-    final topAchievement =
-        unlocked.isNotEmpty ? unlocked.first : null;
+    final topAchievement = unlocked.isNotEmpty ? unlocked.first : null;
     final activePlan = activePlans.isNotEmpty ? activePlans.first : null;
-    final latestCapsule =
-        capsules.isNotEmpty ? capsules.first : null;
+    final latestCapsule = capsules.isNotEmpty ? capsules.first : null;
     final userName = user.nickname ?? user.username;
     final flameBrightness = (user.flameBrightness * 100).round();
 
@@ -369,63 +363,79 @@ class _PosterPresetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              preset.accent.withValues(alpha: selected ? 0.20 : 0.10),
-              DS.surfaceSecondary,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                preset.accent.withValues(alpha: selected ? 0.20 : 0.10),
+                DS.surfaceSecondary,
+              ],
+            ),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: selected
+                  ? preset.accent.withValues(alpha: 0.65)
+                  : DS.borderSubtle,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(preset.icon, color: preset.accent),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      preset.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: DS.bodyMedium.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      preset.subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked,
+                size: 18,
+                color: selected ? preset.accent : DS.textTertiary,
+              ),
             ],
           ),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(
-            color: selected
-                ? preset.accent.withValues(alpha: 0.65)
-                : DS.borderSubtle,
-          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(preset.icon, color: preset.accent),
-            ),
-            const SizedBox(height: DS.spacing10),
-            Text(
-              preset.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: DS.bodyMedium.copyWith(
-                color: DS.textPrimary,
-                  fontWeight: DS.fontWeightBold,
-                  height: 1.2,
-                ),
-            ),
-            const SizedBox(height: DS.spacing6),
-            Text(
-              preset.subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: DS.bodySmall.copyWith(
-                color: DS.textSecondary,
-                  height: 1.35,
-                ),
-            ),
-          ],
-        ),
-      ),
-    );
+      );
 }
 
 class _PosterPreviewCard extends StatelessWidget {
@@ -439,35 +449,35 @@ class _PosterPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius20,
-        border: Border.all(color: DS.borderSubtle),
-      ),
-      child: AspectRatio(
-        aspectRatio: 396 / 704,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: ColoredBox(
-            color: DS.surfacePrimary,
-            child: isGenerating
-                ? const Center(child: CircularProgressIndicator())
-                : previewFile != null
-                    ? Image.file(previewFile!, fit: BoxFit.cover)
-                    : Center(
-                        child: Text(
-                          '预览生成中',
-                          style: DS.bodyMedium.copyWith(
-                            color: DS.textSecondary,
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius20,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: AspectRatio(
+          aspectRatio: 396 / 704,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: ColoredBox(
+              color: DS.surfacePrimary,
+              child: isGenerating
+                  ? const Center(child: CircularProgressIndicator())
+                  : previewFile != null
+                      ? Image.file(previewFile!, fit: BoxFit.cover)
+                      : Center(
+                          child: Text(
+                            '预览生成中',
+                            style: DS.bodyMedium.copyWith(
+                              color: DS.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _PosterStudioHero extends StatelessWidget {
@@ -532,6 +542,8 @@ class _PosterStudioHero extends StatelessWidget {
           const SizedBox(height: DS.spacing16),
           Text(
             '把你的成长，做成值得分享的一张图',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.textPrimary,
@@ -546,6 +558,8 @@ class _PosterStudioHero extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             '海报工坊会自动读取你的真实成就、计划、胶囊和成长数据，生成适合分享到社交平台或保存到相册的高质感海报。',
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
             style: DS.bodyMedium.copyWith(
               color: DS.textSecondary,
               height: 1.55,
@@ -581,34 +595,41 @@ class _HeroBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing8,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: DS.borderRadius20,
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: DS.spacing6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: DS.fontWeightSemibold,
-                ) ??
-                DS.bodySmall.copyWith(
-              color: DS.textPrimary,
-              fontWeight: DS.fontWeightSemibold,
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width < 360 ? 148 : 188,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: DS.borderRadius20,
+          border: Border.all(color: color.withValues(alpha: 0.18)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: DS.spacing6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightSemibold,
+                        ) ??
+                    DS.bodySmall.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }
 
 class _HeroChip extends StatelessWidget {
@@ -618,22 +639,24 @@ class _HeroChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: DS.surfaceOverlay,
-        borderRadius: DS.borderRadius20,
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(
-          color: DS.textSecondary,
-          fontWeight: DS.fontWeightSemibold,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
         ),
-      ),
-    );
+        decoration: BoxDecoration(
+          color: DS.surfaceOverlay,
+          borderRadius: DS.borderRadius20,
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DS.labelSmall.copyWith(
+            color: DS.textSecondary,
+            fontWeight: DS.fontWeightSemibold,
+          ),
+        ),
+      );
 }
 
 class _SelectedTemplateCaption extends StatelessWidget {
@@ -659,7 +682,8 @@ class _SelectedTemplateCaption extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: (template.color ?? DS.brandPrimary).withValues(alpha: 0.12),
+              color:
+                  (template.color ?? DS.brandPrimary).withValues(alpha: 0.12),
               borderRadius: DS.borderRadius12,
             ),
             child: Icon(
@@ -674,6 +698,8 @@ class _SelectedTemplateCaption extends StatelessWidget {
               children: [
                 Text(
                   '${template.name} 模板',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: DS.bodyMedium.copyWith(
                     fontWeight: DS.fontWeightBold,
                     color: DS.textPrimary,
@@ -682,6 +708,8 @@ class _SelectedTemplateCaption extends StatelessWidget {
                 const SizedBox(height: DS.spacing2),
                 Text(
                   template.description ?? '适合分享你的成长亮点',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,

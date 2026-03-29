@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
 	"testing"
@@ -154,6 +157,8 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 	expectedAdditionalRoutes := []string{
 		"POST /api/v1/community/shared-resources/:shared_resource_id/adopt",
 		"GET /api/v1/visual-elements",
+		"GET /api/v1/user/*path",
+		"GET /api/v1/achievements/streak/history",
 		"GET /api/v1/experiments",
 		"GET /api/v1/reviews/*path",
 		"GET /api/v1/stats/*path",
@@ -235,5 +240,74 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 	// Verify we have routes registered (should be more than 50)
 	if len(routes) < 50 {
 		t.Errorf("Expected at least 50 routes to be registered, got %d", len(routes))
+	}
+}
+
+func TestProxyRoutesHandler_ClientTelemetryAuthBoundary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := zap.NewNop()
+
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer backend.Close()
+
+	backendURL, err := url.Parse(backend.URL)
+	if err != nil {
+		t.Fatalf("failed to parse backend url: %v", err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(backendURL)
+
+	abTestConfig := &middleware.ABTestConfig{
+		BackendURL: backend.URL,
+		Timeout:    3 * time.Second,
+		Enabled:    false,
+	}
+	abTestMiddleware := middleware.NewABTestMiddleware(abTestConfig)
+	h := NewProxyRoutesHandler(proxy, abTestMiddleware, logger)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+
+	authCalls := 0
+	mockAuthMiddleware := func(c *gin.Context) {
+		authCalls++
+		c.Set("user_id", "test-user-123")
+		c.Set("auth_token", "test-token-abc")
+		c.Next()
+	}
+
+	h.RegisterProxyRoutes(api, mockAuthMiddleware)
+
+	server := httptest.NewServer(router)
+	defer server.Close()
+	postResp, err := http.Post(
+		server.URL+"/api/v1/client-telemetry/events/batch",
+		"application/json",
+		bytes.NewBufferString(`{"events":[{"event_type":"screen_view"}]}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to post anonymous telemetry ingest: %v", err)
+	}
+	defer postResp.Body.Close()
+
+	if postResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected anonymous telemetry ingest to proxy successfully, got %d", postResp.StatusCode)
+	}
+	if authCalls != 0 {
+		t.Fatalf("expected anonymous telemetry ingest to bypass auth middleware, got %d calls", authCalls)
+	}
+
+	summaryResp, err := http.Get(server.URL + "/api/v1/client-telemetry/summary")
+	if err != nil {
+		t.Fatalf("failed to get telemetry summary: %v", err)
+	}
+	defer summaryResp.Body.Close()
+
+	if summaryResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected telemetry summary to proxy successfully, got %d", summaryResp.StatusCode)
+	}
+	if authCalls != 1 {
+		t.Fatalf("expected telemetry summary to invoke auth middleware once, got %d calls", authCalls)
 	}
 }

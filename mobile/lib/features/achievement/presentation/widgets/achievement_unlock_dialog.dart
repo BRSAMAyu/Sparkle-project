@@ -14,6 +14,13 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
+enum _AchievementUnlockActionState {
+  idle,
+  closing,
+  sharing,
+  navigating,
+}
+
 /// 成就解锁弹窗
 ///
 /// 显示成就解锁动画，根据稀有度显示不同视觉效果
@@ -113,6 +120,8 @@ class AchievementUnlockDialog extends StatefulWidget {
 
 class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     with TickerProviderStateMixin {
+  static const _actionCooldown = Duration(milliseconds: 180);
+
   late AnimationController _scaleController;
   late AnimationController _rotateController;
   late AnimationController _particleController;
@@ -121,6 +130,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   late Animation<double> _rotateAnimation;
   late Animation<double> _glowAnimation;
   bool _showLegendaryAura = false;
+  _AchievementUnlockActionState _actionState =
+      _AchievementUnlockActionState.idle;
 
   @override
   void initState() {
@@ -285,26 +296,51 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     );
   }
 
-  void _dismissUnlockDialog() {
+  Future<void> _dismissUnlockDialog() async {
     final navigator = Navigator.of(context, rootNavigator: true);
     if (navigator.canPop()) {
       navigator.pop();
     }
+    await Future<void>.delayed(_actionCooldown);
+  }
+
+  Future<void> _runDialogAction(
+    _AchievementUnlockActionState nextState,
+    VoidCallback? callback,
+  ) async {
+    if (_actionState != _AchievementUnlockActionState.idle) {
+      return;
+    }
+    setState(() => _actionState = nextState);
+    try {
+      await _dismissUnlockDialog();
+      callback?.call();
+    } finally {
+      if (mounted) {
+        setState(() => _actionState = _AchievementUnlockActionState.idle);
+      }
+    }
   }
 
   void _handleClose() {
-    _dismissUnlockDialog();
-    widget.onClose?.call();
+    unawaited(
+      _runDialogAction(_AchievementUnlockActionState.closing, widget.onClose),
+    );
   }
 
   void _handleShare() {
-    _dismissUnlockDialog();
-    widget.onShare?.call();
+    unawaited(
+      _runDialogAction(_AchievementUnlockActionState.sharing, widget.onShare),
+    );
   }
 
   void _handleViewRewards() {
-    _dismissUnlockDialog();
-    widget.onViewRewards?.call();
+    unawaited(
+      _runDialogAction(
+        _AchievementUnlockActionState.navigating,
+        widget.onViewRewards,
+      ),
+    );
   }
 
   int _confettiParticleCount(AchievementRarity rarity) => switch (rarity) {
@@ -483,7 +519,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                             icon: Icons.workspace_premium_outlined,
                             label: '查看奖励',
                             isPrimary: true,
-                            onPressed: widget.onViewRewards!,
+                            onPressed: _handleViewRewards,
                           ),
                           const SizedBox(height: DS.spacing12),
                         ],
@@ -698,16 +734,20 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }) {
     final colors = _getRarityColors();
 
+    final isBusy = _actionState != _AchievementUnlockActionState.idle;
+
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isBusy ? null : onPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: DS.spacing12,
         ),
         decoration: BoxDecoration(
-          color: isPrimary ? colors.primary.withValues(alpha: 0.8) : null,
+          color: isPrimary
+              ? colors.primary.withValues(alpha: isBusy ? 0.48 : 0.8)
+              : null,
           border: Border.all(
-            color: colors.border,
+            color: colors.border.withValues(alpha: isBusy ? 0.6 : 1),
             width: 1.5,
           ),
           borderRadius: DS.borderRadius12,
@@ -724,11 +764,22 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               color: colors.text,
             ),
             Text(
-              label,
+              isBusy &&
+                      ((label == '关闭' &&
+                              _actionState ==
+                                  _AchievementUnlockActionState.closing) ||
+                          (label == '分享' &&
+                              _actionState ==
+                                  _AchievementUnlockActionState.sharing) ||
+                          (label == '查看奖励' &&
+                              _actionState ==
+                                  _AchievementUnlockActionState.navigating))
+                  ? '处理中...'
+                  : label,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 fontWeight: DS.fontWeightMedium,
-                color: colors.text,
+                color: colors.text.withValues(alpha: isBusy ? 0.82 : 1),
               ),
             ),
           ],

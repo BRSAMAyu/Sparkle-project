@@ -186,6 +186,7 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(
       clearConversation: true,
       messages: [],
+      hasMoreMessages: false,
       clearError: true,
       agentActivities: const [],
     );
@@ -257,6 +258,7 @@ extension ChatNotifierActions on ChatNotifier {
       state = state.copyWith(
         conversationId: sessionId,
         messages: [],
+        hasMoreMessages: false,
         isSending: false,
         clearError: true,
         streamingContent: '',

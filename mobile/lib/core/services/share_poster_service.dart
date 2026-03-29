@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,40 +21,42 @@ class SharePosterService {
     BuildContext context,
     UniversalSharePayload payload,
   ) async {
-    final overlay = Overlay.maybeOf(context, rootOverlay: true);
-    if (overlay == null) {
-      return null;
-    }
+    return runWithoutDebugTextGuides(() async {
+      final overlay = Overlay.maybeOf(context, rootOverlay: true);
+      if (overlay == null) {
+        return null;
+      }
 
-    final captureKey = GlobalKey();
-    final mediaQuery = MediaQuery.of(context);
-    final sanitizedPayload = _sanitizePayload(payload);
+      final captureKey = GlobalKey();
+      final mediaQuery = MediaQuery.of(context);
+      final sanitizedPayload = _sanitizePayload(payload);
 
-    late final OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (_) => Positioned.fill(
-        child: IgnorePointer(
-          child: ExcludeSemantics(
-            child: Transform.translate(
-              offset: Offset(mediaQuery.size.width * 2, 0),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: MediaQuery(
-                  data: mediaQuery.copyWith(
-                    size: _posterSize,
-                    padding: EdgeInsets.zero,
-                    viewPadding: EdgeInsets.zero,
-                    viewInsets: EdgeInsets.zero,
-                    devicePixelRatio: 1,
-                  ),
-                  child: Theme(
-                    data: Theme.of(context),
-                    child: RepaintBoundary(
-                      key: captureKey,
-                      child: SizedBox(
-                        width: _posterSize.width,
-                        height: _posterSize.height,
-                        child: _SharePosterCanvas(payload: sanitizedPayload),
+      late final OverlayEntry entry;
+      entry = OverlayEntry(
+        builder: (_) => Positioned.fill(
+          child: IgnorePointer(
+            child: ExcludeSemantics(
+              child: Transform.translate(
+                offset: Offset(mediaQuery.size.width * 2, 0),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: MediaQuery(
+                    data: mediaQuery.copyWith(
+                      size: _posterSize,
+                      padding: EdgeInsets.zero,
+                      viewPadding: EdgeInsets.zero,
+                      viewInsets: EdgeInsets.zero,
+                      devicePixelRatio: 1,
+                    ),
+                    child: Theme(
+                      data: Theme.of(context),
+                      child: RepaintBoundary(
+                        key: captureKey,
+                        child: SizedBox(
+                          width: _posterSize.width,
+                          height: _posterSize.height,
+                          child: _SharePosterCanvas(payload: sanitizedPayload),
+                        ),
                       ),
                     ),
                   ),
@@ -62,43 +65,57 @@ class SharePosterService {
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    overlay.insert(entry);
+      overlay.insert(entry);
+
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await WidgetsBinding.instance.endOfFrame;
+
+        final boundary = captureKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+        if (boundary == null) {
+          return null;
+        }
+
+        final image = await boundary.toImage(pixelRatio: _pixelRatio);
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+
+        if (byteData == null) {
+          return null;
+        }
+
+        final tempDir = await getTemporaryDirectory();
+        final file = File(
+          '${tempDir.path}/${sanitizedPayload.contentType.stringValue}_${sanitizedPayload.resourceId}_${sanitizedPayload.templateId}_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+
+        await file.writeAsBytes(
+          byteData.buffer.asUint8List(),
+          flush: true,
+        );
+
+        return file;
+      } finally {
+        entry.remove();
+      }
+    });
+  }
+
+  @visibleForTesting
+  static Future<T> runWithoutDebugTextGuides<T>(
+    Future<T> Function() action,
+  ) async {
+    final previousBaselines = debugPaintBaselinesEnabled;
+    debugPaintBaselinesEnabled = false;
 
     try {
-      await WidgetsBinding.instance.endOfFrame;
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      await WidgetsBinding.instance.endOfFrame;
-
-      final boundary = captureKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) {
-        return null;
-      }
-
-      final image = await boundary.toImage(pixelRatio: _pixelRatio);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-
-      if (byteData == null) {
-        return null;
-      }
-
-      final tempDir = await getTemporaryDirectory();
-      final file = File(
-        '${tempDir.path}/${sanitizedPayload.contentType.stringValue}_${sanitizedPayload.resourceId}_${sanitizedPayload.templateId}_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-
-      await file.writeAsBytes(
-        byteData.buffer.asUint8List(),
-        flush: true,
-      );
-
-      return file;
+      return await action();
     } finally {
-      entry.remove();
+      debugPaintBaselinesEnabled = previousBaselines;
     }
   }
 
@@ -171,10 +188,10 @@ class _SharePosterCanvas extends StatelessWidget {
                 const SizedBox(height: 24),
                 Text(
                   payload.title,
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 34,
+                    fontSize: 32,
                     height: 1.08,
                     fontWeight: FontWeight.w800,
                     color: posterTheme.textPrimary,
@@ -186,7 +203,7 @@ class _SharePosterCanvas extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 12),
                     child: Text(
                       summary,
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 15,
@@ -195,15 +212,25 @@ class _SharePosterCanvas extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
-                _PosterCardShell(
-                  accent: posterTheme.accent,
-                  child: Center(
-                    child: ShareCardFactory.fromPayload(payload),
+                const SizedBox(height: 20),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: _PosterCardShell(
+                    accent: posterTheme.accent,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: 220,
+                        child: Center(
+                          child: ShareCardFactory.fromPayload(payload),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 if (metrics.isNotEmpty) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
@@ -346,7 +373,7 @@ class _SharePosterCanvas extends StatelessWidget {
         addMetric('模式类型', metadata['pattern_type']);
     }
 
-    return metrics.take(4).toList();
+    return metrics.take(3).toList();
   }
 
   String? _normalizeMetricValue(Object? value) {
@@ -410,58 +437,96 @@ class _PosterTopBar extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 280;
+
+          final leadingPill = Container(
+            constraints: BoxConstraints(
+              maxWidth: compact ? constraints.maxWidth : 156,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.18),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Sparkle Share',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          final labelPill = Container(
+            constraints: BoxConstraints(
+              maxWidth: compact ? constraints.maxWidth : 92,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: accent,
+              ),
+            ),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                leadingPill,
+                const SizedBox(height: 8),
+                labelPill,
+              ],
+            );
+          }
+
+          return Row(
             children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: accent,
-                  shape: BoxShape.circle,
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: leadingPill,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Sparkle Share',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
+              const SizedBox(width: 12),
+              labelPill,
             ],
-          ),
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: accent,
-            ),
-          ),
-        ),
-      ],
-    );
+          );
+        },
+      );
 }
 
 class _PosterCardShell extends StatelessWidget {
@@ -475,22 +540,22 @@ class _PosterCardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: Colors.white.withValues(alpha: 0.9),
-        border: Border.all(color: accent.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 28,
-            offset: const Offset(0, 20),
-          ),
-        ],
-      ),
-      child: child,
-    );
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          color: Colors.white.withValues(alpha: 0.9),
+          border: Border.all(color: accent.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 28,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: child,
+      );
 }
 
 class _PosterMetricChip extends StatelessWidget {
@@ -508,38 +573,38 @@ class _PosterMetricChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      constraints: const BoxConstraints(minWidth: 112),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: textColor.withValues(alpha: 0.72),
+        constraints: const BoxConstraints(minWidth: 112),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: textColor.withValues(alpha: 0.72),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: textColor,
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }
 
 class _PosterIdentity extends StatelessWidget {
@@ -555,40 +620,40 @@ class _PosterIdentity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      children: [
-        if (showAvatar)
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  accent.withValues(alpha: 0.92),
-                  accent.withValues(alpha: 0.54),
-                ],
+        children: [
+          if (showAvatar)
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    accent.withValues(alpha: 0.92),
+                    accent.withValues(alpha: 0.54),
+                  ],
+                ),
+              ),
+              child: Text(
+                displayName.substring(0, 1).toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-            child: Text(
-              displayName.substring(0, 1).toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
+          if (showAvatar) const SizedBox(width: 10),
+          Text(
+            displayName,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
-        if (showAvatar) const SizedBox(width: 10),
-        Text(
-          displayName,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 class _PosterMetric {
@@ -670,38 +735,39 @@ class _PosterThemeData {
   }
 
   List<Widget> buildDecorations() => [
-      Positioned(
-        top: -60,
-        right: -30,
-        child: _GlowBlob(
-          size: 220,
-          color: accent.withValues(alpha: 0.18),
+        Positioned(
+          top: -60,
+          right: -30,
+          child: _GlowBlob(
+            size: 220,
+            color: accent.withValues(alpha: 0.18),
+          ),
         ),
-      ),
-      Positioned(
-        bottom: -90,
-        left: -50,
-        child: _GlowBlob(
-          size: 260,
-          color: accent.withValues(alpha: 0.14),
+        Positioned(
+          bottom: -90,
+          left: -50,
+          child: _GlowBlob(
+            size: 260,
+            color: accent.withValues(alpha: 0.14),
+          ),
         ),
-      ),
-      Positioned(
-        top: 120,
-        left: 34,
-        child: _SparkDot(color: Colors.white.withValues(alpha: 0.42)),
-      ),
-      Positioned(
-        top: 188,
-        right: 38,
-        child: _SparkDot(color: accent.withValues(alpha: 0.72), size: 8),
-      ),
-      Positioned(
-        top: 84,
-        right: 90,
-        child: _SparkDot(color: Colors.white.withValues(alpha: 0.26), size: 6),
-      ),
-    ];
+        Positioned(
+          top: 120,
+          left: 34,
+          child: _SparkDot(color: Colors.white.withValues(alpha: 0.42)),
+        ),
+        Positioned(
+          top: 188,
+          right: 38,
+          child: _SparkDot(color: accent.withValues(alpha: 0.72), size: 8),
+        ),
+        Positioned(
+          top: 84,
+          right: 90,
+          child:
+              _SparkDot(color: Colors.white.withValues(alpha: 0.26), size: 6),
+        ),
+      ];
 
   static Color _accentForContent(ShareableContentType type) => switch (type) {
         ShareableContentType.achievement => const Color(0xFFF9B94B),
@@ -725,19 +791,19 @@ class _GlowBlob extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 80,
-            spreadRadius: 12,
-          ),
-        ],
-      ),
-    );
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color,
+              blurRadius: 80,
+              spreadRadius: 12,
+            ),
+          ],
+        ),
+      );
 }
 
 class _SparkDot extends StatelessWidget {
@@ -751,17 +817,17 @@ class _SparkDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 16,
-          ),
-        ],
-      ),
-    );
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color,
+              blurRadius: 16,
+            ),
+          ],
+        ),
+      );
 }

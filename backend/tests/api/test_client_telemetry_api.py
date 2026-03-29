@@ -167,3 +167,39 @@ def test_client_telemetry_summary_includes_daily_totals():
     assert first_recent["event_type"] == "api_request"
     assert first_recent["route"] == "/predictive/analytics"
     assert json.loads(json.dumps(body))
+
+
+def test_client_telemetry_batch_ingest_accepts_anonymous_events():
+    app = _build_app()
+    fake_redis = _FakeRedis()
+    original_redis = cache_service.redis
+    cache_service.redis = fake_redis
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/client-telemetry/events/batch",
+                json={
+                    "events": [
+                        {
+                            "event_type": "screen_view",
+                            "category": "navigation",
+                            "route": "/login",
+                            "status": "ok",
+                            "severity": "info",
+                            "metadata": {"platform": "ios"},
+                        }
+                    ]
+                },
+            )
+    finally:
+        cache_service.redis = original_redis
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted"] is True
+    assert body["accepted_count"] == 1
+    assert body["events"][0]["event_type"] == "screen_view"
+
+    recent = json.loads(fake_redis._lists["client_telemetry:recent"][0])
+    assert recent["user_id"] == "anonymous"

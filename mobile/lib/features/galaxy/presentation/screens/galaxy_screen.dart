@@ -339,7 +339,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       preserveCamera: preserveCamera,
     );
     final playbackSpeedMultiplier =
-        preserveCamera ? 1.0 : (playbackLaunch == null ? 1.0 : 1.24);
+        preserveCamera ? 1.0 : (playbackLaunch == null ? 1.0 : 1.45);
 
     _spatialIndex.build(positions, sanitizedGraph.nodes);
     _labelCache.clear();
@@ -480,11 +480,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       curve: Curves.easeOutCubic,
     );
     _initialBuildReplayTimer?.cancel();
-    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 180), () {
+    _initialBuildReplayTimer = Timer(const Duration(milliseconds: 140), () {
       if (!mounted || _graph == null || playbackLaunch == null) {
         return;
       }
-      _startPreparedPlayback(preRoll: const Duration(milliseconds: 50));
+      _startPreparedPlayback(preRoll: const Duration(milliseconds: 30));
     });
     unawaited(_entranceController.forward());
   }
@@ -2300,21 +2300,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               );
             }
 
-            return Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: _handlePointerDown,
-              onPointerMove: _gestureHandler.handlePointerMove,
-              onPointerUp: _handlePointerUp,
-              onPointerCancel: _handlePointerCancel,
-              onPointerSignal: _handlePointerSignal,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: Stack(
-                  key: const ValueKey<bool>(isDarkMode),
-                  children: [
-                    RepaintBoundary(
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: Stack(
+                key: const ValueKey<bool>(isDarkMode),
+                children: [
+                  Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: _handlePointerDown,
+                    onPointerMove: _gestureHandler.handlePointerMove,
+                    onPointerUp: _handlePointerUp,
+                    onPointerCancel: _handlePointerCancel,
+                    onPointerSignal: _handlePointerSignal,
+                    child: RepaintBoundary(
                       child: CustomPaint(
                         painter: StarMapPainter(
                           camera: _camera,
@@ -2357,156 +2357,153 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         child: const SizedBox.expand(),
                       ),
                     ),
-                    ..._celebrations.map((entry) {
-                      final worldPosition = _renderPositions[entry.nodeId];
-                      if (worldPosition == null) {
-                        return const SizedBox.shrink();
+                  ),
+                  ..._celebrations.map((entry) {
+                    final worldPosition = _renderPositions[entry.nodeId];
+                    if (worldPosition == null) {
+                      return const SizedBox.shrink();
+                    }
+                    final neighborIds =
+                        _adjacency[entry.nodeId] ?? const <String>{};
+                    final neighborScreenPositions = <Offset>[];
+                    for (final nid in neighborIds) {
+                      final nPos = _renderPositions[nid];
+                      if (nPos != null) {
+                        neighborScreenPositions
+                            .add(_camera.worldToScreen(nPos));
                       }
-                      // Collect neighbor screen positions for connection animation
-                      final neighborIds =
-                          _adjacency[entry.nodeId] ?? const <String>{};
-                      final neighborScreenPositions = <Offset>[];
-                      for (final nid in neighborIds) {
-                        final nPos = _renderPositions[nid];
-                        if (nPos != null) {
-                          neighborScreenPositions
-                              .add(_camera.worldToScreen(nPos));
-                        }
-                      }
-                      return Positioned.fill(
-                        child: IgnorePointer(
-                          child: StarSuccessAnimation(
-                            key: ValueKey(entry.id),
-                            position: _camera.worldToScreen(worldPosition),
-                            color: entry.color,
-                            neighborPositions: neighborScreenPositions,
-                            emphasizeNeighbors: entry.emphasizeNeighbors,
-                            onComplete: () => _removeCelebration(entry.id),
-                          ),
-                        ),
-                      );
-                    }),
-                    if (_previewNode != null && _previewScreenPosition != null)
-                      Positioned(
-                        left: _previewScreenPosition!.dx,
-                        top: _previewScreenPosition!.dy,
-                        child: AnimatedScale(
-                          scale: 1,
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutBack,
-                          child: AnimatedOpacity(
-                            opacity: 1,
-                            duration: const Duration(milliseconds: 160),
-                            child: GalaxyNodePreviewCard(
-                              node: _previewNode!,
-                              onFocus: _focusPreviewNode,
-                              onInspectConnections: _inspectPreviewConnections,
-                              onLaunchPrediction:
-                                  _launchPredictionForPreviewNode,
-                            ),
-                          ),
+                    }
+                    return Positioned.fill(
+                      child: IgnorePointer(
+                        child: StarSuccessAnimation(
+                          key: ValueKey(entry.id),
+                          position: _camera.worldToScreen(worldPosition),
+                          color: entry.color,
+                          neighborPositions: neighborScreenPositions,
+                          emphasizeNeighbors: entry.emphasizeNeighbors,
+                          onComplete: () => _removeCelebration(entry.id),
                         ),
                       ),
-                    SafeArea(
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            top: 12,
-                            left: 16,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 150),
-                              child: currentSector == null
-                                  ? const SizedBox.shrink()
-                                  : GalaxySectorIndicator(
-                                      key: ValueKey(currentSector.name),
-                                      label:
-                                          SectorConfig.getStyle(currentSector)
-                                              .name,
-                                      color:
-                                          SectorConfig.getColor(currentSector),
-                                      isDarkMode: isDarkMode,
-                                    ),
-                            ),
+                    );
+                  }),
+                  if (_previewNode != null && _previewScreenPosition != null)
+                    Positioned(
+                      left: _previewScreenPosition!.dx,
+                      top: _previewScreenPosition!.dy,
+                      child: AnimatedScale(
+                        scale: 1,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutBack,
+                        child: AnimatedOpacity(
+                          opacity: 1,
+                          duration: const Duration(milliseconds: 160),
+                          child: GalaxyNodePreviewCard(
+                            node: _previewNode!,
+                            onFocus: _focusPreviewNode,
+                            onInspectConnections: _inspectPreviewConnections,
+                            onLaunchPrediction: _launchPredictionForPreviewNode,
                           ),
-                          if (overviewStats != null && _camera.scale < 0.32)
-                            Positioned(
-                              top: 14,
-                              right: 16,
-                              child: _GalaxyOverviewStats(
-                                stats: overviewStats,
-                                isDarkMode: isDarkMode,
-                              ),
-                            ),
-                          Positioned(
-                            left: 16,
-                            bottom: 16,
-                            child: AnimatedOpacity(
-                              opacity: _camera.scale >= 0.3 ? 1 : 0,
-                              duration: const Duration(milliseconds: 180),
-                              child: IgnorePointer(
-                                ignoring: _camera.scale < 0.3,
-                                child: GalaxyMiniMap(
-                                  camera: _camera,
-                                  positions: _renderPositions,
-                                  nodesById: _nodesById,
-                                  blendedColors: blendedColors,
-                                  worldBounds: _computeWorldBounds(),
-                                  isDarkMode: isDarkMode,
-                                  sceneVersion: _sceneVersion,
-                                  onNavigate: _handleMiniMapNavigate,
-                                  onViewportDragged: _handleMiniMapDrag,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 16,
-                            bottom: 16,
-                            child: GalaxyControls(
-                              onZoomIn: () => _zoomAroundCenter(1.5),
-                              onFitToOverview: _fitOverviewAnimated,
-                              onZoomOut: () => _zoomAroundCenter(1 / 1.5),
-                              onReplay: _toggleBuildReplay,
-                              onSearch: _toggleSearchPanel,
-                              onSettings: _openSimulationSettings,
-                              isDarkMode: isDarkMode,
-                              isReplaying: _isBuildAnimating,
-                              isSearchOpen: _isSearchOpen,
-                              isSettingsOpen: _isSettingsOpen,
-                            ),
-                          ),
-                          Positioned(
-                            top: 58,
-                            right: 16,
-                            child: AnimatedSlide(
-                              offset: _isSearchOpen
-                                  ? Offset.zero
-                                  : const Offset(0, -0.08),
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                              child: AnimatedOpacity(
-                                opacity: _isSearchOpen ? 1 : 0,
-                                duration: const Duration(milliseconds: 180),
-                                child: IgnorePointer(
-                                  ignoring: !_isSearchOpen,
-                                  child: GalaxySearchPanel(
-                                    controller: _searchController,
-                                    query: _searchQuery,
-                                    results: _searchResults,
-                                    isDarkMode: isDarkMode,
-                                    onQueryChanged: _updateSearchQuery,
-                                    onClose: _toggleSearchPanel,
-                                    onNodeSelected: _handleSearchNodeSelected,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  SafeArea(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: 12,
+                          left: 16,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            child: currentSector == null
+                                ? const SizedBox.shrink()
+                                : GalaxySectorIndicator(
+                                    key: ValueKey(currentSector.name),
+                                    label: SectorConfig.getStyle(currentSector)
+                                        .name,
+                                    color:
+                                        SectorConfig.getColor(currentSector),
+                                    isDarkMode: isDarkMode,
+                                  ),
+                          ),
+                        ),
+                        if (overviewStats != null && _camera.scale < 0.32)
+                          Positioned(
+                            top: 14,
+                            right: 16,
+                            child: _GalaxyOverviewStats(
+                              stats: overviewStats,
+                              isDarkMode: isDarkMode,
+                            ),
+                          ),
+                        Positioned(
+                          left: 16,
+                          bottom: 16,
+                          child: AnimatedOpacity(
+                            opacity: _camera.scale >= 0.3 ? 1 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            child: IgnorePointer(
+                              ignoring: _camera.scale < 0.3,
+                              child: GalaxyMiniMap(
+                                camera: _camera,
+                                positions: _renderPositions,
+                                nodesById: _nodesById,
+                                blendedColors: blendedColors,
+                                worldBounds: _computeWorldBounds(),
+                                isDarkMode: isDarkMode,
+                                sceneVersion: _sceneVersion,
+                                onNavigate: _handleMiniMapNavigate,
+                                onViewportDragged: _handleMiniMapDrag,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: GalaxyControls(
+                            onZoomIn: () => _zoomAroundCenter(1.5),
+                            onFitToOverview: _fitOverviewAnimated,
+                            onZoomOut: () => _zoomAroundCenter(1 / 1.5),
+                            onReplay: _toggleBuildReplay,
+                            onSearch: _toggleSearchPanel,
+                            onSettings: _openSimulationSettings,
+                            isDarkMode: isDarkMode,
+                            isReplaying: _isBuildAnimating,
+                            isSearchOpen: _isSearchOpen,
+                            isSettingsOpen: _isSettingsOpen,
+                          ),
+                        ),
+                        Positioned(
+                          top: 58,
+                          right: 16,
+                          child: AnimatedSlide(
+                            offset: _isSearchOpen
+                                ? Offset.zero
+                                : const Offset(0, -0.08),
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            child: AnimatedOpacity(
+                              opacity: _isSearchOpen ? 1 : 0,
+                              duration: const Duration(milliseconds: 180),
+                              child: IgnorePointer(
+                                ignoring: !_isSearchOpen,
+                                child: GalaxySearchPanel(
+                                  controller: _searchController,
+                                  query: _searchQuery,
+                                  results: _searchResults,
+                                  isDarkMode: isDarkMode,
+                                  onQueryChanged: _updateSearchQuery,
+                                  onClose: _toggleSearchPanel,
+                                  onNodeSelected: _handleSearchNodeSelected,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },

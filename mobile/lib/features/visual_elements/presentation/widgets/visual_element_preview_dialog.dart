@@ -24,6 +24,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
     super.key,
     this.availableElements = const <VisualElementModel>[],
     this.unlockedElementIds = const <String>{},
+    this.scrollController,
     this.baseConfig,
     this.onEquip,
     this.onUnequip,
@@ -34,6 +35,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
   final VisualElementModel element;
   final List<VisualElementModel> availableElements;
   final Set<String> unlockedElementIds;
+  final ScrollController? scrollController;
   final UserVisualConfig? baseConfig;
   final VoidCallback? onEquip;
   final VoidCallback? onUnequip;
@@ -63,6 +65,7 @@ class VisualElementPreviewDialog extends StatefulWidget {
             element: element,
             availableElements: availableElements,
             unlockedElementIds: unlockedElementIds,
+            scrollController: scrollController,
             baseConfig: baseConfig,
             onEquip: onEquip,
             onUnequip: onUnequip,
@@ -144,6 +147,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
               Expanded(
                 child: CustomScrollView(
+                  controller: widget.scrollController,
                   slivers: [
                     // 预览区域 (带交叉淡入淡出)
                     SliverToBoxAdapter(
@@ -369,16 +373,17 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           top: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final actionWidth = constraints.maxWidth > 420
-                  ? constraints.maxWidth - 152
-                  : constraints.maxWidth;
+              final stackActions = constraints.maxWidth < 520;
+              final shareWidth = stackActions ? constraints.maxWidth : 140.0;
+              final actionWidth = stackActions
+                  ? constraints.maxWidth
+                  : constraints.maxWidth - 152;
               return Wrap(
                 spacing: DS.spacing12,
                 runSpacing: DS.spacing12,
                 children: [
                   SizedBox(
-                    width:
-                        constraints.maxWidth > 420 ? 140 : constraints.maxWidth,
+                    width: shareWidth,
                     child: _buildShareButton(l10n),
                   ),
                   SizedBox(
@@ -437,6 +442,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           ),
           label: Text(
             widget.element.isBundle ? '一键装备套装' : l10n.visualElementEquip,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: DS.brandPrimary,
@@ -456,6 +463,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           icon: const Icon(Icons.remove_circle_outline),
           label: Text(
             widget.element.isBundle ? '卸下整套' : l10n.visualElementUnequip,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: DS.textSecondary,
@@ -473,7 +482,11 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
         child: ElevatedButton.icon(
           onPressed: null,
           icon: const Icon(Icons.lock_outline),
-          label: Text(l10n.visualElementLocked),
+          label: Text(
+            l10n.visualElementLocked,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: DS.surfaceTertiary,
             foregroundColor: DS.textTertiary,
@@ -638,7 +651,9 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(maxWidth: 160),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width < 360 ? 132 : 180,
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing10,
           vertical: DS.spacing6,

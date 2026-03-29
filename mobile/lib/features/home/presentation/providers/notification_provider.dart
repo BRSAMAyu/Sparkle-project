@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
@@ -9,7 +11,7 @@ final unreadNotificationsProvider = StateNotifierProvider<NotificationNotifier,
 class NotificationNotifier
     extends StateNotifier<AsyncValue<List<NotificationModel>>> {
   NotificationNotifier(this._repository) : super(const AsyncValue.loading()) {
-    fetchUnreadNotifications();
+    unawaited(fetchUnreadNotifications());
   }
   final NotificationRepository _repository;
 
@@ -17,8 +19,10 @@ class NotificationNotifier
     try {
       final notifications =
           await _repository.getNotifications(unreadOnly: true);
+      if (!mounted) return;
       state = AsyncValue.data(notifications);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -26,8 +30,10 @@ class NotificationNotifier
   Future<void> markAsRead(String id) async {
     try {
       await _repository.markAsRead(id);
+      if (!mounted) return;
       // Optimistically update state
       state.whenData((list) {
+        if (!mounted) return;
         state =
             AsyncValue.data(list.where((element) => element.id != id).toList());
       });

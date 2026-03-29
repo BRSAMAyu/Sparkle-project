@@ -25,6 +25,7 @@ class _AchievementProgressBannerState
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
+  ProviderSubscription<CloseToUnlockState>? _bannerSubscription;
 
   @override
   void initState() {
@@ -43,10 +44,28 @@ class _AchievementProgressBannerState
         curve: Curves.easeOut,
       ),
     );
+    _bannerSubscription = ref.listenManual<CloseToUnlockState>(
+      closeToUnlockProvider,
+      (previous, next) {
+        if (!mounted) {
+          return;
+        }
+        if (next.isVisible && next.item != null) {
+          if (_controller.status == AnimationStatus.dismissed) {
+            unawaited(_controller.forward());
+          }
+          return;
+        }
+        if (_controller.status != AnimationStatus.dismissed) {
+          unawaited(_controller.reverse());
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _bannerSubscription?.close();
     _controller.dispose();
     super.dispose();
   }
@@ -57,8 +76,10 @@ class _AchievementProgressBannerState
     final l10n = context.l10n;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isVisible = bannerState.isVisible && bannerState.item != null;
+    final shouldRender =
+        isVisible || _controller.isAnimating || _controller.value > 0;
 
-    if (!isVisible) {
+    if (!shouldRender) {
       return Positioned(
         bottom: kBottomNavigationBarHeight + bottomPadding + DS.spacing8,
         left: DS.spacing16,
@@ -70,13 +91,6 @@ class _AchievementProgressBannerState
     final item = bannerState.item!;
     final achievement = item.achievement;
     final rarity = achievement.rarity;
-
-    // Start slide-in animation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _controller.status == AnimationStatus.dismissed) {
-        unawaited(_controller.forward());
-      }
-    });
 
     return Positioned(
       bottom: kBottomNavigationBarHeight + bottomPadding + DS.spacing8,

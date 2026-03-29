@@ -11,6 +11,7 @@ import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 /// 我的责任伙伴列表
 class AccountabilityScreen extends ConsumerWidget {
@@ -186,18 +187,49 @@ class _PartnershipCard extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     try {
+      final repo = ref.read(accountabilityRepositoryProvider);
       final updated = await ref
           .read(accountabilityRepositoryProvider)
           .respondToPartnership(partnership.id, accept: true);
       await ref.read(myPartnershipsProvider.notifier).load();
       ref.invalidate(accountabilityOverviewProvider);
+      final freshOverview = await repo.getOverview();
       if (!context.mounted) return;
       AppFeedback.success(context, '已接受责任伙伴邀请！');
       context.go(
-        CommunityRoutes.accountabilityDetail.replaceFirst(':id', updated.id),
+        CommunityRoutes.accountabilityDetail.replaceFirst(
+          ':id',
+          freshOverview.activePartnership?.id ?? updated.id,
+        ),
       );
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, '操作失败: $e');
+      if (!context.mounted) {
+        return;
+      }
+      final rawMessage = e.toString();
+      final message = rawMessage.startsWith('Exception: ')
+          ? rawMessage.substring('Exception: '.length)
+          : rawMessage;
+      if (message.contains('already has a core accountability partner')) {
+        try {
+          final activePartnership = await ref
+              .read(accountabilityRepositoryProvider)
+              .getOverview()
+              .then((overview) => overview.activePartnership);
+          AppFeedback.info(
+            context,
+            '你当前已经有核心责任伙伴，先进入现有工作台继续协作。',
+          );
+          if (activePartnership != null) {
+            context.go(
+              CommunityRoutes.accountabilityDetail
+                  .replaceFirst(':id', activePartnership.id),
+            );
+            return;
+          }
+        } catch (_) {}
+      }
+      AppFeedback.error(context, message);
     }
   }
 
@@ -211,9 +243,17 @@ class _PartnershipCard extends ConsumerWidget {
           .respondToPartnership(partnership.id, accept: false);
       await ref.read(myPartnershipsProvider.notifier).load();
       ref.invalidate(accountabilityOverviewProvider);
+      ref.invalidate(pendingRequestsProvider);
       if (context.mounted) AppFeedback.info(context, '已拒绝邀请');
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, '操作失败: $e');
+      if (!context.mounted) {
+        return;
+      }
+      final rawMessage = e.toString();
+      final message = rawMessage.startsWith('Exception: ')
+          ? rawMessage.substring('Exception: '.length)
+          : rawMessage;
+      AppFeedback.error(context, message);
     }
   }
 }

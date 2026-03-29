@@ -7,7 +7,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_active_superuser, get_current_user
+from app.api.deps import (
+    get_current_active_superuser,
+    get_current_user,
+    get_optional_current_user,
+)
 from app.core.cache import cache_service
 from app.models.user import User
 
@@ -113,7 +117,7 @@ async def _store_event(
 @router.post("/events")
 async def ingest_client_telemetry(
     payload: ClientTelemetryEventRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ) -> dict[str, Any]:
     redis_client = cache_service.redis
     if not redis_client:
@@ -126,7 +130,7 @@ async def ingest_client_telemetry(
     event_type, now = await _store_event(
         redis_client=redis_client,
         payload=payload,
-        user_id=str(current_user.id),
+        user_id=str(current_user.id) if current_user else "anonymous",
     )
 
     return {
@@ -140,7 +144,7 @@ async def ingest_client_telemetry(
 @router.post("/events/batch")
 async def ingest_client_telemetry_batch(
     payload: ClientTelemetryBatchRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ) -> dict[str, Any]:
     redis_client = cache_service.redis
     if not redis_client:
@@ -163,7 +167,7 @@ async def ingest_client_telemetry_batch(
         event_type, occurred_at = await _store_event(
             redis_client=redis_client,
             payload=event,
-            user_id=str(current_user.id),
+            user_id=str(current_user.id) if current_user else "anonymous",
         )
         accepted_events.append(
             {

@@ -69,7 +69,8 @@ class VisualElementUnlockDialog extends StatefulWidget {
       );
 
   /// Get the highest rarity from a list of elements
-  static VisualElementRarity _getHighestRarity(List<VisualElementModel> elements) {
+  static VisualElementRarity _getHighestRarity(
+      List<VisualElementModel> elements) {
     if (elements.isEmpty) return VisualElementRarity.common;
     return elements
         .map((e) => e.rarity)
@@ -160,7 +161,8 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
   }
 
   void _startRarityAnimations() {
-    final highestRarity = VisualElementUnlockDialog._getHighestRarity(widget.elements);
+    final highestRarity =
+        VisualElementUnlockDialog._getHighestRarity(widget.elements);
 
     switch (highestRarity) {
       case VisualElementRarity.common:
@@ -224,7 +226,8 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
   }
 
   void _triggerHapticFeedback() {
-    final highestRarity = VisualElementUnlockDialog._getHighestRarity(widget.elements);
+    final highestRarity =
+        VisualElementUnlockDialog._getHighestRarity(widget.elements);
 
     switch (highestRarity) {
       case VisualElementRarity.common:
@@ -274,7 +277,8 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
 
   @override
   Widget build(BuildContext context) {
-    final highestRarity = VisualElementUnlockDialog._getHighestRarity(widget.elements);
+    final highestRarity =
+        VisualElementUnlockDialog._getHighestRarity(widget.elements);
     final colors = _getRarityColors(highestRarity);
     final l10n = context.l10n;
 
@@ -284,22 +288,27 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Background effects (for Epic/Legendary)
-            if (!_reduceMotion &&
-                (highestRarity == VisualElementRarity.epic ||
-                    highestRarity == VisualElementRarity.legendary))
-              _buildBackgroundEffects(highestRarity),
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing24,
+        ),
+        child: SafeArea(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background effects (for Epic/Legendary)
+              if (!_reduceMotion &&
+                  (highestRarity == VisualElementRarity.epic ||
+                      highestRarity == VisualElementRarity.legendary))
+                _buildBackgroundEffects(highestRarity),
 
-            // Particle overlay
-            if (_particlesEnabled)
-              _buildParticleOverlay(highestRarity),
+              // Particle overlay
+              if (_particlesEnabled) _buildParticleOverlay(highestRarity),
 
-            // Main content
-            _buildContent(context, colors, l10n, highestRarity),
-          ],
+              // Main content
+              _buildContent(context, colors, l10n, highestRarity),
+            ],
+          ),
         ),
       ),
     );
@@ -310,182 +319,203 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     _RarityColors colors,
     AppLocalizations l10n,
     VisualElementRarity highestRarity,
-  ) => LayoutBuilder(
-      builder: (context, constraints) {
-        final dialogWidth = math.min(constraints.maxWidth - 48, 340.0);
-        final compact = dialogWidth < 300;
+  ) =>
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final dialogWidth = math.min(constraints.maxWidth, 340.0);
+          final compact = dialogWidth < 300;
+          final maxHeight = MediaQuery.sizeOf(context).height * 0.82;
 
-        return ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: dialogWidth),
-          child: AnimatedBuilder(
-            animation: _scaleAnimation,
-            builder: (context, _) => Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(26),
-                          gradient: RadialGradient(
-                            center: const Alignment(0.0, -0.3),
-                            radius: 1.05,
-                            colors: [
-                              colors.glow.withValues(alpha: 0.28),
-                              colors.glow.withValues(alpha: 0.08),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.42, 1.0],
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: dialogWidth,
+              maxHeight: maxHeight,
+            ),
+            child: AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, _) => Transform.scale(
+                scale: _scaleAnimation.value,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(26),
+                            gradient: RadialGradient(
+                              center: const Alignment(0.0, -0.3),
+                              radius: 1.05,
+                              colors: [
+                                colors.glow.withValues(alpha: 0.28),
+                                colors.glow.withValues(alpha: 0.08),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.42, 1.0],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    top: -22,
-                    right: compact ? 12 : 18,
-                    child: IgnorePointer(
-                      child: Container(
-                        width: compact ? 58 : 72,
-                        height: compact ? 58 : 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0.22),
-                              colors.primary.withValues(alpha: 0.12),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.5, 1.0],
+                    Positioned(
+                      top: -22,
+                      right: compact ? 12 : 18,
+                      child: IgnorePointer(
+                        child: Container(
+                          width: compact ? 58 : 72,
+                          height: compact ? 58 : 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: 0.22),
+                                colors.primary.withValues(alpha: 0.12),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Container(
-                    width: dialogWidth,
-                    padding: EdgeInsets.all(compact ? DS.spacing20 : DS.spacing24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          colors.primary.withValues(alpha: 0.95),
-                          colors.secondary.withValues(alpha: 0.9),
+                    Container(
+                      width: dialogWidth,
+                      padding: EdgeInsets.all(
+                        compact ? DS.spacing20 : DS.spacing24,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            colors.primary.withValues(alpha: 0.95),
+                            colors.secondary.withValues(alpha: 0.9),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colors.border,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.glow.withValues(alpha: 0.72),
+                            blurRadius: 32,
+                            spreadRadius: 4,
+                          ),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: colors.border,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.glow.withValues(alpha: 0.72),
-                          blurRadius: 32,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.white.withValues(alpha: 0.14),
-                                    Colors.transparent,
-                                    DS.surfacePrimary.withValues(alpha: 0.08),
-                                  ],
-                                  stops: const [0.0, 0.35, 1.0],
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(24),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white.withValues(alpha: 0.14),
+                                      Colors.transparent,
+                                      DS.surfacePrimary.withValues(alpha: 0.08),
+                                    ],
+                                    stops: const [0.0, 0.35, 1.0],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildRarityIndicator(highestRarity, l10n),
-                            const SizedBox(height: DS.spacing16),
-                            _buildIconContainer(colors, highestRarity, _reduceMotion),
-                            const SizedBox(height: DS.spacing16),
-                            Text(
-                              l10n.visualElementUnlockTitle,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: compact ? DS.fontSizeLg : DS.fontSizeXl,
-                                fontWeight: DS.fontWeightBold,
-                                color: colors.text,
-                              ),
+                          SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildRarityIndicator(highestRarity, l10n),
+                                const SizedBox(height: DS.spacing16),
+                                _buildIconContainer(
+                                  colors,
+                                  highestRarity,
+                                  _reduceMotion,
+                                ),
+                                const SizedBox(height: DS.spacing16),
+                                Text(
+                                  l10n.visualElementUnlockTitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize:
+                                        compact ? DS.fontSizeLg : DS.fontSizeXl,
+                                    fontWeight: DS.fontWeightBold,
+                                    color: colors.text,
+                                  ),
+                                ),
+                                const SizedBox(height: DS.spacing8),
+                                Text(
+                                  l10n.visualElementUnlockSubtitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeBase,
+                                    color: colors.text.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                                const SizedBox(height: DS.spacing16),
+                                if (widget.elements.isNotEmpty) ...[
+                                  _buildElementsPreview(compact),
+                                  const SizedBox(height: DS.spacing20),
+                                ],
+                                _buildActionButtons(
+                                  context,
+                                  colors,
+                                  l10n,
+                                  compact,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: DS.spacing8),
-                            Text(
-                              l10n.visualElementUnlockSubtitle,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: DS.fontSizeBase,
-                                color: colors.text.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            const SizedBox(height: DS.spacing16),
-                            if (widget.elements.isNotEmpty) ...[
-                              _buildElementsPreview(compact),
-                              const SizedBox(height: DS.spacing20),
-                            ],
-                            _buildActionButtons(context, colors, l10n, compact),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
 
-  Widget _buildRarityIndicator(VisualElementRarity rarity, AppLocalizations l10n) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary.withValues(alpha: 0.2),
-        borderRadius: DS.borderRadiusFull,
-        border: Border.all(
-          color: DS.textPrimary.withValues(alpha: 0.3),
+  Widget _buildRarityIndicator(
+          VisualElementRarity rarity, AppLocalizations l10n) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing6,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _getRarityIcon(rarity),
-            size: DS.iconSizeXs,
-            color: DS.textPrimary.withValues(alpha: 0.9),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.2),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(
+            color: DS.textPrimary.withValues(alpha: 0.3),
           ),
-          const SizedBox(width: DS.spacing6),
-          Text(
-            _getRarityLabel(rarity, l10n),
-            style: TextStyle(
-              fontSize: DS.fontSizeXs,
-              fontWeight: DS.fontWeightMedium,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getRarityIcon(rarity),
+              size: DS.iconSizeXs,
               color: DS.textPrimary.withValues(alpha: 0.9),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.spacing6),
+            Text(
+              _getRarityLabel(rarity, l10n),
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                fontWeight: DS.fontWeightMedium,
+                color: DS.textPrimary.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildIconContainer(
     _RarityColors colors,
@@ -563,59 +593,62 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       runSpacing: DS.spacing8,
       alignment: WrapAlignment.center,
       children: [
-        ...displayElements.map((element) => Container(
-              constraints: BoxConstraints(
-                maxWidth: compact ? 80 : 100,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8,
-                vertical: DS.spacing6,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    DS.surfacePrimary.withValues(alpha: 0.94),
-                    _getElementColor(element.rarity).withValues(alpha: 0.08),
-                  ],
-                ),
-                borderRadius: DS.borderRadius8,
-                border: Border.all(
-                  color: _getElementColor(element.rarity).withValues(alpha: 0.5),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _getElementColor(element.rarity).withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+        ...displayElements.map(
+          (element) => Container(
+            constraints: BoxConstraints(
+              maxWidth: compact ? 80 : 100,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing8,
+              vertical: DS.spacing6,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  DS.surfacePrimary.withValues(alpha: 0.94),
+                  _getElementColor(element.rarity).withValues(alpha: 0.08),
                 ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _getElementTypeIcon(element.elementType),
-                    size: DS.iconSizeXs,
-                    color: _getElementColor(element.rarity),
-                  ),
-                  const SizedBox(width: DS.spacing4),
-                  Flexible(
-                    child: Text(
-                      element.name,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        fontWeight: DS.fontWeightMedium,
-                        color: DS.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              borderRadius: DS.borderRadius8,
+              border: Border.all(
+                color: _getElementColor(element.rarity).withValues(alpha: 0.5),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      _getElementColor(element.rarity).withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getElementTypeIcon(element.elementType),
+                  size: DS.iconSizeXs,
+                  color: _getElementColor(element.rarity),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Flexible(
+                  child: Text(
+                    element.name,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.textPrimary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-            ),),
+                ),
+              ],
+            ),
+          ),
+        ),
         if (hasMore)
           Container(
             padding: const EdgeInsets.symmetric(
@@ -709,26 +742,29 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     required bool isPrimary,
     required _RarityColors colors,
     required VoidCallback onPressed,
-  }) => GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
-        decoration: BoxDecoration(
-          color: isPrimary ? colors.primary.withValues(alpha: 0.8) : null,
-          border: Border.all(color: colors.border, width: 1.5),
-          borderRadius: DS.borderRadius12,
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightMedium,
-            color: colors.text,
+  }) =>
+      GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+          decoration: BoxDecoration(
+            color: isPrimary ? colors.primary.withValues(alpha: 0.8) : null,
+            border: Border.all(color: colors.border, width: 1.5),
+            borderRadius: DS.borderRadius12,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightMedium,
+              color: colors.text,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildBackgroundEffects(VisualElementRarity rarity) {
     if (rarity == VisualElementRarity.legendary) {
@@ -752,7 +788,8 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: DS.rarityEpic.withValues(alpha: 0.2 * (1 - _particleController.value)),
+            color: DS.rarityEpic
+                .withValues(alpha: 0.2 * (1 - _particleController.value)),
             width: 3,
           ),
         ),
@@ -1058,7 +1095,8 @@ class _RainbowExplosionPainter extends CustomPainter {
     for (var i = 0; i < colors.length; i++) {
       final radius = 80 + progress * 120 + i * 30;
       final paint = Paint()
-        ..color = colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))
+        ..color =
+            colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
 

@@ -172,10 +172,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('学习场景模拟'), findsWidgets);
-    expect(find.text('当前讨论流'), findsOneWidget);
-    expect(find.text('轮到你加入这场讨论'), findsOneWidget);
-    expect(find.textContaining('分析者'), findsWidgets);
-    expect(find.textContaining('反方质疑'), findsWidgets);
+    expect(find.text('沉浸讨论流'), findsOneWidget);
+    expect(find.text('推荐场景'), findsNothing);
+    expect(find.text('展开模拟设置'), findsOneWidget);
+    expect(find.text('数学专家'), findsWidgets);
+    expect(find.text('反方辩手'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

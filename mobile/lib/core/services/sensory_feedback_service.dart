@@ -576,6 +576,16 @@ class SensoryFeedbackService {
       return;
     }
 
+    // iOS simulator/debug builds have been intermittently rejecting the OGG UI
+    // assets even when Flutter can resolve them. Fall back to the native system
+    // sound so interaction flows stay stable during local verification.
+    if (defaultTargetPlatform == TargetPlatform.iOS && kDebugMode) {
+      try {
+        await SystemSound.play(spec.fallback);
+      } catch (_) {}
+      return;
+    }
+
     // Ensure pool is ready (lazy init if init() was not called)
     if (!_poolReady) await init();
 

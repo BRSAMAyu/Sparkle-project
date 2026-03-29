@@ -34,6 +34,9 @@ extension ChatNotifierHistory on ChatNotifier {
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
+    final previousMessages = state.messages;
+    final previousConversationId = state.conversationId;
+
     // P0修复: 取消之前的加载请求，防止快速切换会话时竞态条件
     unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;
@@ -48,7 +51,7 @@ extension ChatNotifierHistory on ChatNotifier {
       isLoading: true,
       isSending: false,
       isLoadingMore: false,
-      hasMoreMessages: true,
+      hasMoreMessages: false,
       streamingContent: '',
       clearError: true,
       clearAiStatus: true,
@@ -66,13 +69,15 @@ extension ChatNotifierHistory on ChatNotifier {
 
     // P0修复: 使用CancelableOperation包装异步请求，支持取消
     _historyLoadOperation = CancelableOperation.fromFuture(
-      _chatRepository.getConversationHistory(conversationId).timeout(
+      _chatRepository
+          .getConversationHistory(
+        conversationId,
+        limit: ChatNotifier.historyPageSize,
+      )
+          .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          debugPrint(
-            '[ChatHistory] Load timeout for $conversationId, falling back to empty history',
-          );
-          return <ChatMessageModel>[];
+          throw TimeoutException('[ChatHistory] Load timeout for $conversationId');
         },
       ),
       onCancel: () {
@@ -92,6 +97,7 @@ extension ChatNotifierHistory on ChatNotifier {
         isLoading: false,
         messages: history,
         conversationId: conversationId,
+        hasMoreMessages: history.length >= ChatNotifier.historyPageSize,
       );
     } catch (e) {
       if (loadingConversationId != conversationId) {
@@ -105,6 +111,8 @@ extension ChatNotifierHistory on ChatNotifier {
 
       state = state.copyWith(
         isLoading: false,
+        messages: previousMessages,
+        conversationId: previousConversationId,
         error: errorMessage,
         errorCode: 'UNKNOWN',
         isErrorRetryable: true,
@@ -149,17 +157,16 @@ extension ChatNotifierHistory on ChatNotifier {
     state = state.copyWith(isLoadingMore: true);
 
     try {
-      const pageSize = 20;
       final currentCount = state.messages.length;
 
       final moreMessages = await _chatRepository.getConversationHistory(
         state.conversationId!,
-        limit: pageSize,
+        limit: ChatNotifier.historyPageSize,
         offset: currentCount,
       );
 
       // 如果返回的消息少于 pageSize，说明没有更多消息了
-      final hasMore = moreMessages.length >= pageSize;
+      final hasMore = moreMessages.length >= ChatNotifier.historyPageSize;
 
       state = state.copyWith(
         isLoadingMore: false,

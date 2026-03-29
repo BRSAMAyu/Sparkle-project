@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -403,14 +404,16 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 	}
 
 	return func(c *gin.Context) {
+		if shouldBypassGlobalRateLimit(c) {
+			c.Next()
+			return
+		}
+
 		clientID := c.GetString("user_id")
 		if clientID == "" {
 			clientID = "ip:" + c.ClientIP()
 		}
-		routePath := c.FullPath()
-		if routePath == "" {
-			routePath = c.Request.URL.Path
-		}
+		routePath := normalizeRateLimitRoutePath(c)
 		// Scope buckets by route so noisy endpoints like telemetry do not
 		// starve unrelated interactive flows behind the same simulator IP.
 		limitKey := clientID + ":" + c.Request.Method + ":" + routePath
@@ -457,6 +460,32 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
 		c.Next()
 	}
+}
+
+func shouldBypassGlobalRateLimit(c *gin.Context) bool {
+	if c.Request.Method != http.MethodPost {
+		return false
+	}
+	path := c.Request.URL.Path
+	return strings.HasSuffix(path, "/api/v1/client-telemetry/events") ||
+		strings.HasSuffix(path, "/api/v1/client-telemetry/events/batch")
+}
+
+func normalizeRateLimitRoutePath(c *gin.Context) string {
+	routePath := c.FullPath()
+	if routePath == "" {
+		return c.Request.URL.Path
+	}
+
+	// Catch-all proxy routes like /api/v1/user/*path collapse unrelated
+	// interactive requests into the same rate-limit bucket. Use the concrete
+	// request path for wildcard templates so /settings and /settings/ai-usage
+	// do not throttle each other.
+	if strings.Contains(routePath, "*") {
+		return c.Request.URL.Path
+	}
+
+	return routePath
 }
 
 // SlidingWindowRateLimitMiddleware uses sliding window algorithm for rate limiting

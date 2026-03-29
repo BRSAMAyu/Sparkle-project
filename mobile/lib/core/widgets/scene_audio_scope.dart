@@ -97,16 +97,20 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-        fit: StackFit.expand,
-        children: [
-          widget.child,
-          if (widget.policy.atmosphere != ExperienceAtmosphere.none)
-            Positioned.fill(
-              child: SceneAtmosphereLayer(
-                atmosphere: widget.policy.atmosphere,
-              ),
-            ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    if (widget.policy.atmosphere == ExperienceAtmosphere.none) {
+      return widget.child;
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        Positioned.fill(
+          child: SceneAtmosphereLayer(
+            atmosphere: widget.policy.atmosphere,
+          ),
+        ),
+      ],
+    );
+  }
 }

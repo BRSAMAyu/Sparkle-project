@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -236,91 +238,106 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ),
           ],
         ),
-        child: Wrap(
-          spacing: DS.spacing12,
-          runSpacing: DS.spacing12,
-          children: [
-            SizedBox(
-              width: 212,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.visualElementsUnlockProgress,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: DS.textSecondary,
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 360;
+            final progressWidth = compact
+                ? constraints.maxWidth
+                : math.max(0.0, constraints.maxWidth - 108);
+            final equippedWidth = compact ? constraints.maxWidth : 96.0;
+
+            return Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                SizedBox(
+                  width: progressWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.visualElementsUnlockProgress,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      ClipRRect(
+                        borderRadius: DS.borderRadius8,
+                        child: LinearProgressIndicator(
+                          value: stats.unlockProgress,
+                          backgroundColor: DS.surfaceTertiary,
+                          valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        '${stats.unlockedCount}/${stats.totalCount}',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightMedium,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: DS.spacing8),
-                  ClipRRect(
-                    borderRadius: DS.borderRadius8,
-                    child: LinearProgressIndicator(
-                      value: stats.unlockProgress,
-                      backgroundColor: DS.surfaceTertiary,
-                      valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
-                      minHeight: 8,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    '${stats.unlockedCount}/${stats.totalCount}',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightMedium,
-                      color: DS.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 96,
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing12,
-                vertical: DS.spacing12,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    DS.brandPrimary10,
-                    DS.info.withValues(alpha: 0.08),
-                  ],
                 ),
-                borderRadius: DS.borderRadius12,
-                border: Border.all(
-                  color: DS.brandPrimary.withValues(alpha: 0.16),
+                Container(
+                  width: equippedWidth,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing12,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        DS.brandPrimary10,
+                        DS.info.withValues(alpha: 0.08),
+                      ],
+                    ),
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(
+                      color: DS.brandPrimary.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: DS.brandPrimary,
+                        size: DS.iconSizeMd,
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        '${stats.equippedCount}',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.brandPrimary,
+                        ),
+                      ),
+                      Text(
+                        l10n.visualElementsEquipped,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.brandPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: DS.brandPrimary,
-                    size: DS.iconSizeMd,
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    '${stats.equippedCount}',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeLg,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.brandPrimary,
-                    ),
-                  ),
-                  Text(
-                    l10n.visualElementsEquipped,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: DS.brandPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       );
 
@@ -424,89 +441,97 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 104,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: bundles.length > 6 ? 6 : bundles.length,
-        separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
-        itemBuilder: (context, index) {
-          final element = bundles[index];
-          final isUnlocked = state.unlockedIds.contains(element.id);
-          final isEquipped = _isElementEquipped(element, state);
-          final ownedCount = _bundleOwnedCount(element, state);
-          final totalCount = _bundleTotalCount(element);
-          return GestureDetector(
-            onTap: () => _showElementPreview(
-              element,
-              isUnlocked,
-              isEquipped,
-            ),
-            child: Container(
-              width: 208,
-              padding: const EdgeInsets.all(DS.spacing16),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                borderRadius: DS.borderRadius16,
-                border: Border.all(
-                  color: _elementAccent(element).withValues(alpha: 0.24),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
+        final compact = constraints.maxWidth < 360;
+        final cardHeight = compact ? 184.0 : 128.0;
+
+        return SizedBox(
+          height: cardHeight,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: bundles.length > 6 ? 6 : bundles.length,
+            separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
+            itemBuilder: (context, index) {
+              final element = bundles[index];
+              final isUnlocked = state.unlockedIds.contains(element.id);
+              final isEquipped = _isElementEquipped(element, state);
+              final ownedCount = _bundleOwnedCount(element, state);
+              final totalCount = _bundleTotalCount(element);
+              return GestureDetector(
+                onTap: () => _showElementPreview(
+                  element,
+                  isUnlocked,
+                  isEquipped,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: DS.spacing6,
-                    runSpacing: DS.spacing6,
+                child: Container(
+                  width: cardWidth,
+                  padding:
+                      EdgeInsets.all(compact ? DS.spacing12 : DS.spacing16),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary,
+                    borderRadius: DS.borderRadius16,
+                    border: Border.all(
+                      color: _elementAccent(element).withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _miniChip(
-                        element.prestigeLabel ?? element.name,
-                        _elementAccent(element),
+                      Wrap(
+                        spacing: DS.spacing6,
+                        runSpacing: DS.spacing6,
+                        children: [
+                          _miniChip(
+                            element.prestigeLabel ?? element.name,
+                            _elementAccent(element),
+                          ),
+                          _miniChip(
+                            isUnlocked ? '已解锁' : '待征服',
+                            isUnlocked ? DS.success : DS.warning,
+                          ),
+                          if (totalCount > 0)
+                            _miniChip(
+                              '$ownedCount/$totalCount 已集齐',
+                              ownedCount == totalCount ? DS.success : DS.info,
+                            ),
+                        ],
                       ),
-                      _miniChip(
-                        isUnlocked ? '已解锁' : '待征服',
-                        isUnlocked ? DS.success : DS.warning,
-                      ),
-                      if (totalCount > 0)
-                        _miniChip(
-                          '$ownedCount/$totalCount 已集齐',
-                          ownedCount == totalCount ? DS.success : DS.info,
+                      const Spacer(),
+                      Text(
+                        element.name,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        element.description ?? '高曝光荣耀装扮套组',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                        maxLines: compact ? 3 : 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
-                  const Spacer(),
-                  Text(
-                    element.name,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Expanded(
-                    child: Text(
-                      element.description ?? '高曝光荣耀装扮套组',
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
   Widget _miniChip(String label, Color color) => Container(
+        constraints: const BoxConstraints(maxWidth: 156),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
           vertical: DS.spacing4,
@@ -517,6 +542,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
             color: color,
@@ -636,7 +663,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   ),
                   mainAxisSpacing: DS.spacing12,
                   crossAxisSpacing: DS.spacing12,
-                  mainAxisExtent: 220,
+                  mainAxisExtent: _gridMainAxisExtent(
+                    constraints.crossAxisExtent,
+                  ),
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -899,7 +928,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       ),
                       mainAxisSpacing: DS.spacing12,
                       crossAxisSpacing: DS.spacing12,
-                      mainAxisExtent: 228,
+                      mainAxisExtent: _recommendationMainAxisExtent(
+                        MediaQuery.of(context).size.width,
+                      ),
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -1060,31 +1091,42 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          SizedBox(
-            height: 184,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: eventElements.length,
-              separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
-              itemBuilder: (context, index) {
-                final element = eventElements[index];
-                final resolvedElement = element.copyWith(
-                  isUnlocked: state.unlockedIds.contains(element.id),
-                  isEquipped: _isElementEquipped(element, state),
-                );
-                return SizedBox(
-                  width: 160,
-                  child: _VisualElementCard(
-                    element: resolvedElement,
-                    onTap: () => _showElementPreview(
-                      element,
-                      state.unlockedIds.contains(element.id),
-                      _isElementEquipped(element, state),
-                    ),
-                  ),
-                );
-              },
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cardWidth = math.min(
+                math.max(160.0, constraints.maxWidth * 0.52),
+                192.0,
+              );
+              final compact = constraints.maxWidth < 360;
+
+              return SizedBox(
+                height: compact ? 196 : 184,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: eventElements.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: DS.spacing12),
+                  itemBuilder: (context, index) {
+                    final element = eventElements[index];
+                    final resolvedElement = element.copyWith(
+                      isUnlocked: state.unlockedIds.contains(element.id),
+                      isEquipped: _isElementEquipped(element, state),
+                    );
+                    return SizedBox(
+                      width: cardWidth,
+                      child: _VisualElementCard(
+                        element: resolvedElement,
+                        onTap: () => _showElementPreview(
+                          element,
+                          state.unlockedIds.contains(element.id),
+                          _isElementEquipped(element, state),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1161,77 +1203,91 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 132,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: entries.length,
-        separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
-        itemBuilder: (context, index) {
-          final entry = entries[index];
-          final elements = [...entry.value]
-            ..sort((a, b) => b.visibilityWeight.compareTo(a.visibilityWeight));
-          final lead = elements.first;
-          final unlockedCount = elements
-              .where((element) => state.unlockedIds.contains(element.id))
-              .length;
-          final accent = _elementAccent(lead);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
+        final compact = constraints.maxWidth < 360;
 
-          return GestureDetector(
-            onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
-            child: Container(
-              width: 208,
-              padding: const EdgeInsets.all(DS.spacing16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    accent.withValues(alpha: 0.18),
-                    DS.surfaceSecondary,
-                  ],
+        return SizedBox(
+          height: compact ? 160 : 140,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: entries.length,
+            separatorBuilder: (_, __) => const SizedBox(width: DS.spacing12),
+            itemBuilder: (context, index) {
+              final entry = entries[index];
+              final elements = [...entry.value]..sort(
+                  (a, b) => b.visibilityWeight.compareTo(a.visibilityWeight),
+                );
+              final lead = elements.first;
+              final unlockedCount = elements
+                  .where((element) => state.unlockedIds.contains(element.id))
+                  .length;
+              final accent = _elementAccent(lead);
+
+              return GestureDetector(
+                onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
+                child: Container(
+                  width: cardWidth,
+                  padding:
+                      EdgeInsets.all(compact ? DS.spacing12 : DS.spacing16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        accent.withValues(alpha: 0.18),
+                        DS.surfaceSecondary,
+                      ],
+                    ),
+                    borderRadius: DS.borderRadius16,
+                    border: Border.all(color: accent.withValues(alpha: 0.26)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _miniChip(lead.displaySlotLabel, accent),
+                      const Spacer(),
+                      Text(
+                        '${elements.length} 种风格',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeLg,
+                          fontWeight: DS.fontWeightBold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        '已拥有 $unlockedCount / ${elements.length}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        elements
+                            .take(2)
+                            .map((element) => element.name)
+                            .join(' · '),
+                        maxLines: compact ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: accent,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                borderRadius: DS.borderRadius16,
-                border: Border.all(color: accent.withValues(alpha: 0.26)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _miniChip(lead.displaySlotLabel, accent),
-                  const Spacer(),
-                  Text(
-                    '${elements.length} 种风格',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeLg,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    '已拥有 $unlockedCount / ${elements.length}',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    elements.take(2).map((element) => element.name).join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: accent,
-                      fontWeight: DS.fontWeightMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -1251,40 +1307,80 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         borderRadius: DS.borderRadius16,
         border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '当前查看: $label',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.textPrimary,
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stack = constraints.maxWidth < 360;
+          final info = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '当前查看: $label',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightBold,
+                  color: DS.textPrimary,
                 ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  '已切换到该槽位，共 $matchedCount 个可选样式',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.textSecondary,
-                  ),
+              ),
+              const SizedBox(height: DS.spacing4),
+              Text(
+                '已切换到该槽位，共 $matchedCount 个可选样式',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textSecondary,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          TextButton(
+              ),
+            ],
+          );
+          final clearButton = TextButton(
             onPressed: _clearDisplaySlotFilter,
             child: const Text('清除筛选'),
-          ),
-        ],
+          );
+
+          if (stack) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                info,
+                const SizedBox(height: DS.spacing8),
+                clearButton,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: info),
+              const SizedBox(width: DS.spacing12),
+              clearButton,
+            ],
+          );
+        },
       ),
     );
   }
+
+  double _gridMainAxisExtent(double width) {
+    final crossAxisCount = _calculateCrossAxisCount(width);
+    if (crossAxisCount == 1) return 268;
+    if (crossAxisCount == 2) return 236;
+    if (crossAxisCount == 3) return 224;
+    return 216;
+  }
+
+  double _recommendationMainAxisExtent(double width) {
+    final crossAxisCount = _calculateCrossAxisCount(width);
+    if (crossAxisCount == 1) return 284;
+    if (crossAxisCount == 2) return 252;
+    if (crossAxisCount == 3) return 236;
+    return 228;
+  }
+
+  double _horizontalShowcaseCardWidth(double width) =>
+      math.min(math.max(196.0, width * 0.68), 232.0);
 
   String _displaySlotLabel(String slot) {
     switch (slot) {
@@ -1701,6 +1797,8 @@ class _RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _getRarityColors(element.rarity);
+    final actionLabel =
+        element.isBundle ? '一键穿戴' : context.l10n.visualElementEquip;
 
     return GestureDetector(
       onTap: onTap,
@@ -1728,25 +1826,24 @@ class _RecommendationCard extends StatelessWidget {
                       color: DS.brandPrimary.withValues(alpha: 0.12),
                       borderRadius: DS.borderRadius8,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Wrap(
+                      spacing: DS.spacing4,
+                      runSpacing: DS.spacing4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(
                           _reasonIcon(reason),
                           size: DS.iconSizeXs,
                           color: DS.brandPrimary,
                         ),
-                        const SizedBox(width: DS.spacing4),
-                        Flexible(
-                          child: Text(
-                            reasonText,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeXs,
-                              color: DS.brandPrimary,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
+                        Text(
+                          reasonText,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            color: DS.brandPrimary,
+                            fontWeight: DS.fontWeightMedium,
                           ),
                         ),
                       ],
@@ -1798,7 +1895,11 @@ class _RecommendationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: DS.spacing8),
-                  Row(
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1815,11 +1916,11 @@ class _RecommendationCard extends StatelessWidget {
                           color: colors.text,
                         ),
                       ),
-                      const Spacer(),
                       if (onEquip != null)
                         GestureDetector(
                           onTap: onEquip,
                           child: Container(
+                            constraints: const BoxConstraints(maxWidth: 108),
                             padding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing8,
                               vertical: DS.spacing4,
@@ -1829,9 +1930,10 @@ class _RecommendationCard extends StatelessWidget {
                               borderRadius: DS.borderRadius8,
                             ),
                             child: Text(
-                              element.isBundle
-                                  ? '一键穿戴'
-                                  : context.l10n.visualElementEquip,
+                              actionLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: DS.fontSizeXs,
                                 color: DS.textOnPrimary,

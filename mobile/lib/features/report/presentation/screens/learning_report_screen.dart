@@ -266,9 +266,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 primaryLabel:
                     weakestNode == null ? '打开知识星图' : '优先处理 ${weakestNode.nodeName}',
                 onPrimaryTap: weakestNode == null
-                    ? () => context.push(GalaxyRoutes.home)
-                    : () => context.push(
-                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                    ? () => unawaited(_openReportDeepLink(GalaxyRoutes.home))
+                    : () => unawaited(
+                          _openReportDeepLink(
+                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                          ),
                         ),
                 footer: history.length > 1
                     ? SegmentedButton<_ReportRange>(
@@ -316,17 +318,21 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 actionCards: report.actionCards,
                 weakestNode: weakestNode,
                 strongestNode: strongestNode,
-                onOpenGalaxy: () => context.push(GalaxyRoutes.home),
+                onOpenGalaxy: () => unawaited(_openReportDeepLink(GalaxyRoutes.home)),
                 onOpenTheater: weakestNode == null
                     ? null
-                    : () => context.push(
-                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                    : () => unawaited(
+                          _openReportDeepLink(
+                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                          ),
                         ),
-                onOpenSimulation: () => context.push(
-                  '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
+                onOpenSimulation: () => unawaited(
+                  _openReportDeepLink(
+                    '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
+                  ),
                 ),
                 onOpenSprintHistory: () =>
-                    context.push(PlanRoutes.sprintHistory),
+                    unawaited(_openReportDeepLink(PlanRoutes.sprintHistory)),
                 onActionTap: _openReportDeepLink,
               ),
             ),
@@ -574,12 +580,15 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   runSpacing: 10,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: () => context.push(GalaxyRoutes.home),
+                      onPressed: () =>
+                          unawaited(_openReportDeepLink(GalaxyRoutes.home)),
                       icon: const Icon(Icons.auto_graph_rounded),
                       label: const Text('回到 Galaxy'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () => context.push(PlanRoutes.sprintHistory),
+                      onPressed: () => unawaited(
+                        _openReportDeepLink(PlanRoutes.sprintHistory),
+                      ),
                       icon: const Icon(Icons.history_rounded),
                       label: const Text('查看 Sprint 历史'),
                     ),
@@ -950,7 +959,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     FilledButton.tonalIcon(
                       onPressed: () {
                         Navigator.of(sheetContext).pop();
-                        unawaited(context.push(GalaxyRoutes.home));
+                        unawaited(_openReportDeepLink(GalaxyRoutes.home));
                       },
                       icon: const Icon(Icons.auto_graph_rounded),
                       label: const Text('打开知识星图'),
@@ -1092,27 +1101,57 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       await context.push(normalized);
       return;
     }
+    final resolved = _resolveReportDeepLinkUri(parsed);
+    if (!mounted) {
+      return;
+    }
+    if (resolved.path == GalaxyRoutes.home) {
+      context.go(resolved.toString());
+      return;
+    }
+    await context.push(resolved.toString());
+  }
+
+  Uri _resolveReportDeepLinkUri(Uri parsed) {
     final query = Map<String, String>.from(parsed.queryParameters);
     final sourceChatSessionId = widget.initialSourceChatSessionId?.trim();
+    final path = parsed.path.trim();
+    final resolvedPath = switch (path) {
+      '/sprint' => PlanRoutes.sprintHistory,
+      '' => ReportRoutes.learningReport,
+      _ => path,
+    };
+
     final shouldCarryChatContext =
-        parsed.path.startsWith(TheaterRoutes.theater) ||
-            parsed.path.startsWith(SimulationRoutes.simulation) ||
-            parsed.path.startsWith(ReportRoutes.learningReport);
+        resolvedPath.startsWith(TheaterRoutes.theater) ||
+            resolvedPath.startsWith(SimulationRoutes.simulation) ||
+            resolvedPath.startsWith(ReportRoutes.learningReport) ||
+            resolvedPath.startsWith(GalaxyRoutes.home);
     if (shouldCarryChatContext &&
         (sourceChatSessionId?.isNotEmpty ?? false) &&
         !query.containsKey('source_chat_session_id')) {
       query['source_chat_session_id'] = sourceChatSessionId!;
     }
-    final resolvedPath = switch (parsed.path) {
-      '/sprint' => PlanRoutes.sprintHistory,
-      '' => ReportRoutes.learningReport,
-      _ => parsed.path,
-    };
-    final resolved = Uri(
+
+    if (resolvedPath.startsWith(GalaxyRoutes.home)) {
+      final nodeId = (query['node_id'] ?? query['target_node_id'] ?? '').trim();
+      if (nodeId.isNotEmpty) {
+        return Uri(path: '${GalaxyRoutes.home}/node/$nodeId');
+      }
+      final safeQuery = <String, String>{
+        if ((query['source_chat_session_id'] ?? '').trim().isNotEmpty)
+          'source_chat_session_id': query['source_chat_session_id']!.trim(),
+      };
+      return Uri(
+        path: GalaxyRoutes.home,
+        queryParameters: safeQuery.isEmpty ? null : safeQuery,
+      );
+    }
+
+    return Uri(
       path: resolvedPath,
       queryParameters: query.isEmpty ? null : query,
-    ).toString();
-    await context.push(resolved);
+    );
   }
 
   String _masteryLabel(double score) {
@@ -1858,7 +1897,7 @@ class _ReportActionCard extends StatelessWidget {
                   FilledButton.tonalIcon(
                     onPressed: onOpenSimulation,
                     icon: const Icon(Icons.groups_rounded),
-                    label: const Text('打开学习仿真'),
+                    label: const Text('进入学习仿真'),
                   ),
                   OutlinedButton.icon(
                     onPressed: onOpenSprintHistory,

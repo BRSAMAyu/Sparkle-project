@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
-import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
+    as chat;
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========
@@ -524,14 +525,17 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   /// Returns (event, comboCount) if dialog should be shown, null otherwise
   /// 处理成就解锁事件，支持连击队列管理
   /// 返回 (event, comboCount) 如果应该显示弹窗，否则返回 null
-  ({chat.AchievementUnlockEvent event, int? comboCount})? handleAchievementUnlock(
+  ({chat.AchievementUnlockEvent event, int? comboCount})?
+      handleAchievementUnlock(
     chat.AchievementUnlockEvent wsEvent,
   ) {
     final now = DateTime.now();
 
     // Check if backend already calculated combo
-    final comboInfo = wsEvent.achievementData['combo_info'] as Map<String, dynamic>?;
-    final backendComboCount = comboInfo != null ? comboInfo['combo'] as int? : null;
+    final comboInfo =
+        wsEvent.achievementData['combo_info'] as Map<String, dynamic>?;
+    final backendComboCount =
+        comboInfo != null ? comboInfo['combo'] as int? : null;
 
     if (backendComboCount != null && backendComboCount > 1) {
       // Backend already calculated combo, show immediately
@@ -633,7 +637,8 @@ class AchievementMapNotifier extends StateNotifier<AchievementMapState> {
 }
 
 class StreakHistoryNotifier extends StateNotifier<StreakHistoryState> {
-  StreakHistoryNotifier(this._repository) : super(StreakHistoryState.loading()) {
+  StreakHistoryNotifier(this._repository)
+      : super(StreakHistoryState.loading()) {
     unawaited(loadHistory());
   }
 
@@ -641,10 +646,19 @@ class StreakHistoryNotifier extends StateNotifier<StreakHistoryState> {
 
   Future<void> loadHistory({int days = 90}) async {
     try {
+      if (!mounted) {
+        return;
+      }
       state = StreakHistoryState.loading();
       final history = await _repository.getStreakHistory(days: days);
+      if (!mounted) {
+        return;
+      }
       state = StreakHistoryState(days: history);
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
       state = StreakHistoryState.error(e.toString());
     }
   }

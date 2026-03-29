@@ -17,6 +17,7 @@ from app.services.auth_session_service import auth_session_service
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 
@@ -81,6 +82,53 @@ async def get_current_user(
                 type(e).__name__,
             )
     return user
+
+
+async def get_optional_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+) -> User | None:
+    if credentials is None or not credentials.credentials:
+        return None
+
+    try:
+        token = credentials.credentials
+        payload = await decode_token(token, expected_type="access")
+        request.state.token_payload = payload
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            return None
+        user = await db.get(User, user_id)
+        if not user:
+            return None
+        try:
+            await auth_session_service.touch_from_payload(
+                db,
+                request=request,
+                user_id=str(user.id),
+                payload=payload,
+            )
+        except Exception as e:
+            try:
+                import structlog
+
+                structlog.get_logger().warning(
+                    "session_touch_failed",
+                    user_id=str(user.id),
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+            except ImportError:
+                logger.warning(
+                    "session_touch_failed user_id=%s error=%s error_type=%s",
+                    str(user.id),
+                    str(e),
+                    type(e).__name__,
+                )
+        return user
+    except Exception:
+        return None
 
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),

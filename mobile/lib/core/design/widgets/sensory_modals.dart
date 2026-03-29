@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
-const _sheetDuration = Duration(milliseconds: 320);
-const _sheetReverseDuration = Duration(milliseconds: 180);
-const _dialogDuration = Duration(milliseconds: 240);
+const _sheetDuration = Duration(milliseconds: 220);
+const _sheetReverseDuration = Duration(milliseconds: 140);
+const _dialogDuration = Duration(milliseconds: 180);
 
 class SpringCurve extends Curve {
   const SpringCurve({
@@ -90,7 +91,7 @@ Future<T?> showSensoryModalBottomSheet<T>({
   BoxConstraints? constraints,
   RouteSettings? routeSettings,
 }) async {
-  await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
   if (!context.mounted) return null;
 
   return SparkleBottomSheet.show<T>(
@@ -118,7 +119,7 @@ Future<T?> showSensoryDialog<T>({
   RouteSettings? routeSettings,
   Offset? anchorPoint,
 }) async {
-  await SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen);
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen));
   if (!context.mounted) return null;
 
   final resolvedBarrierColor =
@@ -211,7 +212,7 @@ Future<T?> showSensoryGeneralDialog<T>({
   Duration transitionDuration = _dialogDuration,
   String? barrierLabel,
 }) async {
-  await SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen);
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen));
   if (!context.mounted) return null;
 
   final resolvedBarrierColor =
@@ -221,8 +222,8 @@ Future<T?> showSensoryGeneralDialog<T>({
     context: context,
     pageBuilder: pageBuilder,
     barrierDismissible: barrierDismissible,
-    barrierLabel:
-        barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierLabel: barrierLabel ??
+        MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: resolvedBarrierColor,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,

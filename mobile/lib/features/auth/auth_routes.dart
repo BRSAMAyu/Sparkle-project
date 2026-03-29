@@ -1,10 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/experience/experience_profile.dart';
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/scene_audio_policy.dart';
-import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -16,10 +13,9 @@ Page<dynamic> _buildTransitionPage({
       key: state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
+          buildSharedAxisCompatibleTransition(
         animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
+        type: type,
         child: child,
       ),
     );
@@ -31,12 +27,7 @@ class AuthRoutes {
           name: 'login',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                trackOverride: BgmTrack.profile,
-              ),
-              child: const LoginScreen(),
-            ),
+            child: const LoginScreen(),
             type: SharedAxisTransitionType.scaled,
           ),
         ),
@@ -45,12 +36,7 @@ class AuthRoutes {
           name: 'register',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                trackOverride: BgmTrack.profile,
-              ),
-              child: const RegisterScreen(),
-            ),
+            child: const RegisterScreen(),
           ),
         ),
         GoRoute(
@@ -58,12 +44,7 @@ class AuthRoutes {
           name: 'forgotPassword',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                trackOverride: BgmTrack.profile,
-              ),
-              child: const ForgotPasswordScreen(),
-            ),
+            child: const ForgotPasswordScreen(),
           ),
         ),
         GoRoute(
@@ -71,13 +52,8 @@ class AuthRoutes {
           name: 'resetPassword',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: SceneAudioScope(
-              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                trackOverride: BgmTrack.profile,
-              ),
-              child: ResetPasswordScreen(
-                initialToken: state.uri.queryParameters['token'],
-              ),
+            child: ResetPasswordScreen(
+              initialToken: state.uri.queryParameters['token'],
             ),
           ),
         ),
@@ -86,10 +62,7 @@ class AuthRoutes {
           name: 'legalTerms',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const SceneAudioScope(
-              policy: SceneAudioPolicy.silent,
-              child: LegalDocumentScreen(documentType: 'terms'),
-            ),
+            child: const LegalDocumentScreen(documentType: 'terms'),
           ),
         ),
         GoRoute(
@@ -97,10 +70,7 @@ class AuthRoutes {
           name: 'legalPrivacy',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: const SceneAudioScope(
-              policy: SceneAudioPolicy.silent,
-              child: LegalDocumentScreen(documentType: 'privacy'),
-            ),
+            child: const LegalDocumentScreen(documentType: 'privacy'),
           ),
         ),
       ];

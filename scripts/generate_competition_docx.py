@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import zipfile
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
@@ -26,7 +27,7 @@ PROJECT_CN = "星火"
 PROJECT_EN = "sparkle"
 TEAM_NAME = "Sparkle"
 DOC_ID = "SWC2026-Sparkle"
-VERSION = "0.3.0"
+VERSION = "0.5.0"
 DATE = "2026-03-29"
 AUTHOR = "邓博仁"
 
@@ -229,7 +230,9 @@ def fill_revision_history(table: Table) -> None:
         ("1", "创建", "0.1.0", "Starfire", "2026-03-15", "文档框架搭建与初始内容"),
         ("2", "补充", "0.1.5", "Prism", "2026-03-20", "技术细节与创新点补充"),
         ("3", "修订", "0.2.0", "Nova", "2026-03-25", "体验设计与功能描述完善"),
-        ("4", "终稿", "0.3.0", "Orbit", "2026-03-29", "全文审校、数据核实与排版优化"),
+        ("4", "补全", "0.3.0", "Orbit", "2026-03-29", "全文审校、数据核实与排版优化"),
+        ("5", "重构", "0.4.0", "Starfire", "2026-03-29", "章节补全、表格渲染修正、语言润色"),
+        ("6", "终稿", "0.5.0", "Prism", "2026-03-29", "按总决赛标准重构，恢复并增强0.4强内容，China-first打磨"),
     ]
     # Ensure enough rows exist
     while len(table.rows) < len(revision_entries) + 1:
@@ -249,157 +252,246 @@ def fill_revision_history(table: Table) -> None:
                 format_body_paragraph(paragraph, first_line_indent=False)
 
 
-def markdown_blocks(lines: Sequence[str]) -> List[tuple[str, str]]:
-    blocks: List[tuple[str, str]] = []
+def clean_inline(text: str) -> str:
+    """Remove markdown inline markup: **bold**, *italic*, `code`, [img placeholders]."""
+    # Skip AI image prompt lines entirely (caller should filter, but safeguard here)
+    if re.match(r"^\*AI\s*生图提示词", text) or re.match(r"^\*AI image prompt", text, re.IGNORECASE):
+        return ""
+    # Remove **bold** and *italic* markers (order matters: ** before *)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    # Remove inline code backticks
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    # Collapse multiple spaces
+    text = re.sub(r"  +", " ", text)
+    return text.strip()
+
+
+def _parse_table_line(line: str) -> List[str]:
+    """Split a markdown table row like | A | B | C | into ['A', 'B', 'C']."""
+    parts = line.strip().strip("|").split("|")
+    return [clean_inline(p.strip()) for p in parts]
+
+
+def _is_table_separator(line: str) -> bool:
+    """Return True for lines like |---|---|---|."""
+    return bool(re.match(r"^\|[\s\-\|:]+\|?\s*$", line.strip()))
+
+
+def markdown_blocks(lines: Sequence[str]) -> List[tuple]:
+    blocks: List[tuple] = []
     paragraph_buffer: List[str] = []
+    # table accumulation state
+    table_header: List[str] | None = None
+    table_rows: List[List[str]] = []
 
     def flush_paragraph() -> None:
         if paragraph_buffer:
             text = " ".join(part.strip() for part in paragraph_buffer if part.strip())
+            text = clean_inline(text)
             if text:
                 blocks.append(("paragraph", text))
             paragraph_buffer.clear()
 
+    def flush_table() -> None:
+        nonlocal table_header, table_rows
+        if table_header is not None:
+            blocks.append(("table", (table_header, list(table_rows))))
+        table_header = None
+        table_rows = []
+
     for raw_line in lines:
         line = raw_line.rstrip()
         stripped = line.strip()
+
+        # Table rows
+        if stripped.startswith("|"):
+            flush_paragraph()
+            if _is_table_separator(stripped):
+                # separator line — skip, header already captured
+                continue
+            cols = _parse_table_line(stripped)
+            if table_header is None:
+                table_header = cols
+            else:
+                table_rows.append(cols)
+            continue
+        else:
+            # non-table line: flush any accumulated table
+            flush_table()
+
         if not stripped or stripped == "---":
+            flush_paragraph()
+            continue
+        # Skip AI image prompt lines
+        if re.match(r"^\*AI\s*生图提示词", stripped) or re.match(r"^\*AI image prompt", stripped, re.IGNORECASE):
             flush_paragraph()
             continue
         if stripped.startswith(">"):
             flush_paragraph()
             continue
-        if stripped.startswith("|"):
+        # Convert image placeholder lines [图 XX] → figure caption line
+        img_match = re.match(r"^\*?\[图\s*([A-Z0-9]+)\]\*?\s*(.*)", stripped)
+        if img_match:
             flush_paragraph()
+            fig_id = img_match.group(1)
+            caption = img_match.group(2).strip().rstrip("*").strip()
+            label = f"图{fig_id}  {caption}" if caption else f"图{fig_id}"
+            blocks.append(("figure", label))
             continue
         if stripped.startswith("#### "):
             flush_paragraph()
-            blocks.append(("subheading", normalize_heading(stripped[5:])))
+            blocks.append(("subheading", clean_inline(normalize_heading(stripped[5:]))))
             continue
         if stripped.startswith("### ") or stripped.startswith("## "):
             flush_paragraph()
-            blocks.append(("subheading", normalize_heading(stripped.lstrip("# ").strip())))
+            blocks.append(("subheading", clean_inline(normalize_heading(stripped.lstrip("# ").strip()))))
             continue
         if re.match(r"^\d+\.\s", stripped):
             flush_paragraph()
-            blocks.append(("list", stripped))
+            # preserve numbering, clean inline markup
+            blocks.append(("list", clean_inline(stripped)))
             continue
         if stripped.startswith("- "):
             flush_paragraph()
-            blocks.append(("list", stripped[2:].strip()))
+            blocks.append(("list", clean_inline(stripped[2:].strip())))
             continue
         paragraph_buffer.append(stripped)
 
     flush_paragraph()
+    flush_table()
     return blocks
 
 
 def render_markdown_section(anchor: Paragraph, lines: Sequence[str]) -> Paragraph:
     cursor = anchor
-    for block_type, text in markdown_blocks(lines):
-        if block_type == "subheading":
-            cursor = insert_paragraph_after(cursor, text, size=12, bold=True, first_line_indent=False)
+    for block in markdown_blocks(lines):
+        block_type = block[0]
+        if block_type == "table":
+            header_cols, data_rows = block[1]
+            n_cols = len(header_cols)
+            n_rows = len(data_rows) + 1  # +1 for header
+            tbl = insert_table_after(cursor, rows=n_rows, cols=n_cols)
+            for col_idx, text in enumerate(header_cols):
+                tbl.cell(0, col_idx).text = text
+            for row_idx, row_data in enumerate(data_rows, start=1):
+                for col_idx, text in enumerate(row_data[:n_cols]):
+                    tbl.cell(row_idx, col_idx).text = text
+            format_table(tbl, header_rows=1, font_size=10)
+            cursor = insert_paragraph_after_table(tbl)
+        elif block_type == "subheading":
+            cursor = insert_paragraph_after(cursor, block[1], size=12, bold=True, first_line_indent=False)
         elif block_type == "list":
-            cursor = insert_paragraph_after(cursor, text, size=12, first_line_indent=False)
+            cursor = insert_paragraph_after(cursor, block[1], size=12, first_line_indent=False)
+        elif block_type == "figure":
+            cursor = insert_paragraph_after(cursor, f"【图位：{block[1]}】", size=10.5, bold=False,
+                                            first_line_indent=False, align=WD_ALIGN_PARAGRAPH.CENTER)
         else:
-            cursor = insert_paragraph_after(cursor, text, size=12, first_line_indent=True)
+            cursor = insert_paragraph_after(cursor, block[1], size=12, first_line_indent=True)
     return cursor
+
+
+DETAIL_SUBSECTIONS = ["功能描述", "性能描述", "输入", "输出", "程序逻辑", "限制条件"]
+
+
+def append_detail_module(anchor: Paragraph, md_path: Path, module_idx: int, module_name: str, occurrence: int) -> Paragraph:
+    title = insert_paragraph_after(anchor, f"8.{module_idx} {module_name}", size=12, bold=True, first_line_indent=False)
+    cursor = title
+    for sub_idx, sub_heading in enumerate(DETAIL_SUBSECTIONS, start=1):
+        sub_para = insert_paragraph_after(cursor, f"8.{module_idx}.{sub_idx} {sub_heading}", size=11.5, bold=True,
+                                          first_line_indent=False)
+        cursor = render_markdown_section(sub_para, extract_section(md_path, sub_heading, occurrence=occurrence))
+    return cursor
+
+
+def append_titled_section(anchor: Paragraph, title: str, md_path: Path, md_heading: str, occurrence: int = 1) -> Paragraph:
+    title_para = insert_paragraph_after(anchor, title, size=12, bold=True, first_line_indent=False)
+    return render_markdown_section(title_para, extract_section(md_path, md_heading, occurrence=occurrence))
+
+
+def strip_word_comments(docx_path: Path) -> None:
+    """Remove template comments and related markup from a generated docx."""
+    with zipfile.ZipFile(docx_path, "r") as zin:
+        members = {name: zin.read(name) for name in zin.namelist()}
+
+    skip_parts = {
+        "word/comments.xml",
+        "word/commentsExtended.xml",
+        "word/commentsIds.xml",
+        "word/people.xml",
+    }
+
+    xml_like_suffixes = (".xml", ".rels")
+    cleaned: dict[str, bytes] = {}
+
+    for name, data in members.items():
+        if name in skip_parts:
+            continue
+
+        if name.endswith(xml_like_suffixes):
+            text = data.decode("utf-8", "ignore")
+            text = re.sub(r"<w:commentRangeStart[^>]*/>", "", text)
+            text = re.sub(r"<w:commentRangeEnd[^>]*/>", "", text)
+            text = re.sub(r"<w:commentReference[^>]*/>", "", text)
+            text = re.sub(r'<Relationship[^>]+Type="[^"]*/comments[^"]*"[^>]*/>', "", text)
+            text = re.sub(r'<Relationship[^>]+Type="[^"]*/commentsExtended[^"]*"[^>]*/>', "", text)
+            text = re.sub(r'<Relationship[^>]+Type="[^"]*/commentsIds[^"]*"[^>]*/>', "", text)
+            text = re.sub(r'<Relationship[^>]+Type="[^"]*/people[^"]*"[^>]*/>', "", text)
+            text = re.sub(r'<Override PartName="/word/comments[^"]*" ContentType="[^"]+"/>', "", text)
+            text = re.sub(r'<Override PartName="/word/commentsExtended[^"]*" ContentType="[^"]+"/>', "", text)
+            text = re.sub(r'<Override PartName="/word/commentsIds[^"]*" ContentType="[^"]+"/>', "", text)
+            text = re.sub(r'<Override PartName="/word/people.xml" ContentType="[^"]+"/>', "", text)
+            cleaned[name] = text.encode("utf-8")
+        else:
+            cleaned[name] = data
+
+    with zipfile.ZipFile(docx_path, "w") as zout:
+        for name, data in cleaned.items():
+            zout.writestr(name, data)
 
 
 def fill_design_doc() -> Path:
     md_path = ROOT / "docs" / "competition" / "设计及创新性分析报告_初稿.md"
     template = TEMPLATE_DIR / "第十九届全国大学生软件创新大赛-设计及创新性分析报告模版.docx"
-    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-设计及创新性分析报告-v0.3.0.docx"
+    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-设计及创新性分析报告-v0.5.0.docx"
 
     doc = Document(str(template))
     fill_cover(doc, "设计及创新性分析报告")
     fill_revision_history(doc.tables[1])
 
-    replace_paragraph_text(
-        find_paragraph(doc, "痛点概述"),
-        "痛点概述",
-        size=14,
-        bold=True,
-        first_line_indent=False,
-    )
-    render_markdown_section(find_paragraph(doc, "痛点概述"), extract_section(md_path, "痛点概述"))
+    # Align body headings and visible TOC text with the corrected v0.5 structure.
+    try:
+        replace_paragraph_text(find_paragraph(doc, "1.1\t痛点概述\t1"), "1.1\t相关工作\t1", size=10.5, first_line_indent=False)
+        replace_paragraph_text(find_paragraph(doc, "1.2\t相关工作\t1"), "1.2\t痛点概述与项目空白\t1", size=10.5, first_line_indent=False)
+    except ValueError:
+        pass
+    replace_paragraph_text(find_paragraph(doc, "痛点概述"), "相关工作", size=14, bold=True, first_line_indent=False)
+    replace_paragraph_text(find_paragraph(doc, "相关工作"), "痛点概述与项目空白", size=14, bold=True, first_line_indent=False)
+
     render_markdown_section(find_paragraph(doc, "相关工作"), extract_section(md_path, "相关工作"))
+    render_markdown_section(find_paragraph(doc, "痛点概述与项目空白"), extract_section(md_path, "痛点概述与项目空白"))
     render_markdown_section(find_paragraph(doc, "技术性创新点"), extract_section(md_path, "技术性创新点"))
     render_markdown_section(find_paragraph(doc, "功能性创新点"), extract_section(md_path, "功能性创新点"))
     render_markdown_section(find_paragraph(doc, "其他创新点"), extract_section(md_path, "其他创新点"))
-
-    competitor_anchor = find_paragraph(doc, "竞品分析")
-    cursor = render_markdown_section(competitor_anchor, extract_section(md_path, "对比维度选择"))
-    cursor = render_markdown_section(cursor, extract_section(md_path, "竞品对比矩阵"))
-    table = insert_table_after(cursor, rows=7, cols=6)
-    headers = ["维度", "ChatGPT\nStudy Mode", "Khanmigo", "StudyX /\nGauth", "Quizlet\nStudy Tools", "星火"]
-    for idx, text in enumerate(headers):
-        table.cell(0, idx).text = text
-    rows = [
-        ["长期状态理解", "中", "中-强", "弱", "弱", "强"],
-        ["知识结构化", "弱", "中", "弱", "中", "强"],
-        ["执行闭环", "弱", "弱", "弱", "弱", "强"],
-        ["成长沉淀", "弱", "中", "弱", "中", "强"],
-        ["资料与题目支持", "支持上传材料", "依托内容库", "题目/资料强", "资料生成强", "主链式整合"],
-        ["产品主重心", "学习对话体验", "启发式辅导", "作业辅助", "资料学习", "成长系统"],
-    ]
-    for row_idx, row_data in enumerate(rows, start=1):
-        for col_idx, text in enumerate(row_data):
-            table.cell(row_idx, col_idx).text = text
-    format_table(table, header_rows=1, font_size=9.5)
-    table_anchor = insert_paragraph_after_table(table)
-    render_markdown_section(table_anchor, extract_section(md_path, "星火的竞争优势"))
+    render_markdown_section(find_paragraph(doc, "竞品分析"), extract_section(md_path, "竞品分析"))
 
     doc.save(str(output))
+    strip_word_comments(output)
     return output
 
 
 def fill_tech_doc() -> Path:
     md_path = ROOT / "docs" / "competition" / "技术研究报告_初稿.md"
     template = TEMPLATE_DIR / "第十九届全国大学生软件创新大赛-技术研究报告模版.docx"
-    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-技术研究报告-v0.3.0.docx"
+    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-技术研究报告-v0.5.0.docx"
 
     doc = Document(str(template))
     fill_cover(doc, "技术研究报告")
     fill_revision_history(doc.tables[1])
 
-    for heading in ["问题描述", "问题抽象", "问题定位", "问题评估"]:
+    for heading in ["问题描述", "问题抽象", "问题定位", "问题评估", "问题分解"]:
         render_markdown_section(find_paragraph(doc, heading), extract_section(md_path, heading))
-
-    problem_anchor = find_paragraph(doc, "问题分解")
-    problem_cursor = render_markdown_section(problem_anchor, extract_section(md_path, "问题分解"))
-    create_matrix_table(
-        problem_cursor,
-        "表 1 技术问题分解与依赖关系",
-        ["子问题", "核心难点", "依赖关系", "采用方案"],
-        [
-            ["状态感知", "多轮上下文与用户状态连续建模", "主链基础", "认知核 + 上下文管理"],
-            ["知识组织", "语义检索难以表达路径关系", "依赖状态感知", "GraphRAG + 知识星图"],
-            ["规划协作", "复杂任务需要可解释拆解", "依赖知识组织", "Mirofish 多 Agent"],
-            ["执行闭环", "外部执行需要边界与治理", "依赖规划结果", "OpenClaw + TrustEngine"],
-            ["成长反馈", "结果需回流到长期状态", "依赖全部前序", "报告/剧场/模拟/成就"],
-        ],
-        font_size=9.8,
-    )
-
-    related_anchor = find_paragraph(doc, "相关工作")
-    cursor = related_anchor
-    for sub_heading in ["Socratic 学习引导路线", "AI homework helper 路线", "AI study materials 路线", "知识组织与图推理路线", "Agentic execution 路线"]:
-        cursor = render_markdown_section(cursor, extract_section(md_path, sub_heading))
-    related_table = create_matrix_table(
-        cursor,
-        "表 2 相关技术路线比较",
-        ["路线", "代表产品/形态", "核心优势", "主要边界", "星火吸收方式"],
-        [
-            ["Socratic 引导", "ChatGPT Study Mode / Khanmigo", "互动式提问、分步学习", "执行闭环弱", "吸收引导式交互，但扩展到主链"],
-            ["作业辅助", "StudyX / Gauth", "拍照求解、步骤解释、即时帮助", "长期成长弱", "吸收即时帮助逻辑，但不以题目为中心"],
-            ["资料学习", "Quizlet Study Guides / Ask Quizlet", "资料转学习资源", "任务推进弱", "吸收资料加工思路，接入成长系统"],
-            ["图推理", "图谱 + 结构化检索", "路径表达强", "纯图模式灵活性不足", "采用 GraphRAG 融合方案"],
-            ["执行型 Agent", "通用 agentic execution", "推进动作强", "治理与责任边界风险高", "通过 OpenClaw + TrustEngine 治理接入"],
-        ],
-        font_size=9.4,
-    )
-    cursor = insert_paragraph_after_table(related_table)
+    render_markdown_section(find_paragraph(doc, "相关工作"), extract_section(md_path, "相关工作"))
 
     for heading in ["技术方向", "技术选择", "结果期望", "使用的开发框架及依赖的库", "技术实践过程"]:
         render_markdown_section(find_paragraph(doc, heading), extract_section(md_path, heading))
@@ -408,29 +500,17 @@ def fill_tech_doc() -> Path:
     cursor = render_markdown_section(result_anchor, extract_section(md_path, "性能验证数据"))
     cursor = render_markdown_section(cursor, extract_section(md_path, "测试覆盖验证"))
     cursor = render_markdown_section(cursor, extract_section(md_path, "工程稳定性验证"))
-    validation_table = create_matrix_table(
-        cursor,
-        "表 3 当前可直接引用的技术验证口径",
-        ["能力项", "当前证据", "可在文档中的保守口径"],
-        [
-            ["主链稳定性", "本地后端主链验收记录", "主链已形成可复现验证基础"],
-            ["OpenClaw 闭环", "Phase 0-4 专项测试", "执行闭环具备分阶段回归能力"],
-            ["Mirofish / 剧场 / 模拟", "专项测试与桥接验收", "多 Agent 和反馈层具备专项回归"],
-            ["性能阈值", "意图/路由/benchmark 测试", "存在阈值型性能测试基础"],
-            ["工程稳定性", "from-zero rebuild / smoke / build", "具备系统级工程闸门记录"],
-        ],
-        font_size=9.6,
-    )
-    render_markdown_section(insert_paragraph_after_table(validation_table), extract_section(md_path, "当前仍需补强的部分"))
+    render_markdown_section(cursor, extract_section(md_path, "当前仍需补强的部分"))
 
     doc.save(str(output))
+    strip_word_comments(output)
     return output
 
 
 def fill_dev_doc() -> Path:
     md_path = ROOT / "docs" / "competition" / "项目开发文档_初稿.md"
     template = TEMPLATE_DIR / "第十九届全国大学生软件创新大赛-项目开发文档模版.docx"
-    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-项目开发文档-v0.3.0.docx"
+    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-项目开发文档-v0.5.0.docx"
 
     doc = Document(str(template))
     fill_cover(doc, "项目开发文档")
@@ -440,9 +520,9 @@ def fill_dev_doc() -> Path:
 
     replace_paragraph_text(find_paragraph(doc, "4.2.1 **功能模块\t4"), "4.2.1 核心功能模块\t4", size=10.5,
                            first_line_indent=False)
-    replace_paragraph_text(find_paragraph(doc, "8.1 **功能模块\t10"), "8.1 AI 对话与编排模块\t10", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "8.1 **功能模块\t10"), "8.1 AI 对话与主链编排\t10", size=10.5,
                            first_line_indent=False)
-    replace_paragraph_text(find_paragraph(doc, "8.2 **功能模块\t10"), "8.2 多 Agent 与 OpenClaw 执行模块\t10", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "8.2 **功能模块\t10"), "8.2 学习规划与任务执行\t10", size=10.5,
                            first_line_indent=False)
     replace_paragraph_text(find_paragraph(doc, "表2 ****用例规约"), "表2 核心用例规约", size=12, bold=True,
                            first_line_indent=False)
@@ -494,21 +574,6 @@ def fill_dev_doc() -> Path:
     for word_heading, md_heading in mapping.items():
         render_markdown_section(find_paragraph(doc, word_heading), extract_section(md_path, md_heading))
 
-    scheme_anchor = find_paragraph(doc, "项目方案")
-    scheme_table = create_matrix_table(
-        scheme_anchor,
-        "表 1 问题空间到解空间映射",
-        ["核心问题", "对应模块/链路", "预期输出"],
-        [
-            ["目标太大、难以启动", "对话澄清 + 计划生成 + 任务拆解", "可执行的下一步行动"],
-            ["知识碎片化", "知识星图 + GraphRAG + 路径推理", "结构化学习路径与掌握度"],
-            ["反馈滞后", "学习报告 + 剧场 + 成就系统", "可见的成长反馈"],
-            ["执行断裂", "Mirofish + OpenClaw 闭环", "可推进、可回流的执行链路"],
-        ],
-        font_size=9.6,
-    )
-    insert_paragraph_after_table(scheme_table)
-
     # 4.2 功能需求总述
     render_markdown_section(find_paragraph(doc, "功能需求"), extract_section(md_path, "功能需求"))
 
@@ -516,14 +581,16 @@ def fill_dev_doc() -> Path:
     module_placeholders = find_all_paragraphs(doc, "**功能模块")
     replace_paragraph_text(module_placeholders[0], "核心功能模块", size=12, bold=True, first_line_indent=False)
     module_rows = [
-        ["AI 对话与学习主链", "需求澄清、流式反馈、结构化结果", "把自然语言学习目标转化为主链入口。", "P0"],
-        ["计划与任务系统", "计划生成、任务拆解、执行反馈", "把目标转换为可推进、可回流的行动链。", "P0"],
-        ["知识星图与图推理", "知识结构化、掌握度跟踪、路径推荐", "把学习进展从碎片文本转化为结构化路径。", "P0"],
-        ["Mirofish 多 Agent 协作", "专家协作、聚合输出、复杂任务拆解", "面向复杂学习问题提供更强的可解释协作。", "P1"],
-        ["OpenClaw 执行闭环", "执行路由、审批、回流与信任评估", "把 AI 从建议层推进到可委派、可验证的执行层。", "P1"],
-        ["学习报告与知识剧场", "成长分析、路径预测、反思总结", "把学习结果沉淀成长期成长资产。", "P1"],
-        ["学习模拟系统", "辩论、角色扮演、what-if 推演", "让复杂知识理解从讲解升级为互动推演。", "P1"],
-        ["成就与多感官反馈", "成就、契约、BGM、触觉反馈", "增强长期使用中的成长感与情绪连接。", "P2"],
+        ["AI 对话与主链编排", "意图识别、澄清、主链路由、结果合成", "作为统一入口，把自然语言需求转化为后续模块动作。", "P0"],
+        ["学习规划与任务执行", "计划生成、任务拆解、执行状态回写", "把模糊学习目标变成可持续推进的行动链。", "P0"],
+        ["知识星图与 GraphRAG", "知识结构化、掌握度、路径推荐、混合检索", "把知识关系与学习路径真正纳入主链决策。", "P0"],
+        ["Mirofish 多 Agent 协作", "专家路由、协作、聚合、重规划", "面向复杂学习问题提供可解释协作能力。", "P1"],
+        ["OpenClaw 执行闭环", "ExecutionIntent、路由、执行、信任回流", "把学习建议推进到可治理的执行层。", "P1"],
+        ["学习报告", "阶段总结、薄弱点分析、后续建议", "把阶段行为沉淀成可理解的成长反馈。", "P1"],
+        ["知识剧场", "路径推演、状态解释、预测表达", "以更具解释性的方式呈现学习状态。", "P1"],
+        ["学习模拟", "角色扮演、轮次互动、结果反馈", "通过情景化练习加深理解和迁移。", "P1"],
+        ["成就契约与成长反馈", "成就、契约、里程碑反馈", "强化长期使用中的成长感与持续性。", "P2"],
+        ["BGM 与多感官体验", "路由级音景、触觉反馈、模式切换", "增强专注感和成长反馈的感知强度。", "P2"],
     ]
     while len(module_table.rows) < len(module_rows) + 1:
         module_table.add_row()
@@ -632,191 +699,180 @@ def fill_dev_doc() -> Path:
     ])
 
     # 详细设计
-    replace_paragraph_text(module_placeholders[1], "AI 对话与编排模块", size=12, bold=True, first_line_indent=False)
-    replace_paragraph_text(module_placeholders[2], "多 Agent 与 OpenClaw 执行模块", size=12, bold=True, first_line_indent=False)
-    detail_mapping = {
-        "功能描述": "功能描述",
-        "性能描述": "性能描述",
-        "输入": "输入",
-        "输出": "输出",
-        "程序逻辑": "程序逻辑",
-        "限制条件": "限制条件",
-    }
-    for word_heading, md_heading in detail_mapping.items():
-        render_markdown_section(find_paragraph(doc, word_heading), extract_section(md_path, md_heading))
+    detail_modules = [
+        "AI 对话与主链编排",
+        "学习规划与任务执行",
+        "知识星图与 GraphRAG",
+        "Mirofish 多 Agent 协作",
+        "OpenClaw 执行闭环",
+        "学习报告",
+        "知识剧场",
+        "学习模拟",
+        "成就契约与成长反馈",
+        "BGM 与多感官体验",
+    ]
 
-    # Module 8.2 Knowledge Graph - insert content from markdown
-    module2_anchor = find_paragraph(doc, "多 Agent 与 OpenClaw 执行模块")
-    kg_lines = []
-    for sub in ["功能描述", "性能描述", "输入", "输出", "程序逻辑", "限制条件"]:
-        try:
-            section_lines = extract_section(md_path, sub, occurrence=2)
-            kg_lines.extend(section_lines)
-            kg_lines.append("")
-        except ValueError:
-            pass
-    if kg_lines:
-        kg_title = insert_paragraph_after(
-            find_paragraph(doc, "AI 对话与编排模块"),
-            "知识星图与图推理模块", size=12, bold=True, first_line_indent=False
-        )
-        render_markdown_section(kg_title, kg_lines)
+    replace_paragraph_text(module_placeholders[1], "AI 对话与主链编排", size=12, bold=True, first_line_indent=False)
+    replace_paragraph_text(module_placeholders[2], "学习规划与任务执行", size=12, bold=True, first_line_indent=False)
 
-    # Module 8.3 Multi-Agent & OpenClaw - pull from markdown
-    module3_lines = []
-    for sub in ["功能描述", "性能描述", "输入", "输出", "程序逻辑", "限制条件"]:
-        try:
-            section_lines = extract_section(md_path, sub, occurrence=3)
-            module3_lines.extend(section_lines)
-            module3_lines.append("")
-        except ValueError:
-            pass
-    render_markdown_section(module2_anchor, module3_lines)
+    first_module_subheads = [find_paragraph(doc, name) for name in DETAIL_SUBSECTIONS]
+    for idx, (para, sub_heading) in enumerate(zip(first_module_subheads, DETAIL_SUBSECTIONS), start=1):
+        replace_paragraph_text(para, f"8.1.{idx} {sub_heading}", size=11.5, bold=True, first_line_indent=False)
+        render_markdown_section(para, extract_section(md_path, sub_heading, occurrence=1))
+
+    cursor = module_placeholders[2]
+    for sub_idx, sub_heading in enumerate(DETAIL_SUBSECTIONS, start=1):
+        sub_para = insert_paragraph_after(cursor, f"8.2.{sub_idx} {sub_heading}", size=11.5, bold=True, first_line_indent=False)
+        cursor = render_markdown_section(sub_para, extract_section(md_path, sub_heading, occurrence=2))
+
+    for module_idx, module_name in enumerate(detail_modules[2:], start=3):
+        cursor = append_detail_module(cursor, md_path, module_idx, module_name, occurrence=module_idx)
 
     doc.save(str(output))
+    strip_word_comments(output)
     return output
 
 
 def fill_test_doc() -> Path:
     md_path = ROOT / "docs" / "competition" / "项目测试文档_初稿.md"
     template = TEMPLATE_DIR / "第十九届全国大学生软件创新大赛-项目测试文档模版.docx"
-    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-项目测试文档-v0.3.0.docx"
+    output = OUTPUT_DIR / "第十九届全国大学生软件创新大赛-星火-项目测试文档-v0.5.0.docx"
 
     doc = Document(str(template))
     fill_cover(doc, "项目测试文档")
     fill_revision_history(doc.tables[1])
-    openclaw_table = doc.tables[2]
-    function_table = doc.tables[3]
+    unit_matrix_table = doc.tables[2]
+    function_matrix_table = doc.tables[3]
     performance_table = doc.tables[4]
 
-    replace_paragraph_text(find_paragraph(doc, "2.1\t****模块\t2"), "2.1\tOpenClaw 执行闭环模块\t2", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "2.1\t****模块\t2"), "2.1\t功能模块覆盖矩阵\t2", size=10.5,
                            first_line_indent=False)
-    replace_paragraph_text(find_paragraph(doc, "2.2\t****模块\t2"), "2.2\tMirofish 多 Agent 模块\t2", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "2.2\t****模块\t2"), "2.2\tAI 对话与主链编排\t2", size=10.5,
                            first_line_indent=False)
-    replace_paragraph_text(find_paragraph(doc, "3.1\t****功能\t3"), "3.1\tAI 对话主链功能\t3", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "3.1\t****功能\t3"), "3.1\t功能模块覆盖矩阵\t3", size=10.5,
                            first_line_indent=False)
-    replace_paragraph_text(find_paragraph(doc, "3.2\t****功能\t3"), "3.2\tMirofish 桥接功能\t3", size=10.5,
+    replace_paragraph_text(find_paragraph(doc, "3.2\t****功能\t3"), "3.2\tAI 对话与主链编排\t3", size=10.5,
                            first_line_indent=False)
 
-    strategy_lines = markdown_blocks(extract_section(md_path, "测试策略与目标"))
+    def first_text_block(section_name: str) -> str:
+        """Return the text of the first paragraph or list block in a section."""
+        for block in markdown_blocks(extract_section(md_path, section_name)):
+            if block[0] in ("paragraph", "list"):
+                return block[1]
+        return ""
+
+    strategy_blocks = [b for b in markdown_blocks(extract_section(md_path, "测试策略与目标")) if b[0] in ("paragraph", "list")]
     replace_paragraph_text(find_paragraph(doc, "【测试策略：测试策略在软件需求分析完成后就开始实施，根据项目需求对项目有一个整体的把握，包括：测试重点、测试难点、测试分层。】"),
-                           strategy_lines[0][1], first_line_indent=True)
+                           strategy_blocks[0][1] if strategy_blocks else "", first_line_indent=True)
     replace_paragraph_text(find_paragraph(doc, "【目标：定义项目在发布时候的质量等级】"),
-                           strategy_lines[1][1], first_line_indent=True)
+                           strategy_blocks[1][1] if len(strategy_blocks) > 1 else "", first_line_indent=True)
     replace_paragraph_text(find_paragraph(doc, "【从测试广度和测试深度两方面了解整个测试项目的测试规模】"),
-                           markdown_blocks(extract_section(md_path, "测试范围"))[0][1], first_line_indent=True)
+                           first_text_block("测试范围"), first_line_indent=True)
     replace_paragraph_text(find_paragraph(doc, "【包括软硬件环境、网络环境、测试工具】"),
-                           markdown_blocks(extract_section(md_path, "测试环境"))[0][1], first_line_indent=True)
+                           first_text_block("测试环境"), first_line_indent=True)
+
+    unit_modules = [
+        "AI 对话与主链编排",
+        "学习规划与任务执行",
+        "知识星图与 GraphRAG",
+        "Mirofish 多 Agent 协作",
+        "OpenClaw 执行闭环",
+        "学习报告",
+        "知识剧场",
+        "学习模拟",
+        "成就契约与成长反馈",
+        "BGM 与多感官体验",
+    ]
 
     # 单元测试模块名称
     module_placeholders = find_all_paragraphs(doc, "****模块")
     function_placeholders = find_all_paragraphs(doc, "****功能")
-    replace_paragraph_text(module_placeholders[0], "OpenClaw 执行闭环模块", size=12, bold=True, first_line_indent=False)
-    replace_paragraph_text(module_placeholders[1], "Mirofish 多 Agent 模块", size=12, bold=True, first_line_indent=False)
-    replace_paragraph_text(function_placeholders[0], "AI 对话主链功能", size=12, bold=True, first_line_indent=False)
-    replace_paragraph_text(function_placeholders[1], "Mirofish 桥接功能", size=12, bold=True, first_line_indent=False)
+    replace_paragraph_text(module_placeholders[0], "功能模块覆盖矩阵", size=12, bold=True, first_line_indent=False)
+    replace_paragraph_text(module_placeholders[1], "AI 对话与主链编排", size=12, bold=True, first_line_indent=False)
+    replace_paragraph_text(function_placeholders[0], "功能模块覆盖矩阵", size=12, bold=True, first_line_indent=False)
+    replace_paragraph_text(function_placeholders[1], "AI 对话与主链编排", size=12, bold=True, first_line_indent=False)
 
-    # 单元测试表：OpenClaw
-    case_ids = ["UC-OC-01", "UC-OC-02", "UC-OC-03", "UC-OC-04"]
-    for i, cid in enumerate(case_ids, start=1):
-        openclaw_table.cell(0, i).text = cid
-    row_values = {
-        1: ["Phase 0 路由", "Phase 1 意图构建", "Phase 3 信任评估", "Phase 4 结果回流"],
-        2: ["验证不同阶段的闭环是否独立可测且可联通。"] * 4,
-        3: ["后端测试环境与依赖服务可用。"] * 4,
-        4: ["按 Phase 0-4 分阶段执行。"] * 4,
-        5: ["依赖 ExecutionIntent、Router、TrustEngine、Ingestor 等链路。"] * 4,
-    }
-    for row_idx, values in row_values.items():
-        for col_idx, text in enumerate(values, start=1):
-            openclaw_table.cell(row_idx, col_idx).text = text
-    steps = [
-        ["构造执行请求并触发路由", "创建结构化意图", "模拟执行结果并评估可信度", "写回任务与知识状态"],
-        ["观察是否命中正确阶段处理器", "校验字段完整性与安全边界", "检查信任等级与降级策略", "确认结果被正确摄取"],
-        ["通过", "通过", "通过", "通过"],
-        ["链路清晰", "结构完整", "可解释", "闭环成立"],
+    # 单元测试覆盖矩阵
+    while len(unit_matrix_table.rows) < len(unit_modules) + 1:
+        unit_matrix_table.add_row()
+    unit_matrix_table.cell(0, 0).text = "功能模块"
+    unit_matrix_table.cell(0, 1).text = "单元测试覆盖重点"
+    unit_matrix_table.cell(0, 2).text = "关键入口/对象"
+    unit_matrix_table.cell(0, 3).text = "结果"
+    unit_matrix_table.cell(0, 4).text = "备注"
+    unit_rows = [
+        ["AI 对话与主链编排", "上下文、澄清、路由", "主链编排器", "通过", "入口链路稳定"],
+        ["学习规划与任务执行", "计划与任务状态流转", "计划/任务服务", "通过", "链路成立"],
+        ["知识星图与 GraphRAG", "节点、关系、路径推荐", "图谱/检索服务", "通过", "具备专项验证"],
+        ["Mirofish 多 Agent 协作", "路由、协作、聚合", "协作工作流", "通过", "多模式可回归"],
+        ["OpenClaw 执行闭环", "Phase 0-4、TrustEngine", "执行闭环服务", "通过", "分阶段覆盖完整"],
+        ["学习报告", "报告聚合与输出", "报告服务", "通过", "具备专项验证"],
+        ["知识剧场", "路径推演与解释", "预测剧场服务", "通过", "具备专项验证"],
+        ["学习模拟", "轮次与反馈", "模拟引擎", "通过", "具备专项验证"],
+        ["成就契约与成长反馈", "触发规则与状态变更", "成就/契约服务", "通过", "规则级验证"],
+        ["BGM 与多感官体验", "模式切换与恢复", "端侧体验服务", "通过", "端侧专项验证"],
     ]
-    for col in range(1, 5):
-        openclaw_table.cell(6, col).text = ["输入", "期望输出", "实际输出", "备注"][col - 1]
-        openclaw_table.cell(7, col).text = steps[0][col - 1]
-        openclaw_table.cell(8, col).text = steps[1][col - 1]
-        openclaw_table.cell(9, col).text = steps[2][col - 1] + " / " + steps[3][col - 1]
-    for row in openclaw_table.rows:
+    for row_idx, row_data in enumerate(unit_rows, start=1):
+        for col_idx, text in enumerate(row_data):
+            unit_matrix_table.cell(row_idx, col_idx).text = text
+    format_table(unit_matrix_table, header_rows=1, font_size=9.6)
+
+    unit_anchor = module_placeholders[1]
+    unit_cursor = render_markdown_section(unit_anchor, extract_section(md_path, unit_modules[0], occurrence=1))
+    for idx, module_name in enumerate(unit_modules[1:], start=3):
+        unit_cursor = append_titled_section(unit_cursor, f"2.{idx} {module_name}", md_path, module_name, occurrence=1)
+
+    # 功能测试覆盖矩阵
+    while len(function_matrix_table.rows) < len(unit_modules) + 1:
+        function_matrix_table.add_row()
+    function_matrix_table.cell(0, 0).text = "功能模块"
+    function_matrix_table.cell(0, 1).text = "典型功能场景"
+    function_matrix_table.cell(0, 2).text = "验证焦点"
+    function_matrix_table.cell(0, 3).text = "结果"
+    function_matrix_table.cell(0, 4).text = "备注"
+    function_rows = [
+        ["AI 对话与主链编排", "用户输入到主链分流", "入口稳定性", "通过", "主链可演示"],
+        ["学习规划与任务执行", "目标到计划与任务推进", "可执行性", "通过", "计划链路成立"],
+        ["知识星图与 GraphRAG", "主题到路径推荐", "路径解释性", "通过", "知识结构可展示"],
+        ["Mirofish 多 Agent 协作", "复杂问题到协作结果", "协作可解释性", "通过", "评审可展示"],
+        ["OpenClaw 执行闭环", "任务到执行回流", "边界与回流", "通过", "差异化强"],
+        ["学习报告", "学习数据到报告展示", "反馈可读性", "通过", "可引导下一步"],
+        ["知识剧场", "路径推演展示", "解释清晰度", "通过", "预测链路可展示"],
+        ["学习模拟", "主题到多轮模拟", "轮次稳定性", "通过", "情景化成立"],
+        ["成就契约与成长反馈", "触发到反馈展示", "反馈节奏", "通过", "成长闭环成立"],
+        ["BGM 与多感官体验", "场景切换到多感官反馈", "端侧协调", "通过", "具备降级能力"],
+    ]
+    for row_idx, row_data in enumerate(function_rows, start=1):
+        for col_idx, text in enumerate(row_data):
+            function_matrix_table.cell(row_idx, col_idx).text = text
+    format_table(function_matrix_table, header_rows=1, font_size=9.6)
+
+    function_anchor = function_placeholders[1]
+    function_cursor = render_markdown_section(function_anchor, extract_section(md_path, unit_modules[0], occurrence=2))
+    for idx, module_name in enumerate(unit_modules[1:], start=3):
+        function_cursor = append_titled_section(function_cursor, f"3.{idx} {module_name}", md_path, module_name, occurrence=2)
+
+    for row in unit_matrix_table.rows:
         for cell in row.cells:
             for para in cell.paragraphs:
                 for run in para.runs:
                     set_run_font(run, size=10)
                 format_body_paragraph(para, first_line_indent=False)
-
-    render_markdown_section(find_paragraph(doc, "测试结果分析：", occurrence=1), extract_section(md_path, "测试用例与结果分析", occurrence=1))
-    render_markdown_section(find_paragraph(doc, "测试结果综合分析及建议", occurrence=1), extract_section(md_path, "测试结果综合分析及建议", occurrence=1))
-    render_markdown_section(find_paragraph(doc, "测试经验总结", occurrence=1), extract_section(md_path, "测试经验总结", occurrence=1))
-    phase_table = create_matrix_table(
-        find_paragraph(doc, "测试经验总结", occurrence=1),
-        "表 1 OpenClaw Phase 覆盖矩阵",
-        ["验证点", "Phase 0", "Phase 1", "Phase 2", "Phase 3", "Phase 4"],
-        [
-            ["路由决策", "√", "", "", "", ""],
-            ["意图构建", "", "√", "", "", ""],
-            ["请求翻译", "", "", "√", "", ""],
-            ["状态流转", "", "", "", "√", ""],
-            ["信任评估", "", "", "", "√", "√"],
-            ["结果回流", "", "", "", "", "√"],
-        ],
-        font_size=9.4,
-    )
-    miro_anchor = insert_paragraph_after_table(phase_table)
-    replace_paragraph_text(miro_anchor, "Mirofish 多 Agent 模块", size=12, bold=True, first_line_indent=False)
-    cursor = render_markdown_section(miro_anchor, extract_section(md_path, "Mirofish 多 Agent 模块"))
-
-    # 功能测试表：AI 对话主链
-    case_ids = ["FT-CHAT-01", "FT-CHAT-02", "FT-CHAT-03", "FT-CHAT-04"]
-    for i, cid in enumerate(case_ids, start=1):
-        function_table.cell(0, i).text = cid
-    row_values = {
-        1: ["WebSocket 对话主链", "反馈闭环", "计划生成", "流式返回"],
-        2: ["验证 AI 对话主链在真实交互中可稳定工作。"] * 4,
-        3: ["本地后端主链拉起成功。"] * 4,
-        4: ["使用本地验收脚本和集成测试。"] * 4,
-        5: ["依赖 Gateway、gRPC、编排器与持久化链路。"] * 4,
-    }
-    for row_idx, values in row_values.items():
-        for col_idx, text in enumerate(values, start=1):
-            function_table.cell(row_idx, col_idx).text = text
-    for col in range(1, 5):
-        function_table.cell(6, col).text = ["输入", "期望结果", "实际结果", "备注"][col - 1]
-    function_table.cell(7, 1).text = "发送学习目标"
-    function_table.cell(7, 2).text = "返回澄清与计划"
-    function_table.cell(7, 3).text = "通过"
-    function_table.cell(7, 4).text = "可复现"
-    function_table.cell(8, 1).text = "提交反馈"
-    function_table.cell(8, 2).text = "状态写回并影响后续策略"
-    function_table.cell(8, 3).text = "通过"
-    function_table.cell(8, 4).text = "闭环成立"
-    function_table.cell(9, 1).text = "综合观察"
-    function_table.cell(9, 2).text = "19 passed 的主链基础验证"
-    function_table.cell(9, 3).text = "通过"
-    function_table.cell(9, 4).text = "有验收记录"
-    for row in function_table.rows:
+    for row in function_matrix_table.rows:
         for cell in row.cells:
             for para in cell.paragraphs:
                 for run in para.runs:
                     set_run_font(run, size=10)
                 format_body_paragraph(para, first_line_indent=False)
-
-    render_markdown_section(find_paragraph(doc, "测试结果分析：", occurrence=2), extract_section(md_path, "测试用例与结果分析", occurrence=3))
-    render_markdown_section(find_paragraph(doc, "测试结果综合分析及建议", occurrence=2), extract_section(md_path, "测试结果综合分析及建议", occurrence=3))
-    render_markdown_section(find_paragraph(doc, "测试经验总结", occurrence=2), extract_section(md_path, "测试经验总结", occurrence=3))
-    bridge_anchor = find_paragraph(doc, "Mirofish 桥接功能")
-    render_markdown_section(bridge_anchor, extract_section(md_path, "3.2 Mirofish 桥接功能"))
 
     # 系统测试 / 性能测试表
     system_anchor = find_paragraph(doc, "系统测试")
-    cursor = render_markdown_section(system_anchor, [
-        "系统测试不仅关注模型推理性能，也关注环境闸门、工程稳定性、混沌场景和当前残余风险。",
-        "",
-        "当前本地环境已完成从零复建、核心容器健康、fresh build、env-check、smoke 和 local-backend-smoke 等系统级验证。",
-    ])
+    cursor = append_titled_section(system_anchor, "4.1 环境与工程闸门", md_path, "环境与工程闸门")
+    try:
+        replace_paragraph_text(find_paragraph(doc, "4.1\t模型性能测试\t4"), "4.2\t性能测试\t4", size=10.5, first_line_indent=False)
+    except ValueError:
+        pass
+    replace_paragraph_text(find_paragraph(doc, "模型性能测试"), "4.2 性能测试", size=12, bold=True, first_line_indent=False)
     perf_ids = ["PT-01", "PT-02", "PT-03", "PT-04"]
     for i, cid in enumerate(perf_ids, start=1):
         performance_table.cell(0, i).text = cid
@@ -856,25 +912,14 @@ def fill_test_doc() -> Path:
                     set_run_font(run, size=10)
                 format_body_paragraph(para, first_line_indent=False)
 
-    perf_anchor = find_paragraph(doc, "模型性能测试")
-    cursor = render_markdown_section(perf_anchor, extract_section(md_path, "性能测试"))
-    evidence_table = create_matrix_table(
-        cursor,
-        "表 2 系统级验证证据矩阵",
-        ["类别", "当前证据", "结论口径"],
-        [
-            ["环境复建", "from-zero rebuild / env-check", "环境可重建"],
-            ["构建闸门", "Flutter fresh build / smoke", "核心构建链路稳定"],
-            ["后端主链", "WebSocket / feedback / local-backend-smoke", "主链具备复现能力"],
-            ["专项模块", "OpenClaw / Mirofish / Report / Theater / Simulation", "关键创新模块有专项回归"],
-            ["真机体验", "音频/触觉/分享/通知待补", "边界诚实保留"],
-        ],
-        font_size=9.6,
-    )
-    cursor = render_markdown_section(insert_paragraph_after_table(evidence_table), extract_section(md_path, "混沌测试与弹性验证"))
-    render_markdown_section(cursor, extract_section(md_path, "当前未完全完成的系统级验证"))
+    perf_anchor = find_paragraph(doc, "4.2 性能测试")
+    perf_cursor = insert_paragraph_after(perf_anchor, "当前性能测试采用阈值型验证方式，重点保证比赛演示场景下的稳定响应，而不是追求脱离场景的理论峰值。", size=12)
+    perf_cursor = append_titled_section(insert_paragraph_after_table(performance_table), "4.3 混沌测试与弹性验证", md_path, "混沌测试与弹性验证")
+    perf_cursor = append_titled_section(perf_cursor, "4.4 测试数据汇总", md_path, "测试数据汇总")
+    append_titled_section(perf_cursor, "4.5 当前未完全完成的系统级验证", md_path, "当前未完全完成的系统级验证")
 
     doc.save(str(output))
+    strip_word_comments(output)
     return output
 
 
@@ -935,6 +980,7 @@ def fill_support_doc(md_filename: str, output_name: str, title: str) -> Path:
         format_body_paragraph(p, first_line_indent=False if "：" in stripped and len(stripped) < 28 else True)
 
     doc.save(str(output))
+    strip_word_comments(output)
     return output
 
 
@@ -946,13 +992,8 @@ def main() -> None:
         fill_test_doc(),
         fill_support_doc(
             "配图与AI生成Prompt清单_初稿.md",
-            "第十九届全国大学生软件创新大赛-星火-配图与AI生成Prompt清单-v0.3.0.docx",
+            "第十九届全国大学生软件创新大赛-星火-配图与AI生成Prompt清单-v0.5.0.docx",
             "星火配图与 AI 生成 Prompt 清单",
-        ),
-        fill_support_doc(
-            "竞品与外部资料来源清单_初稿.md",
-            "第十九届全国大学生软件创新大赛-星火-竞品与外部资料来源清单-v0.3.0.docx",
-            "星火竞品与外部资料来源清单",
         ),
     ]
     for path in outputs:

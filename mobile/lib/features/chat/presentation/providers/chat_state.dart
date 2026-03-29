@@ -100,7 +100,7 @@ class ChatState {
     this.isLoading = false,
     this.isSending = false,
     this.isLoadingMore = false,
-    this.hasMoreMessages = true,
+    this.hasMoreMessages = false,
     this.conversationId,
     this.messages = const [],
     this.error,

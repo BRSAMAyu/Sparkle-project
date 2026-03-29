@@ -133,6 +133,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered users proxy routes")
 
+	// ==================== User Settings Routes ====================
+	user := api.Group("/user")
+	user.Use(authMiddleware)
+	{
+		user.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered user proxy routes")
+
 	// ==================== Achievements Routes ====================
 	achievements := api.Group("/achievements")
 	achievements.Use(authMiddleware)
@@ -141,6 +149,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		achievements.GET("/stats", h.proxyWithHeaders)
 		achievements.GET("/map", h.proxyWithHeaders)
 		achievements.GET("/streak", h.proxyWithHeaders)
+		achievements.GET("/streak/history", h.proxyWithHeaders)
 		achievements.GET("/:id", h.proxyWithHeaders)
 		achievements.POST("/:id/share", h.proxyWithHeaders)
 		achievements.GET("/contracts", h.proxyWithHeaders)
@@ -506,11 +515,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 	// ==================== Client Telemetry Routes ====================
 	clientTelemetry := api.Group("/client-telemetry")
-	clientTelemetry.Use(authMiddleware)
 	{
 		clientTelemetry.POST("/events", h.proxyWithHeaders)
 		clientTelemetry.POST("/events/batch", h.proxyWithHeaders)
-		clientTelemetry.GET("/summary", h.proxyWithHeaders)
+	}
+
+	clientTelemetryProtected := api.Group("/client-telemetry")
+	clientTelemetryProtected.Use(authMiddleware)
+	{
+		clientTelemetryProtected.GET("/summary", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered client-telemetry proxy routes")
 

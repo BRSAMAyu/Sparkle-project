@@ -138,12 +138,16 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.text('推荐场景'), findsNothing);
+    expect(find.text('展开模拟设置'), findsOneWidget);
+    expect(find.text('提交我的判断'), findsOneWidget);
     final chipFinder = find.byType(ActionChip).first;
     await tester.ensureVisible(chipFinder);
     await tester.tap(chipFinder);
     await tester.pump();
 
     expect(notifier.replies, <String>['我会先画依赖图，再做一道题验证。']);
-    expect(find.text('继续当前模拟'), findsWidgets);
+    expect(find.text('继续当前模拟'), findsNothing);
+    expect(find.text('提交我的判断'), findsOneWidget);
   });
 }

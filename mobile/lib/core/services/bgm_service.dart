@@ -811,6 +811,9 @@ class BgmService {
     if (player == null || currentTrack == null || _isRefreshing) {
       return;
     }
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.iOS) {
+      return;
+    }
 
     final sequence = ++_duckSequence;
     final targetVolume = await _targetVolume(
@@ -819,11 +822,11 @@ class BgmService {
     );
     final duckFactor = isBackNavigation ? 0.84 : 0.70;
     final duckDuration = isBackNavigation
-        ? const Duration(milliseconds: 120)
-        : const Duration(milliseconds: 160);
+        ? const Duration(milliseconds: 90)
+        : const Duration(milliseconds: 110);
     final settleDuration = isBackNavigation
-        ? const Duration(milliseconds: 120)
-        : const Duration(milliseconds: 180);
+        ? const Duration(milliseconds: 90)
+        : const Duration(milliseconds: 130);
 
     await _fadeTo(targetVolume * duckFactor, duration: duckDuration, steps: 4);
     await Future<void>.delayed(settleDuration);
@@ -1198,6 +1201,16 @@ class BgmService {
             allowRecovery: false,
           );
           return;
+        }
+        if (selection.source.path != _fallbackBgmAssetPath) {
+          try {
+            await _switchTrack(
+              track,
+              force: true,
+              allowRecovery: false,
+            );
+            return;
+          } catch (_) {}
         }
       } else if (kDebugMode) {
         debugPrint('BGM switch error for ${selection.source.path}: $e');

@@ -3266,13 +3266,13 @@ class _SnapshotSection extends StatelessWidget {
             final compact = constraints.maxWidth < 420;
             final button = FilledButton.tonal(
               onPressed: isSaving ? null : onSave,
-              child: Text(isSaving ? '保存中' : '保存'),
+              child: Text(isSaving ? '保存中' : '保存当前快照'),
             );
             final content = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '保存快照',
+                  '保存当前快照',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

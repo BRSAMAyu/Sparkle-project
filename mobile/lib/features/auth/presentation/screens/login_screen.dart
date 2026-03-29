@@ -103,210 +103,180 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       safeArea: false,
       child: SafeArea(
         child: ContentConstraint(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(DS.xl),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: DS.spacing24),
-                        SparkleStaggerItem(
-                          index: 0,
-                          motionToken: SparkleMotionToken.hero,
-                          child: _BrandMark(
-                            orange: _brandOrange,
-                            orangeDeep: _brandOrangeDeep,
-                          ),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.all(DS.xl),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: DS.spacing24),
+                  _BrandMark(
+                    orange: _brandOrange,
+                    orangeDeep: _brandOrangeDeep,
+                  ),
+                  const SizedBox(height: DS.lg),
+                  _BrandWordmark(
+                    title: l10n.appTitle,
+                    blue: _brandBlue,
+                    blueDeep: _brandBlueDeep,
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    l10n.welcomeSubtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: DS.xxxl),
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: l10n.username,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? l10n.pleaseEnterUsername : null,
+                  ),
+                  const SizedBox(height: DS.lg),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: l10n.password,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: SparkleIconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 1,
-                          motionToken: SparkleMotionToken.hero,
-                          child: _BrandWordmark(
-                            title: l10n.appTitle,
-                            blue: _brandBlue,
-                            blueDeep: _brandBlueDeep,
-                          ),
-                        ),
-                        const SizedBox(height: DS.sm),
-                        SparkleStaggerItem(
-                          index: 2,
-                          child: Text(
-                            l10n.welcomeSubtitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ),
-                        const SizedBox(height: DS.xxxl),
-                        SparkleStaggerItem(
-                          index: 3,
-                          child: TextFormField(
-                            controller: _usernameController,
-                            decoration: InputDecoration(
-                              labelText: l10n.username,
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.person_outline),
+                        onPressed: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
                             ),
-                            validator: (value) =>
-                                value!.isEmpty ? l10n.pleaseEnterUsername : null,
-                          ),
-                        ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 4,
-                          child: TextFormField(
-                            controller: _passwordController,
-                            obscureText: !_isPasswordVisible,
-                            decoration: InputDecoration(
-                              labelText: l10n.password,
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: SparkleIconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () {
-                                  unawaited(
-                                    SensoryFeedbackService.emit(
-                                      SensoryFeedbackEvent.selection,
-                                    ),
-                                  );
-                                  setState(
-                                    () => _isPasswordVisible = !_isPasswordVisible,
-                                  );
-                                },
-                              ),
-                            ),
-                            validator: (value) =>
-                                value!.isEmpty ? l10n.pleaseEnterPassword : null,
-                          ),
-                        ),
-                        const SizedBox(height: DS.sm),
-                        SparkleStaggerItem(
-                          index: 5,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: authState.isLoading
-                                  ? null
-                                  : () => context.go('/forgot-password'),
-                              child: Text(l10n.authForgotPassword),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.xl),
-                        SparkleStaggerItem(
-                          index: 6,
-                          child: SparkleButton(
-                            label: l10n.login,
-                            onPressed: authState.isLoading ? null : _submit,
-                            expand: true,
-                            loading: authState.isLoading,
-                            disabled: authState.isLoading,
-                          ),
-                        ),
-                        const Spacer(),
-                        Row(
-                          children: [
-                            const Expanded(child: Divider()),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.spacing16,
-                              ),
-                              child: Text(
-                                l10n.orText,
-                                style: TextStyle(color: DS.brandPrimary),
-                              ),
-                            ),
-                            const Expanded(child: Divider()),
-                          ],
-                        ),
-                        const SizedBox(height: DS.xl),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _SocialLoginButton(
-                              icon: Icons.g_mobiledata_rounded,
-                              label: l10n.google,
-                              onTap: () => _handleSocialLogin(
-                                SocialAuthService().signInWithGoogle,
-                              ),
-                            ),
-                            _SocialLoginButton(
-                              icon: Icons.apple_rounded,
-                              label: l10n.apple,
-                              onTap: () => _handleSocialLogin(
-                                SocialAuthService().signInWithApple,
-                              ),
-                            ),
-                            _SocialLoginButton(
-                              icon: Icons.wechat_rounded,
-                              label: l10n.wechat,
-                              onTap: () => _handleSocialLogin(
-                                SocialAuthService().signInWithWeChat,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: DS.lg),
-                        Center(
-                          child: SparkleButton.ghost(
-                            label: l10n.noAccount,
-                            onPressed: () => context.go('/register'),
-                          ),
-                        ),
-                        const SizedBox(height: DS.sm),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: DS.spacing4,
-                          children: [
-                            Text(
-                              l10n.authLoginAgreement,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            TextButton(
-                              onPressed: () => context.push('/legal/terms'),
-                              child: Text(l10n.authUserAgreement),
-                            ),
-                            Text(
-                              l10n.authAnd,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            TextButton(
-                              onPressed: () => context.push('/legal/privacy'),
-                              child: Text(l10n.authPrivacyPolicy),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: DS.sm),
-                        SparkleButton(
-                          label: l10n.continueAsGuest,
-                          onPressed: authState.isLoading
-                              ? null
-                              : () async {
-                                  await ref
-                                      .read(authProvider.notifier)
-                                      .loginAsGuest();
-                                },
-                          loading: authState.isLoading,
-                          disabled: authState.isLoading,
-                          variant: ButtonVariant.ghost,
-                          expand: true,
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                      ],
+                          );
+                          setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          );
+                        },
+                      ),
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? l10n.pleaseEnterPassword : null,
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: authState.isLoading
+                          ? null
+                          : () => context.go('/forgot-password'),
+                      child: Text(l10n.authForgotPassword),
                     ),
                   ),
-                ),
+                  const SizedBox(height: DS.xl),
+                  SparkleButton(
+                    label: l10n.login,
+                    onPressed: authState.isLoading ? null : _submit,
+                    expand: true,
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                  ),
+                  const SizedBox(height: DS.sm),
+                  SparkleButton(
+                    label: l10n.continueAsGuest,
+                    onPressed: authState.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .loginAsGuest();
+                          },
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                    variant: ButtonVariant.ghost,
+                    expand: true,
+                  ),
+                  const SizedBox(height: DS.xxxl),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing16,
+                        ),
+                        child: Text(
+                          l10n.orText,
+                          style: TextStyle(color: DS.brandPrimary),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: DS.xl),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _SocialLoginButton(
+                        icon: Icons.g_mobiledata_rounded,
+                        label: l10n.google,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithGoogle,
+                        ),
+                      ),
+                      _SocialLoginButton(
+                        icon: Icons.apple_rounded,
+                        label: l10n.apple,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithApple,
+                        ),
+                      ),
+                      _SocialLoginButton(
+                        icon: Icons.wechat_rounded,
+                        label: l10n.wechat,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithWeChat,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.lg),
+                  Center(
+                    child: SparkleButton.ghost(
+                      label: l10n.noAccount,
+                      onPressed: () => context.go('/register'),
+                    ),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: DS.spacing4,
+                    children: [
+                      Text(
+                        l10n.authLoginAgreement,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/legal/terms'),
+                        child: Text(l10n.authUserAgreement),
+                      ),
+                      Text(
+                        l10n.authAnd,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/legal/privacy'),
+                        child: Text(l10n.authPrivacyPolicy),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                ],
               ),
             ),
           ),

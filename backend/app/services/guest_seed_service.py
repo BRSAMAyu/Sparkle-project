@@ -3125,8 +3125,9 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         initiator_goal="一起把英语晨读和口语微反馈坚持 10 天。",
         partner_goal=None,
         check_in_days=1,
-        status=AccountabilityStatus.PENDING,
-        started_at=None,
+        status=AccountabilityStatus.ENDED,
+        started_at=now - timedelta(days=24),
+        ended_at=now - timedelta(days=16),
     )
 
     accountability_timeline = [

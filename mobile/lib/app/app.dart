@@ -9,10 +9,19 @@ import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/unified_push_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Provider for initializing push service once
 final pushInitProvider = FutureProvider<void>((ref) async {
+  final authState = ref.watch(authProvider);
+  final user = authState.user;
+  if (authState.isLoading || !authState.isAuthenticated || user == null) {
+    return;
+  }
+  if (user.registrationSource == 'guest') {
+    return;
+  }
   final pushService = ref.watch(unifiedPushServiceProvider);
   await pushService.initialize();
 });

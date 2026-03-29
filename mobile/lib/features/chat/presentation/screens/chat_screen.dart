@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -272,6 +273,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
     final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0) {
+      return;
+    }
+    if (position.userScrollDirection == ScrollDirection.idle) {
+      return;
+    }
     if (position.pixels >= position.maxScrollExtent - 240) {
       unawaited(ref.read(chatProvider.notifier).loadMoreHistory());
     }
@@ -866,12 +873,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     ref.read(chatProvider.notifier).cancelActiveRun(reason: 'history_switch');
-    await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
+    try {
+      await ref
+          .read(chatProvider.notifier)
+          .loadConversationHistory(sessionId)
+          .timeout(const Duration(seconds: 12));
+    } on TimeoutException {
+      return context.l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
+    }
     if (mounted) {
       _scrollController.jumpTo(0);
     }
     if (!mounted) {
       return null;
+    }
+
+    if (ref.read(chatProvider).conversationId != sessionId) {
+      return context.l10n.chatHistoryLoadFailed('历史会话未能成功切换，请重试');
     }
 
     final loadError = ref.read(chatProvider).error;
@@ -1726,7 +1744,12 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
       _openingSessionId = sessionId;
       _inlineError = null;
     });
-    final error = await widget.onSelectSession(sessionId);
+    final error = await widget.onSelectSession(sessionId).timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => I18nService.instance.l10n.chatHistoryLoadFailed(
+            '打开历史会话超时，请重试',
+          ),
+        );
     if (!mounted) {
       return;
     }

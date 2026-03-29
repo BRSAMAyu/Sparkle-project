@@ -1,6 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/features/photon/presentation/screens/photon_transfer_screen.dart';
 import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
 
@@ -13,17 +14,16 @@ Page<dynamic> _buildTransitionPage({
       key: state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          SharedAxisTransition(
+          buildSharedAxisCompatibleTransition(
         animation: animation,
-        secondaryAnimation: secondaryAnimation,
-        transitionType: type,
+        type: type,
         child: child,
       ),
     );
 
 class PhotonRoutes {
   static const String transactionHistory = '/photon/history';
-  static const String transfer = '/photon/transfer';  // 新增
+  static const String transfer = '/photon/transfer'; // 新增
 
   static List<RouteBase> get routes => [
         GoRoute(

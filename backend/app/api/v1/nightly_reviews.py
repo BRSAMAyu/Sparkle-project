@@ -19,7 +19,7 @@ async def get_latest_review(
     service = NightlyReviewService(db)
     review = await service.get_latest(current_user.id)
     if not review:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+        review = await service.generate_for_user(current_user.id, getattr(current_user, "timezone", None))
     widget_payload = {
         "type": "nightly_review",
         "data": {

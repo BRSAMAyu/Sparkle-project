@@ -49,6 +49,8 @@ part 'chat_provider_wiring.dart';
 
 // 2. ChatNotifier Class
 class ChatNotifier extends StateNotifier<ChatState> {
+  static const int historyPageSize = 20;
+
   ChatNotifier(this._chatRepository, this._ref) : super(ChatState()) {
     if (DemoDataService.isDemoMode) {
       // Load demo history
@@ -163,6 +165,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(
       messages: [...state.messages, userMessage],
       isSending: true,
+      hasMoreMessages: false,
       streamingContent: '',
       activeTools: const [],
       agentActivities: const [],
@@ -501,9 +504,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'reason': reason,
         'delegate_preference': suggestion['delegate_preference'],
         'title': tone == 'detailed_guidance' ? '这一步适合交给 AI 执行' : '我可以直接替你执行这一步',
-        'summary': reason.isNotEmpty
-            ? reason
-            : '这个任务已经具备可委派的结构，Sparkle 可以直接进入执行链路。',
+        'summary':
+            reason.isNotEmpty ? reason : '这个任务已经具备可委派的结构，Sparkle 可以直接进入执行链路。',
         'route': '${TaskRoutes.home}/$taskId/execute?origin=chat',
       });
     }
@@ -511,13 +513,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final validation = _parseJsonMap(metadata['execution_validation']);
     if (validation == null) return;
     final toolsTotal = (validation['tools_total'] as num?)?.toInt() ?? 0;
-    final toolsSuccessful = (validation['tools_successful'] as num?)?.toInt() ?? 0;
+    final toolsSuccessful =
+        (validation['tools_successful'] as num?)?.toInt() ?? 0;
     final stepsTotal = (validation['steps_total'] as num?)?.toInt() ?? 0;
     final stepsPassed = (validation['steps_passed'] as num?)?.toInt() ?? 0;
     final qualityScore = (validation['quality_score'] as num?)?.toDouble();
     final validationStatus = validation['validation_status']?.toString() ?? '';
     final aborted = validation['aborted'] == true;
-    final hasMeaningfulValidation = toolsTotal > 0 || stepsTotal > 0 || qualityScore != null;
+    final hasMeaningfulValidation =
+        toolsTotal > 0 || stepsTotal > 0 || qualityScore != null;
     if (!hasMeaningfulValidation) return;
 
     final failedTools = toolsTotal > 0 ? toolsTotal - toolsSuccessful : 0;
@@ -531,7 +535,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final affectedObjects = <String>[
       if (stepsTotal > 0) '步骤 $stepsPassed/$stepsTotal',
       if (toolsTotal > 0) '工具 $toolsSuccessful/$toolsTotal',
-      if (qualityScore != null) '质量 ${(qualityScore * 100).toStringAsFixed(0)}%',
+      if (qualityScore != null)
+        '质量 ${(qualityScore * 100).toStringAsFixed(0)}%',
     ];
 
     _upsertWidget(target, 'execution_summary', {
