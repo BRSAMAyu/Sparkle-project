@@ -190,6 +190,7 @@ class GraphiteModalSurface extends StatelessWidget {
     this.surfaceRole = SparkleSurfaceRole.modal,
     this.borderRadius = const BorderRadius.vertical(top: Radius.circular(28)),
     this.showHandle = true,
+    this.expandChild = false,
   });
 
   final Widget child;
@@ -198,6 +199,7 @@ class GraphiteModalSurface extends StatelessWidget {
   final SparkleSurfaceRole surfaceRole;
   final BorderRadiusGeometry borderRadius;
   final bool showHandle;
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +229,7 @@ class GraphiteModalSurface extends StatelessWidget {
                 ),
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (showHandle)
@@ -249,7 +251,7 @@ class GraphiteModalSurface extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  child,
+                  if (expandChild) Expanded(child: child) else child,
                 ],
               ),
             ),

@@ -20,7 +20,8 @@ class MockChatRepository extends Mock implements ChatRepository {
     String conversationId, {
     int? limit,
     int? offset,
-  }) => super.noSuchMethod(
+  }) =>
+      super.noSuchMethod(
         Invocation.method(
           #getConversationHistory,
           [conversationId],
@@ -130,5 +131,119 @@ void main() {
     expect(state.conversationId, 'session-1');
     expect(state.messages, [existingMessage]);
     expect(state.error, isNotNull);
+  });
+
+  test('handleWidgetAction queues navigation for core cross-module actions',
+      () async {
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatProvider.notifier);
+
+    await notifier.handleWidgetAction('create_task_draft', {
+      'payload': {'title': '整理番茄钟任务'},
+    });
+    expect(container.read(chatProvider).lastActionStatus, 'navigation_ready');
+    expect(
+      container.read(chatProvider).lastActionMessage,
+      '/tasks/new?title=%E6%95%B4%E7%90%86%E7%95%AA%E8%8C%84%E9%92%9F%E4%BB%BB%E5%8A%A1',
+    );
+
+    await notifier.handleWidgetAction('open_task', {
+      'payload': {'task_id': 'task-42'},
+    });
+    expect(container.read(chatProvider).lastActionStatus, 'navigation_ready');
+    expect(
+      container.read(chatProvider).lastActionMessage,
+      '/tasks/task-42/execute',
+    );
+
+    await notifier.handleWidgetAction('start_focus', {
+      'payload': {'task_id': 'focus-7'},
+    });
+    expect(container.read(chatProvider).lastActionStatus, 'navigation_ready');
+    expect(
+      container.read(chatProvider).lastActionMessage,
+      '/focus/mindfulness/focus-7',
+    );
+
+    await notifier.handleWidgetAction('route', {
+      'payload': {'route': '/calendar'},
+    });
+    expect(container.read(chatProvider).lastActionStatus, 'navigation_ready');
+    expect(container.read(chatProvider).lastActionMessage, '/calendar');
+  });
+
+  test('loadMoreHistory silences transient invalid session pagination errors',
+      () async {
+    I18nService.instance.reset();
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatProvider.notifier);
+    notifier.state = notifier.state.copyWith(
+      conversationId: '00000000-0000-0000-0000-000000000123',
+      messages: [
+        ChatMessageModel(
+          id: 'm1',
+          userId: 'u1',
+          conversationId: '00000000-0000-0000-0000-000000000123',
+          role: MessageRole.user,
+          content: 'hello',
+          createdAt: DateTime.now(),
+        ),
+      ],
+      hasMoreMessages: true,
+    );
+
+    when(
+      mockChatRepository.getConversationHistory(
+        '00000000-0000-0000-0000-000000000123',
+        limit: anyNamed('limit'),
+        offset: anyNamed('offset'),
+      ),
+    ).thenAnswer((_) async => throw Exception('invalid session_id'));
+
+    await notifier.loadMoreHistory();
+
+    final state = container.read(chatProvider);
+    expect(state.error, isNull);
+    expect(state.hasMoreMessages, isFalse);
+    expect(state.isLoadingMore, isFalse);
+  });
+
+  test('loadMoreHistory ignores synthetic temporary conversations', () async {
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatProvider.notifier);
+    notifier.state = notifier.state.copyWith(
+      conversationId: 'temp_conversation',
+      hasMoreMessages: true,
+    );
+
+    await notifier.loadMoreHistory();
+
+    final state = container.read(chatProvider);
+    expect(state.hasMoreMessages, isFalse);
+    verifyNever(
+      mockChatRepository.getConversationHistory(
+        'temp_conversation',
+        limit: anyNamed('limit'),
+        offset: anyNamed('offset'),
+      ),
+    );
   });
 }

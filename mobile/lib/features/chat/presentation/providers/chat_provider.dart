@@ -103,6 +103,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
     await _chatRepository.reconnect();
   }
 
+  Future<void> warmUpConnection() async {
+    try {
+      final authState = _ref.read(authProvider);
+      final userId = authState.user?.id ??
+          await _ref.read(guestServiceProvider).getGuestId();
+      if (userId.isEmpty) {
+        return;
+      }
+      final token = await _ref.read(authRepositoryProvider).getAccessToken();
+      await _chatRepository.ensureConnected(userId: userId, token: token);
+    } catch (error, stackTrace) {
+      debugPrint('[ChatProvider] warmUpConnection failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
   String _nextClientRunId() =>
       'run_${DateTime.now().microsecondsSinceEpoch}_${_runSequence++}';
 
@@ -787,6 +803,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedUxEnvelope != null;
 
       if (hasRenderableMessage) {
+        var resolvedContent = accumulatedContent;
+        if (resolvedContent.trim().isEmpty && phase == ChatRunPhase.completed) {
+          if (accumulatedWidgets.isNotEmpty || accumulatedUxEnvelope != null) {
+            resolvedContent = '已为你整理好下一步操作。';
+          } else if (accumulatedCollaboration != null) {
+            resolvedContent = '本轮协作结果已准备好。';
+          }
+        }
         String? reasoningSummary;
         if (accumulatedReasoningSteps.isNotEmpty &&
             reasoningStartTime != null) {
@@ -807,7 +831,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           userId: 'ai_assistant',
           conversationId: state.conversationId ?? 'temp_conversation',
           role: MessageRole.assistant,
-          content: accumulatedContent,
+          content: resolvedContent,
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
           agentCollaboration: accumulatedCollaboration,

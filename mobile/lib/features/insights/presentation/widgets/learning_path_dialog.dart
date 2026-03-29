@@ -437,8 +437,10 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     LearningPathNode node,
   ) {
     Navigator.of(sheetContext).pop(); // close action sheet
-    Navigator.of(parentContext).pop(); // close learning path dialog
-    _pushFromRoot('/galaxy/node/${node.id}', fallbackContext: parentContext);
+    _closeThenPushFromRoot(
+      parentContext,
+      '/galaxy/node/${node.id}',
+    );
   }
 
   Future<void> _handleCreateTask(
@@ -462,8 +464,11 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       if (!feedbackContext.mounted) return;
       AppFeedback.success(feedbackContext, '任务卡已创建');
       _clearInlineFeedback();
-      Navigator.of(parentContext).pop(); // close learning path dialog
-      _pushFromRoot('/tasks/${task.id}', fallbackContext: feedbackContext);
+      _closeThenPushFromRoot(
+        parentContext,
+        '/tasks/${task.id}',
+        fallbackContext: feedbackContext,
+      );
     } catch (e) {
       _setInlineError('创建失败：$e');
     }
@@ -496,8 +501,8 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         AppFeedback.success(feedbackContext, message);
       }
       _clearInlineFeedback();
-      Navigator.of(parentContext).pop(); // close learning path dialog
-      _pushFromRoot(
+      _closeThenPushFromRoot(
+        parentContext,
         '/plans/${response.planId}',
         fallbackContext: feedbackContext,
       );
@@ -530,8 +535,8 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       if (!feedbackContext.mounted) return;
       AppFeedback.success(feedbackContext, '学习计划已生成');
       _clearInlineFeedback();
-      Navigator.of(context).pop();
-      _pushFromRoot(
+      _closeThenPushFromRoot(
+        context,
         '/plans/${response.planId}',
         fallbackContext: feedbackContext,
       );
@@ -566,7 +571,22 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       );
       ref.invalidate(knowledgeDetailProvider(widget.targetNodeId));
       _clearInlineFeedback();
-      Navigator.of(context).pop();
+      final taskListRoute = response.taskListEntityCard?.detailRoute?.trim();
+      if (taskListRoute != null && taskListRoute.isNotEmpty) {
+        _closeThenPushFromRoot(
+          context,
+          taskListRoute,
+          fallbackContext: feedbackContext,
+        );
+      } else if (response.tasks.isNotEmpty) {
+        _closeThenPushFromRoot(
+          context,
+          '/tasks',
+          fallbackContext: feedbackContext,
+        );
+      } else {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       _setInlineError('生成失败：$e');
     } finally {
@@ -580,6 +600,24 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
 
   BuildContext _feedbackContext(BuildContext fallbackContext) =>
       navigatorKey.currentContext ?? fallbackContext;
+
+  void _closeThenPushFromRoot(
+    BuildContext sheetContext,
+    String location, {
+    BuildContext? fallbackContext,
+  }) {
+    final rootContext = navigatorKey.currentContext ??
+        Navigator.of(sheetContext, rootNavigator: true).context;
+    Navigator.of(sheetContext).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final navigationContext =
+          navigatorKey.currentContext ?? fallbackContext ?? rootContext;
+      if (!navigationContext.mounted) {
+        return;
+      }
+      unawaited(navigationContext.push(location));
+    });
+  }
 
   void _pushFromRoot(String location, {required BuildContext fallbackContext}) {
     final navigationContext = navigatorKey.currentContext ?? fallbackContext;

@@ -61,6 +61,42 @@
   - 修正 OpenClaw provider 生命周期，避免重复 dispose
   - 视觉元素 provider 增加默认配置兜底
 
+## 2026-03-29 晚间补充更新
+
+- Mirofish 聊天桥真实基准通过：
+  - `chat_to_theater` `0.331s`
+  - `chat_to_simulation` `0.036s`
+  - `chat_to_report` `1.992s`
+  - 三条链路均为 `bridge_execution_mode=short_circuit`
+- OpenClaw 管理链补齐：
+  - Gateway 显式代理新增 `/api/v1/admin/executions/*`
+  - `GET /api/v1/admin/executions/health` 返回 `200`
+  - `GET /api/v1/admin/executions/quality/summary` 返回 `200`
+  - `GET /api/v1/admin/executions/dashboard` 返回 `200`
+- OpenClaw / Insights / Mirofish / Theater / Simulation 再次通过：
+  - `cd backend && ./.venv/bin/python scripts/insights_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/pytest tests/unit/test_openclaw_phase4.py tests/unit/test_openclaw_phase2.py tests/unit/test_openclaw_gateway_ws.py tests/unit/test_execution_profile_service.py -q` -> `21 passed`
+  - `cd mobile && flutter test ...openclaw_connection_panel_test.dart ...insights_frontend_smoke_test.dart ...learning_insights_navigation_test.dart ...mirofish_wiring_finish_test.dart ...simulation_interaction_continue_test.dart ...simulation_screen_overflow_test.dart ...theater_phase2_widget_test.dart ...sensory_feedback_service_test.dart` -> `28 passed`
+- 本地调试态移动端又补了一层稳定化：
+  - `SensoryFeedbackService` 在 Android / iOS 调试态优先回退系统轻反馈，减少页面切换时的音效层报错与迟滞感
+- 双端集成主链再次通过：
+  - `flutter test integration_test/app_test.dart -d emulator-5554` -> `All tests passed`
+  - `flutter test integration_test/app_test.dart -d 79461B43-C730-47C4-9994-10CA7C5546BD` -> `All tests passed`
+- AI 对话卡片承接与责任伙伴邀请闭环新增页面级回归：
+  - `cd mobile && flutter test test/unit/accountability_invite_flow_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/accountability_invite_closure_test.dart` -> `10 passed`
+  - `task_list / plan_card` 现在会优先使用后端下发的 `detailRoute`，不再硬跳通用路由
+  - `Friends / Accountability` 两处邀请接受逻辑已统一到同一 helper，接受后按最新 overview 落到真实工作台，拒绝后会同步刷新 pending 与 partnership 状态
+- 阶段 1 主链又补了一组页面级与后端级回归：
+  - `cd mobile && flutter test test/widget/chat_history_sheet_regression_test.dart test/widget/learning_path_task_path_navigation_test.dart test/widget/simulator_chain_regression_test.dart test/widget/visual_elements_layout_regression_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/accountability_invite_closure_test.dart` -> `13 passed`
+  - `cd backend && ./.venv/bin/pytest tests/api/test_visual_elements_api.py -q` -> `4 passed`
+  - `cd backend && ./.venv/bin/python scripts/ai_chat_multiturn_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/python scripts/accountability_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/python scripts/galaxy_plan_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/python scripts/achievement_visual_acceptance.py` -> `ALL_OK`
+  - 历史会话切换已加 `ScrollController.hasClients` 防护，修掉“点历史会话后空白卡住”的真实断点
+  - 学习路径 `task-path` 现在会在关闭弹窗后安全回跳到任务系统，不再出现“生成成功但无落点页面”
+  - 默认视觉元素对无 unlock record 的用户仍可见、可装备，这条后端契约已补回归
+
 ---
 
 ## 🚀 服务状态

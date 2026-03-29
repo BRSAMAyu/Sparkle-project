@@ -443,9 +443,12 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (constraints.maxWidth < 340) {
+          return const SizedBox.shrink();
+        }
         final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
         final compact = constraints.maxWidth < 360;
-        final cardHeight = compact ? 184.0 : 128.0;
+        final cardHeight = compact ? 268.0 : 128.0;
 
         return SizedBox(
           height: cardHeight,
@@ -564,41 +567,45 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return value == null ? DS.brandPrimary : Color(value);
   }
 
-  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) =>
-      SliverPersistentHeader(
-        pinned: true,
-        delegate: _StickyTabBarDelegate(
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicator: BoxDecoration(
-              color: DS.brandPrimary,
-              borderRadius: DS.borderRadius8,
-            ),
-            indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-            labelColor: DS.textOnPrimary,
-            unselectedLabelColor: DS.textSecondary,
-            labelStyle: const TextStyle(
-              fontSize: DS.fontSizeSm,
-              fontWeight: DS.fontWeightMedium,
-            ),
-            labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
-            tabs: [
-              Tab(
-                icon: const Icon(Icons.auto_awesome),
-                text: l10n.visualElementsRecommended,
-              ),
-              Tab(text: l10n.visualElementTabAll),
-              Tab(text: l10n.visualElementTabBackground),
-              Tab(text: l10n.visualElementTabParticle),
-              Tab(text: l10n.visualElementTabEffect),
-              Tab(text: l10n.visualElementTabUnlocked),
-            ],
+  Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
+    final compact = MediaQuery.sizeOf(context).width < 360;
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _StickyTabBarDelegate(
+        TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          indicatorSize: TabBarIndicatorSize.label,
+          indicator: BoxDecoration(
+            color: DS.brandPrimary,
+            borderRadius: DS.borderRadius8,
           ),
+          indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+          labelColor: DS.textOnPrimary,
+          unselectedLabelColor: DS.textSecondary,
+          labelStyle: const TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightMedium,
+          ),
+          labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
+          tabs: [
+            compact
+                ? Tab(text: l10n.visualElementsRecommended)
+                : Tab(
+                    icon: const Icon(Icons.auto_awesome),
+                    text: l10n.visualElementsRecommended,
+                  ),
+            Tab(text: l10n.visualElementTabAll),
+            Tab(text: l10n.visualElementTabBackground),
+            Tab(text: l10n.visualElementTabParticle),
+            Tab(text: l10n.visualElementTabEffect),
+            Tab(text: l10n.visualElementTabUnlocked),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildBody(
     BuildContext context,
@@ -655,26 +662,39 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           SliverPadding(
             padding: const EdgeInsets.all(DS.spacing16),
             sliver: SliverLayoutBuilder(
-              builder: (context, constraints) => SliverGrid(
-                key: ValueKey(_filterOptions.hashCode),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _calculateCrossAxisCount(
-                    constraints.crossAxisExtent,
+              builder: (context, constraints) {
+                if (constraints.crossAxisExtent < 360) {
+                  return SliverList.separated(
+                    itemCount: filteredElements.length,
+                    itemBuilder: (context, index) {
+                      final element = filteredElements[index];
+                      return _buildElementCard(element, state);
+                    },
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: DS.spacing12),
+                  );
+                }
+                return SliverGrid(
+                  key: ValueKey(_filterOptions.hashCode),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _calculateCrossAxisCount(
+                      constraints.crossAxisExtent,
+                    ),
+                    mainAxisSpacing: DS.spacing12,
+                    crossAxisSpacing: DS.spacing12,
+                    mainAxisExtent: _gridMainAxisExtent(
+                      constraints.crossAxisExtent,
+                    ),
                   ),
-                  mainAxisSpacing: DS.spacing12,
-                  crossAxisSpacing: DS.spacing12,
-                  mainAxisExtent: _gridMainAxisExtent(
-                    constraints.crossAxisExtent,
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final element = filteredElements[index];
+                      return _buildElementCard(element, state);
+                    },
+                    childCount: filteredElements.length,
                   ),
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final element = filteredElements[index];
-                    return _buildElementCard(element, state);
-                  },
-                  childCount: filteredElements.length,
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -1209,7 +1229,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         final compact = constraints.maxWidth < 360;
 
         return SizedBox(
-          height: compact ? 160 : 140,
+          height: compact ? 190 : 140,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: entries.length,
@@ -1365,7 +1385,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
   double _gridMainAxisExtent(double width) {
     final crossAxisCount = _calculateCrossAxisCount(width);
-    if (crossAxisCount == 1) return 268;
+    if (crossAxisCount == 1) return 360;
     if (crossAxisCount == 2) return 236;
     if (crossAxisCount == 3) return 224;
     return 216;
@@ -1373,7 +1393,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
   double _recommendationMainAxisExtent(double width) {
     final crossAxisCount = _calculateCrossAxisCount(width);
-    if (crossAxisCount == 1) return 284;
+    if (crossAxisCount == 1) return 380;
     if (crossAxisCount == 2) return 252;
     if (crossAxisCount == 3) return 236;
     return 228;

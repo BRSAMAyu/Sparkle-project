@@ -187,7 +187,10 @@ class _VisualElementCardState extends State<VisualElementCard>
                                 ),
                             ],
                           ),
-                          const Spacer(),
+                          if (widget.isCompact)
+                            const SizedBox(height: DS.spacing10)
+                          else
+                            const Spacer(),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -221,10 +224,11 @@ class _VisualElementCardState extends State<VisualElementCard>
                                 spacing: DS.spacing6,
                                 runSpacing: DS.spacing6,
                                 children: [
-                                  _buildMetaChip(
-                                    widget.element.unlockSourceLabel,
-                                    accent,
-                                  ),
+                                  if (!widget.isCompact)
+                                    _buildMetaChip(
+                                      widget.element.unlockSourceLabel,
+                                      accent,
+                                    ),
                                   if (widget.element.setId != null &&
                                       !widget.isCompact)
                                     _buildMetaChip(
@@ -234,11 +238,12 @@ class _VisualElementCardState extends State<VisualElementCard>
                                 ],
                               ),
                               if (widget.element.isBundle &&
-                                  widget.bundleTotalCount > 0) ...[
+                                  widget.bundleTotalCount > 0 &&
+                                  !widget.isCompact) ...[
                                 const SizedBox(height: DS.spacing6),
                                 _buildBundleProgressChip(colors),
                               ],
-                              if (widget.showStatus) ...[
+                              if (widget.showStatus && !widget.isCompact) ...[
                                 const SizedBox(height: DS.spacing8),
                                 _buildStatusRow(l10n),
                               ],

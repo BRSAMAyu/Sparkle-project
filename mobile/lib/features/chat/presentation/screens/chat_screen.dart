@@ -201,6 +201,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      unawaited(ref.read(chatProvider.notifier).warmUpConnection());
       final activePlanId = ref.read(activePlanProvider);
       await ref.read(chatProvider.notifier).switchPlanSession(activePlanId);
       if (ref.read(dashboardProvider).nextIntentForecast == null) {
@@ -881,7 +882,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } on TimeoutException {
       return context.l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
     }
-    if (mounted) {
+    if (mounted && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
     if (!mounted) {
@@ -1768,6 +1769,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     final l10n = I18nService.instance.l10n;
     return GraphiteModalSurface(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      expandChild: true,
       child: SafeArea(
         top: false,
         child: Column(

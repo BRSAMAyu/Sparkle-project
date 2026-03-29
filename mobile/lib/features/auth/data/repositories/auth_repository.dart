@@ -17,6 +17,8 @@ class AuthRepository {
   AuthRepository(this._apiClient, this._storage);
   final ApiClient _apiClient;
   final FlutterSecureStorage _storage;
+  String? _cachedAccessToken;
+  String? _cachedRefreshToken;
 
   Future<UserModel> register(
     String username,
@@ -429,8 +431,10 @@ class AuthRepository {
       );
       return _extractErrorMessage(response.data) ?? '绑定成功';
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not link social account.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ??
+            'Could not link social account.',
+      );
     }
   }
 
@@ -442,8 +446,10 @@ class AuthRepository {
       );
       return _extractErrorMessage(response.data) ?? '解绑成功';
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not unlink social account.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ??
+            'Could not unlink social account.',
+      );
     }
   }
 
@@ -464,8 +470,9 @@ class AuthRepository {
       );
       return _extractErrorMessage(response.data) ?? '设备已下线';
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not revoke session.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ?? 'Could not revoke session.',
+      );
     }
   }
 
@@ -476,8 +483,10 @@ class AuthRepository {
       );
       return _extractErrorMessage(response.data) ?? '其他设备已下线';
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not revoke other sessions.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ??
+            'Could not revoke other sessions.',
+      );
     }
   }
 
@@ -510,8 +519,9 @@ class AuthRepository {
       );
       return _extractErrorMessage(response.data) ?? '账号已注销';
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not delete account.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ?? 'Could not delete account.',
+      );
     }
   }
 
@@ -544,8 +554,10 @@ class AuthRepository {
       await saveTokens(TokenResponse.fromJson(tokenData));
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not upgrade guest account.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ??
+            'Could not upgrade guest account.',
+      );
     }
   }
 
@@ -578,12 +590,16 @@ class AuthRepository {
       await saveTokens(TokenResponse.fromJson(tokenData));
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw Exception(_extractErrorMessage(e.response?.data) ??
-          'Could not upgrade guest account.',);
+      throw Exception(
+        _extractErrorMessage(e.response?.data) ??
+            'Could not upgrade guest account.',
+      );
     }
   }
 
   Future<void> saveTokens(TokenResponse tokenResponse) async {
+    _cachedAccessToken = tokenResponse.accessToken;
+    _cachedRefreshToken = tokenResponse.refreshToken;
     await _storage.write(
       key: AppConstants.keyAccessToken,
       value: tokenResponse.accessToken,
@@ -614,24 +630,40 @@ class AuthRepository {
   }
 
   Future<void> clearTokens() async {
+    _cachedAccessToken = null;
+    _cachedRefreshToken = null;
     await _storage.delete(key: AppConstants.keyAccessToken);
     await _storage.delete(key: AppConstants.keyRefreshToken);
     await _storage.delete(key: _legacyAccessTokenKey);
     await _storage.delete(key: _legacyRefreshTokenKey);
   }
 
-  Future<String?> getAccessToken() async => _readToken(
-        primaryKey: AppConstants.keyAccessToken,
-        legacyKey: _legacyAccessTokenKey,
-      );
+  Future<String?> getAccessToken() async {
+    if (_cachedAccessToken != null && _cachedAccessToken!.isNotEmpty) {
+      return _cachedAccessToken;
+    }
+    final token = await _readToken(
+      primaryKey: AppConstants.keyAccessToken,
+      legacyKey: _legacyAccessTokenKey,
+    );
+    _cachedAccessToken = token;
+    return token;
+  }
 
   // Alias for getAccessToken to match usage in ApiInterceptor
   Future<String?> getToken() => getAccessToken();
 
-  Future<String?> getRefreshToken() async => _readToken(
-        primaryKey: AppConstants.keyRefreshToken,
-        legacyKey: _legacyRefreshTokenKey,
-      );
+  Future<String?> getRefreshToken() async {
+    if (_cachedRefreshToken != null && _cachedRefreshToken!.isNotEmpty) {
+      return _cachedRefreshToken;
+    }
+    final token = await _readToken(
+      primaryKey: AppConstants.keyRefreshToken,
+      legacyKey: _legacyRefreshTokenKey,
+    );
+    _cachedRefreshToken = token;
+    return token;
+  }
 
   Future<bool> isLoggedIn() async {
     if (DemoDataService.isDemoMode) return true;

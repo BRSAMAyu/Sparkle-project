@@ -110,6 +110,7 @@ class SeedExtractor:
         scenario_key: str | None = None,
         limit: int = 3,
         force_refresh: bool = False,
+        allow_llm_refine: bool = True,
     ) -> list[SimulationSeed]:
         cache_key = self._cache_key(user_id, scenario_key=scenario_key, limit=limit)
         if not force_refresh:
@@ -117,7 +118,12 @@ class SeedExtractor:
             if isinstance(cached, list):
                 return [SimulationSeed.from_dict(item) for item in cached if isinstance(item, dict)]
 
-        seeds = await self.extract_seeds(user_id, scenario_key=scenario_key, limit=limit)
+        seeds = await self.extract_seeds(
+            user_id,
+            scenario_key=scenario_key,
+            limit=limit,
+            allow_llm_refine=allow_llm_refine,
+        )
         await cache_service.set(
             cache_key,
             [seed.to_dict() for seed in seeds],
@@ -146,6 +152,7 @@ class SeedExtractor:
         *,
         scenario_key: str | None = None,
         limit: int = 3,
+        allow_llm_refine: bool = True,
     ) -> list[SimulationSeed]:
         seeds: list[SimulationSeed] = []
         seeds.extend(await self._galaxy_seeds(user_id))
@@ -155,7 +162,7 @@ class SeedExtractor:
         seeds.extend(await self._timeline_seeds(user_id))
 
         ranked = self._rank_by_scenario(seeds, scenario_key=scenario_key)
-        if len(ranked) > limit:
+        if allow_llm_refine and len(ranked) > limit:
             ranked = await self._refine_with_llm(ranked, scenario_key=scenario_key, limit=limit)
         ranked = ranked[: max(limit, 1)]
         if ranked:

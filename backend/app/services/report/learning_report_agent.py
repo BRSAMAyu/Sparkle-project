@@ -677,7 +677,11 @@ class LearningReportAgent:
                 if bucket_index not in buckets:
                     continue
                 bucket = buckets[bucket_index]
-                future_deltas = sum(float(buckets[idx]["mastery_delta"]) for idx in range(bucket_index))
+                future_deltas = sum(
+                    float(buckets[idx]["mastery_delta"])
+                    for idx in range(bucket_index)
+                    if idx in buckets
+                )
                 average_mastery = max(0.0, min(current_average - future_deltas, 100.0))
                 history_points.append(
                     {

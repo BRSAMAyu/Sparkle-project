@@ -1091,6 +1091,21 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// 是否已连接
   bool get isConnected => _connectionState == WsConnectionState.connected;
 
+  Future<void> ensureConnected({
+    required String userId,
+    String? token,
+  }) async {
+    if (_disposed) {
+      return;
+    }
+    if (_currentUserId != null && _currentUserId != userId) {
+      _resetConnectionState();
+    }
+    if (_shouldConnect(userId, token)) {
+      await _establishConnectionAsync(userId, token);
+    }
+  }
+
   /// 发送消息（复用连接）
   Stream<ChatStreamEvent> sendMessage({
     required String message,

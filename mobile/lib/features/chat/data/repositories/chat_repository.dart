@@ -31,6 +31,12 @@ class ChatRepository {
   /// 手动触发重连
   Future<void> reconnect() => _wsService.manualReconnect();
 
+  Future<void> ensureConnected({
+    required String userId,
+    String? token,
+  }) =>
+      _wsService.ensureConnected(userId: userId, token: token);
+
   /// 释放资源
   void dispose() {
     _wsService.dispose();

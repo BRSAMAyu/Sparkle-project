@@ -3,9 +3,13 @@ import 'package:flutter/foundation.dart';
 
 /// Service for sending candidate action feedback to backend
 class CandidateFeedbackService {
-  CandidateFeedbackService(this._dio);
+  CandidateFeedbackService(
+    this._dio, {
+    Future<String?> Function()? accessTokenGetter,
+  }) : _accessTokenGetter = accessTokenGetter;
 
   final Dio _dio;
+  final Future<String?> Function()? _accessTokenGetter;
 
   /// Record user feedback on a candidate action
   ///
@@ -21,6 +25,13 @@ class CandidateFeedbackService {
     Map<String, dynamic>? completionResult,
     Map<String, dynamic>? contextSnapshot,
   }) async {
+    final accessToken = await _accessTokenGetter?.call();
+    if (accessToken != null && accessToken.isEmpty) {
+      return;
+    }
+    if (_accessTokenGetter != null && (accessToken == null || accessToken.isEmpty)) {
+      return;
+    }
     try {
       debugPrint('📤 Sending feedback: $candidateId ($feedbackType)');
 
@@ -49,6 +60,10 @@ class CandidateFeedbackService {
 
   /// Get feedback statistics for current user
   Future<Map<String, dynamic>?> getFeedbackStats() async {
+    final accessToken = await _accessTokenGetter?.call();
+    if (_accessTokenGetter != null && (accessToken == null || accessToken.isEmpty)) {
+      return null;
+    }
     try {
       final response = await _dio.get<Map<String, dynamic>>('/signals/feedback/stats');
 

@@ -48,10 +48,21 @@ void main() {
 
       expect(find.textContaining('视觉元素'), findsOneWidget);
       expect(find.textContaining('超长名称'), findsWidgets);
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'initial recommended tab should not overflow on compact width',
+      );
 
-      await tester.tap(find.text('全部'));
+      await tester.ensureVisible(find.text('全部'));
+      await tester.tap(find.text('全部'), warnIfMissed: false);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'switching to all tab should not overflow on compact width',
+      );
 
       final scrollable = find.byType(Scrollable).first;
       await tester.scrollUntilVisible(
@@ -61,7 +72,11 @@ void main() {
       );
 
       expect(find.textContaining('当前荣耀套装'), findsOneWidget);
-      expect(tester.takeException(), isNull);
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'all tab should remain overflow-safe on compact width',
+      );
     });
 
     testWidgets('preview dialog keeps actions reachable with long bundle copy',

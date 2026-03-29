@@ -983,10 +983,11 @@ async def nudge_partner(
 
     nudge_key = f"accountability:nudge:{partnership_id}:{current_user.id}"
     cooldown_seconds = 2 * 60 * 60
-    if cache_service.redis is not None:
-        already_locked = await cache_service.redis.get(nudge_key)
-        if already_locked:
-            raise HTTPException(status_code=429, detail="Nudge cooldown is still active")
+    # Go through the cache service abstraction so the cooldown still works when
+    # Redis is temporarily unavailable and the service falls back to local cache.
+    already_locked = await cache_service.get(nudge_key)
+    if already_locked:
+        raise HTTPException(status_code=429, detail="Nudge cooldown is still active")
 
     partner_id = _other_user_id(partnership, current_user.id)
     sender = await db.get(User, current_user.id)
@@ -1004,8 +1005,7 @@ async def nudge_partner(
         sender_name,
         message or None,
     )
-    if cache_service.redis is not None:
-        await cache_service.redis.setex(nudge_key, cooldown_seconds, "1")
+    await cache_service.set(nudge_key, "1", ttl=cooldown_seconds)
 
     return {
         "success": True,

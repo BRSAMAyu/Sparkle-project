@@ -1,6 +1,18 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierHistory on ChatNotifier {
+  bool _canPaginateCurrentConversationHistory() {
+    final conversationId = state.conversationId?.trim();
+    if (conversationId == null || conversationId.isEmpty) {
+      return false;
+    }
+    if (conversationId == 'temp_conversation' ||
+        conversationId.startsWith('temp_')) {
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _updateDailyUsage(UsageEvent event) async {
     final prefs = await SharedPreferences.getInstance();
     final today = _dateKey(DateTime.now());
@@ -77,7 +89,8 @@ extension ChatNotifierHistory on ChatNotifier {
           .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw TimeoutException('[ChatHistory] Load timeout for $conversationId');
+          throw TimeoutException(
+              '[ChatHistory] Load timeout for $conversationId');
         },
       ),
       onCancel: () {
@@ -148,9 +161,13 @@ extension ChatNotifierHistory on ChatNotifier {
 
   Future<void> loadMoreHistory() async {
     // 如果没有对话 ID 或正在加载或没有更多消息，则不加载
-    if (state.conversationId == null ||
-        state.isLoadingMore ||
-        !state.hasMoreMessages) {
+    if (!_canPaginateCurrentConversationHistory()) {
+      if (state.hasMoreMessages) {
+        state = state.copyWith(hasMoreMessages: false);
+      }
+      return;
+    }
+    if (state.isLoadingMore || !state.hasMoreMessages) {
       return;
     }
 
@@ -167,13 +184,37 @@ extension ChatNotifierHistory on ChatNotifier {
 
       // 如果返回的消息少于 pageSize，说明没有更多消息了
       final hasMore = moreMessages.length >= ChatNotifier.historyPageSize;
+      final existingIds = state.messages
+          .where((message) => message.id.isNotEmpty)
+          .map((message) => message.id)
+          .toSet();
+      final dedupedMoreMessages = moreMessages
+          .where(
+            (message) =>
+                message.id.isEmpty || !existingIds.contains(message.id),
+          )
+          .toList(growable: false);
 
       state = state.copyWith(
         isLoadingMore: false,
-        messages: [...moreMessages, ...state.messages],
+        messages: [...dedupedMoreMessages, ...state.messages],
         hasMoreMessages: hasMore,
       );
     } catch (e) {
+      final rawError = e.toString().toLowerCase();
+      final looksLikeTransientHistoryMiss =
+          rawError.contains('invalid session') ||
+              rawError.contains('invalid session_id') ||
+              rawError.contains('404') ||
+              rawError.contains('not found') ||
+              rawError.contains('forbidden');
+      if (looksLikeTransientHistoryMiss) {
+        state = state.copyWith(
+          isLoadingMore: false,
+          hasMoreMessages: false,
+        );
+        return;
+      }
       final l10n = I18nService.instance.l10n;
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',

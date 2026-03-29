@@ -56,17 +56,17 @@ Page<dynamic> buildSparkleTransitionPage({
       ? const Duration(milliseconds: 140)
       : switch (motionToken) {
           SparkleMotionToken.micro => const Duration(milliseconds: 150),
-          SparkleMotionToken.standard => const Duration(milliseconds: 220),
-          SparkleMotionToken.scene => const Duration(milliseconds: 280),
-          SparkleMotionToken.hero => const Duration(milliseconds: 320),
+          SparkleMotionToken.standard => const Duration(milliseconds: 180),
+          SparkleMotionToken.scene => const Duration(milliseconds: 210),
+          SparkleMotionToken.hero => const Duration(milliseconds: 240),
         };
   final reverseDuration = reduceMotion
       ? const Duration(milliseconds: 120)
       : switch (motionToken) {
           SparkleMotionToken.micro => const Duration(milliseconds: 120),
-          SparkleMotionToken.standard => const Duration(milliseconds: 170),
-          SparkleMotionToken.scene => const Duration(milliseconds: 220),
-          SparkleMotionToken.hero => const Duration(milliseconds: 250),
+          SparkleMotionToken.standard => const Duration(milliseconds: 140),
+          SparkleMotionToken.scene => const Duration(milliseconds: 160),
+          SparkleMotionToken.hero => const Duration(milliseconds: 180),
         };
 
   return CustomTransitionPage<void>(

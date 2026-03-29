@@ -349,11 +349,13 @@ class BgmService {
   static int _sequence = 0;
   static bool _isRefreshing = false;
   static bool _refreshQueued = false;
+  static bool _shutdownRequested = false;
   static int _duckSequence = 0;
   static bool _observerRegistered = false;
   static bool _persistentStateLoaded = false;
   static bool _catalogLoaded = false;
   static List<BgmCatalogEntry>? _catalogOverride;
+  static bool? _preferBundledPlaybackOverride;
   static DateTime Function() _nowProvider = DateTime.now;
   static StreamSubscription<void>? _playerCompletionSubscription;
   static StreamSubscription<void>? _preloadCompletionSubscription;
@@ -491,6 +493,7 @@ class BgmService {
   };
 
   static Future<void> init() async {
+    _shutdownRequested = false;
     if (_player != null) {
       return;
     }
@@ -898,18 +901,28 @@ class BgmService {
   }
 
   static Future<void> dispose() async {
+    _shutdownRequested = true;
     _registrations.clear();
+    _refreshQueued = false;
+    _isRefreshing = false;
+    _duckSequence++;
     await _captureCurrentPlaybackPosition();
     if (_observerRegistered) {
       WidgetsBinding.instance.removeObserver(_lifecycleObserver);
       _observerRegistered = false;
     }
-    await _player?.dispose();
-    await _preloadPlayer?.dispose();
     await _playerCompletionSubscription?.cancel();
     await _preloadCompletionSubscription?.cancel();
     _playerCompletionSubscription = null;
     _preloadCompletionSubscription = null;
+    try {
+      await _player?.stop();
+    } catch (_) {}
+    try {
+      await _preloadPlayer?.stop();
+    } catch (_) {}
+    await _player?.dispose();
+    await _preloadPlayer?.dispose();
     _player = null;
     _preloadPlayer = null;
     _currentTrack = null;
@@ -951,9 +964,15 @@ class BgmService {
     _currentReadingProtectionApplied = false;
     _currentFocusPriorityApplied = false;
     _currentStyleLocked = false;
+    _preferBundledPlaybackOverride = null;
     _savedPositions.clear();
     _trackPlaylistIndices.clear();
     await dispose();
+  }
+
+  @visibleForTesting
+  static void debugSetPreferBundledPlayback(bool? value) {
+    _preferBundledPlaybackOverride = value;
   }
 
   @visibleForTesting
@@ -1022,7 +1041,13 @@ class BgmService {
   static Future<double> debugEffectiveDuckFactor() => _effectiveDuckFactor();
 
   static Future<void> _refreshPlayback({bool force = false}) async {
+    if (_shutdownRequested) {
+      return;
+    }
     await init();
+    if (_shutdownRequested) {
+      return;
+    }
 
     if (_isRefreshing) {
       _refreshQueued = true;
@@ -1037,6 +1062,9 @@ class BgmService {
       if (!enabled || desiredTrack == null) {
         if (_player != null) {
           await _fadeTo(0, duration: const Duration(milliseconds: 420));
+          if (_shutdownRequested || _player == null) {
+            return;
+          }
           await _player!.stop();
         }
         _currentTrack = null;
@@ -1049,7 +1077,7 @@ class BgmService {
       } else {
         await _switchTrack(desiredTrack, force: force);
       }
-      if (desiredTrack != null) {
+      if (!_shutdownRequested && desiredTrack != null) {
         unawaited(_preloadLikelyNextTrack(desiredTrack));
       }
     } finally {
@@ -1107,6 +1135,9 @@ class BgmService {
     bool force = false,
     bool allowRecovery = true,
   }) async {
+    if (_shutdownRequested) {
+      return;
+    }
     final activePlayer = _player;
     final standbyPlayer = _preloadPlayer;
     if (activePlayer == null || standbyPlayer == null) {
@@ -1115,6 +1146,9 @@ class BgmService {
 
     final previousScene = _currentSceneProfile;
     final selection = await _resolveSelection(track, force: force);
+    if (_shutdownRequested || _player == null || _preloadPlayer == null) {
+      return;
+    }
     final fadeDuration = _fadeDurationForTransition(
       from: previousScene,
       to: selection.scene,
@@ -1147,6 +1181,10 @@ class BgmService {
         volume: 0,
         mode: PlayerMode.mediaPlayer,
       );
+      if (_shutdownRequested) {
+        await standbyPlayer.stop();
+        return;
+      }
       final savedPosition = _savedPositions[selection.source.cacheKey];
       if (savedPosition != null && savedPosition > Duration.zero) {
         await standbyPlayer.seek(savedPosition);
@@ -1231,6 +1269,9 @@ class BgmService {
   }
 
   static Future<void> _preloadLikelyNextTrack(BgmTrack currentTrack) async {
+    if (_shutdownRequested) {
+      return;
+    }
     final preloadPlayer = _preloadPlayer;
     if (preloadPlayer == null) {
       return;
@@ -1311,6 +1352,9 @@ class BgmService {
   }
 
   static Future<void> _captureCurrentPlaybackPosition() async {
+    if (_shutdownRequested) {
+      return;
+    }
     final player = _player;
     final sourceKey = _currentSourceKey;
     if (player == null || sourceKey == null) {
@@ -1351,6 +1395,30 @@ class BgmService {
     );
     if (retainedSelection != null) {
       return retainedSelection;
+    }
+
+    if (_shouldPreferBundledPlayback()) {
+      final source = await _resolvePlayableSource(
+        track,
+        paletteOverride: palette,
+      );
+      return _ResolvedBgmSelection(
+        source: source,
+        scene: scene,
+        sourceLabel: 'Bundled fallback',
+        reason: _buildSelectionReason(
+          scene: scene,
+          palette: palette,
+          tuning: tuning,
+          fallback: true,
+          readingProtectionApplied:
+              tuning.readingProtection && scene.readingFriendly,
+          focusPriorityApplied: tuning.focusPriority && scene.focusCritical,
+        ),
+        readingProtectionApplied:
+            tuning.readingProtection && scene.readingFriendly,
+        focusPriorityApplied: tuning.focusPriority && scene.focusCritical,
+      );
     }
 
     final entries = await _loadCatalogEntries();
@@ -1483,6 +1551,14 @@ class BgmService {
       );
     }
     return null;
+  }
+
+  static bool _shouldPreferBundledPlayback() {
+    final override = _preferBundledPlaybackOverride;
+    if (override != null) {
+      return override;
+    }
+    return !kIsWeb && Platform.isAndroid;
   }
 
   static Future<_ResolvedBgmSource?> _sourceForCurrentSelection() async {
@@ -1631,7 +1707,7 @@ class BgmService {
   }
 
   static Future<void> _handleTrackCompletion(AudioPlayer player) async {
-    if (!identical(player, _player) || _isRefreshing) {
+    if (_shutdownRequested || !identical(player, _player) || _isRefreshing) {
       return;
     }
     final currentTrack = _currentTrack;
@@ -1797,35 +1873,36 @@ class BgmService {
     BgmPalette? paletteOverride,
   }) async {
     final palette = paletteOverride ?? await getPalette();
+    final thinkingAsset = _platformThinkingAsset();
     switch (track) {
       case BgmTrack.dashboard:
         return switch (palette) {
           BgmPalette.adaptive => _dashboardAsset,
           BgmPalette.classical => _dashboardAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
         };
       case BgmTrack.plan:
         return switch (palette) {
           BgmPalette.classical => _dashboardAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.chat:
         return switch (palette) {
-          BgmPalette.classical => _thinkingAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.classical => thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _thinkingAsset,
+          _ => thinkingAsset,
         };
       case BgmTrack.community:
         return switch (palette) {
           BgmPalette.classical => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _warmAsset,
@@ -1833,7 +1910,7 @@ class BgmService {
       case BgmTrack.task:
         return switch (palette) {
           BgmPalette.classical => _dashboardAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _dashboardAsset,
@@ -1841,7 +1918,7 @@ class BgmService {
       case BgmTrack.calendar:
         return switch (palette) {
           BgmPalette.classical => _dashboardAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _dashboardAsset,
@@ -1849,7 +1926,7 @@ class BgmService {
       case BgmTrack.achievement:
         return switch (palette) {
           BgmPalette.classical => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _warmAsset,
@@ -1857,7 +1934,7 @@ class BgmService {
       case BgmTrack.galaxy:
         return switch (palette) {
           BgmPalette.classical => _airyAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _airyAsset,
@@ -1865,82 +1942,89 @@ class BgmService {
       case BgmTrack.celebration:
         return switch (palette) {
           BgmPalette.classical => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _warmAsset,
         };
       case BgmTrack.insights:
         return switch (palette) {
-          BgmPalette.classical => _thinkingAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.classical => thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _thinkingAsset,
+          _ => thinkingAsset,
         };
       case BgmTrack.seeds:
         return switch (palette) {
-          BgmPalette.classical => _thinkingAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.classical => thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          _ => _thinkingAsset,
+          _ => thinkingAsset,
         };
       case BgmTrack.tools:
         return switch (palette) {
           BgmPalette.classical => _dashboardAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _dashboardAsset,
         };
       case BgmTrack.profile:
         return switch (palette) {
-          BgmPalette.classical => _thinkingAsset,
+          BgmPalette.classical => thinkingAsset,
           BgmPalette.airy => _dashboardAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
-          BgmPalette.adaptive => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
+          BgmPalette.adaptive => thinkingAsset,
         };
       case BgmTrack.focusStart:
         return switch (palette) {
           BgmPalette.classical => _airyAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.adaptive => _airyAsset,
         };
       case BgmTrack.focus:
         return switch (palette) {
           BgmPalette.classical => _airyAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.warm => _warmAsset,
           _ => _airyAsset,
         };
       case BgmTrack.focusDeep:
         return switch (palette) {
           BgmPalette.classical => _airyAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.warm => _warmAsset,
           _ => _airyAsset,
         };
       case BgmTrack.thinking:
         return switch (palette) {
-          BgmPalette.classical => _thinkingAsset,
-          BgmPalette.adaptive => _thinkingAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.classical => thinkingAsset,
+          BgmPalette.adaptive => thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
         };
       case BgmTrack.visualUnlock:
         return switch (palette) {
           BgmPalette.classical => _warmAsset,
-          BgmPalette.piano => _thinkingAsset,
+          BgmPalette.piano => thinkingAsset,
           BgmPalette.airy => _airyAsset,
           BgmPalette.warm => _warmAsset,
           BgmPalette.adaptive => _warmAsset,
         };
     }
+  }
+
+  static String _platformThinkingAsset() {
+    if (!kIsWeb && Platform.isAndroid) {
+      return _dashboardAsset;
+    }
+    return _thinkingAsset;
   }
 
   static Future<int> localAdaptiveOverrideCount() async {
@@ -1965,7 +2049,10 @@ class BgmService {
   }) async {
     final player = _player;
     final currentTrack = _currentTrack;
-    if (player == null || currentTrack == null || _isRefreshing) {
+    if (_shutdownRequested ||
+        player == null ||
+        currentTrack == null ||
+        _isRefreshing) {
       return;
     }
     await _fadeTo(
@@ -2023,12 +2110,15 @@ class BgmService {
     int steps = 12,
   }) async {
     final player = _player;
-    if (player == null) {
+    if (_shutdownRequested || player == null) {
       return;
     }
 
     final current = _currentOutputVolume;
     for (var i = 1; i <= steps; i++) {
+      if (_shutdownRequested || !identical(player, _player)) {
+        return;
+      }
       final t = Curves.easeInOutCubic.transform(i / steps);
       final next = current + (target - current) * t;
       await player.setVolume(next.clamp(0.0, 1.0));
@@ -2045,6 +2135,9 @@ class BgmService {
     int steps = 12,
   }) async {
     for (var i = 1; i <= steps; i++) {
+      if (_shutdownRequested) {
+        return;
+      }
       final t = Curves.easeInOutCubic.transform(i / steps);
       final next = from + (to - from) * t;
       await player.setVolume(next.clamp(0.0, 1.0));

@@ -8,6 +8,7 @@ import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 
 /// Bottom sheet displaying predicted candidate actions
 ///
@@ -40,7 +41,10 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
   @override
   void initState() {
     super.initState();
-    _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
+    _feedbackService = CandidateFeedbackService(
+      ref.read(dioProvider),
+      accessTokenGetter: ref.read(authRepositoryProvider).getAccessToken,
+    );
   }
 
   @override

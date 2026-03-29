@@ -132,6 +132,65 @@ async def test_unlock_by_achievement_unlocks_only_for_owned_achievement(db_sessi
     assert unlocked.unlock_source == "achievement"
 
 
+@pytest.mark.asyncio
+async def test_defaults_are_visible_and_equippable_without_unlock_records(
+    db_session,
+    visual_client,
+):
+    client, state = visual_client
+    user = User(
+        username="visual_defaults_user",
+        email="visual_defaults_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    db_session.add_all(
+        [
+            VisualElement(
+                id="bg_default",
+                name="Default Background",
+                description="Default background",
+                element_type=VisualElementType.BACKGROUND,
+                rarity=VisualElementRarity.COMMON,
+                unlock_source=VisualElementUnlockSource.SYSTEM,
+                config={"slot": "background"},
+                is_active=True,
+                is_default=True,
+                sort_order=10,
+            ),
+            VisualElement(
+                id="particle_default",
+                name="Default Particle",
+                description="Default particle",
+                element_type=VisualElementType.PARTICLE,
+                rarity=VisualElementRarity.COMMON,
+                unlock_source=VisualElementUnlockSource.SYSTEM,
+                config={"slot": "particle"},
+                is_active=True,
+                is_default=True,
+                sort_order=9,
+            ),
+        ]
+    )
+    await db_session.commit()
+    state["current_user"] = user
+
+    unlocked_response = client.get("/visual-elements/unlocked")
+    assert unlocked_response.status_code == 200
+    unlocked_ids = {item["id"] for item in unlocked_response.json()["items"]}
+    assert {"bg_default", "particle_default"} <= unlocked_ids
+
+    config_response = client.get("/visual-elements/config")
+    assert config_response.status_code == 200
+    body = config_response.json()
+    assert body["equipped_background"]["id"] == "bg_default"
+    assert body["equipped_particle"]["id"] == "particle_default"
+
+    equip_response = client.post("/visual-elements/bg_default/equip")
+    assert equip_response.status_code == 200
+    assert equip_response.json()["success"] is True
+
+
 def test_unlock_internal_requires_internal_token(visual_client):
     from unittest.mock import patch
 

@@ -4,18 +4,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 
 final appEventStreamServiceProvider = Provider<AppEventStreamService>(
-  (ref) => AppEventStreamService(ref.read(apiClientProvider)),
+  (ref) => AppEventStreamService(ref, ref.read(apiClientProvider)),
 );
 
 class AppEventStreamService {
-  AppEventStreamService(this._apiClient);
+  AppEventStreamService(this._ref, this._apiClient);
 
+  final Ref _ref;
   final ApiClient _apiClient;
 
   Future<void> ingestEvents(List<Map<String, dynamic>> events) async {
     if (events.isEmpty) {
+      return;
+    }
+    final accessToken = await _ref.read(authRepositoryProvider).getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
       return;
     }
     try {

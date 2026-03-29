@@ -40,7 +40,7 @@ class QuickSimulationTool(BaseTool):
                 db_session=db_session,
             )
             engine = SimulationEngine(db_session)
-            session = await engine.run(
+            session = await engine.preview(
                 topic=topic,
                 scenario_key=scenario_key,
                 user_id=UUID(user_id),
@@ -101,6 +101,7 @@ class QuickSimulationTool(BaseTool):
             user_id,
             scenario_key=scenario_key,
             limit=1,
+            allow_llm_refine=False,
         )
         if seeds and str(seeds[0].topic).strip():
             return str(seeds[0].topic).strip()

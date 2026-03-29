@@ -113,14 +113,15 @@ async def test_quick_simulation_tool_returns_preview_payload(monkeypatch):
         insight_summary="先补行列式，再学特征值更稳。",
     )
 
-    async def fake_run(self, *, topic, scenario_key, user_id):
+    async def fake_preview(self, *, topic, scenario_key, user_id, user_context=None, max_rounds=3):
         assert topic == "矩阵特征值"
         assert scenario_key == "study_group"
+        assert max_rounds == 3
         return fake_session
 
     monkeypatch.setattr(
-        "app.tools.simulation_tool.SimulationEngine.run",
-        fake_run,
+        "app.tools.simulation_tool.SimulationEngine.preview",
+        fake_preview,
     )
 
     result = await QuickSimulationTool().execute(
@@ -213,14 +214,24 @@ async def test_quick_simulation_tool_uses_seed_topic_for_generic_prompt(monkeypa
         insight_summary="先补前置概念。",
     )
 
-    async def fake_run(self, *, topic, scenario_key, user_id):
+    async def fake_preview(self, *, topic, scenario_key, user_id, user_context=None, max_rounds=3):
         assert topic == "特征值"
         assert scenario_key == "study_group"
+        assert max_rounds == 3
         return fake_session
 
-    async def fake_get_cached_or_generate(self, user_id, *, scenario_key=None, limit=3, force_refresh=False):
+    async def fake_get_cached_or_generate(
+        self,
+        user_id,
+        *,
+        scenario_key=None,
+        limit=3,
+        force_refresh=False,
+        allow_llm_refine=True,
+    ):
         assert scenario_key == "study_group"
         assert limit == 1
+        assert allow_llm_refine is False
         return [
             SimulationSeed(
                 topic="特征值",
@@ -235,8 +246,8 @@ async def test_quick_simulation_tool_uses_seed_topic_for_generic_prompt(monkeypa
         ]
 
     monkeypatch.setattr(
-        "app.tools.simulation_tool.SimulationEngine.run",
-        fake_run,
+        "app.tools.simulation_tool.SimulationEngine.preview",
+        fake_preview,
     )
     monkeypatch.setattr(
         "app.tools.simulation_tool.SeedExtractor.get_cached_or_generate",
@@ -422,7 +433,15 @@ async def test_build_learning_gaps_summary_uses_cached_seeds(monkeypatch):
     builder = _DummyContextBuilder()
     user_id = str(uuid4())
 
-    async def fake_get_cached_or_generate(self, target_user_id, *, scenario_key=None, limit=3, force_refresh=False):
+    async def fake_get_cached_or_generate(
+        self,
+        target_user_id,
+        *,
+        scenario_key=None,
+        limit=3,
+        force_refresh=False,
+        allow_llm_refine=True,
+    ):
         assert str(target_user_id) == user_id
         assert scenario_key == "chat_context"
         assert limit == 3
@@ -466,7 +485,15 @@ async def test_build_learning_gaps_summary_uses_cached_seeds(monkeypatch):
 async def test_build_learning_gaps_summary_gracefully_handles_seed_failures(monkeypatch):
     builder = _DummyContextBuilder()
 
-    async def fake_get_cached_or_generate(self, target_user_id, *, scenario_key=None, limit=3, force_refresh=False):
+    async def fake_get_cached_or_generate(
+        self,
+        target_user_id,
+        *,
+        scenario_key=None,
+        limit=3,
+        force_refresh=False,
+        allow_llm_refine=True,
+    ):
         raise RuntimeError("cache offline")
 
     monkeypatch.setattr(
@@ -905,6 +932,35 @@ def test_learning_report_builds_structured_dashboard_payload():
     assert trend_overview["history_points"]
     assert trend_overview["comparisons"]
     assert action_cards[0]["kind"] == "theater"
+
+
+def test_build_trend_overview_handles_sparse_week_buckets():
+    agent = LearningReportAgent(db=AsyncMock())
+
+    trend_overview = agent._build_trend_overview(
+        mastery=[
+            {"node_name": "学习方法论", "mastery_score": 45},
+            {"node_name": "任务拆解", "mastery_score": 75},
+        ],
+        timeline=[
+            {
+                "node_name": "学习方法论",
+                "study_minutes": 25,
+                "mastery_delta": 2,
+                "created_at": "2026-03-29T08:00:00+00:00",
+            },
+            {
+                "node_name": "任务拆解",
+                "study_minutes": 35,
+                "mastery_delta": 4,
+                "created_at": "2026-03-15T08:00:00+00:00",
+            },
+        ],
+    )
+
+    labels = [point["label"] for point in trend_overview["history_points"]]
+    assert labels == ["上上周", "本周"]
+    assert trend_overview["comparisons"]
 
 
 def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():

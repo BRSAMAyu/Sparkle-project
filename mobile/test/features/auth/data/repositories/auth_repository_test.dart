@@ -197,4 +197,14 @@ void main() {
       throwsA(isA<Exception>()),
     );
   });
+
+  test('getAccessToken reuses in-memory cache after first read', () async {
+    await storage.write(key: 'accessToken', value: 'cached-token');
+
+    expect(await repository.getAccessToken(), 'cached-token');
+
+    await storage.delete(key: 'accessToken');
+
+    expect(await repository.getAccessToken(), 'cached-token');
+  });
 }

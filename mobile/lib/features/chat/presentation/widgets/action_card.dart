@@ -1254,7 +1254,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         action.data['id']?.toString();
     final canConfirm = toolResultId != null && toolResultId.trim().isNotEmpty;
     final planId = entity.planId ?? action.data['plan_id']?.toString();
-    final canOpenPlan = _hasStablePlanId(planId);
+    final planDetailRoute = entity.detailRoute ??
+        (_hasStablePlanId(planId) ? '/plans/$planId' : null);
+    final canOpenPlan =
+        planDetailRoute != null && planDetailRoute.trim().isNotEmpty;
     final planShareId = entity.share?.resourceId ?? planId;
     final canSharePlan = canOpenPlan && (planShareId?.isNotEmpty ?? false);
     final planTitle = _asString(entity.linkedEntities['plan_title']) ??
@@ -1268,9 +1271,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       final taskId = task['id']?.toString();
       final title = task['title']?.toString() ?? l10n.taskUntitled;
       final taskModel = taskModelFromEntityPayload(task);
-      final canOpenTask = taskId != null && isServerTaskId(taskId);
-      final canShareTask =
-          canOpenTask && ((taskEntity.share?.resourceId ?? taskId).isNotEmpty);
+      final taskDetailRoute = taskEntity.detailRoute ??
+          ((taskId != null && isServerTaskId(taskId))
+              ? '/tasks/$taskId'
+              : null);
+      final canOpenTask =
+          taskDetailRoute != null && taskDetailRoute.trim().isNotEmpty;
+      final canShareTask = taskId != null &&
+          isServerTaskId(taskId) &&
+          ((taskEntity.share?.resourceId ?? taskId).isNotEmpty);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing10),
@@ -1281,8 +1290,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               TaskCard(
                 task: taskModel,
                 compact: true,
-                onTap:
-                    canOpenTask ? () => context.push('/tasks/$taskId') : null,
+                onTap: canOpenTask ? () => context.push(taskDetailRoute) : null,
               )
             else
               Container(
@@ -1310,7 +1318,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.open_in_new_rounded),
                         onPressed: canOpenTask
-                            ? () => unawaited(context.push('/tasks/$taskId'))
+                            ? () => unawaited(context.push(taskDetailRoute))
                             : () {},
                         disabled: !canOpenTask,
                       ),
@@ -1400,7 +1408,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.map_outlined),
                     onPressed: canOpenPlan
-                        ? () => unawaited(context.push('/plans/$planId'))
+                        ? () => unawaited(context.push(planDetailRoute))
                         : () {},
                     disabled: !canOpenPlan,
                   ),
@@ -1465,6 +1473,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final planId = entity.entityId ??
         action.data['id']?.toString() ??
         action.data['plan_id']?.toString();
+    final detailRoute = entity.detailRoute ??
+        ((planId != null && planId.isNotEmpty) ? '/plans/$planId' : null);
     final planShareId = entity.share?.resourceId ?? planId;
     final canSharePlan =
         _hasStablePlanId(planId) && (planShareId?.isNotEmpty ?? false);
@@ -1474,13 +1484,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       children: [
         PlanCard(
           data: action.data,
-          onTap: planId == null
+          onTap: detailRoute == null
               ? null
               : () {
-                  unawaited(
-                    context.push(entity.detailRoute ?? '/plans/$planId'),
-                  );
-                  widget.onPlanNavigation?.call(planId);
+                  unawaited(context.push(detailRoute));
+                  if (planId != null && planId.isNotEmpty) {
+                    widget.onPlanNavigation?.call(planId);
+                  }
                 },
           onShare: planId == null
               ? null

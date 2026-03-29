@@ -158,6 +158,9 @@ class _SoundSpec {
 class SensoryFeedbackService {
   SensoryFeedbackService._();
 
+  @visibleForTesting
+  static bool forceNativeDebugSoundFallback = true;
+
   // ── Preferences keys ──────────────────────────────────────────────────────
   static const _soundEnabledKey = 'sensory_feedback.sound_enabled';
   static const _hapticEnabledKey = 'sensory_feedback.haptic_enabled';
@@ -576,10 +579,10 @@ class SensoryFeedbackService {
       return;
     }
 
-    // iOS simulator/debug builds have been intermittently rejecting the OGG UI
-    // assets even when Flutter can resolve them. Fall back to the native system
-    // sound so interaction flows stay stable during local verification.
-    if (defaultTargetPlatform == TargetPlatform.iOS && kDebugMode) {
+    // Local debug builds on mobile simulators/emulators are noticeably more
+    // stable and responsive when short UI sounds use the native system click
+    // instead of going through AudioPlayer asset setup on every interaction.
+    if (shouldUseNativeDebugSoundFallback) {
       try {
         await SystemSound.play(spec.fallback);
       } catch (_) {}
@@ -588,6 +591,9 @@ class SensoryFeedbackService {
 
     // Ensure pool is ready (lazy init if init() was not called)
     if (!_poolReady) await init();
+    if (_pool.isEmpty) {
+      return;
+    }
 
     final player = _pool[_poolIndex % _poolSize];
     _poolIndex++;
@@ -614,6 +620,13 @@ class SensoryFeedbackService {
       } catch (_) {}
     }
   }
+
+  @visibleForTesting
+  static bool get shouldUseNativeDebugSoundFallback =>
+      forceNativeDebugSoundFallback &&
+      kDebugMode &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android);
 
   // ---------------------------------------------------------------------------
   // Internal: haptic table

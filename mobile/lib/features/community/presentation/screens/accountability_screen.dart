@@ -12,6 +12,7 @@ import 'package:sparkle/features/community/data/models/accountability_model.dart
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/utils/accountability_invite_flow.dart';
 
 /// 我的责任伙伴列表
 class AccountabilityScreen extends ConsumerWidget {
@@ -188,46 +189,36 @@ class _PartnershipCard extends ConsumerWidget {
   ) async {
     try {
       final repo = ref.read(accountabilityRepositoryProvider);
-      final updated = await ref
-          .read(accountabilityRepositoryProvider)
-          .respondToPartnership(partnership.id, accept: true);
-      await ref.read(myPartnershipsProvider.notifier).load();
-      ref.invalidate(accountabilityOverviewProvider);
-      final freshOverview = await repo.getOverview();
+      final resolution = await acceptAccountabilityInviteWithRefresh(
+        repository: repo,
+        partnershipId: partnership.id,
+        reloadPartnerships: () =>
+            ref.read(myPartnershipsProvider.notifier).load(),
+        refreshPendingRequests: () =>
+            ref.read(pendingRequestsProvider.notifier).refresh(),
+        invalidateOverview: () =>
+            ref.invalidate(accountabilityOverviewProvider),
+      );
       if (!context.mounted) return;
       AppFeedback.success(context, '已接受责任伙伴邀请！');
-      context.go(
-        CommunityRoutes.accountabilityDetail.replaceFirst(
-          ':id',
-          freshOverview.activePartnership?.id ?? updated.id,
-        ),
-      );
+      context.go(resolution.route);
     } catch (e) {
       if (!context.mounted) {
         return;
       }
-      final rawMessage = e.toString();
-      final message = rawMessage.startsWith('Exception: ')
-          ? rawMessage.substring('Exception: '.length)
-          : rawMessage;
+      final message = normalizeAccountabilityInviteError(e);
       if (message.contains('already has a core accountability partner')) {
-        try {
-          final activePartnership = await ref
-              .read(accountabilityRepositoryProvider)
-              .getOverview()
-              .then((overview) => overview.activePartnership);
-          AppFeedback.info(
-            context,
-            '你当前已经有核心责任伙伴，先进入现有工作台继续协作。',
-          );
-          if (activePartnership != null) {
-            context.go(
-              CommunityRoutes.accountabilityDetail
-                  .replaceFirst(':id', activePartnership.id),
-            );
-            return;
-          }
-        } catch (_) {}
+        final route = await resolveExistingAccountabilityRouteOnConflict(
+          ref.read(accountabilityRepositoryProvider),
+        );
+        AppFeedback.info(
+          context,
+          '你当前已经有核心责任伙伴，先进入现有工作台继续协作。',
+        );
+        if (route != null) {
+          context.go(route);
+          return;
+        }
       }
       AppFeedback.error(context, message);
     }
@@ -238,21 +229,22 @@ class _PartnershipCard extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     try {
-      await ref
-          .read(accountabilityRepositoryProvider)
-          .respondToPartnership(partnership.id, accept: false);
-      await ref.read(myPartnershipsProvider.notifier).load();
-      ref.invalidate(accountabilityOverviewProvider);
-      ref.invalidate(pendingRequestsProvider);
+      await declineAccountabilityInviteWithRefresh(
+        repository: ref.read(accountabilityRepositoryProvider),
+        partnershipId: partnership.id,
+        reloadPartnerships: () =>
+            ref.read(myPartnershipsProvider.notifier).load(),
+        refreshPendingRequests: () =>
+            ref.read(pendingRequestsProvider.notifier).refresh(),
+        invalidateOverview: () =>
+            ref.invalidate(accountabilityOverviewProvider),
+      );
       if (context.mounted) AppFeedback.info(context, '已拒绝邀请');
     } catch (e) {
       if (!context.mounted) {
         return;
       }
-      final rawMessage = e.toString();
-      final message = rawMessage.startsWith('Exception: ')
-          ? rawMessage.substring('Exception: '.length)
-          : rawMessage;
+      final message = normalizeAccountabilityInviteError(e);
       AppFeedback.error(context, message);
     }
   }

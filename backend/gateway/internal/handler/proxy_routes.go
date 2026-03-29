@@ -670,6 +670,24 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered simulation proxy routes")
 
+	// ==================== Executions / OpenClaw Routes ====================
+	executions := api.Group("/executions")
+	executions.Use(authMiddleware)
+	{
+		executions.Any("", h.proxyWithHeaders)
+		executions.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered executions proxy routes")
+
+	// ==================== Admin Executions / OpenClaw Routes ====================
+	adminExecutions := api.Group("/admin/executions")
+	adminExecutions.Use(authMiddleware)
+	{
+		adminExecutions.Any("", h.proxyWithHeaders)
+		adminExecutions.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered admin executions proxy routes")
+
 	// ==================== Learning Reports Routes ====================
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)

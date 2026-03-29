@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 
@@ -31,7 +32,10 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
   @override
   void initState() {
     super.initState();
-    _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
+    _feedbackService = CandidateFeedbackService(
+      ref.read(dioProvider),
+      accessTokenGetter: ref.read(authRepositoryProvider).getAccessToken,
+    );
   }
 
   @override

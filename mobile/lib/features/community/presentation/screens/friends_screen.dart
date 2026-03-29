@@ -15,6 +15,7 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/utils/accountability_invite_flow.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -474,56 +475,39 @@ class _PendingRequestsTab extends ConsumerWidget {
                           try {
                             final repo =
                                 ref.read(accountabilityRepositoryProvider);
-                            final updated = await ref
-                                .read(accountabilityRepositoryProvider)
-                                .respondToPartnership(
-                                  partnership.id,
-                                  accept: true,
-                                );
-                            await ref
-                                .read(myPartnershipsProvider.notifier)
-                                .load();
-                            ref.invalidate(accountabilityOverviewProvider);
-                            final freshOverview = await repo.getOverview();
+                            final resolution =
+                                await acceptAccountabilityInviteWithRefresh(
+                              repository: repo,
+                              partnershipId: partnership.id,
+                              reloadPartnerships: () => ref
+                                  .read(myPartnershipsProvider.notifier)
+                                  .load(),
+                              refreshPendingRequests: () => ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .refresh(),
+                              invalidateOverview: () => ref
+                                  .invalidate(accountabilityOverviewProvider),
+                            );
                             if (!context.mounted) return;
                             AppFeedback.success(context, '已接受责任伙伴邀请！');
-                            context.go(
-                              CommunityRoutes.accountabilityDetail
-                                  .replaceFirst(
-                                    ':id',
-                                    freshOverview.activePartnership?.id ??
-                                        updated.id,
-                                  ),
-                            );
+                            context.go(resolution.route);
                           } catch (e) {
                             if (context.mounted) {
-                              final rawMessage = e.toString();
-                              final message = rawMessage
-                                      .startsWith('Exception: ')
-                                  ? rawMessage.substring('Exception: '.length)
-                                  : rawMessage;
+                              final message =
+                                  normalizeAccountabilityInviteError(e);
                               final hasActiveCoreConflict = message.contains(
                                   'already has a core accountability partner');
                               if (hasActiveCoreConflict) {
-                                AccountabilityPartnershipInfo?
-                                    activePartnership;
-                                try {
-                                  activePartnership = await ref
-                                      .read(accountabilityRepositoryProvider)
-                                      .getOverview()
-                                      .then((overview) =>
-                                          overview.activePartnership);
-                                } catch (_) {}
+                                final route =
+                                    await resolveExistingAccountabilityRouteOnConflict(
+                                  ref.read(accountabilityRepositoryProvider),
+                                );
                                 AppFeedback.info(
                                   context,
                                   '你当前已经有核心责任伙伴，先进入现有工作台继续协作。',
                                 );
-                                if (activePartnership != null) {
-                                  context.go(
-                                    CommunityRoutes.accountabilityDetail
-                                        .replaceFirst(
-                                            ':id', activePartnership.id),
-                                  );
+                                if (route != null) {
+                                  context.go(route);
                                   return;
                                 }
                               }
@@ -538,27 +522,26 @@ class _PendingRequestsTab extends ConsumerWidget {
                         icon: Icon(Icons.close, color: DS.error),
                         onPressed: () async {
                           try {
-                            await ref
-                                .read(accountabilityRepositoryProvider)
-                                .respondToPartnership(
-                                  partnership.id,
-                                  accept: false,
-                                );
-                            await ref
-                                .read(myPartnershipsProvider.notifier)
-                                .load();
-                            ref.invalidate(accountabilityOverviewProvider);
-                            ref.invalidate(pendingRequestsProvider);
+                            await declineAccountabilityInviteWithRefresh(
+                              repository:
+                                  ref.read(accountabilityRepositoryProvider),
+                              partnershipId: partnership.id,
+                              reloadPartnerships: () => ref
+                                  .read(myPartnershipsProvider.notifier)
+                                  .load(),
+                              refreshPendingRequests: () => ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .refresh(),
+                              invalidateOverview: () => ref
+                                  .invalidate(accountabilityOverviewProvider),
+                            );
                             if (context.mounted) {
                               AppFeedback.info(context, '已拒绝邀请');
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              final rawMessage = e.toString();
-                              final message = rawMessage
-                                      .startsWith('Exception: ')
-                                  ? rawMessage.substring('Exception: '.length)
-                                  : rawMessage;
+                              final message =
+                                  normalizeAccountabilityInviteError(e);
                               AppFeedback.error(context, message);
                             }
                           }

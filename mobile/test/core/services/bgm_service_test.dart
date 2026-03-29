@@ -138,4 +138,31 @@ void main() {
 
     expect(factor, closeTo(0.54, 0.001));
   });
+
+  test('bundled-only mode bypasses catalog selection for stable playback',
+      () async {
+    BgmService.debugSetCatalogEntries([
+      const BgmCatalogEntry(
+        id: 'chat_catalog_pick',
+        assetPath: 'audio/bgm/catalog_chat_pick.m4a',
+        album: 'Curated',
+        sceneTags: ['chat'],
+        paletteTags: ['piano'],
+        energy: 0.2,
+        density: 0.2,
+        baseGain: 1,
+        loopable: true,
+        releaseApproved: true,
+      ),
+    ]);
+    BgmService.debugSetPreferBundledPlayback(true);
+
+    final assetPath = await BgmService.debugResolveSelectionAssetPath(
+      BgmTrack.chat,
+      force: true,
+    );
+
+    expect(assetPath, isNot('audio/bgm/catalog_chat_pick.m4a'));
+    expect(assetPath, startsWith('audio/bgm/'));
+  });
 }

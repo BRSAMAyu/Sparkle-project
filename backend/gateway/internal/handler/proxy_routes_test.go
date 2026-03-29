@@ -178,6 +178,10 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"GET /api/v1/vocabulary/*path",
 		"POST /api/v1/translation/*path",
 		"GET /api/v1/decay/*path",
+		"GET /api/v1/executions",
+		"GET /api/v1/executions/*path",
+		"GET /api/v1/admin/executions",
+		"GET /api/v1/admin/executions/*path",
 	}
 
 	// Verify at least some routes are registered

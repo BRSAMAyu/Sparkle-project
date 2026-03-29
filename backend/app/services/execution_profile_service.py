@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, func, select
+from sqlalchemy import String, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
@@ -17,6 +17,10 @@ from app.models.task import Task
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _is_succeeded_status():
+    return cast(ExecutionIntent.status, String) == ExecutionIntentStatus.SUCCEEDED.value
 
 
 class ExecutionProfileService:
@@ -37,7 +41,7 @@ class ExecutionProfileService:
 
         total_stmt = select(
             func.count(ExecutionIntent.id).label("total"),
-            func.sum(case((ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED, 1), else_=0)).label(
+            func.sum(case((_is_succeeded_status(), 1), else_=0)).label(
                 "succeeded",
             ),
         ).where(base_filter)
@@ -49,7 +53,7 @@ class ExecutionProfileService:
             select(
                 ExecutionIntent.target_env,
                 func.count(ExecutionIntent.id).label("total"),
-                func.sum(case((ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED, 1), else_=0)).label(
+                func.sum(case((_is_succeeded_status(), 1), else_=0)).label(
                     "succeeded",
                 ),
             )
@@ -102,7 +106,7 @@ class ExecutionProfileService:
             .join(ExecutionRecord, ExecutionRecord.execution_intent_id == ExecutionIntent.id)
             .where(
                 base_filter,
-                ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED,
+                _is_succeeded_status(),
             )
         )
         estimated_time_saved_minutes = 0.0
@@ -138,7 +142,7 @@ class ExecutionProfileService:
 
         total_stmt = select(
             func.count(ExecutionIntent.id).label("total"),
-            func.sum(case((ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED, 1), else_=0)).label(
+            func.sum(case((_is_succeeded_status(), 1), else_=0)).label(
                 "succeeded",
             ),
         ).where(base_filter)
@@ -150,7 +154,7 @@ class ExecutionProfileService:
             select(
                 ExecutionIntent.target_env,
                 func.count(ExecutionIntent.id).label("total"),
-                func.sum(case((ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED, 1), else_=0)).label(
+                func.sum(case((_is_succeeded_status(), 1), else_=0)).label(
                     "succeeded",
                 ),
             )
@@ -203,7 +207,7 @@ class ExecutionProfileService:
             .join(ExecutionRecord, ExecutionRecord.execution_intent_id == ExecutionIntent.id)
             .where(
                 base_filter,
-                ExecutionIntent.status == ExecutionIntentStatus.SUCCEEDED,
+                _is_succeeded_status(),
             )
         )
         estimated_time_saved_minutes = 0.0

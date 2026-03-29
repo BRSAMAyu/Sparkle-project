@@ -830,6 +830,30 @@ class ChatOrchestrator(
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
+                resolved_active_tools = self._resolve_active_tools(request, user_message)
+
+                if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
+                    bridge_responses = await self._maybe_short_circuit_bridge_tool(
+                        active_tools=resolved_active_tools,
+                        user_message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        active_db=active_db,
+                    )
+                    if bridge_responses:
+                        for bridge_response in bridge_responses:
+                            yield bridge_response
+                        await self._update_state(session_id, STATE_DONE, "Bridge tool short-circuit completed")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                        ).inc()
+                        return
 
                 # Step 4: Build full context
                 grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = (
@@ -995,6 +1019,8 @@ class ChatOrchestrator(
                     chat_mode=chat_mode,
                 )
 
+                state.context_data["resolved_active_tools"] = list(resolved_active_tools)
+
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
                 await self._maybe_enqueue_perceptible_insight(
                     active_db=active_db,
@@ -1084,26 +1110,6 @@ class ChatOrchestrator(
                     )
 
                 # Step 6: Prepare runtime context (transparency, tools)
-                resolved_active_tools = self._resolve_active_tools(request, user_message)
-                state.context_data["resolved_active_tools"] = list(resolved_active_tools)
-                bridge_responses = await self._maybe_short_circuit_bridge_tool(
-                    active_tools=resolved_active_tools,
-                    user_message=user_message,
-                    user_id=user_id,
-                    session_id=session_id,
-                    response_id=response_id,
-                    request_id=request_id,
-                    trace_id=trace_id,
-                    workflow_id=workflow_id,
-                    prompt_version=prompt_version,
-                    active_db=active_db,
-                )
-                if bridge_responses:
-                    async for queued in self._drain_queue(queue):
-                        yield queued
-                    for bridge_response in bridge_responses:
-                        yield bridge_response
-                    return
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
                     state,
                     request_id,

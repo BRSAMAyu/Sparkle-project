@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -35,7 +36,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
   @override
   void initState() {
     super.initState();
-    _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
+    _feedbackService = CandidateFeedbackService(
+      ref.read(dioProvider),
+      accessTokenGetter: ref.read(authRepositoryProvider).getAccessToken,
+    );
     _eventStream = ref.read(appEventStreamServiceProvider);
     _predictionAttribution = ref.read(predictionAttributionServiceProvider);
     unawaited(_loadCollapsedPreference());

@@ -184,6 +184,91 @@ class SimulationEngine:
             raise RuntimeError("Simulation stream completed without a final session payload")
         return final_session
 
+    async def preview(
+        self,
+        *,
+        topic: str,
+        scenario_key: str,
+        user_id: UUID | None = None,
+        user_context: dict[str, Any] | None = None,
+        max_rounds: int = 3,
+    ) -> SimulationSession:
+        normalized_scenario_key = scenario_key if scenario_key in SCENARIOS else "study_group"
+        template = dict(SCENARIOS.get(normalized_scenario_key) or SCENARIOS["study_group"])
+        raw_participants = await generate_participants(
+            scenario_key=normalized_scenario_key,
+            participant_names=list(template.get("participants") or ["学习伙伴"]),
+            user_context=user_context,
+            db=self.db,
+            user_id=user_id,
+            topic=topic,
+            participants_from=str(template.get("participants_from") or "") or None,
+        )
+        participants = self._build_agent_participants(
+            raw_participants,
+            scenario_key=normalized_scenario_key,
+        )
+        planned_round_count = max(2, min(max_rounds, 4))
+        rounds: list[dict[str, Any]] = []
+        latest_insight = f"围绕“{topic}”的讨论刚开始，先用一段轻量预览帮你看到主要分歧。"
+
+        while len(rounds) < planned_round_count:
+            fallback = self._fallback_moderator_decision(
+                topic=topic,
+                scenario_key=normalized_scenario_key,
+                participants=participants,
+                rounds=rounds,
+                planned_round_count=planned_round_count,
+            )
+            speaker_name = str(fallback.get("speaker") or "").strip()
+            speaker = next(
+                (participant for participant in participants if participant.name == speaker_name),
+                participants[0] if participants else AgentParticipant(
+                    name="学习伙伴",
+                    role_hint="学习伙伴",
+                    persona={},
+                    stance="supportive",
+                    source="template",
+                ),
+            )
+            round_item = {
+                "round": len(rounds) + 1,
+                "speaker": speaker.name,
+                "message": self._fallback_round_message(
+                    topic=topic,
+                    scenario_key=normalized_scenario_key,
+                    speaker=speaker,
+                    reply_target=str(fallback.get("reply_target") or "").strip(),
+                    turn_goal=str(fallback.get("turn_goal") or "extend").strip() or "extend",
+                    rounds=rounds,
+                ),
+                "reply_to_speaker": str(fallback.get("reply_target") or "").strip(),
+                "turn_goal": str(fallback.get("turn_goal") or "extend").strip() or "extend",
+                "speaker_type": "agent",
+            }
+            rounds.append(round_item)
+            latest_insight = str(fallback.get("real_time_insight") or latest_insight).strip() or latest_insight
+            self._update_memories_after_round(
+                participants=participants,
+                round_item=round_item,
+                moderator_insight=latest_insight,
+            )
+
+        return SimulationSession(
+            id=str(uuid4()),
+            scenario_key=normalized_scenario_key,
+            state=LearningSimulationState.COMPLETED,
+            topic=topic,
+            participants=[participant.to_public_dict() for participant in participants],
+            rounds=rounds,
+            insight_summary=self._summarize_rounds(topic, rounds),
+            planned_round_count=planned_round_count,
+            interaction_prompt="",
+            suggested_replies=[],
+            interaction_options=[],
+            pending_interaction=None,
+        )
+
     async def continue_run(
         self,
         *,
