@@ -34,6 +34,37 @@ final galaxyBuildPlaybackSessionProvider = StateProvider<bool>(
   (ref) => false,
 );
 
+class GalaxyPlaybackSnapshot {
+  const GalaxyPlaybackSnapshot({
+    required this.plan,
+    required this.frozenPositions,
+    required this.settledPositions,
+    required this.preRevealedNodeIds,
+    required this.preRevealedEdgeIds,
+  });
+
+  final GalaxyBuildPlaybackPlan plan;
+  final Map<String, Offset> frozenPositions;
+  final Map<String, Offset> settledPositions;
+  final Set<String> preRevealedNodeIds;
+  final Set<String> preRevealedEdgeIds;
+
+  GalaxyPlaybackSnapshot copyWith({
+    GalaxyBuildPlaybackPlan? plan,
+    Map<String, Offset>? frozenPositions,
+    Map<String, Offset>? settledPositions,
+    Set<String>? preRevealedNodeIds,
+    Set<String>? preRevealedEdgeIds,
+  }) =>
+      GalaxyPlaybackSnapshot(
+        plan: plan ?? this.plan,
+        frozenPositions: frozenPositions ?? this.frozenPositions,
+        settledPositions: settledPositions ?? this.settledPositions,
+        preRevealedNodeIds: preRevealedNodeIds ?? this.preRevealedNodeIds,
+        preRevealedEdgeIds: preRevealedEdgeIds ?? this.preRevealedEdgeIds,
+      );
+}
+
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
 
@@ -59,6 +90,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final AnimationController _tapFeedbackController;
   late final AnimationController _cameraAnimationController;
   late final AnimationController _buildReplayController;
+  late final AnimationController _layoutBlendController;
   late final AnimationController _entranceController;
   late final Animation<double> _tapFeedbackAnimation;
   late final ProviderSubscription<GalaxyDisplaySettings>
@@ -73,6 +105,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Map<String, Color> _darkBlendedColors = const <String, Color>{};
   Map<String, Color> _lightBlendedColors = const <String, Color>{};
   GalaxyBuildPlaybackPlan? _playbackPlan;
+  GalaxyPlaybackSnapshot? _playbackSnapshot;
   Set<String> _preRevealedNodeIds = const <String>{};
   Set<String> _preRevealedEdgeIds = const <String>{};
   GalaxyCamera _camera = const GalaxyCamera(
@@ -123,6 +156,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _physicsUsesViewportCulling = true;
   Timer? _previewDismissTimer;
   Timer? _initialBuildReplayTimer;
+  int _layoutOptimizationEpoch = 0;
+  Map<String, Offset> _layoutBlendStartPositions = const <String, Offset>{};
+  Map<String, Offset> _layoutBlendTargetPositions = const <String, Offset>{};
 
   @override
   void initState() {
@@ -157,6 +193,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _buildReplayController = AnimationController(vsync: this)
       ..addListener(_handleBuildReplayTick)
       ..addStatusListener(_handleBuildReplayStatus);
+    _layoutBlendController = AnimationController(vsync: this)
+      ..addListener(_handleLayoutBlendTick)
+      ..addStatusListener(_handleLayoutBlendStatus);
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
@@ -222,6 +261,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _buildReplayController
       ..removeListener(_handleBuildReplayTick)
       ..removeStatusListener(_handleBuildReplayStatus)
+      ..dispose();
+    _layoutBlendController
+      ..removeListener(_handleLayoutBlendTick)
+      ..removeStatusListener(_handleLayoutBlendStatus)
       ..dispose();
     _entranceController.dispose();
     _displaySettingsSubscription.close();
@@ -295,10 +338,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       adjacency: adjacency,
       preserveCamera: preserveCamera,
     );
+    final playbackSpeedMultiplier =
+        preserveCamera ? 1.0 : (playbackLaunch == null ? 1.0 : 1.24);
 
     _spatialIndex.build(positions, sanitizedGraph.nodes);
     _labelCache.clear();
     setState(() {
+      _layoutBlendController
+        ..stop()
+        ..reset();
+      _layoutBlendStartPositions = const <String, Offset>{};
+      _layoutBlendTargetPositions = const <String, Offset>{};
       _graph = sanitizedGraph;
       _positions = positions;
       _nodesById = nodesById;
@@ -310,8 +360,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _pendingPersistNodeId = null;
       _isLoading = false;
       _didFitInitialCamera = preserveCamera;
+      if (playbackLaunch != null) {
+        _primePlaybackState(
+          playbackLaunch,
+          speedMultiplier: playbackSpeedMultiplier,
+        );
+      } else {
+        _clearPlaybackState();
+      }
       _sceneVersion++;
     });
+
+    _scheduleLayoutOptimization(
+      graph: sanitizedGraph,
+      basePositions: positions,
+    );
 
     if (!preserveCamera) {
       _startEntranceAnimationIfNeeded(playbackLaunch: playbackLaunch);
@@ -319,13 +382,57 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _refreshSearchState();
       _syncPreviewPosition();
       if (playbackLaunch != null) {
-        _launchPlayback(
-          playbackLaunch,
-          preserveCurrentCamera: true,
-        );
+        _startPreparedPlayback(preRoll: const Duration(milliseconds: 60));
       } else {
         _startGraphSettleSimulation(impulse: 0.28);
       }
+    }
+  }
+
+  Map<String, Offset> get _renderPositions =>
+      _isBuildAnimating && _playbackSnapshot != null
+          ? _playbackSnapshot!.frozenPositions
+          : _positions;
+
+  void _handleLayoutBlendTick() {
+    if (_layoutBlendStartPositions.isEmpty ||
+        _layoutBlendTargetPositions.isEmpty) {
+      return;
+    }
+    final progress = Curves.easeInOutCubic.transform(
+      _layoutBlendController.value.clamp(0.0, 1.0),
+    );
+    final blended = <String, Offset>{};
+    for (final entry in _layoutBlendTargetPositions.entries) {
+      final start = _layoutBlendStartPositions[entry.key] ?? entry.value;
+      blended[entry.key] = Offset.lerp(start, entry.value, progress)!;
+    }
+
+    if (!mounted) {
+      _positions = blended;
+      return;
+    }
+    setState(() {
+      _positions = blended;
+      _sceneVersion++;
+    });
+  }
+
+  void _handleLayoutBlendStatus(AnimationStatus status) {
+    if (!mounted || status != AnimationStatus.completed) {
+      return;
+    }
+    setState(() {
+      _positions = _layoutBlendTargetPositions;
+      _layoutBlendStartPositions = const <String, Offset>{};
+      _layoutBlendTargetPositions = const <String, Offset>{};
+      _sceneVersion++;
+    });
+    if (_graph != null) {
+      _spatialIndex.build(_positions, _graph!.nodes);
+    }
+    if (!_isBuildAnimating && _graph != null) {
+      _startGraphSettleSimulation(impulse: 0.12);
     }
   }
 
@@ -362,8 +469,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
     if (playbackLaunch != null) {
       ref.read(galaxyBuildPlaybackSessionProvider.notifier).state = true;
-      _preparePlayback(playbackLaunch, speedMultiplier: 1.24);
-      _startGraphSettleSimulation(impulse: 0.34);
     }
 
     _entranceController
@@ -396,7 +501,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (previewNode == null) {
       return;
     }
-    final anchor = _positions[previewNode.id];
+    final anchor = _renderPositions[previewNode.id];
     if (anchor == null) {
       return;
     }
@@ -425,7 +530,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   Rect _computeWorldBounds() {
-    if (_positions.isEmpty) {
+    final activePositions = _renderPositions;
+    if (activePositions.isEmpty) {
       return Rect.fromCircle(center: Offset.zero, radius: 240);
     }
 
@@ -434,7 +540,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     var maxX = double.negativeInfinity;
     var maxY = double.negativeInfinity;
 
-    for (final position in _positions.values) {
+    for (final position in activePositions.values) {
       minX = math.min(minX, position.dx);
       minY = math.min(minY, position.dy);
       maxX = math.max(maxX, position.dx);
@@ -450,7 +556,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       );
 
   GalaxyNodeHit? _hitTestNode(Offset worldPoint) {
-    if (_graph == null || _positions.isEmpty || _spatialIndex.size == 0) {
+    if (_isBuildAnimating ||
+        _graph == null ||
+        _renderPositions.isEmpty ||
+        _spatialIndex.size == 0) {
       return null;
     }
 
@@ -465,7 +574,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     final tapRadius = math.max(26 / _camera.scale, 18.0);
     for (final nodeId in overlay.focusNodeIds.reversed) {
-      final position = _positions[nodeId];
+      final position = _renderPositions[nodeId];
       if (position == null) {
         continue;
       }
@@ -900,6 +1009,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _startPhysicsSimulation({bool useViewportCulling = true}) {
+    if (_isBuildAnimating) {
+      return;
+    }
     _physicsUsesViewportCulling = useViewportCulling;
     if (!_physicsTicker.isActive && _forceEngine.hasActiveSimulation) {
       unawaited(_physicsTicker.start());
@@ -1155,7 +1267,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     double targetScale = 0.82,
     bool highlightNeighbors = true,
   }) {
-    final position = _positions[nodeId];
+    final position = _renderPositions[nodeId];
     if (position == null) {
       return;
     }
@@ -1424,6 +1536,96 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     )!;
   }
 
+  void _primePlaybackState(
+    _PlaybackLaunch launch, {
+    double speedMultiplier = 1.0,
+  }) {
+    _playbackPlan = launch.plan;
+    _preRevealedNodeIds = launch.preRevealedNodeIds;
+    _preRevealedEdgeIds = launch.preRevealedEdgeIds;
+    _playbackSnapshot = GalaxyPlaybackSnapshot(
+      plan: launch.plan,
+      frozenPositions: Map<String, Offset>.unmodifiable(launch.frozenPositions),
+      settledPositions:
+          Map<String, Offset>.unmodifiable(launch.frozenPositions),
+      preRevealedNodeIds: launch.preRevealedNodeIds,
+      preRevealedEdgeIds: launch.preRevealedEdgeIds,
+    );
+    _playbackElapsedMs = 0;
+    _selectedNodeId = null;
+    _spotlightAnchorId = null;
+    _spotlightNodeIds = const <String>{};
+    _draggingNodeId = null;
+    _isBuildAnimating = true;
+    _activeReplaySpeedMultiplier = speedMultiplier;
+    _buildReplayController
+      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
+      ..stop()
+      ..reset();
+  }
+
+  void _clearPlaybackState({bool resetElapsed = true}) {
+    _playbackPlan = null;
+    _playbackSnapshot = null;
+    _preRevealedNodeIds = const <String>{};
+    _preRevealedEdgeIds = const <String>{};
+    if (resetElapsed) {
+      _playbackElapsedMs = 0;
+    }
+    _isBuildAnimating = false;
+    _activeReplaySpeedMultiplier = 1.0;
+  }
+
+  void _scheduleLayoutOptimization({
+    required GalaxyGraphResponse graph,
+    required Map<String, Offset> basePositions,
+  }) {
+    final epoch = ++_layoutOptimizationEpoch;
+    final settings = ref.read(galaxyDisplaySettingsProvider);
+    unawaited(() async {
+      final result = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
+        nodes: graph.nodes,
+        edges: graph.edges,
+        initialPositions: basePositions,
+        sectorAffinity: settings.sectorAffinity,
+      );
+      if (!mounted || epoch != _layoutOptimizationEpoch || _graph != graph) {
+        return;
+      }
+
+      final optimizedPositions = result.positions;
+      if (_isBuildAnimating) {
+        final snapshot = _playbackSnapshot;
+        if (snapshot == null) {
+          return;
+        }
+        setState(() {
+          _positions = optimizedPositions;
+          _playbackSnapshot = snapshot.copyWith(
+            settledPositions: optimizedPositions,
+          );
+          _sceneVersion++;
+        });
+        return;
+      }
+
+      _beginLayoutBlend(optimizedPositions);
+    }());
+  }
+
+  void _beginLayoutBlend(Map<String, Offset> targetPositions) {
+    if (targetPositions.isEmpty) {
+      return;
+    }
+    _layoutBlendStartPositions = Map<String, Offset>.from(_positions);
+    _layoutBlendTargetPositions = Map<String, Offset>.from(targetPositions);
+    _layoutBlendController
+      ..duration = const Duration(milliseconds: 260)
+      ..stop()
+      ..reset();
+    unawaited(_layoutBlendController.forward());
+  }
+
   void _handleBuildReplayTick() {
     if (!mounted) {
       return;
@@ -1446,16 +1648,18 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
+    final settledPositions = _playbackSnapshot?.settledPositions;
     setState(() {
-      _isBuildAnimating = false;
       _playbackElapsedMs = _playbackPlan?.totalDurationMs ?? 0;
-      _playbackPlan = null;
-      _preRevealedNodeIds = const <String>{};
-      _preRevealedEdgeIds = const <String>{};
-      _activeReplaySpeedMultiplier = 1.0;
+      _clearPlaybackState(resetElapsed: false);
       _spotlightAnchorId = null;
       _spotlightNodeIds = const <String>{};
     });
+    if (settledPositions != null) {
+      _beginLayoutBlend(settledPositions);
+    } else {
+      _startGraphSettleSimulation(impulse: 0.22);
+    }
   }
 
   void _toggleBuildReplay() {
@@ -1484,6 +1688,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _launchPlayback(
       _PlaybackLaunch(
         plan: playbackPlan,
+        frozenPositions: Map<String, Offset>.from(_positions),
         preRevealedNodeIds: const <String>{},
         preRevealedEdgeIds: const <String>{},
       ),
@@ -1504,12 +1709,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
     setState(() {
-      _isBuildAnimating = false;
-      _playbackElapsedMs = 0;
-      _playbackPlan = null;
-      _preRevealedNodeIds = const <String>{};
-      _preRevealedEdgeIds = const <String>{};
-      _activeReplaySpeedMultiplier = 1.0;
+      _clearPlaybackState();
       _spotlightAnchorId = null;
       _spotlightNodeIds = const <String>{};
     });
@@ -1552,6 +1752,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       }
       return _PlaybackLaunch(
         plan: fullPlan,
+        frozenPositions: Map<String, Offset>.from(positions),
         preRevealedNodeIds: const <String>{},
         preRevealedEdgeIds: const <String>{},
       );
@@ -1588,6 +1789,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     return _PlaybackLaunch(
       plan: incrementalPlan,
+      frozenPositions: Map<String, Offset>.from(positions),
       preRevealedNodeIds: preRevealedNodeIds,
       preRevealedEdgeIds: preRevealedEdgeIds,
     );
@@ -1623,22 +1825,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     double speedMultiplier = 1.0,
   }) {
     setState(() {
-      _playbackPlan = launch.plan;
-      _preRevealedNodeIds = launch.preRevealedNodeIds;
-      _preRevealedEdgeIds = launch.preRevealedEdgeIds;
-      _playbackElapsedMs = 0;
-      _selectedNodeId = null;
-      _spotlightAnchorId = null;
-      _spotlightNodeIds = const <String>{};
-      _draggingNodeId = null;
-      _isBuildAnimating = true;
-      _activeReplaySpeedMultiplier = speedMultiplier;
+      _primePlaybackState(
+        launch,
+        speedMultiplier: speedMultiplier,
+      );
       _sceneVersion++;
     });
-    _buildReplayController
-      ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
-      ..stop()
-      ..reset();
   }
 
   void _startPreparedPlayback({
@@ -1678,7 +1870,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _camera = preserveCurrentCamera ? _camera : overviewCamera;
     });
     _preparePlayback(launch);
-    _startGraphSettleSimulation();
     _startPreparedPlayback();
   }
 
@@ -1920,7 +2111,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         }
         if (_previewNode != null && _previewScreenPosition != null) {
           final nodeId = _previewNode!.id;
-          final anchor = _positions[nodeId];
+          final anchor = _renderPositions[nodeId];
           if (anchor != null) {
             _previewScreenPosition = _computePreviewPosition(
               anchor: _camera.worldToScreen(anchor),
@@ -2129,7 +2320,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           camera: _camera,
                           nodesById: _nodesById,
                           edges: graph.edges,
-                          positions: _positions,
+                          positions: _renderPositions,
                           spatialIndex: _spatialIndex,
                           labelCache: _labelCache,
                           backdropPictureCache: _backdropPictureCache,
@@ -2167,7 +2358,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       ),
                     ),
                     ..._celebrations.map((entry) {
-                      final worldPosition = _positions[entry.nodeId];
+                      final worldPosition = _renderPositions[entry.nodeId];
                       if (worldPosition == null) {
                         return const SizedBox.shrink();
                       }
@@ -2176,7 +2367,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           _adjacency[entry.nodeId] ?? const <String>{};
                       final neighborScreenPositions = <Offset>[];
                       for (final nid in neighborIds) {
-                        final nPos = _positions[nid];
+                        final nPos = _renderPositions[nid];
                         if (nPos != null) {
                           neighborScreenPositions
                               .add(_camera.worldToScreen(nPos));
@@ -2256,7 +2447,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                 ignoring: _camera.scale < 0.3,
                                 child: GalaxyMiniMap(
                                   camera: _camera,
-                                  positions: _positions,
+                                  positions: _renderPositions,
                                   nodesById: _nodesById,
                                   blendedColors: blendedColors,
                                   worldBounds: _computeWorldBounds(),
@@ -2629,11 +2820,13 @@ class _OverviewStatsData {
 class _PlaybackLaunch {
   const _PlaybackLaunch({
     required this.plan,
+    required this.frozenPositions,
     required this.preRevealedNodeIds,
     required this.preRevealedEdgeIds,
   });
 
   final GalaxyBuildPlaybackPlan plan;
+  final Map<String, Offset> frozenPositions;
   final Set<String> preRevealedNodeIds;
   final Set<String> preRevealedEdgeIds;
 }

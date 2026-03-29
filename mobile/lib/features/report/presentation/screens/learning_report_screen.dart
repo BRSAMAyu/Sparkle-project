@@ -223,7 +223,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 .isNotEmpty) ...[
               ChatContinuityBanner(
                 sourceChatSessionId: widget.initialSourceChatSessionId!.trim(),
-                subtitle: '这份报告承接了你刚才的探索流程，你可以回到原会话继续追问策略、任务和下一步安排。',
+                kind: ChatContinuityKind.journey,
+                subtitle: '这份报告承接了你刚才的探索流程。你可以带着这份判断回到原会话，继续追问策略、任务和下一步安排。',
               ),
               const SizedBox(height: 14),
             ],
@@ -240,7 +241,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               delay: 0,
               child: MirofishStageHeader(
                 icon: Icons.insights_rounded,
-                eyebrow: 'Learning Report',
+                eyebrow: '学习诊断面板',
                 title: _reportHeroTitle(
                   weakestNode: weakestNode,
                   strongestNode: strongestNode,
@@ -263,14 +264,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       : _averageMastery(previousReport),
                 ),
                 primaryLabel:
-                    weakestNode == null ? '查看 Sprint 历史' : '优先处理 ${weakestNode.nodeName}',
+                    weakestNode == null ? '打开知识星图' : '优先处理 ${weakestNode.nodeName}',
                 onPrimaryTap: weakestNode == null
-                    ? () => context.push(PlanRoutes.sprintHistory)
+                    ? () => context.push(GalaxyRoutes.home)
                     : () => context.push(
                           '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
                         ),
-                secondaryLabel: '查看历史节奏',
-                onSecondaryTap: () => context.push(PlanRoutes.sprintHistory),
                 footer: history.length > 1
                     ? SegmentedButton<_ReportRange>(
                         segments: const [
@@ -313,6 +312,27 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             const SizedBox(height: 14),
             _AnimatedReportSection(
               delay: 90,
+              child: _ReportActionCard(
+                actionCards: report.actionCards,
+                weakestNode: weakestNode,
+                strongestNode: strongestNode,
+                onOpenGalaxy: () => context.push(GalaxyRoutes.home),
+                onOpenTheater: weakestNode == null
+                    ? null
+                    : () => context.push(
+                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
+                        ),
+                onOpenSimulation: () => context.push(
+                  '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
+                ),
+                onOpenSprintHistory: () =>
+                    context.push(PlanRoutes.sprintHistory),
+                onActionTap: _openReportDeepLink,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _AnimatedReportSection(
+              delay: 120,
               child: GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.card,
                 child: Column(
@@ -370,6 +390,14 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       _TrendHistoryEmptyState(
                         historyCacheLoaded: _historyCacheLoaded,
                       ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
                   ],
                 ),
               ),
@@ -377,27 +405,6 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             const SizedBox(height: 14),
             _AnimatedReportSection(
               delay: 180,
-              child: _ReportActionCard(
-                actionCards: report.actionCards,
-                weakestNode: weakestNode,
-                strongestNode: strongestNode,
-                onOpenGalaxy: () => context.push(GalaxyRoutes.home),
-                onOpenTheater: weakestNode == null
-                    ? null
-                    : () => context.push(
-                          '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
-                        ),
-                onOpenSimulation: () => context.push(
-                  '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
-                ),
-                onOpenSprintHistory: () =>
-                    context.push(PlanRoutes.sprintHistory),
-                onActionTap: _openReportDeepLink,
-              ),
-            ),
-            const SizedBox(height: 14),
-            _AnimatedReportSection(
-              delay: 140,
               child: ExpansionTile(
                 initiallyExpanded: true,
                 shape: RoundedRectangleBorder(
@@ -936,25 +943,22 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       ),
                 ),
                 const SizedBox(height: 18),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: () {
-                          Navigator.of(sheetContext).pop();
-                          unawaited(context.push(GalaxyRoutes.home));
-                        },
-                        icon: const Icon(Icons.auto_graph_rounded),
-                        label: const Text('打开知识星图'),
-                      ),
+                    FilledButton.tonalIcon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(context.push(GalaxyRoutes.home));
+                      },
+                      icon: const Icon(Icons.auto_graph_rounded),
+                      label: const Text('打开知识星图'),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                        icon: const Icon(Icons.check_circle_outline_rounded),
-                        label: const Text('继续阅读报告'),
-                      ),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      label: const Text('继续阅读报告'),
                     ),
                   ],
                 ),
@@ -1049,29 +1053,24 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   ),
                 ],
                 const SizedBox(height: 18),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
                     if ((card.deepLink ?? '').isNotEmpty &&
                         (card.ctaLabel ?? '').isNotEmpty)
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.of(sheetContext).pop();
-                            unawaited(_openReportDeepLink(card.deepLink!));
-                          },
-                          icon: const Icon(Icons.rocket_launch_rounded),
-                          label: Text(card.ctaLabel!),
-                        ),
+                      FilledButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          unawaited(_openReportDeepLink(card.deepLink!));
+                        },
+                        icon: const Icon(Icons.rocket_launch_rounded),
+                        label: Text(card.ctaLabel!),
                       ),
-                    if ((card.deepLink ?? '').isNotEmpty &&
-                        (card.ctaLabel ?? '').isNotEmpty)
-                      const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                        icon: const Icon(Icons.check_circle_outline_rounded),
-                        label: const Text('知道了'),
-                      ),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      label: const Text('知道了'),
                     ),
                   ],
                 ),
@@ -1441,10 +1440,20 @@ class _ReportDiagnosisStrip extends StatelessWidget {
     final delta = previousAverageMastery == null
         ? null
         : averageMastery - previousAverageMastery!;
+    final sortedDiagnosisCards = [...diagnosisCards]
+      ..sort(
+        (
+          LearningReportDiagnosticCard a,
+          LearningReportDiagnosticCard b,
+        ) =>
+            _severityRank(a.severity).compareTo(
+          _severityRank(b.severity),
+        ),
+      );
     final cards = diagnosisCards.isNotEmpty
-        ? diagnosisCards
+        ? sortedDiagnosisCards
             .map(
-              (item) => _DiagnosisCard(
+              (LearningReportDiagnosticCard item) => _DiagnosisCard(
                 title: item.title,
                 headline: item.headline,
                 body: item.summary,
@@ -1453,7 +1462,9 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                   item.severity,
                   Theme.of(context).colorScheme,
                 ),
-                tag: item.tag,
+                tag: (item.tag ?? '').trim().isNotEmpty
+                    ? item.tag
+                    : _decisionTag(item.severity),
                 onTap: () => onCardTap(item),
               ),
             )
@@ -1469,6 +1480,7 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                   : '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。',
               icon: Icons.trending_up_rounded,
               accent: DS.success,
+              tag: '可继续巩固',
             ),
             _DiagnosisCard(
               title: '主要短板',
@@ -1480,6 +1492,7 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                   : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
               icon: Icons.priority_high_rounded,
               accent: Theme.of(context).colorScheme.error,
+              tag: '建议先处理',
             ),
             _DiagnosisCard(
               title: '整体趋势',
@@ -1501,6 +1514,11 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                   : delta >= 0
                       ? DS.brandPrimary
                       : DS.warning,
+              tag: delta == null
+                  ? '等待更多记录'
+                  : delta >= 0
+                      ? '保持当前节奏'
+                      : '建议尽快收口',
             ),
           ];
     return GraphiteCardSurface(
@@ -1572,6 +1590,32 @@ class _ReportDiagnosisStrip extends StatelessWidget {
         return DS.success;
       default:
         return DS.info;
+    }
+  }
+
+  int _severityRank(String severity) {
+    switch (severity) {
+      case 'high':
+        return 0;
+      case 'medium':
+        return 1;
+      case 'low':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  String _decisionTag(String severity) {
+    switch (severity) {
+      case 'high':
+        return '建议先处理';
+      case 'medium':
+        return '建议尽快处理';
+      case 'low':
+        return '可继续巩固';
+      default:
+        return '建议继续观察';
     }
   }
 }
@@ -1854,7 +1898,9 @@ class _ActionSuggestionTile extends StatelessWidget {
       _ => Icons.arrow_forward_rounded,
     };
     return Container(
-      width: 240,
+      constraints: const BoxConstraints(
+        maxWidth: 320,
+      ),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.08),
@@ -1936,7 +1982,9 @@ class _TrendComparisonChip extends StatelessWidget {
       _ => DS.info,
     };
     return Container(
-      width: 220,
+      constraints: const BoxConstraints(
+        maxWidth: 280,
+      ),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.08),
@@ -2400,7 +2448,8 @@ class _AnimatedReportSectionState extends State<_AnimatedReportSection> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(Duration(milliseconds: widget.delay), () {
+    final effectiveDelay = widget.delay > 140 ? 140 : widget.delay;
+    _timer = Timer(Duration(milliseconds: effectiveDelay), () {
       if (!mounted) {
         return;
       }

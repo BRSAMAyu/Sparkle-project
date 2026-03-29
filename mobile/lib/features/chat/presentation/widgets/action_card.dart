@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_result_renderer.dart';
@@ -1636,18 +1637,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final resultPreview = _executionSummaryPreviewData(
       action.data['result_preview'],
     );
-    final replaySteps = (action.data['replay_steps'] as List<dynamic>? ?? const [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final qualityWarnings = (action.data['quality_warnings'] as List<dynamic>? ?? const [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final validationIssues = (action.data['validation_issues'] as List<dynamic>? ?? const [])
-        .map((item) => '$item')
-        .where((item) => item.isNotEmpty)
-        .toList();
+    final replaySteps =
+        (action.data['replay_steps'] as List<dynamic>? ?? const [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+    final qualityWarnings =
+        (action.data['quality_warnings'] as List<dynamic>? ?? const [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+    final validationIssues =
+        (action.data['validation_issues'] as List<dynamic>? ?? const [])
+            .map((item) => '$item')
+            .where((item) => item.isNotEmpty)
+            .toList();
     final validationPassed =
         (action.data['validation_passed'] as num?)?.toInt() ?? 0;
     final validationTotal =
@@ -1672,6 +1676,16 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        OpenClawIdentityStrip(
+          label: 'OpenClaw 执行结果',
+          description: '先看摘要，再按需展开回放、对比和自验证细节',
+          tone: status == 'failed'
+              ? OpenClawVisualTone.offline
+              : status == 'partial'
+                  ? OpenClawVisualTone.attention
+                  : OpenClawVisualTone.connected,
+        ),
+        const SizedBox(height: DS.spacing12),
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing10,
@@ -1782,17 +1796,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             const SizedBox(height: DS.spacing8),
             ...((comparisonSummary['highlights'] as List<dynamic>? ?? const [])
                 .map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.spacing4),
-                    child: Text(
-                      '• $item',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.neutral700,
-                            height: 1.45,
-                          ),
-                    ),
-                  ),
-                )),
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing4),
+                child: Text(
+                  '• $item',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral700,
+                        height: 1.45,
+                      ),
+                ),
+              ),
+            )),
           ],
         ],
         if (replaySteps.isNotEmpty) ...[
@@ -1936,13 +1950,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         Expanded(
                           child: Text(
                             '${item['label'] ?? '检查项'}：${item['detail'] ?? ''}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: DS.neutral700,
-                                  height: 1.45,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.neutral700,
+                                      height: 1.45,
+                                    ),
                           ),
                         ),
                       ],
@@ -2047,6 +2059,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        OpenClawIdentityStrip(
+          label: 'OpenClaw 委派建议',
+          description: '把适合自动执行的工作交给 OpenClaw，必要时再回到任务页审核',
+          tone: executionMode == 'hybrid'
+              ? OpenClawVisualTone.attention
+              : OpenClawVisualTone.active,
+        ),
+        const SizedBox(height: DS.spacing12),
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing10,
@@ -2090,7 +2110,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             if (delegatePreference != null)
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
-                label: '信任 ${(double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)}',
+                label:
+                    '信任 ${(double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)}',
               ),
           ],
         ),

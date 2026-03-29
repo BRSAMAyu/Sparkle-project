@@ -139,6 +139,7 @@ void main() {
       await tester.tap(find.text('设备配对'), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(find.text('设备令牌'), findsOneWidget);
+      expect(find.text('未保存更改'), findsOneWidget);
 
       service.emitRefresh();
       await tester.pump();
@@ -152,6 +153,55 @@ void main() {
       service.emitRefresh();
       await tester.pump();
       expect(find.textContaining('WebSocket 更适合保持持续连接'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'OpenClaw connection panel surfaces pairing countdown and save highlight',
+    (tester) async {
+      final service = _FakeOpenClawConnectionService(
+        config: const OpenClawConnectionConfig(
+          gatewayUrl: 'http://localhost:8080',
+          authToken: 'seed-token',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            openClawConnectionProvider.overrideWith((ref) => service),
+          ],
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            supportedLocales: <Locale>[Locale('zh')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 640,
+                  child: OpenClawConnectionPanel(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('设备配对'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('生成配对码'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('完成配对'), findsWidgets);
+
+      await tester.enterText(find.byType(TextField).at(1), 'device-token-1');
+      await tester.ensureVisible(find.text('完成配对'));
+      await tester.tap(find.text('完成配对'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('保存配置'));
+      await tester.tap(find.text('保存配置'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('配置已保存'), findsWidgets);
     },
   );
 }

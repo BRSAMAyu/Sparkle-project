@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -217,7 +218,6 @@ class _KnowledgeTheaterScreenState
       ),
       body: SparkleConfetti(
         play: _playCelebration,
-        intensity: SparkleCelebrationIntensity.large,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -235,17 +235,114 @@ class _KnowledgeTheaterScreenState
           child: Stack(
             children: [
               SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compactHeight = constraints.maxHeight < 720;
+                    final predictionBody = AnimatedSwitcher(
+                      duration: DS.durationNormal,
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: prediction == null
+                          ? _TheaterIntroState(
+                              key: const ValueKey('theater-intro'),
+                              isLoading: state.isLoading,
+                              latestSnapshot: state.snapshot,
+                              suggestions: simulationState.recommendedSeeds,
+                              error: state.error,
+                              onStartFirstPrediction: () => unawaited(
+                                _generatePrediction(_topicController.text),
+                              ),
+                              onRetry: () => unawaited(
+                                _generatePrediction(_topicController.text),
+                              ),
+                              onChangeTarget: () {
+                                _topicController.clear();
+                                ref
+                                    .read(theaterProvider.notifier)
+                                    .clearError();
+                              },
+                            )
+                          : _PredictionView(
+                              key: ValueKey(prediction.predictionId),
+                              prediction: prediction,
+                              selectedRoute: route,
+                              timeline: timeline,
+                              timelineIndex: timelineIndex,
+                              focusNodeIds: focusNodeIds,
+                              selectedNodeId: _selectedNodeId,
+                              isTimelinePlaying: _isTimelinePlaying,
+                              recommendedRouteId: prediction.recommendedRouteId,
+                              whatIfResult: state.whatIfResult,
+                              snapshot: state.snapshot,
+                              adoptionResult: state.adoptionResult,
+                              accuracySummary: state.accuracySummary,
+                              accuracyTracking: prediction.accuracyTracking,
+                              isLoading: state.isLoading,
+                              isAdopting: state.isAdopting,
+                              isSavingSnapshot: state.isSavingSnapshot,
+                              error: state.error,
+                              onRouteSelected: (routeId) => ref
+                                  .read(theaterProvider.notifier)
+                                  .selectRoute(routeId),
+                              onTimelineSelected: (index) {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.selection,
+                                  ),
+                                );
+                                if (_isTimelinePlaying) {
+                                  _stopTimelinePlayback();
+                                }
+                                ref
+                                    .read(theaterProvider.notifier)
+                                    .setTimelineIndex(index);
+                              },
+                              onToggleTimelinePlayback:
+                                  _toggleTimelinePlayback,
+                              onResetTimelinePlayback: _resetTimelinePlayback,
+                              onAdopt: route == null
+                                  ? null
+                                  : () => unawaited(
+                                        ref
+                                            .read(theaterProvider.notifier)
+                                            .adoptSelectedRouteWithSource(
+                                              sourceChatSessionId: widget
+                                                  .initialSourceChatSessionId,
+                                            ),
+                                      ),
+                              onRunWhatIf: route == null
+                                  ? null
+                                  : (nodeIds) => unawaited(
+                                        ref
+                                            .read(theaterProvider.notifier)
+                                            .runWhatIfForSteps(nodeIds),
+                                      ),
+                              onSaveSnapshot: () => unawaited(
+                                ref.read(theaterProvider.notifier).saveSnapshot(),
+                              ),
+                              onNodeTap: (node) => unawaited(
+                                _handleNodeTap(node, route),
+                              ),
+                              onRecordActual: () => unawaited(
+                                _showActualOutcomeSheet(),
+                              ),
+                              onEdgeLongPress: (edge, globalPosition) =>
+                                  unawaited(
+                                _showEdgeTooltip(edge, globalPosition),
+                              ),
+                            ),
+                    );
+
+                    final contentChildren = <Widget>[
                       if ((widget.initialSourceChatSessionId ?? '')
                           .trim()
                           .isNotEmpty) ...[
                         ChatContinuityBanner(
                           sourceChatSessionId:
                               widget.initialSourceChatSessionId!.trim(),
-                          subtitle: '这次推演承接了你刚才的探索流程。你可以随时回到原对话继续追问路径、风险和具体行动。',
+                          kind: ChatContinuityKind.journey,
+                          subtitle:
+                              '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -262,108 +359,34 @@ class _KnowledgeTheaterScreenState
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: DS.durationNormal,
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          child: prediction == null
-                              ? _TheaterIntroState(
-                                  key: const ValueKey('theater-intro'),
-                                  isLoading: state.isLoading,
-                                  latestSnapshot: state.snapshot,
-                                  suggestions: simulationState.recommendedSeeds,
-                                  error: state.error,
-                                  onStartFirstPrediction: () => unawaited(
-                                    _generatePrediction(_topicController.text),
-                                  ),
-                                  onRetry: () => unawaited(
-                                    _generatePrediction(_topicController.text),
-                                  ),
-                                  onChangeTarget: () {
-                                    _topicController.clear();
-                                    ref
-                                        .read(theaterProvider.notifier)
-                                        .clearError();
-                                  },
-                                )
-                              : _PredictionView(
-                                  key: ValueKey(prediction.predictionId),
-                                  prediction: prediction,
-                                  selectedRoute: route,
-                                  timeline: timeline,
-                                  timelineIndex: timelineIndex,
-                                  focusNodeIds: focusNodeIds,
-                                  selectedNodeId: _selectedNodeId,
-                                  isTimelinePlaying: _isTimelinePlaying,
-                                  recommendedRouteId:
-                                      prediction.recommendedRouteId,
-                                  whatIfResult: state.whatIfResult,
-                                  snapshot: state.snapshot,
-                                  adoptionResult: state.adoptionResult,
-                                  accuracySummary: state.accuracySummary,
-                                  accuracyTracking: prediction.accuracyTracking,
-                                  isLoading: state.isLoading,
-                                  isAdopting: state.isAdopting,
-                                  isSavingSnapshot: state.isSavingSnapshot,
-                                  error: state.error,
-                                  onRouteSelected: (routeId) => ref
-                                      .read(theaterProvider.notifier)
-                                      .selectRoute(routeId),
-                                  onTimelineSelected: (index) {
-                                    unawaited(
-                                      SensoryFeedbackService.emit(
-                                        SensoryFeedbackEvent.selection,
-                                      ),
-                                    );
-                                    if (_isTimelinePlaying) {
-                                      _stopTimelinePlayback();
-                                    }
-                                    ref
-                                        .read(theaterProvider.notifier)
-                                        .setTimelineIndex(index);
-                                  },
-                                  onToggleTimelinePlayback:
-                                      _toggleTimelinePlayback,
-                                  onResetTimelinePlayback:
-                                      _resetTimelinePlayback,
-                                  onAdopt: route == null
-                                      ? null
-                                      : () => unawaited(
-                                            ref
-                                                .read(theaterProvider.notifier)
-                                                .adoptSelectedRouteWithSource(
-                                                  sourceChatSessionId: widget
-                                                      .initialSourceChatSessionId,
-                                                ),
-                                          ),
-                                  onRunWhatIf: route == null
-                                      ? null
-                                      : (nodeIds) => unawaited(
-                                            ref
-                                                .read(theaterProvider.notifier)
-                                                .runWhatIfForSteps(nodeIds),
-                                          ),
-                                  onSaveSnapshot: () => unawaited(
-                                    ref
-                                        .read(theaterProvider.notifier)
-                                        .saveSnapshot(),
-                                  ),
-                                  onNodeTap: (node) => unawaited(
-                                    _handleNodeTap(node, route),
-                                  ),
-                                  onRecordActual: () => unawaited(
-                                    _showActualOutcomeSheet(),
-                                  ),
-                                  onEdgeLongPress: (edge, globalPosition) =>
-                                      unawaited(
-                                    _showEdgeTooltip(edge, globalPosition),
-                                  ),
-                                ),
-                        ),
+                    ];
+
+                    if (compactHeight) {
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          ...contentChildren,
+                          SizedBox(
+                            height: math.max(
+                              420,
+                              constraints.maxHeight - 96,
+                            ),
+                            child: predictionBody,
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          ...contentChildren,
+                          Expanded(child: predictionBody),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
               if (_showCelebration && state.adoptionResult != null)
@@ -937,9 +960,9 @@ class _ComposerCard extends StatelessWidget {
         .toList();
     return MirofishStageHeader(
       icon: Icons.travel_explore_rounded,
-      eyebrow: 'Prediction Theater',
+      eyebrow: '推演决策面板',
       title: '先定目标，再看清多条路径',
-      subtitle: '把一个学习目标交给 AI，剧场会先拆关键节点，再比较路径、风险和日程投入。',
+      subtitle: '先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。',
       metrics: <MirofishStageMetric>[
         MirofishStageMetric(
           label: '当前目标',
@@ -971,36 +994,51 @@ class _ComposerCard extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  textInputAction: TextInputAction.go,
-                  onSubmitted: (_) => onSubmit(),
-                  decoration: InputDecoration(
-                    hintText: '例如：两周内掌握线性代数的特征值部分',
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: scheme.primary,
-                    ),
-                    filled: true,
-                    fillColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 420;
+              final field = TextField(
+                controller: controller,
+                textInputAction: TextInputAction.go,
+                onSubmitted: (_) => onSubmit(),
+                decoration: InputDecoration(
+                  hintText: '例如：两周内掌握线性代数的特征值部分',
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: scheme.primary,
+                  ),
+                  filled: true,
+                  fillColor:
+                      scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              FilledButton.icon(
+              );
+              final submitButton = FilledButton.icon(
                 onPressed: isLoading ? null : onSubmit,
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(isLoading ? '推演中' : '生成'),
-              ),
-            ],
+              );
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    field,
+                    const SizedBox(height: 12),
+                    submitButton,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: field),
+                  const SizedBox(width: 12),
+                  submitButton,
+                ],
+              );
+            },
           ),
           if (suggestions.isNotEmpty) ...[
             const SizedBox(height: 14),
@@ -1267,7 +1305,7 @@ class _PredictionView extends StatelessWidget {
           delay: 0,
           child: MirofishStageHeader(
             icon: Icons.auto_graph_rounded,
-            eyebrow: 'Prediction Summary',
+            eyebrow: '推演决策面板',
             title: prediction.topic,
             subtitle: route == null
                 ? '围绕 ${prediction.targetName}，先看推荐路径、关键风险和知识依赖，再决定采纳哪一种方案。'
@@ -1285,24 +1323,29 @@ class _PredictionView extends StatelessWidget {
                 icon: Icons.star_rounded,
               ),
               MirofishStageMetric(
-                label: '时间跨度',
-                value: '${prediction.horizonDays} 天',
+                label: '预计掌握度',
+                value:
+                    '${(route ?? prediction.paths.firstWhere((item) => item.id == prediction.recommendedRouteId, orElse: () => prediction.paths.first)).estimatedMastery.round()}%',
                 accent: DS.info,
-                icon: Icons.schedule_rounded,
+                icon: Icons.stacked_line_chart_rounded,
               ),
               MirofishStageMetric(
-                label: '图谱规模',
-                value: '${prediction.graphNodes.length} 节点',
+                label: '主要风险',
+                value: _headlineRisk(
+                  route ??
+                      prediction.paths.firstWhere(
+                        (item) => item.id == prediction.recommendedRouteId,
+                        orElse: () => prediction.paths.first,
+                      ),
+                ),
                 accent: DS.warning,
-                icon: Icons.hub_rounded,
+                icon: Icons.warning_amber_rounded,
               ),
             ],
             primaryLabel: route == null ? '查看推荐路径' : '采纳当前路径',
             onPrimaryTap: route == null
                 ? () => onRouteSelected(prediction.recommendedRouteId)
                 : onAdopt,
-            secondaryLabel: '保存快照',
-            onSecondaryTap: onSaveSnapshot,
             accent: DS.brandPrimary,
           ),
         ),
@@ -1680,7 +1723,9 @@ class _SectionEntranceState extends State<_SectionEntrance> {
   void initState() {
     super.initState();
     unawaited(
-      Future<void>.delayed(Duration(milliseconds: widget.delay)).then((_) {
+      Future<void>.delayed(
+        Duration(milliseconds: widget.delay > 140 ? 140 : widget.delay),
+      ).then((_) {
         if (!mounted) {
           return;
         }
@@ -1798,7 +1843,7 @@ class _TimelineSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    currentFrame?.label ?? '当前帧',
+                    currentFrame?.label ?? '当前阶段',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: DS.brandPrimary,
                           fontWeight: FontWeight.w800,
@@ -1818,6 +1863,26 @@ class _TimelineSection extends StatelessWidget {
                           color: DS.textSecondary,
                         ),
                   ),
+                  if (summaryTurn != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '讲到这里',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: DS.textSecondary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      summaryTurn.content,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1864,23 +1929,6 @@ class _TimelineSection extends StatelessWidget {
             ],
           ],
           if (summaryTurn != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                summaryTurn.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.4,
-                    ),
-              ),
-            ),
             const SizedBox(height: 8),
             Text(
               '当前阶段：${currentFrame?.label ?? ''} · ${currentFrame?.activeStepTitle ?? '等待推演'} · ${currentFrame?.compareLabel ?? ''}',
@@ -1965,16 +2013,10 @@ class _RouteSectionState extends State<_RouteSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  '路径对比',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const Spacer(),
-                SegmentedButton<bool>(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 420;
+                final segmentControl = SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment<bool>(
                       value: false,
@@ -1994,8 +2036,38 @@ class _RouteSectionState extends State<_RouteSection> {
                     );
                     setState(() => _compareMode = selection.first);
                   },
-                ),
-              ],
+                );
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '路径对比',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: segmentControl,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Text(
+                      '路径对比',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const Spacer(),
+                    segmentControl,
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             AnimatedSwitcher(
@@ -2058,6 +2130,17 @@ class _RouteSectionState extends State<_RouteSection> {
       );
 }
 
+String _headlineRisk(TheaterPathOption route) {
+  if (route.risks.isEmpty) {
+    return '整体可控';
+  }
+  final firstRisk = route.risks.first.trim();
+  if (firstRisk.isEmpty) {
+    return '需要留意节奏';
+  }
+  return firstRisk;
+}
+
 class _RouteListView extends StatelessWidget {
   const _RouteListView({
     required this.routes,
@@ -2110,33 +2193,50 @@ class _RouteListView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 420;
+                      final titleRow = Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            route.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          if (isRecommended) const _MetricPill(label: '推荐'),
+                        ],
+                      );
+                      final adoptButton = FilledButton(
+                        onPressed: isAdopting ? null : onAdopt,
+                        child: Text(isAdopting ? '采纳中' : '采纳此路径'),
+                      );
+                      if (compact) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Flexible(
-                              child: Text(
-                                route.title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            if (isRecommended) ...[
-                              const SizedBox(width: 8),
-                              const _MetricPill(label: '推荐'),
+                            titleRow,
+                            if (isSelected) ...[
+                              const SizedBox(height: 10),
+                              adoptButton,
                             ],
                           ],
-                        ),
-                      ),
-                      if (isSelected)
-                        FilledButton(
-                          onPressed: isAdopting ? null : onAdopt,
-                          child: Text(isAdopting ? '采纳中' : '采纳此路径'),
-                        ),
-                    ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: titleRow),
+                          if (isSelected) ...[
+                            const SizedBox(width: 12),
+                            adoptButton,
+                          ],
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -2196,10 +2296,11 @@ class _RouteComparePager extends StatelessWidget {
     final currentIndex =
         routes.indexWhere((route) => route.id == selectedRouteId);
     final safeIndex = currentIndex < 0 ? 0 : currentIndex;
+    final compact = MediaQuery.sizeOf(context).width < 420;
     return Column(
       children: [
         SizedBox(
-          height: 320,
+          height: compact ? 460 : 320,
           child: PageView.builder(
             controller: pageController,
             itemCount: routes.length,
@@ -2221,15 +2322,8 @@ class _RouteComparePager extends StatelessWidget {
                         Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _RouteFlowChain(steps: route.steps),
-                      ),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        width: 150,
-                        child: Column(
+                  child: compact
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -2245,29 +2339,38 @@ class _RouteComparePager extends StatelessWidget {
                               const SizedBox(height: 6),
                               const _MetricPill(label: '推荐基线'),
                             ],
-                            const SizedBox(height: 10),
-                            _RouteMetricRow(
-                              label: '完成率',
-                              value:
-                                  '${(route.estimatedCompletionRate * 100).round()}%',
+                            const SizedBox(height: 12),
+                            Expanded(
+                              child: _RouteFlowChain(steps: route.steps),
                             ),
-                            _RouteMetricRow(
-                              label: '掌握度',
-                              value: '${route.estimatedMastery.round()}%',
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 12,
+                              children: [
+                                _RouteMetricRow(
+                                  label: '完成率',
+                                  value:
+                                      '${(route.estimatedCompletionRate * 100).round()}%',
+                                ),
+                                _RouteMetricRow(
+                                  label: '掌握度',
+                                  value: '${route.estimatedMastery.round()}%',
+                                ),
+                                _RouteMetricRow(
+                                  label: '日均时间',
+                                  value: '${route.dailyMinutes} 分钟',
+                                ),
+                                _RouteMetricRow(
+                                  label: '风险数',
+                                  value: '${route.risks.length}',
+                                ),
+                                _RouteMetricRow(
+                                  label: '综合分',
+                                  value: '${route.routeScore.round()}',
+                                ),
+                              ],
                             ),
-                            _RouteMetricRow(
-                              label: '日均时间',
-                              value: '${route.dailyMinutes} 分钟',
-                            ),
-                            _RouteMetricRow(
-                              label: '风险数',
-                              value: '${route.risks.length}',
-                            ),
-                            _RouteMetricRow(
-                              label: '综合分',
-                              value: '${route.routeScore.round()}',
-                            ),
-                            const Spacer(),
+                            const SizedBox(height: 12),
                             FilledButton(
                               onPressed: safeIndex == index && !isAdopting
                                   ? onAdopt
@@ -2279,10 +2382,69 @@ class _RouteComparePager extends StatelessWidget {
                               ),
                             ),
                           ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: _RouteFlowChain(steps: route.steps),
+                            ),
+                            const SizedBox(width: 16),
+                            SizedBox(
+                              width: 150,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    route.title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  if (isRecommended) ...[
+                                    const SizedBox(height: 6),
+                                    const _MetricPill(label: '推荐基线'),
+                                  ],
+                                  const SizedBox(height: 10),
+                                  _RouteMetricRow(
+                                    label: '完成率',
+                                    value:
+                                        '${(route.estimatedCompletionRate * 100).round()}%',
+                                  ),
+                                  _RouteMetricRow(
+                                    label: '掌握度',
+                                    value: '${route.estimatedMastery.round()}%',
+                                  ),
+                                  _RouteMetricRow(
+                                    label: '日均时间',
+                                    value: '${route.dailyMinutes} 分钟',
+                                  ),
+                                  _RouteMetricRow(
+                                    label: '风险数',
+                                    value: '${route.risks.length}',
+                                  ),
+                                  _RouteMetricRow(
+                                    label: '综合分',
+                                    value: '${route.routeScore.round()}',
+                                  ),
+                                  const Spacer(),
+                                  FilledButton(
+                                    onPressed: safeIndex == index && !isAdopting
+                                        ? onAdopt
+                                        : () => onSelect(route.id),
+                                    child: Text(
+                                      safeIndex == index
+                                          ? (isAdopting ? '采纳中' : '采纳此路径')
+                                          : '切换到此路径',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               );
             },
@@ -2361,6 +2523,8 @@ class _RouteFlowChain extends StatelessWidget {
                     children: [
                       Text(
                         step.nodeName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -2394,27 +2558,56 @@ class _RouteMetricRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 420;
+    final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: DS.textSecondary,
+        );
+    final valueStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        );
+    if (compact) {
+      return Container(
+        constraints: const BoxConstraints(minWidth: 108, maxWidth: 160),
         padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                    ),
-              ),
-            ),
+            Text(label, style: labelStyle),
+            const SizedBox(height: 4),
             Text(
               value,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: valueStyle,
             ),
           ],
         ),
       );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: labelStyle,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: valueStyle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MetricPill extends StatelessWidget {
@@ -2513,40 +2706,48 @@ class _RouteComparisonCard extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 14),
-          Table(
-            columnWidths: const <int, TableColumnWidth>{
-              0: FlexColumnWidth(1.15),
-              1: FlexColumnWidth(),
-              2: FlexColumnWidth(),
-            },
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            children: [
-              _comparisonRow(
-                context,
-                '指标',
-                selectedRoute.title,
-                compareRoute.title,
-                header: true,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: MediaQuery.sizeOf(context).width - 64,
               ),
-              _comparisonRow(
-                context,
-                '预计掌握度',
-                '${selectedRoute.estimatedMastery.round()}%',
-                '${compareRoute.estimatedMastery.round()}%',
+              child: Table(
+                columnWidths: const <int, TableColumnWidth>{
+                  0: FlexColumnWidth(1.15),
+                  1: FlexColumnWidth(),
+                  2: FlexColumnWidth(),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  _comparisonRow(
+                    context,
+                    '指标',
+                    selectedRoute.title,
+                    compareRoute.title,
+                    header: true,
+                  ),
+                  _comparisonRow(
+                    context,
+                    '预计掌握度',
+                    '${selectedRoute.estimatedMastery.round()}%',
+                    '${compareRoute.estimatedMastery.round()}%',
+                  ),
+                  _comparisonRow(
+                    context,
+                    '时间投入',
+                    '${selectedRoute.dailyMinutes} 分/天',
+                    '${compareRoute.dailyMinutes} 分/天',
+                  ),
+                  _comparisonRow(
+                    context,
+                    '风险等级',
+                    _routeRiskLabel(selectedRoute),
+                    _routeRiskLabel(compareRoute),
+                  ),
+                ],
               ),
-              _comparisonRow(
-                context,
-                '时间投入',
-                '${selectedRoute.dailyMinutes} 分/天',
-                '${compareRoute.dailyMinutes} 分/天',
-              ),
-              _comparisonRow(
-                context,
-                '风险等级',
-                _routeRiskLabel(selectedRoute),
-                _routeRiskLabel(compareRoute),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -3060,36 +3261,49 @@ class _SnapshotSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '保存快照',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    snapshot == null
-                        ? '把当前推演保存下来，稍后可以继续回看。'
-                        : '已保存：${snapshot!.title}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.tonal(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 420;
+            final button = FilledButton.tonal(
               onPressed: isSaving ? null : onSave,
               child: Text(isSaving ? '保存中' : '保存'),
-            ),
-          ],
+            );
+            final content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '保存快照',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  snapshot == null ? '把当前推演保存下来，稍后可以继续回看。' : '已保存：${snapshot!.title}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                ),
+              ],
+            );
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  content,
+                  const SizedBox(height: 12),
+                  button,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: 12),
+                button,
+              ],
+            );
+          },
         ),
       );
 }
@@ -3263,22 +3477,19 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 18),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => context.push(
-                            PlanRoutes.planDetail.replaceFirst(':id', planId),
-                          ),
-                          child: const Text('查看计划'),
+                      FilledButton(
+                        onPressed: () => context.push(
+                          PlanRoutes.planDetail.replaceFirst(':id', planId),
                         ),
+                        child: const Text('查看计划'),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onDismiss,
-                          child: const Text('继续探索'),
-                        ),
+                      OutlinedButton(
+                        onPressed: onDismiss,
+                        child: const Text('继续探索'),
                       ),
                     ],
                   ),

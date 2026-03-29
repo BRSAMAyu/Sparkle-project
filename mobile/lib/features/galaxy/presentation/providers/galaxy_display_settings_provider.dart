@@ -16,6 +16,10 @@ const double kGalaxyLinkForceMin = 0.02;
 const double kGalaxyLinkForceMax = 0.09;
 const double kGalaxyLinkDistanceMin = 84;
 const double kGalaxyLinkDistanceMax = 176;
+const double kGalaxySectorAffinityMin = 0.0;
+const double kGalaxySectorAffinityMax = 1.0;
+const double kGalaxyRevealTrailStrengthMin = 0.0;
+const double kGalaxyRevealTrailStrengthMax = 1.0;
 const double kGalaxyReplaySpeedMin = 0.4;
 const double kGalaxyReplaySpeedMax = 2.4;
 
@@ -29,6 +33,8 @@ class GalaxyDisplaySettings {
     this.repelForce = 9600,
     this.linkForce = 0.056,
     this.linkDistance = 116,
+    this.sectorAffinity = 0.28,
+    this.revealTrailStrength = 0.72,
     this.replaySpeed = 1.0,
   });
 
@@ -39,6 +45,8 @@ class GalaxyDisplaySettings {
   final double repelForce;
   final double linkForce;
   final double linkDistance;
+  final double sectorAffinity;
+  final double revealTrailStrength;
   final double replaySpeed;
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +57,8 @@ class GalaxyDisplaySettings {
         'repelForce': repelForce,
         'linkForce': linkForce,
         'linkDistance': linkDistance,
+        'sectorAffinity': sectorAffinity,
+        'revealTrailStrength': revealTrailStrength,
         'replaySpeed': replaySpeed,
       };
 
@@ -97,6 +107,18 @@ class GalaxyDisplaySettings {
           min: kGalaxyLinkDistanceMin,
           max: kGalaxyLinkDistanceMax,
         ),
+        sectorAffinity: _readDouble(
+          json['sectorAffinity'],
+          fallback: const GalaxyDisplaySettings().sectorAffinity,
+          min: kGalaxySectorAffinityMin,
+          max: kGalaxySectorAffinityMax,
+        ),
+        revealTrailStrength: _readDouble(
+          json['revealTrailStrength'],
+          fallback: const GalaxyDisplaySettings().revealTrailStrength,
+          min: kGalaxyRevealTrailStrengthMin,
+          max: kGalaxyRevealTrailStrengthMax,
+        ),
         replaySpeed: _readDouble(
           json['replaySpeed'],
           fallback: const GalaxyDisplaySettings().replaySpeed,
@@ -117,6 +139,8 @@ class GalaxyDisplaySettings {
     double? repelForce,
     double? linkForce,
     double? linkDistance,
+    double? sectorAffinity,
+    double? revealTrailStrength,
     double? replaySpeed,
   }) =>
       GalaxyDisplaySettings(
@@ -127,6 +151,8 @@ class GalaxyDisplaySettings {
         repelForce: repelForce ?? this.repelForce,
         linkForce: linkForce ?? this.linkForce,
         linkDistance: linkDistance ?? this.linkDistance,
+        sectorAffinity: sectorAffinity ?? this.sectorAffinity,
+        revealTrailStrength: revealTrailStrength ?? this.revealTrailStrength,
         replaySpeed: replaySpeed ?? this.replaySpeed,
       );
 
@@ -172,6 +198,8 @@ class GalaxyDisplaySettings {
           repelForce == other.repelForce &&
           linkForce == other.linkForce &&
           linkDistance == other.linkDistance &&
+          sectorAffinity == other.sectorAffinity &&
+          revealTrailStrength == other.revealTrailStrength &&
           replaySpeed == other.replaySpeed;
 
   @override
@@ -183,6 +211,8 @@ class GalaxyDisplaySettings {
         repelForce,
         linkForce,
         linkDistance,
+        sectorAffinity,
+        revealTrailStrength,
         replaySpeed,
       );
 }

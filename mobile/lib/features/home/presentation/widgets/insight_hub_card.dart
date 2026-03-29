@@ -378,10 +378,10 @@ class _CompactInsightHubCard extends ConsumerWidget {
             ),
             SizedBox(height: dense ? DS.spacing8 : DS.spacing10),
             Expanded(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _CompactInsightAction(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final actions = <Widget>[
+                    _CompactInsightAction(
                       title: '仿真',
                       subtitle: _simulationSubtitle(
                         simulationState,
@@ -407,10 +407,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                         unawaited(context.push(location));
                       },
                     ),
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: _CompactInsightAction(
+                    _CompactInsightAction(
                       title: '推演',
                       subtitle: _theaterSubtitle(latestTheater),
                       icon: Icons.auto_graph_rounded,
@@ -426,10 +423,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                         unawaited(context.push(location));
                       },
                     ),
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: _CompactInsightAction(
+                    _CompactInsightAction(
                       title: '报告',
                       subtitle: _reportSubtitle(latestReportPayload),
                       icon: Icons.article_outlined,
@@ -441,8 +435,34 @@ class _CompactInsightHubCard extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ];
+                  final useHorizontalStrip =
+                      dense || constraints.maxWidth < 420;
+                  if (useHorizontalStrip) {
+                    final itemWidth =
+                        (constraints.maxWidth * 0.48).clamp(108.0, 152.0);
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: actions.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: DS.spacing8),
+                      itemBuilder: (context, index) => SizedBox(
+                        width: itemWidth,
+                        child: actions[index],
+                      ),
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: actions[0]),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(child: actions[1]),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(child: actions[2]),
+                    ],
+                  );
+                },
               ),
             ),
             if (hasRefreshError) ...[
@@ -568,36 +588,38 @@ class _InsightHubQuickAction extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
-          child: Ink(
-            width: 220,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: accent.withValues(alpha: 0.14)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 18, color: accent),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.35,
-                      ),
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Ink(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: accent.withValues(alpha: 0.14)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 18, color: accent),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.35,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

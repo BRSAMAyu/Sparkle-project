@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 import 'dart:ui';
 
@@ -5,6 +6,18 @@ import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/services/quad_tree.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+
+class GalaxyLayoutSolverResult {
+  const GalaxyLayoutSolverResult({
+    required this.positions,
+    required this.componentAnchors,
+    required this.settled,
+  });
+
+  final Map<String, Offset> positions;
+  final Map<String, Offset> componentAnchors;
+  final bool settled;
+}
 
 /// 高性能星域布局引擎
 ///
@@ -24,184 +37,296 @@ class GalaxyLayoutEngine {
   static const double canvasPadding = 400.0;
   static const double canvasSize = outerRadius * 2 + canvasPadding * 2;
   static const double canvasCenter = canvasSize / 2;
+  static const double _goldenAngle = 2.39996322972865332;
 
   /// 计算初始布局（快速，在主线程）
   static Map<String, Offset> calculateInitialLayout({
     required List<GalaxyNodeModel> nodes,
     required List<GalaxyEdgeModel> edges,
     Map<String, Offset>? existingPositions,
+    double sectorAffinity = 0.28,
+    int refinementIterations = 42,
   }) {
-    final positions = <String, Offset>{};
-    final random = Random(42);
-
-    // 1. 建立父子索引和星域分组
-    final childrenMap = <String, List<String>>{};
-    final sectorRoots = <SectorEnum, List<GalaxyNodeModel>>{};
-
-    // 初始化 map
-    for (final sector in SectorEnum.values) {
-      sectorRoots[sector] = [];
+    if (nodes.isEmpty) {
+      return const <String, Offset>{};
     }
+
+    final stablePositions = existingPositions ?? const <String, Offset>{};
+    final adjacency = _buildAdjacency(nodes, edges);
+    final sectorAnchors = _buildSectorAnchors();
+    final positions = <String, Offset>{};
+    final nodesBySector = <SectorEnum, List<GalaxyNodeModel>>{};
+    final sectorPlacementIndex = <SectorEnum, int>{};
 
     for (final node in nodes) {
-      if (node.parentId != null) {
-        childrenMap.putIfAbsent(node.parentId!, () => []);
-        childrenMap[node.parentId]!.add(node.id);
-      } else {
-        // 没有父节点的作为该星域的根节点
-        sectorRoots[node.sector]?.add(node);
-      }
+      nodesBySector
+          .putIfAbsent(node.sector, () => <GalaxyNodeModel>[])
+          .add(node);
     }
 
-    // 2. 布局星域根节点 (Sector Roots)
-    for (final entry in sectorRoots.entries) {
+    for (final entry in nodesBySector.entries) {
       final sector = entry.key;
-      final roots = entry.value;
-      if (roots.isEmpty) continue;
+      final sectorNodes = entry.value
+        ..sort((left, right) {
+          final degreeCompare = (adjacency[right.id]?.length ?? 0)
+              .compareTo(adjacency[left.id]?.length ?? 0);
+          if (degreeCompare != 0) {
+            return degreeCompare;
+          }
+          final importanceCompare = right.importance.compareTo(left.importance);
+          if (importanceCompare != 0) {
+            return importanceCompare;
+          }
+          final studyCompare = right.studyCount.compareTo(left.studyCount);
+          if (studyCompare != 0) {
+            return studyCompare;
+          }
+          return left.name.compareTo(right.name);
+        });
 
-      final style = SectorConfig.getStyle(sector);
-      // 星域中心角度
-      final centerAngleRad =
-          (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
-
-      // 将多个根节点分布在扇形中心附近
-      for (var i = 0; i < roots.length; i++) {
-        final node = roots[i];
-
-        // 优先复用现有位置
-        if (existingPositions != null &&
-            existingPositions.containsKey(node.id)) {
-          positions[node.id] = existingPositions[node.id]!;
-          _layoutChildrenRecursive(
-            node.id,
-            positions[node.id]!,
-            childrenMap,
-            positions,
-            nodes,
-            style,
-            random,
-            existingPositions,
-          );
+      for (final node in sectorNodes) {
+        final stable = stablePositions[node.id];
+        if (stable != null) {
+          positions[node.id] = stable;
           continue;
         }
-
-        // 计算根节点位置 - 增加随机散布范围
-        var angle = centerAngleRad;
-        if (roots.length > 1) {
-          final spread = (style.sweepAngle * 0.6) * pi / 180; // 更宽的分布
-          final step = spread / (roots.length + 1);
-          angle = centerAngleRad - spread / 2 + step * (i + 1);
-        }
-
-        // 增加径向随机性
-        final radius = sectorRootRadius + (random.nextDouble() - 0.5) * 150;
-        final pos = Offset(radius * cos(angle), radius * sin(angle));
-
-        positions[node.id] = pos;
-
-        // 递归布局子节点
-        _layoutChildrenRecursive(
-          node.id,
-          pos,
-          childrenMap,
-          positions,
-          nodes,
-          style,
-          random,
-          existingPositions,
+        final index = sectorPlacementIndex.update(
+          sector,
+          (value) => value + 1,
+          ifAbsent: () => 0,
+        );
+        positions[node.id] = _seedPhyllotaxisPosition(
+          node: node,
+          index: index,
+          degree: adjacency[node.id]?.length ?? 0,
+          sectorAnchor: sectorAnchors[sector] ?? Offset.zero,
         );
       }
     }
 
-    // 3. 处理孤立节点（如果有）或未处理的节点（可能是循环依赖导致的）
-    for (final node in nodes) {
-      if (!positions.containsKey(node.id)) {
-        final style = SectorConfig.getStyle(node.sector);
-        final centerAngleRad =
-            (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
-        final radius = sectorRootRadius * 2.0 + random.nextDouble() * 200;
-        positions[node.id] =
-            Offset(radius * cos(centerAngleRad), radius * sin(centerAngleRad));
-      }
-    }
-
-    // 4. 碰撞检测和松弛
-    _resolveOverlaps(positions, nodes);
-
+    _solveHybridLayout(
+      positions: positions,
+      nodes: nodes,
+      edges: edges,
+      adjacency: adjacency,
+      sectorAnchors: sectorAnchors,
+      sectorAffinity: sectorAffinity,
+      iterations: refinementIterations,
+      memoryAnchors: stablePositions,
+    );
+    _resolveOverlaps(
+      positions,
+      nodes,
+      pinnedNodeIds: stablePositions.keys.toSet(),
+    );
+    _clampToUniverse(positions);
     return positions;
   }
 
-  /// 递归布局子节点
-  static void _layoutChildrenRecursive(
-    String parentId,
-    Offset parentPos,
-    Map<String, List<String>> childrenMap,
-    Map<String, Offset> positions,
-    List<GalaxyNodeModel> allNodes,
-    SectorStyle style,
-    Random random,
-    Map<String, Offset>? existingPositions,
+  static Map<String, Set<String>> _buildAdjacency(
+    List<GalaxyNodeModel> nodes,
+    List<GalaxyEdgeModel> edges,
   ) {
-    final childrenIds = childrenMap[parentId];
-    if (childrenIds == null || childrenIds.isEmpty) return;
-
-    // 获取子节点对象
-    final children = allNodes.where((n) => childrenIds.contains(n.id)).toList();
-    // 按重要性排序
-    children.sort((a, b) => b.importance.compareTo(a.importance));
-
-    // 父节点到中心的角度
-    final parentAngle = atan2(parentPos.dy, parentPos.dx);
-    final parentDist = parentPos.distance;
-
-    // 扇形分布范围 - 随距离增加而减小
-    var spreadAngle = pi / 2.5; // 72度 - 初始更宽
-    if (parentDist > 800) spreadAngle = pi / 4;
-
-    for (var i = 0; i < children.length; i++) {
-      final child = children[i];
-
-      if (existingPositions != null &&
-          existingPositions.containsKey(child.id)) {
-        positions[child.id] = existingPositions[child.id]!;
-        _layoutChildrenRecursive(child.id, positions[child.id]!, childrenMap,
-            positions, allNodes, style, random, existingPositions,);
-        continue;
-      }
-
-      // 计算位置 - 增加基础间距
-      // 基础距离：根据重要性递减，但整体增大
-      final distStep = 120.0 + (5 - child.importance) * 30.0;
-      final childDist = parentDist + distStep;
-
-      // 角度偏移
-      // 将子节点分布在父节点向外的扇形区域内
-      double angleOffset = 0;
-      if (children.length > 1) {
-        angleOffset =
-            (i - (children.length - 1) / 2) * (spreadAngle / children.length);
-      }
-      // 添加更多随机扰动以打破人工感
-      angleOffset += (random.nextDouble() - 0.5) * 0.2;
-
-      final childAngle = parentAngle + angleOffset;
-
-      final pos =
-          Offset(childDist * cos(childAngle), childDist * sin(childAngle));
-
-      positions[child.id] = pos;
-
-      // 递归
-      _layoutChildrenRecursive(child.id, pos, childrenMap, positions, allNodes,
-          style, random, existingPositions,);
+    final adjacency = {
+      for (final node in nodes) node.id: <String>{},
+    };
+    for (final edge in edges) {
+      adjacency.putIfAbsent(edge.sourceId, () => <String>{}).add(edge.targetId);
+      adjacency.putIfAbsent(edge.targetId, () => <String>{}).add(edge.sourceId);
     }
+    return adjacency;
+  }
+
+  static Map<SectorEnum, Offset> _buildSectorAnchors() => {
+        for (final sector in SectorEnum.values)
+          sector: () {
+            final style = SectorConfig.getStyle(sector);
+            final angle =
+                (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
+            return Offset(
+              sectorRootRadius * cos(angle),
+              sectorRootRadius * sin(angle),
+            );
+          }(),
+      };
+
+  static Offset _seedPhyllotaxisPosition({
+    required GalaxyNodeModel node,
+    required int index,
+    required int degree,
+    required Offset sectorAnchor,
+  }) {
+    final orbitAngle =
+        _goldenAngle * (index + 1) + _stableJitter(node.id) * 0.6;
+    final orbitRadius = 46 +
+        sqrt(index + 1) * minNodeSpacing * 0.84 +
+        (5 - node.importance) * 8;
+    final hubLift = degree * 7.0;
+    final radial = sectorAnchor.distance == 0
+        ? const Offset(0, -1)
+        : sectorAnchor / sectorAnchor.distance;
+    final tangent = Offset(-radial.dy, radial.dx);
+    final orbitOffset = radial * (hubLift * 0.3) +
+        tangent * sin(orbitAngle) * orbitRadius * 0.34 +
+        Offset(cos(orbitAngle), sin(orbitAngle)) * orbitRadius;
+    return sectorAnchor + orbitOffset;
+  }
+
+  static void _solveHybridLayout({
+    required Map<String, Offset> positions,
+    required List<GalaxyNodeModel> nodes,
+    required List<GalaxyEdgeModel> edges,
+    required Map<String, Set<String>> adjacency,
+    required Map<SectorEnum, Offset> sectorAnchors,
+    required double sectorAffinity,
+    required int iterations,
+    required Map<String, Offset> memoryAnchors,
+  }) {
+    final velocities = <String, Offset>{
+      for (final node in nodes) node.id: Offset.zero,
+    };
+    final nodeById = {
+      for (final node in nodes) node.id: node,
+    };
+    final edgeStrengths = <String, double>{};
+    for (final edge in edges) {
+      final key = _edgeKey(edge.sourceId, edge.targetId);
+      final current = edgeStrengths[key] ?? 0;
+      edgeStrengths[key] = max(current, 0.85 + edge.strength * 0.75);
+    }
+
+    var temperature = 1.0;
+    for (var iteration = 0; iteration < iterations; iteration++) {
+      for (final node in nodes) {
+        final memoryAnchor = memoryAnchors[node.id];
+        if (memoryAnchor != null) {
+          positions[node.id] = memoryAnchor;
+          velocities[node.id] = Offset.zero;
+          continue;
+        }
+        final position = positions[node.id] ?? Offset.zero;
+        var force = Offset.zero;
+        final nodeDegree = adjacency[node.id]?.length ?? 0;
+
+        for (final other in nodes) {
+          if (other.id == node.id) {
+            continue;
+          }
+          final otherPosition = positions[other.id] ?? Offset.zero;
+          final delta = position - otherPosition;
+          final distance = max(delta.distance, 1.0);
+          final direction = delta / distance;
+          final combinedRadius = minNodeSpacing * 0.45 +
+              node.radius +
+              other.radius +
+              (nodeDegree + (adjacency[other.id]?.length ?? 0)) * 2.2;
+          final repulsion = 11000 / (distance * distance);
+          force += direction * repulsion;
+          if (distance < combinedRadius) {
+            force += direction * (combinedRadius - distance) * 1.4;
+          }
+        }
+
+        for (final neighborId in adjacency[node.id] ?? const <String>{}) {
+          final neighbor = nodeById[neighborId];
+          final neighborPosition = positions[neighborId];
+          if (neighbor == null || neighborPosition == null) {
+            continue;
+          }
+          final delta = neighborPosition - position;
+          final distance = max(delta.distance, 1.0);
+          final direction = delta / distance;
+          final strength = edgeStrengths[_edgeKey(node.id, neighborId)] ?? 1.0;
+          final targetDistance = (112 +
+                  (5 - min(node.importance, neighbor.importance)) * 12 -
+                  strength * 10)
+              .clamp(88.0, 156.0);
+          force += direction * (distance - targetDistance) * 0.045 * strength;
+        }
+
+        final sectorAnchor = sectorAnchors[node.sector] ?? Offset.zero;
+        force += (sectorAnchor - position) * (0.012 + sectorAffinity * 0.016);
+        force += Offset(-position.dx, -position.dy) * 0.0012;
+
+        final sectorCorrection = _softSectorCorrection(
+          node: node,
+          position: position,
+        );
+        force += sectorCorrection * (0.10 + sectorAffinity * 0.22);
+
+        if (position.distance > outerRadius * 0.9) {
+          force += Offset(-position.dx, -position.dy) * 0.0048;
+        }
+
+        var velocity =
+            (velocities[node.id] ?? Offset.zero) + force * temperature;
+        velocity *= 0.82;
+        final maxStep = 18.0 * temperature + 3;
+        if (velocity.distance > maxStep) {
+          velocity = velocity / velocity.distance * maxStep;
+        }
+
+        positions[node.id] = position + velocity;
+        velocities[node.id] = velocity;
+      }
+      temperature *= 0.972;
+    }
+  }
+
+  static Offset _softSectorCorrection({
+    required GalaxyNodeModel node,
+    required Offset position,
+  }) {
+    if (position.distance <= 1) {
+      return Offset.zero;
+    }
+    final style = SectorConfig.getStyle(node.sector);
+    final centerAngle =
+        (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
+    final currentAngle = atan2(position.dy, position.dx);
+    final delta = _wrapAngle(centerAngle - currentAngle);
+    final tangent = Offset(-sin(currentAngle), cos(currentAngle));
+    return tangent * delta;
+  }
+
+  static double _wrapAngle(double angle) {
+    var normalized = angle;
+    while (normalized > pi) {
+      normalized -= 2 * pi;
+    }
+    while (normalized < -pi) {
+      normalized += 2 * pi;
+    }
+    return normalized;
+  }
+
+  static double _stableJitter(String seed) {
+    final hash = seed.hashCode & 0x7fffffff;
+    return (hash % 1000) / 1000;
+  }
+
+  static String _edgeKey(String sourceId, String targetId) =>
+      sourceId.compareTo(targetId) <= 0
+          ? '$sourceId::$targetId'
+          : '$targetId::$sourceId';
+
+  static void _clampToUniverse(Map<String, Offset> positions) {
+    positions.updateAll((_, position) {
+      final distance = position.distance;
+      if (distance <= outerRadius) {
+        return position;
+      }
+      final safeDistance = distance == 0 ? 1.0 : distance;
+      return (position / safeDistance) * outerRadius;
+    });
   }
 
   /// 解决节点重叠 - 使用四叉树优化碰撞检测
   static void _resolveOverlaps(
     Map<String, Offset> positions,
-    List<GalaxyNodeModel> nodes,
-  ) {
+    List<GalaxyNodeModel> nodes, {
+    Set<String> pinnedNodeIds = const <String>{},
+  }) {
     const maxIterations = 50;
     const pushForce = 0.8;
 
@@ -227,10 +352,20 @@ class GalaxyLayoutEngine {
               hasOverlap = true;
               final overlap = minDist - dist;
               final direction = Offset(delta.dx / dist, delta.dy / dist);
-              final push = direction * overlap * pushForce * 0.5;
-
-              positions[nodeA.id] = posA + push;
-              positions[nodeB.id] = posB - push;
+              final aPinned = pinnedNodeIds.contains(nodeA.id);
+              final bPinned = pinnedNodeIds.contains(nodeB.id);
+              if (aPinned && bPinned) {
+                continue;
+              }
+              final push = direction * overlap * pushForce;
+              if (aPinned) {
+                positions[nodeB.id] = posB - push;
+              } else if (bPinned) {
+                positions[nodeA.id] = posA + push;
+              } else {
+                positions[nodeA.id] = posA + push * 0.5;
+                positions[nodeB.id] = posB - push * 0.5;
+              }
             }
           }
         }
@@ -296,10 +431,20 @@ class GalaxyLayoutEngine {
             hasOverlap = true;
             final overlap = minDist - dist;
             final direction = Offset(delta.dx / dist, delta.dy / dist);
-            final push = direction * overlap * pushForce * 0.5;
-
-            positions[node.id] = posA + push;
-            positions[neighbor.id] = posB - push;
+            final aPinned = pinnedNodeIds.contains(node.id);
+            final bPinned = pinnedNodeIds.contains(neighbor.id);
+            if (aPinned && bPinned) {
+              continue;
+            }
+            final push = direction * overlap * pushForce;
+            if (aPinned) {
+              positions[neighbor.id] = posB - push;
+            } else if (bPinned) {
+              positions[node.id] = posA + push;
+            } else {
+              positions[node.id] = posA + push * 0.5;
+              positions[neighbor.id] = posB - push * 0.5;
+            }
           }
         }
       }
@@ -329,10 +474,12 @@ class _LayoutNode implements QuadTreeItem {
 /// GalaxyLayoutEngine的扩展方法
 extension GalaxyLayoutEngineAsync on GalaxyLayoutEngine {
   /// 在 Isolate 中进行力导向优化
-  static Future<Map<String, Offset>> optimizeLayoutAsync({
+  static Future<GalaxyLayoutSolverResult> optimizeLayoutAsync({
     required List<GalaxyNodeModel> nodes,
     required List<GalaxyEdgeModel> edges,
     required Map<String, Offset> initialPositions,
+    double sectorAffinity = 0.28,
+    int iterations = 160,
   }) async {
     final data = _LayoutOptimizationData(
       nodes: nodes
@@ -355,9 +502,51 @@ extension GalaxyLayoutEngineAsync on GalaxyLayoutEngine {
           )
           .toList(),
       initialPositions: initialPositions,
+      sectorAffinity: sectorAffinity,
+      iterations: iterations,
     );
 
-    return compute(_forceDirectedOptimization, data);
+    final optimizedPositions = await compute(_forceDirectedOptimization, data);
+    return GalaxyLayoutSolverResult(
+      positions: optimizedPositions,
+      componentAnchors: _componentAnchorsFor(optimizedPositions, nodes, edges),
+      settled: true,
+    );
+  }
+
+  static Map<String, Offset> _componentAnchorsFor(
+    Map<String, Offset> positions,
+    List<GalaxyNodeModel> nodes,
+    List<GalaxyEdgeModel> edges,
+  ) {
+    final adjacency = GalaxyLayoutEngine._buildAdjacency(nodes, edges);
+    final visited = <String>{};
+    final anchors = <String, Offset>{};
+
+    for (final node in nodes) {
+      if (!visited.add(node.id)) {
+        continue;
+      }
+      final componentIds = <String>{node.id};
+      final queue = Queue<String>()..add(node.id);
+      while (queue.isNotEmpty) {
+        final current = queue.removeFirst();
+        for (final neighborId in adjacency[current] ?? const <String>{}) {
+          if (visited.add(neighborId)) {
+            componentIds.add(neighborId);
+            queue.add(neighborId);
+          }
+        }
+      }
+
+      final center = componentIds.fold<Offset>(
+            Offset.zero,
+            (sum, nodeId) => sum + (positions[nodeId] ?? Offset.zero),
+          ) /
+          componentIds.length.toDouble();
+      anchors[node.id] = center;
+    }
+    return anchors;
   }
 }
 
@@ -393,201 +582,57 @@ class _LayoutOptimizationData {
     required this.nodes,
     required this.edges,
     required this.initialPositions,
+    required this.sectorAffinity,
+    required this.iterations,
   });
   final List<_SimpleNode> nodes;
   final List<_SimpleEdge> edges;
   final Map<String, Offset> initialPositions;
+  final double sectorAffinity;
+  final int iterations;
 }
 
 /// 力导向布局优化（在 Isolate 中运行）
 Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
-  final nodes = data.nodes;
-  final edges = data.edges;
+  final nodes = data.nodes
+      .map<GalaxyNodeModel>(
+        (node) => GalaxyNodeModel(
+          id: node.id,
+          name: node.id,
+          sector: node.sector,
+          importance: node.importance,
+          parentId: node.parentId,
+          isUnlocked: true,
+          masteryScore: 0,
+        ),
+      )
+      .toList(growable: false);
+  final edges = data.edges
+      .map<GalaxyEdgeModel>(
+        (edge) => GalaxyEdgeModel(
+          id: '${edge.sourceId}-${edge.targetId}',
+          sourceId: edge.sourceId,
+          targetId: edge.targetId,
+          strength: edge.strength,
+        ),
+      )
+      .toList(growable: false);
   final positions = Map<String, Offset>.from(data.initialPositions);
-
-  if (nodes.isEmpty) return positions;
-
-  // 优化参数 - 针对分散布局调整
-  const iterations = 150; // 更多迭代次数以达到平衡
-  const repulsionStrength = 8000.0; // 极强的斥力，推开节点
-  const edgeAttractionStrength = 0.02; // 很弱的引力，允许边拉长
-  const parentAttractionStrength = 0.03;
-  const minDistance = 300.0; // 斥力作用范围显著增大
-  const maxDisplacement = 50.0; // 允许更大的单步位移
-  const damping = 0.88;
-  const coolingFactor = 0.96; // 冷却稍慢
-
-  // 构建连接图
-  final nodeEdges = <String, List<_SimpleEdge>>{};
-  for (final edge in edges) {
-    nodeEdges.putIfAbsent(edge.sourceId, () => []);
-    nodeEdges.putIfAbsent(edge.targetId, () => []);
-    nodeEdges[edge.sourceId]!.add(edge);
-    nodeEdges[edge.targetId]!.add(edge);
+  if (nodes.isEmpty) {
+    return positions;
   }
 
-  // 构建父子关系
-  final children = <String, List<String>>{};
-  for (final node in nodes) {
-    if (node.parentId != null) {
-      children.putIfAbsent(node.parentId!, () => []);
-      children[node.parentId]!.add(node.id);
-    }
-  }
-
-  // 获取星域配置
-  final sectorStyles = <String, (double, double)>{};
-  for (final node in nodes) {
-    final style = SectorConfig.getStyle(node.sector);
-    sectorStyles[node.id] = (
-      (style.baseAngle - 90) * pi / 180,
-      style.sweepAngle * pi / 180,
-    );
-  }
-
-  // 速度
-  final velocity = <String, Offset>{};
-  for (final node in nodes) {
-    velocity[node.id] = Offset.zero;
-  }
-
-  var temperature = 1.0;
-
-  for (var iter = 0; iter < iterations; iter++) {
-    for (final nodeA in nodes) {
-      var force = Offset.zero;
-      final posA = positions[nodeA.id]!;
-
-      // 1. 斥力：节点之间互斥
-      for (final nodeB in nodes) {
-        if (nodeA.id == nodeB.id) continue;
-        final posB = positions[nodeB.id]!;
-        final delta = posA - posB;
-        var distance = delta.distance;
-        if (distance < 1) distance = 1;
-
-        if (distance < minDistance * 4) {
-          final repulsion =
-              repulsionStrength * temperature / (distance * distance);
-          force += Offset(
-            delta.dx / distance * repulsion,
-            delta.dy / distance * repulsion,
-          );
-        }
-      }
-
-      // 2. 边吸引力
-      final nodeEdgeList = nodeEdges[nodeA.id];
-      if (nodeEdgeList != null) {
-        for (final edge in nodeEdgeList) {
-          final otherId =
-              edge.sourceId == nodeA.id ? edge.targetId : edge.sourceId;
-          final otherPos = positions[otherId]!;
-          final delta = otherPos - posA;
-          final distance = delta.distance;
-          if (distance > 50) {
-            final attraction =
-                edgeAttractionStrength * edge.strength * temperature;
-            force += Offset(
-              delta.dx * attraction,
-              delta.dy * attraction,
-            );
-          }
-                }
-      }
-
-      // 3. 父节点吸引力
-      if (nodeA.parentId != null) {
-        final parentPos = positions[nodeA.parentId]!;
-        final delta = parentPos - posA;
-        final distance = delta.distance;
-        if (distance > 40) {
-          force += Offset(
-            delta.dx * parentAttractionStrength * temperature,
-            delta.dy * parentAttractionStrength * temperature,
-          );
-        }
-            }
-
-      // 4. 子节点轻微吸引
-      final nodeChildren = children[nodeA.id];
-      if (nodeChildren != null) {
-        for (final childId in nodeChildren) {
-          final childPos = positions[childId]!;
-          final delta = childPos - posA;
-          if (delta.distance > 100) {
-            force += Offset(
-              delta.dx * parentAttractionStrength * 0.5 * temperature,
-              delta.dy * parentAttractionStrength * 0.5 * temperature,
-            );
-          }
-                }
-      }
-
-      // 5. 中心引力（防止飘远）
-      if (posA.distance > GalaxyLayoutEngine.outerRadius * 0.9) {
-        force -= Offset(
-          posA.dx * 0.002 * temperature,
-          posA.dy * 0.002 * temperature,
-        );
-      }
-
-      // 应用力并更新速度
-      velocity[nodeA.id] = (velocity[nodeA.id]! + force) * damping;
-
-      // 限制最大位移
-      var displacement = velocity[nodeA.id]!;
-      if (displacement.distance > maxDisplacement * temperature) {
-        displacement = displacement /
-            displacement.distance *
-            maxDisplacement *
-            temperature;
-      }
-
-      var newPos = posA + displacement;
-
-      // 6. 约束在星域内
-      final (baseAngle, sweepAngle) = sectorStyles[nodeA.id]!;
-      final nodeAngle = atan2(newPos.dy, newPos.dx);
-      final endAngle = baseAngle + sweepAngle;
-
-      var normalizedAngle = nodeAngle;
-      while (normalizedAngle < baseAngle) {
-        normalizedAngle += 2 * pi;
-      }
-      while (normalizedAngle >= baseAngle + 2 * pi) {
-        normalizedAngle -= 2 * pi;
-      }
-
-      if (normalizedAngle < baseAngle || normalizedAngle > endAngle) {
-        final centerAngle = baseAngle + sweepAngle / 2;
-        final targetAngle =
-            centerAngle + (normalizedAngle - centerAngle) * 0.85;
-        newPos = Offset(
-          newPos.distance * cos(targetAngle),
-          newPos.distance * sin(targetAngle),
-        );
-      }
-
-      // 约束半径
-      final radius = newPos.distance.clamp(
-        GalaxyLayoutEngine.innerRadius,
-        GalaxyLayoutEngine.outerRadius,
-      );
-      if (newPos.distance > 0.1) {
-        newPos = Offset(
-          radius * newPos.dx / newPos.distance,
-          radius * newPos.dy / newPos.distance,
-        );
-      }
-
-      positions[nodeA.id] = newPos;
-    }
-
-    // 冷却
-    temperature *= coolingFactor;
-  }
-
+  GalaxyLayoutEngine._solveHybridLayout(
+    positions: positions,
+    nodes: nodes,
+    edges: edges,
+    adjacency: GalaxyLayoutEngine._buildAdjacency(nodes, edges),
+    sectorAnchors: GalaxyLayoutEngine._buildSectorAnchors(),
+    sectorAffinity: data.sectorAffinity,
+    iterations: data.iterations,
+    memoryAnchors: data.initialPositions,
+  );
+  GalaxyLayoutEngine._clampToUniverse(positions);
   return positions;
 }
 

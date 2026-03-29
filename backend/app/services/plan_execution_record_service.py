@@ -280,7 +280,7 @@ class PlanExecutionRecordService:
         """
         result = await self.db.execute(
             select(PlanExecutionRecord)
-            .where(not PlanExecutionRecord.applied_to_learning)
+            .where(PlanExecutionRecord.applied_to_learning.is_(False))
             .order_by(PlanExecutionRecord.created_at.asc())
             .limit(limit)
         )

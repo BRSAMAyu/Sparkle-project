@@ -13,6 +13,8 @@ void main() {
         'repelForce': 15000,
         'linkForce': 0.051,
         'linkDistance': 140,
+        'sectorAffinity': 0.36,
+        'revealTrailStrength': 0.88,
         'replaySpeed': 1.6,
       })!;
 
@@ -23,6 +25,8 @@ void main() {
       expect(settings.repelForce, 15000);
       expect(settings.linkForce, 0.051);
       expect(settings.linkDistance, 140);
+      expect(settings.sectorAffinity, 0.36);
+      expect(settings.revealTrailStrength, 0.88);
       expect(settings.replaySpeed, 1.6);
       expect(
         GalaxyDisplaySettings.fromJson(settings.toJson()),

@@ -222,7 +222,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           ChatContinuityBanner(
                             sourceChatSessionId:
                                 widget.initialSourceChatSessionId!.trim(),
-                            subtitle: '这一轮模拟承接了你刚才的探索流程。点右侧按钮就能带着上下文回到原对话继续追问。',
+                            kind: ChatContinuityKind.journey,
+                            subtitle: '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。',
                           ),
                           const SizedBox(height: 14),
                         ],
@@ -572,11 +573,14 @@ class _SimulationComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeLabel = scenarioLabels[selectedScenarioKey] ??
         localizeSimulationScenario(selectedScenarioKey);
+    final activeSession = state.session;
+    final hasActiveSession =
+        activeSession != null && activeSession.topic.trim().isNotEmpty;
     return MirofishStageHeader(
         icon: Icons.groups_rounded,
         eyebrow: '学习场景模拟',
-        title: '把一个主题拉进真实讨论现场',
-        subtitle: '先决定场景，再让不同角色围绕同一主题给出观点、追问和挑战，最后沉淀成下一步行动。',
+        title: hasActiveSession ? '继续这场学习模拟' : '把一个主题拉进真实讨论现场',
+        subtitle: '先决定场景和目标，再让不同角色围绕同一主题给出观点、追问和挑战，最后收口成你要采取的下一步。',
         metrics: <MirofishStageMetric>[
           MirofishStageMetric(
             label: '当前场景',
@@ -592,13 +596,21 @@ class _SimulationComposer extends StatelessWidget {
             icon: Icons.flag_rounded,
           ),
           MirofishStageMetric(
-            label: '互动方式',
-            value: '角色讨论 + 你来接话',
+            label: hasActiveSession ? '当前进度' : '互动方式',
+            value: hasActiveSession
+                ? '${state.session!.rounds.length} 轮讨论'
+                : '角色讨论 + 你来接话',
             accent: DS.success,
-            icon: Icons.touch_app_rounded,
+            icon: hasActiveSession
+                ? Icons.timelapse_rounded
+                : Icons.touch_app_rounded,
           ),
         ],
-        primaryLabel: state.isLoading ? '模拟进行中...' : '开始模拟',
+        primaryLabel: state.isLoading
+            ? '模拟进行中...'
+            : hasActiveSession
+                ? '继续当前模拟'
+                : '开始当前模拟',
         onPrimaryTap: state.isLoading ? null : onRun,
         accent: DS.info,
         footer: Column(
@@ -646,7 +658,13 @@ class _SimulationComposer extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: state.isLoading ? null : onRun,
                   icon: const Icon(Icons.play_circle_outline_rounded),
-                  label: Text(state.isLoading ? '模拟进行中...' : '生成舞台'),
+                  label: Text(
+                    state.isLoading
+                        ? '模拟进行中...'
+                        : hasActiveSession
+                            ? '继续当前模拟'
+                            : '开始当前模拟',
+                  ),
                 ),
                 if (topicController.text.trim().isNotEmpty)
                   OutlinedButton.icon(
@@ -1018,7 +1036,7 @@ class _SimulationInteractionCard extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: isSubmitting ? null : onSubmitText,
                   icon: const Icon(Icons.send_rounded),
-                  label: Text(isSubmitting ? '继续生成中...' : '继续这场模拟'),
+                  label: Text(isSubmitting ? '继续生成中...' : '继续当前模拟'),
                 ),
                 if (localizedSuggestedReplies.isNotEmpty)
                   OutlinedButton.icon(
@@ -1026,7 +1044,7 @@ class _SimulationInteractionCard extends StatelessWidget {
                         ? null
                         : () => onContinueInChat(localizedSuggestedReplies.first),
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
-                    label: const Text('带去聊天继续'),
+                    label: const Text('带回聊天继续'),
                   ),
               ],
             ),

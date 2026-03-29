@@ -229,7 +229,9 @@ async def lifespan(app: FastAPI):
 
             # 2. 加载学科缓存
             subject_service = SubjectService()
+            await subject_service.ensure_default_subjects(db)
             await subject_service.load_cache(db)
+            await db.commit()
 
             # 3. 启动定时任务调度器
             scheduler_service.start()

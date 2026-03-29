@@ -133,6 +133,64 @@ void main() {
       expect(plan.labelRevealAt('child', nodeStep.labelStartMs - 1), 0);
       expect(plan.labelRevealAt('child', nodeStep.labelEndMs), 1);
     });
+
+    test('derives stable wave order when nodes have no unlock timestamps', () {
+      final nodes = [
+        _node(id: 'hub', unlocked: true),
+        _node(id: 'left', unlocked: true),
+        _node(id: 'right', unlocked: true),
+        _node(id: 'leaf', unlocked: true),
+      ];
+      final edges = [
+        const GalaxyEdgeModel(
+            id: 'hub-left', sourceId: 'hub', targetId: 'left'),
+        const GalaxyEdgeModel(
+          id: 'hub-right',
+          sourceId: 'hub',
+          targetId: 'right',
+        ),
+        const GalaxyEdgeModel(
+            id: 'left-leaf', sourceId: 'left', targetId: 'leaf'),
+      ];
+      final positions = <String, Offset>{
+        'hub': const Offset(0, 0),
+        'left': const Offset(-120, 0),
+        'right': const Offset(120, 0),
+        'leaf': const Offset(-220, 30),
+      };
+      final adjacency = <String, Set<String>>{
+        'hub': {'left', 'right'},
+        'left': {'hub', 'leaf'},
+        'right': {'hub'},
+        'leaf': {'left'},
+      };
+
+      final first = GalaxyBuildPlaybackPlan.full(
+        nodes: nodes,
+        edges: edges,
+        positions: positions,
+        adjacency: adjacency,
+      );
+      final second = GalaxyBuildPlaybackPlan.full(
+        nodes: nodes.reversed.toList(),
+        edges: edges.reversed.toList(),
+        positions: positions,
+        adjacency: adjacency,
+      );
+
+      expect(first.nodeSteps['hub']!.nodeStartMs, 0);
+      expect(first.nodeSteps['left']!.nodeStartMs,
+          lessThan(first.nodeSteps['leaf']!.nodeStartMs));
+      expect(first.nodeSteps['right']!.nodeStartMs,
+          lessThan(first.nodeSteps['leaf']!.nodeStartMs));
+      expect(
+        first.nodeSteps.map((key, value) => MapEntry(key, value.nodeStartMs)),
+        equals(second.nodeSteps
+            .map((key, value) => MapEntry(key, value.nodeStartMs))),
+      );
+      expect(first.nodeRevealAt('hub', 0), 0);
+      expect(first.edgeRevealAt('hub-left', 0), 0);
+    });
   });
 }
 

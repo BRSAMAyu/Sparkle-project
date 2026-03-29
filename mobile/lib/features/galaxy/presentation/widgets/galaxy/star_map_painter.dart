@@ -1284,7 +1284,57 @@ class StarMapPainter extends CustomPainter {
       } else {
         canvas.drawPath(renderedPath, paint);
       }
+      if (isBuildAnimating && edge.reveal > 0 && edge.reveal < 1) {
+        _drawEdgeRevealTrail(canvas, edge, path);
+      }
     }
+  }
+
+  void _drawEdgeRevealTrail(Canvas canvas, _PaintEdge edge, Path fullPath) {
+    final trailStrength = displaySettings.revealTrailStrength;
+    if (trailStrength <= 0) {
+      return;
+    }
+    final metrics = fullPath.computeMetrics().toList(growable: false);
+    if (metrics.isEmpty) {
+      return;
+    }
+    final metric = metrics.first;
+    final headOffset = metric.length * edge.reveal.clamp(0.0, 1.0);
+    final tailLength =
+        metric.length * (0.06 + trailStrength * 0.08).clamp(0.04, 0.16);
+    final tailStart = math.max(0.0, headOffset - tailLength);
+    final tangent = metric.getTangentForOffset(headOffset);
+    if (tangent == null) {
+      return;
+    }
+
+    final tailPath = metric.extractPath(tailStart, headOffset);
+    canvas.drawPath(
+      tailPath,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = edge.strokeWidth + 0.8
+        ..strokeCap = StrokeCap.round
+        ..color = edge.color.withValues(
+          alpha: edge.color.a * (0.24 + trailStrength * 0.16),
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawCircle(
+      tangent.position,
+      5.2,
+      Paint()
+        ..color = edge.color.withValues(
+          alpha: edge.color.a * (0.18 + trailStrength * 0.18),
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+    canvas.drawCircle(
+      tangent.position,
+      2.2 + trailStrength * 1.6,
+      Paint()..color = Colors.white.withValues(alpha: 0.92),
+    );
   }
 
   Path _extractPathReveal(Path path, double reveal) {
@@ -2102,18 +2152,28 @@ class StarMapPainter extends CustomPainter {
         ..lineTo(screenEnd.dx, screenEnd.dy);
     }
 
-    final normal = Offset(-screenDelta.dy / length, screenDelta.dx / length);
-    final midpoint = Offset(
-      (screenStart.dx + screenEnd.dx) / 2,
-      (screenStart.dy + screenEnd.dy) / 2,
-    );
     final worldLength = (worldEnd - worldStart).distance;
+    if (worldLength < 22) {
+      return Path()
+        ..moveTo(screenStart.dx, screenStart.dy)
+        ..lineTo(screenEnd.dx, screenEnd.dy);
+    }
     final bendScale =
         relationType == EdgeRelationType.parentChild ? 0.12 : 0.08;
-    final bend =
-        (worldLength * camera.scale * bendScale * (0.85 + strength * 0.35))
-            .clamp(10.0, 34.0);
-    final control = midpoint + normal * bend * curveDirection;
+    final worldDelta = worldEnd - worldStart;
+    final worldNormal = Offset(
+      -worldDelta.dy / worldLength,
+      worldDelta.dx / worldLength,
+    );
+    final midpointWorld = Offset(
+      (worldStart.dx + worldEnd.dx) / 2,
+      (worldStart.dy + worldEnd.dy) / 2,
+    );
+    final bendWorld =
+        (worldLength * bendScale * (0.82 + strength * 0.34)).clamp(22.0, 124.0);
+    final controlWorld =
+        midpointWorld + worldNormal * bendWorld * curveDirection;
+    final control = camera.worldToScreen(controlWorld);
     return Path()
       ..moveTo(screenStart.dx, screenStart.dy)
       ..quadraticBezierTo(control.dx, control.dy, screenEnd.dx, screenEnd.dy);

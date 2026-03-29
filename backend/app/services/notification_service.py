@@ -109,7 +109,7 @@ class NotificationService:
     ) -> list[Notification]:
         stmt = select(Notification).where(Notification.user_id == user_id)
         if unread_only:
-            stmt = stmt.where(not Notification.is_read)
+            stmt = stmt.where(Notification.is_read.is_(False))
 
         stmt = stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
         result = await db.execute(stmt)
@@ -139,7 +139,8 @@ class NotificationService:
 
         result = await db.execute(
             select(func.count(Notification.id)).where(
-                Notification.user_id == user_id, not Notification.is_read
+                Notification.user_id == user_id,
+                Notification.is_read.is_(False),
             )
         )
         return result.scalar() or 0

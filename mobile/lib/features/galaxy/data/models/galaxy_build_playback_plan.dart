@@ -1,17 +1,18 @@
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
-const int kGalaxyRootRevealDurationMs = 520;
-const int kGalaxyRootPauseMs = 260;
-const int kGalaxyEdgeRevealDurationMs = 280;
-const int kGalaxyNodeRevealDurationMs = 340;
-const int kGalaxyLabelRevealDurationMs = 180;
-const int kGalaxySiblingStaggerMs = 180;
-const int kGalaxyTimeBucketGapMs = 360;
-const int kGalaxyClusterGapMs = 520;
+const int kGalaxyRootRevealDurationMs = 480;
+const int kGalaxyRootPauseMs = 220;
+const int kGalaxyEdgeRevealDurationMs = 240;
+const int kGalaxyNodeRevealDurationMs = 300;
+const int kGalaxyLabelRevealDurationMs = 140;
+const int kGalaxySiblingStaggerMs = 110;
+const int kGalaxyTimeBucketGapMs = 280;
+const int kGalaxyClusterGapMs = 300;
 
 @immutable
 class BuildPlanNodeStep {
@@ -57,6 +58,117 @@ class BuildPlanEdgeStep {
   final EdgeRelationType relationType;
   final double strength;
   final bool isSynthetic;
+}
+
+@immutable
+class GalaxyRevealOrderStrategy {
+  const GalaxyRevealOrderStrategy({
+    this.visibleNeighborBias = 1600,
+    this.strongEdgeBias = 420,
+    this.centroidBias = 0.32,
+  });
+
+  final double visibleNeighborBias;
+  final double strongEdgeBias;
+  final double centroidBias;
+
+  List<String> orderComponent({
+    required String seedId,
+    required Set<String> componentIds,
+    required Set<String> visibleNodeIds,
+    required Map<String, Set<String>> adjacency,
+    required Map<String, Offset> positions,
+    required double Function(String nodeId) centralityScoreOf,
+    required double Function(String nodeId) visibleNeighborScoreOf,
+    required double Function(String nodeId) strongestConnectionToVisibleOf,
+    required int Function(String leftId, String rightId) fallbackCompare,
+  }) {
+    final ordered = <String>[];
+    final visited = <String>{seedId};
+    final queue = Queue<String>()..add(seedId);
+    final centroid = _centroidFor(componentIds, positions);
+
+    while (queue.isNotEmpty) {
+      final waveCount = queue.length;
+      final wave = <String>[];
+      for (var index = 0; index < waveCount; index++) {
+        wave.add(queue.removeFirst());
+      }
+      wave.sort((left, right) {
+        final leftScore = _waveScore(
+          nodeId: left,
+          seedId: seedId,
+          centroid: centroid,
+          positions: positions,
+          centralityScoreOf: centralityScoreOf,
+          visibleNeighborScoreOf: visibleNeighborScoreOf,
+          strongestConnectionToVisibleOf: strongestConnectionToVisibleOf,
+        );
+        final rightScore = _waveScore(
+          nodeId: right,
+          seedId: seedId,
+          centroid: centroid,
+          positions: positions,
+          centralityScoreOf: centralityScoreOf,
+          visibleNeighborScoreOf: visibleNeighborScoreOf,
+          strongestConnectionToVisibleOf: strongestConnectionToVisibleOf,
+        );
+        final scoreCompare = rightScore.compareTo(leftScore);
+        if (scoreCompare != 0) {
+          return scoreCompare;
+        }
+        return fallbackCompare(left, right);
+      });
+      ordered.addAll(wave);
+
+      final nextWave = <String>{};
+      for (final nodeId in wave) {
+        for (final neighborId in adjacency[nodeId] ?? const <String>{}) {
+          if (!componentIds.contains(neighborId) || !visited.add(neighborId)) {
+            continue;
+          }
+          nextWave.add(neighborId);
+        }
+      }
+      nextWave.forEach(queue.add);
+    }
+
+    final missing = componentIds.difference(visited).toList(growable: false)
+      ..sort(fallbackCompare);
+    ordered.addAll(missing);
+    return ordered;
+  }
+
+  double _waveScore({
+    required String nodeId,
+    required String seedId,
+    required Offset centroid,
+    required Map<String, Offset> positions,
+    required double Function(String nodeId) centralityScoreOf,
+    required double Function(String nodeId) visibleNeighborScoreOf,
+    required double Function(String nodeId) strongestConnectionToVisibleOf,
+  }) {
+    final position = positions[nodeId] ?? Offset.zero;
+    final seedPosition = positions[seedId] ?? Offset.zero;
+    final centroidDistance = (position - centroid).distanceSquared;
+    final seedDistance = (position - seedPosition).distanceSquared;
+    return visibleNeighborScoreOf(nodeId) * visibleNeighborBias +
+        strongestConnectionToVisibleOf(nodeId) * strongEdgeBias +
+        centralityScoreOf(nodeId) -
+        seedDistance * 0.0024 -
+        centroidDistance * centroidBias;
+  }
+
+  Offset _centroidFor(Set<String> nodeIds, Map<String, Offset> positions) {
+    if (nodeIds.isEmpty) {
+      return Offset.zero;
+    }
+    final total = nodeIds.fold<Offset>(
+      Offset.zero,
+      (sum, nodeId) => sum + (positions[nodeId] ?? Offset.zero),
+    );
+    return total / nodeIds.length.toDouble();
+  }
 }
 
 @immutable
@@ -194,6 +306,8 @@ class _GalaxyBuildPlaybackPlanner {
   final Map<String, Set<String>> adjacency;
   final Set<String> _animatedNodeIds;
   final Set<String> _preRevealedNodeIds;
+  final GalaxyRevealOrderStrategy _revealOrderStrategy =
+      const GalaxyRevealOrderStrategy();
 
   final Map<String, BuildPlanNodeStep> _nodeSteps =
       <String, BuildPlanNodeStep>{};
@@ -298,12 +412,31 @@ class _GalaxyBuildPlaybackPlanner {
   }
 
   void _scheduleGroup(List<GalaxyNodeModel> group) {
-    final remaining = <GalaxyNodeModel>[...group];
-    while (remaining.isNotEmpty) {
-      final nextNode = _pickNextNode(remaining);
-      remaining.remove(nextNode);
-      final parentId = _pickParentId(nextNode.id);
-      _scheduleNode(nextNode, parentId: parentId);
+    final remainingIds = group.map((node) => node.id).toSet();
+    while (remainingIds.isNotEmpty) {
+      final seed = _pickNextNode(
+        remainingIds.map((nodeId) => _nodesById[nodeId]!).toList(),
+      );
+      final componentIds = _collectReachableIds(
+        seed.id,
+        allowedNodeIds: remainingIds,
+      );
+      final orderedIds = _revealOrderStrategy.orderComponent(
+        seedId: seed.id,
+        componentIds: componentIds,
+        visibleNodeIds: _visibleNodeIds,
+        adjacency: adjacency,
+        positions: positions,
+        centralityScoreOf: _centralityScoreOf,
+        visibleNeighborScoreOf: _visibleNeighborScoreOf,
+        strongestConnectionToVisibleOf: _strongestConnectionToVisibleOf,
+        fallbackCompare: _fallbackNodeIdOrder,
+      );
+      for (final nodeId in orderedIds) {
+        remainingIds.remove(nodeId);
+        final parentId = _pickParentId(nodeId);
+        _scheduleNode(_nodesById[nodeId]!, parentId: parentId);
+      }
     }
   }
 
@@ -338,8 +471,8 @@ class _GalaxyBuildPlaybackPlanner {
         final rightPos = positions[right.id] ?? Offset.zero;
         final leftDistance = (leftPos - centroid).distanceSquared;
         final rightDistance = (rightPos - centroid).distanceSquared;
-        final leftScore = (left.importance * 8) + (left.studyCount * 2);
-        final rightScore = (right.importance * 8) + (right.studyCount * 2);
+        final leftScore = _centralityScoreOf(left.id);
+        final rightScore = _centralityScoreOf(right.id);
         final weightedLeft = leftDistance - leftScore * 10;
         final weightedRight = rightDistance - rightScore * 10;
         final compare = weightedLeft.compareTo(weightedRight);
@@ -363,9 +496,51 @@ class _GalaxyBuildPlaybackPlanner {
     return left.name.compareTo(right.name);
   }
 
+  int _fallbackNodeIdOrder(String leftId, String rightId) {
+    final left = _nodesById[leftId];
+    final right = _nodesById[rightId];
+    if (left == null || right == null) {
+      return leftId.compareTo(rightId);
+    }
+    return _fallbackNodeOrder(left, right);
+  }
+
   bool _hasVisibleNeighbor(String nodeId) {
     final neighbors = adjacency[nodeId] ?? const <String>{};
     return neighbors.any(_visibleNodeIds.contains);
+  }
+
+  double _visibleNeighborScoreOf(String nodeId) {
+    final neighbors = adjacency[nodeId] ?? const <String>{};
+    if (neighbors.isEmpty) {
+      return 0;
+    }
+    final visibleCount = neighbors.where(_visibleNodeIds.contains).length;
+    return visibleCount / neighbors.length;
+  }
+
+  double _strongestConnectionToVisibleOf(String nodeId) {
+    final neighbors = adjacency[nodeId] ?? const <String>{};
+    var best = 0.0;
+    for (final neighborId in neighbors) {
+      if (!_visibleNodeIds.contains(neighborId)) {
+        continue;
+      }
+      final strength = _strongestEdgeBetween(nodeId, neighborId)?.strength ?? 0;
+      if (strength > best) {
+        best = strength;
+      }
+    }
+    return best;
+  }
+
+  double _centralityScoreOf(String nodeId) {
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      return 0;
+    }
+    final degree = (adjacency[nodeId] ?? const <String>{}).length;
+    return (node.importance * 110) + (node.studyCount * 24) + (degree * 140);
   }
 
   String? _pickParentId(String nodeId) {
@@ -521,6 +696,29 @@ class _GalaxyBuildPlaybackPlanner {
     final first = positions[firstId] ?? Offset.zero;
     final second = positions[secondId] ?? Offset.zero;
     return (first - second).distanceSquared;
+  }
+
+  Set<String> _collectReachableIds(
+    String seedId, {
+    required Set<String> allowedNodeIds,
+  }) {
+    final visited = <String>{};
+    final queue = Queue<String>()..add(seedId);
+
+    while (queue.isNotEmpty) {
+      final current = queue.removeFirst();
+      if (!allowedNodeIds.contains(current) || !visited.add(current)) {
+        continue;
+      }
+      for (final neighborId in adjacency[current] ?? const <String>{}) {
+        if (allowedNodeIds.contains(neighborId) &&
+            !visited.contains(neighborId)) {
+          queue.add(neighborId);
+        }
+      }
+    }
+
+    return visited.isEmpty ? {seedId} : visited;
   }
 
   bool _canReachVisibleNode(String nodeId) {

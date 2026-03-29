@@ -152,7 +152,7 @@ async def resolve_evidence(
                     select(ErrorRecord).where(
                         ErrorRecord.id == item.id,
                         ErrorRecord.user_id == current_user.id,
-                        not ErrorRecord.is_deleted,
+                        ErrorRecord.is_deleted.is_(False),
                     )
                 )
                 error = result.scalar_one_or_none()

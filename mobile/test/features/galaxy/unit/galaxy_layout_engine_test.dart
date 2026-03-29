@@ -146,15 +146,17 @@ void main() {
           edges: testEdges,
         );
 
-        final optimizedPositions =
+        final optimizedResult =
             await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: testNodes,
           edges: testEdges,
           initialPositions: initialPositions,
         );
 
-        expect(optimizedPositions, isNotEmpty);
-        expect(optimizedPositions.length, equals(testNodes.length));
+        expect(optimizedResult.positions, isNotEmpty);
+        expect(optimizedResult.positions.length, equals(testNodes.length));
+        expect(optimizedResult.componentAnchors, isNotEmpty);
+        expect(optimizedResult.settled, isTrue);
       });
 
       test('optimized layout has valid positions', () async {
@@ -163,29 +165,57 @@ void main() {
           edges: testEdges,
         );
 
-        final optimizedPositions =
+        final optimizedResult =
             await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: testNodes,
           edges: testEdges,
           initialPositions: initialPositions,
         );
 
-        for (final pos in optimizedPositions.values) {
+        for (final pos in optimizedResult.positions.values) {
           // 位置应该在宇宙边界内
           expect(
-              pos.distance, lessThanOrEqualTo(GalaxyLayoutEngine.outerRadius),);
+            pos.distance,
+            lessThanOrEqualTo(GalaxyLayoutEngine.outerRadius),
+          );
           expect(pos.distance, greaterThanOrEqualTo(0));
         }
       });
 
       test('handles empty input', () async {
-        final positions = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
+        final result = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: [],
           edges: [],
           initialPositions: {},
         );
 
-        expect(positions, isEmpty);
+        expect(result.positions, isEmpty);
+        expect(result.componentAnchors, isEmpty);
+      });
+
+      test('keeps sectors soft-grouped after optimization', () async {
+        final initialPositions = GalaxyLayoutEngine.calculateInitialLayout(
+          nodes: testNodes,
+          edges: testEdges,
+        );
+
+        final optimizedResult =
+            await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
+          nodes: testNodes,
+          edges: testEdges,
+          initialPositions: initialPositions,
+          sectorAffinity: 0.4,
+        );
+
+        for (final node in testNodes) {
+          final position = optimizedResult.positions[node.id]!;
+          final style = SectorConfig.getStyle(node.sector);
+          final sectorCenter =
+              (style.baseAngle + style.sweepAngle / 2 - 90) * 3.14159 / 180;
+          final angleDelta =
+              _normalizeAngle(position.direction - sectorCenter).abs();
+          expect(angleDelta, lessThan(2.2));
+        }
       });
     });
   });
@@ -250,8 +280,10 @@ void main() {
       final visibleWithoutMargin =
           cullerWithoutMargin.filterVisibleNodes(testNodes, positions);
 
-      expect(visibleWithMargin.length,
-          greaterThanOrEqualTo(visibleWithoutMargin.length),);
+      expect(
+        visibleWithMargin.length,
+        greaterThanOrEqualTo(visibleWithoutMargin.length),
+      );
     });
 
     test('filters edges correctly', () {

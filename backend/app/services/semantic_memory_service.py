@@ -78,7 +78,7 @@ class SemanticMemoryService:
         try:
             stmt = select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
-                not ErrorRecord.is_deleted,
+                ErrorRecord.is_deleted.is_(False),
                 ErrorRecord.id != error_id,
                 ErrorRecord.subject_code == error.subject_code,
                 ErrorRecord.latest_analysis["root_cause"].astext == root_cause,
@@ -88,7 +88,7 @@ class SemanticMemoryService:
         except Exception:
             stmt = select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
-                not ErrorRecord.is_deleted,
+                ErrorRecord.is_deleted.is_(False),
                 ErrorRecord.id != error_id,
                 ErrorRecord.subject_code == error.subject_code,
             ).limit(50)
@@ -105,7 +105,7 @@ class SemanticMemoryService:
             select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
                 ErrorRecord.id == error_id,
-                not ErrorRecord.is_deleted,
+                ErrorRecord.is_deleted.is_(False),
             )
         )
         return result.scalar_one_or_none()

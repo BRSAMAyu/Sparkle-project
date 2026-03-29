@@ -176,12 +176,13 @@ void main() {
         expect(initialPositions.length, equals(nodes.length));
 
         // 3. Optimize layout
-        final optimizedPositions =
+        final optimizedResult =
             await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: nodes,
           edges: edges,
           initialPositions: initialPositions,
         );
+        final optimizedPositions = optimizedResult.positions;
 
         expect(optimizedPositions.length, equals(nodes.length));
 
@@ -215,12 +216,13 @@ void main() {
         );
 
         // Optimize
-        final optimizedPositions =
+        final optimizedResult =
             await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: nodes,
           edges: edges,
           initialPositions: initialPositions,
         );
+        final optimizedPositions = optimizedResult.positions;
 
         // Cull
         ViewportCuller(

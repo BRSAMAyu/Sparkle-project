@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
@@ -33,8 +34,11 @@ class _OpenClawConnectionPanelState
   bool _testing = false;
   bool _saving = false;
   bool _retryingQueue = false;
+  bool _showSaveHighlight = false;
   String _authMode = 'token';
   String _transport = 'responses_http';
+  Timer? _pairingTicker;
+  Timer? _saveHighlightTimer;
 
   @override
   void initState() {
@@ -46,6 +50,8 @@ class _OpenClawConnectionPanelState
 
   @override
   void dispose() {
+    _pairingTicker?.cancel();
+    _saveHighlightTimer?.cancel();
     _gatewayController.dispose();
     _tokenController.dispose();
     _deviceTokenController.dispose();
@@ -85,6 +91,45 @@ class _OpenClawConnectionPanelState
     _formDirty = false;
     _hydrated = true;
     _lastHydratedSignature = _configSignature(service.config);
+  }
+
+  void _flashSavedState() {
+    _saveHighlightTimer?.cancel();
+    setState(() => _showSaveHighlight = true);
+    _saveHighlightTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() => _showSaveHighlight = false);
+    });
+  }
+
+  void _syncPairingTicker(OpenClawPairingSession? session) {
+    if (session == null || session.isExpired) {
+      _pairingTicker?.cancel();
+      _pairingTicker = null;
+      return;
+    }
+    if (_pairingTicker != null) return;
+    _pairingTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if ((ref.read(openClawConnectionProvider).pairingSession?.isExpired ??
+          true)) {
+        _pairingTicker?.cancel();
+        _pairingTicker = null;
+      }
+      setState(() {});
+    });
+  }
+
+  String _pairingCountdownLabel(OpenClawPairingSession? session) {
+    if (session == null) return '';
+    final remaining = session.expiresAt.difference(DateTime.now());
+    if (remaining.isNegative) return '配对码已过期';
+    final minutes = remaining.inMinutes;
+    final seconds = remaining.inSeconds % 60;
+    if (minutes <= 0) {
+      return '请在 $seconds 秒内完成配对';
+    }
+    return '请在 $minutes 分 ${seconds.toString().padLeft(2, '0')} 秒内完成配对';
   }
 
   OpenClawConnectionConfig? _buildConfig() {
@@ -154,6 +199,9 @@ class _OpenClawConnectionPanelState
     );
     if (ok && service.queuedRequests.isNotEmpty) {
       unawaited(_retryQueuedRequests(service));
+    }
+    if (ok) {
+      _flashSavedState();
     }
     _showSnackBar(
       ok
@@ -254,264 +302,357 @@ class _OpenClawConnectionPanelState
   Widget build(BuildContext context) {
     final service = ref.watch(openClawConnectionProvider);
     final pairingSession = service.pairingSession;
+    _syncPairingTicker(pairingSession);
     _hydrateFromService(service);
 
     final spacing = widget.compact ? DS.spacing12 : DS.spacing16;
+    final copy = ExecutionCopy.of(context);
+    final statusTone = switch (service.info.status) {
+      OpenClawConnectionStatus.connected => OpenClawVisualTone.connected,
+      OpenClawConnectionStatus.connecting => OpenClawVisualTone.active,
+      OpenClawConnectionStatus.error => OpenClawVisualTone.offline,
+      OpenClawConnectionStatus.disconnected => OpenClawVisualTone.offline,
+    };
+    final statusTitle = switch (service.info.status) {
+      OpenClawConnectionStatus.connected => '已准备好接手任务',
+      OpenClawConnectionStatus.connecting => '正在确认连接状态',
+      OpenClawConnectionStatus.error => '暂时还没连上',
+      OpenClawConnectionStatus.disconnected => '还没有接入 OpenClaw',
+    };
+    final statusSubtitle = switch (service.info.status) {
+      OpenClawConnectionStatus.connected =>
+        '连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。',
+      OpenClawConnectionStatus.connecting => '我们正在确认引擎状态，保存后的结果会同步显示在这里。',
+      OpenClawConnectionStatus.error =>
+        service.info.errorMessage ?? '先检查地址、认证方式和传输协议，再重新测试连接。',
+      OpenClawConnectionStatus.disconnected =>
+        '完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。',
+    };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _gatewayController,
-          onChanged: (_) => _markDirty(),
-          decoration: const InputDecoration(
-            labelText: '网关地址',
-            hintText: 'http://localhost:8080',
-          ),
-        ),
-        SizedBox(height: spacing),
-        Text(
-          '认证方式',
-          style: DS.labelSmall.copyWith(color: DS.textSecondary),
-        ),
-        const SizedBox(height: DS.spacing8),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment<String>(
-              value: 'token',
-              label: Text('令牌认证'),
-            ),
-            ButtonSegment<String>(
-              value: 'device',
-              label: Text('设备配对'),
-            ),
-          ],
-          selected: {_authMode},
-          onSelectionChanged: (selection) {
-            setState(() {
-              _authMode = selection.first;
-              _formDirty = true;
-            });
-          },
-        ),
-        const SizedBox(height: DS.spacing8),
-        Text(
-          _authMode == 'device'
-              ? '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'
-              : '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。',
-          style: DS.bodySmall.copyWith(
-            color: DS.textSecondary,
-            height: 1.45,
-          ),
-        ),
-        SizedBox(height: spacing),
-        if (_authMode == 'token')
-          TextField(
-            controller: _tokenController,
-            onChanged: (_) => _markDirty(),
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: '认证令牌',
-              hintText: '输入认证令牌',
-            ),
-          )
-        else ...[
-          TextField(
-            controller: _deviceTokenController,
-            onChanged: (_) => _markDirty(),
-            decoration: const InputDecoration(
-              labelText: '设备令牌',
-              hintText: '输入设备令牌',
-            ),
-          ),
-          if (pairingSession != null) ...[
-            const SizedBox(height: DS.spacing12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: DS.info.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: DS.info.withValues(alpha: 0.18),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OpenClawStatusCapsule(
+            title: statusTitle,
+            subtitle: statusSubtitle,
+            tone: statusTone,
+            icon: _showSaveHighlight
+                ? Icons.check_circle_rounded
+                : Icons.cloud_sync_rounded,
+            showToggle: false,
+            metrics: [
+              if (_formDirty)
+                const OpenClawMetricPill(
+                  icon: Icons.edit_rounded,
+                  label: '未保存更改',
+                  tone: OpenClawVisualTone.attention,
+                  emphasized: true,
                 ),
+              OpenClawMetricPill(
+                icon: Icons.route_rounded,
+                label: _transport == 'gateway_ws' ? 'WebSocket' : 'HTTP',
+                tone: OpenClawVisualTone.active,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '配对码',
-                    style: DS.bodySmall.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.info,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          pairingSession.code,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                letterSpacing: 6,
-                                fontWeight: DS.fontWeightBold,
-                              ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: pairingSession.code),
-                          );
-                          if (!mounted) return;
-                          _showSnackBar('配对码已复制');
-                        },
-                        icon: const Icon(Icons.copy_rounded),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。',
-                    style: DS.bodySmall.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
+              OpenClawMetricPill(
+                icon: _authMode == 'device'
+                    ? Icons.devices_rounded
+                    : Icons.key_rounded,
+                label: _authMode == 'device' ? '设备配对' : '令牌认证',
+                tone: _authMode == 'device'
+                    ? OpenClawVisualTone.attention
+                    : OpenClawVisualTone.active,
               ),
-            ),
-          ],
-          const SizedBox(height: DS.spacing8),
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: [
-              TextButton(
-                onPressed: () => unawaited(_startPairing(service)),
-                child: const Text('生成配对码'),
-              ),
-              TextButton(
-                onPressed: () => unawaited(_completePairing(service)),
-                child: const Text('完成配对'),
-              ),
-              if (pairingSession != null)
-                TextButton(
-                  onPressed: () => unawaited(service.cancelPairing()),
-                  child: const Text('取消配对'),
+              if (service.info.latencyMs != null)
+                OpenClawMetricPill(
+                  icon: Icons.speed_rounded,
+                  label: '${service.info.latencyMs}ms',
+                  tone: OpenClawVisualTone.connected,
+                ),
+              if (service.queuedRequests.isNotEmpty)
+                OpenClawMetricPill(
+                  icon: Icons.schedule_rounded,
+                  label: '${service.queuedRequestCount} 个待处理',
+                  tone: OpenClawVisualTone.offline,
+                  emphasized: true,
                 ),
             ],
           ),
-        ],
-        SizedBox(height: spacing),
-        Text(
-          '传输协议',
-          style: DS.labelSmall.copyWith(color: DS.textSecondary),
-        ),
-        const SizedBox(height: DS.spacing8),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment<String>(
-              value: 'responses_http',
-              label: Text('HTTP'),
+          SizedBox(height: spacing),
+          TextField(
+            controller: _gatewayController,
+            onChanged: (_) => _markDirty(),
+            decoration: const InputDecoration(
+              labelText: '网关地址',
+              hintText: '例如 http://localhost:8080',
             ),
-            ButtonSegment<String>(
-              value: 'gateway_ws',
-              label: Text('WebSocket'),
-            ),
-          ],
-          selected: {_transport},
-          onSelectionChanged: (selection) {
-            setState(() {
-              _transport = selection.first;
-              _formDirty = true;
-            });
-          },
-        ),
-        const SizedBox(height: DS.spacing8),
-        Text(
-          _transport == 'gateway_ws'
-              ? 'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'
-              : 'HTTP 更适合手动验证和快速测试连接。',
-          style: DS.bodySmall.copyWith(
-            color: DS.textSecondary,
-            height: 1.45,
           ),
-        ),
-        SizedBox(height: spacing),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed:
-                    _testing ? null : () => unawaited(_testConnection(service)),
-                child: _testing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('测试连接'),
+          SizedBox(height: spacing),
+          Text(
+            '认证方式',
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(
+                value: 'token',
+                label: Text('令牌认证'),
+              ),
+              ButtonSegment<String>(
+                value: 'device',
+                label: Text('设备配对'),
+              ),
+            ],
+            selected: {_authMode},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _authMode = selection.first;
+                _formDirty = true;
+              });
+            },
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            _authMode == 'device'
+                ? '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'
+                : '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。',
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          SizedBox(height: spacing),
+          if (_authMode == 'token')
+            TextField(
+              controller: _tokenController,
+              onChanged: (_) => _markDirty(),
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: '认证令牌',
+                hintText: '粘贴 OpenClaw 网关令牌',
+              ),
+            )
+          else ...[
+            TextField(
+              controller: _deviceTokenController,
+              onChanged: (_) => _markDirty(),
+              decoration: const InputDecoration(
+                labelText: '设备令牌',
+                hintText: '配对完成后粘贴设备令牌',
               ),
             ),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: FilledButton(
-                onPressed:
-                    _saving ? null : () => unawaited(_saveConnection(service)),
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+            if (pairingSession != null) ...[
+              const SizedBox(height: DS.spacing12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.info.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: DS.info.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '配对码',
+                      style: DS.bodySmall.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.info,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            pairingSession.code,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  letterSpacing: 6,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                           ),
                         ),
-                      )
-                    : const Text('保存配置'),
+                        IconButton(
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: pairingSession.code),
+                            );
+                            if (!mounted) return;
+                            _showSnackBar('配对码已复制');
+                          },
+                          icon: const Icon(Icons.copy_rounded),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _pairingCountdownLabel(pairingSession),
+                      style: DS.bodySmall.copyWith(
+                        color: DS.info,
+                        fontWeight: DS.fontWeightSemiBold,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。',
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                TextButton(
+                  onPressed: () => unawaited(_startPairing(service)),
+                  child: const Text('生成配对码'),
+                ),
+                TextButton(
+                  onPressed: () => unawaited(_completePairing(service)),
+                  child: const Text('完成配对'),
+                ),
+                if (pairingSession != null)
+                  TextButton(
+                    onPressed: () => unawaited(service.cancelPairing()),
+                    child: const Text('取消配对'),
+                  ),
+              ],
             ),
           ],
-        ),
-        const SizedBox(height: DS.spacing8),
-        Row(
-          children: [
-            if (service.queuedRequests.isNotEmpty)
+          SizedBox(height: spacing),
+          Text(
+            '传输协议',
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(
+                value: 'responses_http',
+                label: Text('HTTP'),
+              ),
+              ButtonSegment<String>(
+                value: 'gateway_ws',
+                label: Text('WebSocket'),
+              ),
+            ],
+            selected: {_transport},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _transport = selection.first;
+                _formDirty = true;
+              });
+            },
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            _transport == 'gateway_ws'
+                ? 'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'
+                : 'HTTP 更适合手动验证和快速测试连接。',
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          SizedBox(height: spacing),
+          Row(
+            children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _retryingQueue
+                  onPressed: _testing
                       ? null
-                      : () => unawaited(_retryQueuedRequests(service)),
-                  child: _retryingQueue
+                      : () => unawaited(_testConnection(service)),
+                  child: _testing
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('重试队列'),
+                      : const Text('测试连接'),
                 ),
               ),
-            if (service.queuedRequests.isNotEmpty &&
-                service.config.isConfigured) ...[
               const SizedBox(width: DS.spacing12),
-            ],
-            if (service.config.isConfigured)
               Expanded(
-                child: TextButton(
-                  onPressed: () => unawaited(_disconnect(service)),
-                  child: Text(
-                    '断开连接',
-                    style: DS.bodyMedium.copyWith(color: DS.semanticError),
+                child: FilledButton(
+                  onPressed: _saving
+                      ? null
+                      : () => unawaited(_saveConnection(service)),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('保存配置'),
+                ),
+              ),
+            ],
+          ),
+          if (_showSaveHighlight) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              service.isConnected
+                  ? copy.configurationSavedAndConnected
+                  : copy.configurationSavedButUnavailable,
+              style: DS.bodySmall.copyWith(
+                color: service.isConnected ? DS.semanticSuccess : DS.warning,
+                fontWeight: DS.fontWeightSemiBold,
+              ),
+            ),
+          ],
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: [
+              if (service.queuedRequests.isNotEmpty)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _retryingQueue
+                        ? null
+                        : () => unawaited(_retryQueuedRequests(service)),
+                    child: _retryingQueue
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('重试队列'),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ],
+              if (service.queuedRequests.isNotEmpty &&
+                  service.config.isConfigured) ...[
+                const SizedBox(width: DS.spacing12),
+              ],
+              if (service.config.isConfigured)
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => unawaited(_disconnect(service)),
+                    child: Text(
+                      '断开连接',
+                      style: DS.bodyMedium.copyWith(color: DS.semanticError),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

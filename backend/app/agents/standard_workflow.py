@@ -360,6 +360,12 @@ def _build_expert_collaboration_system_prompt(
 async def _execute_explicit_expert_collaboration(state: WorkflowState) -> CollaborationResult:
     selected = _selected_expert_ids(state)
     answer_targets = _answer_expert_ids(state) or list(selected)
+    team_spec = parse_team_spec(str(state.context_data.get("chat_mode") or ""))
+    run_parallel = (
+        isinstance(team_spec, dict)
+        and str(team_spec.get("mode") or team_spec.get("collaboration_mode") or "").strip().lower() == "parallel"
+        and len(selected) > 1
+    )
     user_message = state.messages[-1]["content"] if state.messages else ""
     user_context = state.context_data.get("user_context") or {}
     conversation_context = state.context_data.get("conversation_context") or {"messages": []}
@@ -371,11 +377,11 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
     timeline: list[dict[str, Any]] = []
     few_shot_total = 0
 
-    for expert_id in selected:
+    async def _run_single_expert(expert_id: str, prior_handoffs: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
         started_at = time.time()
         runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
         few_shot_examples: list[dict[str, Any]] = []
-        if few_shot_total < 3 and should_inject_few_shot(
+        if should_inject_few_shot(
             workflow_type="explicit_expert_collaboration",
             stage="collaboration",
             agent_role=expert_id,
@@ -390,7 +396,6 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 stage="collaboration",
                 count=1,
             )
-            few_shot_total += len(few_shot_examples[:1])
         system_prompt = _build_expert_collaboration_system_prompt(
             state=state,
             runtime=runtime,
@@ -401,7 +406,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         expert_request = build_collaboration_user_query(
             base_query=user_message,
             workflow_type="explicit_expert_collaboration",
-            handoff_packets=handoff_packets,
+            handoff_packets=prior_handoffs,
             few_shot_examples=few_shot_examples,
             extra_instruction=("请用你的专业视角回答下面的问题。" "必须保留你的独特判断，不要假装代表其他专家。"),
         )
@@ -436,30 +441,46 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 f"{runtime['display_name']} 本轮未稳定返回。"
                 "请基于现有专家观点继续完成综合，并明确说明该视角暂时缺席。"
             )
-        expert_outputs.append(
-            {
-                "expert_id": expert_id,
-                "display_name": runtime["display_name"],
-                "agent_role": runtime["agent_role"].value,
-                "response": response,
-                "few_shot_examples": few_shot_examples,
-            }
-        )
+        expert_output = {
+            "expert_id": expert_id,
+            "display_name": runtime["display_name"],
+            "agent_role": runtime["agent_role"].value,
+            "response": response,
+            "few_shot_examples": few_shot_examples,
+        }
         handoff_packet = await build_handoff_packet(
             agent=runtime["display_name"],
             response_text=response,
             workflow_type="explicit_expert_collaboration",
         )
-        handoff_packets.append(handoff_packet.to_dict())
-        timeline.append(
-            _build_timeline_step(
-                runtime["display_name"],
-                "expert_analysis",
-                datetime.fromtimestamp(started_at),
-                output_summary=response[:120],
-                agent_role=runtime["agent_role"].value,
-            )
+        timeline_step = _build_timeline_step(
+            runtime["display_name"],
+            "expert_analysis",
+            datetime.fromtimestamp(started_at),
+            output_summary=response[:120],
+            agent_role=runtime["agent_role"].value,
         )
+        return expert_output, handoff_packet.to_dict(), timeline_step, len(few_shot_examples[:1])
+
+    if run_parallel:
+        parallel_results = await asyncio.gather(
+            *[_run_single_expert(expert_id, []) for expert_id in selected]
+        )
+        for expert_output, handoff_packet, timeline_step, few_shot_count in parallel_results:
+            expert_outputs.append(expert_output)
+            handoff_packets.append(handoff_packet)
+            timeline.append(timeline_step)
+            few_shot_total += few_shot_count
+    else:
+        for expert_id in selected:
+            expert_output, handoff_packet, timeline_step, few_shot_count = await _run_single_expert(
+                expert_id,
+                list(handoff_packets),
+            )
+            expert_outputs.append(expert_output)
+            handoff_packets.append(handoff_packet)
+            timeline.append(timeline_step)
+            few_shot_total += few_shot_count
 
     synthesis_target = answer_targets[0] if answer_targets else selected[0]
     synthesis_runtime = await _resolve_llm_for_expert(

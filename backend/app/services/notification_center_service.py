@@ -62,7 +62,7 @@ class NotificationCenterService:
             system_stmt = select(Notification).where(Notification.user_id == user_id)
 
             if unread_only:
-                system_stmt = system_stmt.where(not Notification.is_read)
+                system_stmt = system_stmt.where(Notification.is_read.is_(False))
 
             system_stmt = system_stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
             system_result = await self.db.execute(system_stmt)
@@ -205,7 +205,7 @@ class NotificationCenterService:
             system_stmt = select(Notification).where(
                 and_(
                     Notification.user_id == user_id,
-                    not Notification.is_read
+                    Notification.is_read.is_(False),
                 )
             )
             result = await self.db.execute(system_stmt)

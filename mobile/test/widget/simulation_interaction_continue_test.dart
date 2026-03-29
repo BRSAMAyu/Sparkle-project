@@ -144,6 +144,6 @@ void main() {
     await tester.pump();
 
     expect(notifier.replies, <String>['我会先画依赖图，再做一道题验证。']);
-    expect(find.text('继续这场模拟'), findsOneWidget);
+    expect(find.text('继续当前模拟'), findsWidgets);
   });
 }

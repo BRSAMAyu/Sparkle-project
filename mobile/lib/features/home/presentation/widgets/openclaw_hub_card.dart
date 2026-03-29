@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
+import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
 class OpenClawHubCard extends ConsumerWidget {
@@ -30,12 +31,29 @@ class OpenClawHubCard extends ConsumerWidget {
               ))
             .first;
 
-    final statusColor = switch (connection.info.status) {
-      OpenClawConnectionStatus.connected => DS.semanticSuccess,
-      OpenClawConnectionStatus.connecting => DS.info,
-      OpenClawConnectionStatus.error => DS.semanticError,
-      OpenClawConnectionStatus.disconnected => DS.textTertiary,
-    };
+    final hasRecentExecution = latestIntent != null;
+    final hasQueue = connection.queuedRequestCount > 0;
+    final isConnected = connection.isConnected;
+    final headline = !isConnected && !hasQueue
+        ? '连接后可委派网页调研、文档整理'
+        : !isConnected && hasQueue
+            ? '已有任务在等待恢复'
+            : isConnected && !hasRecentExecution
+                ? '已准备好接手'
+                : '最近一次做了什么';
+    final summary = !isConnected && !hasQueue
+        ? '把 OpenClaw 接进来后，聊天页和任务页都会获得稳定的执行入口。'
+        : !isConnected && hasQueue
+            ? '当前有 ${connection.queuedRequestCount} 个任务已排队，恢复连接后就能继续执行。'
+            : isConnected && !hasRecentExecution
+                ? '引擎状态正常，现在最适合回到聊天或任务页发起第一次委派。'
+                : '最近执行：${latestIntent?.statusLabel ?? '已记录'}'
+                    '${(latestIntent?.goal.trim().isNotEmpty ?? false) ? ' · ${latestIntent?.goal}' : ''}';
+    final actionLabel = hasQueue ? '打开执行中心，处理等待队列' : '打开执行中心';
+    final queueTone =
+        hasQueue ? OpenClawVisualTone.offline : OpenClawVisualTone.active;
+    final connectionTone =
+        isConnected ? OpenClawVisualTone.connected : OpenClawVisualTone.offline;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -101,7 +119,7 @@ class OpenClawHubCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: DS.spacing4),
                         Text(
-                          connection.isConnected ? '执行引擎已就绪' : '独立的 AI 执行中心',
+                          headline,
                           style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -120,26 +138,23 @@ class OpenClawHubCard extends ConsumerWidget {
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
-                  _CardPill(
+                  OpenClawMetricPill(
                     icon: Icons.sensors_rounded,
-                    label: connection.isConnected ? '已连接' : '未连接',
-                    color: statusColor,
+                    label: isConnected ? '已连接' : '未连接',
+                    tone: connectionTone,
+                    emphasized: isConnected,
                   ),
-                  _CardPill(
+                  OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
                     label: '${connection.queuedRequestCount} 排队中',
-                    color: connection.queuedRequestCount > 0
-                        ? DS.warning
-                        : DS.textSecondary,
+                    tone: queueTone,
+                    emphasized: hasQueue,
                   ),
                 ],
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                latestIntent == null
-                    ? '从聊天或任务页发起委派后，这里会显示最近的执行状态和入口。'
-                    : '最近执行：${latestIntent.statusLabel}'
-                        '${latestIntent.goal.trim().isNotEmpty ? ' · ${latestIntent.goal}' : ''}',
+                summary,
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -151,7 +166,7 @@ class OpenClawHubCard extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '打开 OpenClaw',
+                  actionLabel,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     color: DS.brandPrimaryConst,
                     fontWeight: DS.fontWeightBold,
@@ -164,42 +179,4 @@ class OpenClawHubCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _CardPill extends StatelessWidget {
-  const _CardPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing6,
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              label,
-              style: context.sparkleTypography.labelSmall.copyWith(
-                color: color,
-                fontWeight: DS.fontWeightBold,
-              ),
-            ),
-          ],
-        ),
-      );
 }

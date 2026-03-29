@@ -47,6 +47,20 @@
 - 第 21~25 节 E2E / DATA / API / FF / CEL 仍需统一证据归档
 - 用户侧“重拉环境 + 模拟器最终验证”尚未执行完毕
 
+## 2026-03-29 移动端补充更新
+
+- Flutter 模拟器主链阻塞继续收口：
+  - `community_remaining_closure_test + j4/j5 + main_actions_smoke_test` 重新通过，`29 passed`
+  - `chat_scroll_test` 通过，聊天页新增消息自动回到底部，且 `OpenClawConnectionService` 生命周期异常已修复
+  - `galaxy_screen_test + galaxy_integration_test + galaxy_* unit` 通过，`39 passed`
+  - 新增 `simulator_chain_regression_test`，覆盖：
+    - 视觉元素子接口异常时默认内容仍可展示
+    - 学习路径弹层在紧凑屏幕高度下可滚动且操作按钮保持可见
+- 这轮修复重点是移动端稳定性与兼容性收口，不改变既有对外接口形状：
+  - 补齐星图播放/布局相关残缺类型与显示设置字段
+  - 修正 OpenClaw provider 生命周期，避免重复 dispose
+  - 视觉元素 provider 增加默认配置兜底
+
 ---
 
 ## 🚀 服务状态

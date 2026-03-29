@@ -505,6 +505,5 @@ final openClawConnectionProvider =
     ChangeNotifierProvider<OpenClawConnectionService>((ref) {
   final service = OpenClawConnectionService();
   unawaited(service.initialize());
-  ref.onDispose(service.dispose);
   return service;
 });

@@ -39,6 +39,26 @@ Incremental refresh on `2026-03-28`:
 - Known remaining gaps before full final acceptance:
   - Final full-system signoff still requires the broader manual simulator / real-device / E2E evidence in the checklist to be completed and archived.
 
+Additional mobile-focused refresh on `2026-03-29`:
+- The current mobile codebase now compiles cleanly for the audited feature areas after the latest Galaxy/OpenClaw/visual-element closure pass.
+- Targeted Flutter regressions re-run in the local workspace now include:
+  - `test/widget/community_remaining_closure_test.dart`
+  - `test/widget/j4_frontend_closure_test.dart`
+  - `test/widget/j5_frontend_closure_test.dart`
+  - `test/app/main_actions_smoke_test.dart`
+  - `test/widget/chat_scroll_test.dart`
+  - `test/features/galaxy/widget/galaxy_screen_test.dart`
+  - `test/features/galaxy/integration/galaxy_integration_test.dart`
+  - `test/features/galaxy/unit/galaxy_build_playback_plan_test.dart`
+  - `test/features/galaxy/unit/galaxy_display_settings_test.dart`
+  - `test/features/galaxy/unit/galaxy_layout_engine_test.dart`
+  - `test/widget/simulator_chain_regression_test.dart`
+- Additional verified conclusions from the `2026-03-29` refresh:
+  - `OpenClawConnectionService` no longer double-disposes under the Riverpod `ChangeNotifierProvider` lifecycle.
+  - Galaxy playback/layout types and display settings are aligned with the current solver/result model again.
+  - Visual Elements now have a client-side fallback path when `unlocked/config` subrequests fail, preserving default assets for the UI.
+  - Learning Path dialog behavior on compact screens is now covered by a regression test to guard against bottom overflow and non-scrollable content.
+
 This refresh is aligned with:
 - `docs/contracts/openapi_snapshot.json` regenerated on `2026-03-27`
 - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地发布前完整签收清单_2026-03-21.md`

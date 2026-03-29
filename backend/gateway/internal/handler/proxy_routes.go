@@ -445,6 +445,24 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered preferences proxy routes")
 
+	// ==================== Notifications Routes ====================
+	notifications := api.Group("/notifications")
+	notifications.Use(authMiddleware)
+	{
+		notifications.Any("", h.proxyWithHeaders)
+		notifications.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered notifications proxy routes")
+
+	// ==================== Notification Center Routes ====================
+	notificationCenter := api.Group("/notification-center")
+	notificationCenter.Use(authMiddleware)
+	{
+		notificationCenter.Any("", h.proxyWithHeaders)
+		notificationCenter.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered notification-center proxy routes")
+
 	// ==================== Devices Routes ====================
 	devices := api.Group("/devices")
 	devices.Use(authMiddleware)
@@ -576,22 +594,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		leaderboards.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered leaderboards proxy routes")
-
-	// ==================== Notification Center Routes ====================
-	notifCenter := api.Group("/notification-center")
-	notifCenter.Use(authMiddleware)
-	{
-		notifCenter.Any("/*path", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered notification-center proxy routes")
-
-	// ==================== Notifications Routes ====================
-	notifications := api.Group("/notifications")
-	notifications.Use(authMiddleware)
-	{
-		notifications.Any("/*path", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered notifications proxy routes")
 
 	// ==================== Cognitive Routes ====================
 	cognitive := api.Group("/cognitive")

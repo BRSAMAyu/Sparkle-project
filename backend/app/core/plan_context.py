@@ -320,7 +320,7 @@ class PlanContextBuilder:
                 result = await self.db.execute(
                     select(BehaviorPattern)
                     .where(BehaviorPattern.user_id == user_id)
-                    .where(not BehaviorPattern.is_archived)
+                    .where(BehaviorPattern.is_archived.is_(False))
                     .order_by(
                         desc(BehaviorPattern.confidence_score),
                         desc(BehaviorPattern.frequency)

@@ -286,16 +286,46 @@ class VisualElementsNotifier extends StateNotifier<VisualElementsState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      final results = await Future.wait([
-        _repository.getVisualElements(),
-        _repository.getUnlockedElements(),
-        _repository.getUserConfig(),
-      ]);
+      final allElements = await _repository.getVisualElements().catchError(
+        (_) => _repository.getDefaultElements(),
+      );
+      final unlockedElements =
+          await _repository.getUnlockedElements().catchError((_) async {
+        return VisualElementListResponse(
+          items: allElements.items.where((item) => item.isUnlocked).toList(),
+          total: allElements.items.where((item) => item.isUnlocked).length,
+        );
+      });
+      final config = await _repository.getUserConfig().catchError((_) async {
+        final defaults = allElements.items.where((item) => item.isDefault);
+        VisualElementModel? background;
+        VisualElementModel? particle;
+        VisualElementModel? effect;
+        for (final element in defaults) {
+          switch (element.elementType) {
+            case VisualElementType.background:
+              background ??= element;
+            case VisualElementType.particle:
+              particle ??= element;
+            case VisualElementType.effect:
+              effect ??= element;
+            case VisualElementType.bundle:
+              // Bundles are composite presets; the fallback config only equips
+              // concrete slots so we intentionally skip them here.
+              break;
+          }
+        }
+        return UserVisualConfig(
+          equippedBackground: background,
+          equippedParticle: particle,
+          equippedEffect: effect,
+        );
+      });
 
       state = VisualElementsState(
-        allElements: (results[0] as VisualElementListResponse).items,
-        unlockedElements: (results[1] as VisualElementListResponse).items,
-        config: results[2] as UserVisualConfig,
+        allElements: allElements.items,
+        unlockedElements: unlockedElements.items,
+        config: config,
         filterOptions: state.filterOptions,
       );
     } catch (e) {

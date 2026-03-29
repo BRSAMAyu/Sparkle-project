@@ -975,6 +975,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         _QuickActionChip(
                           icon: Icons.cloud_sync_rounded,
                           label: '交给 OpenClaw',
+                          subtitle: '适合网页调研、整理、抓取类任务',
                           color: DS.info,
                           isNarrow: isNarrow,
                           onTap: () => context.push(
@@ -1633,9 +1634,18 @@ class _OpenClawAppBarIcon extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
         clipBehavior: Clip.none,
         children: [
-          Icon(
-            Icons.cloud_sync_outlined,
-            color: highlighted ? DS.brandPrimaryConst : DS.textSecondary,
+          Container(
+            padding: const EdgeInsets.all(DS.spacing4),
+            decoration: BoxDecoration(
+              color: highlighted
+                  ? DS.info.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.cloud_sync_outlined,
+              color: highlighted ? DS.brandPrimaryConst : DS.textSecondary,
+            ),
           ),
           if (highlighted)
             Positioned(
@@ -1965,9 +1975,11 @@ class _QuickActionChip extends StatefulWidget {
     required this.color,
     required this.isNarrow,
     required this.onTap,
+    this.subtitle,
   });
   final IconData icon;
   final String label;
+  final String? subtitle;
   final Color color;
   final bool isNarrow;
   final VoidCallback onTap;
@@ -2061,11 +2073,11 @@ class _QuickActionChipState extends State<_QuickActionChip> {
 
   @override
   Widget build(BuildContext context) {
-    // Use surfaceTertiary background for consistent theming
     final backgroundColor = DS.surfaceTertiary;
-    // Use textPrimary for proper contrast in both modes
     final labelColor = DS.textPrimary;
     final horizontalPadding = widget.isNarrow ? DS.spacing12 : DS.spacing16;
+    final hasSubtitle =
+        widget.subtitle != null && widget.subtitle!.trim().isNotEmpty;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -2077,11 +2089,13 @@ class _QuickActionChipState extends State<_QuickActionChip> {
         duration: DS.durationFast,
         curve: DS.curveEaseOut,
         child: Container(
-          // Ensure minimum 48px touch target
-          height: DS.touchTargetMinSize,
+          constraints: BoxConstraints(
+            minHeight: DS.touchTargetMinSize,
+            minWidth: widget.isNarrow ? 0 : 168,
+          ),
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
-            vertical: DS.spacing8,
+            vertical: hasSubtitle ? DS.spacing10 : DS.spacing8,
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -2100,6 +2114,9 @@ class _QuickActionChipState extends State<_QuickActionChip> {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: hasSubtitle
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
             children: [
               Icon(
                 widget.icon,
@@ -2107,14 +2124,34 @@ class _QuickActionChipState extends State<_QuickActionChip> {
                 color: widget.color,
               ),
               const SizedBox(width: DS.spacing8),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color: labelColor,
-                  fontWeight: DS.fontWeightMedium,
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: labelColor,
+                        fontWeight: DS.fontWeightMedium,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (hasSubtitle) ...[
+                      const SizedBox(height: DS.spacing2),
+                      Text(
+                        widget.subtitle!,
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.35,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

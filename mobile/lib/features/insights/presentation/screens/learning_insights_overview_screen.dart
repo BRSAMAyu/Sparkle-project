@@ -142,30 +142,71 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.card,
                 padding: const EdgeInsets.all(DS.spacing16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.swipe_rounded,
-                      color: DS.textSecondary,
-                      size: 18,
-                    ),
-                    const SizedBox(width: DS.spacing10),
-                    Expanded(
-                      child: Text(
-                        '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.45,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: DS.spacing8),
-                    TextButton(
-                      onPressed: () => context.go('/home'),
-                      child: const Text('回到驾驶舱'),
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 360;
+                    if (compact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.swipe_rounded,
+                                color: DS.textSecondary,
+                                size: 18,
+                              ),
+                              const SizedBox(width: DS.spacing10),
+                              Expanded(
+                                child: Text(
+                                  '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: DS.textSecondary,
+                                        height: 1.45,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: DS.spacing10),
+                          TextButton(
+                            onPressed: () => context.go('/home'),
+                            child: const Text('回到驾驶舱'),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.swipe_rounded,
+                          color: DS.textSecondary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: DS.spacing10),
+                        Expanded(
+                          child: Text(
+                            '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.45,
+                                    ),
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing8),
+                        TextButton(
+                          onPressed: () => context.go('/home'),
+                          child: const Text('回到驾驶舱'),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

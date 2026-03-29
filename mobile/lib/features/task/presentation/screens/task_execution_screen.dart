@@ -21,6 +21,7 @@ import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/home/home_routes.dart';
+import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -1706,6 +1707,32 @@ class _BottomControls extends ConsumerWidget {
     }
   }
 
+  Widget _buildNudgeDetailBlock({
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: DS.bodySmall.copyWith(
+            color: DS.warning,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+        const SizedBox(height: DS.spacing4),
+        Text(
+          value,
+          style: DS.bodySmall.copyWith(
+            color: DS.neutral700,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final copy = ExecutionCopy.of(context);
@@ -1808,133 +1835,87 @@ class _BottomControls extends ConsumerWidget {
               (executionIntent == null || executionIntent.isTerminal) &&
               !isClawConnected &&
               !nudgeDismissed) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(DS.spacing10),
-              decoration: BoxDecoration(
-                color: DS.warning.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(DS.borderRadiusLG),
-                border: Border.all(
-                  color: DS.warning.withValues(alpha: 0.18),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            OpenClawStatusCapsule(
+              title:
+                  isClawConfigured ? 'OpenClaw 当前离线，可先加入等待队列' : 'OpenClaw 尚未连接',
+              subtitle: isClawConfigured
+                  ? '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。'
+                  : '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。',
+              icon: isClawConfigured
+                  ? Icons.cloud_queue_rounded
+                  : Icons.link_off_rounded,
+              tone: OpenClawVisualTone.offline,
+              expanded: nudgeExpanded,
+              onToggleExpanded: () {
+                ref.read(openClawTaskNudgeExpandedProvider.notifier).state =
+                    !nudgeExpanded;
+              },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isClawConfigured
-                            ? Icons.cloud_queue_rounded
-                            : Icons.link_off_rounded,
-                        size: 18,
-                        color: DS.warning,
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      Expanded(
-                        child: Text(
-                          isClawConfigured
-                              ? 'OpenClaw 当前离线，可先加入等待队列'
-                              : 'OpenClaw 尚未连接',
-                          style: DS.bodyMedium.copyWith(
-                            color: DS.warning,
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
-                      ),
-                      if (isClawConfigured && queuedRequestCount > 0)
-                        Container(
-                          margin: const EdgeInsets.only(right: DS.spacing6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing8,
-                            vertical: DS.spacing4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: DS.warning.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '$queuedRequestCount 队列中',
-                            style: DS.bodySmall.copyWith(
-                              color: DS.warning,
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                          ),
-                        ),
-                      TextButton(
-                        onPressed: () => context.push(
-                          '${HomeRoutes.openClawHub}?section=connection',
-                        ),
-                        child: Text(isClawConfigured ? '查看' : '连接'),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          ref
-                              .read(openClawTaskNudgeDismissedProvider.notifier)
-                              .state = true;
-                          ref
-                              .read(openClawTaskNudgeExpandedProvider.notifier)
-                              .state = false;
-                        },
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        visualDensity: VisualDensity.compact,
-                        color: DS.textSecondary,
-                        tooltip: '关闭提示',
-                      ),
-                    ],
+                  TextButton(
+                    onPressed: () => context.push(
+                      '${HomeRoutes.openClawHub}?section=connection',
+                    ),
+                    child: Text(isClawConfigured ? '查看' : '连接'),
                   ),
-                  InkWell(
-                    onTap: () {
+                  IconButton(
+                    onPressed: () {
+                      ref
+                          .read(openClawTaskNudgeDismissedProvider.notifier)
+                          .state = true;
                       ref
                           .read(openClawTaskNudgeExpandedProvider.notifier)
-                          .state = !nudgeExpanded;
+                          .state = false;
                     },
-                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: DS.spacing2),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              nudgeExpanded ? '收起说明' : '查看说明',
-                              style: DS.bodySmall.copyWith(
-                                color: DS.textSecondary,
-                                fontWeight: DS.fontWeightSemiBold,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            nudgeExpanded
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: DS.textSecondary,
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                    ),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    visualDensity: VisualDensity.compact,
+                    color: DS.textSecondary,
+                    tooltip: '关闭提示',
                   ),
-                  if (nudgeExpanded) ...[
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      isClawConfigured
-                          ? '你仍然可以先把任务加入等待队列，等引擎恢复后在 OpenClaw Hub 里统一重试。'
-                          : '先在 OpenClaw Hub 里完成连接，任务页和聊天页的 AI 委派能力就会真正生效。',
-                      style: DS.bodySmall.copyWith(
-                        color: DS.neutral700,
-                        height: 1.45,
-                      ),
-                    ),
-                    if (queuedRequestCount > 0) ...[
-                      const SizedBox(height: DS.spacing8),
-                      Text(
-                        '当前已有 $queuedRequestCount 个任务在等待队列中。',
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
+                ],
+              ),
+              metrics: [
+                OpenClawMetricPill(
+                  icon: Icons.sensors_rounded,
+                  label: isClawConfigured ? '已配置但离线' : '尚未配置',
+                  tone: OpenClawVisualTone.offline,
+                  emphasized: true,
+                ),
+                if (queuedRequestCount > 0)
+                  OpenClawMetricPill(
+                    icon: Icons.schedule_rounded,
+                    label: '$queuedRequestCount 个任务已排队',
+                    tone: OpenClawVisualTone.attention,
+                    emphasized: true,
+                  ),
+                OpenClawMetricPill(
+                  icon: Icons.arrow_circle_right_rounded,
+                  label: isClawConfigured ? '建议先排队再统一重试' : '建议先连接再委派',
+                  tone: OpenClawVisualTone.active,
+                ),
+              ],
+              expandedContent: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNudgeDetailBlock(
+                    label: '当前状态',
+                    value: isClawConfigured
+                        ? '连接信息还在，但引擎暂时不在线。'
+                        : '这台设备还没有接入 OpenClaw。',
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  _buildNudgeDetailBlock(
+                    label: '为什么现在看到这个提示',
+                    value: '你正在一个支持 AI 委派的任务里，而且当前执行入口还没有准备好。',
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  _buildNudgeDetailBlock(
+                    label: '下一步动作',
+                    value: isClawConfigured
+                        ? '继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。'
+                        : '打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。',
+                  ),
                 ],
               ),
             ),
@@ -2061,9 +2042,11 @@ class _BottomControls extends ConsumerWidget {
                                 .read(
                                     openClawTaskNudgeDismissedProvider.notifier)
                                 .state = false;
-                            context.push(
-                              '${HomeRoutes.openClawHub}?section=connection',
-                            );
+                            ref
+                                .read(
+                                  openClawTaskNudgeExpandedProvider.notifier,
+                                )
+                                .state = true;
                           },
                 isLoading: isHandoffLoading,
               ),

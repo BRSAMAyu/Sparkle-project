@@ -625,7 +625,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       if (predictionPreview != null && predictionPreview.isNotEmpty)
         _AccessoryPreviewPage(
           title: '推演剧场',
-          subtitle: '先快速看路径，再决定要不要展开完整推演。',
+          subtitle: '现在最值得先看的是哪条路径，以及它为什么更适合你。',
           child: _buildTheaterPreviewCard(
             context,
             preview: predictionPreview,
@@ -636,7 +636,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       if (simulationPreview != null && simulationPreview.isNotEmpty)
         _AccessoryPreviewPage(
           title: '学习仿真',
-          subtitle: '这里是当前讨论的精简舞台，左右滑动可以比较不同入口。',
+          subtitle: '先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。',
           child: _buildSimulationPreviewCard(
             context,
             preview: simulationPreview,
@@ -647,7 +647,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       if (reportPreview != null && reportPreview.isNotEmpty)
         _AccessoryPreviewPage(
           title: '学习报告',
-          subtitle: '先看最核心的诊断，再决定是否进入完整报告页。',
+          subtitle: '先看最核心的诊断和下一步动作，再决定是否进入完整报告页。',
           child: _buildReportPreviewCard(
             context,
             preview: reportPreview,
@@ -694,7 +694,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       children: [
                         Expanded(
                           child: Text(
-                            '附加内容',
+                            '继续探索',
                             style: Theme.of(dialogContext)
                                 .textTheme
                                 .titleMedium
@@ -796,7 +796,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                         if (pageSpecs.length > 1)
                           Expanded(
                             child: Text(
-                              '左右滑动查看不同预览',
+                              '左右滑动切换不同入口',
                               style: Theme.of(dialogContext)
                                   .textTheme
                                   .bodySmall
@@ -1623,7 +1623,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   String _bridgeCaption(String? sourceChatSessionId) =>
       (sourceChatSessionId?.isNotEmpty ?? false)
           ? '承接刚才的对话'
-          : '可以先在对话里继续细化';
+          : '先看重点，再决定要不要展开完整体验';
 
   List<_InlinePromptAction> _theaterPromptActions(
     Map<String, dynamic> preview,
@@ -1844,7 +1844,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '打开推演剧场',
+      primaryLabel: '打开完整体验',
       onPrimaryTap: () => context.push(resolvedDeepLink),
       secondaryLabel: '继续在对话里',
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
@@ -1888,7 +1888,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '打开学习仿真',
+      primaryLabel: '打开完整体验',
       onPrimaryTap: () => context.push(resolvedDeepLink),
       secondaryLabel: '继续在对话里',
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
@@ -1954,7 +1954,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             ),
           )
           .toList(),
-      primaryLabel: '打开完整报告',
+      primaryLabel: '打开完整体验',
       onPrimaryTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
           unawaited(context.push(resolvedDeepLink, extra: report));
