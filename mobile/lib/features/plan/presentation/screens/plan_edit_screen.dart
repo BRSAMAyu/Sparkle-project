@@ -1,73 +1,38 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.dart';
 
-/// 计划编辑屏幕 - 占位页面
-class PlanEditScreen extends StatelessWidget {
+class PlanEditScreen extends ConsumerWidget {
   const PlanEditScreen({required this.planId, super.key});
+
   final String planId;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        title: Text(l10n.editPlan),
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-            );
-            context.pop();
-          },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final planAsync = ref.watch(planDetailProvider(planId));
+
+    return planAsync.when(
+      data: (plan) => PlanCreateScreen(
+        initialPlan: plan,
+        editingPlanId: planId,
+      ),
+      loading: () => const SparklePageScaffold(
+        role: SparklePageRole.content,
+        child: Center(
+          child: CircularProgressIndicator(),
         ),
       ),
-      child: ContentConstraint(
+      error: (error, _) => SparklePageScaffold(
+        role: SparklePageRole.content,
         child: Center(
-          child: SparkleStaggerItem(
-            index: 0,
-            child: GraphiteCardSurface(
-              surfaceRole: SparkleSurfaceRole.card,
-              child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-                const SizedBox(height: DS.lg),
-                Text(
-                  l10n.planEditInProgress,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  '${l10n.planId}: $planId',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  l10n.featureInDevelopment,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.xl),
-                SparkleButton.primary(
-                  label: l10n.back,
-                  onPressed: () {
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.selection,
-                      ),
-                    );
-                    context.pop();
-                  },
-                ),
-              ],
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing24),
+            child: Text(
+              '计划加载失败：$error',
+              style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              textAlign: TextAlign.center,
             ),
           ),
         ),

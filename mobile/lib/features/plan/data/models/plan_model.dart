@@ -105,7 +105,9 @@ class PlanCreate {
     this.description,
     this.targetDate,
     this.subject,
+    this.totalEstimatedHours,
     this.priority = PlanPriority.normal,
+    this.planStage,
   });
 
   factory PlanCreate.fromJson(Map<String, dynamic> json) =>
@@ -118,7 +120,11 @@ class PlanCreate {
   final String? subject;
   @JsonKey(name: 'daily_available_minutes')
   final int dailyAvailableMinutes;
+  @JsonKey(name: 'total_estimated_hours')
+  final double? totalEstimatedHours;
   final PlanPriority priority;
+  @JsonKey(name: 'plan_stage')
+  final PlanStage? planStage;
   Map<String, dynamic> toJson() => _$PlanCreateToJson(this);
 }
 
@@ -129,6 +135,7 @@ class PlanUpdate {
     this.description,
     this.targetDate,
     this.dailyAvailableMinutes,
+    this.totalEstimatedHours,
     this.isActive,
     this.priority,
     this.planStage,
@@ -142,6 +149,8 @@ class PlanUpdate {
   final DateTime? targetDate;
   @JsonKey(name: 'daily_available_minutes')
   final int? dailyAvailableMinutes;
+  @JsonKey(name: 'total_estimated_hours')
+  final double? totalEstimatedHours;
   @JsonKey(name: 'is_active')
   final bool? isActive;
   final PlanPriority? priority;

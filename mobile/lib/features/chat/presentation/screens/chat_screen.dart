@@ -34,11 +34,13 @@ import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.da
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
-import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
+import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -51,6 +53,11 @@ const _defaultAiSystemPreferences = TransparencyPreferences(
   autoCollapseOnComplete: true,
   allowPerTurnDismiss: true,
 );
+
+enum _ChatShortcutAction {
+  seedLibrary,
+  newSession,
+}
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({
@@ -262,8 +269,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_handleScroll);
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
     unawaited(BgmService.setReadingActivity(false));
     unawaited(BgmService.setThinkingActivity(false));
     super.dispose();
@@ -418,11 +426,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             semanticLabel: l10n.chatHistoryTitle,
             variant: ButtonVariant.ghost,
           ),
-          SparkleIconButton(
-            icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
-            onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
-            semanticLabel: l10n.chatNewConversation,
-            variant: ButtonVariant.ghost,
+          PopupMenuButton<_ChatShortcutAction>(
+            tooltip: '更多对话操作',
+            color: DS.surfacePrimary,
+            surfaceTintColor: DS.surfacePrimary,
+            icon: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
+            onSelected: (value) {
+              if (value == _ChatShortcutAction.seedLibrary) {
+                unawaited(_openSeedLibrary(context));
+              } else if (value == _ChatShortcutAction.newSession) {
+                ref.read(chatProvider.notifier).startNewSession();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<_ChatShortcutAction>(
+                value: _ChatShortcutAction.seedLibrary,
+                child: Row(
+                  children: [
+                    Icon(Icons.library_books_outlined, size: 18),
+                    SizedBox(width: DS.spacing12),
+                    Text('调整种子库'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<_ChatShortcutAction>(
+                value: _ChatShortcutAction.newSession,
+                child: Row(
+                  children: [
+                    Icon(Icons.add_comment_outlined, size: 18),
+                    SizedBox(width: DS.spacing12),
+                    Text('新对话'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -833,6 +870,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Future<void> _openSeedLibrary(BuildContext context) async {
+    await context.push(SeedLibraryRoutes.libraries);
+    if (!mounted || !context.mounted) {
+      return;
+    }
+    await ref.read(subscriptionsProvider.notifier).loadSubscriptions();
+    if (!mounted || !context.mounted) {
+      return;
+    }
+    AppFeedback.info(context, '种子库调整会从下一条消息开始生效');
+  }
+
   Future<void> _navigateFromAction(String route) async {
     if (!mounted || route.isEmpty || !route.startsWith('/')) {
       return;
@@ -864,8 +913,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<String?> _loadHistorySessionFromSheet(String sessionId) async {
+    final l10n = context.l10n;
     if (sessionId.isEmpty) {
-      return context.l10n.chatSessionDataError;
+      return l10n.chatSessionDataError;
     }
 
     final currentSessionId = ref.read(chatProvider).conversationId;
@@ -880,7 +930,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .loadConversationHistory(sessionId)
           .timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      return context.l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
+      return l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
     }
     if (mounted && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -890,7 +940,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     if (ref.read(chatProvider).conversationId != sessionId) {
-      return context.l10n.chatHistoryLoadFailed('历史会话未能成功切换，请重试');
+      return l10n.chatHistoryLoadFailed('历史会话未能成功切换，请重试');
     }
 
     final loadError = ref.read(chatProvider).error;
@@ -1013,6 +1063,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                           ),
                         ),
+                        _QuickActionChip(
+                          icon: Icons.library_books_outlined,
+                          label: '调整种子库',
+                          subtitle: '优化当前会话接下来几轮的回答风格',
+                          color: DS.success,
+                          isNarrow: isNarrow,
+                          onTap: () => unawaited(_openSeedLibrary(context)),
+                        ),
                       ],
                     );
                   },
@@ -1133,6 +1191,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(planListProvider.select((s) => s.activePlans));
     final activePlan =
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
+    final subscriptionState = ref.watch(subscriptionsProvider);
+    final enabledSeedCount = subscriptionState.subscriptions
+        .where((subscription) => subscription.isEnabled)
+        .length;
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -1240,6 +1302,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   )
                 : const SizedBox.shrink(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              _chatBottomSurfaceHorizontalInset,
+              0,
+              _chatBottomSurfaceHorizontalInset,
+              DS.spacing8,
+            ),
+            child: _SeedLibraryEntryBar(
+              enabledCount: enabledSeedCount,
+              isLoading: subscriptionState.isLoading,
+              onTap: () => unawaited(_openSeedLibrary(context)),
+            ),
           ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
@@ -2011,6 +2086,87 @@ class _QuickActionChip extends StatefulWidget {
 
   @override
   State<_QuickActionChip> createState() => _QuickActionChipState();
+}
+
+class _SeedLibraryEntryBar extends StatelessWidget {
+  const _SeedLibraryEntryBar({
+    required this.enabledCount,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  final int enabledCount;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch ((isLoading, enabledCount)) {
+      (true, _) => '正在同步种子库状态',
+      (_, > 0) => '已启用 $enabledCount 个种子库，调整后下一条消息生效',
+      _ => '调整种子库，让接下来的回答更贴合你的风格',
+    };
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: DS.borderRadius16,
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+          decoration: BoxDecoration(
+            color: Color.alphaBlend(
+              DS.success.withValues(alpha: 0.08),
+              DS.surfacePrimary,
+            ),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: DS.success.withValues(alpha: 0.18),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: DS.success.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.library_books_outlined,
+                  size: 18,
+                  color: DS.success,
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: DS.iconSizeSm,
+                color: DS.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ChatContextToggle extends StatelessWidget {

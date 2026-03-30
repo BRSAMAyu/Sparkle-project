@@ -263,7 +263,7 @@ class ToolRegistry {
         ToolLaunchContext.home,
         ToolLaunchContext.toolLibrary,
       },
-      routeBuilder: (_) => '/review?mode=today',
+      routeBuilder: (_) => '/review-plan',
     ),
     ToolDefinition(
       id: 'learning_forecast',

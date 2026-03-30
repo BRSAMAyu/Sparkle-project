@@ -73,6 +73,328 @@
       "releaseApproved": true
     },
     {
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_2_2_02_chopin_nocturne_12_in_g_op_37_2_ct_119",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_2__01_2_02_chopin_nocturne_12_in_g_op_37_2_ct_119.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 2]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_2_2_06_chopin_nocturne_16_in_e_flat_op_55_2_ct_123",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_2__02_2_06_chopin_nocturne_16_in_e_flat_op_55_2_ct_123.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 2]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_2_2_07_chopin_nocturne_17_in_b_op_62_1_ct_124",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_2__03_2_07_chopin_nocturne_17_in_b_op_62_1_ct_124.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 2]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "artur_rubinstein_chopin_19_nocturnes_disc_2_2_08_chopin_nocturne_18_in_e_op_62_2_ct_125",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_19_nocturnes_disc_2__04_2_08_chopin_nocturne_18_in_e_op_62_2_ct_125.m4a",
+      "album": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 2]",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "artur_rubinstein_chopin_favorites_11_chopin_nocturne_5_in_f_sharp_op_15_2_ct_112",
+      "assetPath": "audio/bgm/curated/artur_rubinstein_chopin_favorites__01_11_chopin_nocturne_5_in_f_sharp_op_15_2_ct_112.m4a",
+      "album": "Artur Rubinstein/Chopin Favorites",
+      "sceneTags": [
+        "reading",
+        "reflection",
+        "reflective",
+        "soft",
+        "profile",
+        "insights",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "les_introuvables_disc_5_5_01_bach_cello_suite_1_in_g_bwv_1007_praeludium",
+      "assetPath": "audio/bgm/curated/les_introuvables_disc_5__01_5_01_bach_cello_suite_1_in_g_bwv_1007_praeludium.m4a",
+      "album": "Compilations/Les Introuvables [Disc 5]",
+      "sceneTags": [
+        "focus",
+        "reflection",
+        "reading",
+        "meditative",
+        "soft",
+        "insights",
+        "profile",
+        "plan"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.20,
+      "density": 0.16,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "les_introuvables_disc_5_5_02_bach_cello_suite_1_in_g_bwv_1007_allemande",
+      "assetPath": "audio/bgm/curated/les_introuvables_disc_5__02_5_02_bach_cello_suite_1_in_g_bwv_1007_allemande.m4a",
+      "album": "Compilations/Les Introuvables [Disc 5]",
+      "sceneTags": [
+        "focus",
+        "reflection",
+        "reading",
+        "meditative",
+        "soft",
+        "insights",
+        "profile",
+        "plan"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.18,
+      "density": 0.16,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "les_introuvables_disc_5_5_04_bach_cello_suite_1_in_g_bwv_1007_sarabande",
+      "assetPath": "audio/bgm/curated/les_introuvables_disc_5__03_5_04_bach_cello_suite_1_in_g_bwv_1007_sarabande.m4a",
+      "album": "Compilations/Les Introuvables [Disc 5]",
+      "sceneTags": [
+        "focus",
+        "reflection",
+        "reading",
+        "meditative",
+        "soft",
+        "insights",
+        "profile",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.14,
+      "density": 0.12,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "les_introuvables_disc_5_5_07_bach_cello_suite_2_in_d_minor_bwv_1008_praeludium",
+      "assetPath": "audio/bgm/curated/les_introuvables_disc_5__04_5_07_bach_cello_suite_2_in_d_minor_bwv_1008_praeludium.m4a",
+      "album": "Compilations/Les Introuvables [Disc 5]",
+      "sceneTags": [
+        "focus",
+        "reflection",
+        "reading",
+        "meditative",
+        "deep",
+        "insights",
+        "profile"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.22,
+      "density": 0.16,
+      "baseGain": 0.82,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "les_introuvables_disc_5_5_10_bach_cello_suite_2_in_d_minor_bwv_1008_sarabande",
+      "assetPath": "audio/bgm/curated/les_introuvables_disc_5__05_5_10_bach_cello_suite_2_in_d_minor_bwv_1008_sarabande.m4a",
+      "album": "Compilations/Les Introuvables [Disc 5]",
+      "sceneTags": [
+        "focus",
+        "reflection",
+        "reading",
+        "meditative",
+        "soft",
+        "insights",
+        "profile",
+        "chat"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "airy"
+      ],
+      "energy": 0.14,
+      "density": 0.12,
+      "baseGain": 0.82,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "mozart_complete_works_for_solo_piano_disc_3_3_02_mozart_piano_sonata_9_in_d_k_311_andantino_con_espressione",
+      "assetPath": "audio/bgm/curated/mozart_complete_works_for_solo_piano_disc_3__01_3_02_mozart_piano_sonata_9_in_d_k_311_andantino_con_espressione.m4a",
+      "album": "Compilations/Mozart_ Complete Works For Solo Piano [Disc 3]",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "calm",
+        "plan",
+        "task",
+        "calendar",
+        "dashboard"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.20,
+      "density": 0.18,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "mozart_complete_works_for_solo_piano_disc_3_3_05_mozart_piano_sonata_10_in_c_k_330_andante_cantabile",
+      "assetPath": "audio/bgm/curated/mozart_complete_works_for_solo_piano_disc_3__02_3_05_mozart_piano_sonata_10_in_c_k_330_andante_cantabile.m4a",
+      "album": "Compilations/Mozart_ Complete Works For Solo Piano [Disc 3]",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "calm",
+        "plan",
+        "task",
+        "calendar",
+        "dashboard"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.16,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
+      "id": "mozart_complete_works_for_solo_piano_disc_3_3_07_mozart_piano_sonata_11_in_a_k_331_andante_grazioso",
+      "assetPath": "audio/bgm/curated/mozart_complete_works_for_solo_piano_disc_3__03_3_07_mozart_piano_sonata_11_in_a_k_331_andante_grazioso.m4a",
+      "album": "Compilations/Mozart_ Complete Works For Solo Piano [Disc 3]",
+      "sceneTags": [
+        "focus",
+        "productivity",
+        "reading",
+        "structured",
+        "calm",
+        "plan",
+        "task",
+        "calendar",
+        "dashboard"
+      ],
+      "paletteTags": [
+        "classical",
+        "adaptive",
+        "piano"
+      ],
+      "energy": 0.18,
+      "density": 0.16,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true
+    },
+    {
       "id": "6_7_8_2_05_mozart_piano_sonata_7_in_c_k_309_2_andante_un_poco_adagio",
       "assetPath": "audio/bgm/curated/6_7_8__01_2_05_mozart_piano_sonata_7_in_c_k_309_2_andante_un_poco_adagio.m4a",
       "album": "钢琴内田光子/莫扎特第6、7、8钢琴奏鸣曲",

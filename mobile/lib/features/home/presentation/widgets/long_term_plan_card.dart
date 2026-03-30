@@ -21,7 +21,9 @@ class LongTermPlanCard extends ConsumerWidget {
     final growth = dashboardState.growth;
 
     return SparklePressable(
-      onTap: () => context.push('/growth'),
+      onTap: () => context.push(
+        growth == null ? '/plans/new?type=growth' : '/growth',
+      ),
       padding: EdgeInsets.zero,
       borderRadius: DS.borderRadius20,
       child: MaterialStyler(
@@ -46,23 +48,23 @@ class LongTermPlanCard extends ConsumerWidget {
         SparkleStaggerItem(
           index: 0,
           child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '长期计划',
-              style: TextStyle(
-                fontSize: dense ? 10 : (compact ? 11 : 12),
-                fontWeight: FontWeight.w500,
-                color: DS.textSecondary,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '长期计划',
+                style: TextStyle(
+                  fontSize: dense ? 10 : (compact ? 11 : 12),
+                  fontWeight: FontWeight.w500,
+                  color: DS.textSecondary,
+                ),
               ),
-            ),
-            Icon(
-              Icons.spa_rounded,
-              color: DS.success,
-              size: dense ? 14 : (compact ? 15 : 16),
-            ),
-          ],
-        ),
+              Icon(
+                Icons.spa_rounded,
+                color: DS.success,
+                size: dense ? 14 : (compact ? 15 : 16),
+              ),
+            ],
+          ),
         ),
         const Spacer(),
         Center(
