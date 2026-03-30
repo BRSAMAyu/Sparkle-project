@@ -33,8 +33,7 @@ class ToolRegistry:
             from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
             self._dynamic_registry = dynamic_tool_registry
             # 确保动态工具已注册
-            if len(self._dynamic_registry.get_all_tools()) == 0:
-                self._dynamic_registry.register_from_package("app.tools")
+            self._dynamic_registry.ensure_package_registered("app.tools")
         return self._dynamic_registry
 
     def get_tool(self, name: str) -> BaseTool | None:

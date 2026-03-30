@@ -67,7 +67,12 @@ class GraphStructureService:
 
         # Initialize status
         status = UserNodeStatus(
-            user_id=user_id, node_id=node.id, is_unlocked=True, mastery_score=0, first_unlock_at=_utcnow()
+            user_id=user_id,
+            node_id=node.id,
+            is_unlocked=True,
+            mastery_score=0,
+            bkt_mastery_prob=0.0,
+            first_unlock_at=_utcnow(),
         )
         self.db.add(status)
 

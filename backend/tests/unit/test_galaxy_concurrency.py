@@ -7,9 +7,38 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import text
-
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.user import User
 from app.services.galaxy_service import GalaxyService
+
+
+async def _seed_user_node_status(db, *, user_id: UUID, node_id: UUID, mastery_score: float, revision: int) -> None:
+    user = User(
+        id=user_id,
+        username=f"concurrency_{user_id.hex[:12]}",
+        email=f"{user_id.hex[:12]}@example.com",
+        hashed_password="hashed",
+    )
+    node = KnowledgeNode(
+        id=node_id,
+        name=f"并发测试节点-{node_id.hex[:8]}",
+        description="用于验证知识星图掌握度并发更新。",
+        importance_level=1,
+        source_type="user_created",
+        dominant_sector_code="VOID",
+        sector_classification_status="pending",
+    )
+    status = UserNodeStatus(
+        user_id=user_id,
+        node_id=node_id,
+        mastery_score=mastery_score,
+        bkt_mastery_prob=max(0.0, min(float(mastery_score) / 100.0, 1.0)),
+        revision=revision,
+        is_unlocked=True,
+    )
+    db.add_all([user, node, status])
+    await db.commit()
 
 
 @pytest.mark.asyncio
@@ -20,16 +49,11 @@ async def test_concurrent_mastery_update_with_revision():
     """
     user_id = uuid4()
     node_id = uuid4()
+    await engine.dispose()
 
     # Create initial node status
     async with AsyncSessionLocal() as db:
-        # Setup: Insert initial record with revision=1
-        setup_query = text("""
-            INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, revision, is_unlocked)
-            VALUES (:user_id, :node_id, 50, NOW(), 1, true)
-        """)
-        await db.execute(setup_query, {"user_id": user_id, "node_id": node_id})
-        await db.commit()
+        await _seed_user_node_status(db, user_id=user_id, node_id=node_id, mastery_score=50, revision=1)
 
     # Simulate two concurrent updates with the same expected revision (1)
     async def update_mastery(new_score: int):
@@ -88,15 +112,10 @@ async def test_sequential_mastery_update_with_revision():
     """
     user_id = uuid4()
     node_id = uuid4()
+    await engine.dispose()
 
     async with AsyncSessionLocal() as db:
-        # Setup: Insert initial record with revision=1
-        setup_query = text("""
-            INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, revision, is_unlocked)
-            VALUES (:user_id, :node_id, 40, NOW(), 1, true)
-        """)
-        await db.execute(setup_query, {"user_id": user_id, "node_id": node_id})
-        await db.commit()
+        await _seed_user_node_status(db, user_id=user_id, node_id=node_id, mastery_score=40, revision=1)
 
     # Sequential updates with correct revision numbers
     for expected_rev, new_score in [(1, 50), (2, 60), (3, 70)]:
@@ -133,15 +152,10 @@ async def test_stale_revision_rejected():
     """
     user_id = uuid4()
     node_id = uuid4()
+    await engine.dispose()
 
     async with AsyncSessionLocal() as db:
-        # Setup: Insert record with revision=5
-        setup_query = text("""
-            INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, revision, is_unlocked)
-            VALUES (:user_id, :node_id, 80, NOW(), 5, true)
-        """)
-        await db.execute(setup_query, {"user_id": user_id, "node_id": node_id})
-        await db.commit()
+        await _seed_user_node_status(db, user_id=user_id, node_id=node_id, mastery_score=80, revision=5)
 
     # Try to update with stale revision=3
     async with AsyncSessionLocal() as db:

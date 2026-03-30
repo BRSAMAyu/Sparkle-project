@@ -296,8 +296,8 @@ class ProductionChatOrchestrator:
     def _ensure_tools_registered(self):
         """确保工具已注册"""
         try:
-            if len(dynamic_tool_registry.get_all_tools()) == 0:
-                dynamic_tool_registry.register_from_package("app.tools")
+            registered = dynamic_tool_registry.ensure_package_registered("app.tools")
+            if registered > 0:
                 logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
         except Exception as e:
             logger.error(f"Tool registration failed: {e}")

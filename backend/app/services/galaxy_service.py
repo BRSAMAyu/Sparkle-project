@@ -632,28 +632,46 @@ class GalaxyService:
             return dt
 
         update_time = _to_utc_naive(version) or _utcnow()
+        bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
 
         try:
             # === ATOMIC UPDATE WITH OPTIMISTIC LOCKING ===
             # If revision is provided, use atomic conditional UPDATE to prevent race conditions
             if revision is not None:
-                # Atomic update: WHERE revision = expected_revision, returns row only if matched
+                # Atomic update: lock the expected revision row, then update and return the pre-update mastery.
                 atomic_update = text("""
-                    UPDATE user_node_status
-                    SET mastery_score = :mastery,
-                        updated_at = :updated_at,
-                        last_study_at = :updated_at,
-                        is_unlocked = true,
-                        revision = revision + 1
-                    WHERE user_id = :user_id
-                      AND node_id = :node_id
-                      AND revision = :expected_revision
-                    RETURNING mastery_score, revision
+                    WITH current AS (
+                        SELECT mastery_score
+                        FROM user_node_status
+                        WHERE user_id = :user_id
+                          AND node_id = :node_id
+                          AND revision = :expected_revision
+                        FOR UPDATE
+                    ),
+                    updated AS (
+                        UPDATE user_node_status AS status
+                        SET mastery_score = :mastery,
+                            bkt_mastery_prob = :bkt_mastery_prob,
+                            bkt_last_updated_at = :updated_at,
+                            updated_at = :updated_at,
+                            last_study_at = :updated_at,
+                            last_interacted_at = :updated_at,
+                            is_unlocked = true,
+                            revision = status.revision + 1
+                        FROM current
+                        WHERE status.user_id = :user_id
+                          AND status.node_id = :node_id
+                          AND status.revision = :expected_revision
+                        RETURNING status.revision AS new_revision
+                    )
+                    SELECT current.mastery_score AS old_mastery, updated.new_revision
+                    FROM current, updated
                 """)
                 result = await self.db.execute(atomic_update, {
                     "user_id": user_id,
                     "node_id": node_id,
                     "mastery": new_mastery,
+                    "bkt_mastery_prob": bkt_mastery_prob,
                     "expected_revision": revision,
                     "updated_at": update_time,
                 })
@@ -673,16 +691,10 @@ class GalaxyService:
                     logger.warning(
                         f"Atomic update conflict for node {node_id}. Expected revision {revision}, current is {current_revision}"
                     )
+                    await self.db.rollback()
                     return {"success": False, "reason": "conflict", "current_revision": current_revision}
 
-                # Get old mastery for audit log
-                old_mastery_query = text("""
-                    SELECT mastery_score FROM user_node_status
-                    WHERE user_id = :user_id AND node_id = :node_id
-                """)
-                old_result = await self.db.execute(old_mastery_query, {"user_id": user_id, "node_id": node_id})
-                old_row = old_result.fetchone()
-                old_mastery = old_row[0] if old_row else 0
+                old_mastery = row[0] if row else 0
                 new_revision = row[1]
 
             else:
@@ -712,8 +724,6 @@ class GalaxyService:
                     current_revision = 0
 
                 new_revision = current_revision + 1
-                bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
-
                 # UPSERT pattern for non-revision cases
                 upsert_query = text("""
                     INSERT INTO user_node_status (
@@ -847,6 +857,8 @@ class GalaxyService:
             except Exception as e:
                 logger.warning(f"Achievement processing failed in update_node_mastery: {e}")
             # ============================================
+
+            await self.db.commit()
 
             return {
                 "success": True,

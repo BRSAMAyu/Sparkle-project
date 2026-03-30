@@ -27,6 +27,7 @@ from app.core.business_metrics import (
 )
 from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
+from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
 from app.services.self_evolution_service import StrategyCalibrationService
@@ -171,6 +172,25 @@ class PlanReviewService:
         """Configure Redis client"""
         self.redis = redis_client
         pending_actions_store.set_redis(redis_client)
+
+    async def _get_langgraph_breaker(self) -> CircuitBreaker:
+        breaker = circuit_breaker_registry.get("langgraph_planner")
+        if breaker is not None:
+            return breaker
+
+        breaker = CircuitBreaker(
+            name="langgraph_planner",
+            config=CircuitBreakerConfig(
+                failure_threshold=5,
+                success_threshold=2,
+                timeout_ms=60000,
+                failure_rate_threshold=0.5,
+            ),
+            redis_client=self.redis,
+        )
+        await breaker.initialize()
+        circuit_breaker_registry.register(breaker)
+        return breaker
 
     async def review_plan(
         self,
@@ -1774,7 +1794,10 @@ Please review this plan and provide your assessment."""
                     f"反馈: {feedback}"
                 )
 
-                planner = LangGraphPlanner(self.redis)
+                planner = LangGraphPlanner(
+                    self.redis,
+                    circuit_breaker=await self._get_langgraph_breaker(),
+                )
                 executable_plan = await planner.plan(
                     message=replan_message,
                     snapshot=snapshot,

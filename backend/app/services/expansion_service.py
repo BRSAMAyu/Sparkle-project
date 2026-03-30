@@ -622,6 +622,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             node_id=node_id,
             is_unlocked=True,
             mastery_score=0,
+            bkt_mastery_prob=0.0,
             first_unlock_at=_utcnow(),
         )
         self.db.add(status)

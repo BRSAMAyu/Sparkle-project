@@ -536,7 +536,7 @@ Sparkle-project/
 | Document | Description | Audience |
 |:---------|:------------|:---------|
 | [CLAUDE.md](CLAUDE.md) | Dev guide, architecture rules, code patterns | Developers |
-| [AI System & Task Loop](docs/00_项目概览/AI系统与任务闭环对齐文档_2026-03-10.md) | Main orchestration path, review, approval, and replanning loop | Developers / Product |
+| [Developer Docs Entry](docs/README.md) | Main entry for current development documentation | Developers / Product |
 | [Technical Architecture](docs/00_项目概览/02_技术架构.md) | 3-layer architecture deep dive | Developers |
 | [Knowledge Galaxy Design](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG implementation details | Developers |
 | [API Design](docs/02_技术设计文档/05_API设计.md) | gRPC + WebSocket interfaces | Developers |

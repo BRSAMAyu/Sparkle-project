@@ -83,9 +83,7 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
       glowColor: json['glow_color'] as String?,
       sectorWeights: (json['sector_weights'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(
-              $enumDecode(_$SectorEnumEnumMap, k),
-              (e as num).toDouble(),
-            ),
+                $enumDecode(_$SectorEnumEnumMap, k), (e as num).toDouble()),
           ) ??
           const {},
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -113,9 +111,8 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'sector_code': _$SectorEnumEnumMap[instance.sector]!,
       'base_color': instance.baseColor,
       'glow_color': instance.glowColor,
-      'sector_weights': instance.sectorWeights.map(
-        (k, e) => MapEntry(_$SectorEnumEnumMap[k]!, e),
-      ),
+      'sector_weights': instance.sectorWeights
+          .map((k, e) => MapEntry(_$SectorEnumEnumMap[k]!, e)),
       'is_unlocked': instance.isUnlocked,
       'mastery_score': instance.masteryScore,
       'study_count': instance.studyCount,

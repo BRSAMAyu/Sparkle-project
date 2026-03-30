@@ -342,6 +342,7 @@ class ChatOrchestrator(
         logger.info("ChatOrchestrator initialized with GroundingValidator and UnifiedIntentRouter")
 
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
+        # Note: Circuit breaker will be injected after initialization
         self.lang_graph_planner = LangGraphPlanner(redis_client)
         self.snapshot_manager = StateSnapshotManager(redis_client)
         logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
@@ -356,6 +357,9 @@ class ChatOrchestrator(
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
         self._track_task(asyncio.create_task(self.langgraph_breaker.initialize()))
+
+        # Inject circuit breaker into LangGraphPlanner
+        self.lang_graph_planner.circuit_breaker = self.langgraph_breaker
 
         # Phase 3: Observability
         self.observability = observability_logger
@@ -571,10 +575,8 @@ class ChatOrchestrator(
     def _ensure_tools_registered(self):
         """Ensure tools are registered in the registry"""
         try:
-            # Check if tools are already registered
-            if len(dynamic_tool_registry.get_all_tools()) == 0:
-                # Auto-discover tools from app.tools package
-                dynamic_tool_registry.register_from_package("app.tools")
+            registered = dynamic_tool_registry.ensure_package_registered("app.tools")
+            if registered > 0:
                 logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
 
             # Fix 3: 刷新 validator allowlist（与工具注册联动）

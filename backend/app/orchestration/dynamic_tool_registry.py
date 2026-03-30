@@ -5,6 +5,7 @@ Dynamic Tool Registry
 from __future__ import annotations
 import importlib
 import inspect
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -33,12 +34,15 @@ class DynamicToolRegistry:
     _instance = None
     _tools: dict[str, BaseTool] = {}
     _tool_info: dict[str, ToolInfo] = {}
+    _registered_packages: set[str] = set()
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._tools = {}
             cls._instance._tool_info = {}
+            cls._instance._registered_packages = set()
+            cls._instance._registration_lock = threading.RLock()
         return cls._instance
 
     def register_tool(self, tool: BaseTool) -> None:
@@ -48,8 +52,24 @@ class DynamicToolRegistry:
         Args:
             tool: 工具实例
         """
-        self._tools[tool.name] = tool
-        logger.info(f"Registered tool: {tool.name} ({tool.category.value})")
+        with self._registration_lock:
+            self._tools[tool.name] = tool
+            logger.info(f"Registered tool: {tool.name} ({tool.category.value})")
+
+    def ensure_package_registered(self, package_path: str, recursive: bool = True) -> int:
+        """
+        Register a package at most once per process.
+
+        This closes the race where multiple startup paths all check for an empty
+        registry and try to scan the same package simultaneously.
+        """
+        with self._registration_lock:
+            if package_path in self._registered_packages:
+                return 0
+            registered = self.register_from_package(package_path, recursive=recursive)
+            if registered > 0:
+                self._registered_packages.add(package_path)
+            return registered
 
     def register_from_module(self, module_path: str, class_name: str = None) -> bool:
         """
@@ -257,19 +277,22 @@ class DynamicToolRegistry:
         Returns:
             bool: 是否成功
         """
-        if name in self._tools:
-            del self._tools[name]
-            if name in self._tool_info:
-                del self._tool_info[name]
-            logger.info(f"Unregistered tool: {name}")
-            return True
-        return False
+        with self._registration_lock:
+            if name in self._tools:
+                del self._tools[name]
+                if name in self._tool_info:
+                    del self._tool_info[name]
+                logger.info(f"Unregistered tool: {name}")
+                return True
+            return False
 
     def clear_all(self) -> None:
         """清空所有工具"""
-        self._tools.clear()
-        self._tool_info.clear()
-        logger.info("All tools cleared")
+        with self._registration_lock:
+            self._tools.clear()
+            self._tool_info.clear()
+            self._registered_packages.clear()
+            logger.info("All tools cleared")
 
     def _is_valid_tool_class(self, obj: type) -> bool:
         """

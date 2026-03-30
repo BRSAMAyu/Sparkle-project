@@ -388,7 +388,7 @@ class GalaxyStatsService:
         status = result.scalar_one_or_none()
 
         if not status:
-            status = UserNodeStatus(user_id=user_id, node_id=node_id)
+            status = UserNodeStatus(user_id=user_id, node_id=node_id, bkt_mastery_prob=0.0)
             self.db.add(status)
             await self.db.flush()
 
