@@ -12,6 +12,7 @@ from app.api.deps import get_current_user_id, get_db
 from app.api.v1.simulation import router as simulation_router
 from app.api.v1.theater import router as theater_router
 from app.core.cache import cache_service
+from app.core.exceptions import NotFoundError
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
@@ -1536,6 +1537,138 @@ async def test_record_actual_outcome_updates_db_row(
     assert row.accuracy_status == "recorded"
     assert row.accuracy_summary is not None
     assert row.accuracy_summary["actual_completion_rate"] == 0.75
+
+
+@pytest.mark.asyncio
+async def test_get_accuracy_summary_requires_prediction_owner(db_session, test_user):
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-accuracy-owner-1",
+    )
+    summary = {
+        "prediction_id": "pred-accuracy-owner-1",
+        "accuracy_score": 0.88,
+    }
+    await service._persist_prediction(payload)
+    await db_session.commit()
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.SUMMARY_KEY_PREFIX}pred-accuracy-owner-1",
+        summary,
+        ttl=60,
+    )
+
+    owned_summary = await service.get_accuracy_summary(
+        user_id=test_user.id,
+        prediction_id="pred-accuracy-owner-1",
+    )
+
+    assert owned_summary == summary
+
+    with pytest.raises(NotFoundError):
+        await service.get_accuracy_summary(
+            user_id=uuid4(),
+            prediction_id="pred-accuracy-owner-1",
+        )
+
+
+@pytest.mark.asyncio
+async def test_persist_prediction_failure_keeps_outer_transaction_alive(db_session, test_user):
+    """A best-effort prediction write must not roll back outer staged writes."""
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-savepoint-1",
+    )
+
+    outer_bundle = TheaterCandidateBundle(
+        user_id=test_user.id,
+        prediction_id="bundle-savepoint-1",
+        topic="外层事务主题",
+        target_name="外层事务目标",
+        target_resolution_mode="freeform_only",
+        status="pending_review",
+        nodes_payload=[],
+        edges_payload=[],
+        semantic_matches=[],
+        source_metadata={},
+    )
+    db_session.add(outer_bundle)
+
+    await service._persist_prediction(payload)
+    await service._persist_prediction(payload)
+    await db_session.commit()
+
+    persisted_bundle = (
+        await db_session.execute(
+            select(TheaterCandidateBundle).where(
+                TheaterCandidateBundle.prediction_id == "bundle-savepoint-1"
+            )
+        )
+    ).scalar_one_or_none()
+    assert persisted_bundle is not None
+
+    persisted_predictions = (
+        await db_session.execute(
+            select(TheaterPrediction).where(
+                TheaterPrediction.prediction_id == "pred-savepoint-1"
+            )
+        )
+    ).scalars().all()
+    assert len(persisted_predictions) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_prediction_failure_keeps_outer_transaction_alive(db_session, test_user):
+    """A failed best-effort update must not roll back caller-owned writes."""
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-savepoint-update-1",
+    )
+    await service._persist_prediction(payload)
+    await db_session.commit()
+
+    outer_bundle = TheaterCandidateBundle(
+        user_id=test_user.id,
+        prediction_id="bundle-savepoint-2",
+        topic="外层事务主题",
+        target_name="外层事务目标",
+        target_resolution_mode="freeform_only",
+        status="pending_review",
+        nodes_payload=[],
+        edges_payload=[],
+        semantic_matches=[],
+        source_metadata={},
+    )
+    db_session.add(outer_bundle)
+
+    await service._update_prediction_db(
+        "pred-savepoint-update-1",
+        {"topic": None},
+    )
+    await db_session.commit()
+
+    persisted_bundle = (
+        await db_session.execute(
+            select(TheaterCandidateBundle).where(
+                TheaterCandidateBundle.prediction_id == "bundle-savepoint-2"
+            )
+        )
+    ).scalar_one_or_none()
+    assert persisted_bundle is not None
+
+    persisted_prediction = (
+        await db_session.execute(
+            select(TheaterPrediction).where(
+                TheaterPrediction.prediction_id == "pred-savepoint-update-1"
+            )
+        )
+    ).scalar_one()
+    assert persisted_prediction.topic == "测试主题"
 
 
 async def _generate_minimal_prediction_payload(

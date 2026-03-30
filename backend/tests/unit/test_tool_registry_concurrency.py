@@ -258,3 +258,21 @@ async def test_list_tools_returns_tool_info(clean_registry):
     assert len(tools_info) == 1
     assert tools_info[0]["name"] == "test_tool"
     assert "description" in tools_info[0]
+
+
+@pytest.mark.asyncio
+async def test_get_tool_info_stays_in_sync_with_latest_tool(clean_registry):
+    tool = MockTool("test_tool")
+    clean_registry.register_tool(tool)
+
+    first_info = clean_registry.get_tool_info("test_tool")
+    assert first_info is not None
+    assert first_info.description == "Test tool test_tool"
+
+    replacement = MockTool("test_tool")
+    replacement._description = "Updated description"
+    clean_registry.register_tool(replacement)
+
+    updated_info = clean_registry.get_tool_info("test_tool")
+    assert updated_info is not None
+    assert updated_info.description == "Updated description"

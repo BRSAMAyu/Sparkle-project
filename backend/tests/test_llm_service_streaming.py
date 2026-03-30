@@ -107,3 +107,23 @@ async def test_llm_service_provider_init_failure_returns_http_501():
 
         assert exc_info.value.status_code == 501
         assert "boom" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_chat_json_returns_none_on_invalid_payload():
+    service = LLMService()
+
+    with patch.object(service, "chat", AsyncMock(return_value="not json at all")):
+        result = await service.chat_json([{"role": "user", "content": "hello"}])
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_reason_json_returns_none_on_invalid_payload():
+    service = LLMService()
+
+    with patch.object(service, "reason", AsyncMock(return_value="```json\n{invalid}\n```")):
+        result = await service.reason_json([{"role": "user", "content": "hello"}])
+
+    assert result is None

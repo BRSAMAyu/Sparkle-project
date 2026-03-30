@@ -34,7 +34,8 @@ from app.orchestration.context_focus import ContextFocusDecision
 
 class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
-        return ""
+        logger.warning("Prompt template missing placeholder value: {}", key)
+        return f"{{missing:{key}}}"
 
 
 PROMPT_SECTION_SOFT_LIMIT_TOKENS = 2800

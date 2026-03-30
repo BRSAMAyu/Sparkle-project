@@ -53,6 +53,31 @@ void main() {
         expect(WsConnectionState.reconnecting, isNotNull);
         expect(WsConnectionState.failed, isNotNull);
       });
+
+      test('should only treat explicit auth failures as 401 errors', () {
+        expect(
+          WebSocketChatServiceV2.looksLikeAuthFailure(
+            'WebSocket handshake failed with status code: 401',
+          ),
+          isTrue,
+        );
+        expect(
+          WebSocketChatServiceV2.looksLikeAuthFailure('authentication failed'),
+          isTrue,
+        );
+        expect(
+          WebSocketChatServiceV2.looksLikeAuthFailure(
+            'tool execution token budget exceeded',
+          ),
+          isFalse,
+        );
+        expect(
+          WebSocketChatServiceV2.looksLikeAuthFailure(
+            'heartbeat authentication metrics unavailable',
+          ),
+          isFalse,
+        );
+      });
     });
 
     group('Event Parsing Tests', () {
@@ -165,7 +190,8 @@ void main() {
         final event = WebSocketChatServiceV2Parser.parseEvent(reasoningJson);
         expect(event, isA<ReasoningStepEvent>());
         final reasoningEvent = event as ReasoningStepEvent;
-        expect(reasoningEvent.step.description, equals('Analyzing user request'));
+        expect(
+            reasoningEvent.step.description, equals('Analyzing user request'));
         expect(reasoningEvent.step.agent, equals(AgentType.orchestrator));
         expect(reasoningEvent.step.status, equals(StepStatus.inProgress));
       });
@@ -389,7 +415,9 @@ class WebSocketChatServiceV2Parser {
       case 'reasoning_step':
         final stepData = json['step'] as Map<String, dynamic>?;
         return ReasoningStepEvent(
-          step: stepData != null ? _parseReasoningStep(stepData) : _createDefaultReasoningStep(),
+          step: stepData != null
+              ? _parseReasoningStep(stepData)
+              : _createDefaultReasoningStep(),
           responseId: json['request_id']?.toString(),
         );
 
@@ -505,30 +533,48 @@ class WebSocketChatServiceV2Parser {
   static AgentType _parseAgentType(dynamic raw) {
     final str = raw?.toString().toLowerCase() ?? 'orchestrator';
     switch (str) {
-      case 'orchestrator': return AgentType.orchestrator;
-      case 'math': return AgentType.math;
-      case 'code': return AgentType.code;
-      case 'writing': return AgentType.writing;
-      case 'science': return AgentType.science;
-      case 'knowledge': return AgentType.knowledge;
-      case 'search': return AgentType.search;
-      case 'data_analysis': return AgentType.dataAnalysis;
-      case 'translation': return AgentType.translation;
-      case 'image': return AgentType.image;
-      case 'audio': return AgentType.audio;
-      case 'reasoning': return AgentType.reasoning;
-      default: return AgentType.orchestrator;
+      case 'orchestrator':
+        return AgentType.orchestrator;
+      case 'math':
+        return AgentType.math;
+      case 'code':
+        return AgentType.code;
+      case 'writing':
+        return AgentType.writing;
+      case 'science':
+        return AgentType.science;
+      case 'knowledge':
+        return AgentType.knowledge;
+      case 'search':
+        return AgentType.search;
+      case 'data_analysis':
+        return AgentType.dataAnalysis;
+      case 'translation':
+        return AgentType.translation;
+      case 'image':
+        return AgentType.image;
+      case 'audio':
+        return AgentType.audio;
+      case 'reasoning':
+        return AgentType.reasoning;
+      default:
+        return AgentType.orchestrator;
     }
   }
 
   static StepStatus _parseStepStatus(dynamic raw) {
     final str = raw?.toString().toLowerCase() ?? 'pending';
     switch (str) {
-      case 'pending': return StepStatus.pending;
-      case 'in_progress': return StepStatus.inProgress;
-      case 'completed': return StepStatus.completed;
-      case 'failed': return StepStatus.failed;
-      default: return StepStatus.pending;
+      case 'pending':
+        return StepStatus.pending;
+      case 'in_progress':
+        return StepStatus.inProgress;
+      case 'completed':
+        return StepStatus.completed;
+      case 'failed':
+        return StepStatus.failed;
+      default:
+        return StepStatus.pending;
     }
   }
 }

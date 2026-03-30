@@ -751,27 +751,12 @@ class LLMService:
         model: str | None = None,
         temperature: float = 0.2,
         **kwargs
-    ) -> Any:
+    ) -> Any | None:
         """
         Request JSON output from the LLM using reasoning model.
         """
         raw = await self.reason(messages, model=model, temperature=temperature, **kwargs)
-        cleaned = raw.replace("```json", "").replace("```", "").strip()
-
-        def _extract_json_block(text: str) -> str | None:
-            for start, end in (("{", "}"), ("[", "]")):
-                if start in text and end in text:
-                    return text[text.find(start):text.rfind(end) + 1]
-            return None
-
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            extracted = _extract_json_block(cleaned)
-            if extracted:
-                return json.loads(extracted)
-            logger.warning("Failed to parse JSON from LLM reasoning response, returning empty result")
-            return {}
+        return self._parse_json_payload(raw, response_kind="reasoning")
 
     async def chat_json(
         self,
@@ -779,11 +764,15 @@ class LLMService:
         model: str | None = None,
         temperature: float = 0.3,
         **kwargs
-    ) -> Any:
+    ) -> Any | None:
         """
         Request JSON output from the LLM and parse it safely.
         """
         raw = await self.chat(messages, model=model, temperature=temperature, **kwargs)
+        return self._parse_json_payload(raw, response_kind="chat")
+
+    @staticmethod
+    def _parse_json_payload(raw: str, *, response_kind: str) -> Any | None:
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
         def _extract_json_block(text: str) -> str | None:
@@ -797,9 +786,12 @@ class LLMService:
         except json.JSONDecodeError:
             extracted = _extract_json_block(cleaned)
             if extracted:
-                return json.loads(extracted)
-            logger.warning("Failed to parse JSON from LLM response, returning empty result")
-            return {}
+                try:
+                    return json.loads(extracted)
+                except json.JSONDecodeError:
+                    pass
+            logger.warning("Failed to parse JSON from LLM {} response", response_kind)
+            return None
 
     async def stream_chat(
         self,

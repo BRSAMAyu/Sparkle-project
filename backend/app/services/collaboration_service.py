@@ -48,6 +48,11 @@ class CollaborationService:
                 raise ValueError("Not a member of the target group")
 
         if target_user_id:
+            from app.services.community_service import UserBlockService
+
+            if await UserBlockService.has_block_relationship(db, user_id, target_user_id):
+                raise ValueError("Cannot share with a blocked user")
+
             u1, u2 = (
                 (user_id, target_user_id)
                 if str(user_id) < str(target_user_id)

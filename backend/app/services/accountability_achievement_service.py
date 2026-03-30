@@ -8,9 +8,10 @@ Accountability Achievement Service
 - 协作成就
 """
 
-from datetime import timezone, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
@@ -22,11 +23,32 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
+from app.models.user import PushPreference, User
 from app.services.notification_service import notification_service
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_timezone(timezone_name: str | None) -> str:
+    timezone_name = timezone_name or "Asia/Shanghai"
+    try:
+        ZoneInfo(timezone_name)
+    except Exception:
+        timezone_name = "Asia/Shanghai"
+    return timezone_name
+
+
+def _user_timezone(user: User | None) -> str:
+    return _normalize_timezone(getattr(getattr(user, "push_preference", None), "timezone", None))
+
+
+def _to_local_date(timestamp: datetime, timezone_name: str):
+    zone = ZoneInfo(timezone_name)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(zone).date()
 
 
 class AccountabilityAchievementService:
@@ -389,6 +411,11 @@ class AccountabilityAchievementService:
         """计算用户的连续打卡天数"""
         from datetime import date
 
+        timezone_result = await db.execute(
+            select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+        )
+        timezone_name = _normalize_timezone(timezone_result.scalar_one_or_none())
+
         result = await db.execute(
             select(AccountabilityCheckin.created_at)
             .where(
@@ -402,13 +429,11 @@ class AccountabilityAchievementService:
 
         checkin_dates: set[date] = set()
         for (ts,) in result.all():
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
-            checkin_dates.add(ts.date())
+            checkin_dates.add(_to_local_date(ts, timezone_name))
 
-        today_utc = _utcnow().date()
+        today_local = _to_local_date(_utcnow(), timezone_name)
         streak = 0
-        current = today_utc
+        current = today_local
 
         while current in checkin_dates:
             streak += 1

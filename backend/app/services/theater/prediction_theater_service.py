@@ -1298,7 +1298,7 @@ class PredictionTheaterService:
         actual_completion_rate: float | None = None,
         actual_mastery: float | None = None,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         target_node_id = cached.get("target_node_id")
         adopted_plan_id = cached.get("adopted_plan_id")
 
@@ -1340,7 +1340,8 @@ class PredictionTheaterService:
         })
         return summary
 
-    async def get_accuracy_summary(self, prediction_id: str) -> dict[str, Any] | None:
+    async def get_accuracy_summary(self, *, user_id: UUID, prediction_id: str) -> dict[str, Any] | None:
+        await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         cached = await self.accuracy.get_summary(prediction_id)
         if cached is not None:
             return cached
@@ -1351,6 +1352,7 @@ class PredictionTheaterService:
             result = await self.db.execute(
                 select(TheaterPrediction.accuracy_summary).where(
                     TheaterPrediction.prediction_id == prediction_id,
+                    TheaterPrediction.user_id == user_id,
                     TheaterPrediction.deleted_at.is_(None),
                 )
             )
@@ -1388,6 +1390,7 @@ class PredictionTheaterService:
 
     async def _get_pending_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         redis_client = cache_service.redis
+        redis_ids: set[str] = set()
         results: list[dict[str, Any]] = []
         if redis_client is not None:
             indexed_prediction_ids = await redis_client.smembers(
@@ -1411,25 +1414,27 @@ class PredictionTheaterService:
                 if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
                     continue
                 results.append(cached)
-            if results:
-                return results
+                redis_ids.add(str(cached.get("prediction_id") or ""))
 
-        # DB fallback when Redis returns nothing
-        if self.db is None:
-            return results
-        try:
-            db_result = await self.db.execute(
-                select(TheaterPrediction).where(
-                    TheaterPrediction.user_id == user_id,
-                    TheaterPrediction.accuracy_status == "pending_feedback",
-                    TheaterPrediction.deleted_at.is_(None),
-                ).order_by(desc(TheaterPrediction.generated_at))
-            )
-            rows = db_result.scalars().all()
-            for row in rows:
-                results.append(self._prediction_row_to_payload(row))
-        except Exception as exc:
-            logger.warning("DB fallback for pending predictions failed: %s", exc)
+        # DB fallback: fill in predictions that Redis missed (expired or
+        # never cached) and that are due for accuracy evaluation.
+        if self.db is not None:
+            try:
+                db_result = await self.db.execute(
+                    select(TheaterPrediction).where(
+                        TheaterPrediction.user_id == user_id,
+                        TheaterPrediction.accuracy_status == "pending_feedback",
+                        TheaterPrediction.accuracy_due_on <= _utcnow(),
+                        TheaterPrediction.deleted_at.is_(None),
+                    ).order_by(desc(TheaterPrediction.generated_at))
+                )
+                rows = db_result.scalars().all()
+                for row in rows:
+                    if row.prediction_id in redis_ids:
+                        continue  # Already have it from Redis
+                    results.append(self._prediction_row_to_payload(row))
+            except Exception as exc:
+                logger.warning("DB fallback for pending predictions failed: %s", exc)
         return results
 
     async def _compute_actual_from_prediction(
@@ -2689,6 +2694,9 @@ class PredictionTheaterService:
         # 3. Reconstruct full payload dict
         payload = self._prediction_row_to_payload(row)
 
+        # 4. Hydrate graph from linked TheaterCandidateBundle
+        await self._hydrate_graph_from_bundle(payload)
+
         # 4. Backfill Redis cache for subsequent reads
         try:
             await cache_service.set(
@@ -2700,8 +2708,23 @@ class PredictionTheaterService:
             pass  # Cache backfill failure is non-critical
         return payload
 
+    async def _get_prediction_for_user_or_raise(self, prediction_id: str, *, user_id: UUID) -> dict[str, Any]:
+        payload = await self._get_prediction_or_raise(prediction_id)
+        owner_id = str(payload.get("user_id") or "").strip()
+        if owner_id and owner_id != str(user_id):
+            raise NotFoundError(
+                message="没有找到相关预测记录",
+                detail={"error_code": "THEATER_PREDICTION_NOT_FOUND"},
+            )
+        return payload
+
     def _prediction_row_to_payload(self, row: TheaterPrediction) -> dict[str, Any]:
-        """Reconstruct the full payload dict from a DB row."""
+        """Reconstruct the full payload dict from a DB row.
+
+        Graph data is loaded eagerly from the linked TheaterCandidateBundle.
+        Callers must invoke ``await _hydrate_graph_from_bundle(payload)`` after
+        getting the result if they need the graph populated.
+        """
         payload: dict[str, Any] = {
             "prediction_id": row.prediction_id,
             "user_id": str(row.user_id) if row.user_id else "",
@@ -2728,10 +2751,24 @@ class PredictionTheaterService:
             payload["adopted_at"] = row.adopted_at.isoformat()
         if row.accuracy_summary:
             payload["accuracy_summary"] = row.accuracy_summary
-        # Graph lives in TheaterCandidateBundle — leave empty; callers that
-        # need graph will find it via candidate_bundle_id when needed.
+        # Placeholder — will be populated by _hydrate_graph_from_bundle
         payload["graph"] = {"nodes": [], "edges": []}
         return payload
+
+    async def _hydrate_graph_from_bundle(self, payload: dict[str, Any]) -> None:
+        """Populate the ``graph`` key from the linked TheaterCandidateBundle."""
+        bundle_id = self._maybe_uuid(payload.get("candidate_bundle_id"))
+        if bundle_id is None or self.db is None:
+            return
+        try:
+            bundle = await self.db.get(TheaterCandidateBundle, bundle_id)
+            if bundle is not None:
+                payload["graph"] = {
+                    "nodes": list(bundle.nodes_payload or []),
+                    "edges": list(bundle.edges_payload or []),
+                }
+        except Exception:
+            pass  # Non-critical; callers that don't need graph still work
 
     @staticmethod
     def _find_route(payload: dict[str, Any], route_id: str) -> dict[str, Any]:
@@ -2812,30 +2849,33 @@ class PredictionTheaterService:
             candidate_bundle_id = self._maybe_uuid(payload.get("candidate_bundle_id"))
             target_node_id = self._maybe_uuid(payload.get("target_node_id"))
 
-            row = TheaterPrediction(
-                prediction_id=prediction_id,
-                user_id=self._maybe_uuid(payload.get("user_id")),
-                topic=str(payload.get("topic") or ""),
-                target_name=str(payload.get("target_name") or ""),
-                target_node_id=target_node_id,
-                target_resolution_mode=str(payload.get("target_resolution_mode") or "freeform_only"),
-                horizon_days=int(payload.get("horizon_days") or 14),
-                preview_mode=bool(payload.get("preview_mode")),
-                generated_at=generated_at,
-                candidate_bundle_id=candidate_bundle_id,
-                simulation_session_id=payload.get("simulation_session_id"),
-                recommended_route_id=payload.get("recommended_route_id"),
-                accuracy_status=str(accuracy_tracking.get("status") or "pending_feedback"),
-                accuracy_due_on=due_on,
-                paths=list(payload.get("paths") or []),
-                discussion_turns=list(payload.get("discussion_turns") or []),
-                timeline=list(payload.get("timeline") or []),
-                selected_prediction=payload.get("selected_prediction"),
-                routing_notes=dict(payload.get("routing_notes") or {}),
-                accuracy_tracking=accuracy_tracking,
-            )
-            self.db.add(row)
-            await self.db.flush()
+            # Use a savepoint so best-effort persistence failures do not poison
+            # or roll back the caller's outer transaction.
+            async with self.db.begin_nested():
+                row = TheaterPrediction(
+                    prediction_id=prediction_id,
+                    user_id=self._maybe_uuid(payload.get("user_id")),
+                    topic=str(payload.get("topic") or ""),
+                    target_name=str(payload.get("target_name") or ""),
+                    target_node_id=target_node_id,
+                    target_resolution_mode=str(payload.get("target_resolution_mode") or "freeform_only"),
+                    horizon_days=int(payload.get("horizon_days") or 14),
+                    preview_mode=bool(payload.get("preview_mode")),
+                    generated_at=generated_at,
+                    candidate_bundle_id=candidate_bundle_id,
+                    simulation_session_id=payload.get("simulation_session_id"),
+                    recommended_route_id=payload.get("recommended_route_id"),
+                    accuracy_status=str(accuracy_tracking.get("status") or "pending_feedback"),
+                    accuracy_due_on=due_on,
+                    paths=list(payload.get("paths") or []),
+                    discussion_turns=list(payload.get("discussion_turns") or []),
+                    timeline=list(payload.get("timeline") or []),
+                    selected_prediction=payload.get("selected_prediction"),
+                    routing_notes=dict(payload.get("routing_notes") or {}),
+                    accuracy_tracking=accuracy_tracking,
+                )
+                self.db.add(row)
+                await self.db.flush()
         except Exception as exc:
             logger.warning("Failed to persist prediction %s to DB: %s", prediction_id, exc)
 
@@ -2848,17 +2888,19 @@ class PredictionTheaterService:
         if self.db is None:
             return
         try:
-            result = await self.db.execute(
-                select(TheaterPrediction).where(
-                    TheaterPrediction.prediction_id == prediction_id,
-                    TheaterPrediction.deleted_at.is_(None),
+            # Keep best-effort updates isolated from the caller's transaction.
+            async with self.db.begin_nested():
+                result = await self.db.execute(
+                    select(TheaterPrediction).where(
+                        TheaterPrediction.prediction_id == prediction_id,
+                        TheaterPrediction.deleted_at.is_(None),
+                    )
                 )
-            )
-            row = result.scalar_one_or_none()
-            if row is None:
-                return
-            for key, value in updates.items():
-                setattr(row, key, value)
-            await self.db.flush()
+                row = result.scalar_one_or_none()
+                if row is None:
+                    return
+                for key, value in updates.items():
+                    setattr(row, key, value)
+                await self.db.flush()
         except Exception as exc:
             logger.warning("Failed to update prediction %s in DB: %s", prediction_id, exc)

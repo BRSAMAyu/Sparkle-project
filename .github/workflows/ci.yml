@@ -123,6 +123,11 @@ jobs:
         run: |
           go test -v ./internal/handler/... ./internal/service/... ./internal/db/...
 
+      - name: Go Proto Serialization Contract
+        working-directory: backend/gateway
+        run: |
+          go test -v -run TestProtoSerialization ./internal/handler/
+
       - name: Enforce Go Coverage Threshold
         run: |
           python3 scripts/check_coverage_thresholds.py \
@@ -178,6 +183,14 @@ jobs:
 
       - name: Proto Contract Check
         run: python3 scripts/check_proto_contract.py
+
+      - name: Proto Serialization Contract
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/contract/test_proto_serialization_contract.py backend/tests/contract/test_json_wire_format_contract.py -v
 
       - name: Dependency Contract Check
         run: python3 scripts/check_dependency_contract.py

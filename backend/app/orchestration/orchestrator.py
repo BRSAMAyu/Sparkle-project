@@ -188,7 +188,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -643,15 +643,42 @@ class ChatOrchestrator(
             "生成学习报告",
         )
 
-        inferred: list[str] = []
-        if any(keyword in message for keyword in prediction_keywords):
-            inferred.append("launch_prediction")
-        if any(keyword in message for keyword in simulation_keywords):
-            inferred.append("run_quick_simulation")
-        report_context = ("报告" in message or "总结" in message or "复盘" in message) and any(
-            keyword in message for keyword in ("学习", "掌握", "进度", "本周", "这周", "最近")
+        negation_markers = (
+            "不需要",
+            "不要",
+            "不用",
+            "无需",
+            "先别",
+            "别",
+            "不想",
+            "先不",
+            "暂时不",
+            "先不要",
+            "not ",
+            "don't ",
+            "do not ",
+            "no ",
         )
-        if any(keyword in message for keyword in report_keywords) or report_context:
+
+        def _has_positive_keyword(keywords: tuple[str, ...]) -> bool:
+            for keyword in keywords:
+                start = message.find(keyword)
+                while start != -1:
+                    prefix = message[max(0, start - 8):start]
+                    if not any(marker in prefix for marker in negation_markers):
+                        return True
+                    start = message.find(keyword, start + len(keyword))
+            return False
+
+        inferred: list[str] = []
+        if _has_positive_keyword(prediction_keywords):
+            inferred.append("launch_prediction")
+        if _has_positive_keyword(simulation_keywords):
+            inferred.append("run_quick_simulation")
+        report_context = _has_positive_keyword(("报告", "总结", "复盘")) and _has_positive_keyword(
+            ("学习", "掌握", "进度", "本周", "这周", "最近")
+        )
+        if _has_positive_keyword(report_keywords) or report_context:
             inferred.append("generate_learning_report")
         return inferred
 
@@ -1578,6 +1605,7 @@ class ChatOrchestrator(
                     followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
+                    await self._update_state(session_id, STATE_DONE, "Response completed")
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()

@@ -40,7 +40,8 @@ void main() {
       });
 
       test('should have correct initial connection state', () {
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.disconnected));
+        expect(notifier.state.wsConnectionState,
+            equals(WsConnectionState.disconnected));
       });
     });
 
@@ -103,7 +104,8 @@ void main() {
         );
 
         expect(notifier.state.reasoningSteps.length, equals(1));
-        expect(notifier.state.reasoningSteps.first.description, equals('Analyzing user request'));
+        expect(notifier.state.reasoningSteps.first.description,
+            equals('Analyzing user request'));
       });
 
       test('should update reasoning active state', () {
@@ -223,7 +225,8 @@ void main() {
         );
 
         expect(notifier.state.messages.length, equals(1));
-        expect(notifier.state.messages.first.role, equals(MessageRole.assistant));
+        expect(
+            notifier.state.messages.first.role, equals(MessageRole.assistant));
       });
 
       test('should have multiple messages in correct order', () {
@@ -254,6 +257,29 @@ void main() {
         expect(notifier.state.messages[1].role, equals(MessageRole.assistant));
         expect(notifier.state.messages[2].role, equals(MessageRole.user));
       });
+
+      test('should retain only the most recent bounded message window', () {
+        final messages = List<ChatMessageModel>.generate(
+          ChatState.maxRetainedMessages + 25,
+          (index) => ChatMessageModel(
+            conversationId: 'conv-1',
+            role: index.isEven ? MessageRole.user : MessageRole.assistant,
+            content: 'message-$index',
+          ),
+        );
+
+        notifier.state = notifier.state.copyWith(messages: messages);
+
+        expect(
+          notifier.state.messages.length,
+          equals(ChatState.maxRetainedMessages),
+        );
+        expect(notifier.state.messages.first.content, equals('message-25'));
+        expect(
+          notifier.state.messages.last.content,
+          equals('message-${messages.length - 1}'),
+        );
+      });
     });
 
     group('Connection State', () {
@@ -262,7 +288,8 @@ void main() {
           wsConnectionState: WsConnectionState.connecting,
         );
 
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.connecting));
+        expect(notifier.state.wsConnectionState,
+            equals(WsConnectionState.connecting));
       });
 
       test('should update to connected state', () {
@@ -270,7 +297,8 @@ void main() {
           wsConnectionState: WsConnectionState.connected,
         );
 
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.connected));
+        expect(notifier.state.wsConnectionState,
+            equals(WsConnectionState.connected));
       });
 
       test('should update to disconnected state', () {
@@ -278,7 +306,8 @@ void main() {
           wsConnectionState: WsConnectionState.disconnected,
         );
 
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.disconnected));
+        expect(notifier.state.wsConnectionState,
+            equals(WsConnectionState.disconnected));
       });
 
       test('should update to reconnecting state', () {
@@ -286,7 +315,8 @@ void main() {
           wsConnectionState: WsConnectionState.reconnecting,
         );
 
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.reconnecting));
+        expect(notifier.state.wsConnectionState,
+            equals(WsConnectionState.reconnecting));
       });
 
       test('should update to failed state', () {
@@ -294,7 +324,8 @@ void main() {
           wsConnectionState: WsConnectionState.failed,
         );
 
-        expect(notifier.state.wsConnectionState, equals(WsConnectionState.failed));
+        expect(
+            notifier.state.wsConnectionState, equals(WsConnectionState.failed));
       });
     });
 
@@ -416,7 +447,8 @@ void main() {
         );
 
         expect(notifier.state.transparencyPresentationState.isExpanded, isTrue);
-        expect(notifier.state.transparencyPresentationState.lastCompletedLabel, equals('Test completed'));
+        expect(notifier.state.transparencyPresentationState.lastCompletedLabel,
+            equals('Test completed'));
       });
 
       test('should update transparency data', () {

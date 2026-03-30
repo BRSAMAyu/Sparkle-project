@@ -165,7 +165,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if input.SessionID != "" {
 		sessionID := input.SessionID
 		message := input.Message
-		go h.saveMessage(userID, sessionID, "user", message)
+		h.saveMessage(userID, sessionID, "user", message)
 	}
 
 	startTime := time.Now()

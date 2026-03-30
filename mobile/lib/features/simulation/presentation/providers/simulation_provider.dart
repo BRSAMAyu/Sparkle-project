@@ -293,29 +293,20 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         );
         return;
       case 'participants':
-        state = state.copyWith(
+        _applyLiveSessionState(
+          topic: topic,
+          scenarioKey: scenarioKey,
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
-          livePlannedRoundCount:
+          participants: event.participants,
+          interactionPrompt: event.interactionPrompt,
+          suggestedReplies: event.suggestedReplies,
+          pendingInteraction: event.interaction,
+          plannedRoundCount:
               event.plannedRoundCount ?? state.livePlannedRoundCount,
-          liveFacilitationStyle:
+          facilitationStyle:
               event.facilitationStyle ?? state.liveFacilitationStyle,
-          liveParticipants: event.participants,
-          session: _draftSession(
-            topic: topic,
-            scenarioKey: scenarioKey,
-            sessionId: event.sessionId,
-            participants: event.participants,
-            engineState: event.state,
-            interactionPrompt: event.interactionPrompt,
-            suggestedReplies: event.suggestedReplies,
-            pendingInteraction: event.interaction,
-            plannedRoundCount:
-                event.plannedRoundCount ?? state.livePlannedRoundCount,
-            facilitationStyle:
-                event.facilitationStyle ?? state.liveFacilitationStyle,
-          ),
         );
         return;
       case 'round':
@@ -325,120 +316,69 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
                 ...state.liveRounds,
                 if (event.round != null) event.round!,
               ];
-        state = state.copyWith(
+        _applyLiveSessionState(
+          topic: topic,
+          scenarioKey: scenarioKey,
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
-          livePlannedRoundCount:
-              event.plannedRoundCount ?? state.livePlannedRoundCount,
-          liveFacilitationStyle:
-              event.facilitationStyle ?? state.liveFacilitationStyle,
-          liveRounds: updatedRounds,
-          liveInsightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
-          liveInteractionPrompt:
+          rounds: updatedRounds,
+          insightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
+          interactionPrompt:
               event.interactionPrompt ?? state.liveInteractionPrompt,
-          liveSuggestedReplies: event.suggestedReplies.isNotEmpty
+          suggestedReplies: event.suggestedReplies.isNotEmpty
               ? event.suggestedReplies
               : state.liveSuggestedReplies,
-          activeInteraction: event.interaction ?? state.activeInteraction,
-          session: _draftSession(
-            topic: topic,
-            scenarioKey: scenarioKey,
-            sessionId: event.sessionId,
-            participants: state.liveParticipants,
-            rounds: updatedRounds,
-            engineState: event.state,
-            insightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
-            interactionPrompt:
-                event.interactionPrompt ?? state.liveInteractionPrompt,
-            suggestedReplies: event.suggestedReplies.isNotEmpty
-                ? event.suggestedReplies
-                : state.liveSuggestedReplies,
-            pendingInteraction: event.interaction ?? state.activeInteraction,
-            plannedRoundCount:
-                event.plannedRoundCount ?? state.livePlannedRoundCount,
-            facilitationStyle:
-                event.facilitationStyle ?? state.liveFacilitationStyle,
-          ),
+          pendingInteraction: event.interaction ?? state.activeInteraction,
+          plannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          facilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
         );
         return;
       case 'insight':
-        state = state.copyWith(
+        _applyLiveSessionState(
+          topic: topic,
+          scenarioKey: scenarioKey,
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
-          livePlannedRoundCount:
+          insightSummary: event.message ?? state.liveInsightSummary,
+          plannedRoundCount:
               event.plannedRoundCount ?? state.livePlannedRoundCount,
-          liveFacilitationStyle:
+          facilitationStyle:
               event.facilitationStyle ?? state.liveFacilitationStyle,
-          liveInsightSummary: event.message ?? state.liveInsightSummary,
-          session: _draftSession(
-            topic: topic,
-            scenarioKey: scenarioKey,
-            sessionId: event.sessionId,
-            participants: state.liveParticipants,
-            rounds: state.liveRounds,
-            engineState: event.state,
-            insightSummary: event.message ?? state.liveInsightSummary,
-            interactionPrompt: state.liveInteractionPrompt,
-            suggestedReplies: state.liveSuggestedReplies,
-            pendingInteraction: state.activeInteraction,
-            plannedRoundCount:
-                event.plannedRoundCount ?? state.livePlannedRoundCount,
-            facilitationStyle:
-                event.facilitationStyle ?? state.liveFacilitationStyle,
-          ),
         );
         return;
       case 'interaction':
         final interaction = event.interaction;
         final interactionReplies =
             interaction?.suggestedReplies ?? const <String>[];
-        state = state.copyWith(
+        _applyLiveSessionState(
+          topic: topic,
+          scenarioKey: scenarioKey,
+          sessionId: event.sessionId,
           isLoading: false,
           isContinuing: false,
-          sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
-          livePlannedRoundCount:
-              event.plannedRoundCount ?? state.livePlannedRoundCount,
-          liveFacilitationStyle:
-              event.facilitationStyle ?? state.liveFacilitationStyle,
-          liveParticipants: event.participants.isNotEmpty
+          participants: event.participants.isNotEmpty
               ? event.participants
               : state.liveParticipants,
-          liveRounds: event.rounds.isNotEmpty ? event.rounds : state.liveRounds,
-          liveInteractionPrompt: interaction?.prompt ??
+          rounds: event.rounds.isNotEmpty ? event.rounds : state.liveRounds,
+          interactionPrompt: interaction?.prompt ??
               event.interactionPrompt ??
               state.liveInteractionPrompt,
-          liveSuggestedReplies: interactionReplies.isNotEmpty
+          suggestedReplies: interactionReplies.isNotEmpty
               ? interactionReplies
               : (event.suggestedReplies.isNotEmpty
                   ? event.suggestedReplies
                   : state.liveSuggestedReplies),
-          activeInteraction: interaction,
-          session: _draftSession(
-            topic: topic,
-            scenarioKey: scenarioKey,
-            sessionId: event.sessionId,
-            participants: event.participants.isNotEmpty
-                ? event.participants
-                : state.liveParticipants,
-            rounds: event.rounds.isNotEmpty ? event.rounds : state.liveRounds,
-            engineState: event.state,
-            insightSummary: state.liveInsightSummary,
-            interactionPrompt: interaction?.prompt ??
-                event.interactionPrompt ??
-                state.liveInteractionPrompt,
-            suggestedReplies: interactionReplies.isNotEmpty
-                ? interactionReplies
-                : state.liveSuggestedReplies,
-            pendingInteraction: interaction,
-            plannedRoundCount:
-                event.plannedRoundCount ?? state.livePlannedRoundCount,
-            facilitationStyle:
-                event.facilitationStyle ?? state.liveFacilitationStyle,
-          ),
+          pendingInteraction: interaction,
+          plannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          facilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
         );
         return;
       case 'complete':
@@ -488,6 +428,56 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     }
   }
 
+  void _applyLiveSessionState({
+    required String topic,
+    required String scenarioKey,
+    String? sessionId,
+    bool? isLoading,
+    bool? isContinuing,
+    String? engineState,
+    double? progress,
+    List<SimulationParticipantModel>? participants,
+    List<SimulationRoundModel>? rounds,
+    String? insightSummary,
+    String? interactionPrompt,
+    List<String>? suggestedReplies,
+    SimulationInteractionModel? pendingInteraction,
+    int? plannedRoundCount,
+    String? facilitationStyle,
+  }) {
+    final nextSession = _draftSession(
+      topic: topic,
+      scenarioKey: scenarioKey,
+      sessionId: sessionId,
+      participants: participants,
+      rounds: rounds,
+      engineState: engineState,
+      insightSummary: insightSummary,
+      interactionPrompt: interactionPrompt,
+      suggestedReplies: suggestedReplies,
+      pendingInteraction: pendingInteraction,
+      plannedRoundCount: plannedRoundCount,
+      facilitationStyle: facilitationStyle,
+    );
+
+    state = state.copyWith(
+      isLoading: isLoading,
+      isContinuing: isContinuing,
+      sessionId: nextSession.id,
+      engineState: nextSession.state,
+      progress: progress ?? state.progress,
+      liveParticipants: nextSession.participants,
+      liveRounds: nextSession.rounds,
+      liveInsightSummary: nextSession.insightSummary,
+      liveInteractionPrompt: nextSession.interactionPrompt,
+      liveSuggestedReplies: nextSession.suggestedReplies,
+      activeInteraction: nextSession.pendingInteraction,
+      livePlannedRoundCount: nextSession.plannedRoundCount,
+      liveFacilitationStyle: nextSession.facilitationStyle,
+      session: nextSession,
+    );
+  }
+
   SimulationSessionModel _draftSession({
     required String topic,
     required String scenarioKey,
@@ -502,15 +492,32 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     int? plannedRoundCount,
     String? facilitationStyle,
   }) =>
-      SimulationSessionModel(
-        id: sessionId ?? state.sessionId ?? '',
+      (state.session ??
+              SimulationSessionModel(
+                id: state.sessionId ?? '',
+                scenarioKey: scenarioKey,
+                state: state.engineState ?? 'RUNNING',
+                topic: topic,
+                participants: state.liveParticipants,
+                rounds: state.liveRounds,
+                insightSummary:
+                    state.liveInsightSummary ?? '模拟进行中，正在汇总当前讨论洞察...',
+                interactionPrompt: state.liveInteractionPrompt,
+                suggestedReplies: state.liveSuggestedReplies,
+                pendingInteraction: state.activeInteraction,
+                plannedRoundCount: state.livePlannedRoundCount,
+                facilitationStyle: state.liveFacilitationStyle ?? 'balanced',
+              ))
+          .copyWith(
+        id: sessionId ?? state.sessionId ?? state.session?.id ?? '',
         scenarioKey: scenarioKey,
-        state: engineState ?? state.engineState ?? 'RUNNING',
+        state: engineState ?? state.engineState ?? state.session?.state,
         topic: topic,
         participants: participants ?? state.liveParticipants,
         rounds: rounds ?? state.liveRounds,
-        insightSummary:
-            insightSummary ?? state.liveInsightSummary ?? '模拟进行中，正在汇总当前讨论洞察...',
+        insightSummary: insightSummary ??
+            state.liveInsightSummary ??
+            state.session?.insightSummary,
         interactionPrompt: interactionPrompt ?? state.liveInteractionPrompt,
         suggestedReplies: suggestedReplies ?? state.liveSuggestedReplies,
         pendingInteraction: pendingInteraction ?? state.activeInteraction,

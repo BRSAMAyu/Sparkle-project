@@ -1,12 +1,15 @@
 from __future__ import annotations
-from datetime import timezone, datetime
+from datetime import datetime, time, timezone
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
+from app.models.notification_interaction import NotificationPreferences
+from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
 
 
@@ -16,10 +19,79 @@ def _utcnow() -> datetime:
 
 class NotificationService:
     @staticmethod
+    def _normalize_timezone(timezone_name: str | None) -> str:
+        timezone_name = timezone_name or "Asia/Shanghai"
+        try:
+            ZoneInfo(timezone_name)
+        except Exception:
+            timezone_name = "Asia/Shanghai"
+        return timezone_name
+
+    @staticmethod
+    def _parse_clock(value: str | None) -> time | None:
+        if not value:
+            return None
+        try:
+            hour, minute = value.split(":", 1)
+            return time(hour=int(hour), minute=int(minute))
+        except Exception:
+            return None
+
+    @classmethod
+    def _is_quiet_hours_active(
+        cls,
+        *,
+        local_now: datetime,
+        start: str | None,
+        end: str | None,
+    ) -> bool:
+        start_time = cls._parse_clock(start)
+        end_time = cls._parse_clock(end)
+        if start_time is None or end_time is None:
+            return False
+
+        current_time = local_now.time()
+        if start_time <= end_time:
+            return start_time <= current_time <= end_time
+        return current_time >= start_time or current_time <= end_time
+
+    @classmethod
+    async def _should_push_notification(
+        cls,
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+    ) -> tuple[bool, str | None]:
+        prefs_result = await db.execute(
+            select(NotificationPreferences).where(NotificationPreferences.user_id == user_id)
+        )
+        prefs = prefs_result.scalar_one_or_none()
+        if prefs and not prefs.enable_system:
+            return False, "system_notifications_disabled"
+
+        if not prefs or not prefs.quiet_hours_enabled:
+            return True, None
+
+        timezone_result = await db.execute(
+            select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+        )
+        zone = ZoneInfo(cls._normalize_timezone(timezone_result.scalar_one_or_none()))
+
+        local_now = datetime.now(zone)
+        if cls._is_quiet_hours_active(
+            local_now=local_now,
+            start=prefs.quiet_hours_start,
+            end=prefs.quiet_hours_end,
+        ):
+            return False, "quiet_hours"
+
+        return True, None
+
+    @staticmethod
     async def create(
         db: AsyncSession,
         user_id: UUID,
-        obj_in: NotificationCreate,
+        obj_in: NotificationCreate | dict,
         push_via_websocket: bool = True,
     ) -> Notification:
         """
@@ -34,6 +106,17 @@ class NotificationService:
         Returns:
             创建的 Notification 对象
         """
+        if isinstance(obj_in, dict):
+            obj_in = NotificationCreate(**obj_in)
+
+        should_push = False
+        suppression_reason = None
+        if push_via_websocket:
+            should_push, suppression_reason = await NotificationService._should_push_notification(
+                db,
+                user_id=user_id,
+            )
+
         db_obj = Notification(
             user_id=user_id,
             title=obj_in.title,
@@ -48,10 +131,14 @@ class NotificationService:
         logger.info(f"Created notification {db_obj.id} for user {user_id}: {obj_in.title}")
 
         # 通过 WebSocket 实时推送
-        if push_via_websocket:
+        if should_push:
             await NotificationService._push_notification_via_websocket(
                 user_id=user_id,
                 notification=db_obj,
+            )
+        elif push_via_websocket and suppression_reason:
+            logger.info(
+                f"Skipped websocket push for notification {db_obj.id} to user {user_id}: {suppression_reason}"
             )
 
         return db_obj

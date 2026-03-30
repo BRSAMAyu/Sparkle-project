@@ -11,11 +11,44 @@ import sys
 from pathlib import Path
 
 
-def _preferred_python(repo_root: Path) -> str:
+def _supports_protobuf(python_bin: str) -> bool:
+    try:
+        result = subprocess.run(
+            [python_bin, "-c", "import google.protobuf"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def _export_command(repo_root: Path, output: str) -> list[str]:
     backend_venv = repo_root / "backend" / ".venv" / "bin" / "python"
-    if backend_venv.exists():
-        return str(backend_venv)
-    return sys.executable
+    python_candidates = [
+        str(backend_venv),
+        sys.executable,
+    ]
+    for python_bin in python_candidates:
+        if Path(python_bin).exists() and _supports_protobuf(python_bin):
+            return [
+                python_bin,
+                str(repo_root / "scripts" / "export_proto_contract_snapshot.py"),
+                "--output",
+                output,
+            ]
+    return [
+        "uv",
+        "run",
+        "--no-project",
+        "--with",
+        "protobuf",
+        "python",
+        str(repo_root / "scripts" / "export_proto_contract_snapshot.py"),
+        "--output",
+        output,
+    ]
 
 
 def _load_json(path: Path) -> dict:
@@ -34,18 +67,17 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     snapshot_path = repo_root / args.snapshot
     generated_path = repo_root / "quality" / "proto_snapshot.generated.json"
-    python_bin = _preferred_python(repo_root)
 
     if args.update:
         subprocess.check_call(
-            [python_bin, str(repo_root / "scripts" / "export_proto_contract_snapshot.py"), "--output", args.snapshot],
+            _export_command(repo_root, args.snapshot),
             cwd=repo_root,
         )
         print("✅ Proto snapshot updated")
         return 0
 
     subprocess.check_call(
-        [python_bin, str(repo_root / "scripts" / "export_proto_contract_snapshot.py"), "--output", str(generated_path.relative_to(repo_root))],
+        _export_command(repo_root, str(generated_path.relative_to(repo_root))),
         cwd=repo_root,
     )
 

@@ -255,6 +255,15 @@ class ValidationEngineMixin:
                 conversation_context=(conversation_context or {}).get("messages", []),
                 user_message=user_message,
                 use_llm_fallback=intent_type in {"create_plan", "time_planning"},
+                tracking_key=":".join(
+                    part
+                    for part in (
+                        user_id,
+                        str((conversation_context or {}).get("session_id") or "").strip(),
+                        intent_type,
+                    )
+                    if part
+                ) or f"{user_id}:{intent_type}",
             )
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:

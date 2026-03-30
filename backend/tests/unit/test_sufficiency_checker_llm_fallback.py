@@ -60,3 +60,26 @@ async def test_sufficiency_llm_fallback_non_plan_intent_skips_llm(monkeypatch):
     )
     assert result.status == SufficiencyStatus.SUFFICIENT
     assert called["v"] is False
+
+
+@pytest.mark.asyncio
+async def test_sufficiency_checker_breaks_repeated_clarification_loop():
+    checker = SufficiencyChecker(strict_mode=False)
+
+    result1 = await checker.check(
+        intent="create_task",
+        extracted_entities={},
+        conversation_context=[],
+        tracking_key="user-1:session-1:create_task",
+    )
+    result2 = await checker.check(
+        intent="create_task",
+        extracted_entities={},
+        conversation_context=[],
+        tracking_key="user-1:session-1:create_task",
+    )
+
+    assert result1.status == SufficiencyStatus.NEED_CLARIFICATION
+    assert result2.status == SufficiencyStatus.SUFFICIENT
+    assert result2.recommended_action == "proceed"
+    assert result2.clarification_questions == []

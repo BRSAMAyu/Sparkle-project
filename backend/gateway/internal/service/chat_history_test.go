@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -41,5 +42,26 @@ func TestChatHistoryServiceRejectsForeignSession(t *testing.T) {
 
 	_, err := svc.GetMessages(ctx, "other", "agent_test", 20, 0)
 	require.Error(t, err)
-	require.Equal(t, "forbidden", err.Error())
+	require.True(t, errors.Is(err, ErrChatHistoryForbidden()))
+}
+
+func TestChatHistoryServiceReportsRetryBufferOverflow(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	svc := NewChatHistoryService(rdb)
+	ctx := context.Background()
+
+	svc.breakerThreshold.Store(0)
+	svc.retryMu.Lock()
+	svc.retryBuf = make([]retryEntry, breakerRetryBufMax)
+	svc.retryMu.Unlock()
+
+	err := svc.SaveMessage(ctx, "agent_test", []byte(`{"session_id":"agent_test","user_id":"u1","role":"user","content":"overflow","timestamp":"1710000002"}`))
+	require.Error(t, err)
+	require.True(t, errors.Is(err, errRetryBufferOverflow))
+
+	history, historyErr := svc.GetMessages(ctx, "u1", "agent_test", 20, 0)
+	require.NoError(t, historyErr)
+	require.Len(t, history, 1)
+	require.Equal(t, "overflow", history[0].Content)
 }

@@ -992,6 +992,18 @@ def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():
     assert plain_tools == []
 
 
+def test_infer_bridge_tool_names_respects_negation():
+    orchestrator = object.__new__(ChatOrchestrator)
+
+    no_prediction_tools = orchestrator._infer_bridge_tool_names("我不需要推演这条学习路径")
+    no_simulation_tools = orchestrator._infer_bridge_tool_names("先别模拟学习小组讨论")
+    no_report_tools = orchestrator._infer_bridge_tool_names("这次不用生成学习报告")
+
+    assert "launch_prediction" not in no_prediction_tools
+    assert "run_quick_simulation" not in no_simulation_tools
+    assert "generate_learning_report" not in no_report_tools
+
+
 @pytest.mark.asyncio
 async def test_maybe_short_circuit_bridge_tool_returns_preview_metadata():
     engine = _DummyExecutionEngine()

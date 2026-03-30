@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -47,7 +48,7 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 
 	messages, err := h.chatHistory.GetMessages(c.Request.Context(), userID, sessionID, limit, offset)
 	if err != nil {
-		if err.Error() == "forbidden" {
+		if errors.Is(err, service.ErrChatHistoryForbidden()) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}

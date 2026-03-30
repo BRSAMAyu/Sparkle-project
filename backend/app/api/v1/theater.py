@@ -136,9 +136,8 @@ async def get_theater_prediction_accuracy(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    del user_id
     service = PredictionTheaterService(db)
-    return await service.get_accuracy_summary(prediction_id)
+    return await service.get_accuracy_summary(user_id=UUID(user_id), prediction_id=prediction_id)
 
 
 @router.post("/predictions/{prediction_id}/promote-node")

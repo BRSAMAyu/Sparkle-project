@@ -623,8 +623,8 @@ class UXEnvelopeBuilder:
 
         plan_result = context_data.get("plan_execution_result")
         if execution_validation:
-            total = int(execution_validation.get("total_steps") or execution_validation.get("total_tool_calls") or 0)
-            failed = int(execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls") or 0)
+            total = self._execution_total_count(execution_validation)
+            failed = self._execution_failed_count(execution_validation)
             if total > 0 and failed == 0:
                 has_reflection = bool(
                     context_data.get("adaptation_records")
@@ -794,12 +794,34 @@ class UXEnvelopeBuilder:
             return f"我会先给综合结论，再说明主要专家贡献。{expert_hint}".strip()
         return "我会先直接回答你的当前问题，再补依据和下一步。"
 
+    @staticmethod
+    def _execution_metric(
+        execution_validation: dict[str, Any] | None,
+        primary_key: str,
+        fallback_key: str,
+    ) -> int:
+        if not execution_validation:
+            return 0
+        value = execution_validation.get(primary_key)
+        if value is None:
+            value = execution_validation.get(fallback_key)
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _execution_failed_count(self, execution_validation: dict[str, Any] | None) -> int:
+        return self._execution_metric(execution_validation, "failed_steps", "failed_tool_calls")
+
+    def _execution_total_count(self, execution_validation: dict[str, Any] | None) -> int:
+        return self._execution_metric(execution_validation, "total_steps", "total_tool_calls")
+
     def _completion_state(self, final_state: Any, executable_plan: Any | None, execution_validation: dict[str, Any] | None) -> str:
         if execution_validation:
             if execution_validation.get("execution_suggestion"):
                 return "partial"
-            failed = execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls") or 0
-            total = execution_validation.get("total_steps") or execution_validation.get("total_tool_calls") or 0
+            failed = self._execution_failed_count(execution_validation)
+            total = self._execution_total_count(execution_validation)
             if total and failed and failed < total:
                 return "partial"
             if total and failed >= total:
@@ -823,7 +845,7 @@ class UXEnvelopeBuilder:
                     return "high"
                 if score >= 0.55:
                     return "medium"
-        if execution_validation and (execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls")):
+        if self._execution_failed_count(execution_validation) > 0:
             return "cautious"
         return "medium"
 
@@ -852,7 +874,7 @@ class UXEnvelopeBuilder:
             parts.append("本轮优先给出直接可执行的回答")
         if include_references:
             parts.append("并优先参考了你提供的材料或检索依据")
-        if execution_validation and execution_validation.get("failed_steps"):
+        if self._execution_failed_count(execution_validation) > 0:
             parts.append("部分执行步骤失败，所以我对结论保持审慎")
         fallback_reason = getattr(route_decision, "reason", "") or ""
         if fallback_reason and "fallback" in fallback_reason.lower():
@@ -878,9 +900,7 @@ class UXEnvelopeBuilder:
                 "failure_message": profile.blocked_message,
             }
         if completion_state == "blocked":
-            if execution_validation and (
-                execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls")
-            ):
+            if self._execution_failed_count(execution_validation) > 0:
                 return {
                     "failure_kind": "tool_failure",
                     "failure_message": "我已经给出目前能确认的部分，但有执行步骤失败了。你可以补充条件、换一种做法，或让我先给降级方案。",
@@ -894,9 +914,7 @@ class UXEnvelopeBuilder:
                 "failure_kind": "blocked",
                 "failure_message": profile.blocked_message,
             }
-        if execution_validation and (
-            execution_validation.get("failed_steps") or execution_validation.get("failed_tool_calls")
-        ):
+        if self._execution_failed_count(execution_validation) > 0:
             message = profile.partial_message
             if selected_experts and "fallback" in fallback_reason:
                 message = "综合结论已可用，但有部分专家结果降级或执行步骤失败，所以这轮更适合先拿主结论，再决定是否继续复核。"
@@ -1566,7 +1584,9 @@ class UXEnvelopeBuilder:
         review_step = trace.get("review_step") or {}
         review_meta = review_step.get("metadata") if isinstance(review_step, dict) else {}
         review_meta = review_meta if isinstance(review_meta, dict) else {}
-        review_result = review_meta.get("decision") or review_step.get("decision") if isinstance(review_step, dict) else None
+        review_result = review_meta.get("decision")
+        if review_result is None and isinstance(review_step, dict):
+            review_result = review_step.get("decision")
 
         return {
             "mode": mode,

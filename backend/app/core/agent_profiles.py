@@ -11,6 +11,7 @@ Agent Profile Configuration - 统一的Agent配置管理
 支持运行时动态更新，无需重启服务。
 """
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Literal
@@ -154,6 +155,9 @@ class AgentProfile:
 
         # 根据 tier 选择默认模型
         tier_defaults = {
+            ModelTier.FREE: available_models.get("free_model"),
+            ModelTier.FREE_FAST: available_models.get("free_fast_model"),
+            ModelTier.FREE_REASONING: available_models.get("free_reasoning_model") or available_models.get("free_fast_model"),
             ModelTier.FAST: available_models.get("fast_model"),
             ModelTier.STANDARD: available_models.get("standard_model"),
             ModelTier.PLUS: available_models.get("plus_model"),
@@ -161,6 +165,7 @@ class AgentProfile:
             ModelTier.REASONING: available_models.get("pro_model"),
             ModelTier.MAX: available_models.get("max_model"),
             ModelTier.GLM_BATCH: available_models.get("glm_batch_model"),
+            ModelTier.SPECIALIST: available_models.get("specialist_model"),
         }
         return tier_defaults.get(self.model_tier, {})
 
@@ -716,7 +721,7 @@ class AgentProfileRegistry:
     """Agent配置注册表（支持运行时更新）"""
 
     def __init__(self):
-        self._profiles: dict[AgentRole, AgentProfile] = DEFAULT_AGENT_PROFILES.copy()
+        self._profiles: dict[AgentRole, AgentProfile] = deepcopy(DEFAULT_AGENT_PROFILES)
         self._model_configs: dict[str, Any] = {}
 
     def register_model_configs(self, configs: dict[str, Any]):
