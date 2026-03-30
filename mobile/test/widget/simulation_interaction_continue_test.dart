@@ -139,7 +139,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('推荐场景'), findsNothing);
-    expect(find.text('展开模拟设置'), findsOneWidget);
+    expect(find.text('模拟设置'), findsOneWidget);
     expect(find.text('提交我的判断'), findsOneWidget);
     final chipFinder = find.byType(ActionChip).first;
     await tester.ensureVisible(chipFinder);

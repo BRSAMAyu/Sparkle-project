@@ -14,6 +14,7 @@ class KnowledgeTheaterGraph extends StatefulWidget {
     required this.edges,
     this.focusNodeIds = const <String>[],
     this.routeNodeIds = const <String>[],
+    this.expandToFill = false,
     this.selectedNodeId,
     this.onNodeTap,
     this.onEdgeLongPress,
@@ -24,6 +25,7 @@ class KnowledgeTheaterGraph extends StatefulWidget {
   final List<TheaterGraphEdge> edges;
   final List<String> focusNodeIds;
   final List<String> routeNodeIds;
+  final bool expandToFill;
   final String? selectedNodeId;
   final ValueChanged<TheaterGraphNode>? onNodeTap;
   final void Function(TheaterGraphEdge edge, Offset globalPosition)?
@@ -159,6 +161,37 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
+          final stage = AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) => CustomPaint(
+              painter: _KnowledgeTheaterPainter(
+                nodes: widget.nodes,
+                edges: widget.edges,
+                positions: _positions,
+                focusNodeIds: widget.focusNodeIds.toSet(),
+                routeNodeIds: widget.routeNodeIds.toSet(),
+                selectedNodeId: widget.selectedNodeId,
+                pulseValue: _pulseController.value,
+                backgroundColors: <Color>[
+                  Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.98),
+                  Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHigh
+                      .withValues(alpha: 0.92),
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.98),
+                ],
+                edgeColor: DS.info,
+                focusEdgeColor: DS.warning,
+                lowRiskColor: DS.success,
+                mediumRiskColor: DS.warning,
+                highRiskColor: DS.error,
+                labelColor: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          );
           return ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: GestureDetector(
@@ -169,43 +202,12 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
                 details.globalPosition,
                 size,
               ),
-              child: AspectRatio(
-                aspectRatio: 1.3,
-                child: AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) => CustomPaint(
-                    painter: _KnowledgeTheaterPainter(
-                      nodes: widget.nodes,
-                      edges: widget.edges,
-                      positions: _positions,
-                      focusNodeIds: widget.focusNodeIds.toSet(),
-                      routeNodeIds: widget.routeNodeIds.toSet(),
-                      selectedNodeId: widget.selectedNodeId,
-                      pulseValue: _pulseController.value,
-                      backgroundColors: <Color>[
-                        Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withValues(alpha: 0.98),
-                        Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHigh
-                            .withValues(alpha: 0.92),
-                        Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.98),
-                      ],
-                      edgeColor: DS.info,
-                      focusEdgeColor: DS.warning,
-                      lowRiskColor: DS.success,
-                      mediumRiskColor: DS.warning,
-                      highRiskColor: DS.error,
-                      labelColor: Theme.of(context).colorScheme.onSurface,
+              child: widget.expandToFill
+                  ? SizedBox.expand(child: stage)
+                  : AspectRatio(
+                      aspectRatio: 1.3,
+                      child: stage,
                     ),
-                  ),
-                ),
-              ),
             ),
           );
         },
@@ -384,7 +386,9 @@ class _KnowledgeTheaterPainter extends CustomPainter {
           ..color = (isFocused
                   ? focusEdgeColor
                   : (isRouteEdge ? labelColor : edgeColor))
-              .withValues(alpha: isFocused ? 0.92 : (isRouteEdge ? 0.62 : 0.38)),
+              .withValues(
+            alpha: isFocused ? 0.92 : (isRouteEdge ? 0.62 : 0.38),
+          ),
       );
     }
 
