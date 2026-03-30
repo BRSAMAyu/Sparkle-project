@@ -23,6 +23,8 @@ class OpenClawHubCard extends ConsumerWidget {
     final isTightCard = compact || dense;
     final connection = ref.watch(openClawConnectionProvider);
     final taskState = ref.watch(taskListProvider);
+    final hasExecutionPermissionIssue = connection.hasExecutionPermissionIssue;
+    final hasExecutionEndpointIssue = connection.hasExecutionEndpointIssue;
     final latestIntent = taskState.taskExecutions.values.isEmpty
         ? null
         : (taskState.taskExecutions.values.toList()
@@ -35,26 +37,45 @@ class OpenClawHubCard extends ConsumerWidget {
     final hasRecentExecution = latestIntent != null;
     final hasQueue = connection.queuedRequestCount > 0;
     final isConnected = connection.isConnected;
-    final headline = !isConnected && !hasQueue
-        ? '连接后可委派网页调研、文档整理'
-        : !isConnected && hasQueue
-            ? '已有任务在等待恢复'
-            : isConnected && !hasRecentExecution
-                ? '已准备好接手'
-                : '最近一次做了什么';
-    final summary = !isConnected && !hasQueue
-        ? '把 OpenClaw 接进来后，聊天页和任务页都会获得稳定的执行入口。'
-        : !isConnected && hasQueue
-            ? '当前有 ${connection.queuedRequestCount} 个任务已排队，恢复连接后就能继续执行。'
-            : isConnected && !hasRecentExecution
-                ? '引擎状态正常，现在最适合回到聊天或任务页发起第一次委派。'
-                : '最近执行：${latestIntent?.statusLabel ?? '已记录'}'
-                    '${(latestIntent?.goal.trim().isNotEmpty ?? false) ? ' · ${latestIntent?.goal}' : ''}';
-    final actionLabel = hasQueue ? '打开执行中心，处理等待队列' : '打开执行中心';
+    final isGatewayReachable = connection.isGatewayReachable;
+    final headline = hasExecutionPermissionIssue
+        ? '网关在线，但当前没有执行权限'
+        : hasExecutionEndpointIssue
+            ? '网关在线，但执行入口不可用'
+            : !isGatewayReachable && !hasQueue
+                ? '连接后可委派网页调研、文档整理'
+                : !isGatewayReachable && hasQueue
+                    ? '已有任务在等待恢复'
+                    : isConnected && !hasRecentExecution
+                        ? '已准备好接手'
+                        : '最近一次做了什么';
+    final summary = hasExecutionPermissionIssue
+        ? '当前令牌能访问 OpenClaw，但执行会被权限拦住。补齐权限或切到已配对连接后，排队任务就能继续跑。'
+        : hasExecutionEndpointIssue
+            ? '网关地址本身可达，但执行接口还没准备好。先修好 `/v1/responses` 或 transport，再继续委派。'
+            : !isGatewayReachable && !hasQueue
+                ? '把 OpenClaw 接进来后，聊天页和任务页都会获得稳定的执行入口。'
+                : !isGatewayReachable && hasQueue
+                    ? '当前有 ${connection.queuedRequestCount} 个任务已排队，恢复连接后就能继续执行。'
+                    : isConnected && !hasRecentExecution
+                        ? '引擎状态正常，现在最适合回到聊天或任务页发起第一次委派。'
+                        : '最近执行：${latestIntent?.statusLabel ?? '已记录'}'
+                            '${(latestIntent?.goal.trim().isNotEmpty ?? false) ? ' · ${latestIntent?.goal}' : ''}';
+    final actionLabel = hasExecutionPermissionIssue
+        ? '打开执行中心，修复权限'
+        : hasExecutionEndpointIssue
+            ? '打开执行中心，检查执行入口'
+            : hasQueue
+                ? '打开执行中心，处理等待队列'
+                : '打开执行中心';
     final queueTone =
         hasQueue ? OpenClawVisualTone.offline : OpenClawVisualTone.active;
     final connectionTone =
-        isConnected ? OpenClawVisualTone.connected : OpenClawVisualTone.offline;
+        hasExecutionPermissionIssue || hasExecutionEndpointIssue
+            ? OpenClawVisualTone.attention
+            : isGatewayReachable
+                ? OpenClawVisualTone.connected
+                : OpenClawVisualTone.offline;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -142,10 +163,21 @@ class OpenClawHubCard extends ConsumerWidget {
                 runSpacing: isTightCard ? DS.spacing6 : DS.spacing8,
                 children: [
                   OpenClawMetricPill(
-                    icon: Icons.sensors_rounded,
-                    label: isConnected ? '已连接' : '未连接',
+                    icon: hasExecutionPermissionIssue
+                        ? Icons.key_off_rounded
+                        : hasExecutionEndpointIssue
+                            ? Icons.route_rounded
+                            : Icons.sensors_rounded,
+                    label: hasExecutionPermissionIssue
+                        ? '已连接但无执行权限'
+                        : hasExecutionEndpointIssue
+                            ? '已连接但执行入口异常'
+                            : isGatewayReachable
+                                ? '已连接'
+                                : '未连接',
                     tone: connectionTone,
-                    emphasized: isConnected,
+                    emphasized:
+                        isGatewayReachable || hasExecutionPermissionIssue,
                   ),
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,

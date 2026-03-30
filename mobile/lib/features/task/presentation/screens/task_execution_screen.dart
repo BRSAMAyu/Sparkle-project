@@ -1318,6 +1318,10 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   });
   final TaskModel task;
 
+  bool _hasExecutionPermissionIssue(OpenClawConnectionService connection) {
+    return connection.hasExecutionPermissionIssue;
+  }
+
   Future<void> _handoffTask(BuildContext context, WidgetRef ref) async {
     ref.read(openClawTaskNudgeDismissedProvider.notifier).state = false;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
@@ -1372,7 +1376,12 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     );
     if (!context.mounted) return;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    AppFeedback.info(context, ExecutionCopy.engineOfflineQueuedMessage);
+    AppFeedback.info(
+      context,
+      _hasExecutionPermissionIssue(connection)
+          ? '当前执行权限不足，任务已加入等待队列。补齐权限后可统一重试。'
+          : ExecutionCopy.engineOfflineQueuedMessage,
+    );
   }
 
   Future<void> _confirmAiResult(BuildContext context, WidgetRef ref) async {
@@ -1587,6 +1596,8 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     final isClawConnected = connection.isConnected;
     final isClawConfigured = connection.config.isConfigured;
     final queuedRequestCount = connection.queuedRequestCount;
+    final hasExecutionPermissionIssue =
+        _hasExecutionPermissionIssue(connection);
     final nudgeDismissed = ref.watch(openClawTaskNudgeDismissedProvider);
     final nudgeExpanded = ref.watch(openClawTaskNudgeExpandedProvider);
     final supportsAiHandoff = isServerTaskId(task.id);
@@ -1656,11 +1667,16 @@ class _ExecutionAssistPanel extends ConsumerWidget {
               !isClawConnected &&
               !nudgeDismissed) ...[
             OpenClawStatusCapsule(
-              title:
-                  isClawConfigured ? 'OpenClaw 当前离线，可先加入等待队列' : 'OpenClaw 尚未连接',
-              subtitle: isClawConfigured
-                  ? '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。'
-                  : '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。',
+              title: hasExecutionPermissionIssue
+                  ? 'OpenClaw 能连上，但当前没有执行权限'
+                  : isClawConfigured
+                      ? 'OpenClaw 当前离线，可先加入等待队列'
+                      : 'OpenClaw 尚未连接',
+              subtitle: hasExecutionPermissionIssue
+                  ? '当前令牌能访问网关，但执行会被权限拦住。你可以先把任务排队，等权限修好后统一重试。'
+                  : isClawConfigured
+                      ? '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。'
+                      : '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。',
               icon: isClawConfigured
                   ? Icons.cloud_queue_rounded
                   : Icons.link_off_rounded,
@@ -1697,8 +1713,14 @@ class _ExecutionAssistPanel extends ConsumerWidget {
               ),
               metrics: [
                 OpenClawMetricPill(
-                  icon: Icons.sensors_rounded,
-                  label: isClawConfigured ? '已配置但离线' : '尚未配置',
+                  icon: hasExecutionPermissionIssue
+                      ? Icons.key_off_rounded
+                      : Icons.sensors_rounded,
+                  label: hasExecutionPermissionIssue
+                      ? '已连到网关但无执行权限'
+                      : isClawConfigured
+                          ? '已配置但离线'
+                          : '尚未配置',
                   tone: OpenClawVisualTone.offline,
                   emphasized: true,
                 ),
@@ -1711,7 +1733,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                   ),
                 OpenClawMetricPill(
                   icon: Icons.arrow_circle_right_rounded,
-                  label: isClawConfigured ? '建议先排队再统一重试' : '建议先连接再委派',
+                  label: hasExecutionPermissionIssue
+                      ? '建议先修权限再重试'
+                      : isClawConfigured
+                          ? '建议先排队再统一重试'
+                          : '建议先连接再委派',
                   tone: OpenClawVisualTone.active,
                 ),
               ],
@@ -1720,9 +1746,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                 children: [
                   _buildNudgeDetailBlock(
                     label: '当前状态',
-                    value: isClawConfigured
-                        ? '连接信息还在，但引擎暂时不在线。'
-                        : '这台设备还没有接入 OpenClaw。',
+                    value: hasExecutionPermissionIssue
+                        ? '这台设备已经能访问 OpenClaw 网关，但当前认证没有真正发起执行的权限。'
+                        : isClawConfigured
+                            ? '连接信息还在，但引擎暂时不在线。'
+                            : '这台设备还没有接入 OpenClaw。',
                   ),
                   const SizedBox(height: DS.spacing8),
                   _buildNudgeDetailBlock(
@@ -1732,9 +1760,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                   const SizedBox(height: DS.spacing8),
                   _buildNudgeDetailBlock(
                     label: '下一步动作',
-                    value: isClawConfigured
-                        ? '继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。'
-                        : '打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。',
+                    value: hasExecutionPermissionIssue
+                        ? '打开 OpenClaw Hub 更换具备执行权限的令牌，或切到已配对的 WebSocket 连接；修好后再统一重试队列。'
+                        : isClawConfigured
+                            ? '继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。'
+                            : '打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。',
                   ),
                 ],
               ),

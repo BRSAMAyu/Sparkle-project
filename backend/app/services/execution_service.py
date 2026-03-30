@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import String, cast, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.openclaw import OpenClawClient, OpenClawConfig, IntentTranslator, ResultParser
@@ -784,22 +784,14 @@ class ExecutionService:
         return intent
 
     async def _ensure_no_active_intent(self, *, task_id: UUID, user_id: UUID) -> None:
+        terminal_statuses = [status.value for status in self._terminal_statuses()]
         result = await self._db.execute(
             select(ExecutionIntent)
             .where(
                 ExecutionIntent.task_id == task_id,
                 ExecutionIntent.user_id == user_id,
                 ExecutionIntent.deleted_at.is_(None),
-                ExecutionIntent.status.notin_(
-                    [
-                        ExecutionIntentStatus.SUCCEEDED,
-                        ExecutionIntentStatus.PARTIAL,
-                        ExecutionIntentStatus.FAILED,
-                        ExecutionIntentStatus.CANCELED,
-                        ExecutionIntentStatus.TIMED_OUT,
-                        ExecutionIntentStatus.HANDED_BACK,
-                    ]
-                ),
+                cast(ExecutionIntent.status, String).notin_(terminal_statuses),
             )
             .order_by(desc(ExecutionIntent.created_at))
         )

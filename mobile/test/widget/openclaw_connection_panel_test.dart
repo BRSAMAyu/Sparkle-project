@@ -259,4 +259,48 @@ void main() {
       expect(find.textContaining('配置已保存'), findsWidgets);
     },
   );
+
+  testWidgets(
+    'OpenClaw connection panel explains missing execution scope clearly',
+    (tester) async {
+      final service = _FakeOpenClawConnectionService(
+        config: const OpenClawConnectionConfig(
+          gatewayUrl: 'http://127.0.0.1:18789',
+          authToken: 'seed-token',
+          transport: 'responses_http',
+        ),
+        info: const OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.error,
+          errorMessage: 'missing scope: operator.write',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            openClawConnectionProvider.overrideWith((ref) => service),
+          ],
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            supportedLocales: <Locale>[Locale('zh')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 640,
+                  child: OpenClawConnectionPanel(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('网关在线，但没有执行权限'), findsOneWidget);
+      expect(find.textContaining('operator.write'), findsWidgets);
+      expect(find.textContaining('设备配对 + WebSocket'), findsOneWidget);
+    },
+  );
 }

@@ -140,14 +140,18 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         selectedRouteId: selectedRouteId,
         timelineIndex: 0,
       );
-      unawaited(
-        _ref.read(appEventStreamServiceProvider).recordTheaterGenerated(
-              predictionId: prediction.predictionId,
-              topic: prediction.topic,
-              targetNodeId: prediction.targetNodeId,
-              pathCount: prediction.paths.length,
-            ),
-      );
+      try {
+        unawaited(
+          _ref.read(appEventStreamServiceProvider).recordTheaterGenerated(
+                predictionId: prediction.predictionId,
+                topic: prediction.topic,
+                targetNodeId: prediction.targetNodeId,
+                pathCount: prediction.paths.length,
+              ),
+        );
+      } catch (_) {
+        // Telemetry failures should never override a successful prediction.
+      }
       _syncOverlay();
     } catch (e) {
       state = state.copyWith(
@@ -290,13 +294,17 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isAdopting: false,
         adoptionResult: adoption,
       );
-      unawaited(
-        _ref.read(appEventStreamServiceProvider).recordRouteAdopted(
-              predictionId: prediction.predictionId,
-              routeId: route.id,
-              planId: adoption.planId,
-            ),
-      );
+      try {
+        unawaited(
+          _ref.read(appEventStreamServiceProvider).recordRouteAdopted(
+                predictionId: prediction.predictionId,
+                routeId: route.id,
+                planId: adoption.planId,
+              ),
+        );
+      } catch (_) {
+        // Telemetry failures should never make adoption look unsuccessful.
+      }
     } catch (e) {
       state = state.copyWith(
         isAdopting: false,

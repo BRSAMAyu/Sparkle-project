@@ -158,6 +158,20 @@ class OpenClawClient:
             payload.setdefault("reachable", True)
             payload.setdefault("transport", self._config.transport)
             payload["latency_ms"] = latency_ms
+            capability_probe = await self._probe_http_execution_capability()
+            if not capability_probe["reachable"]:
+                payload["reachable"] = False
+                payload["message"] = capability_probe["message"]
+                payload["execution_probe"] = capability_probe["status"]
+                return payload
+            payload["capabilities"] = list(
+                dict.fromkeys(
+                    [
+                        *list(payload.get("capabilities") or []),
+                        "执行写权限",
+                    ]
+                )
+            )
             return payload
         except Exception as exc:
             return {
@@ -165,6 +179,65 @@ class OpenClawClient:
                 "transport": self._config.transport,
                 "message": str(exc),
             }
+
+    async def _probe_http_execution_capability(self) -> dict[str, Any]:
+        if not self._base_url:
+            return {
+                "reachable": False,
+                "status": "disabled",
+                "message": "OpenClaw gateway URL is not configured",
+            }
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as http:
+                response = await http.post(
+                    f"{self._base_url}/v1/responses",
+                    json={},
+                    headers={
+                        **self._auth_headers(),
+                        "Content-Type": "application/json",
+                    },
+                )
+        except Exception as exc:
+            return {
+                "reachable": False,
+                "status": "probe_failed",
+                "message": str(exc),
+            }
+
+        if response.status_code in {400, 422}:
+            return {
+                "reachable": True,
+                "status": "ok",
+                "message": None,
+            }
+
+        if response.status_code in {401, 403}:
+            error_message = self._extract_error_message(response)
+            return {
+                "reachable": False,
+                "status": "permission_denied",
+                "message": error_message or f"HTTP {response.status_code}",
+            }
+
+        if response.status_code == 404:
+            return {
+                "reachable": False,
+                "status": "missing_endpoint",
+                "message": "OpenClaw /v1/responses endpoint is unavailable",
+            }
+
+        if response.status_code >= 500:
+            return {
+                "reachable": False,
+                "status": "server_error",
+                "message": f"OpenClaw execution endpoint returned HTTP {response.status_code}",
+            }
+
+        return {
+            "reachable": response.status_code < 500,
+            "status": "ok" if response.status_code < 500 else "unknown_error",
+            "message": None if response.status_code < 500 else f"HTTP {response.status_code}",
+        }
 
     async def list_nodes(
         self,
@@ -203,6 +276,23 @@ class OpenClawClient:
         if self._config.auth_token:
             headers["Authorization"] = f"Bearer {self._config.auth_token}"
         return headers
+
+    @staticmethod
+    def _extract_error_message(response: httpx.Response) -> str | None:
+        try:
+            payload = response.json()
+        except Exception:
+            text = response.text.strip()
+            return text or None
+        if not isinstance(payload, dict):
+            return None
+        error = payload.get("error")
+        if isinstance(error, dict):
+            message = str(error.get("message") or "").strip()
+            if message:
+                return message
+        message = str(payload.get("message") or "").strip()
+        return message or None
 
 
 class OpenClawError(Exception):

@@ -597,6 +597,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       );
       if (!mounted) return intent;
 
+      if (connection.config.isConfigured) {
+        connection.markExecutionAvailable();
+      }
+
       _setTaskExecution(taskId, intent);
       final record = await _taskRepository.getExecutionRecord(intent.id);
       if (mounted) {
@@ -611,8 +615,15 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
       return intent;
     } catch (e) {
-      if (mounted) {
-        state = state.copyWith(error: e.toString());
+      final selectedTemplateId = state.selectedExecutionTemplateIds[taskId];
+      final queued = await _handleExecutionDispatchFailure(
+        taskId: taskId,
+        goal: goal,
+        templateId: selectedTemplateId,
+        error: e,
+      );
+      if (!queued && mounted) {
+        state = state.copyWith(error: _normalizeErrorMessage(e));
       }
       return null;
     } finally {
@@ -642,15 +653,62 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         if (mounted) {
           _setTaskExecutionRecord(request.taskId, record);
         }
+        connection.markExecutionAvailable();
         await connection.removeQueuedRequest(request.id);
         dispatched += 1;
       } catch (e) {
+        connection.markExecutionUnavailable(_normalizeErrorMessage(e));
         if (mounted) {
-          state = state.copyWith(error: e.toString());
+          state = state.copyWith(error: _normalizeErrorMessage(e));
         }
+        break;
       }
     }
     return dispatched;
+  }
+
+  String _normalizeErrorMessage(Object error) =>
+      error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+
+  bool _looksLikeExecutionInfrastructureIssue(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('openclaw') ||
+        normalized.contains('operator.write') ||
+        normalized.contains('scope') ||
+        normalized.contains('网关') ||
+        normalized.contains('执行引擎') ||
+        normalized.contains('无法连接') ||
+        normalized.contains('连接失败') ||
+        normalized.contains('authentication failed') ||
+        normalized.contains('not enabled') ||
+        normalized.contains('temporarily degraded');
+  }
+
+  Future<bool> _handleExecutionDispatchFailure({
+    required String taskId,
+    required String? goal,
+    required String? templateId,
+    required Object error,
+  }) async {
+    final connection = _ref.read(openClawConnectionProvider);
+    final message = _normalizeErrorMessage(error);
+    if (!connection.config.isConfigured ||
+        !_looksLikeExecutionInfrastructureIssue(message)) {
+      return false;
+    }
+
+    await connection.queueExecutionRequest(
+      taskId: taskId,
+      goal: goal,
+      templateId: templateId,
+      source: 'task_provider_retry',
+      priority: 2,
+    );
+    connection.markExecutionUnavailable(message);
+    if (mounted) {
+      state = state.copyWith(error: '$message，已加入等待队列。');
+    }
+    return true;
   }
 
   Future<void> reorderTasks(int oldIndex, int newIndex) async {

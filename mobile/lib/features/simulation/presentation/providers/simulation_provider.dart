@@ -22,6 +22,8 @@ class SimulationState {
     this.liveInteractionPrompt,
     this.liveSuggestedReplies = const [],
     this.activeInteraction,
+    this.livePlannedRoundCount = 0,
+    this.liveFacilitationStyle,
   });
 
   final bool isLoading;
@@ -39,6 +41,8 @@ class SimulationState {
   final String? liveInteractionPrompt;
   final List<String> liveSuggestedReplies;
   final SimulationInteractionModel? activeInteraction;
+  final int livePlannedRoundCount;
+  final String? liveFacilitationStyle;
 
   bool get isAwaitingUserInput => engineState == 'WAITING_FOR_USER';
 
@@ -58,12 +62,15 @@ class SimulationState {
     String? liveInteractionPrompt,
     List<String>? liveSuggestedReplies,
     SimulationInteractionModel? activeInteraction,
+    int? livePlannedRoundCount,
+    String? liveFacilitationStyle,
     bool clearError = false,
     bool clearSession = false,
     bool clearSessionId = false,
     bool clearLiveInsightSummary = false,
     bool clearLiveInteractionPrompt = false,
     bool clearActiveInteraction = false,
+    bool clearLiveFacilitationStyle = false,
   }) =>
       SimulationState(
         isLoading: isLoading ?? this.isLoading,
@@ -88,6 +95,11 @@ class SimulationState {
         activeInteraction: clearActiveInteraction
             ? null
             : activeInteraction ?? this.activeInteraction,
+        livePlannedRoundCount:
+            livePlannedRoundCount ?? this.livePlannedRoundCount,
+        liveFacilitationStyle: clearLiveFacilitationStyle
+            ? null
+            : liveFacilitationStyle ?? this.liveFacilitationStyle,
       );
 }
 
@@ -144,13 +156,19 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       clearLiveInteractionPrompt: true,
       liveSuggestedReplies: const [],
       clearActiveInteraction: true,
+      livePlannedRoundCount: plannedRoundCount ?? 0,
+      liveFacilitationStyle: facilitationStyle,
     );
-    unawaited(
-      _ref.read(appEventStreamServiceProvider).recordSimulationStarted(
-            topic: topic,
-            scenarioKey: scenarioKey,
-          ),
-    );
+    try {
+      unawaited(
+        _ref.read(appEventStreamServiceProvider).recordSimulationStarted(
+              topic: topic,
+              scenarioKey: scenarioKey,
+            ),
+      );
+    } catch (_) {
+      // Telemetry should never block the simulation experience.
+    }
     try {
       await for (final event in _repository.streamSimulation(
         topic: topic,
@@ -181,6 +199,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveInteractionPrompt: session.interactionPrompt,
           liveSuggestedReplies: session.suggestedReplies,
           activeInteraction: session.pendingInteraction,
+          livePlannedRoundCount: session.plannedRoundCount,
+          liveFacilitationStyle: session.facilitationStyle,
         );
       }
     } catch (e) {
@@ -188,12 +208,12 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     }
   }
 
-  Future<void> continueSimulation(String userResponse) async {
+  Future<bool> continueSimulation(String userResponse) async {
     final sessionId = state.sessionId ?? state.session?.id;
     final topic = state.session?.topic ?? '';
     final scenarioKey = state.session?.scenarioKey ?? 'study_group';
     if ((sessionId ?? '').isEmpty || userResponse.trim().isEmpty) {
-      return;
+      return false;
     }
 
     state = state.copyWith(
@@ -231,14 +251,18 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveInteractionPrompt: session.interactionPrompt,
           liveSuggestedReplies: session.suggestedReplies,
           activeInteraction: session.pendingInteraction,
+          livePlannedRoundCount: session.plannedRoundCount,
+          liveFacilitationStyle: session.facilitationStyle,
         );
       }
+      return true;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         isContinuing: false,
         error: e.toString(),
       );
+      return false;
     }
   }
 
@@ -253,6 +277,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
+          livePlannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          liveFacilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
         );
         return;
       case 'participants':
@@ -260,6 +288,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
+          livePlannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          liveFacilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
           liveParticipants: event.participants,
           session: _draftSession(
             topic: topic,
@@ -270,6 +302,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             interactionPrompt: event.interactionPrompt,
             suggestedReplies: event.suggestedReplies,
             pendingInteraction: event.interaction,
+            plannedRoundCount:
+                event.plannedRoundCount ?? state.livePlannedRoundCount,
+            facilitationStyle:
+                event.facilitationStyle ?? state.liveFacilitationStyle,
           ),
         );
         return;
@@ -284,6 +320,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
+          livePlannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          liveFacilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
           liveRounds: updatedRounds,
           liveInsightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
           liveInteractionPrompt:
@@ -306,6 +346,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
                 ? event.suggestedReplies
                 : state.liveSuggestedReplies,
             pendingInteraction: event.interaction ?? state.activeInteraction,
+            plannedRoundCount:
+                event.plannedRoundCount ?? state.livePlannedRoundCount,
+            facilitationStyle:
+                event.facilitationStyle ?? state.liveFacilitationStyle,
           ),
         );
         return;
@@ -314,6 +358,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
+          livePlannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          liveFacilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
           liveInsightSummary: event.message ?? state.liveInsightSummary,
           session: _draftSession(
             topic: topic,
@@ -326,6 +374,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
             interactionPrompt: state.liveInteractionPrompt,
             suggestedReplies: state.liveSuggestedReplies,
             pendingInteraction: state.activeInteraction,
+            plannedRoundCount:
+                event.plannedRoundCount ?? state.livePlannedRoundCount,
+            facilitationStyle:
+                event.facilitationStyle ?? state.liveFacilitationStyle,
           ),
         );
         return;
@@ -339,6 +391,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           sessionId: event.sessionId,
           engineState: event.state,
           progress: event.progress ?? state.progress,
+          livePlannedRoundCount:
+              event.plannedRoundCount ?? state.livePlannedRoundCount,
+          liveFacilitationStyle:
+              event.facilitationStyle ?? state.liveFacilitationStyle,
           liveParticipants: event.participants.isNotEmpty
               ? event.participants
               : state.liveParticipants,
@@ -369,6 +425,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
                 ? interactionReplies
                 : state.liveSuggestedReplies,
             pendingInteraction: interaction,
+            plannedRoundCount:
+                event.plannedRoundCount ?? state.livePlannedRoundCount,
+            facilitationStyle:
+                event.facilitationStyle ?? state.liveFacilitationStyle,
           ),
         );
         return;
@@ -392,6 +452,12 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
               : state.liveSuggestedReplies,
           activeInteraction:
               session?.pendingInteraction ?? state.activeInteraction,
+          livePlannedRoundCount: session?.plannedRoundCount ??
+              event.plannedRoundCount ??
+              state.livePlannedRoundCount,
+          liveFacilitationStyle: session?.facilitationStyle ??
+              event.facilitationStyle ??
+              state.liveFacilitationStyle,
         );
         return;
       case 'error':
@@ -424,6 +490,8 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     String? interactionPrompt,
     List<String>? suggestedReplies,
     SimulationInteractionModel? pendingInteraction,
+    int? plannedRoundCount,
+    String? facilitationStyle,
   }) =>
       SimulationSessionModel(
         id: sessionId ?? state.sessionId ?? '',
@@ -437,6 +505,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         interactionPrompt: interactionPrompt ?? state.liveInteractionPrompt,
         suggestedReplies: suggestedReplies ?? state.liveSuggestedReplies,
         pendingInteraction: pendingInteraction ?? state.activeInteraction,
+        plannedRoundCount: plannedRoundCount ?? state.livePlannedRoundCount,
+        facilitationStyle:
+            facilitationStyle ?? state.liveFacilitationStyle ?? 'balanced',
       );
 }
 

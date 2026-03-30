@@ -66,8 +66,7 @@ class ApiEndpoints {
   static const String executionHealth = '/executions/health';
   static const String executionConnectionStatus =
       '/executions/connection/status';
-  static const String executionProfileSummary =
-      '/executions/profile/summary';
+  static const String executionProfileSummary = '/executions/profile/summary';
   static String classifyTaskExecution(String taskId) =>
       '/executions/tasks/$taskId/classify';
   static String executionTemplates(String taskId) =>
@@ -177,6 +176,9 @@ class ApiEndpoints {
       '/theater/predictions/$predictionId/accuracy';
   static String theaterPromoteNode(String predictionId) =>
       '/theater/predictions/$predictionId/promote-node';
+
+  // Learning reports
+  static const String learningReportsGenerate = '/learning-reports/generate';
 
   // Community - Friends
   static const String communityFeed = '/community/feed';

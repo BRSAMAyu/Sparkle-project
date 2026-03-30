@@ -19,6 +19,7 @@ class OpenClawConfig:
     ws_wait_timeout_ms: int = 30000
     ws_allow_insecure_auth: bool = False
     ws_device_token: str = ""
+    ws_device_identity_path: str = ""
     ws_client_id: str = "sparkle-backend"
     ws_client_version: str = "0.1.0"
     default_timeout_seconds: int = 300
@@ -37,6 +38,7 @@ class OpenClawConfig:
             ws_wait_timeout_ms=settings.OPENCLAW_WS_WAIT_TIMEOUT_MS,
             ws_allow_insecure_auth=settings.OPENCLAW_WS_ALLOW_INSECURE_AUTH,
             ws_device_token=settings.OPENCLAW_WS_DEVICE_TOKEN,
+            ws_device_identity_path=settings.OPENCLAW_WS_DEVICE_IDENTITY_PATH,
             ws_client_id=settings.OPENCLAW_WS_CLIENT_ID,
             ws_client_version=settings.APP_VERSION,
             default_timeout_seconds=settings.OPENCLAW_DEFAULT_TIMEOUT_SECONDS,

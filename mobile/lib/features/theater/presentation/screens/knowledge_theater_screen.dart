@@ -361,9 +361,10 @@ class _KnowledgeTheaterScreenState
                                   },
                                   onShare: () =>
                                       unawaited(_showTheaterShareSheet()),
-                                  onOpenGalaxy: prediction.hasMappedGalaxyReferences
-                                      ? () => context.go(GalaxyRoutes.home)
-                                      : null,
+                                  onOpenGalaxy:
+                                      prediction.hasMappedGalaxyReferences
+                                          ? () => context.go(GalaxyRoutes.home)
+                                          : null,
                                 ),
                               ),
                               if (_settingsDrawerOpen) ...[
@@ -379,8 +380,7 @@ class _KnowledgeTheaterScreenState
                                     child: _TheaterSettingsDrawer(
                                       controller: _topicController,
                                       isLoading: state.isLoading,
-                                      currentTargetName:
-                                          prediction.targetName,
+                                      currentTargetName: prediction.targetName,
                                       suggestions:
                                           simulationState.recommendedSeeds,
                                       sourceChatSessionId:
@@ -402,6 +402,35 @@ class _KnowledgeTheaterScreenState
                                 ),
                               ],
                               const SizedBox(height: 12),
+                              if (constraints.maxWidth < 340 &&
+                                  prediction.paths.isNotEmpty) ...[
+                                _CompactRoutePreviewCard(
+                                  selectedRoute: route ??
+                                      prediction.paths.firstWhere(
+                                        (item) =>
+                                            item.id ==
+                                            prediction.recommendedRouteId,
+                                        orElse: () => prediction.paths.first,
+                                      ),
+                                  recommendedRouteId:
+                                      prediction.recommendedRouteId,
+                                  alternatives: prediction.paths
+                                      .where(
+                                        (item) =>
+                                            item.id !=
+                                            (route?.id ??
+                                                prediction.recommendedRouteId),
+                                      )
+                                      .toList(),
+                                  onOpenPathWorkbench: () {
+                                    setState(
+                                      () => _activeWorkbenchTab =
+                                          _TheaterWorkbenchTab.paths,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               SizedBox(
                                 height: math.max(
                                   520,
@@ -423,8 +452,7 @@ class _KnowledgeTheaterScreenState
                                   snapshot: state.snapshot,
                                   adoptionResult: state.adoptionResult,
                                   accuracySummary: state.accuracySummary,
-                                  accuracyTracking:
-                                      prediction.accuracyTracking,
+                                  accuracyTracking: prediction.accuracyTracking,
                                   isLoading: state.isLoading,
                                   isAdopting: state.isAdopting,
                                   isSavingSnapshot: state.isSavingSnapshot,
@@ -484,8 +512,8 @@ class _KnowledgeTheaterScreenState
                                   onRecordActual: () => unawaited(
                                     _showActualOutcomeSheet(),
                                   ),
-                                  onEdgeLongPress:
-                                      (edge, globalPosition) => unawaited(
+                                  onEdgeLongPress: (edge, globalPosition) =>
+                                      unawaited(
                                     _showEdgeTooltip(edge, globalPosition),
                                   ),
                                 ),
@@ -1337,7 +1365,8 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
       runSpacing: 8,
       children: [
         _MetricPill(label: '目标 · $targetName'),
-        if (selectedRoute != null) _MetricPill(label: '路径 · ${selectedRoute!.title}'),
+        if (selectedRoute != null)
+          _MetricPill(label: '路径 · ${selectedRoute!.title}'),
         _MetricPill(label: '模式 · ${_targetModeLabel(targetResolutionMode)}'),
         _MetricPill(
           label: semanticMatchCount > 0 ? '参考映射 $semanticMatchCount' : '纯自由推演',
@@ -1533,40 +1562,84 @@ class _TheaterWorkbenchTabs extends StatelessWidget {
   final _TheaterWorkbenchTab activeTab;
   final ValueChanged<_TheaterWorkbenchTab> onChanged;
 
+  Key _tabKey(_TheaterWorkbenchTab tab) =>
+      ValueKey<String>('theater-workbench-tab-${tab.name}');
+
   @override
-  Widget build(BuildContext context) {
-    final segmented = SegmentedButton<_TheaterWorkbenchTab>(
-      segments: const [
-        ButtonSegment<_TheaterWorkbenchTab>(
-          value: _TheaterWorkbenchTab.graph,
-          label: Text('图谱'),
-          icon: Icon(Icons.hub_rounded),
-        ),
-        ButtonSegment<_TheaterWorkbenchTab>(
-          value: _TheaterWorkbenchTab.paths,
-          label: Text('路径'),
-          icon: Icon(Icons.route_rounded),
-        ),
-        ButtonSegment<_TheaterWorkbenchTab>(
-          value: _TheaterWorkbenchTab.discussion,
-          label: Text('讨论'),
-          icon: Icon(Icons.forum_rounded),
-        ),
-        ButtonSegment<_TheaterWorkbenchTab>(
-          value: _TheaterWorkbenchTab.calibration,
-          label: Text('校准'),
-          icon: Icon(Icons.tune_rounded),
-        ),
-      ],
-      selected: <_TheaterWorkbenchTab>{activeTab},
-      onSelectionChanged: (selection) => onChanged(selection.first),
-      showSelectedIcon: false,
-    );
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: segmented,
-    );
-  }
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 420) {
+            const items = <({
+              _TheaterWorkbenchTab value,
+              String label,
+              IconData icon,
+            })>[
+              (
+                value: _TheaterWorkbenchTab.graph,
+                label: '图谱',
+                icon: Icons.hub_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.paths,
+                label: '路径',
+                icon: Icons.route_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.discussion,
+                label: '讨论',
+                icon: Icons.forum_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.calibration,
+                label: '校准',
+                icon: Icons.tune_rounded,
+              ),
+            ];
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: items
+                  .map(
+                    (item) => ChoiceChip(
+                      key: _tabKey(item.value),
+                      avatar: Icon(item.icon, size: 16),
+                      label: Text(item.label),
+                      selected: activeTab == item.value,
+                      onSelected: (_) => onChanged(item.value),
+                    ),
+                  )
+                  .toList(),
+            );
+          }
+          return SegmentedButton<_TheaterWorkbenchTab>(
+            segments: const [
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.graph,
+                label: Text('图谱'),
+                icon: Icon(Icons.hub_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.paths,
+                label: Text('路径'),
+                icon: Icon(Icons.route_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.discussion,
+                label: Text('讨论'),
+                icon: Icon(Icons.forum_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.calibration,
+                label: Text('校准'),
+                icon: Icon(Icons.tune_rounded),
+              ),
+            ],
+            selected: <_TheaterWorkbenchTab>{activeTab},
+            onSelectionChanged: (selection) => onChanged(selection.first),
+            showSelectedIcon: false,
+          );
+        },
+      );
 }
 
 class _TheaterIntroState extends StatelessWidget {
@@ -1819,6 +1892,7 @@ class _PredictionView extends StatelessWidget {
           (item) => item.id == recommendedRouteId,
           orElse: () => prediction.paths.first,
         );
+    final compactWidth = MediaQuery.sizeOf(context).width < 420;
 
     final graphTab = ListView(
       key: const PageStorageKey<String>('theater-graph-tab'),
@@ -1917,6 +1991,18 @@ class _PredictionView extends StatelessWidget {
             ],
           ),
         ),
+        if (compactWidth && prediction.paths.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _CompactRoutePreviewCard(
+            selectedRoute: activeRoute,
+            recommendedRouteId: recommendedRouteId,
+            alternatives: prediction.paths
+                .where((item) => item.id != activeRoute.id)
+                .toList(),
+            onOpenPathWorkbench: () =>
+                onWorkbenchTabChanged(_TheaterWorkbenchTab.paths),
+          ),
+        ],
       ],
     );
 
@@ -3224,6 +3310,99 @@ class _MetricPill extends StatelessWidget {
           style: Theme.of(context).textTheme.labelMedium,
         ),
       );
+}
+
+class _CompactRoutePreviewCard extends StatelessWidget {
+  const _CompactRoutePreviewCard({
+    required this.selectedRoute,
+    required this.recommendedRouteId,
+    required this.alternatives,
+    required this.onOpenPathWorkbench,
+  });
+
+  final TheaterPathOption selectedRoute;
+  final String recommendedRouteId;
+  final List<TheaterPathOption> alternatives;
+  final VoidCallback onOpenPathWorkbench;
+
+  @override
+  Widget build(BuildContext context) {
+    final compareRoute = alternatives.firstWhere(
+      (item) => item.id == recommendedRouteId,
+      orElse: () => alternatives.firstOrNull ?? selectedRoute,
+    );
+    final focusSummary = selectedRoute.summary.trim().isNotEmpty
+        ? selectedRoute.summary.trim()
+        : _buildFallbackSummary(selectedRoute);
+    final compareSummary = compareRoute.id == selectedRoute.id
+        ? null
+        : (compareRoute.summary.trim().isNotEmpty
+            ? compareRoute.summary.trim()
+            : _buildFallbackSummary(compareRoute));
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '路径对比',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            focusSummary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+          if (compareSummary != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '对照路径：$compareSummary',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MetricPill(label: '当前 · ${selectedRoute.title}'),
+              _MetricPill(
+                  label: '掌握 ${selectedRoute.estimatedMastery.round()}%'),
+              _MetricPill(label: '时间 ${selectedRoute.dailyMinutes} 分/天'),
+              if (compareRoute.id != selectedRoute.id)
+                _MetricPill(label: '对照 · ${compareRoute.title}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onOpenPathWorkbench,
+            icon: const Icon(Icons.route_rounded),
+            label: const Text('进入路径页细比'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildFallbackSummary(TheaterPathOption route) {
+    if (route.steps.isEmpty) {
+      return route.title;
+    }
+    final first = route.steps.first.nodeName;
+    final last = route.steps.last.nodeName;
+    if (route.steps.length == 1) {
+      return '先聚焦 $first。';
+    }
+    return '先补 $first，再推进 $last。';
+  }
 }
 
 class _TimelineMetricTile extends StatelessWidget {

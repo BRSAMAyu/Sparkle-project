@@ -2273,6 +2273,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 foregroundColor: Colors.white,
                 title: context.l10n.galaxyLoadingTitle,
                 message: context.l10n.galaxyLoadingMessage,
+                highlights: <String>[
+                  context.l10n.searchNodes,
+                  '推演模式',
+                  context.l10n.galaxyOverviewNodes,
+                ],
                 showLoader: true,
               );
             }
@@ -2420,8 +2425,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                     key: ValueKey(currentSector.name),
                                     label: SectorConfig.getStyle(currentSector)
                                         .name,
-                                    color:
-                                        SectorConfig.getColor(currentSector),
+                                    color: SectorConfig.getColor(currentSector),
                                     isDarkMode: isDarkMode,
                                   ),
                           ),
@@ -2518,6 +2522,7 @@ class _StatusPanel extends StatelessWidget {
     required this.backgroundColor,
     required this.foregroundColor,
     required this.title,
+    this.highlights = const <String>[],
     this.showLoader = false,
     this.message,
     this.actionLabel,
@@ -2527,6 +2532,7 @@ class _StatusPanel extends StatelessWidget {
   final Color backgroundColor;
   final Color foregroundColor;
   final String title;
+  final List<String> highlights;
   final bool showLoader;
   final String? message;
   final String? actionLabel;
@@ -2596,6 +2602,43 @@ class _StatusPanel extends StatelessWidget {
                           height: 1.5,
                         ),
                         textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (highlights.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: highlights
+                            .map(
+                              (item) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      foregroundColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: foregroundColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    color:
+                                        foregroundColor.withValues(alpha: 0.72),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
                       ),
                     ],
                     if (showLoader) ...[

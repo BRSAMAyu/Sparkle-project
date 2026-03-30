@@ -23,8 +23,8 @@ class SimulationRunRequest(BaseModel):
     planned_round_count: int | None = Field(
         default=None,
         ge=3,
-        le=8,
-        description="期望轮次，后端会按场景上限裁剪",
+        le=12,
+        description="期望轮次，后端会按场景上限裁剪（当前最高支持 12 轮）",
     )
     participant_names: list[str] = Field(
         default_factory=list,

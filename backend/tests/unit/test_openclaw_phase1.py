@@ -4,6 +4,8 @@ from uuid import uuid4
 
 import pytest
 
+from app.adapters.openclaw.client import OpenClawClient
+from app.adapters.openclaw.config import OpenClawConfig
 from app.adapters.openclaw.intent_translator import IntentTranslator
 from app.adapters.openclaw.result_parser import ResultParser
 from app.models.execution_intent import (
@@ -30,11 +32,13 @@ def openclaw_settings():
         "OPENCLAW_GATEWAY_URL": settings.OPENCLAW_GATEWAY_URL,
         "OPENCLAW_AUTH_TOKEN": settings.OPENCLAW_AUTH_TOKEN,
         "OPENCLAW_DEFAULT_AGENT_ID": settings.OPENCLAW_DEFAULT_AGENT_ID,
+        "OPENCLAW_TRANSPORT": settings.OPENCLAW_TRANSPORT,
     }
     settings.OPENCLAW_ENABLED = True
     settings.OPENCLAW_GATEWAY_URL = "http://openclaw.local"
     settings.OPENCLAW_AUTH_TOKEN = "token"
     settings.OPENCLAW_DEFAULT_AGENT_ID = "default"
+    settings.OPENCLAW_TRANSPORT = "responses_http"
     try:
         yield settings
     finally:
@@ -42,6 +46,7 @@ def openclaw_settings():
         settings.OPENCLAW_GATEWAY_URL = original["OPENCLAW_GATEWAY_URL"]
         settings.OPENCLAW_AUTH_TOKEN = original["OPENCLAW_AUTH_TOKEN"]
         settings.OPENCLAW_DEFAULT_AGENT_ID = original["OPENCLAW_DEFAULT_AGENT_ID"]
+        settings.OPENCLAW_TRANSPORT = original["OPENCLAW_TRANSPORT"]
 
 
 def test_intent_translator_builds_response_request() -> None:
@@ -97,6 +102,60 @@ def test_result_parser_parses_text_and_json() -> None:
     assert parsed["success"] is True
     assert parsed["parsed_output"] == {"summary": "done", "items": ["a", "b"]}
     assert parsed["tool_calls_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_openclaw_health_snapshot_detects_missing_write_scope(monkeypatch) -> None:
+    class _FakeResponse:
+        def __init__(self, status_code: int, payload: dict[str, object]):
+            self.status_code = status_code
+            self._payload = payload
+            self.content = b"{}"
+            self.text = str(payload)
+
+        def json(self) -> dict[str, object]:
+            return self._payload
+
+    class _FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def get(self, url, headers=None):
+            return _FakeResponse(200, {"ok": True, "status": "live"})
+
+        async def post(self, url, json=None, headers=None):
+            return _FakeResponse(
+                403,
+                {
+                    "ok": False,
+                    "error": {
+                        "type": "forbidden",
+                        "message": "missing scope: operator.write",
+                    },
+                },
+            )
+
+    monkeypatch.setattr("app.adapters.openclaw.client.httpx.AsyncClient", _FakeAsyncClient)
+
+    client = OpenClawClient(
+        OpenClawConfig(
+            enabled=True,
+            gateway_url="http://openclaw.local",
+            auth_token="token",
+            transport="responses_http",
+        )
+    )
+
+    snapshot = await client.health_snapshot()
+
+    assert snapshot["reachable"] is False
+    assert snapshot["message"] == "missing scope: operator.write"
 
 
 def test_execution_result_validator_builds_warnings_and_replay() -> None:

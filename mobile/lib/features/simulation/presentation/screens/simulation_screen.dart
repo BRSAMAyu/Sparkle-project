@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -87,6 +89,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   bool _settingsDrawerOpen = false;
   bool _insightOverlayOpen = false;
   _SimulationBottomTrayMode _bottomTrayMode = _SimulationBottomTrayMode.hidden;
+  bool _isGeneratingReport = false;
   int _configuredRoundCount = 5;
   String _facilitationStyle = 'balanced';
   List<String> _selectedParticipantNames = const [];
@@ -201,8 +204,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     final expectedRounds = _expectedRoundsForScenario(
       session?.scenarioKey ?? _selectedScenarioKey,
     );
-    final plannedRoundCount = (session?.plannedRoundCount ?? 0) > 0
-        ? session!.plannedRoundCount
+    final runtimePlannedRoundCount =
+        session?.plannedRoundCount ?? state.livePlannedRoundCount;
+    final plannedRoundCount = runtimePlannedRoundCount > 0
+        ? runtimePlannedRoundCount
         : math.max(_configuredRoundCount, expectedRounds);
     final viewMode = _resolveViewMode(session);
     final activeSpeaker = rounds.isEmpty ? null : rounds.last.speaker;
@@ -593,13 +598,13 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           ),
                   onOpenReport: session == null
                       ? null
-                      : () => context.push(
-                            ReportRoutes.learningReport,
-                            extra: _buildSimulationReport(session),
+                      : () => unawaited(
+                            _openGeneratedLearningReport(session),
                           ),
                   onShare: session == null
                       ? null
                       : () => unawaited(_shareSession(session)),
+                  isGeneratingReport: _isGeneratingReport,
                 ),
               ],
             ],
@@ -639,8 +644,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             ? _SimulationBottomTrayMode.expanded
             : _bottomTrayMode)
         : _SimulationBottomTrayMode.hidden;
-    final runtimeFacilitationStyle =
-        session?.facilitationStyle ?? _facilitationStyle;
+    final runtimeFacilitationStyle = session?.facilitationStyle ??
+        state.liveFacilitationStyle ??
+        _facilitationStyle;
     final setupPanel = _SimulationCompactSetupPanel(
       topicController: _topicController,
       selectedScenarioKey: _selectedScenarioKey,
@@ -811,13 +817,13 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                             ),
                     onOpenReport: session == null
                         ? null
-                        : () => context.push(
-                              ReportRoutes.learningReport,
-                              extra: _buildSimulationReport(session),
+                        : () => unawaited(
+                              _openGeneratedLearningReport(session),
                             ),
                     onShare: session == null
                         ? null
                         : () => unawaited(_shareSession(session)),
+                    isGeneratingReport: _isGeneratingReport,
                   ),
                 ),
             ]),
@@ -937,22 +943,89 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     }
   }
 
-  LearningReport _buildSimulationReport(SimulationSessionModel session) {
-    final participants = session.participants
-        .take(4)
-        .map(
-          (item) => LearningMasteryDatum(
-            nodeName: item.name,
-            masteryScore: 68 + ((item.name.hashCode.abs() % 20).toDouble()),
-          ),
-        )
-        .toList();
+  Future<void> _openGeneratedLearningReport(
+    SimulationSessionModel session,
+  ) async {
+    if (_isGeneratingReport) {
+      return;
+    }
+    setState(() => _isGeneratingReport = true);
+    try {
+      final response = await ref.read(apiClientProvider).post<dynamic>(
+        ApiEndpoints.learningReportsGenerate,
+        data: <String, dynamic>{
+          'section_limit': 5,
+          'trigger_source': 'simulation',
+        },
+      );
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        throw Exception('学习报告返回格式异常');
+      }
+      final report = LearningReport.fromJson(data);
+      if (!mounted) {
+        return;
+      }
+      await context.push(
+        ReportRoutes.learningReport,
+        extra: _mergeSimulationContextIntoReport(
+          session: session,
+          report: report,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('生成学习报告失败：$e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingReport = false);
+      }
+    }
+  }
+
+  LearningReport _mergeSimulationContextIntoReport({
+    required SimulationSessionModel session,
+    required LearningReport report,
+  }) {
+    final simulationBridgeMarkdown = [
+      '# 仿真桥接摘要',
+      '',
+      '主题：${session.topic}',
+      '场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}',
+      '参与者：${session.participants.map((item) => item.name).join('、')}',
+      '总轮次：${session.rounds.length} 轮',
+      '',
+      '## 来自本次模拟的关键洞察',
+      '- ${localizeSimulationText(session.insightSummary)}',
+      '',
+      report.markdown.trim(),
+    ].join('\n');
     return LearningReport(
-      reportId: 'simulation-${session.id}',
-      markdown:
-          '# 仿真洞察报告\n\n主题：${session.topic}\n\n## 关键洞察\n- ${localizeSimulationText(session.insightSummary)}\n- 参与者：${session.participants.map((e) => e.name).join('、')}',
-      sections: const ['摘要概览', '学习场景洞察'],
-      mastery: participants,
+      reportId: report.reportId,
+      markdown: simulationBridgeMarkdown,
+      sections: <String>[
+        '仿真桥接',
+        ...report.sections.where((item) => item != '仿真桥接'),
+      ],
+      mastery: report.mastery,
+      patterns: report.patterns,
+      timeline: report.timeline,
+      diagnosisCards: report.diagnosisCards,
+      actionCards: report.actionCards,
+      trendOverview: report.trendOverview,
+      triggerSummary: report.triggerSummary ??
+          const LearningReportTriggerSummary(
+            mode: 'simulation_bridge',
+            title: '已从学习模拟沉淀为正式报告',
+            summary: '先看模拟里暴露出的分歧，再结合完整报告安排下一步。',
+          ),
     );
   }
 
@@ -1004,8 +1077,31 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   }
 
   Future<void> _continueInChat(String reply) async {
+    final normalizedReply = reply.trim();
+    if (normalizedReply.isEmpty) {
+      return;
+    }
+    final state = ref.read(simulationProvider);
+    final session = state.session;
+    final topic = (session?.topic ?? _topicController.text.trim()).trim();
+    final scenarioLabel =
+        _scenarioLabels[session?.scenarioKey ?? _selectedScenarioKey] ??
+            localizeSimulationScenario(
+              session?.scenarioKey ?? _selectedScenarioKey,
+            );
+    final currentPrompt = session?.pendingInteraction?.prompt ??
+        session?.interactionPrompt ??
+        state.liveInteractionPrompt;
+    final prompt = [
+      if (topic.isNotEmpty) '继续刚才的学习模拟。',
+      if (topic.isNotEmpty) '主题：$topic',
+      if (scenarioLabel.trim().isNotEmpty) '场景：$scenarioLabel',
+      if ((currentPrompt ?? '').trim().isNotEmpty)
+        '当前问题：${localizeSimulationText(currentPrompt!)}',
+      '我的回应：$normalizedReply',
+    ].join('\n');
     final query = <String, String>{
-      'prompt': reply,
+      'prompt': prompt.isEmpty ? normalizedReply : prompt,
       if ((widget.initialSourceChatSessionId ?? '').trim().isNotEmpty)
         'session_id': widget.initialSourceChatSessionId!.trim(),
     };
@@ -1017,8 +1113,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     if (normalized.isEmpty) {
       return;
     }
-    _interactionController.clear();
-    await ref.read(simulationProvider.notifier).continueSimulation(normalized);
+    final ok = await ref
+        .read(simulationProvider.notifier)
+        .continueSimulation(normalized);
+    if (ok) {
+      _interactionController.clear();
+    }
   }
 }
 
@@ -1777,7 +1877,14 @@ class _SimulationInteractionCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: isSubmitting
                       ? null
-                      : () => onContinueInChat(localizedSuggestedReplies.first),
+                      : () {
+                          final draft = textController.text.trim();
+                          onContinueInChat(
+                            draft.isNotEmpty
+                                ? draft
+                                : localizedSuggestedReplies.first,
+                          );
+                        },
                   icon: const Icon(Icons.chat_bubble_outline_rounded),
                   label: const Text('带回聊天继续'),
                 ),
@@ -1919,7 +2026,8 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Text(
-                scenarioDescriptions[selectedScenarioKey] ?? '调整场景后，讨论的角色关系与推进方式也会一起变化。',
+                scenarioDescriptions[selectedScenarioKey] ??
+                    '调整场景后，讨论的角色关系与推进方式也会一起变化。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -2310,7 +2418,47 @@ class _SimulationTimelineCard extends StatelessWidget {
                 },
               );
     if (immersive && embedInParentScroll) {
-      return timelineList;
+      return GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '沉浸讨论流',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        topic.isEmpty
+                            ? '开始后会实时出现每一轮讨论。'
+                            : activeSpeaker == null
+                                ? '主题：$topic'
+                                : '主题：$topic · 当前发言 ${localizeSimulationText(activeSpeaker!)}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            timelineList,
+          ],
+        ),
+      );
     }
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -2397,6 +2545,7 @@ class _SimulationInsightTray extends StatelessWidget {
     required this.expanded,
     required this.onToggleExpanded,
     required this.session,
+    this.isGeneratingReport = false,
     required this.onOpenTheater,
     required this.onOpenReport,
     required this.onShare,
@@ -2406,6 +2555,7 @@ class _SimulationInsightTray extends StatelessWidget {
   final bool expanded;
   final VoidCallback onToggleExpanded;
   final SimulationSessionModel? session;
+  final bool isGeneratingReport;
   final VoidCallback? onOpenTheater;
   final VoidCallback? onOpenReport;
   final VoidCallback? onShare;
@@ -2501,9 +2651,15 @@ class _SimulationInsightTray extends StatelessWidget {
               runSpacing: 8,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: onOpenReport,
-                  icon: const Icon(Icons.article_outlined),
-                  label: const Text('生成学习报告'),
+                  onPressed: isGeneratingReport ? null : onOpenReport,
+                  icon: isGeneratingReport
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.article_outlined),
+                  label: Text(isGeneratingReport ? '生成中...' : '生成学习报告'),
                 ),
                 FilledButton.tonalIcon(
                   onPressed: onOpenTheater,

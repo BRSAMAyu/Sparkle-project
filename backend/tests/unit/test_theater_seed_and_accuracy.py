@@ -353,19 +353,19 @@ def test_simulation_engine_round_target_respects_scenario_cap():
 
     assert (
         engine._normalize_round_target(
-            10,
+            20,
             current_rounds=2,
             scenario_key="knowledge_debate",
         )
-        == 8
+        == 12
     )
     assert (
         engine._normalize_round_target(
-            10,
+            20,
             current_rounds=2,
             scenario_key="what_if_path",
         )
-        == 6
+        == 10
     )
 
 

@@ -241,6 +241,8 @@ class SimulationStreamEventModel {
     this.sessionId,
     this.state,
     this.progress,
+    this.plannedRoundCount,
+    this.facilitationStyle,
     this.participants = const [],
     this.round,
     this.rounds = const [],
@@ -260,6 +262,8 @@ class SimulationStreamEventModel {
         sessionId: json['session_id']?.toString(),
         state: json['state']?.toString(),
         progress: (json['progress'] as num?)?.toDouble(),
+        plannedRoundCount: (json['planned_round_count'] as num?)?.toInt(),
+        facilitationStyle: json['facilitation_style']?.toString(),
         participants: (json['participants'] as List<dynamic>? ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(SimulationParticipantModel.fromJson)
@@ -295,6 +299,8 @@ class SimulationStreamEventModel {
   final String? sessionId;
   final String? state;
   final double? progress;
+  final int? plannedRoundCount;
+  final String? facilitationStyle;
   final List<SimulationParticipantModel> participants;
   final SimulationRoundModel? round;
   final List<SimulationRoundModel> rounds;

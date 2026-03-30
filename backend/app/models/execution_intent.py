@@ -78,12 +78,22 @@ class ExecutionIntent(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     execution_mode = Column(
-        Enum(ExecutionMode, values_callable=_enum_values, create_constraint=False),
+        Enum(
+            ExecutionMode,
+            values_callable=_enum_values,
+            create_constraint=False,
+            native_enum=False,
+        ),
         nullable=False,
         default=ExecutionMode.HUMAN,
     )
     executor = Column(
-        Enum(ExecutorType, values_callable=_enum_values, create_constraint=False),
+        Enum(
+            ExecutorType,
+            values_callable=_enum_values,
+            create_constraint=False,
+            native_enum=False,
+        ),
         nullable=False,
         default=ExecutorType.MANUAL,
     )
@@ -91,7 +101,12 @@ class ExecutionIntent(BaseModel):
     goal = Column(Text, nullable=False)
     instructions = Column(JSONBCompat, nullable=False, default=list)
     target_env = Column(
-        Enum(ExecutionTargetEnv, values_callable=_enum_values, create_constraint=False),
+        Enum(
+            ExecutionTargetEnv,
+            values_callable=_enum_values,
+            create_constraint=False,
+            native_enum=False,
+        ),
         nullable=True,
     )
     policy = Column(JSONBCompat, nullable=False, default=dict)
@@ -100,13 +115,23 @@ class ExecutionIntent(BaseModel):
     timeout_seconds = Column(Integer, nullable=False, default=300)
 
     status = Column(
-        Enum(ExecutionIntentStatus, values_callable=_enum_values, create_constraint=False),
+        Enum(
+            ExecutionIntentStatus,
+            values_callable=_enum_values,
+            create_constraint=False,
+            native_enum=False,
+        ),
         nullable=False,
         default=ExecutionIntentStatus.DRAFT,
         index=True,
     )
     trust_level = Column(
-        Enum(TrustLevel, values_callable=_enum_values, create_constraint=False),
+        Enum(
+            TrustLevel,
+            values_callable=_enum_values,
+            create_constraint=False,
+            native_enum=False,
+        ),
         nullable=False,
         default=TrustLevel.RAW,
     )

@@ -304,17 +304,27 @@ void main() {
     expect(find.text('模式 · 智能混合'), findsWidgets);
     expect(find.textContaining('自由节点与星图参考'), findsOneWidget);
 
-    await tester.tap(find.text('路径'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('theater-workbench-tab-paths')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('路径对比'), findsOneWidget);
 
-    await tester.tap(find.text('讨论'));
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>('theater-workbench-tab-discussion'),
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('推演时间轴'), findsOneWidget);
 
-    await tester.tap(find.text('校准'));
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>('theater-workbench-tab-calibration'),
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('校准与落地'), findsOneWidget);
