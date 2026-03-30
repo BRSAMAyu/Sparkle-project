@@ -17,6 +17,7 @@ class TheaterGenerateRequest(BaseModel):
     topic: str = Field(..., min_length=1, description="学习目标或主题")
     target_node_id: UUID | None = Field(default=None, description="可选的目标节点 ID")
     horizon_days: int = Field(default=14, ge=7, le=30, description="推演周期天数")
+    simulation_session_id: str | None = Field(default=None, description="来源学习模拟会话 ID")
 
 
 class TheaterWhatIfRequest(BaseModel):
@@ -60,6 +61,7 @@ async def generate_theater_prediction(
             topic=request.topic,
             target_node_id=request.target_node_id,
             horizon_days=request.horizon_days,
+            simulation_session_id=request.simulation_session_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

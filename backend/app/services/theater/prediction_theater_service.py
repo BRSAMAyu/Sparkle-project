@@ -265,6 +265,7 @@ class PredictionTheaterService:
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
         preview_mode: bool = False,
+        simulation_session_id: str | None = None,
     ) -> dict[str, Any]:
         try:
             return await asyncio.wait_for(
@@ -274,6 +275,7 @@ class PredictionTheaterService:
                     target_node_id=target_node_id,
                     horizon_days=horizon_days,
                     preview_mode=preview_mode,
+                    simulation_session_id=simulation_session_id,
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
@@ -288,6 +290,7 @@ class PredictionTheaterService:
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
         preview_mode: bool = False,
+        simulation_session_id: str | None = None,
     ) -> dict[str, Any]:
         target_context = await self._resolve_target_context(
             user_id=user_id,
@@ -350,6 +353,7 @@ class PredictionTheaterService:
             "prediction_id": prediction_id,
             "user_id": str(user_id),
             "topic": topic,
+            "simulation_session_id": simulation_session_id,
             "target_node_id": target_context.target_node_id,
             "target_name": target_context.name,
             "candidate_bundle_id": candidate_bundle_id,
@@ -379,6 +383,8 @@ class PredictionTheaterService:
             query = {"topic": topic}
             if target_context.target_node_id:
                 query["target_node_id"] = target_context.target_node_id
+            if simulation_session_id:
+                query["simulation_session_id"] = simulation_session_id
             deep_link = f"/theater?{urlencode(query)}"
             await SystemUpdateService().enqueue(
                 user_id,
@@ -396,6 +402,7 @@ class PredictionTheaterService:
                         "target_node_id": target_context.target_node_id,
                         "target_name": target_context.name,
                         "topic": topic,
+                        "simulation_session_id": simulation_session_id,
                         "title": options[0].title if options else target_context.name,
                         "path_count": len(options),
                         "deep_link": deep_link,
@@ -1053,23 +1060,31 @@ class PredictionTheaterService:
             theater_node=node,
         )
         expansion_service = ExpansionService(self.db)
-        promoted_node, created = await expansion_service.upsert_node_from_candidate(
-            user_id=user_id,
-            candidate=payload["candidate"],
-            trigger_node_id=payload["trigger_node_id"],
-            parent_node_id=payload["parent_node_id"],
-            subject_id=payload["subject_id"],
-            source_type="theater_candidate",
-            generate_embedding=True,
-            unlock_for_user=True,
-            commit=True,
-            invalidate_caches=True,
-        )
-        await self._record_candidate_bundle_promotion(
-            prediction_id=prediction_id,
-            theater_node_id=theater_node_id,
-            galaxy_node=promoted_node,
-        )
+        try:
+            promoted_node, created = await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate=payload["candidate"],
+                trigger_node_id=payload["trigger_node_id"],
+                parent_node_id=payload["parent_node_id"],
+                subject_id=payload["subject_id"],
+                source_type="theater_candidate",
+                generate_embedding=True,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
+            )
+            await self._record_candidate_bundle_promotion(
+                prediction_id=prediction_id,
+                theater_node_id=theater_node_id,
+                galaxy_node=promoted_node,
+                commit=False,
+            )
+            await self.db.commit()
+        except Exception:
+            await self.db.rollback()
+            raise
+
+        await expansion_service._invalidate_after_graph_mutation(user_id)
         await self._patch_prediction_cache_with_promoted_node(
             cached=cached,
             prediction_id=prediction_id,
@@ -2039,6 +2054,7 @@ class PredictionTheaterService:
         prediction_id: str,
         theater_node_id: str,
         galaxy_node: KnowledgeNode,
+        commit: bool = True,
     ) -> None:
         if self.db is None:
             return
@@ -2059,7 +2075,8 @@ class PredictionTheaterService:
         bundle.source_metadata = metadata
         bundle.status = "partially_applied"
         self.db.add(bundle)
-        await self.db.commit()
+        if commit:
+            await self.db.commit()
 
     async def _patch_prediction_cache_with_promoted_node(
         self,

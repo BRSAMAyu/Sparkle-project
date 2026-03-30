@@ -18,9 +18,12 @@ class TheaterRoutes {
               policy: const SceneAudioPolicy(track: BgmTrack.insights),
               child: KnowledgeTheaterScreen(
                 initialTopic: state.uri.queryParameters['topic'],
-                initialTargetNodeId: state.uri.queryParameters['target_node_id'],
+                initialTargetNodeId:
+                    state.uri.queryParameters['target_node_id'],
                 initialSourceChatSessionId:
                     state.uri.queryParameters['source_chat_session_id'],
+                initialSimulationSessionId:
+                    state.uri.queryParameters['simulation_session_id'],
               ),
             ),
           ),

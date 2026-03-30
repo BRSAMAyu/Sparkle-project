@@ -78,6 +78,18 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     'practical': '优先讨论行动、验证和现实约束，适合技能与方案推演。',
   };
 
+  String _buildTheaterRoute({
+    required String topic,
+    String? simulationSessionId,
+  }) {
+    final query = <String, String>{
+      'topic': topic,
+      if ((simulationSessionId ?? '').trim().isNotEmpty)
+        'simulation_session_id': simulationSessionId!.trim(),
+    };
+    return Uri(path: TheaterRoutes.theater, queryParameters: query).toString();
+  }
+
   final _topicController = TextEditingController();
   final _interactionController = TextEditingController();
   final _roundsScrollController = ScrollController();
@@ -520,7 +532,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 ),
                 onStartSeed: _startSeed,
                 onOpenTheater: (seed) => context.push(
-                  '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(seed.topic)}',
+                  _buildTheaterRoute(topic: seed.topic),
                 ),
               ),
               if (session != null) ...[
@@ -594,7 +606,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   onOpenTheater: session == null
                       ? null
                       : () => context.push(
-                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(session.topic)}',
+                            _buildTheaterRoute(
+                              topic: session.topic,
+                              simulationSessionId: session.id,
+                            ),
                           ),
                   onOpenReport: session == null
                       ? null
@@ -813,7 +828,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                     onOpenTheater: session == null
                         ? null
                         : () => context.push(
-                              '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(session.topic)}',
+                              _buildTheaterRoute(
+                                topic: session.topic,
+                                simulationSessionId: session.id,
+                              ),
                             ),
                     onOpenReport: session == null
                         ? null

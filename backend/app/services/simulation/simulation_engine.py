@@ -1162,7 +1162,7 @@ class SimulationEngine:
                 priority="medium",
                 metadata={
                     "session_payload": session.to_dict(),
-                    "deep_link": f"/simulation?{urlencode({'topic': session.topic, 'scenario_key': session.scenario_key})}",
+                    "deep_link": f"/simulation?{urlencode({'topic': session.topic, 'scenario_key': session.scenario_key, 'simulation_session_id': session.id})}",
                     "interaction_prompt": session.interaction_prompt,
                     "suggested_replies": list(session.suggested_replies or []),
                     "interaction_type": session.interaction_type,

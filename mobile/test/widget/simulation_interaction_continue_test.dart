@@ -136,6 +136,119 @@ class _StreamingSimulationRepository implements SimulationRepository {
       const Stream<SimulationStreamEventModel>.empty();
 }
 
+class _AbruptStreamSimulationRepository implements SimulationRepository {
+  @override
+  Future<List<SimulationSeedModel>> getRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+  }) async =>
+      const <SimulationSeedModel>[];
+
+  @override
+  Future<SimulationSessionModel> runSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) async =>
+      throw UnimplementedError('draft session should prevent fallback rerun');
+
+  @override
+  Stream<SimulationStreamEventModel> streamSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) =>
+      Stream<SimulationStreamEventModel>.fromIterable(
+        <SimulationStreamEventModel>[
+          SimulationStreamEventModel.fromJson('participants', <String, dynamic>{
+            'session_id': 'sim-abrupt-1',
+            'state': 'RUNNING',
+            'participants': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'name': '实践派',
+                'role_hint': '先讲怎么落地',
+                'persona': <String, dynamic>{},
+              },
+            ],
+          }),
+        ],
+      );
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
+}
+
+class _AbruptContinueSimulationRepository implements SimulationRepository {
+  @override
+  Future<List<SimulationSeedModel>> getRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+  }) async =>
+      const <SimulationSeedModel>[];
+
+  @override
+  Future<SimulationSessionModel> runSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Stream<SimulationStreamEventModel> streamSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+  }) async =>
+      throw UnimplementedError(
+          'existing session should prevent fallback rerun');
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+  }) =>
+      Stream<SimulationStreamEventModel>.fromIterable(
+        <SimulationStreamEventModel>[
+          SimulationStreamEventModel.fromJson('round', <String, dynamic>{
+            'session_id': sessionId,
+            'state': 'RUNNING',
+            'round': <String, dynamic>{
+              'round': 2,
+              'speaker': '实践派',
+              'message': '先把验证动作做出来。',
+            },
+          }),
+        ],
+      );
+}
+
 class _FakeRef implements Ref {
   final _fakeAppEventStreamService = _FakeAppEventStreamService();
 
@@ -209,6 +322,56 @@ class _FailingContinueNotifier extends SimulationNotifier {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
+  test('run clears loading when stream ends without complete event', () async {
+    final notifier = SimulationNotifier(
+      _AbruptStreamSimulationRepository(),
+      _FakeRef(),
+    );
+
+    await notifier.run(
+      topic: '特征值',
+      scenarioKey: 'study_group',
+    );
+
+    expect(notifier.state.isLoading, isFalse);
+    expect(notifier.state.session?.id, 'sim-abrupt-1');
+    expect(notifier.state.liveParticipants, isNotEmpty);
+  });
+
+  test(
+      'continueSimulation clears loading when stream ends without terminal event',
+      () async {
+    final notifier = SimulationNotifier(
+      _AbruptContinueSimulationRepository(),
+      _FakeRef(),
+    );
+    notifier.state = const SimulationState(
+      sessionId: 'sim-continue-1',
+      session: SimulationSessionModel(
+        id: 'sim-continue-1',
+        scenarioKey: 'study_group',
+        state: 'WAITING_FOR_USER',
+        topic: '特征值',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '等待用户继续',
+        pendingInteraction: SimulationInteractionModel(
+          id: 'interaction-1',
+          interactionType: 'prompt',
+          prompt: '你准备先做什么？',
+        ),
+      ),
+      engineState: 'WAITING_FOR_USER',
+    );
+
+    final ok = await notifier.continueSimulation('我先做一道题');
+
+    expect(ok, isTrue);
+    expect(notifier.state.isLoading, isFalse);
+    expect(notifier.state.isContinuing, isFalse);
+    expect(notifier.state.liveRounds, isNotEmpty);
   });
 
   testWidgets('interaction card continues simulation in place', (tester) async {

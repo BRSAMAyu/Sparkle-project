@@ -67,6 +67,7 @@ class TheaterRepository {
     required String topic,
     String? targetNodeId,
     int horizonDays = 14,
+    String? simulationSessionId,
   }) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -76,6 +77,8 @@ class TheaterRepository {
           if (targetNodeId != null && targetNodeId.isNotEmpty)
             'target_node_id': targetNodeId,
           'horizon_days': horizonDays,
+          if (simulationSessionId != null && simulationSessionId.isNotEmpty)
+            'simulation_session_id': simulationSessionId,
         },
       );
       return TheaterPrediction.fromJson(response.data ?? const {});

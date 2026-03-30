@@ -28,11 +28,13 @@ class KnowledgeTheaterScreen extends ConsumerStatefulWidget {
     this.initialTopic,
     this.initialTargetNodeId,
     this.initialSourceChatSessionId,
+    this.initialSimulationSessionId,
   });
 
   final String? initialTopic;
   final String? initialTargetNodeId;
   final String? initialSourceChatSessionId;
+  final String? initialSimulationSessionId;
 
   @override
   ConsumerState<KnowledgeTheaterScreen> createState() =>
@@ -117,6 +119,7 @@ class _KnowledgeTheaterScreenState
     await ref.read(theaterProvider.notifier).generatePrediction(
           topic: topic.trim(),
           targetNodeId: widget.initialTargetNodeId,
+          simulationSessionId: widget.initialSimulationSessionId,
         );
   }
 

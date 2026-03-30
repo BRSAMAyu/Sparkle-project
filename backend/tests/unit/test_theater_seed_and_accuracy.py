@@ -514,9 +514,10 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
         ),
     )
     monkeypatch.setattr(service.accuracy, "record_prediction", AsyncMock(return_value=None))
+    enqueue_mock = AsyncMock(return_value=True)
     monkeypatch.setattr(
         "app.services.theater.prediction_theater_service.SystemUpdateService.enqueue",
-        AsyncMock(return_value=True),
+        enqueue_mock,
     )
     monkeypatch.setattr(
         "app.services.theater.prediction_theater_service.analysis_llm.json_call",
@@ -571,6 +572,7 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
         user_id=test_user.id,
         topic="我想系统学习 LLM",
         preview_mode=False,
+        simulation_session_id="sim-session-123",
     )
 
     result = await db_session.execute(select(TheaterCandidateBundle))
@@ -582,6 +584,10 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
     assert bundles[0].prediction_id == payload["prediction_id"]
     assert bundles[0].nodes_payload
     assert bundles[0].edges_payload
+    assert payload["simulation_session_id"] == "sim-session-123"
+    update_payload = enqueue_mock.await_args.args[1]
+    assert update_payload["metadata"]["simulation_session_id"] == "sim-session-123"
+    assert "simulation_session_id=sim-session-123" in update_payload["metadata"]["deep_link"]
 
 
 @pytest.mark.asyncio
@@ -696,6 +702,157 @@ async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_sessio
     )
     assert cached["graph"]["nodes"][0]["mapped_galaxy_node_id"] == str(promoted_node.id)
     assert cached["paths"][0]["steps"][0]["mapped_galaxy_node_id"] == str(promoted_node.id)
+
+
+@pytest.mark.asyncio
+async def test_promote_theater_node_rolls_back_when_bundle_update_fails(db_session, test_user, monkeypatch):
+    parent = KnowledgeNode(
+        name="Transformer",
+        description="现有星图节点",
+        importance_level=4,
+        is_seed=True,
+        sector_weights={"TECH": 70, "WISDOM": 30},
+        dominant_sector_code="TECH",
+    )
+    db_session.add(parent)
+    await db_session.commit()
+    await db_session.refresh(parent)
+
+    bundle = TheaterCandidateBundle(
+        user_id=test_user.id,
+        prediction_id="prediction-promote-rollback",
+        topic="LLM",
+        target_name="LLM 学习路径",
+        target_resolution_mode="hybrid_semantic",
+        status="pending_review",
+        nodes_payload=[],
+        edges_payload=[],
+        semantic_matches=[],
+        source_metadata={},
+    )
+    db_session.add(bundle)
+    await db_session.commit()
+
+    cached_prediction = {
+        "prediction_id": "prediction-promote-rollback",
+        "topic": "LLM",
+        "target_name": "LLM 学习路径",
+        "target_node_id": None,
+        "candidate_bundle_id": str(bundle.id),
+        "graph": {
+            "nodes": [
+                {
+                    "id": "free-node-rollback",
+                    "name": "上下文工程",
+                    "description": "围绕上下文整理、压缩和注入的能力。",
+                    "source_type": "freeform",
+                    "mapped_galaxy_node_id": None,
+                    "candidate_status": "pending_review",
+                    "aliases": ["上下文压缩"],
+                    "sector_weights": {},
+                },
+                {
+                    "id": "ref-parent",
+                    "name": "Transformer",
+                    "description": "现有参考节点",
+                    "source_type": "hybrid_reference",
+                    "mapped_galaxy_node_id": str(parent.id),
+                    "candidate_status": None,
+                    "aliases": [],
+                    "sector_weights": {"TECH": 70, "WISDOM": 30},
+                },
+            ],
+            "edges": [
+                {
+                    "id": "free-node-rollback_ref-parent_part_of",
+                    "source_id": "free-node-rollback",
+                    "target_id": "ref-parent",
+                    "relation_type": "part_of",
+                    "strength": 0.72,
+                }
+            ],
+        },
+        "paths": [
+            {
+                "id": "route-1",
+                "steps": [
+                    {
+                        "node_id": "free-node-rollback",
+                        "node_name": "上下文工程",
+                        "mapped_galaxy_node_id": None,
+                    }
+                ],
+            }
+        ],
+    }
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}prediction-promote-rollback",
+        cached_prediction,
+        ttl=PredictionAccuracyTracker.TTL_SECONDS,
+    )
+
+    service = PredictionTheaterService(db_session)
+
+    async def fail_record(*args, **kwargs):
+        raise RuntimeError("bundle update failed")
+
+    monkeypatch.setattr(service, "_record_candidate_bundle_promotion", fail_record)
+
+    with pytest.raises(RuntimeError, match="bundle update failed"):
+        await service.promote_node_to_galaxy(
+            user_id=test_user.id,
+            prediction_id="prediction-promote-rollback",
+            theater_node_id="free-node-rollback",
+        )
+
+    node_result = await db_session.execute(
+        select(KnowledgeNode).where(KnowledgeNode.name == "上下文工程")
+    )
+    assert node_result.scalars().all() == []
+
+    cached = await cache_service.get(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}prediction-promote-rollback"
+    )
+    assert cached["graph"]["nodes"][0]["mapped_galaxy_node_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_theater_api_passes_simulation_session_id(monkeypatch):
+    app = _build_test_app()
+    app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: object()
+    captured: dict[str, str | None] = {}
+
+    async def fake_generate_prediction(
+        self,
+        *,
+        user_id,
+        topic,
+        target_node_id=None,
+        horizon_days=14,
+        simulation_session_id=None,
+    ):
+        captured["simulation_session_id"] = simulation_session_id
+        return {"prediction_id": "prediction-1", "topic": topic}
+
+    monkeypatch.setattr(
+        "app.api.v1.theater.PredictionTheaterService.generate_prediction",
+        fake_generate_prediction,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/theater/predictions/generate",
+            json={
+                "topic": "两周掌握特征值",
+                "simulation_session_id": "sim-session-123",
+            },
+        )
+
+    app.dependency_overrides = {}
+
+    assert response.status_code == 200
+    assert captured["simulation_session_id"] == "sim-session-123"
 
 
 def test_normalized_topic_terms_extracts_keywords_from_natural_language():

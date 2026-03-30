@@ -93,6 +93,7 @@ class _StaticTheaterNotifier extends TheaterNotifier {
     required String topic,
     String? targetNodeId,
     int horizonDays = 14,
+    String? simulationSessionId,
   }) async {}
 
   @override

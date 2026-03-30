@@ -117,6 +117,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     required String topic,
     String? targetNodeId,
     int horizonDays = 14,
+    String? simulationSessionId,
   }) async {
     state = state.copyWith(
       isLoading: true,
@@ -131,6 +132,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         topic: topic,
         targetNodeId: targetNodeId,
         horizonDays: horizonDays,
+        simulationSessionId: simulationSessionId,
       );
       final selectedRouteId =
           prediction.paths.isNotEmpty ? prediction.paths.first.id : null;

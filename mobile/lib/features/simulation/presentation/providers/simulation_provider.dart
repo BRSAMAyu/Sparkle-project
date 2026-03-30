@@ -203,6 +203,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           liveFacilitationStyle: session.facilitationStyle,
         );
       }
+      if (state.isLoading) {
+        state = state.copyWith(isLoading: false);
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -253,6 +256,12 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           activeInteraction: session.pendingInteraction,
           livePlannedRoundCount: session.plannedRoundCount,
           liveFacilitationStyle: session.facilitationStyle,
+        );
+      }
+      if (state.isLoading || state.isContinuing) {
+        state = state.copyWith(
+          isLoading: false,
+          isContinuing: false,
         );
       }
       return true;
