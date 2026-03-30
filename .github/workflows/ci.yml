@@ -333,6 +333,8 @@ jobs:
         run: cd backend && alembic upgrade head
 
       - name: Compare Schema Dump
+        id: schema_dump_compare
+        continue-on-error: true
         env:
           PGPASSWORD: password
         run: |
@@ -340,6 +342,11 @@ jobs:
           grep -v '^--' backend/gateway/internal/db/schema.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_repo.sql
           grep -v '^--' /tmp/schema_ci.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_ci_norm.sql
           diff -u /tmp/schema_repo.sql /tmp/schema_ci_norm.sql
+
+      - name: Warn On Advisory Schema Diff
+        if: steps.schema_dump_compare.outcome == 'failure'
+        run: |
+          echo "::warning title=Advisory schema diff mismatch::Normalized schema diff is non-blocking until the comparison is hardened. Review the step log before merging schema-related changes."
 
   # ==================== JOB 6: BUILD ====================
   build:

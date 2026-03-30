@@ -53,9 +53,34 @@ def run_fixture_file(path: Path) -> list[str]:
             if decision.mode != expected["mode"]:
                 failures.append(f"{name}: expected mode={expected['mode']}, got {decision.mode}")
                 continue
+            ux_mode = expected.get("ux_mode")
+            if ux_mode and decision.ux_mode != ux_mode:
+                failures.append(f"{name}: expected ux_mode={ux_mode}, got {decision.ux_mode}")
             contains = expected.get("contains_reason")
             if contains and contains not in decision.reason:
                 failures.append(f"{name}: expected reason to contain {contains!r}, got {decision.reason!r}")
+            contains_adjustment = expected.get("contains_adjustment")
+            if contains_adjustment and not any(
+                contains_adjustment in item for item in decision.cognitive_adjustments
+            ):
+                failures.append(
+                    f"{name}: expected cognitive adjustment to contain {contains_adjustment!r}, "
+                    f"got {decision.cognitive_adjustments!r}"
+                )
+            contains_constraint = expected.get("contains_constraint")
+            if contains_constraint and not any(
+                contains_constraint in item for item in decision.execution_constraints
+            ):
+                failures.append(
+                    f"{name}: expected execution constraint to contain {contains_constraint!r}, "
+                    f"got {decision.execution_constraints!r}"
+                )
+            prompt_contains = expected.get("prompt_contains")
+            if prompt_contains and prompt_contains not in decision.prompt_instruction:
+                failures.append(
+                    f"{name}: expected prompt instruction to contain {prompt_contains!r}, "
+                    f"got {decision.prompt_instruction!r}"
+                )
         else:
             failures.append(f"{name}: unsupported fixture kind {kind!r}")
     return failures

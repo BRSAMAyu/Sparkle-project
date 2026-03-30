@@ -12,13 +12,101 @@
   },
   {
     "kind": "intent_routing",
-    "name": "high_confidence_error_diagnosis_uses_langgraph",
+    "name": "error_diagnosis_langgraph_at_confidence_boundary",
     "message": "帮我分析这道错题为什么错了",
     "intent": "error_diagnosis",
-    "confidence": 0.88,
+    "confidence": 0.8,
     "expect": {
       "mode": "langgraph",
       "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "translation_stays_direct_low_risk",
+    "message": "把这句话翻译成英文并解释一下语气",
+    "intent": "translation",
+    "confidence": 0.97,
+    "expect": {
+      "mode": "direct",
+      "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "complex_sprint_plan_uses_langgraph",
+    "message": "帮我做一个考试冲刺计划，然后按每天拆一下。",
+    "intent": "sprint_plan",
+    "confidence": 0.82,
+    "expect": {
+      "mode": "langgraph",
+      "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "multi_intent_forces_langgraph",
+    "message": "先帮我翻译这句，然后再安排复习计划。",
+    "intent": "multi_intent",
+    "confidence": 0.78,
+    "expect": {
+      "mode": "langgraph",
+      "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "destructive_task_request_remains_direct_high_risk",
+    "message": "把我所有任务都清空",
+    "intent": "task",
+    "confidence": 0.94,
+    "expect": {
+      "mode": "direct",
+      "risk": "high"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "cognitive_prism_stays_direct_low_risk",
+    "message": "根据我的学习数据做个认知棱镜分析",
+    "intent": "cognitive_prism",
+    "confidence": 0.86,
+    "expect": {
+      "mode": "direct",
+      "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "knowledge_query_stays_direct_low_risk",
+    "message": "帮我梳理这个知识点之间的关系",
+    "intent": "knowledge",
+    "confidence": 0.81,
+    "expect": {
+      "mode": "direct",
+      "risk": "low"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "empty_plan_message_defaults_to_direct_medium_risk",
+    "message": "",
+    "intent": "plan",
+    "confidence": 0.65,
+    "expect": {
+      "mode": "direct",
+      "risk": "medium"
+    }
+  },
+  {
+    "kind": "intent_routing",
+    "name": "backward_compatible_create_intent_stays_direct",
+    "message": "帮我创建一个新的学习目标",
+    "intent": "create",
+    "confidence": 0.91,
+    "expect": {
+      "mode": "direct",
+      "risk": "medium"
     }
   },
   {
@@ -44,7 +132,11 @@
     },
     "expect": {
       "mode": "cognitive_first",
-      "contains_reason": "信息"
+      "ux_mode": "cognitive",
+      "contains_reason": "信息",
+      "contains_adjustment": "情绪阻力",
+      "contains_constraint": "25 分钟",
+      "prompt_contains": "双核心认知调制"
     }
   },
   {
@@ -69,7 +161,89 @@
     },
     "expect": {
       "mode": "execution_first",
+      "ux_mode": "execution",
       "contains_reason": "目标清晰"
+    }
+  },
+  {
+    "kind": "dual_core_routing",
+    "name": "critical_feedback_prefers_cognitive_first",
+    "input": {
+      "intent": "task",
+      "intent_confidence": 0.9,
+      "information_sufficient": true,
+      "primary_challenge_area": null,
+      "recent_sentiment_distribution": {
+        "calm": 1
+      },
+      "has_active_plan": true,
+      "plan_health_status": "critical",
+      "recent_task_feedback_distribution": {
+        "too_long": 2,
+        "too_difficult": 0,
+        "unclear": 1
+      },
+      "session_length_preference": null,
+      "difficulty_preference": 0.3
+    },
+    "expect": {
+      "mode": "cognitive_first",
+      "ux_mode": "cognitive",
+      "contains_reason": "执行反馈显示阻力在累积",
+      "contains_constraint": "更短",
+      "prompt_contains": "双核心执行约束"
+    }
+  },
+  {
+    "kind": "dual_core_routing",
+    "name": "partially_clear_chat_stays_balanced",
+    "input": {
+      "intent": "chat",
+      "intent_confidence": 0.74,
+      "information_sufficient": true,
+      "primary_challenge_area": "cognitive",
+      "recent_sentiment_distribution": {
+        "calm": 1
+      },
+      "has_active_plan": false,
+      "plan_health_status": null,
+      "recent_task_feedback_distribution": {
+        "too_long": 0,
+        "too_difficult": 0
+      },
+      "session_length_preference": null,
+      "difficulty_preference": null
+    },
+    "expect": {
+      "mode": "balanced",
+      "ux_mode": "balanced",
+      "contains_reason": "部分边界"
+    }
+  },
+  {
+    "kind": "dual_core_routing",
+    "name": "unclear_low_confidence_goal_prefers_cognitive_first",
+    "input": {
+      "intent": "chat",
+      "intent_confidence": 0.4,
+      "information_sufficient": true,
+      "primary_challenge_area": null,
+      "recent_sentiment_distribution": {
+        "calm": 1
+      },
+      "has_active_plan": false,
+      "plan_health_status": null,
+      "recent_task_feedback_distribution": {
+        "too_long": 0,
+        "too_difficult": 0
+      },
+      "session_length_preference": null,
+      "difficulty_preference": null
+    },
+    "expect": {
+      "mode": "cognitive_first",
+      "ux_mode": "cognitive",
+      "contains_reason": "目标还不够清晰"
     }
   }
 ]
