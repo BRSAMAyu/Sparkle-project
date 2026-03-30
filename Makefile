@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets
+.PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance local-signoff-preflight local-final-signoff auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets
 
 # Load environment variables from .env
 include .env
@@ -487,6 +487,27 @@ local-mobile-smoke:
 
 local-acceptance: local-backend-smoke local-ai-check local-mobile-smoke
 	@echo "✅ Local full-stack acceptance passed."
+
+local-signoff-preflight:
+	@echo "🧭 Running local final sign-off preflight..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/local_signoff_preflight.py
+
+local-final-signoff: local-signoff-preflight
+	@echo "🔎 Running final runtime smoke..."
+	@$(MAKE) smoke
+	@echo "🧪 Running final gateway sign-off suite..."
+	cd backend/gateway && go test ./internal/handler ./internal/middleware
+	@echo "🧪 Running final backend sign-off suite..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/ai_chat_multiturn_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/accountability_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/galaxy_plan_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/achievement_visual_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/seed_library_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/insights_acceptance.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/cognitive_capsule_acceptance.py
+	@echo "📱 Running final mobile sign-off suite..."
+	cd mobile && flutter test test/widget/visual_elements_layout_regression_test.dart test/widget/chat_history_sheet_regression_test.dart test/widget/learning_path_task_path_navigation_test.dart test/widget/simulator_chain_regression_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/accountability_invite_closure_test.dart test/unit/accountability_invite_flow_test.dart test/unit/chat_provider_test.dart test/app/main_pages_load_smoke_test.dart -r compact
+	@echo "✅ Local final sign-off suite passed."
 
 # ═══════════════════════════════════════════════════════════════════
 # China Network Mirror Configuration

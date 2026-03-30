@@ -97,6 +97,46 @@
   - 学习路径 `task-path` 现在会在关闭弹窗后安全回跳到任务系统，不再出现“生成成功但无落点页面”
   - 默认视觉元素对无 unlock record 的用户仍可见、可装备，这条后端契约已补回归
 
+## 2026-03-30 最终本地收尾补充更新
+
+- 阶段 1 关键页面级回归再次通过：
+  - `cd mobile && flutter test test/widget/visual_elements_layout_regression_test.dart test/widget/chat_history_sheet_regression_test.dart test/widget/learning_path_task_path_navigation_test.dart test/widget/simulator_chain_regression_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/accountability_invite_closure_test.dart test/unit/accountability_invite_flow_test.dart test/unit/chat_provider_test.dart test/app/main_pages_load_smoke_test.dart`
+  - 结果：`39 passed`
+- 后端最终主链专项再次通过：
+  - `accountability_acceptance.py` -> `ALL_OK`
+  - `galaxy_plan_acceptance.py` -> `ALL_OK`
+  - `achievement_visual_acceptance.py` -> `ALL_OK`
+- 本地运行态新增两项“自愈型基线”：
+  - 最小星图 prerequisite 关系会通过 `ensure_global_galaxy_baseline` 自动补齐
+  - 演示账号 `chat_test` 的成就、皮肤、头衔装备态改为 `upsert` 基线，不再因旧 demo 数据残留造成验收漂移
+- 本地最终签收新增入口：
+  - `make local-signoff-preflight`
+  - `make local-final-signoff`
+- 新增说明文档：
+  - `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/本地最终签收基线说明_2026-03-30.md`
+- 本地环境一致性已继续收口：
+  - 仓库根 `.env`、`backend/.env`、`backend/gateway/.env` 已统一到当前真实健康基线 `brsama@127.0.0.1:5432/sparkle`
+  - `make env-check` -> 通过
+  - `make local-signoff-preflight` -> 通过
+  - 当前 `redis_search_index` 为 `WARN` 而非 `FAIL`：本机 `6379` 为普通 Redis，知识检索走已验证的降级路径
+  - `make smoke` -> 通过
+  - `cd backend/gateway && go test ./internal/handler ./internal/middleware` -> 通过
+  - `cd backend && ./.venv/bin/python scripts/seed_library_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/python scripts/insights_acceptance.py` -> `ALL_OK`
+  - `cd backend && ./.venv/bin/python scripts/cognitive_capsule_acceptance.py` -> `ALL_OK`
+  - `cd mobile && flutter test test/widget/visual_elements_layout_regression_test.dart test/widget/chat_history_sheet_regression_test.dart test/widget/learning_path_task_path_navigation_test.dart test/widget/simulator_chain_regression_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/accountability_invite_closure_test.dart test/unit/accountability_invite_flow_test.dart test/unit/chat_provider_test.dart test/app/main_pages_load_smoke_test.dart` -> `31 passed`
+  - `make local-final-signoff` -> 通过
+  - `ai_chat_multiturn_acceptance.py` 已改为：
+    - 功能失败仍 `hard fail`
+    - 外部模型偶发慢响应改为 `latency_warnings`
+    - 本轮完整签收包中出现 `study_plan too slow: 87.287s > 60.0s`，但功能链路本身通过
+
+本报告截至当前的真实结论应更新为：
+
+- 已知代码断链项已基本清空
+- 仍未完成的部分主要是你重拉环境后的双端人工点击签收与真机体验确认
+- 因此状态仍应诚实标记为 `PARTIAL`，但阻塞来源已从“代码断链”转为“最终人工确认未完成”
+
 ---
 
 ## 🚀 服务状态

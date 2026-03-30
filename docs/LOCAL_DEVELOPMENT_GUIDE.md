@@ -1,7 +1,7 @@
 # Sparkle 本地开发环境启动指南
 
 > **文档版本**: 1.0.0
-> **最后更新**: 2026-03-17
+> **最后更新**: 2026-03-30
 > **适用系统**: macOS (Apple Silicon)
 
 ---
@@ -94,6 +94,19 @@ flutter pub get
 ## 3. 服务启动顺序
 
 **关键原则**: 按依赖关系从底层到上层启动
+
+### 2026-03-30 补充说明
+
+默认本地数据库基线统一为 `127.0.0.1:5432`。  
+如果你因为本机冲突改了数据库端口，必须同时同步仓库根 `.env`、`backend/.env`、`backend/gateway/.env`；不要只改其中一处。  
+当前应以**有效配置 + 真实监听端口**为准，并在进入模拟器前执行：
+
+```bash
+make env-check
+make local-signoff-preflight
+```
+
+如果 `local-signoff-preflight` 失败，先修配置或底层依赖，不要继续点应用。
 
 ```
 启动顺序:
@@ -250,6 +263,12 @@ flutter run -d "iPhone 17 Pro"
 ```bash
 # 一键检查所有服务
 make smoke
+
+# 最终签收前统一自检
+make local-signoff-preflight
+
+# 最终本地签收 smoke 组合
+make local-final-signoff
 
 # 或手动逐项检查:
 

@@ -3,6 +3,7 @@ Guest Seed Service
 Automatically seeds demo data for new guest users so they experience
 the full app with realistic pre-populated content.
 """
+import math
 import uuid
 from datetime import date, datetime, timedelta
 
@@ -120,6 +121,83 @@ async def _ensure_galaxy_skins(session: AsyncSession):
         if existing.scalar_one_or_none():
             continue
         session.add(GalaxySkin(**item, created_at=now, updated_at=now))
+
+
+async def ensure_global_galaxy_baseline(session: AsyncSession) -> None:
+    """Ensure a minimal shared galaxy graph exists for learning-path flows."""
+    baseline_nodes = [
+        (
+            "程序设计基础",
+            "变量、流程控制、函数与基础编程思维。",
+            5,
+            ["编程", "基础"],
+            120.0,
+            40.0,
+        ),
+        (
+            "Python编程",
+            "Python 语法、数据结构与基础实践。",
+            4,
+            ["Python", "编程"],
+            210.0,
+            80.0,
+        ),
+        (
+            "数据结构",
+            "数组、链表、栈、队列与复杂度分析。",
+            4,
+            ["算法", "数据结构"],
+            250.0,
+            150.0,
+        ),
+    ]
+    baseline_relations = [
+        ("程序设计基础", "Python编程", "prerequisite", 0.9),
+        ("程序设计基础", "数据结构", "prerequisite", 0.86),
+    ]
+
+    created_nodes: dict[str, KnowledgeNode] = {}
+    for name, description, importance, keywords, x, y in baseline_nodes:
+        existing = (
+            await session.execute(select(KnowledgeNode).where(KnowledgeNode.name == name))
+        ).scalar_one_or_none()
+        if existing is None:
+            existing = KnowledgeNode(
+                name=name,
+                description=description,
+                importance_level=importance,
+                is_seed=True,
+                source_type="startup_seed",
+                keywords=keywords,
+                position_x=x,
+                position_y=y,
+            )
+            session.add(existing)
+            await session.flush()
+        created_nodes[name] = existing
+
+    for source_name, target_name, relation_type, strength in baseline_relations:
+        source = created_nodes[source_name]
+        target = created_nodes[target_name]
+        existing_relation = (
+            await session.execute(
+                select(NodeRelation).where(
+                    NodeRelation.source_node_id == source.id,
+                    NodeRelation.target_node_id == target.id,
+                    func.lower(NodeRelation.relation_type) == relation_type,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing_relation is None:
+            session.add(
+                NodeRelation(
+                    source_node_id=source.id,
+                    target_node_id=target.id,
+                    relation_type=relation_type,
+                    strength=strength,
+                    created_by="startup_seed",
+                )
+            )
 
 
 def _avatar_seed(seed: str) -> str:

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +28,16 @@ final pushInitProvider = FutureProvider<void>((ref) async {
   await pushService.initialize();
 });
 
+/// Provider for booting the sync engine after the shell is already interactive.
+final deferredSyncBootstrapProvider = FutureProvider<void>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (authState.isLoading || !authState.isAuthenticated) {
+    return;
+  }
+  await Future<void>.delayed(const Duration(milliseconds: 900));
+  ref.read(syncEngineProvider);
+});
+
 /// Sparkle Application Root Widget
 class SparkleApp extends ConsumerWidget {
   const SparkleApp({super.key});
@@ -37,8 +49,8 @@ class SparkleApp extends ConsumerWidget {
     ClientObservabilityService.instance.attachDio(apiClient.dio);
     // Watch the manager to rebuild when theme changes (colors, high contrast, etc.)
     ref.watch(themeManagerProvider);
-    // Initialize sync engine early.
-    ref.watch(syncEngineProvider);
+    // Defer sync startup until auth has settled and the shell is visible.
+    ref.watch(deferredSyncBootstrapProvider);
     // Initialize unified push service (FCM + JPush)
     ref.watch(pushInitProvider);
     // Watch the mode specifically for MaterialApp.themeMode

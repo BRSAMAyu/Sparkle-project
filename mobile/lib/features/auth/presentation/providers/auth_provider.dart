@@ -52,8 +52,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _clearUserScopedLocalData() async {
     await _ref.read(guestServiceProvider).clearGuestData();
     await ChatCacheService().clearAllCache();
-    await ViewStorageService.instance.clearAllViewState();
-    await LocalDatabase().clearUserScopedData();
+    try {
+      await ViewStorageService.instance.clearAllViewState();
+    } catch (e) {
+      debugPrint('ℹ️ View storage cleanup skipped during auth reset: $e');
+    }
+    try {
+      await LocalDatabase().clearUserScopedData();
+    } catch (e) {
+      debugPrint('ℹ️ Local database cleanup skipped during auth reset: $e');
+    }
+  }
+
+  Future<void> _resetInvalidStoredSession(Object error) async {
+    debugPrint('ℹ️ Stored auth session expired, clearing local auth state: $error');
+    await _authRepository.clearTokens();
+    await _clearUserScopedLocalData();
+    state = state.copyWith(
+      isLoading: false,
+      isAuthenticated: false,
+      user: null,
+    );
   }
 
   Future<void> checkAuthStatus() async {
@@ -89,24 +108,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
           SessionRefreshService.refreshSessionBoundProviders(_ref);
         } catch (e) {
-          debugPrint('⚠️ Stored auth state invalid, clearing tokens: $e');
-          await _authRepository.logout();
-          state = state.copyWith(
-            isLoading: false,
-            isAuthenticated: false,
-            error: e.toString(),
-          );
+          await _resetInvalidStoredSession(e);
         }
       } else {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
-      await _authRepository.logout();
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: false,
-        error: e.toString(),
-      );
+      await _resetInvalidStoredSession(e);
     }
   }
 

@@ -212,13 +212,15 @@ async def lifespan(app: FastAPI):
                 from app.services.guest_seed_service import (
                     _ensure_achievements,
                     _ensure_galaxy_skins,
+                    ensure_global_galaxy_baseline,
                 )
                 from app.data.seed_content_initial import initialize_seed_libraries
                 await _ensure_achievements(db)
                 await _ensure_galaxy_skins(db)
+                await ensure_global_galaxy_baseline(db)
                 await initialize_seed_libraries(db)
                 await db.commit()
-                logger.info("Global achievements, galaxy skins, and official seed libraries ensured")
+                logger.info("Global achievements, galaxy skins, galaxy baseline, and official seed libraries ensured")
             except Exception as e:
                 await db.rollback()
                 logger.warning(f"Failed to ensure startup reference data (non-fatal): {e}")

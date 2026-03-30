@@ -126,6 +126,44 @@ void main() {
       expect(rebuiltAuthState.user?.id, userId);
       expect(rebuiltContainer.read(onboardingCompletedProvider), isTrue);
     });
+
+    test('expired stored session falls back to logged-out state quietly',
+        () async {
+      final prefs = await initPrefs(onboardingCompleted: false);
+      final storage = _MemorySecureStorage();
+      final authRepo = _FailingAuthRepository(storage);
+      final userRepo = _FakeUserRepository();
+
+      await authRepo.saveTokens(
+        TokenResponse(
+          accessToken: 'expired-access-token',
+          refreshToken: 'expired-refresh-token',
+          expiresIn: 3600,
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepo),
+          userRepositoryProvider.overrideWithValue(userRepo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          sessionBoundProvidersProvider.overrideWithValue(const []),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await _waitFor(
+        () => container.read(authProvider).isLoading == false,
+      );
+
+      final authState = container.read(authProvider);
+      expect(authState.isAuthenticated, isFalse);
+      expect(authState.user, isNull);
+      expect(authState.error, isNull);
+      expect(await authRepo.getAccessToken(), isNull);
+      expect(await authRepo.getRefreshToken(), isNull);
+      expect(authRepo.clearTokensCallCount, greaterThanOrEqualTo(1));
+    });
   });
 }
 
@@ -167,6 +205,39 @@ class _FakeAuthRepository extends AuthRepository {
   @override
   Future<void> logout({bool keepDemoMode = false}) async {
     await clearTokens();
+  }
+}
+
+class _FailingAuthRepository extends _FakeAuthRepository {
+  _FailingAuthRepository(FlutterSecureStorage storage)
+      : super(storage, _expiredUser);
+
+  static final UserModel _expiredUser = UserModel(
+    id: 'expired-user',
+    username: 'expired_user',
+    email: 'expired@example.com',
+    nickname: 'Expired User',
+    flameLevel: 1,
+    flameBrightness: 0.3,
+    depthPreference: 0.2,
+    curiosityPreference: 0.4,
+    isActive: true,
+    status: UserStatus.offline,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+
+  int clearTokensCallCount = 0;
+
+  @override
+  Future<UserModel> getCurrentUser() async {
+    throw Exception('Could not fetch user profile.');
+  }
+
+  @override
+  Future<void> clearTokens() async {
+    clearTokensCallCount += 1;
+    await super.clearTokens();
   }
 }
 

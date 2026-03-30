@@ -1228,6 +1228,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
         final compact = constraints.maxWidth < 360;
 
+        if (compact) {
+          final visibleEntries = entries.take(3).toList(growable: false);
+          return Column(
+            children: [
+              for (var index = 0; index < visibleEntries.length; index++) ...[
+                _buildCompactRunwayCard(visibleEntries[index], state),
+                if (index != visibleEntries.length - 1)
+                  const SizedBox(height: DS.spacing12),
+              ],
+            ],
+          );
+        }
+
         return SizedBox(
           height: compact ? 190 : 140,
           child: ListView.separated(
@@ -1308,6 +1321,75 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCompactRunwayCard(
+    MapEntry<String, List<VisualElementModel>> entry,
+    VisualElementsState state,
+  ) {
+    final elements = [...entry.value]
+      ..sort((a, b) => b.visibilityWeight.compareTo(a.visibilityWeight));
+    final lead = elements.first;
+    final unlockedCount = elements
+        .where((element) => state.unlockedIds.contains(element.id))
+        .length;
+    final accent = _elementAccent(lead);
+
+    return GestureDetector(
+      onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accent.withValues(alpha: 0.16),
+              DS.surfaceSecondary,
+            ],
+          ),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: accent.withValues(alpha: 0.24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _miniChip(lead.displaySlotLabel, accent),
+            const SizedBox(height: DS.spacing10),
+            Text(
+              '${elements.length} 种风格',
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                fontWeight: DS.fontWeightBold,
+                color: DS.textPrimary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              '已拥有 $unlockedCount / ${elements.length}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              elements.take(2).map((element) => element.name).join(' · '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: accent,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

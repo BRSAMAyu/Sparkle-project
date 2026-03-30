@@ -50,3 +50,17 @@ def test_reset_override_requires_key(profile_client):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "key required"
+
+
+def test_inferred_preferences_returns_behavioral_baseline_for_sparse_user(profile_client):
+    client, state = profile_client
+    state["current_user"] = type("UserStub", (), {"id": uuid4()})()
+
+    response = client.get("/profile/inferred-preferences")
+
+    assert response.status_code == 200
+    payload = response.json()
+    keys = {item["key"] for item in payload}
+    assert "avg_question_complexity" in keys
+    assert "community_engagement_level" in keys
+    assert "social_learning_preference" in keys

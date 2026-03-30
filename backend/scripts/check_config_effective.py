@@ -30,7 +30,10 @@ def _redact_url(raw_url: str) -> str:
 
 
 async def _check_postgres() -> None:
-    conn = await asyncpg.connect(to_sync_database_url(settings.DATABASE_URL))
+    try:
+        conn = await asyncpg.connect(to_sync_database_url(settings.DATABASE_URL))
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"PostgreSQL connect failed: {exc}") from exc
     try:
         value = await conn.fetchval("SELECT 1")
     finally:

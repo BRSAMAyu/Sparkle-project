@@ -1021,7 +1021,7 @@ async def _seed_user_data(session, user: User):
 
     user_achievements = [
         _upsert_user_achievement("streak_7", 1.0, 7, 7, True),
-        _upsert_user_achievement("streak_30", 0.63, 19, 30, False),
+        _upsert_user_achievement("streak_30", 0.83, 25, 30, False),
         _upsert_user_achievement("nodes_100", 0.68, 68, 100, False),
         _upsert_user_achievement("study_100hours", 0.87, 87, 100, False),
         _upsert_user_achievement("sprint_first", 1.0, 1, 1, True),
@@ -1036,9 +1036,16 @@ async def _seed_user_data(session, user: User):
                 UserAchievement.achievement_id == item.achievement_id,
             )
         )
-        if exists.scalar_one_or_none():
+        existing = exists.scalar_one_or_none()
+        if existing is None:
+            session.add(item)
             continue
-        session.add(item)
+        existing.progress = item.progress
+        existing.progress_value = item.progress_value
+        existing.progress_target = item.progress_target
+        existing.unlocked_at = item.unlocked_at
+        existing.is_pinned = item.is_pinned
+        existing.last_progress_update = item.last_progress_update
 
     # Streak stats
     streak = await session.execute(
@@ -1132,6 +1139,8 @@ async def _seed_user_data(session, user: User):
                         is_equipped=(skin_id == "skin_nebula"),
                     )
                 )
+    user.equipped_skin = "skin_nebula"
+    user.equipped_skin_source = "achievement"
 
     for title_spec in [
         ("title_sprinter", "冲刺高手", "🏃 冲刺高手", "sprint_first"),
@@ -1143,7 +1152,9 @@ async def _seed_user_data(session, user: User):
                 UserTitle.title_id == title_spec[0]
             )
         )
-        if not title_exists.scalar_one_or_none():
+        existing_title = title_exists.scalar_one_or_none()
+        is_equipped = title_spec[0] == "title_sprinter"
+        if existing_title is None:
             session.add(
                 UserTitle(
                     user_id=user.id,
@@ -1151,10 +1162,17 @@ async def _seed_user_data(session, user: User):
                     title_name=title_spec[1],
                     title_display=title_spec[2],
                     source_achievement_id=title_spec[3],
-                    is_equipped=(title_spec[0] == "title_sprinter"),
+                    is_equipped=is_equipped,
                     unlocked_at=now - timedelta(days=randint(2, 10)),
                 )
             )
+            continue
+        existing_title.title_name = title_spec[1]
+        existing_title.title_display = title_spec[2]
+        existing_title.source_achievement_id = title_spec[3]
+        existing_title.is_equipped = is_equipped
+    user.equipped_title = "title_sprinter"
+    user.equipped_title_source = "achievement"
 
     # Plans
     sprint_plan = await session.execute(

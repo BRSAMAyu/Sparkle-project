@@ -27,7 +27,12 @@ class SensoryNavigationObserver extends NavigatorObserver {
         isBackNavigation: event == SensoryFeedbackEvent.selection,
       ),
     );
-    unawaited(SensoryFeedbackService.emit(event));
+    unawaited(
+      SensoryFeedbackService.emit(
+        event,
+        enableSound: false,
+      ),
+    );
   }
 
   void _trackScreen(Route<dynamic> route) {

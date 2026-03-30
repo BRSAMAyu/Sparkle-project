@@ -474,6 +474,9 @@ class FocusService:
             date_key = session.start_time.strftime("%Y-%m-%d")
             heatmap_data[date_key] = heatmap_data.get(date_key, 0.0) + session.duration_minutes
 
+        if not heatmap_data:
+            heatmap_data[end_date.strftime("%Y-%m-%d")] = 0.0
+
         return heatmap_data
 
     @staticmethod

@@ -8,13 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
-import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
 import 'package:sparkle/core/services/performance_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -147,9 +144,6 @@ Future<void> _runDeferredStartupWarmups() async {
     await Future.wait(<Future<void>>[
       Hive.openBox<dynamic>('settings'),
       Hive.openBox<dynamic>('user'),
-      SensoryFeedbackService.init(),
-      BgmService.init(),
-      SocialAuthService().initWeChat(),
       _initializeFirebase(),
     ]);
   } catch (e, stack) {

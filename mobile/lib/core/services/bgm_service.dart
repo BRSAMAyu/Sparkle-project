@@ -814,7 +814,9 @@ class BgmService {
     if (player == null || currentTrack == null || _isRefreshing) {
       return;
     }
-    if (kDebugMode && defaultTargetPlatform == TargetPlatform.iOS) {
+    if (kDebugMode &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android)) {
       return;
     }
 

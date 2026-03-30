@@ -39,13 +39,19 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   bool _isShowingAchievementDialog = false;
+  bool _visualRefreshScheduled = false;
   StreamSubscription<dynamic>? _communityEventsSub;
 
   void _handleDestinationSelected(int index) {
     if (index == widget.navigationShell.currentIndex) {
       return;
     }
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    unawaited(
+      SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.selection,
+        enableSound: false,
+      ),
+    );
     widget.navigationShell.goBranch(index);
   }
 
@@ -58,7 +64,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   }
 
   void _setupAchievementListener() {
-    unawaited(ref.read(visualElementProvider.notifier).refresh());
+    _scheduleVisualElementWarmRefresh();
     _subscribeToCommunityEvents(ref.read(communityEventsStreamProvider));
     ref
       ..listenManual<Stream<dynamic>>(
@@ -78,6 +84,25 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           }
         },
       );
+  }
+
+  void _scheduleVisualElementWarmRefresh() {
+    if (_visualRefreshScheduled) {
+      return;
+    }
+    _visualRefreshScheduled = true;
+    Future<void>.delayed(const Duration(milliseconds: 1200), () async {
+      if (!mounted) {
+        return;
+      }
+      final state = ref.read(visualElementProvider);
+      if (state.isLoading ||
+          state.allElements.isNotEmpty ||
+          state.unlockedElements.isNotEmpty) {
+        return;
+      }
+      await ref.read(visualElementProvider.notifier).refresh();
+    });
   }
 
   void _subscribeToCommunityEvents(Stream<dynamic> stream) {

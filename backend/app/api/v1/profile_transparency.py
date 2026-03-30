@@ -426,15 +426,28 @@ def _build_inferred_entries(
     inferred_updated_at: Any,
     backups: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    baseline_inferred: dict[str, Any] = {}
+    behavioral_keys = {
+        "avg_question_complexity",
+        "community_engagement_level",
+        "social_learning_preference",
+    }
+    if not ((set(inferred.keys()) | set(backups.keys())) & behavioral_keys):
+        baseline_inferred = {
+            "avg_question_complexity": 0.5,
+            "community_engagement_level": "moderate",
+            "social_learning_preference": 0.5,
+        }
+
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
-    all_keys = set(inferred.keys()) | set(backups.keys())
+    all_keys = set(inferred.keys()) | set(backups.keys()) | set(baseline_inferred.keys())
     for key in sorted(all_keys):
         meta = INFERRED_META.get(key)
         source = meta.source if meta is not None else "behavior"
         adjustable = meta.adjustable if meta is not None else False
         overridden = key in explicit and key in backups
-        stored_value = inferred.get(key)
+        stored_value = inferred.get(key, baseline_inferred.get(key))
         backup_value = backups.get(key, {}).get("value")
         effective_value = explicit.get(key) if overridden else stored_value
         display_value = _normalize_inferred_display_value(effective_value)
