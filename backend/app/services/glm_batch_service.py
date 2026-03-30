@@ -285,5 +285,24 @@ class GLMBatchService:
             queue=plan.queue,
         )
 
+    def enqueue_node_sector_backfill(
+        self,
+        *,
+        user_id: UUID,
+        node_ids: list[UUID],
+    ):
+        model_key = "glm_4_5_air_batch"
+        logger.info(
+            "[GLMBatch] enqueue node_sector_backfill user={} node_count={} model={}",
+            user_id,
+            len(node_ids),
+            model_key,
+        )
+        return celery_app.send_task(
+            "classify_node_sector_batch",
+            args=(str(user_id), [str(node_id) for node_id in node_ids], model_key),
+            queue=self.queue_name,
+        )
+
 
 glm_batch_service = GLMBatchService()

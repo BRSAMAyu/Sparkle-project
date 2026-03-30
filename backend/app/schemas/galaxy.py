@@ -8,6 +8,15 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.services.node_sector_service import (
+    blend_sector_colors,
+    build_sector_visuals,
+    dominant_sector_from_weights,
+    normalize_sector_weights,
+    parse_sector_code,
+    resolve_sector_weights,
+)
+
 
 class SectorCode(str, Enum):
     COSMOS = "COSMOS"
@@ -67,6 +76,7 @@ class NodeExpansionCandidate(BaseModel):
     relation_to_trigger: str = "related"
     relation_strength: float = Field(0.7, ge=0.0, le=1.0)
     keywords: list[str] = Field(default_factory=list)
+    sector_weights: dict[str, int] = Field(default_factory=dict)
 
 
 class NodeExpansionCandidatesResponse(BaseModel):
@@ -96,6 +106,7 @@ class NodeBase(BaseModel):
     description: str | None = None
     importance_level: int
     sector_code: SectorCode
+    sector_weights: dict[str, int] = Field(default_factory=dict)
     base_color: str | None = None
     glow_color: str | None = None
     is_seed: bool
@@ -105,6 +116,43 @@ class NodeBase(BaseModel):
     global_spark_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_model(cls, node) -> "NodeBase":
+        sector_weights = resolve_sector_weights(node)
+        sector_code = dominant_sector_from_weights(sector_weights)
+        base_color, glow_color = cls._resolve_sector_colors(node, sector_weights)
+        return cls(
+            id=node.id,
+            name=node.name,
+            name_en=node.name_en,
+            description=node.description,
+            importance_level=node.importance_level,
+            sector_code=sector_code,
+            sector_weights=sector_weights,
+            base_color=base_color,
+            glow_color=glow_color,
+            is_seed=node.is_seed,
+            parent_id=node.parent_id,
+            parent_name=node.parent.name if getattr(node, "parent", None) else None,
+            tags=NodeWithStatus._build_auto_tags(node, sector_code),
+            global_spark_count=node.global_spark_count,
+        )
+
+    @staticmethod
+    def _resolve_sector_colors(node, sector_weights: dict[str, int]) -> tuple[str, str]:
+        dominant_sector = dominant_sector_from_weights(sector_weights)
+        subject = getattr(node, "subject", None)
+        if (
+            subject is not None
+            and parse_sector_code(getattr(subject, "sector_code", None)) == dominant_sector
+            and len(sector_weights) == 1
+        ):
+            base_color = getattr(subject, "hex_color", None)
+            glow_color = getattr(subject, "glow_color", None)
+            if base_color and glow_color:
+                return base_color, glow_color
+        return blend_sector_colors(sector_weights)
 
 
 class UserStatusInfo(BaseModel):
@@ -158,20 +206,17 @@ class NodeWithStatus(NodeBase):
                 brightness=brightness,
             )
 
-        # 处理 subject 为空的异常情况
-        sector_code = SectorCode.VOID
-        position_angle = 0.0
-        position_radius = 100.0 + node.importance_level * 30.0
-        if node.subject:
-            # 尝试匹配 SectorCode，如果不在枚举中则归为 VOID
-            try:
-                sector_code = SectorCode(node.subject.sector_code)
-            except ValueError:
-                sector_code = SectorCode.VOID
-
-            position_angle = float(node.subject.position_angle) if node.subject.position_angle is not None else 0.0
-
-        base_color, glow_color = cls._resolve_sector_colors(node, sector_code)
+        sector_weights = resolve_sector_weights(node)
+        sector_code = dominant_sector_from_weights(sector_weights)
+        base_color, glow_color = cls._resolve_sector_colors(node, sector_weights)
+        sector_visuals = build_sector_visuals(
+            node,
+            importance_level=node.importance_level,
+            sector_weights=sector_weights,
+            keep_position=(node.position_x, node.position_y),
+        )
+        position_angle = sector_visuals.position_angle
+        position_radius = sector_visuals.position_radius
         position_x, position_y = cls._resolve_position(
             node=node,
             angle=position_angle,
@@ -185,6 +230,7 @@ class NodeWithStatus(NodeBase):
             description=node.description,
             importance_level=node.importance_level,
             sector_code=sector_code,
+            sector_weights=sector_weights,
             base_color=base_color,
             glow_color=glow_color,
             is_seed=node.is_seed,
@@ -241,23 +287,8 @@ class NodeWithStatus(NodeBase):
         )
 
     @staticmethod
-    def _resolve_sector_colors(node, sector_code: SectorCode) -> tuple[str, str]:
-        subject = getattr(node, "subject", None)
-        base_color = getattr(subject, "hex_color", None)
-        glow_color = getattr(subject, "glow_color", None)
-        if base_color and glow_color:
-            return base_color, glow_color
-
-        fallback = {
-            SectorCode.COSMOS: ("#78A3D1", "#A8C8F3"),
-            SectorCode.TECH: ("#5AB8CC", "#92E1E9"),
-            SectorCode.ART: ("#C97C8F", "#F4B0C1"),
-            SectorCode.CIVILIZATION: ("#D0A05F", "#F2D5A1"),
-            SectorCode.LIFE: ("#5FAF80", "#9FDEB6"),
-            SectorCode.WISDOM: ("#A181C8", "#D0B8EE"),
-            SectorCode.VOID: ("#70798B", "#AAB2C4"),
-        }
-        return fallback.get(sector_code, fallback[SectorCode.VOID])
+    def _resolve_sector_colors(node, sector_weights: dict[str, int]) -> tuple[str, str]:
+        return NodeBase._resolve_sector_colors(node, sector_weights)
 
     @staticmethod
     def _build_auto_tags(node, sector_code: SectorCode) -> list[str]:

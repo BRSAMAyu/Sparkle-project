@@ -2351,70 +2351,92 @@ class _TaskExitConfirmationDialogState
   @override
   Widget build(BuildContext context) => SlideTransition(
         position: _slideAnimation,
-        child: Dialog(
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-          insetPadding: const EdgeInsets.all(DS.xl),
-          child: GraphiteModalSurface(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Progress Indicator
-                _buildProgressIndicator(),
-                const SizedBox(height: DS.xl),
-
-                // Icon
-                _buildIcon(),
-                const SizedBox(height: DS.lg),
-
-                // Title
-                Text(
-                  _getTitle(),
-                  style: TextStyle(
-                    color: DS.neutral900,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.md),
-
-                // Message
-                Text(
-                  _getMessage(),
-                  style: TextStyle(
-                    color: DS.neutral600,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.xl),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomButton.secondary(
-                        text: _getCancelText(),
-                        onPressed: _cancel,
+        child: SafeArea(
+          minimum: const EdgeInsets.all(DS.xl),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.all(DS.xl),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: DS.neutral200.withValues(alpha: 0.8),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DS.neutral900.withValues(alpha: 0.18),
+                        blurRadius: 36,
+                        offset: const Offset(0, 18),
                       ),
-                    ),
-                    const SizedBox(width: DS.lg),
-                    Expanded(
-                      child: _currentStep == _TaskExitStep.third
-                          ? CustomButton.primary(
-                              text: _getConfirmText(),
-                              onPressed: _nextStep,
-                              customGradient: DS.warningGradient,
-                            )
-                          : CustomButton.secondary(
-                              text: _getConfirmText(),
-                              onPressed: _nextStep,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Progress Indicator
+                      _buildProgressIndicator(),
+                      const SizedBox(height: DS.xl),
+
+                      // Icon
+                      _buildIcon(),
+                      const SizedBox(height: DS.lg),
+
+                      // Title
+                      Text(
+                        _getTitle(),
+                        style: TextStyle(
+                          color: DS.neutral900,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DS.md),
+
+                      // Message
+                      Text(
+                        _getMessage(),
+                        style: TextStyle(
+                          color: DS.neutral600,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DS.xl),
+
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomButton.secondary(
+                              text: _getCancelText(),
+                              onPressed: _cancel,
                             ),
-                    ),
-                  ],
+                          ),
+                          const SizedBox(width: DS.lg),
+                          Expanded(
+                            child: _currentStep == _TaskExitStep.third
+                                ? CustomButton.primary(
+                                    text: _getConfirmText(),
+                                    onPressed: _nextStep,
+                                    customGradient: DS.warningGradient,
+                                  )
+                                : CustomButton.secondary(
+                                    text: _getConfirmText(),
+                                    onPressed: _nextStep,
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

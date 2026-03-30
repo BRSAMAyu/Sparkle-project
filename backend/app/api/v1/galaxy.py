@@ -41,6 +41,7 @@ from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy_service import GalaxyService
 from app.services.knowledge_integration_service import KnowledgeIntegrationService
+from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
 
@@ -226,10 +227,8 @@ async def get_node_detail(
     relations_result = await db.execute(relations_query)
     relations = relations_result.unique().scalars().all()
 
-    # 构建 sector_code
-    sector_code = "VOID"
-    if node.subject:
-        sector_code = node.subject.sector_code or "VOID"
+    sector_weights = resolve_sector_weights(node)
+    sector_code = dominant_sector_from_weights(sector_weights).value
 
     # 构建 user_stats (top-level, matching Flutter KnowledgeUserStats)
     if user_status:
@@ -266,6 +265,7 @@ async def get_node_detail(
         "keywords": node.keywords or [],
         "importance_level": node.importance_level,
         "sector_code": sector_code,
+        "sector_weights": sector_weights,
         "is_seed": bool(node.is_seed),
         "source_type": node.source_type or "seed",
         "parent_id": str(node.parent_id) if node.parent_id else None,
@@ -405,21 +405,8 @@ async def apply_node_expansion_candidates(
         UUID(user_id),
         candidates=[candidate.model_dump() for candidate in request.candidates],
     )
-    sector_code = SectorCode.VOID
     created = [
-        NodeBase(
-            id=created_node.id,
-            name=created_node.name,
-            name_en=created_node.name_en,
-            description=created_node.description,
-            importance_level=created_node.importance_level,
-            sector_code=sector_code,
-            is_seed=bool(created_node.is_seed),
-            parent_id=created_node.parent_id,
-            parent_name=node.name,
-            tags=list(created_node.keywords or []),
-            global_spark_count=int(getattr(created_node, "global_spark_count", 0) or 0),
-        )
+        NodeBase.from_model(created_node)
         for created_node in created_nodes
     ]
     return ApplyNodeExpansionResponse(

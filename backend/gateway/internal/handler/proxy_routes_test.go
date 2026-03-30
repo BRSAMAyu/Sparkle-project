@@ -114,6 +114,9 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 	expectedTasksRoutes := []string{
 		"GET /api/v1/tasks",
 		"POST /api/v1/tasks",
+		"POST /api/v1/tasks/reorder",
+		"POST /api/v1/tasks/suggestions",
+		"GET /api/v1/tasks/recommendations/micro",
 		"GET /api/v1/tasks/today",
 		"GET /api/v1/tasks/:id",
 		"GET /api/v1/tasks/:id/resources",
@@ -121,6 +124,15 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"DELETE /api/v1/tasks/:id",
 		"POST /api/v1/tasks/:id/resources",
 		"DELETE /api/v1/tasks/:id/resources/:resourceId",
+		"POST /api/v1/tasks/:id/generate-guide",
+		"POST /api/v1/tasks/:id/start",
+		"POST /api/v1/tasks/:id/complete",
+		"POST /api/v1/tasks/:id/abandon",
+		"POST /api/v1/tasks/:id/feedback",
+		"GET /api/v1/tasks/:id/feedback",
+		"GET /api/v1/tasks/feedback/stats",
+		"POST /api/v1/tasks/feedback/:feedback_id/reflection",
+		"POST /api/v1/tasks/:id/next-action-selection",
 	}
 
 	// Expected route patterns for plans (Python uses PATCH, not PUT)

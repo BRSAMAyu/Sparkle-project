@@ -80,6 +80,14 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['first_unlock_at'] as String),
       parentId: json['parent_id'] as String?,
       baseColor: json['base_color'] as String?,
+      glowColor: json['glow_color'] as String?,
+      sectorWeights: (json['sector_weights'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(
+              $enumDecode(_$SectorEnumEnumMap, k),
+              (e as num).toDouble(),
+            ),
+          ) ??
+          const {},
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       description: json['description'] as String?,
       positionHint: json['position_hint'] == null
@@ -104,6 +112,10 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'importance': instance.importance,
       'sector_code': _$SectorEnumEnumMap[instance.sector]!,
       'base_color': instance.baseColor,
+      'glow_color': instance.glowColor,
+      'sector_weights': instance.sectorWeights.map(
+        (k, e) => MapEntry(_$SectorEnumEnumMap[k]!, e),
+      ),
       'is_unlocked': instance.isUnlocked,
       'mastery_score': instance.masteryScore,
       'study_count': instance.studyCount,

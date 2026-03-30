@@ -19,6 +19,7 @@ from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.graph_models import KnowledgeVertex
 from app.services.knowledge_service import KnowledgeService
+from app.services.node_sector_service import dominant_sector_from_weights
 
 
 def _utcnow() -> datetime:
@@ -65,11 +66,15 @@ class GraphKnowledgeService:
             id=uuid.uuid4(),
             name=name,
             description=description,
-            sector_code=sector_code,
             importance_level=importance_level,
             keywords=keywords,
             source_type=source_type,
             source_task_id=source_task_id,
+            sector_weights={sector_code: 100},
+            dominant_sector_code=sector_code,
+            sector_classification_status="completed",
+            sector_classification_model="graph_knowledge_service",
+            sector_classified_at=_utcnow(),
             created_at=_utcnow(),
             updated_at=_utcnow()
         )
@@ -87,7 +92,7 @@ class GraphKnowledgeService:
                         "id": str(node.id),
                         "name": node.name,
                         "description": node.description,
-                        "sector": node.sector_code,
+                        "sector": node.dominant_sector_code,
                         "importance": node.importance_level,
                         "keywords": ",".join(node.keywords),
                         "source_type": node.source_type,
@@ -358,7 +363,7 @@ class GraphKnowledgeService:
                 name=node.name,
                 description=node.description or "",
                 importance=node.importance_level or 1,
-                sector=node.sector_code or "VOID",
+                sector=dominant_sector_from_weights(node.sector_weights or {}).value,
                 keywords=node.keywords or [],
                 source_type=node.source_type or "seed",
                 created_at=node.created_at

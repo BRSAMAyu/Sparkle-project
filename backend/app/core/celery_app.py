@@ -108,6 +108,7 @@ celery_app.conf.update(
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
+        "classify_node_sector_batch": {"queue": "glm_batch"},
         "daily_report": {"queue": "default"},
         "send_task_reminders": {"queue": "default"},
         "generate_daily_capsules_for_all": {"queue": "default"},
@@ -489,6 +490,36 @@ def analyze_cognitive_fragment_batch(
         return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Cognitive batch analysis task failed: {exc}")
+        countdown = 60 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown)
+
+
+@celery_app.task(bind=True, max_retries=3, name="classify_node_sector_batch")
+def classify_node_sector_batch(
+    self,
+    user_id: str,
+    node_ids: list[str],
+    model_key: str | None = None,
+):
+    """使用 GLM batch 队列为知识节点回填多星域归属。"""
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.node_sector_service import NodeSectorService
+
+    async def _classify():
+        async with AsyncSessionLocal() as session:
+            service = NodeSectorService(session)
+            return await service.classify_nodes_by_ids(
+                user_id=UUID(user_id),
+                node_ids=[UUID(node_id) for node_id in node_ids],
+                model_key=model_key,
+            )
+
+    try:
+        return _run_async(_classify())
+    except Exception as exc:
+        logger.error(f"Node sector batch classification failed: {exc}")
         countdown = 60 * (2 ** self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 

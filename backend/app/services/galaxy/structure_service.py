@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.galaxy import GalaxyGraphResponse
+from app.services.node_sector_service import node_belongs_to_sector
 
 
 def _utcnow() -> datetime:
@@ -211,9 +212,6 @@ class GraphStructureService:
             .outerjoin(Subject, KnowledgeNode.subject_id == Subject.id)
         )
 
-        if sector_code:
-            query = query.where(Subject.sector_code == sector_code)
-
         # LOD Filtering
         if zoom_level < 0.5:
             query = query.where(
@@ -222,6 +220,13 @@ class GraphStructureService:
 
         result = await self.db.execute(query)
         nodes_with_status = result.all()
+
+        if sector_code:
+            nodes_with_status = [
+                (node, status)
+                for node, status in nodes_with_status
+                if node_belongs_to_sector(node, sector_code)
+            ]
 
         if not include_locked:
             nodes_with_status = [(node, status) for node, status in nodes_with_status if status and status.is_unlocked]

@@ -156,6 +156,36 @@ class VocabularyService:
         return data if isinstance(data, dict) else None
 
     @staticmethod
+    def _normalize_definitions(value: Any) -> list[str]:
+        if isinstance(value, list):
+            return [
+                str(item).strip()
+                for item in value
+                if str(item).strip()
+            ]
+        if isinstance(value, str) and value.strip():
+            return [value.strip()]
+        return []
+
+    @staticmethod
+    def _extract_definition_lines(content: str) -> list[str]:
+        definitions: list[str] = []
+        for raw_line in (content or "").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            line = re.sub(r"^[-*•\d.\)\s]+", "", line).strip()
+            if not line:
+                continue
+            lowered = line.lower()
+            if lowered.startswith(("word:", "phonetic:", "pos:", "examples:", "example:")):
+                continue
+            definitions.append(line)
+            if len(definitions) >= 3:
+                break
+        return definitions
+
+    @staticmethod
     async def synthesize_lookup(word: str) -> dict[str, Any]:
         """
         Generate a lightweight dictionary result via LLM fallback.
@@ -188,14 +218,34 @@ class VocabularyService:
         if data is None:
             data = {}
 
-        definitions = data.get("definitions")
+        definitions = VocabularyService._normalize_definitions(data.get("definitions"))
         examples = data.get("examples")
+
+        if not definitions:
+            raw_text = await vocabulary_llm.call(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an English dictionary. "
+                            "Return 1 to 3 short English definitions as plain text lines only."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Provide short dictionary definitions for the word: {word}",
+                    },
+                ],
+                fallback="",
+                temperature=0.2,
+            )
+            definitions = VocabularyService._extract_definition_lines(raw_text)
 
         normalized = {
             "word": str(data.get("word") or word).strip().lower(),
             "phonetic": data.get("phonetic") if isinstance(data.get("phonetic"), str) else None,
             "pos": data.get("pos") if isinstance(data.get("pos"), str) else None,
-            "definitions": [str(item).strip() for item in definitions] if isinstance(definitions, list) else [],
+            "definitions": definitions,
             "examples": [str(item).strip() for item in examples] if isinstance(examples, list) else [],
             "source": "llm_fallback",
         }

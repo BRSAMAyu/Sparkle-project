@@ -538,22 +538,7 @@ class KnowledgeRetrievalService:
         return result.scalar_one_or_none()
 
     def _format_search_result(self, node: KnowledgeNode, status: UserNodeStatus | None, score: float) -> SearchResultItem:
-        sector_code_str = node.subject.sector_code if node.subject else 'VOID'
-        try:
-            sector_enum = SectorCode(sector_code_str)
-        except ValueError:
-            sector_enum = SectorCode.VOID
-
-        node_base = NodeBase(
-            id=node.id,
-            name=node.name,
-            name_en=node.name_en,
-            description=node.description,
-            importance_level=node.importance_level,
-            sector_code=sector_enum,
-            is_seed=node.is_seed,
-            parent_name=node.parent.name if node.parent else None
-        )
+        node_base = NodeBase.from_model(node)
 
         user_status_info = None
         if status:

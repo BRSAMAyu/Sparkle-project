@@ -78,6 +78,7 @@ from app.models.community import MessageFavorite
 from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 from app.models.user import UserStatus
+from app.services.node_sector_service import build_sector_visuals
 
 
 async def _ensure_achievements(session: AsyncSession):
@@ -1661,6 +1662,12 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         angle_rad = math.radians(angle_deg)
         # Vary radius by importance (more important = closer to center)
         radius = 150.0 + (5 - importance) * 40 + (sector_idx % 3) * 20
+        sector_weights = {sector: 100}
+        visuals = build_sector_visuals(
+            name,
+            importance_level=importance,
+            sector_weights=sector_weights,
+        )
 
         node = KnowledgeNode(
             name=name,
@@ -1671,6 +1678,11 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             keywords=keywords,
             position_x=radius * math.cos(angle_rad),
             position_y=radius * math.sin(angle_rad),
+            sector_weights=sector_weights,
+            dominant_sector_code=visuals.dominant_sector_code.value,
+            sector_classification_status="completed",
+            sector_classification_model="guest_seed",
+            sector_classified_at=now,
         )
         session.add(node)
         await session.flush()

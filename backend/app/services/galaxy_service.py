@@ -33,6 +33,7 @@ from app.services.galaxy.ontology_generator import relation_type_to_wire_name
 from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
+from app.services.node_sector_service import NodeSectorService
 
 
 def _utcnow() -> datetime:
@@ -333,6 +334,10 @@ class GalaxyService:
         # 1. Get Structure
         nodes_with_status, relations = await self.structure.get_graph_view(
             user_id, sector_code, include_locked, zoom_level
+        )
+        await NodeSectorService(self.db).ensure_backfill_for_user(
+            user_id=user_id,
+            candidate_nodes=[node for node, _ in nodes_with_status],
         )
 
         # 2. Get Stats (Parallelizable if needed, but fast enough)

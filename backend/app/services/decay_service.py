@@ -15,6 +15,7 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 
 class DecayService:
@@ -180,9 +181,7 @@ class DecayService:
         suggestions = []
         for status, node in rows:
             # 获取星域信息
-            sector_code = 'VOID'
-            if node.subject:
-                sector_code = node.subject.sector_code
+            sector_code = dominant_sector_from_weights(resolve_sector_weights(node)).value
 
             suggestions.append({
                 'node_id': node.id,

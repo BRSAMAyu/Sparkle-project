@@ -18,8 +18,16 @@ from app.core.cache import cache_service
 from app.core.llm_client import llm_client
 from app.db.session import AsyncSessionLocal
 from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
+from app.schemas.galaxy import SectorCode
 from app.services.embedding_service import embedding_service
 from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalProcessor
+from app.services.node_sector_service import (
+    build_sector_visuals,
+    dominant_sector_from_weights,
+    normalize_sector_weights,
+    parse_sector_code,
+    resolve_sector_weights,
+)
 
 
 def _utcnow() -> datetime:
@@ -112,7 +120,10 @@ class ExpansionService:
             "trigger_node": {
                 "name": node.name,
                 "description": node.description or "",
-                "sector": node.subject.sector_code if node.subject else "VOID",
+                "sector": (parse_sector_code(getattr(node.subject, "sector_code", None)) or SectorCode.VOID).value
+                if node.subject
+                else (parse_sector_code(getattr(node, "dominant_sector_code", None)) or SectorCode.VOID).value,
+                "sector_weights": resolve_sector_weights(node),
             },
             "neighbor_nodes": [
                 {"name": n.name, "relation": rel}
@@ -277,6 +288,7 @@ class ExpansionService:
 - 名称：{context['trigger_node']['name']}
 - 描述：{context['trigger_node']['description']}
 - 所属领域：{context['trigger_node']['sector']}
+- 星域归属：{json.dumps(context['trigger_node'].get('sector_weights') or {}, ensure_ascii=False)}
 
 ## 相邻知识点
 {chr(10).join([f"- {n['name']} ({n['relation']})" for n in context['neighbor_nodes']]) if context['neighbor_nodes'] else "暂无"}
@@ -307,13 +319,23 @@ class ExpansionService:
       "importance_level": 3,
       "relation_to_trigger": "prerequisite",
       "relation_strength": 0.8,
-      "keywords": ["关键词1", "关键词2"]
+      "keywords": ["关键词1", "关键词2"],
+      "sector_weights": {{
+        "COSMOS": 0,
+        "TECH": 0,
+        "ART": 0,
+        "CIVILIZATION": 0,
+        "LIFE": 0,
+        "WISDOM": 0,
+        "VOID": 0
+      }}
     }}
   ]
 }}
 ```
 
 relation_to_trigger 可选值: prerequisite (前置知识), related (相关), application (应用), evolution (进阶)
+sector_weights 必须返回整数百分比，总和必须为 100，可多星域归属，不要默认全放进 VOID。
 """
         if prompt_version == "v2":
             return base_prompt + "\n额外要求：避免重复或过度相似的概念，确保每个节点的差异性。"
@@ -343,6 +365,11 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         """创建拓展的知识节点"""
         trigger_node = await self.db.get(KnowledgeNode, trigger_node_id)
         new_nodes = []
+        fallback_sector = (
+            parse_sector_code(getattr(trigger_node, "dominant_sector_code", None))
+            or parse_sector_code(getattr(getattr(trigger_node, "subject", None), "sector_code", None))
+            or SectorCode.VOID
+        )
 
         for item in expanded_data.get('expanded_nodes', [])[:self.MAX_EXPANDED_NODES_PER_REQUEST]:
             # 检查是否已存在 (通过名称去重)
@@ -360,6 +387,15 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                     continue
 
             # 创建新节点
+            sector_weights = normalize_sector_weights(
+                item.get("sector_weights"),
+                fallback_sector=fallback_sector,
+            )
+            visuals = build_sector_visuals(
+                item.get("name") or trigger_node_id,
+                importance_level=item.get("importance_level", 3),
+                sector_weights=sector_weights,
+            )
             node = KnowledgeNode(
                 subject_id=trigger_node.subject_id,
                 parent_id=trigger_node_id,
@@ -369,7 +405,14 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 importance_level=item.get('importance_level', 3),
                 is_seed=False,
                 source_type='llm_expanded',
-                keywords=item.get('keywords', [])
+                keywords=item.get('keywords', []),
+                sector_weights=sector_weights,
+                dominant_sector_code=visuals.dominant_sector_code.value,
+                sector_classification_status='completed',
+                sector_classification_model='expansion_llm',
+                sector_classified_at=_utcnow(),
+                position_x=visuals.position_x,
+                position_y=visuals.position_y,
             )
 
             # 生成向量嵌入
@@ -536,6 +579,10 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                     "relation_to_trigger": relation,
                     "relation_strength": max(0.0, min(1.0, float(raw_item.get("relation_strength") or 0.7))),
                     "keywords": keywords,
+                    "sector_weights": normalize_sector_weights(
+                        raw_item.get("sector_weights"),
+                        fallback_sector=SectorCode.VOID,
+                    ),
                 }
             )
         return normalized
@@ -588,6 +635,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 "relation_to_trigger": "prerequisite",
                 "relation_strength": 0.82,
                 "keywords": [trigger, "基础", "框架"],
+                "sector_weights": dict(context.get("trigger_node", {}).get("sector_weights") or {"VOID": 100}),
             },
             {
                 "candidate_id": f"{trigger}_application",
@@ -597,6 +645,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 "relation_to_trigger": "application",
                 "relation_strength": 0.75,
                 "keywords": [trigger, "应用", "实践"],
+                "sector_weights": dict(context.get("trigger_node", {}).get("sector_weights") or {"VOID": 100}),
             },
             {
                 "candidate_id": f"{trigger}_advanced",
@@ -606,6 +655,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 "relation_to_trigger": "evolution",
                 "relation_strength": 0.7,
                 "keywords": [trigger, "进阶", "专题"],
+                "sector_weights": dict(context.get("trigger_node", {}).get("sector_weights") or {"VOID": 100}),
             },
         ]
         return templates[:count]

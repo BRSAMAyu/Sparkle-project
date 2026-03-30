@@ -8,6 +8,29 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 
+bool _looksLikeUnavailableDefinition(String value) {
+  final normalized = value.trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return true;
+  }
+  return normalized.contains('definition unavailable') ||
+      normalized.contains('no definition found');
+}
+
+bool _hasUsableDefinitions(Map<String, dynamic> entry) {
+  final definitions = entry['definitions'];
+  if (definitions is List) {
+    return definitions
+        .whereType<Object>()
+        .map((item) => item.toString().trim())
+        .any((item) => !_looksLikeUnavailableDefinition(item));
+  }
+  if (definitions is String) {
+    return !_looksLikeUnavailableDefinition(definitions);
+  }
+  return false;
+}
+
 class DictionaryPackageInfo {
   const DictionaryPackageInfo({
     required this.id,
@@ -160,6 +183,9 @@ class OfflineDictionaryService {
     if (match == null) {
       return null;
     }
+    if (!_hasUsableDefinitions(match)) {
+      return null;
+    }
     return Map<String, dynamic>.from(match)
       ..putIfAbsent('source', () => 'offline_dictionary');
   }
@@ -167,6 +193,9 @@ class OfflineDictionaryService {
   Future<void> cacheLookupResult(Map<String, dynamic> entry) async {
     final word = (entry['word'] as String?)?.trim().toLowerCase();
     if (word == null || word.isEmpty) {
+      return;
+    }
+    if (!_hasUsableDefinitions(entry)) {
       return;
     }
 
@@ -226,7 +255,8 @@ class OfflineDictionaryService {
   Future<bool> _fileExists(String path) async =>
       Isolate.run(() => File(path).existsSync());
 
-  Future<Map<String, dynamic>?> _readJsonMap(String path) async => Isolate.run(() {
+  Future<Map<String, dynamic>?> _readJsonMap(String path) async =>
+      Isolate.run(() {
         final file = File(path);
         if (!file.existsSync()) {
           return null;
@@ -248,27 +278,28 @@ class OfflineDictionaryService {
     String dirPath,
   ) async =>
       Isolate.run(() {
-      final result = <String, Map<String, dynamic>>{};
-      final dir = Directory(dirPath);
+        final result = <String, Map<String, dynamic>>{};
+        final dir = Directory(dirPath);
 
-      for (final entity in dir.listSync()) {
-        if (entity is! File || !entity.path.endsWith('.json')) {
-          continue;
-        }
-        final decoded = json.decode(entity.readAsStringSync());
-        if (decoded is! Map<String, dynamic>) {
-          continue;
-        }
-        for (final entry in decoded.entries) {
-          final value = entry.value;
-          if (value is Map<String, dynamic>) {
-            result[entry.key.toLowerCase()] = Map<String, dynamic>.from(value);
+        for (final entity in dir.listSync()) {
+          if (entity is! File || !entity.path.endsWith('.json')) {
+            continue;
+          }
+          final decoded = json.decode(entity.readAsStringSync());
+          if (decoded is! Map<String, dynamic>) {
+            continue;
+          }
+          for (final entry in decoded.entries) {
+            final value = entry.value;
+            if (value is Map<String, dynamic>) {
+              result[entry.key.toLowerCase()] =
+                  Map<String, dynamic>.from(value);
+            }
           }
         }
-      }
 
-      return result;
-    });
+        return result;
+      });
 }
 
 final offlineDictionaryServiceProvider = Provider<OfflineDictionaryService>(

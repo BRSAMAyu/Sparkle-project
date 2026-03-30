@@ -147,6 +147,13 @@ class KnowledgeNode(BaseModel):
     position_x = Column(Float, nullable=True, index=True)
     position_y = Column(Float, nullable=True, index=True)
 
+    # 多星域归属
+    sector_weights = Column(JSONBCompat, default=dict, nullable=True)
+    dominant_sector_code = Column(String(20), default="VOID", nullable=False, server_default="VOID", index=True)
+    sector_classification_status = Column(String(20), default="pending", nullable=False, server_default="pending", index=True)
+    sector_classification_model = Column(String(100), nullable=True)
+    sector_classified_at = Column(DateTime, nullable=True)
+
     # Collaborative Data
     global_spark_count = Column(Integer, default=0, nullable=False)
 

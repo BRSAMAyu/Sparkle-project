@@ -11,6 +11,7 @@ from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult, UserStatusInfo
 from app.services.expansion_service import ExpansionService
+from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 
 def _utcnow() -> datetime:
@@ -91,9 +92,7 @@ class GalaxyStatsService:
             logger.warning(f"Failed to publish mastery update event: {e}")
 
         # 6. 获取星域信息
-        sector_code = 'VOID'
-        if node.subject:
-            sector_code = node.subject.sector_code
+        sector_code = dominant_sector_from_weights(resolve_sector_weights(node)).value
 
         # 7. 生成动画事件
         try:
