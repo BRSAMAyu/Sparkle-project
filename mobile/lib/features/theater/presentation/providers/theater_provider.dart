@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
 
@@ -14,6 +17,7 @@ class TheaterState {
     this.isLoading = false,
     this.isSavingSnapshot = false,
     this.isAdopting = false,
+    this.isPromotingNode = false,
     this.prediction,
     this.selectedRouteId,
     this.timelineIndex = 0,
@@ -27,6 +31,7 @@ class TheaterState {
   final bool isLoading;
   final bool isSavingSnapshot;
   final bool isAdopting;
+  final bool isPromotingNode;
   final TheaterPrediction? prediction;
   final String? selectedRouteId;
   final int timelineIndex;
@@ -55,6 +60,7 @@ class TheaterState {
     bool? isLoading,
     bool? isSavingSnapshot,
     bool? isAdopting,
+    bool? isPromotingNode,
     TheaterPrediction? prediction,
     String? selectedRouteId,
     int? timelineIndex,
@@ -74,6 +80,7 @@ class TheaterState {
         isLoading: isLoading ?? this.isLoading,
         isSavingSnapshot: isSavingSnapshot ?? this.isSavingSnapshot,
         isAdopting: isAdopting ?? this.isAdopting,
+        isPromotingNode: isPromotingNode ?? this.isPromotingNode,
         prediction: clearPrediction ? null : prediction ?? this.prediction,
         selectedRouteId: selectedRouteId ?? this.selectedRouteId,
         timelineIndex: timelineIndex ?? this.timelineIndex,
@@ -196,7 +203,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isLoading: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '这次 What-If 没有成功生成，你可以稍后再试。',
+          fallbackMessage: '这次假设推演没有成功生成，你可以稍后再试。',
         ),
       );
     }
@@ -327,6 +334,42 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     _ref.read(theaterOverlayProvider.notifier).state = null;
   }
 
+  Future<TheaterNodePromotionResult?> promoteNodeToGalaxy(
+    String theaterNodeId,
+  ) async {
+    final prediction = state.prediction;
+    if (prediction == null) {
+      return null;
+    }
+    state = state.copyWith(isPromotingNode: true, clearError: true);
+    try {
+      final result = await _repository.promoteNodeToGalaxy(
+        predictionId: prediction.predictionId,
+        theaterNodeId: theaterNodeId,
+      );
+      final updatedPrediction = _applyPromotion(prediction, result);
+      state = state.copyWith(
+        isPromotingNode: false,
+        prediction: updatedPrediction,
+      );
+      _ref
+        ..invalidate(galaxyRepositoryProvider)
+        ..invalidate(enhancedGalaxyRepositoryProvider)
+        ..invalidate(galaxyProvider);
+      _syncOverlay();
+      return result;
+    } catch (e) {
+      state = state.copyWith(
+        isPromotingNode: false,
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '将节点同步到知识星图失败，你可以稍后再试。',
+        ),
+      );
+      return null;
+    }
+  }
+
   void _syncOverlay() {
     final route = state.selectedRoute;
     final prediction = state.prediction;
@@ -337,16 +380,30 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
 
     final nodeRiskLevels = <String, String>{};
     final predictedMastery = <String, double>{};
+    final mappedNodeIds = <String>[];
     for (final step in route.steps) {
-      nodeRiskLevels[step.nodeId] = step.riskLevel;
-      predictedMastery[step.nodeId] = step.predictedMastery;
+      final mappedNodeId = (step.mappedGalaxyNodeId ?? '').trim();
+      if (mappedNodeId.isEmpty) {
+        continue;
+      }
+      mappedNodeIds.add(mappedNodeId);
+      nodeRiskLevels[mappedNodeId] = step.riskLevel;
+      predictedMastery[mappedNodeId] = step.predictedMastery;
     }
 
-    final focusNodeIds = route.steps.map((step) => step.nodeId).toList();
+    if (mappedNodeIds.isEmpty) {
+      _ref.read(theaterOverlayProvider.notifier).state = null;
+      return;
+    }
+
+    final focusNodeIds = mappedNodeIds.toSet().toList();
     final highlightEdgeIds = <String>[];
     for (var index = 0; index < route.steps.length - 1; index++) {
-      final source = route.steps[index].nodeId;
-      final target = route.steps[index + 1].nodeId;
+      final source = (route.steps[index].mappedGalaxyNodeId ?? '').trim();
+      final target = (route.steps[index + 1].mappedGalaxyNodeId ?? '').trim();
+      if (source.isEmpty || target.isEmpty) {
+        continue;
+      }
       highlightEdgeIds.add('${source}_${target}_prerequisite');
     }
     _ref.read(theaterOverlayProvider.notifier).state = TheaterGalaxyOverlay(
@@ -356,6 +413,41 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       highlightEdgeIds: highlightEdgeIds,
       nodeRiskLevels: nodeRiskLevels,
       predictedMasteryByNodeId: predictedMastery,
+    );
+  }
+
+  TheaterPrediction _applyPromotion(
+    TheaterPrediction prediction,
+    TheaterNodePromotionResult result,
+  ) {
+    final updatedNodes = prediction.graphNodes
+        .map(
+          (node) => node.id == result.theaterNodeId
+              ? node.copyWith(
+                  mappedGalaxyNodeId: result.galaxyNodeId,
+                  clearCandidateStatus: true,
+                )
+              : node,
+        )
+        .toList(growable: false);
+    final updatedPaths = prediction.paths
+        .map(
+          (path) => path.copyWith(
+            steps: path.steps
+                .map(
+                  (step) => step.nodeId == result.theaterNodeId
+                      ? step.copyWith(
+                          mappedGalaxyNodeId: result.galaxyNodeId,
+                        )
+                      : step,
+                )
+                .toList(growable: false),
+          ),
+        )
+        .toList(growable: false);
+    return prediction.copyWith(
+      graphNodes: updatedNodes,
+      paths: updatedPaths,
     );
   }
 }

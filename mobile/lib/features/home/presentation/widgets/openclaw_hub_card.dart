@@ -20,6 +20,7 @@ class OpenClawHubCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isTightCard = compact || dense;
     final connection = ref.watch(openClawConnectionProvider);
     final taskState = ref.watch(taskListProvider);
     final latestIntent = taskState.taskExecutions.values.isEmpty
@@ -80,15 +81,15 @@ class OpenClawHubCard extends ConsumerWidget {
             borderWidth: 1,
           ),
           borderRadius: DS.borderRadius20,
-          padding: EdgeInsets.all(dense ? DS.spacing12 : DS.spacing16),
+          padding: EdgeInsets.all(isTightCard ? DS.spacing10 : DS.spacing16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    width: compact ? 38 : 44,
-                    height: compact ? 38 : 44,
+                    width: isTightCard ? 34 : 44,
+                    height: isTightCard ? 34 : 44,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -123,6 +124,8 @@ class OpenClawHubCard extends ConsumerWidget {
                           style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
+                          maxLines: isTightCard ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -133,10 +136,10 @@ class OpenClawHubCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: DS.spacing12),
+              SizedBox(height: isTightCard ? DS.spacing8 : DS.spacing12),
               Wrap(
                 spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
+                runSpacing: isTightCard ? DS.spacing6 : DS.spacing8,
                 children: [
                   OpenClawMetricPill(
                     icon: Icons.sensors_rounded,
@@ -152,22 +155,28 @@ class OpenClawHubCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: DS.spacing12),
+              SizedBox(height: isTightCard ? DS.spacing8 : DS.spacing12),
               Text(
                 summary,
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
                 ),
-                maxLines: 2,
+                maxLines: isTightCard ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: DS.spacing10),
+              SizedBox(height: isTightCard ? DS.spacing6 : DS.spacing10),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   actionLabel,
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: (isTightCard
+                          ? context.sparkleTypography.labelLarge.copyWith(
+                              fontSize: 13,
+                              height: 1.1,
+                            )
+                          : context.sparkleTypography.labelLarge)
+                      .copyWith(
                     color: DS.brandPrimaryConst,
                     fontWeight: DS.fontWeightBold,
                   ),

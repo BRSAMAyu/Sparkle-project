@@ -5,6 +5,9 @@ import 'package:sparkle/features/calendar/presentation/providers/calendar_provid
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
+import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
@@ -14,8 +17,7 @@ import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 
-final sessionBoundProvidersProvider =
-    Provider<List<ProviderOrFamily>>(
+final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
   (ref) => [
     dashboardProvider,
     unreadNotificationsProvider,
@@ -34,6 +36,9 @@ final sessionBoundProvidersProvider =
     leaderboardProvider,
     myRankProvider,
     focusStatisticsProvider,
+    galaxyProvider,
+    enhancedGalaxyRepositoryProvider,
+    galaxyRepositoryProvider,
     profileContextProvider,
     transparentProfileProvider,
     inferredPreferencesProvider,

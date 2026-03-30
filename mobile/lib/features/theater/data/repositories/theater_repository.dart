@@ -110,11 +110,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '这次 What-If 没有成功生成，你可以稍后再试。',
+        fallbackMessage: '这次假设推演没有成功生成，你可以稍后再试。',
       );
     } catch (_) {
       throw const TheaterRepositoryException(
-        message: '这次 What-If 没有成功生成，你可以稍后再试。',
+        message: '这次假设推演没有成功生成，你可以稍后再试。',
       );
     }
   }
@@ -219,6 +219,30 @@ class TheaterRepository {
     } catch (_) {
       throw const TheaterRepositoryException(
         message: '读取推演准确度失败，你可以稍后再试。',
+      );
+    }
+  }
+
+  Future<TheaterNodePromotionResult> promoteNodeToGalaxy({
+    required String predictionId,
+    required String theaterNodeId,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.theaterPromoteNode(predictionId),
+        data: {
+          'theater_node_id': theaterNodeId,
+        },
+      );
+      return TheaterNodePromotionResult.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '将节点同步到知识星图失败，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '将节点同步到知识星图失败，你可以稍后再试。',
       );
     }
   }

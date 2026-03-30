@@ -43,6 +43,10 @@ class TheaterActualOutcomeRequest(BaseModel):
     actual_mastery: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
+class TheaterPromoteNodeRequest(BaseModel):
+    theater_node_id: str = Field(..., min_length=1)
+
+
 @router.post("/predictions/generate")
 async def generate_theater_prediction(
     request: TheaterGenerateRequest,
@@ -133,3 +137,21 @@ async def get_theater_prediction_accuracy(
     del user_id
     service = PredictionTheaterService(db)
     return await service.get_accuracy_summary(prediction_id)
+
+
+@router.post("/predictions/{prediction_id}/promote-node")
+async def promote_theater_node(
+    prediction_id: str,
+    request: TheaterPromoteNodeRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    try:
+        return await service.promote_node_to_galaxy(
+            user_id=UUID(user_id),
+            prediction_id=prediction_id,
+            theater_node_id=request.theater_node_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

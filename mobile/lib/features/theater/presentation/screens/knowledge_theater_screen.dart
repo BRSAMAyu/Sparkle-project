@@ -249,7 +249,6 @@ class _KnowledgeTheaterScreenState
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     if (prediction == null) {
-                      final compactHeight = constraints.maxHeight < 720;
                       final introBody = _TheaterIntroState(
                         key: const ValueKey('theater-intro'),
                         isLoading: state.isLoading,
@@ -296,30 +295,22 @@ class _KnowledgeTheaterScreenState
                         const SizedBox(height: 16),
                       ];
 
-                      if (compactHeight) {
-                        return ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            ...contentChildren,
-                            SizedBox(
-                              height: math.max(
-                                420,
-                                constraints.maxHeight - 96,
-                              ),
-                              child: introBody,
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            ...contentChildren,
-                            Expanded(child: introBody),
-                          ],
+                      return ListView(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          math.max(
+                            24,
+                            MediaQuery.of(context).padding.bottom + 16,
+                          ),
                         ),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        children: [
+                          ...contentChildren,
+                          introBody,
+                        ],
                       );
                     }
 
@@ -329,12 +320,16 @@ class _KnowledgeTheaterScreenState
                       topBar: _TheaterImmersiveTopBar(
                         topic: prediction.topic,
                         targetName: prediction.targetName,
+                        targetResolutionMode: prediction.targetResolutionMode,
+                        semanticMatchCount: prediction.semanticMatches.length,
                         selectedRoute: route,
                         onOpenSettings: () {
                           setState(() => _settingsDrawerOpen = true);
                         },
                         onShare: () => unawaited(_showTheaterShareSheet()),
-                        onOpenGalaxy: () => context.go(GalaxyRoutes.home),
+                        onOpenGalaxy: prediction.hasMappedGalaxyReferences
+                            ? () => context.go(GalaxyRoutes.home)
+                            : null,
                       ),
                       drawer: _TheaterSettingsDrawer(
                         controller: _topicController,
@@ -416,6 +411,9 @@ class _KnowledgeTheaterScreenState
                         onSaveSnapshot: () => unawaited(
                           ref.read(theaterProvider.notifier).saveSnapshot(),
                         ),
+                        isPromotingNode: state.isPromotingNode,
+                        onPromoteNodeToGalaxy: (node) =>
+                            unawaited(_promoteNodeToGalaxy(node)),
                         onNodeTap: (node) => unawaited(
                           _handleNodeTap(node, route),
                         ),
@@ -595,6 +593,8 @@ class _KnowledgeTheaterScreenState
     required TheaterGraphNode node,
     required TheaterPathOption? selectedRoute,
     required ValueChanged<String>? onRunWhatIf,
+    required Future<void> Function(TheaterGraphNode node) onPromoteNode,
+    required bool isPromotingNode,
   }) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     final canRunWhatIf =
@@ -604,18 +604,26 @@ class _KnowledgeTheaterScreenState
         .firstOrNull;
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) {
         final scheme = Theme.of(sheetContext).colorScheme;
         final delta = node.predictedMastery - node.currentMastery;
+        final mediaQuery = MediaQuery.of(sheetContext);
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            padding: EdgeInsets.fromLTRB(
+              20,
+              4,
+              20,
+              math.max(24, mediaQuery.viewInsets.bottom + 16),
+            ),
+            child: SizedBox(
+              height: mediaQuery.size.height * 0.82,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
                 Text(
                   node.name,
                   style:
@@ -727,34 +735,57 @@ class _KnowledgeTheaterScreenState
                               onRunWhatIf(node.id);
                             }
                           : null,
-                      child: const Text('开始 What-If'),
+                      child: const Text('开始假设推演'),
+                    ),
+                    FilledButton(
+                      onPressed: isPromotingNode
+                          ? null
+                          : () {
+                              Navigator.of(sheetContext).pop();
+                              unawaited(onPromoteNode(node));
+                            },
+                      child: Text(
+                        _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
+                      ),
                     ),
                     OutlinedButton(
-                      onPressed: () {
+                      onPressed: (node.mappedGalaxyNodeId ?? '').isEmpty
+                          ? null
+                          : () {
                         Navigator.of(sheetContext).pop();
                         unawaited(
                           context.push(
                             GalaxyRoutes.knowledgeDetail.replaceFirst(
                               ':id',
-                              node.id,
+                              node.mappedGalaxyNodeId!,
                             ),
                           ),
                         );
                       },
-                      child: const Text('查看 Galaxy'),
+                      child: const Text('查看星图参考'),
                     ),
                   ],
                 ),
                 if (!canRunWhatIf) ...[
                   const SizedBox(height: 12),
                   Text(
-                    '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做 What-If。',
+                    '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。',
                     style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
                   ),
                 ],
-              ],
+                if ((node.mappedGalaxyNodeId ?? '').isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。',
+                    style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                ],
+                ],
+              ),
             ),
           ),
         );
@@ -775,6 +806,52 @@ class _KnowledgeTheaterScreenState
           : (nodeId) => unawaited(
                 ref.read(theaterProvider.notifier).runWhatIfForStep(nodeId),
               ),
+      onPromoteNode: _promoteNodeToGalaxy,
+      isPromotingNode: ref.read(theaterProvider).isPromotingNode,
+    );
+  }
+
+  Future<void> _promoteNodeToGalaxy(TheaterGraphNode node) async {
+    final mappedNodeId = (node.mappedGalaxyNodeId ?? '').trim();
+    final opensExisting =
+        node.sourceType == 'graph_explicit' || node.sourceType == 'hybrid_reference';
+    if (opensExisting && mappedNodeId.isNotEmpty) {
+      if (!mounted) {
+        return;
+      }
+      await context.push(
+        GalaxyRoutes.knowledgeDetail.replaceFirst(':id', mappedNodeId),
+      );
+      return;
+    }
+
+    final result = await ref
+        .read(theaterProvider.notifier)
+        .promoteNodeToGalaxy(node.id);
+    if (!mounted || result == null) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.created
+              ? '已将「${result.nodeName}」加入知识星图，可以继续完善节点内容。'
+              : '已定位到知识星图中的「${result.nodeName}」，你可以继续完善节点内容。',
+        ),
+        action: SnackBarAction(
+          label: '去完善',
+          onPressed: () {
+            unawaited(
+              context.push(
+                GalaxyRoutes.knowledgeDetail.replaceFirst(
+                  ':id',
+                  result.galaxyNodeId,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -900,9 +977,15 @@ class _NodeStatChip extends StatelessWidget {
 }
 
 class _SelectedNodeBanner extends StatelessWidget {
-  const _SelectedNodeBanner({required this.node});
+  const _SelectedNodeBanner({
+    required this.node,
+    required this.isPromotingNode,
+    required this.onPromoteToGalaxy,
+  });
 
   final TheaterGraphNode node;
+  final bool isPromotingNode;
+  final VoidCallback onPromoteToGalaxy;
 
   @override
   Widget build(BuildContext context) {
@@ -966,6 +1049,37 @@ class _SelectedNodeBanner extends StatelessWidget {
                 value:
                     '${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}%',
                 accent: masteryDelta >= 0 ? DS.success : DS.error,
+              ),
+              _NodeStatChip(
+                label: '来源',
+                value: _nodeSourceLabel(node),
+                accent: accent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              FilledButton.icon(
+                onPressed: isPromotingNode ? null : onPromoteToGalaxy,
+                icon: Icon(
+                  _nodeCanOpenGalaxy(node)
+                      ? Icons.open_in_new_rounded
+                      : Icons.add_circle_outline_rounded,
+                ),
+                label: Text(
+                  _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _nodeBannerHint(node),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                ),
               ),
             ],
           ),
@@ -1109,6 +1223,8 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
   const _TheaterImmersiveTopBar({
     required this.topic,
     required this.targetName,
+    required this.targetResolutionMode,
+    required this.semanticMatchCount,
     required this.selectedRoute,
     required this.onOpenSettings,
     required this.onShare,
@@ -1117,10 +1233,12 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
 
   final String topic;
   final String targetName;
+  final String targetResolutionMode;
+  final int semanticMatchCount;
   final TheaterPathOption? selectedRoute;
   final VoidCallback onOpenSettings;
   final VoidCallback onShare;
-  final VoidCallback onOpenGalaxy;
+  final VoidCallback? onOpenGalaxy;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1152,6 +1270,15 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
                         ],
                         const SizedBox(width: 8),
                         _MetricPill(
+                          label: '模式 · ${_targetModeLabel(targetResolutionMode)}',
+                        ),
+                        const SizedBox(width: 8),
+                        _MetricPill(
+                          label:
+                              semanticMatchCount > 0 ? '参考映射 $semanticMatchCount' : '纯自由推演',
+                        ),
+                        const SizedBox(width: 8),
+                        _MetricPill(
                           label:
                               '掌握度 ${selectedRoute?.estimatedMastery.round() ?? '--'}%',
                         ),
@@ -1169,7 +1296,7 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             IconButton.filledTonal(
-              tooltip: '查看 Galaxy',
+              tooltip: onOpenGalaxy == null ? '当前没有可打开的知识星图参考节点' : '查看知识星图',
               onPressed: onOpenGalaxy,
               icon: const Icon(Icons.auto_graph_rounded),
             ),
@@ -1386,7 +1513,9 @@ class _TheaterIntroState extends StatelessWidget {
       return const _PredictionLoadingState();
     }
 
-    return ListView(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (error != null) ...[
           _TheaterErrorCard(
@@ -1539,6 +1668,7 @@ class _PredictionView extends StatelessWidget {
     required this.accuracyTracking,
     required this.isLoading,
     required this.isAdopting,
+    required this.isPromotingNode,
     required this.isSavingSnapshot,
     required this.error,
     required this.activeTab,
@@ -1551,6 +1681,7 @@ class _PredictionView extends StatelessWidget {
     required this.onRunWhatIf,
     required this.onSaveSnapshot,
     required this.onRecordActual,
+    required this.onPromoteNodeToGalaxy,
     required this.onNodeTap,
     required this.onEdgeLongPress,
     super.key,
@@ -1571,6 +1702,7 @@ class _PredictionView extends StatelessWidget {
   final TheaterAccuracyTracking? accuracyTracking;
   final bool isLoading;
   final bool isAdopting;
+  final bool isPromotingNode;
   final bool isSavingSnapshot;
   final String? error;
   final _TheaterWorkbenchTab activeTab;
@@ -1583,6 +1715,7 @@ class _PredictionView extends StatelessWidget {
   final ValueChanged<List<String>>? onRunWhatIf;
   final VoidCallback onSaveSnapshot;
   final VoidCallback onRecordActual;
+  final ValueChanged<TheaterGraphNode> onPromoteNodeToGalaxy;
   final ValueChanged<TheaterGraphNode> onNodeTap;
   final void Function(TheaterGraphEdge edge, Offset globalPosition)
       onEdgeLongPress;
@@ -1620,6 +1753,14 @@ class _PredictionView extends StatelessWidget {
                 label: '预计掌握 ${activeRoute.estimatedMastery.round()}%',
               ),
               _MetricPill(label: '风险 · ${_headlineRisk(activeRoute)}'),
+              _MetricPill(
+                label: '模式 · ${_targetModeLabel(prediction.targetResolutionMode)}',
+              ),
+              _MetricPill(
+                label: prediction.semanticMatches.isNotEmpty
+                    ? '映射参考 ${prediction.semanticMatches.length}'
+                    : '候选待入图',
+              ),
               _MetricPill(label: '${prediction.graphNodes.length} 个节点'),
             ],
           ),
@@ -1641,6 +1782,12 @@ class _PredictionView extends StatelessWidget {
                           ),
                     ),
                     const Spacer(),
+                    _MetricPill(
+                      label: prediction.hasMappedGalaxyReferences
+                          ? '含星图参考'
+                          : '独立自由图谱',
+                    ),
+                    const SizedBox(width: 8),
                     if (routeTimeline.isNotEmpty)
                       _MetricPill(
                         label: routeTimeline[safeTimelineIndex].label,
@@ -1648,8 +1795,16 @@ class _PredictionView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (prediction.semanticMatches.isNotEmpty) ...[
+                  _SemanticMatchSummary(matches: prediction.semanticMatches),
+                  const SizedBox(height: 12),
+                ],
                 if (selectedNode != null) ...[
-                  _SelectedNodeBanner(node: selectedNode),
+                  _SelectedNodeBanner(
+                    node: selectedNode,
+                    isPromotingNode: isPromotingNode,
+                    onPromoteToGalaxy: () => onPromoteNodeToGalaxy(selectedNode),
+                  ),
                   const SizedBox(height: 12),
                 ],
                 Expanded(
@@ -1869,36 +2024,80 @@ class _TheaterErrorCard extends StatelessWidget {
   }
 }
 
+class _SemanticMatchSummary extends StatelessWidget {
+  const _SemanticMatchSummary({
+    required this.matches,
+  });
+
+  final List<TheaterSemanticMatch> matches;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = matches.take(2).toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '自由节点与星图参考',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            preview
+                .map(
+                  (item) =>
+                      '${item.freeformNodeName} 对应参考 ${item.galaxyNodeName}',
+                )
+                .join('；'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PredictionLoadingState extends StatelessWidget {
   const _PredictionLoadingState();
 
   @override
-  Widget build(BuildContext context) => ListView(
-        children: [
-          GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI 正在分析知识结构...',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  '节点会逐步亮起，路径卡片和专家讨论会依次出现。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                ),
-                const SizedBox(height: 20),
-                const _SkeletonGraphStage(),
-              ],
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'AI 正在分析知识结构...',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              '节点会逐步亮起，路径卡片和专家讨论会依次出现。',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 20),
+            const _SkeletonGraphStage(),
+          ],
+        ),
       );
 }
 
@@ -2050,7 +2249,7 @@ class _TimelineSection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '现在可以按天拖动预测进度，直接对比基线路径和 What-If 分支的差异。',
+                '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -2392,6 +2591,54 @@ String _headlineRisk(TheaterPathOption route) {
     return '需要留意节奏';
   }
   return firstRisk;
+}
+
+String _targetModeLabel(String mode) {
+  switch (mode) {
+    case 'graph_explicit':
+      return '图谱锚定';
+    case 'hybrid_semantic':
+      return '智能混合';
+    case 'freeform_only':
+      return '自由推演';
+    default:
+      return '推演中';
+  }
+}
+
+bool _nodeCanOpenGalaxy(TheaterGraphNode node) =>
+    (node.mappedGalaxyNodeId ?? '').trim().isNotEmpty &&
+    (node.sourceType == 'graph_explicit' || node.sourceType == 'hybrid_reference');
+
+String _nodePrimaryGalaxyActionLabel(
+  TheaterGraphNode node,
+  bool isPromotingNode,
+) {
+  if (isPromotingNode) {
+    return '同步中...';
+  }
+  return _nodeCanOpenGalaxy(node) ? '打开知识星图' : '加入知识星图';
+}
+
+String _nodeSourceLabel(TheaterGraphNode node) {
+  switch (node.sourceType) {
+    case 'graph_explicit':
+      return '星图节点';
+    case 'hybrid_reference':
+      return '参考映射';
+    default:
+      return node.candidateStatus == 'pending_review' ? '候选节点' : '自由节点';
+  }
+}
+
+String _nodeBannerHint(TheaterGraphNode node) {
+  if (_nodeCanOpenGalaxy(node)) {
+    return '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+  }
+  if ((node.mappedGalaxyNodeId ?? '').trim().isNotEmpty) {
+    return '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+  }
+  return '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
 }
 
 class _RouteListView extends StatelessWidget {
@@ -3079,7 +3326,7 @@ class _BranchDeltaCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'What-If 分支对比',
+            '假设分支对比',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -3094,7 +3341,7 @@ class _BranchDeltaCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? 'What-If'}',
+            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? '假设推演'}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -3265,7 +3512,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                     ),
             icon: const Icon(Icons.alt_route),
             label: Text(
-              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整 What-If 结果',
+              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整假设推演结果',
             ),
           ),
           if (widget.result != null) ...[

@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.api.deps import get_current_user_id, get_db
 from app.api.v1.simulation import router as simulation_router
@@ -13,6 +14,7 @@ from app.api.v1.theater import router as theater_router
 from app.core.cache import cache_service
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.theater_candidate_bundle import TheaterCandidateBundle
 from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
 from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.theater.prediction_theater_service import (
@@ -113,10 +115,11 @@ async def test_seed_extractor_reads_from_cache_before_regenerating(monkeypatch):
     )
     calls = {"count": 0}
 
-    async def fake_extract(target_user_id, *, scenario_key=None, limit=3):
+    async def fake_extract(target_user_id, *, scenario_key=None, limit=3, allow_llm_refine=True):
         assert target_user_id == user_id
         assert scenario_key == "study_group"
         assert limit == 2
+        assert allow_llm_refine is True
         calls["count"] += 1
         return [generated_seed]
 
@@ -153,7 +156,8 @@ async def test_seed_extractor_treats_cached_empty_list_as_cache_hit(monkeypatch)
     await cache_service.set(cache_key, [], ttl=60)
     calls = {"count": 0}
 
-    async def fake_extract(target_user_id, *, scenario_key=None, limit=3):
+    async def fake_extract(target_user_id, *, scenario_key=None, limit=3, allow_llm_refine=True):
+        del target_user_id, scenario_key, limit, allow_llm_refine
         calls["count"] += 1
         return [
             SimulationSeed(
@@ -414,7 +418,7 @@ async def test_free_mode_target_context_backfills_missing_required_fields(monkey
 
     async def fake_json_call(messages, *, fallback=None, temperature=0.2):
         del messages, fallback, temperature
-        return {"target_name": "特征值"}
+        return {"target_name": "特征值学习路径"}
 
     monkeypatch.setattr(
         "app.services.theater.prediction_theater_service.analysis_llm.json_call",
@@ -423,9 +427,10 @@ async def test_free_mode_target_context_backfills_missing_required_fields(monkey
 
     context = await service._build_free_mode_target_context("帮我推演特征值")
 
-    assert context.name == "特征值"
+    assert context.name == "特征值学习路径"
     assert context.description
-    assert len(context.backbone) >= 3
+    assert len(context.backbone) >= 8
+    assert context.resolution_mode == "freeform_only"
 
 
 @pytest.mark.asyncio
@@ -479,6 +484,218 @@ async def test_resolve_target_node_for_user_accepts_user_status_node(db_session,
     )
 
     assert resolved.id == node.id
+
+
+@pytest.mark.asyncio
+async def test_freeform_prediction_persists_candidate_bundle(db_session, test_user, monkeypatch):
+    service = PredictionTheaterService(db_session)
+
+    monkeypatch.setattr(service, "_get_mastery_map", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        service,
+        "_build_user_learning_profile",
+        AsyncMock(return_value={"average_session_minutes": 35}),
+    )
+    monkeypatch.setattr(service, "_top_pattern_names", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        service,
+        "_build_discussion",
+        AsyncMock(
+            return_value=[
+                {
+                    "turn_index": 0,
+                    "agent_id": "galaxy_guide",
+                    "display_name": "星图导航",
+                    "turn_type": "analysis",
+                    "content": "先把核心概念铺开，再收束成目标。",
+                    "related_node_ids": ["free-node-1"],
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(service.accuracy, "record_prediction", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.SystemUpdateService.enqueue",
+        AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.analysis_llm.json_call",
+        AsyncMock(
+            return_value={
+                "target_name": "LLM 学习路径",
+                "description": "围绕 LLM 的中文自由推演。",
+                "prerequisites": ["Python 基础", "概率基础"],
+                "core_concepts": ["Transformer", "预训练", "推理"],
+                "milestones": ["完成一个中文问答 Demo"],
+                "misconceptions": ["把提示词工程当成全部能力"],
+                "applications": ["搭建学习助手"],
+                "aliases": ["大语言模型"],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_semantic_enrich_freeform_nodes",
+        AsyncMock(
+            return_value=(
+                [
+                    {
+                        "id": "free-node-1",
+                        "name": "Transformer",
+                        "description": "核心概念",
+                        "node_type": "concept",
+                        "is_target": False,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": [],
+                    },
+                    {
+                        "id": "free-node-2",
+                        "name": "LLM 学习路径",
+                        "description": "目标",
+                        "node_type": "target",
+                        "is_target": True,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": ["大语言模型"],
+                    },
+                ],
+                [],
+            )
+        ),
+    )
+
+    payload = await service.generate_prediction(
+        user_id=test_user.id,
+        topic="我想系统学习 LLM",
+        preview_mode=False,
+    )
+
+    result = await db_session.execute(select(TheaterCandidateBundle))
+    bundles = result.scalars().all()
+
+    assert payload["candidate_bundle_id"]
+    assert len(bundles) == 1
+    assert bundles[0].status == "pending_review"
+    assert bundles[0].prediction_id == payload["prediction_id"]
+    assert bundles[0].nodes_payload
+    assert bundles[0].edges_payload
+
+
+@pytest.mark.asyncio
+async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_session, test_user):
+    parent = KnowledgeNode(
+        name="Transformer",
+        description="现有星图节点",
+        importance_level=4,
+        is_seed=True,
+        sector_weights={"TECH": 70, "WISDOM": 30},
+        dominant_sector_code="TECH",
+    )
+    db_session.add(parent)
+    await db_session.commit()
+    await db_session.refresh(parent)
+
+    bundle = TheaterCandidateBundle(
+        user_id=test_user.id,
+        prediction_id="prediction-promote-1",
+        topic="LLM",
+        target_name="LLM 学习路径",
+        target_resolution_mode="hybrid_semantic",
+        status="pending_review",
+        nodes_payload=[],
+        edges_payload=[],
+        semantic_matches=[],
+        source_metadata={},
+    )
+    db_session.add(bundle)
+    await db_session.commit()
+    await db_session.refresh(bundle)
+
+    cached_prediction = {
+        "prediction_id": "prediction-promote-1",
+        "topic": "LLM",
+        "target_name": "LLM 学习路径",
+        "target_node_id": None,
+        "candidate_bundle_id": str(bundle.id),
+        "graph": {
+            "nodes": [
+                {
+                    "id": "free-node-1",
+                    "name": "上下文工程",
+                    "description": "围绕上下文整理、压缩和注入的能力。",
+                    "source_type": "freeform",
+                    "mapped_galaxy_node_id": None,
+                    "candidate_status": "pending_review",
+                    "aliases": ["上下文压缩"],
+                    "sector_weights": {},
+                },
+                {
+                    "id": "ref-parent",
+                    "name": "Transformer",
+                    "description": "现有参考节点",
+                    "source_type": "hybrid_reference",
+                    "mapped_galaxy_node_id": str(parent.id),
+                    "candidate_status": None,
+                    "aliases": [],
+                    "sector_weights": {"TECH": 70, "WISDOM": 30},
+                },
+            ],
+            "edges": [
+                {
+                    "id": "free-node-1_ref-parent_part_of",
+                    "source_id": "free-node-1",
+                    "target_id": "ref-parent",
+                    "relation_type": "part_of",
+                    "strength": 0.72,
+                }
+            ],
+        },
+        "paths": [
+            {
+                "id": "route-1",
+                "steps": [
+                    {
+                        "node_id": "free-node-1",
+                        "node_name": "上下文工程",
+                        "mapped_galaxy_node_id": None,
+                    }
+                ],
+            }
+        ],
+    }
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}prediction-promote-1",
+        cached_prediction,
+        ttl=PredictionAccuracyTracker.TTL_SECONDS,
+    )
+
+    service = PredictionTheaterService(db_session)
+    result = await service.promote_node_to_galaxy(
+        user_id=test_user.id,
+        prediction_id="prediction-promote-1",
+        theater_node_id="free-node-1",
+    )
+
+    assert result["galaxy_node_id"]
+    promoted_node = await db_session.get(KnowledgeNode, UUID(result["galaxy_node_id"]))
+    assert promoted_node is not None
+    assert promoted_node.name == "上下文工程"
+
+    user_status = await db_session.get(UserNodeStatus, (test_user.id, promoted_node.id))
+    assert user_status is not None
+
+    await db_session.refresh(bundle)
+    assert bundle.status == "partially_applied"
+    assert "free-node-1" in dict(bundle.source_metadata or {}).get("promoted_nodes", {})
+
+    cached = await cache_service.get(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}prediction-promote-1"
+    )
+    assert cached["graph"]["nodes"][0]["mapped_galaxy_node_id"] == str(promoted_node.id)
+    assert cached["paths"][0]["steps"][0]["mapped_galaxy_node_id"] == str(promoted_node.id)
 
 
 def test_normalized_topic_terms_extracts_keywords_from_natural_language():
@@ -688,7 +905,7 @@ async def test_build_discussion_accepts_list_payload(monkeypatch, db_session):
                 predicted_mastery=71.0,
                 risk_level="medium",
                 estimated_minutes=40,
-                day_label="Day 1",
+                day_label="第 1 天",
             )
         ],
     )
@@ -743,7 +960,7 @@ def test_theater_timeline_builds_daily_frames():
                 predicted_mastery=63.0,
                 risk_level="high",
                 estimated_minutes=35,
-                day_label="Day 1",
+                day_label="第 1 天",
             ),
             TheaterPathStep(
                 index=2,
@@ -754,7 +971,7 @@ def test_theater_timeline_builds_daily_frames():
                 predicted_mastery=78.0,
                 risk_level="medium",
                 estimated_minutes=45,
-                day_label="Day 7",
+                day_label="第 7 天",
             ),
         ],
     )
@@ -768,6 +985,7 @@ def test_theater_timeline_builds_daily_frames():
     assert len(timeline) == 7
     assert timeline[0]["day_index"] == 1
     assert timeline[-1]["day_index"] == 7
+    assert timeline[0]["label"] == "第 1 天"
     assert timeline[0]["route_id"] == "path_foundation"
     assert timeline[-1]["projected_mastery"] >= timeline[0]["projected_mastery"]
     assert timeline[0]["compare_label"] == "推荐基线"

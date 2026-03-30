@@ -602,7 +602,8 @@ def update_knowledge_galaxy(
                         if existing_node:
                             # Update mastery level
                             await knowledge_service.update_node_mastery(
-                                existing_node.id,
+                                user_id=user_uuid,
+                                node_id=existing_node.id,
                                 mastery_delta=concept.get("mastery_delta", 0.1),
                             )
                             result["nodes_updated"] += 1

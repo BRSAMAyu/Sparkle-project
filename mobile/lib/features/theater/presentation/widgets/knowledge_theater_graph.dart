@@ -307,9 +307,9 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
   }
 
   double _nodeRadius(TheaterGraphNode node) =>
-      18.0 +
+      (node.sourceType == 'hybrid_reference' ? 14.0 : 18.0) +
       ((node.predictedMastery - node.currentMastery) / 18)
-          .clamp(0, 8)
+          .clamp(0, node.sourceType == 'hybrid_reference' ? 5 : 8)
           .toDouble();
 }
 
@@ -382,12 +382,12 @@ class _KnowledgeTheaterPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = isFocused
               ? 3.2
-              : (isRouteEdge ? 2.6 : (1.2 + edge.strength * 1.8))
+              : (isRouteEdge ? 2.6 : (1.0 + edge.strength * 1.6))
           ..color = (isFocused
                   ? focusEdgeColor
                   : (isRouteEdge ? labelColor : edgeColor))
               .withValues(
-            alpha: isFocused ? 0.92 : (isRouteEdge ? 0.62 : 0.38),
+            alpha: _edgeAlpha(edge, isFocused: isFocused, isRouteEdge: isRouteEdge),
           ),
       );
     }
@@ -408,9 +408,9 @@ class _KnowledgeTheaterPainter extends CustomPainter {
             (node.predictedMastery / 100).clamp(0.0, 1.0),
           ) ??
           color;
-      final radius = 18.0 +
+      final radius = (node.sourceType == 'hybrid_reference' ? 14.0 : 18.0) +
           ((node.predictedMastery - node.currentMastery) / 18)
-              .clamp(0, 8)
+              .clamp(0, node.sourceType == 'hybrid_reference' ? 5 : 8)
               .toDouble();
       final pulseRadius = radius + (isSelected ? 14 : 8) + (pulseValue * 8);
       final pulseAlpha = isSelected
@@ -455,6 +455,37 @@ class _KnowledgeTheaterPainter extends CustomPainter {
         );
       }
 
+      if (node.sourceType == 'graph_explicit') {
+        canvas.drawCircle(
+          point,
+          radius + 6,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.4
+            ..color = labelColor.withValues(alpha: 0.28),
+        );
+      } else if (node.sourceType == 'hybrid_reference') {
+        canvas.drawCircle(
+          point,
+          radius + 5,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2
+            ..color = edgeColor.withValues(alpha: 0.28),
+        );
+      }
+
+      if (node.candidateStatus == 'pending_review') {
+        canvas.drawCircle(
+          point,
+          radius + 8,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.6
+            ..color = mediumRiskColor.withValues(alpha: 0.34),
+        );
+      }
+
       final textPainter = TextPainter(
         text: TextSpan(
           text: node.name,
@@ -486,6 +517,23 @@ class _KnowledgeTheaterPainter extends CustomPainter {
       default:
         return lowRiskColor;
     }
+  }
+
+  double _edgeAlpha(
+    TheaterGraphEdge edge, {
+    required bool isFocused,
+    required bool isRouteEdge,
+  }) {
+    if (isFocused) {
+      return 0.92;
+    }
+    if (isRouteEdge) {
+      return 0.62;
+    }
+    if (edge.sourceType == 'hybrid_reference') {
+      return 0.22;
+    }
+    return edge.sourceType == 'graph_explicit' ? 0.44 : 0.34;
   }
 
   @override

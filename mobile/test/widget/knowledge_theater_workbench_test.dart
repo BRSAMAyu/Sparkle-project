@@ -135,7 +135,8 @@ void main() {
           predictedMastery: 62,
           riskLevel: 'high',
           estimatedMinutes: 35,
-          dayLabel: 'Day 1',
+          dayLabel: '第 1 天',
+          mappedGalaxyNodeId: 'galaxy-node-1',
         ),
         TheaterPathStep(
           index: 2,
@@ -146,7 +147,8 @@ void main() {
           predictedMastery: 79,
           riskLevel: 'medium',
           estimatedMinutes: 40,
-          dayLabel: 'Day 7',
+          dayLabel: '第 7 天',
+          mappedGalaxyNodeId: 'galaxy-node-2',
         ),
       ],
     );
@@ -176,6 +178,7 @@ void main() {
           currentMastery: 40,
           predictedMastery: 62,
           riskLevel: 'high',
+          candidateStatus: 'pending_review',
         ),
         TheaterGraphNode(
           id: 'node-2',
@@ -184,6 +187,9 @@ void main() {
           currentMastery: 56,
           predictedMastery: 79,
           riskLevel: 'medium',
+          sourceType: 'hybrid_reference',
+          mappedGalaxyNodeId: 'galaxy-node-2',
+          isTarget: true,
         ),
       ],
       graphEdges: <TheaterGraphEdge>[
@@ -193,12 +199,13 @@ void main() {
           targetId: 'node-2',
           relationType: 'prerequisite',
           strength: 0.9,
+          sourceType: 'hybrid_reference',
         ),
       ],
       timeline: <TheaterTimelineFrame>[
         TheaterTimelineFrame(
           index: 0,
-          label: 'Day 1',
+          label: '第 1 天',
           dayIndex: 1,
           routeId: 'path-foundation',
           focusNodeIds: <String>['node-1'],
@@ -212,7 +219,7 @@ void main() {
         ),
         TheaterTimelineFrame(
           index: 1,
-          label: 'Day 7',
+          label: '第 7 天',
           dayIndex: 7,
           routeId: 'path-foundation',
           focusNodeIds: <String>['node-2'],
@@ -226,7 +233,17 @@ void main() {
         ),
       ],
       recommendedRouteId: 'path-foundation',
-      targetResolutionMode: 'knowledge_graph',
+      targetResolutionMode: 'hybrid_semantic',
+      semanticMatches: <TheaterSemanticMatch>[
+        TheaterSemanticMatch(
+          freeformNodeId: 'node-1',
+          freeformNodeName: '行列式',
+          galaxyNodeId: 'galaxy-node-1',
+          galaxyNodeName: '行列式',
+          confidence: 0.82,
+          evidence: '语义接近，可作为参考映射。',
+        ),
+      ],
       accuracyTracking: TheaterAccuracyTracking(
         predictionId: 'prediction-1',
         status: 'pending_feedback',
@@ -278,6 +295,8 @@ void main() {
     expect(find.text('先定目标，再看清多条路径'), findsNothing);
     expect(find.text('调整目标'), findsOneWidget);
     expect(find.text('关系图谱主舞台'), findsOneWidget);
+    expect(find.text('模式 · 智能混合'), findsWidgets);
+    expect(find.textContaining('自由节点与星图参考'), findsOneWidget);
 
     await tester.tap(find.text('路径'));
     await tester.pump();

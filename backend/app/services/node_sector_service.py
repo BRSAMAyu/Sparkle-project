@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation
-from app.schemas.galaxy import SectorCode
+from app.models.sector import SectorCode
 from app.services.llm_service import get_llm_service, get_llm_service_for_specific_model
 
 
@@ -300,48 +300,85 @@ class NodeSectorService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def classify_payload(
+        self,
+        *,
+        name: str,
+        description: str | None = None,
+        name_en: str | None = None,
+        keywords: list[str] | None = None,
+        importance_level: int = 3,
+        parent_name: str | None = None,
+        subject_name: str | None = None,
+        subject_sector_hint: str | None = None,
+        neighbors: list[dict[str, str]] | None = None,
+        fallback_sector: SectorCode = SectorCode.VOID,
+        stable_seed: str | UUID | None = None,
+        model_key: str | None = None,
+    ) -> SectorClassificationResult:
+        prompt = self._build_payload_prompt(
+            {
+                "node_name": name,
+                "node_name_en": name_en,
+                "description": description,
+                "keywords": list(keywords or []),
+                "importance_level": importance_level,
+                "parent_name": parent_name,
+                "subject_name": subject_name,
+                "subject_sector_hint": subject_sector_hint,
+                "neighbors": list(neighbors or []),
+            }
+        )
+        sector_weights = await self._request_sector_weights(
+            prompt,
+            fallback_sector=fallback_sector,
+            model_key=model_key,
+        )
+        return build_sector_visuals(
+            stable_seed or name,
+            importance_level=importance_level,
+            sector_weights=sector_weights,
+        )
+
     async def classify_node(
         self,
         node: KnowledgeNode,
         *,
         model_key: str | None = None,
     ) -> SectorClassificationResult:
-        prompt = await self._build_prompt(node)
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "你是知识星图星域分类器。请只输出 JSON。"
-                    "必须给出 6+1 星域（COSMOS, TECH, ART, CIVILIZATION, LIFE, WISDOM, VOID）"
-                    "的百分比归属，总和必须为 100。"
-                    "优先把概念分到六个主星域，只有在信息明显不足或确实无法归类时才给 VOID 较高占比。"
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ]
-
-        if model_key:
-            llm = await get_llm_service_for_specific_model(model_key, agent_role="generation")
-            payload = await llm.chat_json(messages=messages, temperature=0.2)
-        else:
-            llm = get_llm_service("generation")
-            payload = await llm.chat_json(messages=messages, temperature=0.25)
-
-        if not isinstance(payload, dict):
-            raise ValueError("Invalid node sector classification payload")
-
         fallback_sector = (
             parse_sector_code(getattr(getattr(node, "subject", None), "sector_code", None))
             or SectorCode.VOID
         )
-        sector_weights = normalize_sector_weights(
-            payload.get("sector_weights") or payload.get("weights"),
-            fallback_sector=fallback_sector,
+        neighbors_result = await self.db.execute(
+            select(KnowledgeNode.name, NodeRelation.relation_type)
+            .join(
+                NodeRelation,
+                or_(
+                    and_(NodeRelation.source_node_id == node.id, NodeRelation.target_node_id == KnowledgeNode.id),
+                    and_(NodeRelation.target_node_id == node.id, NodeRelation.source_node_id == KnowledgeNode.id),
+                ),
+            )
+            .where(KnowledgeNode.id != node.id)
+            .limit(8)
         )
-        return build_sector_visuals(
-            node,
+        neighbors = [
+            {"name": name, "relation": relation_type}
+            for name, relation_type in neighbors_result.all()
+        ]
+        return await self.classify_payload(
+            name=node.name,
+            name_en=node.name_en,
+            description=node.description,
+            keywords=list(node.keywords or []),
             importance_level=node.importance_level,
-            sector_weights=sector_weights,
+            parent_name=getattr(getattr(node, "parent", None), "name", None),
+            subject_name=getattr(getattr(node, "subject", None), "name", None),
+            subject_sector_hint=getattr(getattr(node, "subject", None), "sector_code", None),
+            neighbors=neighbors,
+            fallback_sector=fallback_sector,
+            stable_seed=node,
+            model_key=model_key,
         )
 
     async def update_node_classification(
@@ -490,38 +527,42 @@ class NodeSectorService:
     async def invalidate_user_graph_cache(self, user_id: UUID) -> None:
         await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
 
-    async def _build_prompt(self, node: KnowledgeNode) -> str:
-        parent_name = getattr(getattr(node, "parent", None), "name", None)
-        subject_name = getattr(getattr(node, "subject", None), "name", None)
-        subject_sector = getattr(getattr(node, "subject", None), "sector_code", None)
-
-        neighbors_result = await self.db.execute(
-            select(KnowledgeNode.name, NodeRelation.relation_type)
-            .join(
-                NodeRelation,
-                or_(
-                    and_(NodeRelation.source_node_id == node.id, NodeRelation.target_node_id == KnowledgeNode.id),
-                    and_(NodeRelation.target_node_id == node.id, NodeRelation.source_node_id == KnowledgeNode.id),
+    async def _request_sector_weights(
+        self,
+        prompt: str,
+        *,
+        fallback_sector: SectorCode,
+        model_key: str | None,
+    ) -> dict[str, int]:
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "你是知识星图星域分类器。请只输出 JSON。"
+                    "必须给出 6+1 星域（COSMOS, TECH, ART, CIVILIZATION, LIFE, WISDOM, VOID）"
+                    "的百分比归属，总和必须为 100。"
+                    "优先把概念分到六个主星域，只有在信息明显不足或确实无法归类时才给 VOID 较高占比。"
                 ),
-            )
-            .where(KnowledgeNode.id != node.id)
-            .limit(8)
-        )
-        neighbors = [
-            {"name": name, "relation": relation_type}
-            for name, relation_type in neighbors_result.all()
+            },
+            {"role": "user", "content": prompt},
         ]
-        payload = {
-            "node_name": node.name,
-            "node_name_en": node.name_en,
-            "description": node.description,
-            "keywords": list(node.keywords or []),
-            "importance_level": node.importance_level,
-            "parent_name": parent_name,
-            "subject_name": subject_name,
-            "subject_sector_hint": subject_sector,
-            "neighbors": neighbors,
-        }
+
+        if model_key:
+            llm = await get_llm_service_for_specific_model(model_key, agent_role="generation")
+            payload = await llm.chat_json(messages=messages, temperature=0.2)
+        else:
+            llm = get_llm_service("generation")
+            payload = await llm.chat_json(messages=messages, temperature=0.25)
+
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid node sector classification payload")
+
+        return normalize_sector_weights(
+            payload.get("sector_weights") or payload.get("weights"),
+            fallback_sector=fallback_sector,
+        )
+
+    def _build_payload_prompt(self, payload: dict[str, Any]) -> str:
         return (
             "请判断下面这个知识节点在 6+1 星域中的归属百分比，总和必须为 100。\n"
             "输出 JSON 结构："

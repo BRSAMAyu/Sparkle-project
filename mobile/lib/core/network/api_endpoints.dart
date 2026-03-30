@@ -175,6 +175,8 @@ class ApiEndpoints {
       '/theater/predictions/$predictionId/actuals';
   static String theaterAccuracy(String predictionId) =>
       '/theater/predictions/$predictionId/accuracy';
+  static String theaterPromoteNode(String predictionId) =>
+      '/theater/predictions/$predictionId/promote-node';
 
   // Community - Friends
   static const String communityFeed = '/community/feed';

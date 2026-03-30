@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
@@ -120,6 +123,10 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           });
 
           AppFeedback.success(context, '已加入生词卡，24小时后复习');
+          ref
+            ..invalidate(galaxyRepositoryProvider)
+            ..invalidate(enhancedGalaxyRepositoryProvider)
+            ..invalidate(galaxyProvider);
 
           // Call callback
           widget.onSaved?.call();

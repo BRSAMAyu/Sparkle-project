@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.sector import SectorCode
 from app.services.node_sector_service import (
     blend_sector_colors,
     build_sector_visuals,
@@ -16,17 +17,6 @@ from app.services.node_sector_service import (
     parse_sector_code,
     resolve_sector_weights,
 )
-
-
-class SectorCode(str, Enum):
-    COSMOS = "COSMOS"
-    TECH = "TECH"
-    ART = "ART"
-    CIVILIZATION = "CIVILIZATION"
-    LIFE = "LIFE"
-    WISDOM = "WISDOM"
-    VOID = "VOID"
-
 
 class NodeStatus(str, Enum):
     LOCKED = "locked"  # 未解锁
@@ -51,6 +41,19 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=200)
     limit: int = Field(10, ge=1, le=50)
     threshold: float = Field(0.3, ge=0.0, le=1.0)
+
+
+class CreateGalaxyNodeRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    name_en: str | None = Field(None, max_length=255)
+    description: str = Field("", max_length=500)
+    importance_level: int = Field(3, ge=1, le=5)
+    subject_id: int | None = None
+    parent_node_id: UUID | None = None
+    relation_to_parent: str = Field("related")
+    relation_strength: float = Field(0.7, ge=0.0, le=1.0)
+    keywords: list[str] = Field(default_factory=list)
+    sector_weights: dict[str, int] = Field(default_factory=dict)
 
 
 class ExpansionFeedbackRequest(BaseModel):

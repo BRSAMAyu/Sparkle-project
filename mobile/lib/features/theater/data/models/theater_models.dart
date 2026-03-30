@@ -6,6 +6,12 @@ class TheaterGraphNode {
     required this.currentMastery,
     required this.predictedMastery,
     required this.riskLevel,
+    this.sourceType = 'freeform',
+    this.mappedGalaxyNodeId,
+    this.candidateStatus,
+    this.isTarget = false,
+    this.aliases = const <String>[],
+    this.sectorWeights = const <String, double>{},
   });
 
   factory TheaterGraphNode.fromJson(Map<String, dynamic> json) =>
@@ -16,6 +22,19 @@ class TheaterGraphNode {
         currentMastery: (json['current_mastery'] as num?)?.toDouble() ?? 0,
         predictedMastery: (json['predicted_mastery'] as num?)?.toDouble() ?? 0,
         riskLevel: json['risk_level']?.toString() ?? 'low',
+        sourceType: json['source_type']?.toString() ?? 'freeform',
+        mappedGalaxyNodeId: json['mapped_galaxy_node_id']?.toString(),
+        candidateStatus: json['candidate_status']?.toString(),
+        isTarget: json['is_target'] as bool? ?? false,
+        aliases: (json['aliases'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        sectorWeights:
+            ((json['sector_weights'] as Map<String, dynamic>?) ??
+                    const <String, dynamic>{})
+                .map(
+          (key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0),
+        ),
       );
 
   final String id;
@@ -24,6 +43,34 @@ class TheaterGraphNode {
   final double currentMastery;
   final double predictedMastery;
   final String riskLevel;
+  final String sourceType;
+  final String? mappedGalaxyNodeId;
+  final String? candidateStatus;
+  final bool isTarget;
+  final List<String> aliases;
+  final Map<String, double> sectorWeights;
+
+  TheaterGraphNode copyWith({
+    String? mappedGalaxyNodeId,
+    String? candidateStatus,
+    bool clearCandidateStatus = false,
+  }) =>
+      TheaterGraphNode(
+        id: id,
+        name: name,
+        description: description,
+        currentMastery: currentMastery,
+        predictedMastery: predictedMastery,
+        riskLevel: riskLevel,
+        sourceType: sourceType,
+        mappedGalaxyNodeId: mappedGalaxyNodeId ?? this.mappedGalaxyNodeId,
+        candidateStatus: clearCandidateStatus
+            ? null
+            : (candidateStatus ?? this.candidateStatus),
+        isTarget: isTarget,
+        aliases: aliases,
+        sectorWeights: sectorWeights,
+      );
 }
 
 class TheaterGraphEdge {
@@ -33,6 +80,9 @@ class TheaterGraphEdge {
     required this.targetId,
     required this.relationType,
     required this.strength,
+    this.confidence = 0.5,
+    this.evidence,
+    this.sourceType = 'freeform',
   });
 
   factory TheaterGraphEdge.fromJson(Map<String, dynamic> json) =>
@@ -42,6 +92,9 @@ class TheaterGraphEdge {
         targetId: json['target_id']?.toString() ?? '',
         relationType: json['relation_type']?.toString() ?? 'related',
         strength: (json['strength'] as num?)?.toDouble() ?? 0.5,
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
+        evidence: json['evidence']?.toString(),
+        sourceType: json['source_type']?.toString() ?? 'freeform',
       );
 
   final String id;
@@ -49,6 +102,9 @@ class TheaterGraphEdge {
   final String targetId;
   final String relationType;
   final double strength;
+  final double confidence;
+  final String? evidence;
+  final String sourceType;
 }
 
 class TheaterDiscussionTurn {
@@ -93,6 +149,7 @@ class TheaterPathStep {
     required this.estimatedMinutes,
     required this.dayLabel,
     this.checkpointLabel,
+    this.mappedGalaxyNodeId,
   });
 
   factory TheaterPathStep.fromJson(Map<String, dynamic> json) =>
@@ -107,6 +164,7 @@ class TheaterPathStep {
         estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 25,
         dayLabel: json['day_label']?.toString() ?? '',
         checkpointLabel: json['checkpoint_label']?.toString(),
+        mappedGalaxyNodeId: json['mapped_galaxy_node_id']?.toString(),
       );
 
   final int index;
@@ -119,6 +177,52 @@ class TheaterPathStep {
   final int estimatedMinutes;
   final String dayLabel;
   final String? checkpointLabel;
+  final String? mappedGalaxyNodeId;
+
+  TheaterPathStep copyWith({
+    String? mappedGalaxyNodeId,
+  }) =>
+      TheaterPathStep(
+        index: index,
+        nodeId: nodeId,
+        nodeName: nodeName,
+        rationale: rationale,
+        currentMastery: currentMastery,
+        predictedMastery: predictedMastery,
+        riskLevel: riskLevel,
+        estimatedMinutes: estimatedMinutes,
+        dayLabel: dayLabel,
+        checkpointLabel: checkpointLabel,
+        mappedGalaxyNodeId: mappedGalaxyNodeId ?? this.mappedGalaxyNodeId,
+      );
+}
+
+class TheaterSemanticMatch {
+  const TheaterSemanticMatch({
+    required this.freeformNodeId,
+    required this.freeformNodeName,
+    required this.galaxyNodeId,
+    required this.galaxyNodeName,
+    required this.confidence,
+    required this.evidence,
+  });
+
+  factory TheaterSemanticMatch.fromJson(Map<String, dynamic> json) =>
+      TheaterSemanticMatch(
+        freeformNodeId: json['freeform_node_id']?.toString() ?? '',
+        freeformNodeName: json['freeform_node_name']?.toString() ?? '',
+        galaxyNodeId: json['galaxy_node_id']?.toString() ?? '',
+        galaxyNodeName: json['galaxy_node_name']?.toString() ?? '',
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+        evidence: json['evidence']?.toString() ?? '',
+      );
+
+  final String freeformNodeId;
+  final String freeformNodeName;
+  final String galaxyNodeId;
+  final String galaxyNodeName;
+  final double confidence;
+  final String evidence;
 }
 
 class TheaterTaskBrief {
@@ -220,6 +324,25 @@ class TheaterPathOption {
   final double routeScore;
   final List<int> checkpointDays;
   final List<TheaterTaskBrief> weekOneTasks;
+
+  TheaterPathOption copyWith({
+    List<TheaterPathStep>? steps,
+  }) =>
+      TheaterPathOption(
+        id: id,
+        title: title,
+        summary: summary,
+        strategyType: strategyType,
+        expertIds: expertIds,
+        estimatedCompletionRate: estimatedCompletionRate,
+        estimatedMastery: estimatedMastery,
+        dailyMinutes: dailyMinutes,
+        risks: risks,
+        steps: steps ?? this.steps,
+        routeScore: routeScore,
+        checkpointDays: checkpointDays,
+        weekOneTasks: weekOneTasks,
+      );
 }
 
 class TheaterTimelineFrame {
@@ -311,6 +434,8 @@ class TheaterPrediction {
     required this.timeline,
     this.recommendedRouteId = '',
     this.targetResolutionMode = '',
+    this.candidateBundleId = '',
+    this.semanticMatches = const <TheaterSemanticMatch>[],
     this.accuracyTracking,
   });
 
@@ -350,6 +475,15 @@ class TheaterPrediction {
                       ?.toString() ??
                   ''
               : ''),
+      candidateBundleId: json['candidate_bundle_id']?.toString() ?? '',
+      semanticMatches: json['routing_notes'] is Map<String, dynamic>
+          ? ((((json['routing_notes'] as Map<String, dynamic>)[
+                          'semantic_matches'] as List<dynamic>?) ??
+                      const [])
+                  .whereType<Map<String, dynamic>>()
+                  .map(TheaterSemanticMatch.fromJson)
+                  .toList())
+          : const <TheaterSemanticMatch>[],
       accuracyTracking: json['accuracy_tracking'] is Map<String, dynamic>
           ? TheaterAccuracyTracking.fromJson(
               json['accuracy_tracking'] as Map<String, dynamic>,
@@ -370,7 +504,65 @@ class TheaterPrediction {
   final List<TheaterTimelineFrame> timeline;
   final String recommendedRouteId;
   final String targetResolutionMode;
+  final String candidateBundleId;
+  final List<TheaterSemanticMatch> semanticMatches;
   final TheaterAccuracyTracking? accuracyTracking;
+
+  bool get hasMappedGalaxyReferences =>
+      graphNodes.any((node) => (node.mappedGalaxyNodeId ?? '').isNotEmpty) ||
+      paths.any(
+        (path) =>
+            path.steps.any(
+              (step) => (step.mappedGalaxyNodeId ?? '').isNotEmpty,
+            ),
+      );
+
+  TheaterPrediction copyWith({
+    List<TheaterGraphNode>? graphNodes,
+    List<TheaterPathOption>? paths,
+  }) =>
+      TheaterPrediction(
+        predictionId: predictionId,
+        topic: topic,
+        targetNodeId: targetNodeId,
+        targetName: targetName,
+        horizonDays: horizonDays,
+        paths: paths ?? this.paths,
+        discussionTurns: discussionTurns,
+        graphNodes: graphNodes ?? this.graphNodes,
+        graphEdges: graphEdges,
+        timeline: timeline,
+        recommendedRouteId: recommendedRouteId,
+        targetResolutionMode: targetResolutionMode,
+        candidateBundleId: candidateBundleId,
+        semanticMatches: semanticMatches,
+        accuracyTracking: accuracyTracking,
+      );
+}
+
+class TheaterNodePromotionResult {
+  const TheaterNodePromotionResult({
+    required this.predictionId,
+    required this.theaterNodeId,
+    required this.nodeName,
+    required this.galaxyNodeId,
+    required this.created,
+  });
+
+  factory TheaterNodePromotionResult.fromJson(Map<String, dynamic> json) =>
+      TheaterNodePromotionResult(
+        predictionId: json['prediction_id']?.toString() ?? '',
+        theaterNodeId: json['theater_node_id']?.toString() ?? '',
+        nodeName: json['node_name']?.toString() ?? '',
+        galaxyNodeId: json['galaxy_node_id']?.toString() ?? '',
+        created: json['created'] as bool? ?? false,
+      );
+
+  final String predictionId;
+  final String theaterNodeId;
+  final String nodeName;
+  final String galaxyNodeId;
+  final bool created;
 }
 
 class TheaterWhatIfResult {

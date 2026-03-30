@@ -17,7 +17,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.metrics import RAG_RETRIEVAL_LATENCY
 from app.core.sse import sse_manager
-from app.models.galaxy import KnowledgeNode
+from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+from app.models.subject import Subject
 from app.schemas.galaxy import SearchResultItem
 from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
@@ -36,6 +37,133 @@ class KnowledgeService:
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
         self.galaxy_service = GalaxyService(db_session)
+
+    async def _resolve_subject_id(self, subject: str | None) -> int | None:
+        if not subject:
+            return None
+        stmt = select(Subject.id).where(Subject.name == subject).limit(1)
+        return await self.db.scalar(stmt)
+
+    async def find_node_by_name(self, user_id: UUID, name: str) -> KnowledgeNode | None:
+        stmt = (
+            select(KnowledgeNode)
+            .join(
+                UserNodeStatus,
+                UserNodeStatus.node_id == KnowledgeNode.id,
+            )
+            .where(
+                UserNodeStatus.user_id == user_id,
+                KnowledgeNode.name == name,
+            )
+            .limit(1)
+        )
+        return await self.db.scalar(stmt)
+
+    async def create_node(
+        self,
+        *,
+        user_id: UUID,
+        name: str,
+        subject: str | None = None,
+        description: str = "",
+        tags: list[str] | None = None,
+    ) -> KnowledgeNode:
+        return await self.galaxy_service.create_node(
+            user_id=user_id,
+            title=name,
+            summary=description,
+            subject_id=await self._resolve_subject_id(subject),
+            tags=tags or [],
+        )
+
+    async def update_node_mastery(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        mastery_delta: float = 0.1,
+    ):
+        status = await self.db.scalar(
+            select(UserNodeStatus).where(
+                UserNodeStatus.user_id == user_id,
+                UserNodeStatus.node_id == node_id,
+            )
+        )
+        current_mastery = float(getattr(status, "mastery_score", 0) or 0)
+        new_mastery = max(0, min(100, round(current_mastery + mastery_delta * 100)))
+        return await self.galaxy_service.update_node_mastery(
+            user_id=user_id,
+            node_id=node_id,
+            new_mastery=new_mastery,
+            reason="knowledge_service_increment",
+        )
+
+    async def create_or_update_link(
+        self,
+        *,
+        user_id: UUID,
+        source_name: str,
+        target_name: str,
+        relation_type: str,
+        strength: float = 0.5,
+    ) -> bool:
+        source_node = await self.find_node_by_name(user_id, source_name)
+        if source_node is None:
+            source_node = await self.create_node(
+                user_id=user_id,
+                name=source_name,
+                subject=source_name if relation_type == "contains" else None,
+                description="",
+                tags=[source_name],
+            )
+
+        target_node = await self.find_node_by_name(user_id, target_name)
+        if target_node is None:
+            target_node = await self.create_node(
+                user_id=user_id,
+                name=target_name,
+                description="",
+                tags=[target_name],
+            )
+
+        relation = await self.db.scalar(
+            select(NodeRelation).where(
+                NodeRelation.source_node_id == source_node.id,
+                NodeRelation.target_node_id == target_node.id,
+            )
+        )
+        if relation:
+            changed = False
+            if relation.relation_type != relation_type:
+                relation.relation_type = relation_type
+                changed = True
+            if float(relation.strength or 0) < strength:
+                relation.strength = strength
+                changed = True
+            if changed:
+                self.db.add(relation)
+                await self.db.flush()
+                await self.db.commit()
+                from app.services.expansion_service import ExpansionService
+
+                await ExpansionService(self.db)._invalidate_after_graph_mutation(user_id)
+            return changed
+
+        self.db.add(
+            NodeRelation(
+                source_node_id=source_node.id,
+                target_node_id=target_node.id,
+                relation_type=relation_type,
+                strength=strength,
+                created_by="knowledge_service",
+            )
+        )
+        await self.db.flush()
+        await self.db.commit()
+        from app.services.expansion_service import ExpansionService
+
+        await ExpansionService(self.db)._invalidate_after_graph_mutation(user_id)
+        return True
 
     async def _generate_hypothetical_answer(self, query: str) -> str:
         """

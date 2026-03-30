@@ -67,7 +67,8 @@ class GalaxyRepository {
     }
     // 🔧 后端未实现galaxy/events端点，返回空流避免404错误
     debugPrint(
-        '🌌 Galaxy events stream: endpoint not implemented, returning empty stream');
+      '🌌 Galaxy events stream: endpoint not implemented, returning empty stream',
+    );
     return const Stream.empty();
   }
 
@@ -272,6 +273,15 @@ class GalaxyRepository {
               keywords: ((item['tags'] as List<dynamic>?) ?? const <dynamic>[])
                   .map((tag) => tag.toString())
                   .toList(growable: false),
+              sectorWeights:
+                  ((item['sector_weights'] as Map<String, dynamic>?) ??
+                          const <String, dynamic>{})
+                      .map(
+                (key, value) => MapEntry(
+                  key,
+                  (value as num?)?.toDouble() ?? 0,
+                ),
+              ),
             ),
           )
           .toList(growable: false);
@@ -288,8 +298,10 @@ class GalaxyRepository {
     }
   }
 
-  String _extractDetail(DioException exception,
-      {required String defaultMessage}) {
+  String _extractDetail(
+    DioException exception, {
+    required String defaultMessage,
+  }) {
     if (exception.response?.statusCode == 404) {
       return '当前节点不存在或已被清理，请返回星图后重试';
     }

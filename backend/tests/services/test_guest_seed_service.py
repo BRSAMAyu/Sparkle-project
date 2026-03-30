@@ -14,6 +14,7 @@ from app.models.community import (
     PrivateMessage,
 )
 from app.models.focus import FocusSession
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.intervention import InterventionRequest, UserInterventionSettings
 from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
@@ -211,3 +212,50 @@ async def test_guest_seed_can_reseed_existing_guest_with_chat_history(db_session
 
     assert notification_count >= 4
     assert intervention_count >= 2
+
+
+@pytest.mark.asyncio
+async def test_guest_seed_heals_existing_demo_node_sector_mapping(db_session):
+    guest = User(
+        username="guest_seed_sector_heal",
+        email="guest_seed_sector_heal@guest.local",
+        hashed_password="hashed",
+        password_login_enabled=False,
+        nickname="访客",
+        registration_source="guest",
+        is_active=True,
+    )
+    stale_node = KnowledgeNode(
+        name="高等数学",
+        description="旧节点",
+        importance_level=5,
+        is_seed=True,
+        source_type="seed",
+        dominant_sector_code="VOID",
+        sector_classification_status="pending",
+        position_x=None,
+        position_y=None,
+    )
+    db_session.add_all([guest, stale_node])
+    await db_session.flush()
+
+    await seed_guest_user_data(db_session, guest)
+    await db_session.commit()
+    await db_session.refresh(stale_node)
+
+    status = await db_session.scalar(
+        select(UserNodeStatus).where(
+            UserNodeStatus.user_id == guest.id,
+            UserNodeStatus.node_id == stale_node.id,
+        )
+    )
+
+    assert stale_node.sector_weights == {"COSMOS": 100}
+    assert stale_node.dominant_sector_code == "COSMOS"
+    assert stale_node.sector_classification_status == "completed"
+    assert stale_node.sector_classification_model == "guest_seed"
+    assert stale_node.sector_classified_at is not None
+    assert stale_node.position_x is not None
+    assert stale_node.position_y is not None
+    assert status is not None
+    assert status.is_unlocked is True

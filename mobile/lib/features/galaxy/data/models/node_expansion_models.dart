@@ -8,6 +8,7 @@ class NodeExpansionCandidate {
     required this.relationStrength,
     this.nameEn,
     this.keywords = const <String>[],
+    this.sectorWeights = const <String, double>{},
   });
 
   factory NodeExpansionCandidate.fromJson(Map<String, dynamic> json) =>
@@ -18,10 +19,19 @@ class NodeExpansionCandidate {
         description: json['description']?.toString() ?? '',
         importanceLevel: (json['importance_level'] as num?)?.toInt() ?? 3,
         relationToTrigger: json['relation_to_trigger']?.toString() ?? 'related',
-        relationStrength: (json['relation_strength'] as num?)?.toDouble() ?? 0.7,
+        relationStrength:
+            (json['relation_strength'] as num?)?.toDouble() ?? 0.7,
         keywords: ((json['keywords'] as List<dynamic>?) ?? const <dynamic>[])
             .map((item) => item.toString())
             .toList(growable: false),
+        sectorWeights: ((json['sector_weights'] as Map<String, dynamic>?) ??
+                const <String, dynamic>{})
+            .map(
+          (key, value) => MapEntry(
+            key,
+            (value as num?)?.toDouble() ?? 0,
+          ),
+        ),
       );
 
   final String candidateId;
@@ -32,6 +42,7 @@ class NodeExpansionCandidate {
   final String relationToTrigger;
   final double relationStrength;
   final List<String> keywords;
+  final Map<String, double> sectorWeights;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'candidate_id': candidateId,
@@ -42,6 +53,7 @@ class NodeExpansionCandidate {
         'relation_to_trigger': relationToTrigger,
         'relation_strength': relationStrength,
         'keywords': keywords,
+        'sector_weights': sectorWeights,
       };
 }
 
@@ -56,10 +68,11 @@ class NodeExpansionCandidatesResponse {
       NodeExpansionCandidatesResponse(
         triggerNodeId: json['trigger_node_id']?.toString() ?? '',
         promptVersion: json['prompt_version']?.toString() ?? 'v1',
-        candidates: ((json['candidates'] as List<dynamic>?) ?? const <dynamic>[])
-            .whereType<Map<String, dynamic>>()
-            .map(NodeExpansionCandidate.fromJson)
-            .toList(growable: false),
+        candidates:
+            ((json['candidates'] as List<dynamic>?) ?? const <dynamic>[])
+                .whereType<Map<String, dynamic>>()
+                .map(NodeExpansionCandidate.fromJson)
+                .toList(growable: false),
       );
 
   final String triggerNodeId;

@@ -12,16 +12,19 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.llm_client import llm_client
 from app.db.session import AsyncSessionLocal
 from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
+from app.models.subject import Subject
 from app.schemas.galaxy import SectorCode
 from app.services.embedding_service import embedding_service
 from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalProcessor
 from app.services.node_sector_service import (
+    NodeSectorService,
     build_sector_visuals,
     dominant_sector_from_weights,
     normalize_sector_weights,
@@ -270,6 +273,101 @@ class ExpansionService:
             user_id=user_id,
         )
 
+    async def upsert_node_from_candidate(
+        self,
+        *,
+        user_id: UUID,
+        candidate: dict,
+        trigger_node_id: UUID | None = None,
+        parent_node_id: UUID | None = None,
+        subject_id: int | None = None,
+        source_type: str = "llm_expanded",
+        generate_embedding: bool = True,
+        unlock_for_user: bool = True,
+        commit: bool = True,
+        invalidate_caches: bool = True,
+        allow_existing_match: bool = True,
+        node_updates: dict | None = None,
+    ) -> tuple[KnowledgeNode, bool]:
+        context_node_id = trigger_node_id or parent_node_id
+        context_node = await self._get_context_node(context_node_id) if context_node_id else None
+        resolved_subject = await self._get_subject(subject_id or getattr(context_node, "subject_id", None))
+        fallback_sector = (
+            parse_sector_code(getattr(context_node, "dominant_sector_code", None))
+            or parse_sector_code(getattr(resolved_subject, "sector_code", None))
+            or SectorCode.VOID
+        )
+        normalized = self._normalize_candidate_item(candidate, index=0, fallback_sector=fallback_sector)
+        existing = await self._find_existing_node(normalized["name"]) if allow_existing_match else None
+        visual_data, classification_model = await self._resolve_visual_data(
+            normalized,
+            context_node=context_node,
+            subject=resolved_subject,
+            fallback_sector=fallback_sector,
+        )
+
+        if existing:
+            node = existing
+            created = False
+            self._heal_existing_node(
+                existing,
+                normalized,
+                visual_data=visual_data,
+                classification_model=classification_model,
+                parent_node_id=parent_node_id,
+            )
+        else:
+            node = KnowledgeNode(
+                subject_id=subject_id or getattr(context_node, "subject_id", None),
+                parent_id=parent_node_id,
+                name=normalized["name"],
+                name_en=normalized.get("name_en"),
+                description=normalized.get("description"),
+                importance_level=normalized.get("importance_level", 3),
+                is_seed=False,
+                source_type=source_type,
+                keywords=normalized.get("keywords", []),
+                sector_weights=visual_data.sector_weights,
+                dominant_sector_code=visual_data.dominant_sector_code.value,
+                sector_classification_status="completed",
+                sector_classification_model=classification_model,
+                sector_classified_at=_utcnow(),
+                position_x=visual_data.position_x,
+                position_y=visual_data.position_y,
+            )
+            if generate_embedding and node.description:
+                embedding_text = f"{node.name} {node.description}"
+                node.embedding = await embedding_service.get_embedding(embedding_text)
+            self.db.add(node)
+            await self.db.flush()
+            created = True
+
+        self._apply_node_updates(node, node_updates)
+
+        if unlock_for_user:
+            await self._ensure_user_node_status(user_id, node.id)
+
+        if context_node_id and node.id != context_node_id:
+            await self._ensure_relation(
+                context_node_id,
+                node.id,
+                normalized,
+            )
+
+        if commit:
+            await self.db.commit()
+            if invalidate_caches:
+                await self._invalidate_after_graph_mutation(user_id)
+
+        return node, created
+
+    def _apply_node_updates(self, node: KnowledgeNode, updates: dict | None) -> None:
+        if not updates:
+            return
+        for field, value in updates.items():
+            setattr(node, field, value)
+        self.db.add(node)
+
     def _build_expansion_prompt(
         self,
         context_json: str,
@@ -363,82 +461,32 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         user_id: UUID
     ) -> list[KnowledgeNode]:
         """创建拓展的知识节点"""
-        trigger_node = await self.db.get(KnowledgeNode, trigger_node_id)
         new_nodes = []
-        fallback_sector = (
-            parse_sector_code(getattr(trigger_node, "dominant_sector_code", None))
-            or parse_sector_code(getattr(getattr(trigger_node, "subject", None), "sector_code", None))
-            or SectorCode.VOID
-        )
 
         for item in expanded_data.get('expanded_nodes', [])[:self.MAX_EXPANDED_NODES_PER_REQUEST]:
-            # 检查是否已存在 (通过名称去重)
-            existing = await self._find_existing_node(item['name'])
-            if existing:
-                # 如果已存在，只创建关系
-                await self._ensure_relation(trigger_node_id, existing.id, item)
-                continue
-
-            # 语义去重
             if settings.EXPANSION_SEMANTIC_DEDUP_ENABLED:
                 dedup_candidate = await self._find_semantic_duplicate(item)
                 if dedup_candidate:
+                    await self._ensure_user_node_status(user_id, dedup_candidate.id)
                     await self._ensure_relation(trigger_node_id, dedup_candidate.id, item)
                     continue
 
-            # 创建新节点
-            sector_weights = normalize_sector_weights(
-                item.get("sector_weights"),
-                fallback_sector=fallback_sector,
+            node, created = await self.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate=item,
+                trigger_node_id=trigger_node_id,
+                parent_node_id=trigger_node_id,
+                source_type="llm_expanded",
+                generate_embedding=True,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
             )
-            visuals = build_sector_visuals(
-                item.get("name") or trigger_node_id,
-                importance_level=item.get("importance_level", 3),
-                sector_weights=sector_weights,
-            )
-            node = KnowledgeNode(
-                subject_id=trigger_node.subject_id,
-                parent_id=trigger_node_id,
-                name=item['name'],
-                name_en=item.get('name_en'),
-                description=item.get('description'),
-                importance_level=item.get('importance_level', 3),
-                is_seed=False,
-                source_type='llm_expanded',
-                keywords=item.get('keywords', []),
-                sector_weights=sector_weights,
-                dominant_sector_code=visuals.dominant_sector_code.value,
-                sector_classification_status='completed',
-                sector_classification_model='expansion_llm',
-                sector_classified_at=_utcnow(),
-                position_x=visuals.position_x,
-                position_y=visuals.position_y,
-            )
-
-            # 生成向量嵌入
-            if node.description:
-                embedding_text = f"{node.name} {node.description}"
-                node.embedding = await embedding_service.get_embedding(embedding_text)
-
-            self.db.add(node)
-            await self.db.flush()  # 获取 node.id
-
-            # 创建关系
-            relation = NodeRelation(
-                source_node_id=trigger_node_id,
-                target_node_id=node.id,
-                relation_type=item.get('relation_to_trigger', 'related'),
-                strength=item.get('relation_strength', 0.7)
-            )
-            self.db.add(relation)
-
-            new_nodes.append(node)
+            if created:
+                new_nodes.append(node)
 
         await self.db.commit()
-
-        from app.services.graph_reasoning_service import GraphReasoningService
-
-        await GraphReasoningService(self.db).invalidate_cache()
+        await self._invalidate_after_graph_mutation(user_id)
         return new_nodes
 
     async def _find_semantic_duplicate(self, item: dict) -> KnowledgeNode | None:
@@ -527,6 +575,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         query = select(KnowledgeNode).where(KnowledgeNode.name == name)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
     async def _ensure_relation(self, source_id: UUID, target_id: UUID, item: dict):
         """确保关系存在"""
         query = select(NodeRelation).where(
@@ -548,44 +597,190 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             strength=item.get('relation_strength', 0.7),
         )
         self.db.add(relation)
-        await self.db.commit()
+        await self.db.flush()
         return relation
+
+    async def _ensure_user_node_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus:
+        result = await self.db.execute(
+            select(UserNodeStatus).where(
+                and_(
+                    UserNodeStatus.user_id == user_id,
+                    UserNodeStatus.node_id == node_id,
+                )
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            if not existing.is_unlocked:
+                existing.is_unlocked = True
+                existing.first_unlock_at = existing.first_unlock_at or _utcnow()
+                self.db.add(existing)
+            return existing
+
+        status = UserNodeStatus(
+            user_id=user_id,
+            node_id=node_id,
+            is_unlocked=True,
+            mastery_score=0,
+            first_unlock_at=_utcnow(),
+        )
+        self.db.add(status)
+        await self.db.flush()
+        return status
+
+    async def _get_context_node(self, node_id: UUID | None) -> KnowledgeNode | None:
+        if node_id is None:
+            return None
+        result = await self.db.execute(
+            select(KnowledgeNode)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent),
+            )
+            .where(KnowledgeNode.id == node_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def _get_subject(self, subject_id: int | None) -> Subject | None:
+        if subject_id is None:
+            return None
+        return await self.db.get(Subject, subject_id)
+
+    async def _resolve_visual_data(
+        self,
+        item: dict,
+        *,
+        context_node: KnowledgeNode | None,
+        subject: Subject | None,
+        fallback_sector: SectorCode,
+    ):
+        sector_weights = normalize_sector_weights(
+            item.get("sector_weights"),
+            fallback_sector=fallback_sector,
+        )
+        dominant_sector = dominant_sector_from_weights(sector_weights)
+        should_classify = (
+            not item.get("sector_weights_provided")
+            or dominant_sector == SectorCode.VOID
+        )
+        if should_classify:
+            try:
+                visual_data = await NodeSectorService(self.db).classify_payload(
+                    name=item["name"],
+                    name_en=item.get("name_en"),
+                    description=item.get("description"),
+                    keywords=item.get("keywords", []),
+                    importance_level=item.get("importance_level", 3),
+                    parent_name=getattr(context_node, "name", None),
+                    subject_name=getattr(subject, "name", None),
+                    subject_sector_hint=getattr(subject, "sector_code", None),
+                    neighbors=(
+                        [{"name": context_node.name, "relation": "trigger"}]
+                        if context_node is not None
+                        else []
+                    ),
+                    fallback_sector=fallback_sector,
+                    stable_seed=item.get("candidate_id") or item["name"],
+                )
+                return visual_data, "expansion_sector_classifier"
+            except Exception as exc:
+                logger.warning("Expansion sector enrichment fallback triggered for {}: {}", item["name"], exc)
+
+        return (
+            build_sector_visuals(
+                item.get("candidate_id") or item["name"],
+                importance_level=item.get("importance_level", 3),
+                sector_weights=sector_weights,
+            ),
+            "expansion_llm" if item.get("sector_weights_provided") else "expansion_fallback",
+        )
+
+    def _heal_existing_node(
+        self,
+        node: KnowledgeNode,
+        item: dict,
+        *,
+        visual_data,
+        classification_model: str,
+        parent_node_id: UUID | None,
+    ) -> None:
+        if not node.description and item.get("description"):
+            node.description = item["description"]
+        if not node.name_en and item.get("name_en"):
+            node.name_en = item["name_en"]
+        if int(node.importance_level or 0) <= 0:
+            node.importance_level = item.get("importance_level", 3)
+        merged_keywords = list(dict.fromkeys([*(node.keywords or []), *(item.get("keywords") or [])]))
+        if merged_keywords != list(node.keywords or []):
+            node.keywords = merged_keywords[:10]
+        if not node.parent_id and parent_node_id:
+            node.parent_id = parent_node_id
+        if (
+            not node.sector_weights
+            or str(getattr(node, "dominant_sector_code", "VOID") or "VOID") == SectorCode.VOID.value
+            or str(getattr(node, "sector_classification_status", "pending") or "pending") in {"pending", "failed"}
+        ):
+            node.sector_weights = visual_data.sector_weights
+            node.dominant_sector_code = visual_data.dominant_sector_code.value
+            node.sector_classification_status = "completed"
+            node.sector_classification_model = classification_model
+            node.sector_classified_at = _utcnow()
+            node.position_x = visual_data.position_x
+            node.position_y = visual_data.position_y
+        self.db.add(node)
+
+    async def _invalidate_after_graph_mutation(self, user_id: UUID) -> None:
+        await NodeSectorService(self.db).invalidate_user_graph_cache(user_id)
+        from app.services.graph_reasoning_service import GraphReasoningService
+
+        await GraphReasoningService(self.db).invalidate_cache()
 
     def _normalize_candidates(self, expanded_data: dict, *, count: int) -> list[dict]:
         normalized: list[dict] = []
         for index, raw_item in enumerate(expanded_data.get("expanded_nodes", [])[:count]):
-            if not isinstance(raw_item, dict):
-                continue
-            name = self._sanitize_text(raw_item.get("name"))
-            if not name:
-                continue
-            relation = self._normalize_relation_type(raw_item.get("relation_to_trigger"))
-            description = self._sanitize_text(raw_item.get("description")) or f"围绕{name}补充一个更完整的学习节点。"
-            keywords = [
-                keyword
-                for keyword in (
-                    self._sanitize_text(item) for item in (raw_item.get("keywords") or [])
-                )
-                if keyword
-            ][:6]
-            normalized.append(
-                {
-                    "candidate_id": self._sanitize_text(raw_item.get("candidate_id"))
-                    or f"{name}_{index + 1}",
-                    "name": name,
-                    "name_en": self._sanitize_text(raw_item.get("name_en")),
-                    "description": description[:120],
-                    "importance_level": max(1, min(5, int(raw_item.get("importance_level") or 3))),
-                    "relation_to_trigger": relation,
-                    "relation_strength": max(0.0, min(1.0, float(raw_item.get("relation_strength") or 0.7))),
-                    "keywords": keywords,
-                    "sector_weights": normalize_sector_weights(
-                        raw_item.get("sector_weights"),
-                        fallback_sector=SectorCode.VOID,
-                    ),
-                }
-            )
+            item = self._normalize_candidate_item(raw_item, index=index, fallback_sector=SectorCode.VOID)
+            if item:
+                normalized.append(item)
         return normalized
+
+    def _normalize_candidate_item(
+        self,
+        raw_item: dict | None,
+        *,
+        index: int,
+        fallback_sector: SectorCode,
+    ) -> dict | None:
+        if not isinstance(raw_item, dict):
+            return None
+        name = self._sanitize_text(raw_item.get("name"))
+        if not name:
+            return None
+        relation = self._normalize_relation_type(raw_item.get("relation_to_trigger"))
+        description = self._sanitize_text(raw_item.get("description")) or f"围绕{name}补充一个更完整的学习节点。"
+        keywords = [
+            keyword
+            for keyword in (
+                self._sanitize_text(item) for item in (raw_item.get("keywords") or [])
+            )
+            if keyword
+        ][:6]
+        raw_sector_weights = raw_item.get("sector_weights")
+        return {
+            "candidate_id": self._sanitize_text(raw_item.get("candidate_id"))
+            or f"{name}_{index + 1}",
+            "name": name,
+            "name_en": self._sanitize_text(raw_item.get("name_en")),
+            "description": description[:120],
+            "importance_level": max(1, min(5, int(raw_item.get("importance_level") or 3))),
+            "relation_to_trigger": relation,
+            "relation_strength": max(0.0, min(1.0, float(raw_item.get("relation_strength") or 0.7))),
+            "keywords": keywords,
+            "sector_weights": normalize_sector_weights(
+                raw_sector_weights,
+                fallback_sector=fallback_sector,
+            ),
+            "sector_weights_provided": bool(raw_sector_weights),
+        }
 
     def _sanitize_text(self, value: object) -> str | None:
         if value is None:
@@ -611,6 +806,8 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             "related": "related",
             "application": "application",
             "evolution": "evolution",
+            "parent_child": "parent_child",
+            "contains": "contains",
             "derived": "evolution",
             "similar": "related",
         }

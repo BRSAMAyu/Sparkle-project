@@ -20,6 +20,7 @@ from app.models.task import Task
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
+    CreateGalaxyNodeRequest,
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
     GalaxyGraphResponse,
@@ -163,6 +164,28 @@ async def get_galaxy_graph(
     return await galaxy_service.get_galaxy_graph(
         user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
     )
+
+
+@router.post("/nodes", response_model=NodeBase)
+async def create_galaxy_node(
+    request: CreateGalaxyNodeRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    node = await galaxy_service.create_node(
+        user_id=UUID(user_id),
+        title=request.name,
+        summary=request.description,
+        subject_id=request.subject_id,
+        tags=request.keywords,
+        parent_node_id=request.parent_node_id,
+        name_en=request.name_en,
+        importance_level=request.importance_level,
+        relation_type=request.relation_to_parent,
+        relation_strength=request.relation_strength,
+        sector_weights=request.sector_weights or None,
+    )
+    return NodeBase.from_model(node)
 
 
 @router.post("/node/{node_id}/spark", response_model=SparkResult)

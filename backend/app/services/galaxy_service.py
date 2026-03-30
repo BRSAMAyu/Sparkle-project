@@ -11,7 +11,7 @@ from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cached
@@ -174,6 +174,12 @@ class GalaxyService:
         subject_id: int | None = None,
         tags: list[str] = None,
         parent_node_id: UUID | None = None,
+        *,
+        name_en: str | None = None,
+        importance_level: int = 3,
+        relation_type: str = "related",
+        relation_strength: float = 0.7,
+        sector_weights: dict[str, int] | None = None,
     ) -> KnowledgeNode:
         """
         Create a new knowledge node.
@@ -184,7 +190,27 @@ class GalaxyService:
         # 1. Fast Write
         if tags is None:
             tags = []
-        node = await self.structure.create_node(user_id, title, summary, subject_id, tags, parent_node_id)
+        expansion_service = ExpansionService(self.db)
+        node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": title,
+                "name_en": name_en,
+                "description": summary,
+                "importance_level": importance_level,
+                "relation_to_trigger": relation_type,
+                "relation_strength": relation_strength,
+                "keywords": tags,
+                "sector_weights": sector_weights or {},
+            },
+            parent_node_id=parent_node_id,
+            subject_id=subject_id,
+            source_type="user_created",
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=True,
+            invalidate_caches=True,
+        )
 
         # 2. Async Background Processing (Managed)
         from app.core.task_manager import task_manager
@@ -222,72 +248,69 @@ class GalaxyService:
         subject: str | None = None,
     ) -> dict[str, object]:
         ontology = await self.auto_generate_ontology(document_text, subject)
-
-        root_node = KnowledgeNode(
-            name=file_name[:255],
-            description=f"Imported from {file_name}",
+        expansion_service = ExpansionService(self.db)
+        root_node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": file_name[:255],
+                "description": f"Imported from {file_name}",
+                "importance_level": 3,
+                "keywords": ["document_import", "ontology:root", *(["subject:" + subject] if subject else [])],
+            },
             subject_id=subject_id,
             source_type="document_import",
-            source_file_id=file_id,
-            status="draft",
-            importance_level=3,
-            is_seed=False,
-            keywords=["document_import", "ontology:root", *(["subject:" + subject] if subject else [])],
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=False,
+            invalidate_caches=False,
+            allow_existing_match=False,
+            node_updates={
+                "source_file_id": file_id,
+                "status": "draft",
+            },
         )
-        self.db.add(root_node)
-        await self.db.flush()
-
-        root_status = UserNodeStatus(
-            user_id=user_id,
-            node_id=root_node.id,
-            is_unlocked=True,
-            mastery_score=0,
-            first_unlock_at=_utcnow(),
-        )
-        self.db.add(root_status)
 
         created_nodes: list[KnowledgeNode] = []
         created_relations: list[NodeRelation] = []
         node_by_name: dict[str, KnowledgeNode] = {}
 
         for candidate in ontology.nodes:
-            child = KnowledgeNode(
-                name=candidate.name[:255],
-                description=candidate.summary,
-                keywords=[
-                    *list(dict.fromkeys([*candidate.keywords[:8], f"node_type:{candidate.node_type.lower()}"])),
-                ],
-                importance_level=candidate.importance_level,
+            child, _ = await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate={
+                    "name": candidate.name[:255],
+                    "description": candidate.summary,
+                    "keywords": [
+                        *list(dict.fromkeys([*candidate.keywords[:8], f"node_type:{candidate.node_type.lower()}"])),
+                    ],
+                    "importance_level": candidate.importance_level,
+                    "relation_to_trigger": "parent_child",
+                    "relation_strength": 0.65,
+                },
+                trigger_node_id=root_node.id,
+                parent_node_id=root_node.id,
                 subject_id=subject_id,
-                parent_id=root_node.id,
                 source_type="document_import",
-                source_file_id=file_id,
-                status="draft",
-                is_seed=False,
+                generate_embedding=False,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
+                allow_existing_match=False,
+                node_updates={
+                    "source_file_id": file_id,
+                    "status": "draft",
+                },
             )
-            self.db.add(child)
-            await self.db.flush()
-            self.db.add(
-                UserNodeStatus(
-                    user_id=user_id,
-                    node_id=child.id,
-                    is_unlocked=True,
-                    mastery_score=0,
-                    first_unlock_at=_utcnow(),
+            parent_relation = await self.db.scalar(
+                select(NodeRelation).where(
+                    NodeRelation.source_node_id == root_node.id,
+                    NodeRelation.target_node_id == child.id,
                 )
             )
+            if parent_relation:
+                created_relations.append(parent_relation)
             node_by_name[candidate.name] = child
             created_nodes.append(child)
-            created_relations.append(
-                NodeRelation(
-                    source_node_id=root_node.id,
-                    target_node_id=child.id,
-                    relation_type="parent_child",
-                    strength=0.65,
-                    created_by="document_import",
-                )
-            )
-            self.db.add(created_relations[-1])
 
         for relation in ontology.relations:
             source = node_by_name.get(relation.source_name)
@@ -305,6 +328,7 @@ class GalaxyService:
             created_relations.append(edge)
 
         await self.db.commit()
+        await expansion_service._invalidate_after_graph_mutation(user_id)
         return {
             "root_node": root_node,
             "created_nodes": created_nodes,
