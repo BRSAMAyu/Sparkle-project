@@ -20,6 +20,7 @@ Prompt 管理系统 - 统一的Agent Prompt管理
 
 from typing import Any
 import json
+import math
 import random
 
 from loguru import logger
@@ -70,8 +71,26 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
 }
 
 
+def _is_cjk_character(char: str) -> bool:
+    codepoint = ord(char)
+    return (
+        0x3400 <= codepoint <= 0x4DBF
+        or 0x4E00 <= codepoint <= 0x9FFF
+        or 0xF900 <= codepoint <= 0xFAFF
+        or 0x3040 <= codepoint <= 0x30FF
+        or 0xAC00 <= codepoint <= 0xD7AF
+    )
+
+
 def _estimate_prompt_tokens(text: str) -> int:
-    return max(1, len(str(text or "")) // 4)
+    normalized = str(text or "")
+    if not normalized:
+        return 1
+
+    cjk_chars = sum(1 for char in normalized if _is_cjk_character(char))
+    non_cjk_chars = len(normalized) - cjk_chars
+    estimated_tokens = math.ceil((cjk_chars * 1.5) + (non_cjk_chars / 4))
+    return max(1, estimated_tokens)
 
 
 def _detect_feedback_mode(instruction: str | None) -> str:

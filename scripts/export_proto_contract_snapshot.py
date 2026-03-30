@@ -27,10 +27,18 @@ def _field_summary(field) -> dict[str, object]:
         type_name = field.message_type.full_name
     elif field.enum_type is not None:
         type_name = field.enum_type.full_name
+    label = getattr(field, "label", None)
+    if label is None:
+        if getattr(field, "is_repeated", False):
+            label = field.LABEL_REPEATED
+        elif getattr(field, "is_required", False):
+            label = field.LABEL_REQUIRED
+        else:
+            label = field.LABEL_OPTIONAL
     return {
         "name": field.name,
         "number": field.number,
-        "label": field.label,
+        "label": label,
         "type": field.type,
         "type_name": type_name,
         "json_name": field.json_name,

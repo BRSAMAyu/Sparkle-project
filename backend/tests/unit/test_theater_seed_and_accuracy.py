@@ -15,6 +15,7 @@ from app.core.cache import cache_service
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
+from app.models.theater_prediction import TheaterPrediction
 from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
 from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.theater.prediction_theater_service import (
@@ -25,6 +26,7 @@ from app.services.theater.prediction_theater_service import (
     TheaterNodeAccessError,
     TheaterTimeoutError,
     _normalized_topic_terms,
+    _utcnow,
 )
 from app.services.simulation.simulation_engine import ModeratorDecision
 
@@ -1359,3 +1361,223 @@ async def test_seed_extractor_onboarding_survives_missing_learning_profile_table
     assert seeds
     assert any("线性代数" in seed.topic for seed in seeds)
     db.rollback.assert_awaited_once()
+
+
+# ------------------------------------------------------------------
+# P1-C: DB persistence tests
+# ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_persist_prediction_writes_to_db(db_session, test_user, monkeypatch):
+    """_persist_prediction should create a TheaterPrediction row."""
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.SystemUpdateService",
+        MagicMock(),
+    )
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-persist-1",
+    )
+    await service._persist_prediction(payload)
+
+    result = await db_session.execute(
+        select(TheaterPrediction).where(
+            TheaterPrediction.prediction_id == "pred-persist-1"
+        )
+    )
+    row = result.scalar_one_or_none()
+    assert row is not None
+    assert row.topic == payload["topic"]
+    assert row.user_id == test_user.id
+    assert row.accuracy_status == "pending_feedback"
+    assert row.paths == payload["paths"]
+
+
+@pytest.mark.asyncio
+async def test_get_prediction_or_raise_falls_back_to_db(
+    db_session, test_user, monkeypatch
+):
+    """When Redis misses, _get_prediction_or_raise should read from DB."""
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.SystemUpdateService",
+        MagicMock(),
+    )
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-fallback-1",
+    )
+    await service._persist_prediction(payload)
+    await db_session.commit()
+
+    # Ensure Redis is empty for this key (the autouse fixture disables Redis)
+    result = await service._get_prediction_or_raise("pred-fallback-1")
+    assert result["prediction_id"] == "pred-fallback-1"
+    assert result["topic"] == payload["topic"]
+
+
+@pytest.mark.asyncio
+async def test_adopt_prediction_updates_db_row(db_session, test_user, monkeypatch):
+    """adopt_prediction should set adopted_plan_id on the DB row."""
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-adopt-1",
+    )
+    await service._persist_prediction(payload)
+    await db_session.commit()
+
+    # Set up cached prediction for adopt_prediction to read
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}pred-adopt-1",
+        payload,
+        ttl=60,
+    )
+    # Provide a selected route in payload
+    payload["paths"] = [
+        {
+            "id": "route-1",
+            "title": "稳扎稳打",
+            "summary": "test route",
+            "steps": [],
+            "daily_minutes": 30,
+            "estimated_completion_rate": 0.8,
+            "estimated_mastery": 75.0,
+        }
+    ]
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}pred-adopt-1",
+        payload,
+        ttl=60,
+    )
+
+    # Mock PlanService.create to avoid real plan creation complexity
+    from app.models.plan import Plan
+    mock_plan = Plan(
+        id=uuid4(),
+        name="Test Plan",
+        type="sprint",
+        description="",
+        subject="test",
+        user_id=test_user.id,
+    )
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.PlanService.create",
+        AsyncMock(return_value=mock_plan),
+    )
+    monkeypatch.setattr(service, "_create_week_one_tasks", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "_build_checkpoint_schedule", MagicMock(return_value=[]))
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.CognitiveService",
+        MagicMock(),
+    )
+
+    await service.adopt_prediction(
+        user_id=test_user.id,
+        prediction_id="pred-adopt-1",
+        route_id="route-1",
+    )
+
+    result = await db_session.execute(
+        select(TheaterPrediction).where(
+            TheaterPrediction.prediction_id == "pred-adopt-1"
+        )
+    )
+    row = result.scalar_one_or_none()
+    assert row is not None
+    assert row.adopted_plan_id == mock_plan.id
+    assert row.adopted_at is not None
+
+
+@pytest.mark.asyncio
+async def test_record_actual_outcome_updates_db_row(
+    db_session, test_user, monkeypatch
+):
+    """record_actual_outcome should set accuracy_status='recorded' on the DB row."""
+    service = PredictionTheaterService(db_session)
+    payload = await _generate_minimal_prediction_payload(
+        service=service,
+        user_id=test_user.id,
+        prediction_id="pred-actual-1",
+    )
+    payload["selected_prediction"] = {
+        "estimated_completion_rate": 0.8,
+        "estimated_mastery": 75.0,
+    }
+    await service._persist_prediction(payload)
+    await db_session.commit()
+
+    # Cache the prediction so record_actual_outcome can read it
+    await cache_service.set(
+        f"{PredictionAccuracyTracker.PREDICTION_KEY_PREFIX}pred-actual-1",
+        payload,
+        ttl=60,
+    )
+
+    await service.record_actual_outcome(
+        user_id=test_user.id,
+        prediction_id="pred-actual-1",
+        actual_completion_rate=0.75,
+        actual_mastery=70.0,
+    )
+
+    result = await db_session.execute(
+        select(TheaterPrediction).where(
+            TheaterPrediction.prediction_id == "pred-actual-1"
+        )
+    )
+    row = result.scalar_one_or_none()
+    assert row is not None
+    assert row.accuracy_status == "recorded"
+    assert row.accuracy_summary is not None
+    assert row.accuracy_summary["actual_completion_rate"] == 0.75
+
+
+async def _generate_minimal_prediction_payload(
+    *,
+    service: PredictionTheaterService,
+    user_id: UUID,
+    prediction_id: str,
+) -> dict[str, Any]:
+    """Helper to build a minimal prediction payload for testing."""
+    from datetime import date, timedelta
+
+    return {
+        "prediction_id": prediction_id,
+        "user_id": str(user_id),
+        "topic": "测试主题",
+        "simulation_session_id": None,
+        "target_node_id": None,
+        "target_name": "测试目标",
+        "candidate_bundle_id": None,
+        "horizon_days": 14,
+        "generated_at": _utcnow().isoformat(),
+        "paths": [
+            {
+                "id": "route-1",
+                "title": "稳扎稳打",
+                "summary": "test",
+                "steps": [],
+                "estimated_completion_rate": 0.8,
+                "estimated_mastery": 75.0,
+            }
+        ],
+        "discussion_turns": [],
+        "timeline": [],
+        "selected_prediction": {},
+        "recommended_route_id": "route-1",
+        "target_resolution_mode": "freeform_only",
+        "accuracy_tracking": {
+            "status": "pending_feedback",
+            "due_on": (date.today() + timedelta(days=7)).isoformat(),
+            "summary_hint": "test",
+        },
+        "routing_notes": {"patterns": [], "recommended_entry": "稳扎稳打"},
+        "preview_mode": False,
+        "graph": {"nodes": [], "edges": []},
+    }

@@ -549,6 +549,8 @@ class Settings(BaseSettings):
     # Event Bus reliability
     EVENT_BUS_MAX_RETRIES: int = 3
     EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
+    EVENT_BUS_STREAM_MAXLEN: int = 50000  # Soft cap for primary/retry Redis streams
+    EVENT_BUS_RETRY_STREAM_MAXLEN: int = 50000  # Prevent retry storms from growing streams unbounded
     EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
 
     # Translation Service

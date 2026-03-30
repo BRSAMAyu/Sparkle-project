@@ -7,12 +7,12 @@ from app.core.event_bus import EventBus
 
 class FakeRedis:
     def __init__(self):
-        self.added: list[tuple[str, dict[str, str]]] = []
+        self.added: list[tuple[str, dict[str, str], int | None]] = []
         self.acked: list[tuple[str, str, str]] = []
 
     async def xadd(self, stream: str, payload: dict[str, str], maxlen=None, approximate=True):
         # maxlen parameter added for DLQ size limit feature (C3 fix)
-        self.added.append((stream, payload))
+        self.added.append((stream, payload, maxlen))
         return "1-0"
 
     async def xack(self, stream: str, group_name: str, message_id: str):
@@ -38,11 +38,12 @@ async def test_event_bus_requeues_failed_message_before_dlq():
     assert bus.redis.acked == [("sparkle_events", "task_event_consumer", "123-0")]
     assert len(bus.redis.added) == 1
 
-    retry_stream, payload = bus.redis.added[0]
+    retry_stream, payload, maxlen = bus.redis.added[0]
     assert retry_stream == "sparkle_events"
     assert payload["event_type"] == "task.completed"
     assert payload["_retry_count"] == "1"
     assert payload["_original_message_id"] == "123-0"
+    assert maxlen == bus.retry_stream_maxlen
 
 
 @pytest.mark.asyncio
@@ -67,9 +68,10 @@ async def test_event_bus_moves_message_to_dlq_after_max_retries():
     assert bus.redis.acked == [("sparkle_events", "task_event_consumer", "123-0")]
     assert len(bus.redis.added) == 1
 
-    dlq_stream, payload = bus.redis.added[0]
+    dlq_stream, payload, maxlen = bus.redis.added[0]
     assert dlq_stream == "sparkle_events:dlq"
     body = json.loads(payload["data"])
     assert body["event"]["event_type"] == "task.completed"
     assert body["retry_count"] == 3
     assert body["message_id"] == "123-0"
+    assert maxlen == bus.dlq_maxlen

@@ -344,22 +344,22 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					_ = writer.WriteJSON(gin.H{"type": "pong"})
 					return false
 				case "action_feedback":
-					h.handleActionFeedback(conn, msgMap, userID, authToken)
+					h.handleActionFeedback(writer, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
-					h.handleInterventionFeedback(conn, msgMap, userID, authToken)
+					h.handleInterventionFeedback(writer, msgMap, userID, authToken)
 					return false
 				case "response_feedback":
-					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
+					h.handleResponseFeedback(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "plan_review_feedback":
-					h.handlePlanReviewFeedback(conn, msgMap, userID, c.Request.Context())
+					h.handlePlanReviewFeedback(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID, authToken)
 					return false
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(conn, msgMap, userID)
+					h.handleUpdateNodeMastery(writer, msgMap, userID)
 					return false
 				case "message", "":
 					// Continue with normal chat message handling

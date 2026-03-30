@@ -162,6 +162,7 @@ class LLMService:
         self,
         agent_role: AgentRole | str | Any = AgentRole.GENERATION,
         enable_dynamic_routing: bool = True,
+        initial_selection: LLMSelection | None = None,
     ):
         """
         Args:
@@ -179,6 +180,7 @@ class LLMService:
         # 当前选中的模型配置
         self._current_selection: LLMSelection | None = None
         self._provider: LLMProvider | None = None
+        self._provider_error: str | None = None
         self._explicit_model_override = False
 
         # 向后兼容：保留原有的模型名称
@@ -190,7 +192,7 @@ class LLMService:
 
         if enable_dynamic_routing:
             # 使用新的 LLMRouter
-            self._init_with_router()
+            self._init_with_router(initial_selection)
         else:
             # 使用原有的 LLM_PROVIDER 逻辑
             self._init_legacy()
@@ -201,10 +203,17 @@ class LLMService:
         self._current_selection = selection
 
         kwargs = llm_router.get_openai_client_kwargs(selection)
-        self._provider = OpenAICompatibleProvider(
-            api_key=kwargs["api_key"],
-            base_url=kwargs["base_url"]
-        )
+        try:
+            self._provider = OpenAICompatibleProvider(
+                api_key=kwargs["api_key"],
+                base_url=kwargs["base_url"]
+            )
+            self._provider_error = None
+        except Exception as exc:
+            self._provider = None
+            self._provider_error = str(exc)
+            logger.exception("[LLMRouter] Failed to initialize provider")
+            return
 
         self.chat_model = kwargs["model"]
         self.reason_model = kwargs["model"]  # 默认用同一个，可按需切换
@@ -245,10 +254,17 @@ class LLMService:
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
 
-        self._provider = OpenAICompatibleProvider(
-            api_key=api_key,
-            base_url=base_url
-        )
+        try:
+            self._provider = OpenAICompatibleProvider(
+                api_key=api_key,
+                base_url=base_url
+            )
+            self._provider_error = None
+        except Exception as exc:
+            self._provider = None
+            self._provider_error = str(exc)
+            logger.exception(f"[Legacy] Failed to initialize provider={provider_type}")
+            return
         if not api_key:
             self.demo_mode = True
 
@@ -271,9 +287,9 @@ class LLMService:
             }
 
     @property
-    def provider(self) -> LLMProvider:
+    def provider(self) -> LLMProvider | None:
         """获取当前provider（向后兼容）"""
-        if self._provider is None:
+        if self._provider is None and self._provider_error is None:
             self._init_with_router()
         return self._provider
 
@@ -1322,7 +1338,6 @@ async def get_configured_llm_service_for_tier(
     reasoning_mode: str | None = None,
 ) -> LLMService:
     """获取按指定 tier 强制路由后的 LLM 服务实例。"""
-    service = get_llm_service(agent_role)
     selection = llm_router.select_model(
         agent_role,
         task_type=task_type,
@@ -1330,8 +1345,11 @@ async def get_configured_llm_service_for_tier(
         reasoning_mode=reasoning_mode,
         allow_max=force_tier == ModelTier.MAX,
     )
-    service._init_with_router(selection)
-    return service
+    return LLMService(
+        agent_role=selection.agent_role,
+        enable_dynamic_routing=True,
+        initial_selection=selection,
+    )
 
 
 def get_llm_service_for_task(
@@ -1357,9 +1375,11 @@ def get_llm_service_for_task(
         task_type=task_type,
         avoid_providers=avoid_providers,
     )
-    service = LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
-    service._init_with_router(selection)
-    return service
+    return LLMService(
+        agent_role=selection.agent_role,
+        enable_dynamic_routing=True,
+        initial_selection=selection,
+    )
 
 
 async def get_llm_service_for_specific_model(

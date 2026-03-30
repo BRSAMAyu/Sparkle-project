@@ -1548,7 +1548,7 @@ Please review this plan and provide your assessment."""
         from sqlalchemy import select
 
         from app.database import get_db_session
-        from app.models.plan import PlanType
+        from app.models.plan import Plan, PlanType
         from app.models.task import Task
         from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
         from app.services.plan_service import PlanService

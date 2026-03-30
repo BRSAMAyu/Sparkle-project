@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -9,6 +10,7 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
@@ -62,26 +64,26 @@ func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 
 // HealthStatus represents the health check result
 type HealthStatus struct {
-	IsHealthy   bool
-	LastCheck   time.Time
-	Latency     time.Duration
-	LastError   error
+	IsHealthy    bool
+	LastCheck    time.Time
+	Latency      time.Duration
+	LastError    error
 	CircuitState CircuitState
-	Failures    int
+	Failures     int
 }
 
 // AgentHealthChecker performs periodic health checks on the gRPC agent service
 type AgentHealthChecker struct {
-	client    *Client
-	interval  time.Duration
-	timeout   time.Duration
-	cbConfig  CircuitBreakerConfig
+	client   *Client
+	interval time.Duration
+	timeout  time.Duration
+	cbConfig CircuitBreakerConfig
 
-	mu          sync.RWMutex
-	lastCheck   time.Time
-	isHealthy   bool
-	latency     time.Duration
-	lastError   error
+	mu        sync.RWMutex
+	lastCheck time.Time
+	isHealthy bool
+	latency   time.Duration
+	lastError error
 
 	// Circuit breaker state
 	failures      int
@@ -155,9 +157,6 @@ func (h *AgentHealthChecker) check() {
 
 	start := time.Now()
 
-	// Perform a lightweight health check using a simple gRPC call
-	// We use StreamChat with an empty message as a health probe
-	// The Python backend should handle this gracefully
 	var err error
 	func() {
 		defer func() {
@@ -166,13 +165,7 @@ func (h *AgentHealthChecker) check() {
 			}
 		}()
 
-		// Create a health check request - minimal overhead
-		// Using a simple ping-like approach with timeout context
-		_, err = h.client.api.StreamChat(ctx, &agentv1.ChatRequest{
-			UserId:    "__health_check__",
-			SessionId: "__health_check__",
-			Input:     &agentv1.ChatRequest_Message{Message: ""}, // Empty message for health check
-		})
+		err = h.checkConnectionState(ctx)
 	}()
 
 	latency := time.Since(start)
@@ -194,6 +187,44 @@ func (h *AgentHealthChecker) check() {
 		h.isHealthy = true
 		h.recordSuccess()
 	}
+}
+
+func (h *AgentHealthChecker) checkConnectionState(ctx context.Context) error {
+	if h.client == nil || h.client.currentConn() == nil {
+		return status.Error(codes.Unavailable, "agent client connection unavailable")
+	}
+
+	conn := h.client.currentConn()
+	state := conn.GetState()
+	if isHealthyConnectionState(state) {
+		return nil
+	}
+
+	conn.Connect()
+	if !conn.WaitForStateChange(ctx, state) {
+		nextState := conn.GetState()
+		if isHealthyConnectionState(nextState) {
+			return nil
+		}
+		if h.client.reconnect(ctx) == nil {
+			return nil
+		}
+		return status.Error(codes.DeadlineExceeded, fmt.Sprintf("agent connection state=%s", nextState.String()))
+	}
+
+	nextState := conn.GetState()
+	if isHealthyConnectionState(nextState) {
+		return nil
+	}
+	if h.client.reconnect(ctx) == nil {
+		return nil
+	}
+
+	return status.Error(codes.Unavailable, fmt.Sprintf("agent connection state=%s", nextState.String()))
+}
+
+func isHealthyConnectionState(state connectivity.State) bool {
+	return state == connectivity.Ready || state == connectivity.Idle
 }
 
 func (h *AgentHealthChecker) recordFailure() {
@@ -358,12 +389,12 @@ func (h *AgentHealthChecker) CheckNow() HealthStatus {
 
 // HealthCheckerMetrics returns metrics for monitoring
 type HealthCheckerMetrics struct {
-	IsHealthy       bool          `json:"is_healthy"`
-	CircuitState    string        `json:"circuit_state"`
-	FailureCount    int           `json:"failure_count"`
-	LastCheckTime   time.Time     `json:"last_check_time"`
+	IsHealthy        bool          `json:"is_healthy"`
+	CircuitState     string        `json:"circuit_state"`
+	FailureCount     int           `json:"failure_count"`
+	LastCheckTime    time.Time     `json:"last_check_time"`
 	LastCheckLatency time.Duration `json:"last_check_latency_ms"`
-	LastError       string        `json:"last_error,omitempty"`
+	LastError        string        `json:"last_error,omitempty"`
 }
 
 // GetMetrics returns current metrics for monitoring
@@ -377,12 +408,12 @@ func (h *AgentHealthChecker) GetMetrics() HealthCheckerMetrics {
 	}
 
 	return HealthCheckerMetrics{
-		IsHealthy:       h.isHealthy,
-		CircuitState:    h.circuitState.String(),
-		FailureCount:    h.failures,
-		LastCheckTime:   h.lastCheck,
+		IsHealthy:        h.isHealthy,
+		CircuitState:     h.circuitState.String(),
+		FailureCount:     h.failures,
+		LastCheckTime:    h.lastCheck,
 		LastCheckLatency: h.latency,
-		LastError:       lastErr,
+		LastError:        lastErr,
 	}
 }
 
@@ -422,10 +453,28 @@ func (c *GRPCHealthClient) Close() {
 
 // Check performs a health check
 func (c *GRPCHealthClient) Check(ctx context.Context) error {
-	_, err := c.client.StreamChat(ctx, &agentv1.ChatRequest{
-		UserId:    "__health_check__",
-		SessionId: "__health_check__",
-		Input:     &agentv1.ChatRequest_Message{Message: ""},
-	})
-	return err
+	if c == nil || c.conn == nil {
+		return status.Error(codes.Unavailable, "health client connection unavailable")
+	}
+
+	state := c.conn.GetState()
+	if isHealthyConnectionState(state) {
+		return nil
+	}
+
+	c.conn.Connect()
+	if !c.conn.WaitForStateChange(ctx, state) {
+		nextState := c.conn.GetState()
+		if isHealthyConnectionState(nextState) {
+			return nil
+		}
+		return status.Error(codes.DeadlineExceeded, fmt.Sprintf("agent connection state=%s", nextState.String()))
+	}
+
+	nextState := c.conn.GetState()
+	if isHealthyConnectionState(nextState) {
+		return nil
+	}
+
+	return status.Error(codes.Unavailable, fmt.Sprintf("agent connection state=%s", nextState.String()))
 }

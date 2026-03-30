@@ -7,6 +7,9 @@ BERT Intent Classifier Test Suite
 - 置信度校准
 - 模型不可用时的降级
 - 多语言输入处理
+
+NOTE: torch is required for BERT model loading.
+These tests are skipped when torch is not installed.
 """
 from __future__ import annotations
 
@@ -16,12 +19,22 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from typing import Any
 
-from app.orchestration.bert_intent_classifier import (
-    BERTIntentClassifier,
-    get_bert_classifier,
-    classify_with_bert,
-    TRANSFORMERS_AVAILABLE,
-)
+# Skip entire module if torch is not available
+try:
+    import torch  # noqa: F401
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+pytestmark = pytest.mark.skipif(not HAS_TORCH, reason="torch not installed - BERT tests require PyTorch")
+
+if HAS_TORCH:
+    from app.orchestration.bert_intent_classifier import (
+        BERTIntentClassifier,
+        get_bert_classifier,
+        classify_with_bert,
+        TRANSFORMERS_AVAILABLE,
+    )
 
 
 # =============================================================================

@@ -456,24 +456,35 @@ class ChatOrchestrator(
         return "normal"
 
     def _evict_oldest_droppable_stream_item(self, queue: asyncio.Queue) -> bool:
-        internal_queue = getattr(queue, "_queue", None)
-        if internal_queue is None:
+        drained_items: list[agent_service_pb2.ChatResponse] = []
+        retained_items: list[agent_service_pb2.ChatResponse] = []
+        dropped = False
+
+        try:
+            while True:
+                drained_items.append(queue.get_nowait())
+        except asyncio.QueueEmpty:
+            pass
+
+        if not drained_items:
             return False
 
-        items = list(internal_queue)
-        for index, item in enumerate(items):
-            if isinstance(item, agent_service_pb2.ChatResponse) and self._response_priority(item) == "droppable":
-                del items[index]
-                internal_queue.clear()
-                internal_queue.extend(items)
+        for item in drained_items:
+            if (
+                not dropped
+                and isinstance(item, agent_service_pb2.ChatResponse)
+                and self._response_priority(item) == "droppable"
+            ):
+                queue.task_done()
+                dropped = True
+                continue
+            retained_items.append(item)
 
-                unfinished = getattr(queue, "_unfinished_tasks", None)
-                if isinstance(unfinished, int) and unfinished > 0:
-                    queue._unfinished_tasks = unfinished - 1
-                    if queue._unfinished_tasks == 0:
-                        queue._finished.set()
-                return True
-        return False
+        for item in retained_items:
+            queue.put_nowait(item)
+            queue.task_done()
+
+        return dropped
 
     async def _enqueue_stream_response(self, queue: asyncio.Queue, resp: agent_service_pb2.ChatResponse) -> None:
         priority = self._response_priority(resp)

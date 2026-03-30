@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -61,7 +60,7 @@ func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) 
 }
 
 type legacyActionStatusSender struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 }
 
 func (s legacyActionStatusSender) SendActionStatus(actionID, status string, data map[string]interface{}) {
@@ -74,7 +73,7 @@ func (s legacyActionStatusSender) SendActionStatus(actionID, status string, data
 	for k, v := range data {
 		statusMsg[k] = v
 	}
-	if err := s.conn.WriteJSON(statusMsg); err != nil {
+	if err := s.writer.WriteJSON(statusMsg); err != nil {
 		log.Printf("Failed to send action status: %v", err)
 	} else {
 		log.Printf("✅ Action status sent: status=%s, action_id=%s", status, actionID)
@@ -82,22 +81,24 @@ func (s legacyActionStatusSender) SendActionStatus(actionID, status string, data
 }
 
 type legacyUpdateNodeResponder struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 }
 
 func (s legacyUpdateNodeResponder) SendUpdateNodeError(nodeID, version, message string) {
-	s.conn.WriteJSON(map[string]interface{}{
+	if err := s.writer.WriteJSON(map[string]interface{}{
 		"type": "error_update_node_mastery",
 		"payload": map[string]interface{}{
 			"nodeId":  nodeID,
 			"version": version,
 			"error":   message,
 		},
-	})
+	}); err != nil {
+		log.Printf("Failed to send update node error: %v", err)
+	}
 }
 
 func (s legacyUpdateNodeResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
-	s.conn.WriteJSON(map[string]interface{}{
+	if err := s.writer.WriteJSON(map[string]interface{}{
 		"type": "ack_update_node_mastery",
 		"payload": map[string]interface{}{
 			"node_id":   nodeID,
@@ -105,11 +106,13 @@ func (s legacyUpdateNodeResponder) SendUpdateNodeMasteryAck(nodeID, version stri
 			"success":   success,
 			"timestamp": time.Now().Unix(),
 		},
-	})
+	}); err != nil {
+		log.Printf("Failed to send update node mastery ack: %v", err)
+	}
 }
 
 type legacyInterventionResponder struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 }
 
 func (s legacyInterventionResponder) SendInterventionAck(requestID, status, message string) {
@@ -122,13 +125,13 @@ func (s legacyInterventionResponder) SendInterventionAck(requestID, status, mess
 	if message != "" {
 		payload["message"] = message
 	}
-	if err := s.conn.WriteJSON(payload); err != nil {
+	if err := s.writer.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send intervention feedback ack: %v", err)
 	}
 }
 
 type legacyResponseFeedbackResponder struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 }
 
 func (s legacyResponseFeedbackResponder) SendResponseFeedbackAck(responseID, status, message string) {
@@ -141,13 +144,13 @@ func (s legacyResponseFeedbackResponder) SendResponseFeedbackAck(responseID, sta
 	if message != "" {
 		payload["message"] = message
 	}
-	if err := s.conn.WriteJSON(payload); err != nil {
+	if err := s.writer.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send response feedback ack: %v", err)
 	}
 }
 
 type legacyPlanReviewStatusSender struct {
-	conn *websocket.Conn
+	writer *wsSafeWriter
 }
 
 func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status string, data map[string]interface{}) {
@@ -160,7 +163,7 @@ func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status stri
 	for k, v := range data {
 		statusMsg[k] = v
 	}
-	if err := s.conn.WriteJSON(statusMsg); err != nil {
+	if err := s.writer.WriteJSON(statusMsg); err != nil {
 		log.Printf("Failed to send plan review status: %v", err)
 	} else {
 		log.Printf("✅ Plan review status sent: status=%s, review_id=%s", status, reviewID)
@@ -585,12 +588,12 @@ func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Conte
 }
 
 // handleActionFeedback processes action confirmation/dismissal feedback from user
-func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID, authToken string) {
-	h.handleActionFeedbackWithResponder(legacyActionStatusSender{conn: conn}, msgMap, userID, authToken)
+func (h *ChatOrchestrator) handleActionFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID, authToken string) {
+	h.handleActionFeedbackWithResponder(legacyActionStatusSender{writer: writer}, msgMap, userID, authToken)
 }
 
 // sendActionStatus sends action confirmation/dismissal status back to the client via WebSocket
-func (h *ChatOrchestrator) sendActionStatus(conn *websocket.Conn, actionID, status string, data map[string]interface{}) {
+func (h *ChatOrchestrator) sendActionStatus(writer *wsSafeWriter, actionID, status string, data map[string]interface{}) {
 	// Build status message
 	statusMsg := map[string]interface{}{
 		"type":      "action_status",
@@ -605,18 +608,18 @@ func (h *ChatOrchestrator) sendActionStatus(conn *websocket.Conn, actionID, stat
 	}
 
 	// Send message to client
-	if err := conn.WriteJSON(statusMsg); err != nil {
+	if err := writer.WriteJSON(statusMsg); err != nil {
 		log.Printf("Failed to send action status: %v", err)
 	} else {
 		log.Printf("✅ Action status sent: status=%s, action_id=%s", status, actionID)
 	}
 }
 
-func (h *ChatOrchestrator) handleInterventionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID, authToken string) {
-	h.handleInterventionFeedbackWithResponder(legacyInterventionResponder{conn: conn}, msgMap, userID, authToken)
+func (h *ChatOrchestrator) handleInterventionFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID, authToken string) {
+	h.handleInterventionFeedbackWithResponder(legacyInterventionResponder{writer: writer}, msgMap, userID, authToken)
 }
 
-func (h *ChatOrchestrator) sendInterventionAck(conn *websocket.Conn, requestID, status, message string) {
+func (h *ChatOrchestrator) sendInterventionAck(writer *wsSafeWriter, requestID, status, message string) {
 	payload := map[string]interface{}{
 		"type":       "intervention_feedback_ack",
 		"request_id": requestID,
@@ -626,18 +629,18 @@ func (h *ChatOrchestrator) sendInterventionAck(conn *websocket.Conn, requestID, 
 	if message != "" {
 		payload["message"] = message
 	}
-	if err := conn.WriteJSON(payload); err != nil {
+	if err := writer.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send intervention feedback ack: %v", err)
 	}
 }
 
-func (h *ChatOrchestrator) handleResponseFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
-	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{conn: conn}, msgMap, userID)
+func (h *ChatOrchestrator) handleResponseFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{writer: writer}, msgMap, userID)
 }
 
 // handlePlanReviewFeedback processes user feedback on plan reviews (legacy wrapper)
-func (h *ChatOrchestrator) handlePlanReviewFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
-	h.handlePlanReviewFeedbackWithResponder(ctx, legacyPlanReviewStatusSender{conn: conn}, msgMap, userID)
+func (h *ChatOrchestrator) handlePlanReviewFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handlePlanReviewFeedbackWithResponder(ctx, legacyPlanReviewStatusSender{writer: writer}, msgMap, userID)
 }
 
 // handlePlanReviewFeedbackWithResponder processes user feedback on plan reviews
@@ -825,17 +828,19 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 }
 
 // handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK
-func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
-	h.handleUpdateNodeMasteryWithResponder(legacyUpdateNodeResponder{conn: conn}, msgMap, userID)
+func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
+	h.handleUpdateNodeMasteryWithResponder(legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
 }
 
-func (h *ChatOrchestrator) sendError(conn *websocket.Conn, opType, nodeID, version, message string) {
-	conn.WriteJSON(map[string]interface{}{
+func (h *ChatOrchestrator) sendError(writer *wsSafeWriter, opType, nodeID, version, message string) {
+	if err := writer.WriteJSON(map[string]interface{}{
 		"type": fmt.Sprintf("error_%s", opType),
 		"payload": map[string]interface{}{
 			"nodeId":  nodeID,
 			"version": version,
 			"error":   message,
 		},
-	})
+	}); err != nil {
+		log.Printf("Failed to send %s error: %v", opType, err)
+	}
 }

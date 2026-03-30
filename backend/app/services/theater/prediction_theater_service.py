@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import json
 import re
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNode
 from app.models.plan import PlanType
 from app.models.task import TaskType
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
+from app.models.theater_prediction import TheaterPrediction
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.insight_copy import present_pattern_name
@@ -33,6 +35,8 @@ from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.cognitive_service import CognitiveService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -379,6 +383,7 @@ class PredictionTheaterService:
             "preview_mode": preview_mode,
         }
         await self.accuracy.record_prediction(payload)
+        await self._persist_prediction(payload)
         if not preview_mode:
             query = {"topic": topic}
             if target_context.target_node_id:
@@ -1181,6 +1186,11 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
+        await self._update_prediction_db(prediction_id, {
+            "adopted_plan_id": plan.id,
+            "adopted_at": _utcnow(),
+            "selected_prediction": selected_route,
+        })
 
         try:
             await CognitiveService(self.db).create_fragment(
@@ -1323,10 +1333,31 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
+        await self._update_prediction_db(prediction_id, {
+            "accuracy_status": "recorded",
+            "accuracy_summary": summary,
+            "accuracy_tracking": cached["accuracy_tracking"],
+        })
         return summary
 
     async def get_accuracy_summary(self, prediction_id: str) -> dict[str, Any] | None:
-        return await self.accuracy.get_summary(prediction_id)
+        cached = await self.accuracy.get_summary(prediction_id)
+        if cached is not None:
+            return cached
+        # DB fallback
+        if self.db is None:
+            return None
+        try:
+            result = await self.db.execute(
+                select(TheaterPrediction.accuracy_summary).where(
+                    TheaterPrediction.prediction_id == prediction_id,
+                    TheaterPrediction.deleted_at.is_(None),
+                )
+            )
+            row = result.scalar_one_or_none()
+            return row if isinstance(row, dict) else None
+        except Exception:
+            return None
 
     async def auto_check_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         pending_predictions = await self._get_pending_predictions(user_id)
@@ -1357,30 +1388,48 @@ class PredictionTheaterService:
 
     async def _get_pending_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         redis_client = cache_service.redis
-        if redis_client is None:
-            return []
         results: list[dict[str, Any]] = []
-        indexed_prediction_ids = await redis_client.smembers(
-            f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
-        )
-        prediction_keys = [
-            f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
-            for raw_id in indexed_prediction_ids
-        ]
-        if not prediction_keys:
-            async for raw_key in redis_client.scan_iter(f"{self.accuracy.PREDICTION_KEY_PREFIX}*"):
-                key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
-                prediction_keys.append(key)
-        for key in prediction_keys:
-            cached = await cache_service.get(key)
-            if not isinstance(cached, dict):
-                continue
-            if str(cached.get("user_id") or "").strip() != str(user_id):
-                continue
-            accuracy_tracking = dict(cached.get("accuracy_tracking") or {})
-            if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
-                continue
-            results.append(cached)
+        if redis_client is not None:
+            indexed_prediction_ids = await redis_client.smembers(
+                f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
+            )
+            prediction_keys = [
+                f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
+                for raw_id in indexed_prediction_ids
+            ]
+            if not prediction_keys:
+                async for raw_key in redis_client.scan_iter(f"{self.accuracy.PREDICTION_KEY_PREFIX}*"):
+                    key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
+                    prediction_keys.append(key)
+            for key in prediction_keys:
+                cached = await cache_service.get(key)
+                if not isinstance(cached, dict):
+                    continue
+                if str(cached.get("user_id") or "").strip() != str(user_id):
+                    continue
+                accuracy_tracking = dict(cached.get("accuracy_tracking") or {})
+                if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
+                    continue
+                results.append(cached)
+            if results:
+                return results
+
+        # DB fallback when Redis returns nothing
+        if self.db is None:
+            return results
+        try:
+            db_result = await self.db.execute(
+                select(TheaterPrediction).where(
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.accuracy_status == "pending_feedback",
+                    TheaterPrediction.deleted_at.is_(None),
+                ).order_by(desc(TheaterPrediction.generated_at))
+            )
+            rows = db_result.scalars().all()
+            for row in rows:
+                results.append(self._prediction_row_to_payload(row))
+        except Exception as exc:
+            logger.warning("DB fallback for pending predictions failed: %s", exc)
         return results
 
     async def _compute_actual_from_prediction(
@@ -2619,10 +2668,70 @@ class PredictionTheaterService:
         ]
 
     async def _get_prediction_or_raise(self, prediction_id: str) -> dict[str, Any]:
+        # 1. Hot path: Redis cache
         cached = await cache_service.get(f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}")
-        if not isinstance(cached, dict):
+        if isinstance(cached, dict):
+            return cached
+
+        # 2. DB fallback
+        if self.db is None:
             raise ValueError("Prediction not found or expired")
-        return cached
+        result = await self.db.execute(
+            select(TheaterPrediction).where(
+                TheaterPrediction.prediction_id == prediction_id,
+                TheaterPrediction.deleted_at.is_(None),
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            raise ValueError("Prediction not found or expired")
+
+        # 3. Reconstruct full payload dict
+        payload = self._prediction_row_to_payload(row)
+
+        # 4. Backfill Redis cache for subsequent reads
+        try:
+            await cache_service.set(
+                f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}",
+                payload,
+                ttl=self.accuracy.TTL_SECONDS,
+            )
+        except Exception:
+            pass  # Cache backfill failure is non-critical
+        return payload
+
+    def _prediction_row_to_payload(self, row: TheaterPrediction) -> dict[str, Any]:
+        """Reconstruct the full payload dict from a DB row."""
+        payload: dict[str, Any] = {
+            "prediction_id": row.prediction_id,
+            "user_id": str(row.user_id) if row.user_id else "",
+            "topic": row.topic,
+            "simulation_session_id": row.simulation_session_id,
+            "target_node_id": str(row.target_node_id) if row.target_node_id else None,
+            "target_name": row.target_name,
+            "candidate_bundle_id": str(row.candidate_bundle_id) if row.candidate_bundle_id else None,
+            "horizon_days": row.horizon_days,
+            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+            "paths": row.paths or [],
+            "discussion_turns": row.discussion_turns or [],
+            "timeline": row.timeline or [],
+            "selected_prediction": row.selected_prediction or {},
+            "recommended_route_id": row.recommended_route_id or "",
+            "target_resolution_mode": row.target_resolution_mode,
+            "accuracy_tracking": row.accuracy_tracking or {},
+            "routing_notes": row.routing_notes or {},
+            "preview_mode": row.preview_mode,
+        }
+        if row.adopted_plan_id:
+            payload["adopted_plan_id"] = str(row.adopted_plan_id)
+        if row.adopted_at:
+            payload["adopted_at"] = row.adopted_at.isoformat()
+        if row.accuracy_summary:
+            payload["accuracy_summary"] = row.accuracy_summary
+        # Graph lives in TheaterCandidateBundle — leave empty; callers that
+        # need graph will find it via candidate_bundle_id when needed.
+        payload["graph"] = {"nodes": [], "edges": []}
+        return payload
 
     @staticmethod
     def _find_route(payload: dict[str, Any], route_id: str) -> dict[str, Any]:
@@ -2669,3 +2778,87 @@ class PredictionTheaterService:
         if strategy_type == "personalized":
             return f"{node_name} 被切进小步节奏里，目的是降低启动阻力并提高连续完成率。"
         return f"{node_name} 是前置链的一环，先补齐它能减少后续推导中的理解断层。"
+
+    # ------------------------------------------------------------------
+    # DB persistence helpers
+    # ------------------------------------------------------------------
+
+    async def _persist_prediction(self, payload: dict[str, Any]) -> None:
+        """Write prediction to DB after Redis cache. Failure is non-blocking."""
+        if self.db is None:
+            return
+        prediction_id = str(payload.get("prediction_id") or "").strip()
+        if not prediction_id:
+            return
+        try:
+            accuracy_tracking = dict(payload.get("accuracy_tracking") or {})
+            due_on_raw = str(accuracy_tracking.get("due_on") or "").strip()
+            due_on: datetime | None = None
+            if due_on_raw:
+                try:
+                    due_on = datetime.fromisoformat(due_on_raw)
+                except (TypeError, ValueError):
+                    pass
+            generated_at_raw = payload.get("generated_at")
+            generated_at: datetime | None = None
+            if isinstance(generated_at_raw, str):
+                try:
+                    generated_at = datetime.fromisoformat(generated_at_raw)
+                except (TypeError, ValueError):
+                    pass
+            if generated_at is None:
+                generated_at = _utcnow()
+
+            candidate_bundle_id = self._maybe_uuid(payload.get("candidate_bundle_id"))
+            target_node_id = self._maybe_uuid(payload.get("target_node_id"))
+
+            row = TheaterPrediction(
+                prediction_id=prediction_id,
+                user_id=self._maybe_uuid(payload.get("user_id")),
+                topic=str(payload.get("topic") or ""),
+                target_name=str(payload.get("target_name") or ""),
+                target_node_id=target_node_id,
+                target_resolution_mode=str(payload.get("target_resolution_mode") or "freeform_only"),
+                horizon_days=int(payload.get("horizon_days") or 14),
+                preview_mode=bool(payload.get("preview_mode")),
+                generated_at=generated_at,
+                candidate_bundle_id=candidate_bundle_id,
+                simulation_session_id=payload.get("simulation_session_id"),
+                recommended_route_id=payload.get("recommended_route_id"),
+                accuracy_status=str(accuracy_tracking.get("status") or "pending_feedback"),
+                accuracy_due_on=due_on,
+                paths=list(payload.get("paths") or []),
+                discussion_turns=list(payload.get("discussion_turns") or []),
+                timeline=list(payload.get("timeline") or []),
+                selected_prediction=payload.get("selected_prediction"),
+                routing_notes=dict(payload.get("routing_notes") or {}),
+                accuracy_tracking=accuracy_tracking,
+            )
+            self.db.add(row)
+            await self.db.flush()
+        except Exception as exc:
+            logger.warning("Failed to persist prediction %s to DB: %s", prediction_id, exc)
+
+    async def _update_prediction_db(
+        self,
+        prediction_id: str,
+        updates: dict[str, Any],
+    ) -> None:
+        """Update a persisted prediction row. Failure is non-blocking."""
+        if self.db is None:
+            return
+        try:
+            result = await self.db.execute(
+                select(TheaterPrediction).where(
+                    TheaterPrediction.prediction_id == prediction_id,
+                    TheaterPrediction.deleted_at.is_(None),
+                )
+            )
+            row = result.scalar_one_or_none()
+            if row is None:
+                return
+            for key, value in updates.items():
+                setattr(row, key, value)
+            await self.db.flush()
+        except Exception as exc:
+            logger.warning("Failed to update prediction %s in DB: %s", prediction_id, exc)

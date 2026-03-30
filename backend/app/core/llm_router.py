@@ -14,6 +14,7 @@ LLM Router - 统一的LLM客户端获取入口
 - 可降级：主模型失败时自动降级
 """
 
+import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -120,6 +121,7 @@ class LLMRouter:
     ]
 
     def __init__(self):
+        self._lock = threading.RLock()
         self._available_models: dict[str, ModelConfig] = {}
         self._tier_mapping: dict[ModelTier, list[str]] = {}
         self._model_health: dict[str, ModelHealthState] = {}
@@ -133,10 +135,11 @@ class LLMRouter:
             configs: 以模型key为索引的配置字典
             tier_mapping: 可选，更新层级映射
         """
-        self._available_models.update(configs)
-        if tier_mapping:
-            self._tier_mapping = tier_mapping
-        agent_profile_registry.register_model_configs(configs)
+        with self._lock:
+            self._available_models.update(configs)
+            if tier_mapping:
+                self._tier_mapping = tier_mapping
+            agent_profile_registry.register_model_configs(configs)
         logger.info(f"LLMRouter updated with {len(configs)} model configs")
 
     @staticmethod
@@ -870,8 +873,9 @@ class LLMRouter:
         )
 
     def get_model_provider(self, model_key: str) -> ModelProvider | None:
-        config = self._available_models.get(model_key)
-        return config.provider if config else None
+        with self._lock:
+            config = self._available_models.get(model_key)
+            return config.provider if config else None
 
     def _apply_provider_avoidance(
         self,
@@ -899,12 +903,17 @@ class LLMRouter:
         """
         直接按已注册模型key选择（用于调试或手动指定）。
         """
-        agent_role = self._normalize_agent_role(agent_role)
-        task_type = self._normalize_task_type(task_type)
-        config = self._available_models.get(model_key, self._available_models["default"])
-        reason = f"指定模型key: {model_key}" if model_key in self._available_models else f"模型key未注册: {model_key}，回退默认"
-        resolved_key = model_key if model_key in self._available_models else "default"
-        return self._create_selection(resolved_key, config, agent_role, task_type, reason)
+        with self._lock:
+            agent_role = self._normalize_agent_role(agent_role)
+            task_type = self._normalize_task_type(task_type)
+            config = self._available_models.get(model_key, self._available_models["default"])
+            reason = (
+                f"指定模型key: {model_key}"
+                if model_key in self._available_models
+                else f"模型key未注册: {model_key}，回退默认"
+            )
+            resolved_key = model_key if model_key in self._available_models else "default"
+            return self._create_selection(resolved_key, config, agent_role, task_type, reason)
 
     def _create_selection(
         self,
@@ -954,22 +963,25 @@ class LLMRouter:
 
     def report_model_failure(self, model_key: str) -> None:
         """上报模型调用失败（由 providers.py 调用）"""
-        if model_key not in self._model_health:
-            self._model_health[model_key] = ModelHealthState()
-        self._model_health[model_key].record_failure()
+        with self._lock:
+            if model_key not in self._model_health:
+                self._model_health[model_key] = ModelHealthState()
+            self._model_health[model_key].record_failure()
 
     def report_model_success(self, model_key: str) -> None:
         """上报模型调用成功"""
-        if model_key in self._model_health:
-            self._model_health[model_key].record_success()
+        with self._lock:
+            if model_key in self._model_health:
+                self._model_health[model_key].record_success()
 
     def _is_model_healthy(self, model_key: str) -> bool:
         """检查模型是否健康（含自动恢复检测）"""
-        if model_key not in self._model_health:
-            return True
-        state = self._model_health[model_key]
-        state.check_recovery()
-        return state.is_healthy
+        with self._lock:
+            if model_key not in self._model_health:
+                return True
+            state = self._model_health[model_key]
+            state.check_recovery()
+            return state.is_healthy
 
     @staticmethod
     def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:

@@ -1,64 +1,64 @@
 {
   "python": {
-    "global": 30,
+    "global": 32,
     "paths": [
       {
         "path": "app/core",
-        "threshold": 28
+        "threshold": 30
       },
       {
         "path": "app/orchestration",
-        "threshold": 8
+        "threshold": 10
       },
       {
         "path": "app/routing",
-        "threshold": 20
+        "threshold": 22
       },
       {
         "path": "app/api",
-        "threshold": 8
-      }
-    ]
-  },
-  "go": {
-    "global": 8,
-    "paths": [
-      {
-        "path": "internal/handler",
-        "threshold": 12
-      },
-      {
-        "path": "internal/service",
-        "threshold": 12
-      },
-      {
-        "path": "internal/db",
         "threshold": 10
       }
     ]
   },
-  "flutter": {
+  "go": {
     "global": 10,
     "paths": [
       {
+        "path": "internal/handler",
+        "threshold": 14
+      },
+      {
+        "path": "internal/service",
+        "threshold": 14
+      },
+      {
+        "path": "internal/db",
+        "threshold": 12
+      }
+    ]
+  },
+  "flutter": {
+    "global": 12,
+    "paths": [
+      {
         "path": "mobile/lib/features/chat",
-        "threshold": 6
+        "threshold": 8
       },
       {
         "path": "mobile/lib/features/plan",
-        "threshold": 5
+        "threshold": 7
       },
       {
         "path": "mobile/lib/features/task",
-        "threshold": 5
+        "threshold": 7
       },
       {
         "path": "mobile/lib/features/home",
-        "threshold": 5
+        "threshold": 7
       },
       {
         "path": "mobile/lib/core/network",
-        "threshold": 8
+        "threshold": 10
       }
     ]
   }

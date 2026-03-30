@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock, AsyncMock as MagicMockType
+from fastapi import HTTPException
 from app.services.llm_service import LLMService
 
 # 模拟流式响应
@@ -93,3 +94,16 @@ async def test_llm_service_token_billing_mock():
         assert "".join(chunks) == "Content"
         assert usage_data is not None
         assert usage_data.total_tokens == 15  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_llm_service_provider_init_failure_returns_http_501():
+    with patch("app.services.llm_service.OpenAICompatibleProvider", side_effect=RuntimeError("boom")):
+        service = LLMService(enable_dynamic_routing=False)
+        service.demo_mode = False
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.chat([{"role": "user", "content": "hello"}])
+
+        assert exc_info.value.status_code == 501
+        assert "boom" in exc_info.value.detail
