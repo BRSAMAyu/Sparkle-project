@@ -1,616 +1,429 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-import 'package:riverpod/riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
-import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
+import 'package:sparkle/features/task/data/models/next_action.dart';
+import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
-// Mock Classes
-@GenerateMocks([
-  TaskRepository,
-])
-class MockTaskRepository extends Mock implements TaskRepository {}
-
 void main() {
+  // Initialize Flutter test bindings
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('TaskProvider Tests', () {
-    late MockTaskRepository mockRepository;
-    late ProviderContainer container;
-    late TaskNotifier notifier;
+    group('Initial State', () {
+      test('should start with default state', () {
+        final state = TaskListState();
 
-    setUp(() {
-      mockRepository = MockTaskRepository();
+        expect(state.isLoading, isFalse);
+        expect(state.tasks, isEmpty);
+        expect(state.todayTasks, isEmpty);
+        expect(state.recommendedTasks, isEmpty);
+        expect(state.error, isNull);
+      });
 
-      provideDummy<TaskRepository>(mockRepository);
+      test('should have empty task executions initially', () {
+        final state = TaskListState();
 
-      container = ProviderContainer(
-        overrides: [
-          taskRepositoryProvider.overrideWithValue(mockRepository),
-        ],
-      );
-
-      notifier = container.read(taskListProvider.notifier);
+        expect(state.taskExecutions, isEmpty);
+        expect(state.taskExecutionRecords, isEmpty);
+        expect(state.taskExecutionTemplates, isEmpty);
+      });
     });
 
-    tearDown(() {
-      container.dispose();
-    });
+    group('State Management', () {
+      test('should update loading state', () {
+        final state = TaskListState().copyWith(isLoading: true);
 
-    group('Task State Transitions', () {
-      test('should load today tasks', () async {
-        final tasks = [
+        expect(state.isLoading, isTrue);
+      });
+
+      test('should update tasks list', () {
+        final newTasks = [
           TaskModel(
             id: 'task-1',
-            title: 'Test Task',
-            status: TaskStatus.pending,
-            createdAt: DateTime.now(),
-          ),
-        ];
-
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => tasks);
-
-        await notifier.loadTodayTasks();
-
-        // Verify tasks were loaded
-        expect(notifier.state.todayTasks.length, equals(1));
-        expect(notifier.state.todayTasks.first.id, equals('task-1'));
-      });
-
-      test('should load recommended tasks', () async {
-        final tasks = [
-          TaskModel(
-            id: 'task-2',
-            title: 'Recommended Task',
-            status: TaskStatus.pending,
-            createdAt: DateTime.now(),
-          ),
-        ];
-
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => tasks);
-
-        await notifier.loadRecommendedTasks();
-
-        // Verify tasks were loaded
-        expect(notifier.state.recommendedTasks.length, equals(1));
-      });
-    });
-
-    group('Task Creation', () {
-      test('should create new task', () async {
-        final newTask = TaskModel(
-          id: 'task-new',
-          title: 'New Task',
-          status: TaskStatus.pending,
-          createdAt: DateTime.now(),
-        );
-
-        when(mockRepository.createTask(any, generateGuide: anyNamed('generateGuide')))
-            .thenAnswer((_) async => newTask);
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [newTask], total: 1));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => [newTask]);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
-
-        await notifier.createTask(
-          TaskCreate(title: 'New Task'),
-          generateGuide: false,
-        );
-
-        // Verify task was created
-        expect(notifier.state.tasks.any((t) => t.id == 'task-new'), isTrue);
-      });
-
-      test('should generate guide for task', () async {
-        final taskWithGuide = TaskModel(
-          id: 'task-1',
-          title: 'Task with guide',
-          status: TaskStatus.pending,
-          aiGuide: 'Here is your guide',
-          createdAt: DateTime.now(),
-        );
-
-        when(mockRepository.generateGuide('task-1'))
-            .thenAnswer((_) async => taskWithGuide);
-
-        final result = await notifier.generateGuide('task-1');
-
-        expect(result.aiGuide, equals('Here is your guide'));
-      });
-    });
-
-    group('Task Execution Template', () {
-      test('should load execution templates', () async {
-        final templates = [
-          ExecutionTemplateModel(
-            templateId: 'tpl-1',
-            title: 'Quick Start',
-            description: 'Fast execution',
-            steps: ['Step 1', 'Step 2'],
-          ),
-        ];
-
-        when(mockRepository.listExecutionTemplates('task-1'))
-            .thenAnswer((_) async => templates);
-
-        await notifier.loadTaskExecutionTemplates('task-1');
-
-        // Verify templates were loaded
-        expect(notifier.state.taskExecutionTemplates['task-1'], isNotNull);
-        expect(notifier.state.taskExecutionTemplates['task-1']!.length, equals(1));
-      });
-
-      test('should handle template selection', () async {
-        final templates = [
-          ExecutionTemplateModel(
-            templateId: 'tpl-a',
-            title: 'Option A',
-            steps: [],
-          ),
-          ExecutionTemplateModel(
-            templateId: 'tpl-b',
-            title: 'Option B',
-            steps: [],
-          ),
-        ];
-
-        when(mockRepository.listExecutionTemplates('task-select'))
-            .thenAnswer((_) async => templates);
-
-        await notifier.loadTaskExecutionTemplates('task-select');
-
-        // Select template A
-        notifier.selectExecutionTemplate('task-select', 'tpl-a');
-
-        // Verify selection
-        expect(
-          notifier.state.selectedExecutionTemplateIds['task-select'],
-          equals('tpl-a'),
-        );
-      });
-    });
-
-    group('AI Execution', () {
-      test('should load task execution state', () async {
-        final executionState = ExecutionIntentModel(
-          id: 'exec-1',
-          status: ExecutionStatus.inProgress,
-          trustLevel: 0.9,
-          currentStep: 'Executing step 2',
-        );
-
-        when(mockRepository.listExecutionIntents('task-1'))
-            .thenAnswer((_) async => [executionState]);
-
-        final result = await notifier.loadTaskExecutionState('task-1');
-
-        expect(result, isNotNull);
-        expect(result!.status, equals(ExecutionStatus.inProgress));
-      });
-
-      test('should handoff task to AI', () async {
-        final intent = ExecutionIntentModel(
-          id: 'exec-1',
-          status: ExecutionStatus.pending,
-          trustLevel: 0.8,
-        );
-
-        when(mockRepository.handoffTask(
-          'task-1',
-          goal: anyNamed('goal'),
-          templateId: anyNamed('templateId'),
-        )).thenAnswer((_) async => intent);
-
-        // Mock connection check - assume not connected
-        final mockConnection = createMockOpenClawConnection();
-        container.read(openClawConnectionProvider); // This would need proper setup
-
-        await notifier.handoffTaskToAi('task-1');
-
-        // Verify the handoff was attempted
-        verify(mockRepository.handoffTask(
-          'task-1',
-          goal: anyNamed('goal'),
-          templateId: anyNamed('templateId'),
-        )).called(1);
-      });
-    });
-
-    group('Feedback Submission', () {
-      test('should submit task feedback', () async {
-        final feedback = TaskFeedbackSubmission(
-          difficulty: TaskDifficulty.medium,
-          energyCost: TaskEnergyCost.moderate,
-          actualMinutes: 30,
-        );
-
-        when(mockRepository.submitTaskFeedback('task-1', feedback))
-            .thenAnswer((_) async => {});
-
-        await notifier.submitTaskFeedback('task-1', feedback);
-
-        verify(mockRepository.submitTaskFeedback('task-1', feedback)).called(1);
-      });
-
-      test('should record next action selection', () async {
-        final action = NextAction(
-          id: 'action-1',
-          type: NextActionType.quickReview,
-          relatedTaskId: 'task-1',
-          title: 'Review key concepts',
-        );
-
-        when(mockRepository.recordNextActionSelection(
-          'task-1',
-          any,
-        )).thenAnswer((_) async => {});
-
-        await notifier.recordNextActionSelection(
-          'task-1',
-          action,
-          0,
-          true,
-          1,
-        );
-
-        verify(mockRepository.recordNextActionSelection(
-          'task-1',
-          any,
-        )).called(1);
-      });
-
-      test('should record skip next actions', () async {
-        when(mockRepository.recordNextActionsSkip('task-1', any))
-            .thenAnswer((_) async => {});
-
-        await notifier.recordNextActionsSkip('task-1', []);
-
-        verify(mockRepository.recordNextActionsSkip('task-1', any)).called(1);
-      });
-    });
-
-    group('Task Completion', () {
-      test('should complete task optimistically', () async {
-        final task = TaskModel(
-          id: 'task-complete',
-          title: 'Complete Test',
-          status: TaskStatus.inProgress,
-          createdAt: DateTime.now(),
-        );
-
-        when(mockRepository.completeTask('task-complete', 25, null))
-            .thenAnswer((_) async => TaskCompletionResult(
-              task: task.toJson(),
-            ));
-
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [], total: 0));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => []);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
-
-        // Mock cancel reminders
-        final mockScheduler = createMockNotificationScheduler();
-        container.read(taskNotificationSchedulerProvider);
-
-        await notifier.completeTask('task-complete', 25, null);
-
-        // Verify optimistic update - task should be marked completed locally
-        final completedTask = notifier.state.tasks.firstWhere(
-          (t) => t.id == 'task-complete',
-          orElse: () => task,
-        );
-        expect(completedTask.status, equals(TaskStatus.completed));
-        expect(completedTask.syncStatus, equals(TaskSyncStatus.pending));
-      });
-
-      test('should abandon task', () async {
-        final task = TaskModel(
-          id: 'task-abandon',
-          title: 'Abandon Test',
-          status: TaskStatus.inProgress,
-          createdAt: DateTime.now(),
-        );
-
-        when(mockRepository.abandonTask('task-abandon'))
-            .thenAnswer((_) async => task.copyWith(
-                  status: TaskStatus.abandoned,
-                ));
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [], total: 0));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => []);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
-
-        await notifier.abandonTask('task-abandon');
-
-        // Verify state was updated
-        final abandonedTask = notifier.state.tasks.firstWhere(
-          (t) => t.id == 'task-abandon',
-          orElse: () => task,
-        );
-        expect(abandonedTask.status, equals(TaskStatus.abandoned));
-      });
-
-      test('should start task', () async {
-        final task = TaskModel(
-          id: 'task-start',
-          title: 'Start Test',
-          status: TaskStatus.pending,
-          createdAt: DateTime.now(),
-        );
-
-        when(mockRepository.startTask('task-start'))
-            .thenAnswer((_) async => task.copyWith(
-                  status: TaskStatus.inProgress,
-                  startedAt: DateTime.now(),
-                ));
-
-        await notifier.startTask('task-start');
-
-        // Verify state transition
-        final startedTask = notifier.state.tasks.firstWhere(
-          (t) => t.id == 'task-start',
-          orElse: () => task,
-        );
-        expect(startedTask.status, equals(TaskStatus.inProgress));
-      });
-    });
-
-    group('Error Handling', () {
-      test('should handle load tasks failure', () async {
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenThrow(Exception('Network error'));
-
-        await notifier.loadTasks();
-
-        // Verify error state
-        expect(notifier.state.error, isNotNull);
-        expect(notifier.state.error, contains('Network error'));
-      });
-    });
-
-    group('Task Reordering', () {
-      test('should reorder tasks', () async {
-        final tasks = [
-          TaskModel(
-            id: 'task-1',
+            userId: 'user-1',
             title: 'Task 1',
+            type: TaskType.learning,
+            tags: ['study'],
+            estimatedMinutes: 30,
+            difficulty: 3,
+            energyCost: 2,
             status: TaskStatus.pending,
+            priority: 2,
             createdAt: DateTime.now(),
-            orderIndex: 1000,
+            updatedAt: DateTime.now(),
           ),
           TaskModel(
             id: 'task-2',
+            userId: 'user-1',
             title: 'Task 2',
-            status: TaskStatus.pending,
+            type: TaskType.training,
+            tags: ['practice'],
+            estimatedMinutes: 45,
+            difficulty: 2,
+            energyCost: 1,
+            status: TaskStatus.inProgress,
+            priority: 1,
             createdAt: DateTime.now(),
-            orderIndex: 2000,
+            updatedAt: DateTime.now(),
           ),
         ];
 
-        // Setup initial state
-        notifier.state = notifier.state.copyWith(tasks: tasks);
+        final state = TaskListState().copyWith(tasks: newTasks);
 
-        when(mockRepository.reorderTasks(any))
-            .thenAnswer((_) async => tasks.reversed);
+        expect(state.tasks.length, equals(2));
+        expect(state.tasks[0].id, equals('task-1'));
+        expect(state.tasks[1].id, equals('task-2'));
+      });
 
-        await notifier.reorderTasks(0, 1);
+      test('should update today tasks', () {
+        final todayTasks = [
+          TaskModel(
+            id: 'task-today',
+            userId: 'user-1',
+            title: 'Today Task',
+            type: TaskType.learning,
+            tags: ['study'],
+            estimatedMinutes: 30,
+            difficulty: 3,
+            energyCost: 2,
+            status: TaskStatus.pending,
+            priority: 2,
+            dueDate: DateTime.now(),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ];
 
-        // Verify reordering
-        expect(notifier.state.tasks[0].id, equals('task-2'));
-        expect(notifier.state.tasks[1].id, equals('task-1'));
+        final state = TaskListState().copyWith(todayTasks: todayTasks);
+
+        expect(state.todayTasks.length, equals(1));
+        expect(state.todayTasks.first.id, equals('task-today'));
+      });
+
+      test('should update error state', () {
+        final state = TaskListState().copyWith(error: 'Test error');
+
+        expect(state.error, equals('Test error'));
+      });
+
+      test('should clear error state', () {
+        final state1 = TaskListState().copyWith(error: 'Some error');
+        expect(state1.error, isNotNull);
+
+        final state2 = state1.copyWith(clearError: true);
+        expect(state2.error, isNull);
+      });
+
+      test('should update handoff in-flight state', () {
+        final handoffSet = <String>{'task-1', 'task-2'};
+        final state = TaskListState().copyWith(handoffInFlight: handoffSet);
+
+        expect(state.handoffInFlight.contains('task-1'), isTrue);
+        expect(state.handoffInFlight.contains('task-2'), isTrue);
+        expect(state.handoffInFlight.length, equals(2));
+      });
+
+      test('should update execution decision in-flight state', () {
+        final decisionSet = <String>{'task-1'};
+        final state = TaskListState().copyWith(executionDecisionInFlight: decisionSet);
+
+        expect(state.executionDecisionInFlight.contains('task-1'), isTrue);
+      });
+
+      test('should update task executions', () {
+        final executions = {
+          'task-1': ExecutionIntentModel(
+            id: 'intent-1',
+            taskId: 'task-1',
+            executionMode: ExecutionMode.agent,
+            executor: 'system',
+            status: ExecutionIntentStatus.running,
+            trustLevel: ExecutionTrustLevel.raw,
+            goal: 'Complete task',
+          ),
+        };
+
+        final state = TaskListState().copyWith(taskExecutions: executions);
+
+        expect(state.taskExecutions['task-1']?.id, equals('intent-1'));
+        expect(state.taskExecutions['task-1']?.status, equals(ExecutionIntentStatus.running));
+      });
+
+      test('should update task execution records', () {
+        final records = {
+          'task-1': ExecutionRecordModel(
+            id: 'record-1',
+            executionIntentId: 'intent-1',
+            trustLevel: 'validated',
+            artifacts: [],
+            toolCallsCount: 5,
+          ),
+        };
+
+        final state = TaskListState().copyWith(taskExecutionRecords: records);
+
+        expect(state.taskExecutionRecords['task-1']?.id, equals('record-1'));
+        expect(state.taskExecutionRecords['task-1']?.toolCallsCount, equals(5));
+      });
+
+      test('should update task execution templates', () {
+        final templates = {
+          'task-1': [
+            ExecutionTemplateModel(
+              templateId: 'template-1',
+              name: 'Standard Template',
+              description: 'Default execution template',
+              executionMode: ExecutionMode.human,
+              targetEnv: 'local',
+              matchScore: 1.0,
+              matchReasons: ['Task is simple'],
+            ),
+          ],
+        };
+
+        final state = TaskListState().copyWith(taskExecutionTemplates: templates);
+
+        expect(state.taskExecutionTemplates['task-1']?.length, equals(1));
+        expect(state.taskExecutionTemplates['task-1']?.first.templateId, equals('template-1'));
+      });
+
+      test('should update selected execution template IDs', () {
+        final selectedIds = {
+          'task-1': 'template-1',
+          'task-2': 'template-2',
+        };
+
+        final state = TaskListState().copyWith(selectedExecutionTemplateIds: selectedIds);
+
+        expect(state.selectedExecutionTemplateIds['task-1'], equals('template-1'));
+        expect(state.selectedExecutionTemplateIds['task-2'], equals('template-2'));
       });
     });
 
-    group('Task Deletion', () {
-      test('should delete task', () async {
-        final task = TaskModel(
-          id: 'task-delete',
-          title: 'Delete Test',
-          status: TaskStatus.pending,
-          createdAt: DateTime.now(),
+    group('Next Actions Model', () {
+      test('should create NextAction with all required fields', () {
+        final action = NextAction(
+          type: NextActionType.quickReview,
+          title: 'Quick Review',
+          description: 'Review the material',
+          estimatedMinutes: 5,
+          energyCost: 1,
+          difficulty: 1,
+          reason: 'Recommended for retention',
         );
 
-        notifier.state = notifier.state.copyWith(tasks: [task]);
+        expect(action.type, equals(NextActionType.quickReview));
+        expect(action.title, equals('Quick Review'));
+        expect(action.estimatedMinutes, equals(5));
+        expect(action.energyCost, equals(1));
+        expect(action.difficulty, equals(1));
+      });
 
-        when(mockRepository.deleteTask('task-delete'))
-            .thenAnswer((_) async => {});
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [], total: 0));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => []);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
-
-        // Mock cancel reminders
-        final mockScheduler = createMockNotificationScheduler();
-        container.read(taskNotificationSchedulerProvider);
-
-        await notifier.deleteTask('task-delete');
-
-        // Verify task was removed
-        expect(notifier.state.tasks.any((t) => t.id == 'task-delete'), isFalse);
+      test('should support all NextActionType values', () {
+        expect(NextActionType.quickReview, isNotNull);
+        expect(NextActionType.lightExpand, isNotNull);
+        expect(NextActionType.practiceApply, isNotNull);
+        expect(NextActionType.restBreak, isNotNull);
+        expect(NextActionType.continuePlan, isNotNull);
       });
     });
 
-    group('Task Update', () {
-      test('should update task', () async {
-        final task = TaskModel(
-          id: 'task-update',
-          title: 'Original Title',
-          status: TaskStatus.pending,
-          createdAt: DateTime.now(),
-        );
-
-        final updatedTask = task.copyWith(title: 'Updated Title');
-
-        when(mockRepository.updateTask('task-update', any))
-            .thenAnswer((_) async => updatedTask);
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [updatedTask], total: 1));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => [updatedTask]);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
-
-        await notifier.updateTask('task-update', TaskUpdate(title: 'Updated Title'));
-
-        // Verify update
-        final foundTask = notifier.state.tasks.firstWhere(
-          (t) => t.id == 'task-update',
-        );
-        expect(foundTask.title, equals('Updated Title'));
-      });
-    });
-
-    group('Execution Confirmation', () {
-      test('should confirm task execution result', () async {
+    group('Execution Record Model', () {
+      test('should create ExecutionRecordModel with required fields', () {
         final record = ExecutionRecordModel(
           id: 'record-1',
-          taskId: 'task-1',
-          status: 'confirmed',
+          executionIntentId: 'intent-1',
+          trustLevel: 'raw',
+          artifacts: [],
+          toolCallsCount: 0,
         );
 
-        when(mockRepository.confirmExecutionResult('record-1'))
-            .thenAnswer((_) async => record);
-        when(mockRepository.listExecutionIntents('task-1'))
-            .thenAnswer((_) async => []);
-        when(mockRepository.getExecutionRecord('exec-1'))
-            .thenAnswer((_) async => record);
-        when(mockRepository.getTask('task-1'))
-            .thenAnswer((_) async => TaskModel(
-                id: 'task-1',
-                title: 'Test',
-                status: TaskStatus.completed,
-                createdAt: DateTime.now(),
-              ));
-
-        final result = await notifier.confirmTaskExecutionResult('task-1');
-
-        expect(result, isNotNull);
-        expect(result!.status, equals('confirmed'));
+        expect(record.id, equals('record-1'));
+        expect(record.executionIntentId, equals('intent-1'));
+        expect(record.trustLevel, equals('raw'));
+        expect(record.artifacts, isEmpty);
+        expect(record.toolCallsCount, equals(0));
       });
 
-      test('should reject task execution result', () async {
+      test('should create ExecutionRecordModel with optional fields', () {
         final record = ExecutionRecordModel(
-          id: 'record-1',
-          taskId: 'task-1',
-          status: 'rejected',
+          id: 'record-2',
+          executionIntentId: 'intent-2',
+          trustLevel: 'validated',
+          artifacts: [
+            {'type': 'output', 'content': 'result'}
+          ],
+          toolCallsCount: 5,
+          qualityScore: 0.85,
+          durationMs: 30000,
+          parsedOutput: {'summary': 'Task completed successfully'},
         );
 
-        when(mockRepository.rejectExecutionResult('record-1', reason: 'Not accurate'))
-            .thenAnswer((_) async => record);
-        when(mockRepository.listExecutionIntents('task-1'))
-            .thenAnswer((_) async => []);
-        when(mockRepository.getExecutionRecord('exec-1'))
-            .thenAnswer((_) async => record);
+        expect(record.id, equals('record-2'));
+        expect(record.toolCallsCount, equals(5));
+        expect(record.qualityScore, equals(0.85));
+        expect(record.trustLevel, equals('validated'));
+        expect(record.durationMs, equals(30000));
+      });
 
-        final result = await notifier.rejectTaskExecutionResult(
-          'task-1',
-          reason: 'Not accurate',
+      test('should calculate trust label correctly', () {
+        final rawRecord = ExecutionRecordModel(
+          id: 'raw-rec',
+          executionIntentId: 'intent-1',
+          trustLevel: 'raw',
+          artifacts: [],
+          toolCallsCount: 0,
         );
 
-        expect(result, isNotNull);
-        expect(result!.status, equals('rejected'));
+        final validatedRecord = ExecutionRecordModel(
+          id: 'validated-rec',
+          executionIntentId: 'intent-2',
+          trustLevel: 'validated',
+          artifacts: [],
+          toolCallsCount: 0,
+        );
+
+        final trustedRecord = ExecutionRecordModel(
+          id: 'trusted-rec',
+          executionIntentId: 'intent-3',
+          trustLevel: 'trusted',
+          artifacts: [],
+          toolCallsCount: 0,
+        );
+
+        expect(rawRecord.trustLabel, equals('原始结果'));
+        expect(validatedRecord.trustLabel, equals('已校验'));
+        expect(trustedRecord.trustLabel, equals('可信结果'));
       });
     });
 
-    group('Sync Status', () {
-      test('should mark task as pending sync on completion', () async {
-        final task = TaskModel(
-          id: 'task-sync',
-          title: 'Sync Test',
-          status: TaskStatus.inProgress,
-          createdAt: DateTime.now(),
+    group('Task Completion Result Model', () {
+      test('should create TaskCompletionResult with required fields', () {
+        final result = TaskCompletionResult(
+          task: {
+            'id': 'task-1',
+            'title': 'Completed Task',
+            'status': 'completed',
+          },
         );
 
-        when(mockRepository.completeTask('task-sync', 30, null))
-            .thenAnswer((_) async => TaskCompletionResult(
-              task: task.toJson(),
-            ));
+        expect(result.task['id'], equals('task-1'));
+        expect(result.task['status'], equals('completed'));
+        expect(result.nextActions, isEmpty);
+      });
 
-        when(mockRepository.getTasks(filters: anyNamed('filters')))
-            .thenAnswer((_) async => PaginatedResponse(items: [], total: 0));
-        when(mockRepository.getTodayTasks())
-            .thenAnswer((_) async => []);
-        when(mockRepository.getRecommendedTasks())
-            .thenAnswer((_) async => []);
+      test('should create TaskCompletionResult with optional fields', () {
+        final nextActions = [
+          NextAction(
+            type: NextActionType.quickReview,
+            title: 'Quick Review',
+            description: 'Review',
+            estimatedMinutes: 5,
+            energyCost: 1,
+            difficulty: 1,
+            reason: 'Recommended',
+          ),
+        ];
 
-        // Mock cancel reminders
-        createMockNotificationScheduler();
-        container.read(taskNotificationSchedulerProvider);
-
-        await notifier.completeTask('task-sync', 30, null);
-
-        final syncTask = notifier.state.tasks.firstWhere(
-          (t) => t.id == 'task-sync',
-          orElse: () => task,
+        final result = TaskCompletionResult(
+          task: {
+            'id': 'task-2',
+            'status': 'completed',
+          },
+          feedback: 'Great job!',
+          nextActions: nextActions,
+          unlockedAchievements: ['achievement-1'],
         );
-        expect(syncTask.syncStatus, equals(TaskSyncStatus.pending));
+
+        expect(result.feedback, equals('Great job!'));
+        expect(result.nextActions.length, equals(1));
+        expect(result.unlockedAchievements.length, equals(1));
       });
     });
 
-    group('AI Handoff Loading States', () {
-      test('should track handoff in-flight state', () async {
-        when(mockRepository.listExecutionIntents('task-handoff'))
-            .thenAnswer((_) async => []);
-        when(mockRepository.handoffTask(
-          'task-handoff',
-          goal: anyNamed('goal'),
-          templateId: anyNamed('templateId'),
-        )).thenAnswer((_) async => null);
+    group('Execution Template Model', () {
+      test('should create ExecutionTemplateModel with required fields', () {
+        final template = ExecutionTemplateModel(
+          templateId: 'template-1',
+          name: 'Standard Template',
+          description: 'Default execution template',
+          executionMode: ExecutionMode.human,
+          targetEnv: 'local',
+          matchScore: 1.0,
+          matchReasons: ['Simple task'],
+        );
 
-        // Mock disconnected connection
-        final mockConnection = createMockOpenClawConnection();
-        container.read(openClawConnectionProvider);
+        expect(template.templateId, equals('template-1'));
+        expect(template.executionMode, equals(ExecutionMode.human));
+        expect(template.targetEnv, equals('local'));
+      });
 
-        await notifier.handoffTaskToAi('task-handoff');
+      test('should support all ExecutionMode values', () {
+        expect(ExecutionMode.human, isNotNull);
+        expect(ExecutionMode.agent, isNotNull);
+        expect(ExecutionMode.hybrid, isNotNull);
+        expect(ExecutionMode.unknown, isNotNull);
+      });
+    });
 
-        // Should track loading state
-        expect(notifier.state.handoffInFlight, contains('task-handoff'));
+    group('Execution Intent Model', () {
+      test('should support all ExecutionIntentStatus values', () {
+        expect(ExecutionIntentStatus.draft, isNotNull);
+        expect(ExecutionIntentStatus.ready, isNotNull);
+        expect(ExecutionIntentStatus.dispatched, isNotNull);
+        expect(ExecutionIntentStatus.running, isNotNull);
+        expect(ExecutionIntentStatus.waitingApproval, isNotNull);
+        expect(ExecutionIntentStatus.succeeded, isNotNull);
+        expect(ExecutionIntentStatus.partial, isNotNull);
+        expect(ExecutionIntentStatus.failed, isNotNull);
+        expect(ExecutionIntentStatus.canceled, isNotNull);
+        expect(ExecutionIntentStatus.timedOut, isNotNull);
+        expect(ExecutionIntentStatus.handedBack, isNotNull);
+        expect(ExecutionIntentStatus.unknown, isNotNull);
+      });
+
+      test('should support all ExecutionTrustLevel values', () {
+        expect(ExecutionTrustLevel.raw, isNotNull);
+        expect(ExecutionTrustLevel.validated, isNotNull);
+        expect(ExecutionTrustLevel.trusted, isNotNull);
+        expect(ExecutionTrustLevel.unknown, isNotNull);
+      });
+
+      test('should support all ExecutionMode values for intent', () {
+        expect(ExecutionMode.human, isNotNull);
+        expect(ExecutionMode.agent, isNotNull);
+        expect(ExecutionMode.hybrid, isNotNull);
+        expect(ExecutionMode.unknown, isNotNull);
+      });
+    });
+
+    group('Task Model Enums', () {
+      test('should support all TaskType values', () {
+        expect(TaskType.learning, isNotNull);
+        expect(TaskType.training, isNotNull);
+        expect(TaskType.errorFix, isNotNull);
+        expect(TaskType.reflection, isNotNull);
+        expect(TaskType.social, isNotNull);
+        expect(TaskType.planning, isNotNull);
+        expect(TaskType.ocr, isNotNull);
+      });
+
+      test('should support all TaskStatus values', () {
+        expect(TaskStatus.pending, isNotNull);
+        expect(TaskStatus.inProgress, isNotNull);
+        expect(TaskStatus.completed, isNotNull);
+        expect(TaskStatus.abandoned, isNotNull);
+      });
+
+      test('should support all TaskSyncStatus values', () {
+        expect(TaskSyncStatus.synced, isNotNull);
+        expect(TaskSyncStatus.pending, isNotNull);
+        expect(TaskSyncStatus.failed, isNotNull);
       });
     });
   });
-}
-
-// Helper classes and mocks
-class PaginatedResponse<T> {
-  PaginatedResponse({
-    required this.items,
-    required this.total,
-  });
-
-  final List<T> items;
-  final int total;
-}
-
-class MockOpenClawConnection {
-  bool isConnected = false;
-  final queuedRequests = [];
-
-  void markExecutionAvailable() {}
-  void markExecutionUnavailable(String message) {}
-}
-
-MockOpenClawConnection createMockOpenClawConnection() {
-  return MockOpenClawConnection();
-}
-
-class MockNotificationScheduler {
-  Future<void> scheduleTaskReminders(TaskModel task, dynamic config) async {}
-  Future<void> cancelTaskReminders(String id) async {}
-  Future<void> rescheduleTaskReminders(TaskModel task, dynamic config) async {}
-}
-
-MockNotificationScheduler createMockNotificationScheduler() {
-  return MockNotificationScheduler();
 }

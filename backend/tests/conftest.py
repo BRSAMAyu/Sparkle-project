@@ -37,7 +37,7 @@ from app.models.community import (  # noqa: F401
 )
 from app.models.accountability import AccountabilityPartnership, AccountabilityCheckin  # noqa: F401
 from app.models.achievement import Achievement, UserAchievement  # noqa: F401
-from app.models.cognitive import BehaviorPattern  # noqa: F401
+from app.models.cognitive import BehaviorPattern, CognitiveFragment  # noqa: F401
 from app.models.shop import (  # noqa: F401
     ShopItem, ShopPurchase, UserConsumable,
     PhotonTransactionType, ShopItemType, ItemRarity, ConsumableEffectType

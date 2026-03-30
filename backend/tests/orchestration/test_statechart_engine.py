@@ -296,7 +296,7 @@ class TestConditionalRouting:
         """测试多分支路由"""
 
         async def router_node(state: WorkflowState) -> WorkflowState:
-            state.context_data["score"] = 75
+            # 不覆盖分数，使用传入的分数
             return state
 
         async def high_branch(state: WorkflowState) -> WorkflowState:
@@ -330,6 +330,7 @@ class TestConditionalRouting:
         graph.compile()
 
         # 测试中等分数
+        sample_state.context_data["score"] = 75
         result = await graph.invoke(sample_state)
         assert result.context_data["tier"] == "medium"
 
@@ -751,8 +752,8 @@ class TestErrorHandling:
 
         def error_router(state: WorkflowState) -> str:
             if state.errors:
-                return "recovery_node"
-            return "success_node"
+                return "recovery"
+            return "success"
 
         graph = StateGraph("RecoveryGraph")
         graph.add_node("process", process_node)
@@ -789,13 +790,18 @@ class TestEventEmission:
 
         events, collector = event_history
 
-        async def test_node(state: WorkflowState) -> WorkflowState:
+        async def first_node(state: WorkflowState) -> WorkflowState:
             await asyncio.sleep(0.01)
             return state
 
+        async def second_node(state: WorkflowState) -> WorkflowState:
+            return state
+
         graph = StateGraph("EventTestGraph")
-        graph.add_node("test_node", test_node)
-        graph.set_entry_point("test_node")
+        graph.add_node("first_node", first_node)
+        graph.add_node("second_node", second_node)
+        graph.add_edge("first_node", "second_node")
+        graph.set_entry_point("first_node")
         graph.on_event = collector
         graph.compile()
 
