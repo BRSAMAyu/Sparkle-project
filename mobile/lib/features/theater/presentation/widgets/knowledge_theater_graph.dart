@@ -40,10 +40,15 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
   late final GalaxyForceEngine _forceEngine;
   late final GalaxySpatialIndex _spatialIndex;
   late final AnimationController _pulseController;
+  late final TransformationController _transformationController;
   Timer? _timer;
   Map<String, Offset> _positions = const <String, Offset>{};
   Map<String, Set<String>> _adjacency = const <String, Set<String>>{};
   Map<String, double> _edgeStrengths = const <String, double>{};
+  Matrix4 _defaultTransform = Matrix4.identity();
+  Size _viewportSize = Size.zero;
+  Size _canvasSize = Size.zero;
+  bool _hasAdjustedViewport = false;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
       centerGravity: 0.002,
     );
     _spatialIndex = GalaxySpatialIndex();
+    _transformationController = TransformationController();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -78,6 +84,7 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
   @override
   void dispose() {
     _timer?.cancel();
+    _transformationController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -160,58 +167,109 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
-          final size = Size(constraints.maxWidth, constraints.maxHeight);
+          final viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
+          final canvasSize = _resolveCanvasSize(viewportSize);
+          _syncViewport(canvasSize: canvasSize, viewportSize: viewportSize);
           final stage = AnimatedBuilder(
             animation: _pulseController,
-            builder: (context, child) => CustomPaint(
-              painter: _KnowledgeTheaterPainter(
-                nodes: widget.nodes,
-                edges: widget.edges,
-                positions: _positions,
-                focusNodeIds: widget.focusNodeIds.toSet(),
-                routeNodeIds: widget.routeNodeIds.toSet(),
-                selectedNodeId: widget.selectedNodeId,
-                pulseValue: _pulseController.value,
-                backgroundColors: <Color>[
-                  Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest
-                      .withValues(alpha: 0.98),
-                  Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHigh
-                      .withValues(alpha: 0.92),
-                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.98),
-                ],
-                edgeColor: DS.info,
-                focusEdgeColor: DS.warning,
-                lowRiskColor: DS.success,
-                mediumRiskColor: DS.warning,
-                highRiskColor: DS.error,
-                labelColor: Theme.of(context).colorScheme.onSurface,
+            builder: (context, child) => SizedBox(
+              width: canvasSize.width,
+              height: canvasSize.height,
+              child: CustomPaint(
+                painter: _KnowledgeTheaterPainter(
+                  nodes: widget.nodes,
+                  edges: widget.edges,
+                  positions: _positions,
+                  focusNodeIds: widget.focusNodeIds.toSet(),
+                  routeNodeIds: widget.routeNodeIds.toSet(),
+                  selectedNodeId: widget.selectedNodeId,
+                  pulseValue: _pulseController.value,
+                  backgroundColors: <Color>[
+                    Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.98),
+                    Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHigh
+                        .withValues(alpha: 0.92),
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.98),
+                  ],
+                  edgeColor: DS.info,
+                  focusEdgeColor: DS.warning,
+                  lowRiskColor: DS.success,
+                  mediumRiskColor: DS.warning,
+                  highRiskColor: DS.error,
+                  labelColor: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           );
           return ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (details) => _handleTapUp(details.localPosition, size),
-              onLongPressStart: (details) => _handleLongPressStart(
-                details.localPosition,
-                details.globalPosition,
-                size,
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              constrained: false,
+              boundaryMargin: const EdgeInsets.all(240),
+              minScale: 0.78,
+              maxScale: 2.2,
+              onInteractionStart: (_) => _hasAdjustedViewport = true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (details) =>
+                    _handleTapUp(details.localPosition, canvasSize),
+                onLongPressStart: (details) => _handleLongPressStart(
+                  details.localPosition,
+                  details.globalPosition,
+                  canvasSize,
+                ),
+                onDoubleTap: _resetViewport,
+                child: widget.expandToFill
+                    ? SizedBox(
+                        width: canvasSize.width,
+                        height: canvasSize.height,
+                        child: stage,
+                      )
+                    : AspectRatio(
+                        aspectRatio: 1.3,
+                        child: stage,
+                      ),
               ),
-              child: widget.expandToFill
-                  ? SizedBox.expand(child: stage)
-                  : AspectRatio(
-                      aspectRatio: 1.3,
-                      child: stage,
-                    ),
             ),
           );
         },
       );
+
+  Size _resolveCanvasSize(Size viewportSize) => Size(
+        math.max(920, viewportSize.width * 1.7),
+        math.max(720, viewportSize.height * 1.45),
+      );
+
+  void _syncViewport({
+    required Size canvasSize,
+    required Size viewportSize,
+  }) {
+    if (_canvasSize == canvasSize && _viewportSize == viewportSize) {
+      return;
+    }
+    _canvasSize = canvasSize;
+    _viewportSize = viewportSize;
+    _defaultTransform = Matrix4.identity();
+    _defaultTransform.setTranslationRaw(
+      (viewportSize.width - canvasSize.width) / 2,
+      (viewportSize.height - canvasSize.height) / 2,
+      0,
+    );
+    if (_hasAdjustedViewport) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _transformationController.value = Matrix4.copy(_defaultTransform);
+    });
+  }
 
   void _handleTapUp(Offset localPosition, Size size) {
     final node = _hitTestNode(localPosition, size);
@@ -240,7 +298,7 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
       if (world == null) {
         continue;
       }
-      final point = center + world;
+      final point = _transformPoint(center, world);
       final radius = _nodeRadius(node);
       if ((localPosition - point).distance <= radius + 14) {
         return node;
@@ -259,8 +317,8 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
       if (source == null || target == null) {
         continue;
       }
-      final p1 = center + source;
-      final p2 = center + target;
+      final p1 = _transformPoint(center, source);
+      final p2 = _transformPoint(center, target);
       final control = Offset(
         (p1.dx + p2.dx) / 2 + (p2.dy - p1.dy) * 0.12,
         (p1.dy + p2.dy) / 2 + (p1.dx - p2.dx) * 0.12,
@@ -311,6 +369,15 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
       ((node.predictedMastery - node.currentMastery) / 18)
           .clamp(0, node.sourceType == 'hybrid_reference' ? 5 : 8)
           .toDouble();
+
+  Offset _transformPoint(Offset center, Offset world) => center + world;
+
+  void _resetViewport() {
+    setState(() {
+      _hasAdjustedViewport = false;
+      _transformationController.value = Matrix4.copy(_defaultTransform);
+    });
+  }
 }
 
 class _KnowledgeTheaterPainter extends CustomPainter {
@@ -387,7 +454,11 @@ class _KnowledgeTheaterPainter extends CustomPainter {
                   ? focusEdgeColor
                   : (isRouteEdge ? labelColor : edgeColor))
               .withValues(
-            alpha: _edgeAlpha(edge, isFocused: isFocused, isRouteEdge: isRouteEdge),
+            alpha: _edgeAlpha(
+              edge,
+              isFocused: isFocused,
+              isRouteEdge: isRouteEdge,
+            ),
           ),
       );
     }
@@ -500,7 +571,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
         maxLines: 1,
         ellipsis: '…',
         textDirection: TextDirection.ltr,
-      )..layout(maxWidth: 82);
+      )..layout(maxWidth: 92);
       textPainter.paint(
         canvas,
         Offset(point.dx - textPainter.width / 2, point.dy + radius + 6),

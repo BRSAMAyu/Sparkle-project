@@ -36,7 +36,7 @@ class DashboardCardSection extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           DS.spacing16,
-          0,
+          DS.spacing4,
           DS.spacing16,
           DS.spacing10,
         ),

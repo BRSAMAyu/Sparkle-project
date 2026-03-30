@@ -260,7 +260,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               children: [
                 _buildRankList(
                   byFlame,
-                  value: (m) => '${m.flameContribution} 🔥',
+                  value: (m) => '${m.flameContribution} 火焰',
                 ),
                 _buildRankList(
                   byStreak,

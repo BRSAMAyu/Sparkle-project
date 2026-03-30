@@ -129,6 +129,7 @@ class SimulationSession:
     interaction_options: list[str] | None = None
     planned_round_count: int = 0
     pending_interaction: dict[str, Any] | None = None
+    facilitation_style: str = "balanced"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -145,6 +146,7 @@ class SimulationSession:
             "interaction_options": list(self.interaction_options or []),
             "planned_round_count": self.planned_round_count,
             "pending_interaction": self.pending_interaction,
+            "facilitation_style": self.facilitation_style,
         }
 
 
@@ -161,6 +163,9 @@ class SimulationEngine:
         *,
         topic: str,
         scenario_key: str,
+        planned_round_count: int | None = None,
+        participant_names: list[str] | None = None,
+        facilitation_style: str = "balanced",
         user_id: UUID | None = None,
         user_context: dict[str, Any] | None = None,
     ) -> SimulationSession:
@@ -168,6 +173,9 @@ class SimulationEngine:
         async for event_name, payload in self.stream(
             topic=topic,
             scenario_key=scenario_key,
+            planned_round_count=planned_round_count,
+            participant_names=participant_names,
+            facilitation_style=facilitation_style,
             user_id=user_id,
             user_context=user_context,
             await_user_input=False,
@@ -300,6 +308,9 @@ class SimulationEngine:
         *,
         topic: str,
         scenario_key: str,
+        planned_round_count: int | None = None,
+        participant_names: list[str] | None = None,
+        facilitation_style: str = "balanced",
         user_id: UUID | None = None,
         user_context: dict[str, Any] | None = None,
         await_user_input: bool = True,
@@ -307,6 +318,11 @@ class SimulationEngine:
         session_id = str(uuid4())
         normalized_scenario_key = scenario_key if scenario_key in SCENARIOS else "study_group"
         template = dict(SCENARIOS.get(normalized_scenario_key) or SCENARIOS["study_group"])
+        normalized_facilitation_style = self._normalize_facilitation_style(facilitation_style)
+        resolved_participant_names = self._resolve_participant_names(
+            participant_names=participant_names,
+            template=template,
+        )
 
         yield "status", {
             "session_id": session_id,
@@ -314,11 +330,13 @@ class SimulationEngine:
             "progress": 0.08,
             "topic": topic,
             "scenario_key": normalized_scenario_key,
+            "planned_round_count": planned_round_count,
+            "facilitation_style": normalized_facilitation_style,
         }
 
         raw_participants = await generate_participants(
             scenario_key=normalized_scenario_key,
-            participant_names=list(template.get("participants") or ["学习伙伴"]),
+            participant_names=resolved_participant_names,
             user_context=user_context,
             db=self.db,
             user_id=user_id,
@@ -341,8 +359,10 @@ class SimulationEngine:
             rounds=[],
             planned_round_count=self._initial_round_target(
                 template.get("rounds"),
+                requested_rounds=planned_round_count,
                 scenario_key=normalized_scenario_key,
             ),
+            facilitation_style=normalized_facilitation_style,
             user_id=user_id,
             await_user_input=await_user_input,
         ):
@@ -366,6 +386,9 @@ class SimulationEngine:
         topic = str(checkpoint.get("topic") or "")
         scenario_key = str(checkpoint.get("scenario_key") or "study_group")
         planned_round_count = max(int(checkpoint.get("planned_round_count") or 0), 3)
+        facilitation_style = self._normalize_facilitation_style(
+            str(checkpoint.get("facilitation_style") or "balanced"),
+        )
 
         if user_response.strip():
             user_round = {
@@ -397,6 +420,7 @@ class SimulationEngine:
             participants=participants,
             rounds=rounds,
             planned_round_count=max(planned_round_count, len(rounds) + 2),
+            facilitation_style=facilitation_style,
             user_id=user_id,
             await_user_input=await_user_input,
         ):
@@ -411,6 +435,7 @@ class SimulationEngine:
         participants: list[AgentParticipant],
         rounds: list[dict[str, Any]],
         planned_round_count: int,
+        facilitation_style: str,
         user_id: UUID | None,
         await_user_input: bool,
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
@@ -421,6 +446,7 @@ class SimulationEngine:
                 participants=participants,
                 rounds=rounds,
                 planned_round_count=planned_round_count,
+                facilitation_style=facilitation_style,
             )
             planned_round_count = self._normalize_round_target(
                 moderator_decision.round_target,
@@ -433,6 +459,7 @@ class SimulationEngine:
                 participants=participants,
                 rounds=rounds,
                 moderator_decision=moderator_decision,
+                facilitation_style=facilitation_style,
             )
             rounds.append(round_item)
             self._update_memories_after_round(
@@ -465,18 +492,19 @@ class SimulationEngine:
                 session = SimulationSession(
                     id=session_id,
                     scenario_key=scenario_key,
-                    state=LearningSimulationState.WAITING_FOR_USER,
-                    topic=topic,
-                    participants=[participant.to_public_dict() for participant in participants],
-                    rounds=rounds,
-                    insight_summary=moderator_decision.real_time_insight,
+                state=LearningSimulationState.WAITING_FOR_USER,
+                topic=topic,
+                participants=[participant.to_public_dict() for participant in participants],
+                rounds=rounds,
+                insight_summary=moderator_decision.real_time_insight,
                     interaction_prompt=interaction.prompt,
                     suggested_replies=interaction.suggested_replies,
                     interaction_type=interaction.interaction_type,
-                    interaction_options=interaction.options,
-                    planned_round_count=planned_round_count,
-                    pending_interaction=interaction.to_dict(),
-                )
+                interaction_options=interaction.options,
+                planned_round_count=planned_round_count,
+                pending_interaction=interaction.to_dict(),
+                facilitation_style=facilitation_style,
+            )
                 await self._persist_checkpoint(
                     user_id=user_id,
                     session=session,
@@ -511,6 +539,7 @@ class SimulationEngine:
             rounds=rounds,
             insight_summary=insight_summary,
             planned_round_count=planned_round_count,
+            facilitation_style=facilitation_style,
         )
         await cache_service.delete(f"{self.SESSION_KEY_PREFIX}{session_id}")
         if user_id is not None:
@@ -594,6 +623,7 @@ class SimulationEngine:
         participants: list[AgentParticipant],
         rounds: list[dict[str, Any]],
         planned_round_count: int,
+        facilitation_style: str,
     ) -> ModeratorDecision:
         fallback = self._fallback_moderator_decision(
             topic=topic,
@@ -601,6 +631,7 @@ class SimulationEngine:
             participants=participants,
             rounds=rounds,
             planned_round_count=planned_round_count,
+            facilitation_style=facilitation_style,
         )
         participant_prompt = "\n".join(
             (
@@ -631,6 +662,11 @@ class SimulationEngine:
                         "- what_if_path: 对比不同选择的后果\n"
                         "- concept_map_build: 重点说清概念依赖与连接\n"
                         "- error_diagnosis: 优先锁定根因与修补动作\n\n"
+                        "## 展开风格\n"
+                        "- balanced: 保持多方平衡推进，不让单一角色压住全场\n"
+                        "- debate: 主动放大冲突、追问证据与边界条件\n"
+                        "- guided: 更像导师带讨论，强调拆解、澄清和用户可跟上\n"
+                        "- practical: 更强调落地动作、验证路径和现实约束\n\n"
                         "## 语言要求\n"
                         "- real_time_insight、interaction_prompt、interaction_options、suggested_replies 必须使用自然、简体中文。\n"
                         "- speaker、reply_target、turn_goal、interaction_type 保持机器可读格式，不要翻译成中文键值。\n"
@@ -645,6 +681,7 @@ class SimulationEngine:
                     "content": (
                         f"主题：{topic}\n"
                         f"场景：{scenario_key}\n"
+                        f"展开风格：{facilitation_style}\n"
                         f"当前轮次：{len(rounds)}\n"
                         f"计划轮次：{planned_round_count}\n"
                         f"参与者：\n{participant_prompt}\n"
@@ -695,6 +732,7 @@ class SimulationEngine:
         participants: list[AgentParticipant],
         rounds: list[dict[str, Any]],
         planned_round_count: int,
+        facilitation_style: str = "balanced",
     ) -> dict[str, Any]:
         if not participants:
             return {
@@ -728,14 +766,21 @@ class SimulationEngine:
             if should_pause
             else ""
         )
+        real_time_insight = (
+            f"{chosen.name} 更适合在这一轮接棒，因为当前讨论还缺少“{chosen.strategy}”视角。"
+        )
+        if facilitation_style == "debate":
+            real_time_insight = f"{chosen.name} 这一轮会把争议点挑明，逼近“{topic}”里最站不住脚的前提。"
+        elif facilitation_style == "guided":
+            real_time_insight = f"{chosen.name} 这一轮更适合把“{topic}”拆小，让用户更容易跟上推理链。"
+        elif facilitation_style == "practical":
+            real_time_insight = f"{chosen.name} 这一轮会把讨论拉回应用与验证，避免“{topic}”停在抽象表述。"
         return {
             "speaker": chosen.name,
             "reply_target": reply_target,
             "turn_goal": "synthesize" if len(rounds) + 1 >= planned_round_count else ("probe" if scenario_key == "socratic_dialogue" else "extend"),
-            "real_time_insight": (
-                f"{chosen.name} 更适合在这一轮接棒，因为当前讨论还缺少“{chosen.strategy}”视角。"
-            ),
-            "round_target": min(6, max(planned_round_count, 3 + int(len(rounds) >= 2))),
+            "real_time_insight": real_time_insight,
+            "round_target": max(planned_round_count, 3 + int(len(rounds) >= 2)),
             "should_pause_for_user": should_pause,
             "should_end": len(rounds) + 1 >= planned_round_count and len(rounds) >= 2,
             "interaction_type": "forced_choice" if scenario_key != "socratic_dialogue" else "open_question",
@@ -756,6 +801,7 @@ class SimulationEngine:
         participants: list[AgentParticipant],
         rounds: list[dict[str, Any]],
         moderator_decision: ModeratorDecision,
+        facilitation_style: str = "balanced",
     ) -> dict[str, Any]:
         speaker = next((participant for participant in participants if participant.name == moderator_decision.speaker), None)
         if speaker is None:
@@ -794,6 +840,7 @@ class SimulationEngine:
                     "content": (
                         f"主题：{topic}\n"
                         f"场景：{scenario_key}\n"
+                        f"展开风格：{facilitation_style}\n"
                         f"发言角色：{speaker.name}\n"
                         f"角色提示：{speaker.role_hint}\n"
                         f"立场：{speaker.stance}\n"
@@ -937,7 +984,19 @@ class SimulationEngine:
                     }
                 )
 
-    def _initial_round_target(self, configured_rounds: object, *, scenario_key: str) -> int:
+    def _initial_round_target(
+        self,
+        configured_rounds: object,
+        *,
+        scenario_key: str,
+        requested_rounds: int | None = None,
+    ) -> int:
+        if requested_rounds is not None:
+            return self._normalize_round_target(
+                requested_rounds,
+                current_rounds=0,
+                scenario_key=scenario_key,
+            )
         if str(configured_rounds) == "dynamic":
             return 4
         return self._normalize_round_target(
@@ -945,6 +1004,29 @@ class SimulationEngine:
             current_rounds=0,
             scenario_key=scenario_key,
         )
+
+    @staticmethod
+    def _normalize_facilitation_style(style: str | None) -> str:
+        normalized = str(style or "").strip().lower()
+        if normalized in {"debate", "guided", "practical"}:
+            return normalized
+        return "balanced"
+
+    @staticmethod
+    def _resolve_participant_names(
+        *,
+        participant_names: list[str] | None,
+        template: dict[str, Any],
+    ) -> list[str]:
+        cleaned = [
+            str(item).strip()
+            for item in list(participant_names or [])
+            if str(item).strip()
+        ]
+        deduped = list(dict.fromkeys(cleaned))
+        if deduped:
+            return deduped[:6]
+        return [str(item).strip() for item in list(template.get("participants") or ["学习伙伴"]) if str(item).strip()] or ["学习伙伴"]
 
     def _normalize_round_target(
         self,
@@ -958,11 +1040,15 @@ class SimulationEngine:
         except (TypeError, ValueError):
             requested_int = 4
         scenario_max = {
-            "case_analysis": 8,
-            "error_diagnosis": 7,
-            "knowledge_debate": 8,
-            "what_if_path": 6,
-        }.get(str(scenario_key or "study_group"), 6)
+            "study_group": 10,
+            "knowledge_debate": 12,
+            "historical_roleplay": 12,
+            "socratic_dialogue": 9,
+            "case_analysis": 12,
+            "what_if_path": 10,
+            "concept_map_build": 10,
+            "error_diagnosis": 12,
+        }.get(str(scenario_key or "study_group"), 10)
         return max(current_rounds + 1, min(max(requested_int, 3), scenario_max))
 
     def _summarize_rounds(self, topic: str, rounds: list[dict[str, Any]]) -> str:
@@ -1081,6 +1167,7 @@ class SimulationEngine:
                     "suggested_replies": list(session.suggested_replies or []),
                     "interaction_type": session.interaction_type,
                     "interaction_options": list(session.interaction_options or []),
+                    "facilitation_style": session.facilitation_style,
                 },
             ),
         )
@@ -1106,4 +1193,5 @@ class SimulationEngine:
             interaction_options=list(payload.get("interaction_options") or []),
             planned_round_count=int(payload.get("planned_round_count") or 0),
             pending_interaction=payload.get("pending_interaction") if isinstance(payload.get("pending_interaction"), dict) else None,
+            facilitation_style=str(payload.get("facilitation_style") or "balanced"),
         )

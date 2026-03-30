@@ -145,9 +145,10 @@ class _AccountabilityDetailScreenState
                 : null,
             onChat: canChat
                 ? () {
-                    final partnerId = dashboard.partnership.initiatorId == currentUserId
-                        ? dashboard.partnership.partnerId
-                        : dashboard.partnership.initiatorId;
+                    final partnerId =
+                        dashboard.partnership.initiatorId == currentUserId
+                            ? dashboard.partnership.partnerId
+                            : dashboard.partnership.initiatorId;
                     final partnerName = _partnerName(
                       dashboard.partnership,
                       currentUserId,
@@ -168,25 +169,27 @@ class _AccountabilityDetailScreenState
     String currentUserId,
   ) {
     final isInitiator = partnership.initiatorId == currentUserId;
-    final partner =
-        isInitiator ? partnership.partner : partnership.initiator;
+    final partner = isInitiator ? partnership.partner : partnership.initiator;
     return partner?.displayName ?? '责任伙伴';
   }
 
   void _showCheckinSheet() {
-    unawaited(showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (ctx) => AccountabilityCheckinSheet(
-        partnershipId: widget.partnershipId,
-        onDone: () {
-          ref.invalidate(myPartnershipsProvider);
-          ref.invalidate(accountabilityOverviewProvider);
-          ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
-        },
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (ctx) => AccountabilityCheckinSheet(
+          partnershipId: widget.partnershipId,
+          onDone: () {
+            ref.invalidate(myPartnershipsProvider);
+            ref.invalidate(accountabilityOverviewProvider);
+            ref.invalidate(
+                accountabilityDashboardProvider(widget.partnershipId));
+          },
+        ),
       ),
-    ),);
+    );
   }
 
   Future<void> _sendNudge(String partnershipId) async {
@@ -195,10 +198,9 @@ class _AccountabilityDetailScreenState
           .read(accountabilityActionsProvider)
           .nudgePartner(ref, partnershipId);
       if (mounted) {
-        final deliverySummary =
-            (result['delivery_summary'] as String?) ??
-                (result['message'] as String?) ??
-                '已通过站内提醒发送，对方在线时会实时看到';
+        final deliverySummary = (result['delivery_summary'] as String?) ??
+            (result['message'] as String?) ??
+            '已通过站内提醒发送，对方在线时会实时看到';
         AppFeedback.success(context, deliverySummary);
       }
     } catch (e) {
@@ -278,15 +280,12 @@ class _DashboardView extends StatelessWidget {
     final partnership = dashboard.partnership;
     final stats = dashboard.stats;
     final isInitiator = partnership.initiatorId == currentUserId;
-    final partner =
-        isInitiator ? partnership.partner : partnership.initiator;
+    final partner = isInitiator ? partnership.partner : partnership.initiator;
     final partnerName = partner?.displayName ?? '责任伙伴';
-    final partnerAchievements = ((dashboard.achievements['achievements']
-                    as List<dynamic>?) ??
-                const [])
+    final partnerAchievements =
+        ((dashboard.achievements['achievements'] as List<dynamic>?) ?? const [])
             .where(
-              (item) =>
-                  (item as Map)['partner_unlocked'] == true,
+              (item) => (item as Map)['partner_unlocked'] == true,
             )
             .map(
               (item) => AchievementInfo.fromJson(
@@ -406,15 +405,15 @@ class _DashboardView extends StatelessWidget {
               SparkleStaggerItem(
                 index: 5,
                 child: _SectionCard(
-                  title: '年度打卡热力图',
+                  title: '月度打卡热力图',
                   child: AccountabilityHeatmap(
-                    year:
-                        (dashboard.heatmap['year'] as int?) ?? DateTime.now().year,
-                    heatmap:
-                        ((dashboard.heatmap['heatmap'] as List<dynamic>?) ??
-                                const [])
-                            .map((item) => Map<String, dynamic>.from(item as Map))
-                            .toList(),
+                    year: (dashboard.heatmap['year'] as int?) ??
+                        DateTime.now().year,
+                    heatmap: ((dashboard.heatmap['heatmap']
+                                as List<dynamic>?) ??
+                            const [])
+                        .map((item) => Map<String, dynamic>.from(item as Map))
+                        .toList(),
                   ),
                 ),
               ),
@@ -497,119 +496,120 @@ class _DashboardHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: LinearGradient(
-            colors: [
-              DS.brandPrimary.withValues(alpha: 0.18),
-              DS.surfaceSecondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              colors: [
+                DS.brandPrimary.withValues(alpha: 0.18),
+                DS.surfaceSecondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.22),
+            ),
           ),
-          border: Border.all(
-            color: DS.brandPrimary.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _PersonStat(
-                    name: '我',
-                    streakDays: stats.myStreakDays,
-                    checkedInToday: stats.myCheckedInToday,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          partnerName,
-                          style: DS.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '一起坚持了 ${relationshipSummary['days_together'] ?? 0} 天',
-                          style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: DS.surfacePrimary.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                '${relationshipSummary['total_checkins'] ?? stats.totalCheckins}',
-                                style: DS.titleLarge.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                '总打卡',
-                                style: DS.bodySmall.copyWith(
-                                  color: DS.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _PersonStat(
+                      name: '我',
+                      streakDays: stats.myStreakDays,
+                      checkedInToday: stats.myCheckedInToday,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _PersonStat(
-                    name: 'TA',
-                    streakDays: stats.partnerStreakDays,
-                    checkedInToday: stats.partnerCheckedInToday,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _HeroAction(
-                    icon: Icons.check_circle_outline,
-                    label: stats.myCheckedInToday ? '已打卡' : '打卡',
-                    onTap: onCheckin,
-                  ),
-                  _HeroAction(
-                    icon: Icons.bolt_outlined,
-                    label: '提醒',
-                    onTap: onNudge,
-                  ),
-                  _HeroAction(
-                    icon: Icons.share_outlined,
-                    label: '分享',
-                    onTap: onShare,
-                  ),
-                  _HeroAction(
-                    icon: Icons.chat_bubble_outline,
-                    label: '聊天',
-                    onTap: onChat,
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            partnerName,
+                            style: DS.titleLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '一起坚持了 ${relationshipSummary['days_together'] ?? 0} 天',
+                            style:
+                                DS.bodySmall.copyWith(color: DS.textSecondary),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: DS.surfacePrimary.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${relationshipSummary['total_checkins'] ?? stats.totalCheckins}',
+                                  style: DS.titleLarge.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '总打卡',
+                                  style: DS.bodySmall.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _PersonStat(
+                      name: 'TA',
+                      streakDays: stats.partnerStreakDays,
+                      checkedInToday: stats.partnerCheckedInToday,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _HeroAction(
+                      icon: Icons.check_circle_outline,
+                      label: stats.myCheckedInToday ? '已打卡' : '打卡',
+                      onTap: onCheckin,
+                    ),
+                    _HeroAction(
+                      icon: Icons.bolt_outlined,
+                      label: '提醒',
+                      onTap: onNudge,
+                    ),
+                    _HeroAction(
+                      icon: Icons.share_outlined,
+                      label: '分享',
+                      onTap: onShare,
+                    ),
+                    _HeroAction(
+                      icon: Icons.chat_bubble_outline,
+                      label: '聊天',
+                      onTap: onChat,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _HeroAction extends StatelessWidget {
@@ -625,37 +625,37 @@ class _HeroAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: onTap == null
-              ? DS.surfaceSecondary.withValues(alpha: 0.7)
-              : DS.surfacePrimary.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: DS.neutral200),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: onTap == null ? DS.textTertiary : DS.brandPrimary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: DS.labelSmall.copyWith(
-                fontWeight: FontWeight.w700,
-                color: onTap == null ? DS.textTertiary : null,
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: onTap == null
+                ? DS.surfaceSecondary.withValues(alpha: 0.7)
+                : DS.surfacePrimary.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: DS.neutral200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: onTap == null ? DS.textTertiary : DS.brandPrimary,
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: onTap == null ? DS.textTertiary : null,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class _InactiveDashboardView extends StatelessWidget {
@@ -673,8 +673,7 @@ class _InactiveDashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final partnership = dashboard.partnership;
     final isInitiator = partnership.initiatorId == currentUserId;
-    final partner =
-        isInitiator ? partnership.partner : partnership.initiator;
+    final partner = isInitiator ? partnership.partner : partnership.initiator;
     final partnerName = partner?.displayName ?? '责任伙伴';
     final isPending = partnership.status == AccountabilityStatus.pending;
     final message = isPending
@@ -746,8 +745,9 @@ class _GrowthSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myAchievements =
-        achievements['my_total_unlocked'] ?? achievements['total_unlocked'] ?? 0;
+    final myAchievements = achievements['my_total_unlocked'] ??
+        achievements['total_unlocked'] ??
+        0;
     final partnerAchievements = achievements['partner_total_unlocked'] ?? 0;
     final streakBoard =
         (leaderboardSummary['streak'] as Map<String, dynamic>?) ?? const {};
@@ -847,23 +847,23 @@ class _GoalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.panel,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+        surfaceRole: SparkleSurfaceRole.panel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.xs),
-          Text(goal),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.xs),
+            Text(goal),
+          ],
+        ),
+      );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -874,21 +874,21 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.panel,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: DS.spacing12),
-          child,
-        ],
-      ),
-    );
+        surfaceRole: SparkleSurfaceRole.panel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing12),
+            child,
+          ],
+        ),
+      );
 }
 
 class _TinyMetric extends StatelessWidget {
@@ -898,17 +898,60 @@ class _TinyMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: DS.labelSmall.copyWith(color: DS.textSecondary),
-      ),
-    );
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+        ),
+      );
 }
+
+class _CheckinMoodVisual {
+  const _CheckinMoodVisual({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+}
+
+const _checkinMoodVisuals = <_CheckinMoodVisual>[
+  _CheckinMoodVisual(
+    icon: Icons.sentiment_very_dissatisfied_rounded,
+    label: '低落',
+    color: Color(0xFFE57373),
+  ),
+  _CheckinMoodVisual(
+    icon: Icons.sentiment_dissatisfied_rounded,
+    label: '一般',
+    color: Color(0xFFFFB74D),
+  ),
+  _CheckinMoodVisual(
+    icon: Icons.sentiment_neutral_rounded,
+    label: '平稳',
+    color: Color(0xFF90A4AE),
+  ),
+  _CheckinMoodVisual(
+    icon: Icons.sentiment_satisfied_alt_rounded,
+    label: '不错',
+    color: Color(0xFF66BB6A),
+  ),
+  _CheckinMoodVisual(
+    icon: Icons.mood_rounded,
+    label: '很棒',
+    color: Color(0xFF26A69A),
+  ),
+];
+
+_CheckinMoodVisual _resolveCheckinMoodVisual(int mood) =>
+    _checkinMoodVisuals[(mood - 1).clamp(0, _checkinMoodVisuals.length - 1)];
 
 class _CheckinTile extends ConsumerWidget {
   const _CheckinTile({required this.checkin, required this.isMe});
@@ -919,8 +962,7 @@ class _CheckinTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
-    final moodEmojis = ['😔', '😕', '😐', '😊', '😄'];
-    final moodIdx = (checkin.mood - 1).clamp(0, 4);
+    final moodVisual = _resolveCheckinMoodVisual(checkin.mood);
     final authorName = checkin.author?.displayName ?? (isMe ? '我' : '伙伴');
 
     return Container(
@@ -946,7 +988,19 @@ class _CheckinTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: DS.sm),
-              Text(moodEmojis[moodIdx], style: const TextStyle(fontSize: 16)),
+              Icon(
+                moodVisual.icon,
+                size: 16,
+                color: moodVisual.color,
+              ),
+              const SizedBox(width: DS.xs),
+              Text(
+                moodVisual.label,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textSecondary,
+                ),
+              ),
               const SizedBox(width: DS.sm),
               if (checkin.minutes > 0)
                 Text(
@@ -973,8 +1027,10 @@ class _CheckinTile extends ConsumerWidget {
             children: [
               Icon(Icons.favorite, size: 16, color: DS.error),
               const SizedBox(width: DS.xs),
-              Text('${checkin.likes}',
-                  style: TextStyle(color: DS.textSecondary),),
+              Text(
+                '${checkin.likes}',
+                style: TextStyle(color: DS.textSecondary),
+              ),
               const SizedBox(width: DS.spacing16),
               Icon(Icons.chat_bubble_outline, size: 16, color: DS.neutral500),
               const SizedBox(width: DS.xs),
@@ -1001,22 +1057,26 @@ class _CheckinTile extends ConsumerWidget {
             const SizedBox(height: DS.spacing8),
             Wrap(
               runSpacing: DS.xs,
-              children: checkin.encouragements.map((item) => Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: DS.xs),
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
-                    color: DS.surfaceTertiary,
-                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                  ),
-                  child: Text(
-                    item.message,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: DS.textSecondary,
+              children: checkin.encouragements
+                  .map(
+                    (item) => Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: DS.xs),
+                      padding: const EdgeInsets.all(DS.sm),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceTertiary,
+                        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                      ),
+                      child: Text(
+                        item.message,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
-                ),).toList(),
+                  )
+                  .toList(),
             ),
           ],
         ],
@@ -1114,8 +1174,6 @@ class _AccountabilityCheckinSheetState
 
   @override
   Widget build(BuildContext context) {
-    final moodEmojis = ['😔', '😕', '😐', '😊', '😄'];
-
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -1161,13 +1219,14 @@ class _AccountabilityCheckinSheetState
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(5, (i) {
                   final selected = _mood == i + 1;
+                  final moodVisual = _checkinMoodVisuals[i];
                   return GestureDetector(
                     onTap: () => setState(() => _mood = i + 1),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 48,
-                      height: 48,
-                      alignment: Alignment.center,
+                      width: 64,
+                      height: 64,
+                      padding: const EdgeInsets.symmetric(vertical: DS.xs),
                       decoration: BoxDecoration(
                         color: selected
                             ? DS.brandPrimary.withValues(alpha: 0.15)
@@ -1177,9 +1236,28 @@ class _AccountabilityCheckinSheetState
                             ? Border.all(color: DS.brandPrimary, width: 2)
                             : Border.all(color: Colors.transparent),
                       ),
-                      child: Text(
-                        moodEmojis[i],
-                        style: const TextStyle(fontSize: 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            moodVisual.icon,
+                            size: 22,
+                            color:
+                                selected ? DS.brandPrimary : moodVisual.color,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            moodVisual.label,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color:
+                                  selected ? DS.brandPrimary : DS.textSecondary,
+                              fontWeight: selected
+                                  ? DS.fontWeightSemibold
+                                  : DS.fontWeightMedium,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );

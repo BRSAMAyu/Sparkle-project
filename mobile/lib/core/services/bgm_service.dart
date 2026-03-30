@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
 
 enum BgmPriority {
   route,
@@ -243,16 +244,117 @@ class BgmPlaybackSnapshot {
   final BgmVariety variety;
 }
 
+@immutable
+class _BgmScenePlaybackState {
+  const _BgmScenePlaybackState({
+    required this.queueCursor,
+    this.assetKey,
+    this.trackId,
+    this.position = Duration.zero,
+    this.completed = false,
+    this.lastUpdatedAt,
+    this.palette,
+    this.intensity,
+    this.variety,
+  });
+
+  factory _BgmScenePlaybackState.fromJson(Map<String, dynamic> json) {
+    DateTime? readTimestamp(Object? value) {
+      if (value is String && value.isNotEmpty) {
+        return DateTime.tryParse(value);
+      }
+      return null;
+    }
+
+    return _BgmScenePlaybackState(
+      queueCursor: (json['queueCursor'] as num?)?.toInt() ?? 0,
+      assetKey: json['assetKey']?.toString(),
+      trackId: json['trackId']?.toString(),
+      position: Duration(
+        milliseconds: (json['positionMs'] as num?)?.toInt() ?? 0,
+      ),
+      completed: json['completed'] == true,
+      lastUpdatedAt: readTimestamp(json['lastUpdatedAt']),
+      palette: json['palette']?.toString(),
+      intensity: json['intensity']?.toString(),
+      variety: json['variety']?.toString(),
+    );
+  }
+
+  final String? assetKey;
+  final String? trackId;
+  final Duration position;
+  final int queueCursor;
+  final bool completed;
+  final DateTime? lastUpdatedAt;
+  final String? palette;
+  final String? intensity;
+  final String? variety;
+
+  _BgmScenePlaybackState copyWith({
+    Object? assetKey = _unset,
+    Object? trackId = _unset,
+    Duration? position,
+    int? queueCursor,
+    bool? completed,
+    Object? lastUpdatedAt = _unset,
+    Object? palette = _unset,
+    Object? intensity = _unset,
+    Object? variety = _unset,
+  }) =>
+      _BgmScenePlaybackState(
+        assetKey:
+            identical(assetKey, _unset) ? this.assetKey : assetKey as String?,
+        trackId: identical(trackId, _unset) ? this.trackId : trackId as String?,
+        position: position ?? this.position,
+        queueCursor: queueCursor ?? this.queueCursor,
+        completed: completed ?? this.completed,
+        lastUpdatedAt: identical(lastUpdatedAt, _unset)
+            ? this.lastUpdatedAt
+            : lastUpdatedAt as DateTime?,
+        palette: identical(palette, _unset) ? this.palette : palette as String?,
+        intensity: identical(intensity, _unset)
+            ? this.intensity
+            : intensity as String?,
+        variety: identical(variety, _unset) ? this.variety : variety as String?,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'assetKey': assetKey,
+        'trackId': trackId,
+        'positionMs': position.inMilliseconds,
+        'queueCursor': queueCursor,
+        'completed': completed,
+        'lastUpdatedAt': lastUpdatedAt?.toIso8601String(),
+        'palette': palette,
+        'intensity': intensity,
+        'variety': variety,
+      };
+
+  bool matchesTuning({
+    required BgmPalette palette,
+    required BgmIntensity intensity,
+    required BgmVariety variety,
+  }) =>
+      this.palette == palette.name &&
+      this.intensity == intensity.name &&
+      this.variety == variety.name;
+
+  static const Object _unset = Object();
+}
+
 class _BgmRegistration {
   const _BgmRegistration({
     required this.track,
     required this.priority,
     required this.sequence,
+    required this.switchBehavior,
   });
 
   final BgmTrack track;
   final BgmPriority priority;
   final int sequence;
+  final SceneBgmSwitchBehavior switchBehavior;
 }
 
 class _ResolvedBgmSource {
@@ -278,6 +380,7 @@ class _ResolvedBgmSelection {
     required this.sourceLabel,
     required this.reason,
     this.entry,
+    this.resumePosition = Duration.zero,
     this.readingProtectionApplied = false,
     this.focusPriorityApplied = false,
     this.styleLocked = false,
@@ -288,6 +391,7 @@ class _ResolvedBgmSelection {
   final BgmSceneProfile scene;
   final String sourceLabel;
   final String reason;
+  final Duration resumePosition;
   final bool readingProtectionApplied;
   final bool focusPriorityApplied;
   final bool styleLocked;
@@ -299,23 +403,8 @@ class BgmService {
   static const _catalogAssetBundlePath = 'assets/audio/bgm/bgm_catalog.json';
   static const _fallbackBgmAssetPath = 'audio/bgm/calm_track_loop.m4a';
   static const _dashboardAsset = 'audio/bgm/relax_background1.m4a';
-  static const _communityAsset = 'audio/bgm/loop_city.m4a';
   static const _warmAsset = 'audio/bgm/sunset_walk.m4a';
   static const _airyAsset = 'audio/bgm/oceanic_drift.m4a';
-  static const _pianoAsset = 'audio/bgm/classical_piano_loop.m4a';
-  static const _celebrationAsset = 'audio/bgm/heavenly_loop.m4a';
-  static const _homeMorningAsset = 'audio/bgm/home_morning.m4a';
-  static const _chatAmbientAsset = 'audio/bgm/chat_ambient.m4a';
-  static const _taskFlowAsset = 'audio/bgm/task_flow.m4a';
-  static const _focusDeepAsset = 'audio/bgm/focus_deep.m4a';
-  static const _focusBinauralAsset = 'audio/bgm/focus_binaural.m4a';
-  static const _galaxySpaceAsset = 'audio/bgm/galaxy_space.m4a';
-  static const _achievementWarmAsset = 'audio/bgm/achievement_warm.m4a';
-  static const _communityJazzAsset = 'audio/bgm/community_jazz.m4a';
-  static const _calendarPlanAsset = 'audio/bgm/calendar_plan.m4a';
-  static const _insightsHarpAsset = 'audio/bgm/insights_harp.m4a';
-  static const _seedsNatureAsset = 'audio/bgm/seeds_nature.m4a';
-  static const _profileReflectAsset = 'audio/bgm/profile_reflect.m4a';
   static const _thinkingAsset = 'audio/bgm/thinking.m4a';
   static const _localOverrideRoot = String.fromEnvironment(
     'SPARKLE_LOCAL_BGM_DIR',
@@ -332,9 +421,7 @@ class BgmService {
   static const _readingProtectionKey = 'bgm.reading_protection';
   static const _focusPriorityKey = 'bgm.focus_priority';
   static const _lockCurrentStyleKey = 'bgm.lock_current_style';
-  static const _savedPositionsKey = 'bgm.saved_positions_v2';
-  static const _playlistIndicesKey = 'bgm.playlist_indices_v2';
-  static const _sameFamilyRetention = Duration(seconds: 20);
+  static const _scenePlaybackStateKey = 'bgm.scene_playback_state_v3';
 
   static AudioPlayer? _player;
   static AudioPlayer? _preloadPlayer;
@@ -343,9 +430,8 @@ class BgmService {
       _BgmLifecycleObserver();
   static final Map<Object, _BgmRegistration> _registrations = {};
   static final Set<String> _missingAssetPaths = <String>{};
-  static final Map<String, Duration> _savedPositions = <String, Duration>{};
-  static final Map<BgmTrack, int> _trackPlaylistIndices = <BgmTrack, int>{};
-  static final List<String> _recentCatalogEntryIds = <String>[];
+  static final Map<BgmTrack, _BgmScenePlaybackState> _scenePlaybackStates =
+      <BgmTrack, _BgmScenePlaybackState>{};
   static int _sequence = 0;
   static bool _isRefreshing = false;
   static bool _refreshQueued = false;
@@ -375,7 +461,6 @@ class BgmService {
   static bool _currentReadingProtectionApplied = false;
   static bool _currentFocusPriorityApplied = false;
   static bool _currentStyleLocked = false;
-  static DateTime? _currentSceneStartedAt;
 
   static final Map<BgmTrack, String> _adaptiveLocalOverrideFiles =
       <BgmTrack, String>{
@@ -660,12 +745,15 @@ class BgmService {
   static Object activate(
     BgmTrack track, {
     BgmPriority priority = BgmPriority.route,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) {
     final token = Object();
     _registrations[token] = _BgmRegistration(
       track: track,
       priority: priority,
       sequence: ++_sequence,
+      switchBehavior: switchBehavior,
     );
     unawaited(_refreshPlayback());
     return token;
@@ -675,6 +763,8 @@ class BgmService {
     Object token, {
     required BgmTrack track,
     BgmPriority priority = BgmPriority.route,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) async {
     if (!_registrations.containsKey(token)) {
       return;
@@ -683,6 +773,7 @@ class BgmService {
       track: track,
       priority: priority,
       sequence: ++_sequence,
+      switchBehavior: switchBehavior,
     );
     await _refreshPlayback();
   }
@@ -952,7 +1043,8 @@ class BgmService {
     _catalogOverride = null;
     _catalogLoaded = false;
     _nowProvider = DateTime.now;
-    _recentCatalogEntryIds.clear();
+    _prefs = null;
+    _persistentStateLoaded = false;
     _missingAssetPaths.clear();
     _manualDuckFactor = 1.0;
     _readingActivityActive = false;
@@ -962,13 +1054,11 @@ class BgmService {
     _currentSceneProfile = null;
     _currentSourceKey = null;
     _currentTrack = null;
-    _currentSceneStartedAt = null;
     _currentReadingProtectionApplied = false;
     _currentFocusPriorityApplied = false;
     _currentStyleLocked = false;
     _preferBundledPlaybackOverride = null;
-    _savedPositions.clear();
-    _trackPlaylistIndices.clear();
+    _scenePlaybackStates.clear();
     await dispose();
   }
 
@@ -991,15 +1081,53 @@ class BgmService {
     required BgmTrack track,
     BgmCatalogEntry? entry,
     String? sourceKey,
-    DateTime? startedAt,
+    Duration position = Duration.zero,
+    int queueCursor = 0,
+    bool completed = false,
   }) {
+    final resolvedSourceKey =
+        sourceKey ?? 'asset:${entry?.assetPath ?? _fallbackBgmAssetPath}';
     _currentTrack = track;
     _currentSceneProfile = _sceneProfileForTrack(track);
     _currentCatalogEntry = entry;
-    _currentSourceKey =
-        sourceKey ?? 'asset:${entry?.assetPath ?? _fallbackBgmAssetPath}';
-    _currentSceneStartedAt = startedAt ?? _nowProvider();
+    _currentSourceKey = resolvedSourceKey;
     _currentSourceLabel = entry?.album ?? 'Bundled fallback';
+    _scenePlaybackStates[track] = _buildScenePlaybackState(
+      assetKey: resolvedSourceKey,
+      trackId: entry?.id,
+      position: position,
+      queueCursor: queueCursor,
+      completed: completed,
+      palette: BgmPalette.adaptive,
+      intensity: BgmIntensity.gentle,
+      variety: BgmVariety.balanced,
+    );
+  }
+
+  @visibleForTesting
+  static void debugSeedSceneState({
+    required BgmTrack track,
+    BgmCatalogEntry? entry,
+    String? sourceKey,
+    Duration position = Duration.zero,
+    int queueCursor = 0,
+    bool completed = false,
+    BgmPalette palette = BgmPalette.adaptive,
+    BgmIntensity intensity = BgmIntensity.gentle,
+    BgmVariety variety = BgmVariety.balanced,
+  }) {
+    final resolvedSourceKey =
+        sourceKey ?? 'asset:${entry?.assetPath ?? _fallbackBgmAssetPath}';
+    _scenePlaybackStates[track] = _buildScenePlaybackState(
+      assetKey: resolvedSourceKey,
+      trackId: entry?.id,
+      position: position,
+      queueCursor: queueCursor,
+      completed: completed,
+      palette: palette,
+      intensity: intensity,
+      variety: variety,
+    );
   }
 
   @visibleForTesting
@@ -1008,25 +1136,30 @@ class BgmService {
     required BgmTrack track,
     required BgmPalette palette,
     required BgmUserTuning tuning,
-    List<String> recentIds = const <String>[],
-    BgmCatalogEntry? currentEntry,
-  }) =>
-      _pickCatalogEntry(
-        entries: entries,
-        scene: _sceneProfileForTrack(track),
-        palette: palette,
-        tuning: tuning,
-        recentIds: recentIds,
-        currentEntry: currentEntry,
-      );
+  }) {
+    final queue = _buildCatalogQueue(
+      entries: entries,
+      scene: _sceneProfileForTrack(track),
+      palette: palette,
+      tuning: tuning,
+    );
+    return queue.isEmpty ? null : queue.first;
+  }
 
   @visibleForTesting
   static Future<String> debugResolveSelectionReason(
     BgmTrack track, {
     bool force = false,
     BgmPalette? palette,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) async =>
-      (await _resolveSelection(track, force: force, paletteOverride: palette))
+      (await _resolveSelection(
+        track,
+        force: force,
+        paletteOverride: palette,
+        switchBehavior: switchBehavior,
+      ))
           .reason;
 
   @visibleForTesting
@@ -1034,10 +1167,59 @@ class BgmService {
     BgmTrack track, {
     bool force = false,
     BgmPalette? palette,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) async =>
-      (await _resolveSelection(track, force: force, paletteOverride: palette))
+      (await _resolveSelection(
+        track,
+        force: force,
+        paletteOverride: palette,
+        switchBehavior: switchBehavior,
+      ))
           .source
           .path;
+
+  @visibleForTesting
+  static Map<String, Object?> debugSceneStateForTrack(BgmTrack track) {
+    final state = _scenePlaybackStates[track];
+    return <String, Object?>{
+      'assetKey': state?.assetKey,
+      'trackId': state?.trackId,
+      'positionMs': state?.position.inMilliseconds,
+      'queueCursor': state?.queueCursor,
+      'completed': state?.completed,
+      'palette': state?.palette,
+      'intensity': state?.intensity,
+      'variety': state?.variety,
+    };
+  }
+
+  @visibleForTesting
+  static List<String> debugCatalogQueueIds({
+    required List<BgmCatalogEntry> entries,
+    required BgmTrack track,
+    required BgmPalette palette,
+    required BgmUserTuning tuning,
+  }) =>
+      _buildCatalogQueue(
+        entries: entries,
+        scene: _sceneProfileForTrack(track),
+        palette: palette,
+        tuning: tuning,
+      ).map((entry) => entry.id).toList(growable: false);
+
+  @visibleForTesting
+  static void debugAdvanceSceneQueue(
+    BgmTrack track, {
+    required int playlistLength,
+    BgmVariety variety = BgmVariety.balanced,
+  }) {
+    _advanceSceneQueueCursor(
+      track,
+      queueLength: playlistLength,
+      variety: variety,
+    );
+  }
 
   @visibleForTesting
   static Future<double> debugEffectiveDuckFactor() => _effectiveDuckFactor();
@@ -1058,11 +1240,12 @@ class BgmService {
 
     _isRefreshing = true;
     try {
-      final desiredTrack = await _resolveDesiredTrack();
+      final desiredRegistration = await _resolveDesiredRegistration();
       final enabled = await isEnabled();
 
-      if (!enabled || desiredTrack == null) {
+      if (!enabled || desiredRegistration == null) {
         if (_player != null) {
+          await _captureCurrentPlaybackPosition();
           await _fadeTo(0, duration: const Duration(milliseconds: 420));
           if (_shutdownRequested || _player == null) {
             return;
@@ -1074,13 +1257,17 @@ class BgmService {
         _currentSceneProfile = null;
         _currentOutputVolume = 0;
         _currentSourceKey = null;
-      } else if (!force && desiredTrack == _currentTrack) {
+      } else if (!force && desiredRegistration.track == _currentTrack) {
         await _applyDynamicMix(duration: const Duration(milliseconds: 180));
       } else {
-        await _switchTrack(desiredTrack, force: force);
+        await _switchTrack(
+          desiredRegistration.track,
+          force: force,
+          switchBehavior: desiredRegistration.switchBehavior,
+        );
       }
-      if (!_shutdownRequested && desiredTrack != null) {
-        unawaited(_preloadLikelyNextTrack(desiredTrack));
+      if (!_shutdownRequested && desiredRegistration != null) {
+        unawaited(_preloadLikelyNextTrack(desiredRegistration.track));
       }
     } finally {
       _isRefreshing = false;
@@ -1106,7 +1293,7 @@ class BgmService {
     return values.first;
   }
 
-  static Future<BgmTrack?> _resolveDesiredTrack() async {
+  static Future<_BgmRegistration?> _resolveDesiredRegistration() async {
     final registration = _resolveRegistration();
     if (registration == null) {
       return null;
@@ -1118,7 +1305,7 @@ class BgmService {
     if (mode == BgmMode.focusOnly && !_isFocusTrack(registration.track)) {
       return null;
     }
-    return registration.track;
+    return registration;
   }
 
   static bool _isFocusTrack(BgmTrack track) {
@@ -1136,6 +1323,8 @@ class BgmService {
     BgmTrack track, {
     bool force = false,
     bool allowRecovery = true,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) async {
     if (_shutdownRequested) {
       return;
@@ -1147,7 +1336,11 @@ class BgmService {
     }
 
     final previousScene = _currentSceneProfile;
-    final selection = await _resolveSelection(track, force: force);
+    final selection = await _resolveSelection(
+      track,
+      force: force,
+      switchBehavior: switchBehavior,
+    );
     if (_shutdownRequested || _player == null || _preloadPlayer == null) {
       return;
     }
@@ -1165,11 +1358,26 @@ class BgmService {
       _currentReadingProtectionApplied = selection.readingProtectionApplied;
       _currentFocusPriorityApplied = selection.focusPriorityApplied;
       _currentStyleLocked = selection.styleLocked;
-      _currentSceneStartedAt ??= _nowProvider();
+      if (selection.resumePosition > Duration.zero) {
+        await activePlayer.seek(selection.resumePosition);
+      }
       await activePlayer.resume();
       await _fadeTo(
         await _targetVolume(track, entry: selection.entry),
         duration: fadeDuration,
+      );
+      _saveScenePlaybackState(
+        track,
+        _buildScenePlaybackState(
+          assetKey: selection.source.cacheKey,
+          trackId: selection.entry?.id,
+          position: selection.resumePosition,
+          queueCursor: _sceneStateForTrack(track).queueCursor,
+          completed: false,
+          palette: await getPalette(),
+          intensity: (await getUserTuning()).intensity,
+          variety: (await getUserTuning()).variety,
+        ),
       );
       await _persistPlaybackState();
       return;
@@ -1187,9 +1395,8 @@ class BgmService {
         await standbyPlayer.stop();
         return;
       }
-      final savedPosition = _savedPositions[selection.source.cacheKey];
-      if (savedPosition != null && savedPosition > Duration.zero) {
-        await standbyPlayer.seek(savedPosition);
+      if (selection.resumePosition > Duration.zero) {
+        await standbyPlayer.seek(selection.resumePosition);
       }
       final nextTargetVolume =
           await _targetVolume(track, entry: selection.entry);
@@ -1220,11 +1427,20 @@ class BgmService {
       _currentFocusPriorityApplied = selection.focusPriorityApplied;
       _currentStyleLocked = selection.styleLocked;
       _currentOutputVolume = nextTargetVolume;
-      _currentSceneStartedAt = _nowProvider();
       _preloadedSourceKey = null;
-      if (selection.entry != null) {
-        _rememberCatalogEntry(selection.entry!.id);
-      }
+      _saveScenePlaybackState(
+        track,
+        _buildScenePlaybackState(
+          assetKey: selection.source.cacheKey,
+          trackId: selection.entry?.id,
+          position: selection.resumePosition,
+          queueCursor: _sceneStateForTrack(track).queueCursor,
+          completed: false,
+          palette: await getPalette(),
+          intensity: (await getUserTuning()).intensity,
+          variety: (await getUserTuning()).variety,
+        ),
+      );
       await _persistPlaybackState();
     } catch (e) {
       if (selection.source.isAsset && _isAssetLoadFailure(e)) {
@@ -1239,6 +1455,7 @@ class BgmService {
             track,
             force: true,
             allowRecovery: false,
+            switchBehavior: switchBehavior,
           );
           return;
         }
@@ -1248,6 +1465,7 @@ class BgmService {
               track,
               force: true,
               allowRecovery: false,
+              switchBehavior: switchBehavior,
             );
             return;
           } catch (_) {}
@@ -1282,7 +1500,11 @@ class BgmService {
     if (nextTrack == null) {
       return;
     }
-    final resolvedSource = await _resolvePlayableSource(nextTrack);
+    final resolvedSource = (await _resolveSelection(
+      nextTrack,
+      switchBehavior: SceneBgmSwitchBehavior.switchOnEnter,
+    ))
+        .source;
     if (resolvedSource.cacheKey == _currentSourceKey ||
         resolvedSource.cacheKey == _preloadedSourceKey) {
       return;
@@ -1353,21 +1575,67 @@ class BgmService {
         effectiveDuck;
   }
 
+  static _BgmScenePlaybackState _sceneStateForTrack(BgmTrack track) =>
+      _scenePlaybackStates[track] ??
+      const _BgmScenePlaybackState(queueCursor: 0);
+
+  static _BgmScenePlaybackState _buildScenePlaybackState({
+    required String? assetKey,
+    required String? trackId,
+    required Duration position,
+    required int queueCursor,
+    required bool completed,
+    required BgmPalette palette,
+    required BgmIntensity intensity,
+    required BgmVariety variety,
+  }) =>
+      _BgmScenePlaybackState(
+        assetKey: assetKey,
+        trackId: trackId,
+        position: position,
+        queueCursor: queueCursor,
+        completed: completed,
+        lastUpdatedAt: _nowProvider(),
+        palette: palette.name,
+        intensity: intensity.name,
+        variety: variety.name,
+      );
+
+  static void _saveScenePlaybackState(
+    BgmTrack track,
+    _BgmScenePlaybackState state,
+  ) {
+    _scenePlaybackStates[track] = state;
+  }
+
   static Future<void> _captureCurrentPlaybackPosition() async {
     if (_shutdownRequested) {
       return;
     }
     final player = _player;
+    final currentTrack = _currentTrack;
     final sourceKey = _currentSourceKey;
-    if (player == null || sourceKey == null) {
+    if (player == null || sourceKey == null || currentTrack == null) {
       return;
     }
     try {
-      final position = await player.getCurrentPosition();
-      if (position != null && position > Duration.zero) {
-        _savedPositions[sourceKey] = position;
-        await _persistPlaybackState();
-      }
+      final position = await player.getCurrentPosition() ?? Duration.zero;
+      final palette = await getPalette();
+      final tuning = await getUserTuning();
+      _saveScenePlaybackState(
+        currentTrack,
+        _buildScenePlaybackState(
+          assetKey: sourceKey,
+          trackId: _currentCatalogEntry?.id,
+          position: position,
+          queueCursor: _sceneStateForTrack(currentTrack).queueCursor,
+          completed: false,
+          palette: palette,
+          intensity: tuning.intensity,
+          variety: tuning.variety,
+        ),
+      );
+      await _persistPlaybackState();
     } catch (_) {
       // Ignore progress snapshot failures and keep playback flowing.
     }
@@ -1377,62 +1645,47 @@ class BgmService {
     BgmTrack track, {
     bool force = false,
     BgmPalette? paletteOverride,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
   }) async {
     final scene = _sceneProfileForTrack(track);
     final palette = paletteOverride ?? await getPalette();
     final tuning = await getUserTuning();
-    final localSelection = await _resolveLocalSelection(
-      track,
-      scene: scene,
-      palette: palette,
-    );
-    if (localSelection != null) {
-      return localSelection;
+    final sceneState = _sceneStateForTrack(track);
+
+    if (!force) {
+      final resumeSelection = await _resolveSceneResumeSelection(
+        track,
+        scene: scene,
+        palette: palette,
+        tuning: tuning,
+        sceneState: sceneState,
+      );
+      if (resumeSelection != null) {
+        return resumeSelection;
+      }
     }
 
     final retainedSelection = await _resolveRetainedSelection(
       scene,
       tuning: tuning,
       force: force,
+      switchBehavior: switchBehavior,
     );
     if (retainedSelection != null) {
       return retainedSelection;
     }
 
-    if (_shouldPreferBundledPlayback()) {
-      final source = await _resolvePlayableSource(
-        track,
-        paletteOverride: palette,
-      );
-      return _ResolvedBgmSelection(
-        source: source,
-        scene: scene,
-        sourceLabel: 'Bundled fallback',
-        reason: _buildSelectionReason(
-          scene: scene,
-          palette: palette,
-          tuning: tuning,
-          fallback: true,
-          readingProtectionApplied:
-              tuning.readingProtection && scene.readingFriendly,
-          focusPriorityApplied: tuning.focusPriority && scene.focusCritical,
-        ),
-        readingProtectionApplied:
-            tuning.readingProtection && scene.readingFriendly,
-        focusPriorityApplied: tuning.focusPriority && scene.focusCritical,
-      );
-    }
-
     final entries = await _loadCatalogEntries();
-    final entry = _pickCatalogEntry(
+    final catalogQueue = _buildCatalogQueue(
       entries: entries,
       scene: scene,
       palette: palette,
       tuning: tuning,
-      recentIds: _recentCatalogEntryIds,
-      currentEntry: _currentCatalogEntry,
     );
-    if (entry != null && !_missingAssetPaths.contains(entry.assetPath)) {
+    if (!_shouldPreferBundledPlayback() && catalogQueue.isNotEmpty) {
+      final entry = catalogQueue[
+          _queueCursorForLength(track, catalogQueue.length, tuning.variety)];
       return _ResolvedBgmSelection(
         source: _ResolvedBgmSource.asset(entry.assetPath),
         entry: entry,
@@ -1452,9 +1705,20 @@ class BgmService {
       );
     }
 
+    final localSelection = await _resolveLocalSelection(
+      track,
+      scene: scene,
+      palette: palette,
+      tuning: tuning,
+    );
+    if (localSelection != null) {
+      return localSelection;
+    }
+
     final source = await _resolvePlayableSource(
       track,
       paletteOverride: palette,
+      variety: tuning.variety,
     );
     return _ResolvedBgmSelection(
       source: source,
@@ -1479,6 +1743,7 @@ class BgmService {
     BgmTrack track, {
     required BgmSceneProfile scene,
     required BgmPalette palette,
+    required BgmUserTuning tuning,
   }) async {
     final localPlaylist = await _resolveLocalOverridePlaylist(
       track,
@@ -1487,7 +1752,8 @@ class BgmService {
     if (localPlaylist.isEmpty) {
       return null;
     }
-    final fileName = _selectPlaylistEntry(track, localPlaylist);
+    final fileName = localPlaylist[
+        _queueCursorForLength(track, localPlaylist.length, tuning.variety)];
     final file = File('$_localOverrideRoot/$fileName');
     if (!await file.exists()) {
       return null;
@@ -1504,6 +1770,7 @@ class BgmService {
     BgmSceneProfile targetScene, {
     required BgmUserTuning tuning,
     required bool force,
+    required SceneBgmSwitchBehavior switchBehavior,
   }) async {
     if (force || _currentSourceKey == null || _currentSceneProfile == null) {
       return null;
@@ -1533,10 +1800,7 @@ class BgmService {
       );
     }
 
-    final startedAt = _currentSceneStartedAt;
-    final withinRetention = startedAt != null &&
-        _nowProvider().difference(startedAt) <= _sameFamilyRetention;
-    if (withinRetention && currentScene.family == targetScene.family) {
+    if (switchBehavior == SceneBgmSwitchBehavior.keepPlaying) {
       final currentSource = await _sourceForCurrentSelection();
       if (currentSource == null) {
         return null;
@@ -1546,7 +1810,28 @@ class BgmService {
         entry: _currentCatalogEntry,
         scene: targetScene,
         sourceLabel: _currentSourceLabel,
-        reason: '同一氛围家族在 20 秒内延续当前音乐',
+        reason: '页面策略要求延续当前音乐',
+        readingProtectionApplied:
+            tuning.readingProtection && targetScene.readingFriendly,
+        focusPriorityApplied: tuning.focusPriority && targetScene.focusCritical,
+      );
+    }
+
+    final isAdjacentFamily = currentScene.family == targetScene.family ||
+        currentScene.adjacentFamilies.contains(targetScene.family) ||
+        targetScene.adjacentFamilies.contains(currentScene.family);
+    if (switchBehavior == SceneBgmSwitchBehavior.retainIfAdjacent &&
+        isAdjacentFamily) {
+      final currentSource = await _sourceForCurrentSelection();
+      if (currentSource == null) {
+        return null;
+      }
+      return _ResolvedBgmSelection(
+        source: currentSource,
+        entry: _currentCatalogEntry,
+        scene: targetScene,
+        sourceLabel: _currentSourceLabel,
+        reason: '相邻场景延续当前音乐',
         readingProtectionApplied:
             tuning.readingProtection && targetScene.readingFriendly,
         focusPriorityApplied: tuning.focusPriority && targetScene.focusCritical,
@@ -1560,7 +1845,7 @@ class BgmService {
     if (override != null) {
       return override;
     }
-    return !kIsWeb && Platform.isAndroid;
+    return false;
   }
 
   static Future<_ResolvedBgmSource?> _sourceForCurrentSelection() async {
@@ -1568,30 +1853,106 @@ class BgmService {
     if (currentSourceKey == null) {
       return null;
     }
-    final separator = currentSourceKey.indexOf(':');
+    return _resolvedSourceFromCacheKey(currentSourceKey);
+  }
+
+  static _ResolvedBgmSource? _resolvedSourceFromCacheKey(String cacheKey) {
+    final separator = cacheKey.indexOf(':');
     if (separator <= 0) {
       return null;
     }
-    final kind = currentSourceKey.substring(0, separator);
-    final path = currentSourceKey.substring(separator + 1);
+    final kind = cacheKey.substring(0, separator);
+    final path = cacheKey.substring(separator + 1);
     if (kind == 'asset') {
       return _ResolvedBgmSource.asset(path);
     }
     return _ResolvedBgmSource.device(path);
   }
 
-  static BgmCatalogEntry? _pickCatalogEntry({
+  static Future<_ResolvedBgmSelection?> _resolveSceneResumeSelection(
+    BgmTrack track, {
+    required BgmSceneProfile scene,
+    required BgmPalette palette,
+    required BgmUserTuning tuning,
+    required _BgmScenePlaybackState sceneState,
+  }) async {
+    if (sceneState.completed ||
+        !sceneState.matchesTuning(
+          palette: palette,
+          intensity: tuning.intensity,
+          variety: tuning.variety,
+        )) {
+      return null;
+    }
+
+    final readingProtectionApplied =
+        tuning.readingProtection && scene.readingFriendly;
+    final focusPriorityApplied = tuning.focusPriority && scene.focusCritical;
+    final entries = await _loadCatalogEntries();
+
+    if (sceneState.trackId case final String trackId) {
+      for (final entry in entries) {
+        if (entry.id == trackId &&
+            entry.releaseApproved &&
+            !_missingAssetPaths.contains(entry.assetPath)) {
+          return _ResolvedBgmSelection(
+            source: _ResolvedBgmSource.asset(entry.assetPath),
+            entry: entry,
+            scene: scene,
+            sourceLabel: entry.album,
+            reason: '恢复 ${scene.name} 上次播放断点',
+            resumePosition: sceneState.position,
+            readingProtectionApplied: readingProtectionApplied,
+            focusPriorityApplied: focusPriorityApplied,
+          );
+        }
+      }
+    }
+
+    final assetKey = sceneState.assetKey;
+    if (assetKey == null || assetKey.isEmpty) {
+      return null;
+    }
+    final source = _resolvedSourceFromCacheKey(assetKey);
+    if (source == null) {
+      return null;
+    }
+    if (source.isAsset && _missingAssetPaths.contains(source.path)) {
+      return null;
+    }
+    return _ResolvedBgmSelection(
+      source: source,
+      scene: scene,
+      sourceLabel: _sourceLabelForResume(source, entries),
+      reason: '恢复 ${scene.name} 上次播放断点',
+      resumePosition: sceneState.position,
+      readingProtectionApplied: readingProtectionApplied,
+      focusPriorityApplied: focusPriorityApplied,
+    );
+  }
+
+  static String _sourceLabelForResume(
+    _ResolvedBgmSource source,
+    List<BgmCatalogEntry> entries,
+  ) {
+    final matchedEntry =
+        entries.where((entry) => entry.assetPath == source.path);
+    if (matchedEntry.isNotEmpty) {
+      return matchedEntry.first.album;
+    }
+    return source.isAsset ? 'Bundled fallback' : 'Local override';
+  }
+
+  static List<BgmCatalogEntry> _buildCatalogQueue({
     required List<BgmCatalogEntry> entries,
     required BgmSceneProfile scene,
     required BgmPalette palette,
     required BgmUserTuning tuning,
-    required List<String> recentIds,
-    required BgmCatalogEntry? currentEntry,
   }) {
     final approvedEntries =
         entries.where((entry) => entry.releaseApproved).toList(growable: false);
     if (approvedEntries.isEmpty) {
-      return null;
+      return const <BgmCatalogEntry>[];
     }
 
     final sceneCandidates = approvedEntries.where((entry) {
@@ -1644,20 +2005,6 @@ class BgmService {
         score += (1.0 - entry.density).clamp(0.0, 1.0) * 12.0;
       }
 
-      if (currentEntry != null && currentEntry.id == entry.id) {
-        score += switch (tuning.variety) {
-          BgmVariety.steady => 16.0,
-          BgmVariety.balanced => 6.0,
-          BgmVariety.dynamic => 0.0,
-        };
-      }
-      if (recentIds.contains(entry.id)) {
-        score -= switch (tuning.variety) {
-          BgmVariety.steady => 10.0,
-          BgmVariety.balanced => 18.0,
-          BgmVariety.dynamic => 28.0,
-        };
-      }
       if (entry.loopable) {
         score += 3.0;
       }
@@ -1671,7 +2018,79 @@ class BgmService {
         return a.key.id.compareTo(b.key.id);
       });
 
-    return scored.isEmpty ? null : scored.first.key;
+    return scored.map((entry) => entry.key).toList(growable: false);
+  }
+
+  static int _queueCursorForLength(
+    BgmTrack track,
+    int queueLength,
+    BgmVariety variety,
+  ) {
+    if (queueLength <= 0) {
+      return 0;
+    }
+    final activeLength = _activeQueueLength(queueLength, variety);
+    final cursor = _sceneStateForTrack(track).queueCursor;
+    return activeLength <= 0 ? 0 : cursor % activeLength;
+  }
+
+  static void _advanceSceneQueueCursor(
+    BgmTrack track, {
+    required int queueLength,
+    required BgmVariety variety,
+  }) {
+    if (queueLength <= 0) {
+      return;
+    }
+    final state = _sceneStateForTrack(track);
+    final activeLength = _activeQueueLength(queueLength, variety);
+    final currentCursor =
+        activeLength <= 0 ? 0 : state.queueCursor % activeLength;
+    final nextCursor = activeLength <= 1
+        ? 0
+        : (currentCursor + _rotationStep(activeLength, variety)) % activeLength;
+    _saveScenePlaybackState(
+      track,
+      state.copyWith(
+        queueCursor: nextCursor,
+        position: Duration.zero,
+        completed: true,
+        lastUpdatedAt: _nowProvider(),
+      ),
+    );
+  }
+
+  static int _activeQueueLength(int queueLength, BgmVariety variety) {
+    if (queueLength <= 0) {
+      return 0;
+    }
+    return switch (variety) {
+      BgmVariety.steady => queueLength < 3 ? queueLength : 3,
+      BgmVariety.balanced || BgmVariety.dynamic => queueLength,
+    };
+  }
+
+  static int _rotationStep(int queueLength, BgmVariety variety) {
+    if (queueLength <= 1 || variety != BgmVariety.dynamic) {
+      return 1;
+    }
+    for (var candidate = queueLength - 1; candidate >= 2; candidate--) {
+      if (_greatestCommonDivisor(candidate, queueLength) == 1) {
+        return candidate;
+      }
+    }
+    return 1;
+  }
+
+  static int _greatestCommonDivisor(int a, int b) {
+    var left = a.abs();
+    var right = b.abs();
+    while (right != 0) {
+      final next = left % right;
+      left = right;
+      right = next;
+    }
+    return left;
   }
 
   static String _buildSelectionReason({
@@ -1716,8 +2135,13 @@ class BgmService {
     if (currentTrack == null) {
       return;
     }
-    final playlist = await _resolveEffectivePlaylist(currentTrack);
-    if (playlist.length <= 1 && _currentCatalogEntry == null) {
+    final tuning = await getUserTuning();
+    final queueLength = await _queueLengthForTrack(
+      currentTrack,
+      paletteOverride: await getPalette(),
+      tuning: tuning,
+    );
+    if (_currentCatalogEntry == null && queueLength <= 1) {
       try {
         await player.seek(Duration.zero);
         await player.resume();
@@ -1729,40 +2153,64 @@ class BgmService {
       }
       return;
     }
-    if (_currentCatalogEntry != null) {
-      _rememberCatalogEntry(_currentCatalogEntry!.id);
-    }
-    final currentIndex = _trackPlaylistIndices[currentTrack] ?? 0;
-    _trackPlaylistIndices[currentTrack] = (currentIndex + 1) % playlist.length;
+    _advanceSceneQueueCursor(
+      currentTrack,
+      queueLength: queueLength,
+      variety: tuning.variety,
+    );
     await _persistPlaybackState();
     await _refreshPlayback(force: true);
   }
 
-  static void _rememberCatalogEntry(String id) {
-    _recentCatalogEntryIds.remove(id);
-    _recentCatalogEntryIds.insert(0, id);
-    if (_recentCatalogEntryIds.length > 6) {
-      _recentCatalogEntryIds.removeRange(6, _recentCatalogEntryIds.length);
+  static Future<int> _queueLengthForTrack(
+    BgmTrack track, {
+    BgmPalette? paletteOverride,
+    BgmUserTuning? tuning,
+  }) async {
+    final palette = paletteOverride ?? await getPalette();
+    final resolvedTuning = tuning ?? await getUserTuning();
+    if (!_shouldPreferBundledPlayback()) {
+      final catalogQueue = _buildCatalogQueue(
+        entries: await _loadCatalogEntries(),
+        scene: _sceneProfileForTrack(track),
+        palette: palette,
+        tuning: resolvedTuning,
+      );
+      if (catalogQueue.isNotEmpty) {
+        return catalogQueue.length;
+      }
     }
+    final playlist = await _resolveEffectivePlaylist(
+      track,
+      paletteOverride: palette,
+    );
+    return playlist.length;
   }
 
-  static String _selectPlaylistEntry(BgmTrack track, List<String> entries) {
-    final index = _trackPlaylistIndices[track] ?? 0;
-    final normalizedIndex = entries.isEmpty ? 0 : index % entries.length;
-    _trackPlaylistIndices[track] = normalizedIndex;
-    return entries[normalizedIndex];
-  }
-
-  static Future<List<String>> _resolveEffectivePlaylist(BgmTrack track) async {
-    final localPlaylist = await _resolveLocalOverridePlaylist(track);
+  static Future<List<String>> _resolveEffectivePlaylist(
+    BgmTrack track, {
+    BgmPalette? paletteOverride,
+  }) async {
+    final localPlaylist = await _resolveLocalOverridePlaylist(
+      track,
+      paletteOverride: paletteOverride,
+    );
     if (localPlaylist.isNotEmpty) {
       return localPlaylist;
     }
-    final assetPlaylist = await _resolveAssetPlaylist(track);
+    final assetPlaylist = await _resolveAssetPlaylist(
+      track,
+      paletteOverride: paletteOverride,
+    );
     if (assetPlaylist.isNotEmpty) {
       return assetPlaylist;
     }
-    return <String>[await _resolvePlayableAssetPath(track)];
+    return <String>[
+      await _resolvePlayableAssetPath(
+        track,
+        paletteOverride: paletteOverride,
+      ),
+    ];
   }
 
   static Future<List<String>> _resolveLocalOverridePlaylist(
@@ -1810,20 +2258,15 @@ class BgmService {
   static Future<_ResolvedBgmSource> _resolvePlayableSource(
     BgmTrack track, {
     BgmPalette? paletteOverride,
+    BgmVariety variety = BgmVariety.balanced,
   }) async {
-    final localOverride = await _resolveLocalOverride(
-      track,
-      paletteOverride: paletteOverride,
-    );
-    if (localOverride != null) {
-      return localOverride;
-    }
     final assetPlaylist = await _resolveAssetPlaylist(
       track,
       paletteOverride: paletteOverride,
     );
     if (assetPlaylist.isNotEmpty) {
-      final assetPath = _selectPlaylistEntry(track, assetPlaylist);
+      final assetPath = assetPlaylist[
+          _queueCursorForLength(track, assetPlaylist.length, variety)];
       if (!_missingAssetPaths.contains(assetPath)) {
         return _ResolvedBgmSource.asset(assetPath);
       }
@@ -1834,28 +2277,6 @@ class BgmService {
         paletteOverride: paletteOverride,
       ),
     );
-  }
-
-  static Future<_ResolvedBgmSource?> _resolveLocalOverride(
-    BgmTrack track, {
-    BgmPalette? paletteOverride,
-  }) async {
-    if (!kDebugMode || _localOverrideRoot.isEmpty) {
-      return null;
-    }
-    final palette = paletteOverride ?? await getPalette();
-    if (palette != BgmPalette.adaptive && palette != BgmPalette.classical) {
-      return null;
-    }
-    final fileName = _adaptiveLocalOverrideFiles[track];
-    if (fileName == null) {
-      return null;
-    }
-    final file = File('$_localOverrideRoot/$fileName');
-    if (!await file.exists()) {
-      return null;
-    }
-    return _ResolvedBgmSource.device(file.path);
   }
 
   static Future<String> _resolvePlayableAssetPath(
@@ -2336,40 +2757,31 @@ class BgmService {
       return;
     }
     final prefs = await _getPrefs();
-    final savedPositionsRaw = prefs.getString(_savedPositionsKey);
-    if (savedPositionsRaw != null && savedPositionsRaw.isNotEmpty) {
-      final entries = savedPositionsRaw.split('|');
-      for (final entry in entries) {
-        final separator = entry.lastIndexOf('::');
-        if (separator <= 0 || separator >= entry.length - 2) {
-          continue;
+    final raw = prefs.getString(_scenePlaybackStateKey);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          for (final entry in decoded.entries) {
+            final track =
+                BgmTrack.values.where((value) => value.name == entry.key);
+            if (track.isEmpty) {
+              continue;
+            }
+            final payload = entry.value;
+            if (payload is Map<String, dynamic>) {
+              _scenePlaybackStates[track.first] =
+                  _BgmScenePlaybackState.fromJson(payload);
+            } else if (payload is Map) {
+              _scenePlaybackStates[track.first] =
+                  _BgmScenePlaybackState.fromJson(
+                Map<String, dynamic>.from(payload),
+              );
+            }
+          }
         }
-        final key = entry.substring(0, separator);
-        final millis = int.tryParse(entry.substring(separator + 2));
-        if (millis == null || millis <= 0) {
-          continue;
-        }
-        _savedPositions[key] = Duration(milliseconds: millis);
-      }
-    }
-
-    final playlistIndicesRaw = prefs.getString(_playlistIndicesKey);
-    if (playlistIndicesRaw != null && playlistIndicesRaw.isNotEmpty) {
-      final entries = playlistIndicesRaw.split('|');
-      for (final entry in entries) {
-        final separator = entry.indexOf('=');
-        if (separator <= 0 || separator >= entry.length - 1) {
-          continue;
-        }
-        final trackName = entry.substring(0, separator);
-        final index = int.tryParse(entry.substring(separator + 1));
-        if (index == null || index < 0) {
-          continue;
-        }
-        final track = BgmTrack.values.where((value) => value.name == trackName);
-        if (track.isNotEmpty) {
-          _trackPlaylistIndices[track.first] = index;
-        }
+      } catch (_) {
+        _scenePlaybackStates.clear();
       }
     }
     _persistentStateLoaded = true;
@@ -2377,15 +2789,11 @@ class BgmService {
 
   static Future<void> _persistPlaybackState() async {
     final prefs = await _getPrefs();
-    final savedPositions = _savedPositions.entries
-        .where((entry) => entry.value > Duration.zero)
-        .map((entry) => '${entry.key}::${entry.value.inMilliseconds}')
-        .join('|');
-    final playlistIndices = _trackPlaylistIndices.entries
-        .map((entry) => '${entry.key.name}=${entry.value}')
-        .join('|');
-    await prefs.setString(_savedPositionsKey, savedPositions);
-    await prefs.setString(_playlistIndicesKey, playlistIndices);
+    final payload = <String, Map<String, dynamic>>{};
+    for (final entry in _scenePlaybackStates.entries) {
+      payload[entry.key.name] = entry.value.toJson();
+    }
+    await prefs.setString(_scenePlaybackStateKey, jsonEncode(payload));
   }
 }
 

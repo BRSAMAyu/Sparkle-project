@@ -23,6 +23,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> runSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) async =>
       throw UnimplementedError();
 
@@ -30,6 +33,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> streamSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
 

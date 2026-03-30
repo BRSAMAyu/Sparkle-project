@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
@@ -17,14 +18,37 @@ class RecentInsightsCard extends ConsumerStatefulWidget {
 }
 
 class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
+  static const _collapsedPrefKey = 'dashboard.recent_insights_card.collapsed';
+
+  bool _isCollapsed = false;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_loadCollapsedPreference());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(
         ref.read(notificationCenterProvider.notifier).loadNotifications(),
       );
     });
+  }
+
+  Future<void> _loadCollapsedPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final collapsed = prefs.getBool(_collapsedPrefKey) ?? false;
+    if (!mounted) return;
+    setState(() {
+      _isCollapsed = collapsed;
+    });
+  }
+
+  Future<void> _setCollapsed(bool value) async {
+    if (_isCollapsed == value) return;
+    setState(() {
+      _isCollapsed = value;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_collapsedPrefKey, value);
   }
 
   @override
@@ -87,67 +111,109 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
       return const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing10,
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing16,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: DS.brandPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.auto_graph_rounded,
+                      size: 16,
+                      color: DS.brandPrimary,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.auto_graph_rounded,
-                    size: 16,
-                    color: DS.brandPrimary,
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      '最近洞察',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    '最近洞察',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                  Text(
+                    '${recentEntries.length} 条',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: DS.textSecondary,
                         ),
                   ),
-                ),
-                Text(
-                  '${recentEntries.length} 条',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing8),
-            ...recentEntries.map(
-              (item) => _InsightRow(
-                icon: item.type == 'learning_report_ready'
-                    ? Icons.article_outlined
-                    : item.type == 'simulation_session_ready'
-                        ? Icons.groups_rounded
-                        : Icons.auto_graph_rounded,
-                title: item.title,
-                subtitle: item.subtitle,
-                onTap: () => _openNotificationInsight(
-                  context,
-                  type: item.type,
-                  metadata: item.metadata,
-                ),
+                  const SizedBox(width: DS.spacing4),
+                  SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 32,
+                    onPressed: () => unawaited(_setCollapsed(!_isCollapsed)),
+                    icon: Icon(
+                      _isCollapsed
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.keyboard_arrow_up_rounded,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              AnimatedSwitcher(
+                duration: DS.durationFast,
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: _isCollapsed
+                    ? Padding(
+                        key: const ValueKey('collapsed'),
+                        padding: const EdgeInsets.only(top: DS.spacing8),
+                        child: Text(
+                          '已收起最近洞察，需要时可随时展开查看。',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.4,
+                                  ),
+                        ),
+                      )
+                    : Column(
+                        key: const ValueKey('expanded'),
+                        children: [
+                          const SizedBox(height: DS.spacing8),
+                          ...recentEntries.map(
+                            (item) => _InsightRow(
+                              icon: item.type == 'learning_report_ready'
+                                  ? Icons.article_outlined
+                                  : item.type == 'simulation_session_ready'
+                                      ? Icons.groups_rounded
+                                      : Icons.auto_graph_rounded,
+                              title: item.title,
+                              subtitle: item.subtitle,
+                              onTap: () => _openNotificationInsight(
+                                context,
+                                type: item.type,
+                                metadata: item.metadata,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

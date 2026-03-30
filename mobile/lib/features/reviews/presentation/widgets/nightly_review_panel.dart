@@ -28,9 +28,9 @@ class NightlyReviewPanel extends ConsumerWidget {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               DS.spacing16,
-              0,
+              DS.spacing4,
               DS.spacing16,
-              compact ? DS.spacing8 : DS.spacing10,
+              compact ? DS.spacing12 : DS.spacing16,
             ),
             child: DashboardEntrance(
               index: 6,

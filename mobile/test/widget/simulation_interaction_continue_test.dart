@@ -19,6 +19,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> runSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) async =>
       throw UnimplementedError();
 
@@ -26,6 +29,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> streamSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
 
@@ -143,8 +149,9 @@ void main() {
     expect(find.text('提交我的判断'), findsOneWidget);
     final chipFinder = find.byType(ActionChip).first;
     await tester.ensureVisible(chipFinder);
-    await tester.tap(chipFinder);
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(chipFinder, warnIfMissed: false);
+    await tester.pumpAndSettle();
 
     expect(notifier.replies, <String>['我会先画依赖图，再做一道题验证。']);
     expect(find.text('继续当前模拟'), findsNothing);

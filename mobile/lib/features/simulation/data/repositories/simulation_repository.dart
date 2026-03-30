@@ -32,12 +32,19 @@ class SimulationRepository {
   Future<SimulationSessionModel> runSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/simulation/run',
       data: {
         'topic': topic,
         'scenario_key': scenarioKey,
+        if (plannedRoundCount != null) 'planned_round_count': plannedRoundCount,
+        if ((participantNames ?? const <String>[]).isNotEmpty)
+          'participant_names': participantNames,
+        'facilitation_style': facilitationStyle,
       },
     );
     return SimulationSessionModel.fromJson(response.data ?? const {});
@@ -46,12 +53,20 @@ class SimulationRepository {
   Stream<SimulationStreamEventModel> streamSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) =>
       _apiClient.postStream(
         '/simulation/run/stream',
         data: {
           'topic': topic,
           'scenario_key': scenarioKey,
+          if (plannedRoundCount != null)
+            'planned_round_count': plannedRoundCount,
+          if ((participantNames ?? const <String>[]).isNotEmpty)
+            'participant_names': participantNames,
+          'facilitation_style': facilitationStyle,
         },
       ).map(
         (event) => SimulationStreamEventModel.fromJson(

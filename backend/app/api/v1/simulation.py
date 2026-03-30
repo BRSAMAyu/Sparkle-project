@@ -20,6 +20,20 @@ router = APIRouter(prefix="/simulation", tags=["simulation"])
 class SimulationRunRequest(BaseModel):
     topic: str = Field(..., description="学习主题")
     scenario_key: str = Field(default="study_group", description="场景模板 key")
+    planned_round_count: int | None = Field(
+        default=None,
+        ge=3,
+        le=8,
+        description="期望轮次，后端会按场景上限裁剪",
+    )
+    participant_names: list[str] = Field(
+        default_factory=list,
+        description="用户显式指定的参与角色名",
+    )
+    facilitation_style: str = Field(
+        default="balanced",
+        description="讨论展开方式：balanced / debate / guided / practical",
+    )
 
 
 class SimulationContinueRequest(BaseModel):
@@ -81,6 +95,9 @@ async def run_learning_simulation(
     session = await engine.run(
         topic=request.topic,
         scenario_key=normalized_scenario_key,
+        planned_round_count=request.planned_round_count,
+        participant_names=request.participant_names,
+        facilitation_style=request.facilitation_style,
         user_id=UUID(user_id),
     )
     return session.to_dict()
@@ -104,6 +121,9 @@ async def stream_learning_simulation(
             async for event_name, payload in engine.stream(
                 topic=request.topic,
                 scenario_key=normalized_scenario_key,
+                planned_round_count=request.planned_round_count,
+                participant_names=request.participant_names,
+                facilitation_style=request.facilitation_style,
                 user_id=UUID(user_id),
             ):
                 yield f"event: {event_name}\n"

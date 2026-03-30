@@ -11,7 +11,6 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/chat_continuity_banner.dart';
-import 'package:sparkle/core/widgets/immersive_stage_shell.dart';
 import 'package:sparkle/core/widgets/mirofish_stage_header.dart';
 import 'package:sparkle/features/mirofish/presentation/support/mirofish_milestone_service.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
@@ -44,10 +43,43 @@ enum _SimulationBottomTrayMode { hidden, peek, expanded }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   static const Map<String, String> _scenarioLabels = simulationScenarioLabels;
+  static const Map<String, List<String>> _scenarioParticipantOptions = {
+    'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
+    'knowledge_debate': ['正方专家', '反方专家', '主持人', '证据审查员', '追问者'],
+    'historical_roleplay': ['历史导师', '关键人物', '时代观察者', '策略顾问', '记录官'],
+    'socratic_dialogue': ['苏格拉底', '怀疑者', '拆解者', '应用者'],
+    'case_analysis': ['案例导师', '诊断官', '实践派', '反例提出者', '决策记录官'],
+    'what_if_path': ['当前路线', '激进路线', '风险观察者', '资源调度者', '验证者'],
+    'concept_map_build': ['结构师', '连接者', '提问者', '反例检查员', '桥梁构建者'],
+    'error_diagnosis': ['错因分析师', '纠偏教练', '验证者', '题面解构者', '迁移教练'],
+  };
+  static const Map<String, String> _scenarioDescriptions = {
+    'study_group': '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。',
+    'knowledge_debate': '让不同立场直接碰撞，适合验证观点、证据和边界条件。',
+    'historical_roleplay': '带入人物与时代约束，让讨论像真实历史现场一样推进。',
+    'socratic_dialogue': '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。',
+    'case_analysis': '围绕具体案例做拆解、诊断和决策，适合实务型主题。',
+    'what_if_path': '比较不同学习或行动路线，适合规划、取舍与资源分配。',
+    'concept_map_build': '把知识点织成结构图，适合建立全局框架与连接关系。',
+    'error_diagnosis': '专注识别错因、纠偏路径与验证方式，适合查漏补缺。',
+  };
+  static const Map<String, String> _facilitationLabels = {
+    'balanced': '平衡推进',
+    'debate': '分歧碰撞',
+    'guided': '引导拆解',
+    'practical': '应用落地',
+  };
+  static const Map<String, String> _facilitationDescriptions = {
+    'balanced': '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。',
+    'debate': '主动放大争议和证据冲突，更适合需要碰撞观点的主题。',
+    'guided': '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。',
+    'practical': '优先讨论行动、验证和现实约束，适合技能与方案推演。',
+  };
 
   final _topicController = TextEditingController();
   final _interactionController = TextEditingController();
   final _roundsScrollController = ScrollController();
+  final _immersiveScrollController = ScrollController();
   late String _selectedScenarioKey;
   late final ProviderSubscription<SimulationState> _simulationSubscription;
   bool _isPlaybackPaused = false;
@@ -55,6 +87,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   bool _settingsDrawerOpen = false;
   bool _insightOverlayOpen = false;
   _SimulationBottomTrayMode _bottomTrayMode = _SimulationBottomTrayMode.hidden;
+  int _configuredRoundCount = 5;
+  String _facilitationStyle = 'balanced';
+  List<String> _selectedParticipantNames = const [];
   List<SimulationParticipantModel>? _pausedParticipants;
   List<SimulationRoundModel>? _pausedRounds;
   String? _pausedInsightSummary;
@@ -65,6 +100,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void initState() {
     super.initState();
     _selectedScenarioKey = widget.initialScenarioKey ?? 'study_group';
+    _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
     _simulationSubscription = ref.listenManual<SimulationState>(
       simulationProvider,
       (previous, next) {
@@ -113,6 +149,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
           ref.read(simulationProvider.notifier).run(
                 topic: widget.initialTopic!.trim(),
                 scenarioKey: _selectedScenarioKey,
+                plannedRoundCount: _configuredRoundCount,
+                participantNames: _selectedParticipantNames,
+                facilitationStyle: _facilitationStyle,
               ),
         );
       }
@@ -125,6 +164,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     _topicController.dispose();
     _interactionController.dispose();
     _roundsScrollController.dispose();
+    _immersiveScrollController.dispose();
     super.dispose();
   }
 
@@ -163,7 +203,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     );
     final plannedRoundCount = (session?.plannedRoundCount ?? 0) > 0
         ? session!.plannedRoundCount
-        : expectedRounds;
+        : math.max(_configuredRoundCount, expectedRounds);
     final viewMode = _resolveViewMode(session);
     final activeSpeaker = rounds.isEmpty ? null : rounds.last.speaker;
 
@@ -261,7 +301,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   }
 
   void _handleScenarioSelected(String value) {
-    setState(() => _selectedScenarioKey = value);
+    setState(() {
+      _selectedScenarioKey = value;
+      _applyScenarioDefaults(value, resetParticipants: true);
+    });
     unawaited(
       ref.read(simulationProvider.notifier).loadRecommendedSeeds(
             scenarioKey: value,
@@ -273,6 +316,14 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void _startSeed(SimulationSeedModel seed) {
     setState(() {
       _selectedScenarioKey = seed.suggestedScenario;
+      _applyScenarioDefaults(seed.suggestedScenario, resetParticipants: true);
+      if (seed.suggestedExperts.isNotEmpty) {
+        _selectedParticipantNames = seed.suggestedExperts
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .take(6)
+            .toList(growable: false);
+      }
       _settingsDrawerOpen = false;
       _insightOverlayOpen = false;
       _bottomTrayMode = _SimulationBottomTrayMode.hidden;
@@ -283,8 +334,93 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       ref.read(simulationProvider.notifier).run(
             topic: seed.topic,
             scenarioKey: seed.suggestedScenario,
+            plannedRoundCount: _configuredRoundCount,
+            participantNames: _selectedParticipantNames,
+            facilitationStyle: _facilitationStyle,
           ),
     );
+  }
+
+  void _applyScenarioDefaults(
+    String scenarioKey, {
+    required bool resetParticipants,
+  }) {
+    final maxRounds = _maxRoundsForScenario(scenarioKey);
+    final suggestedRounds = _suggestedRoundCountForScenario(scenarioKey);
+    _configuredRoundCount = _configuredRoundCount.clamp(3, maxRounds);
+    if (_configuredRoundCount == 0 ||
+        resetParticipants ||
+        _configuredRoundCount > maxRounds) {
+      _configuredRoundCount = suggestedRounds.clamp(3, maxRounds);
+    }
+    if (resetParticipants || _selectedParticipantNames.isEmpty) {
+      _selectedParticipantNames = _defaultParticipantNamesForScenario(
+        scenarioKey,
+      );
+    }
+  }
+
+  int _suggestedRoundCountForScenario(String scenarioKey) {
+    switch (scenarioKey) {
+      case 'knowledge_debate':
+      case 'case_analysis':
+        return 8;
+      case 'historical_roleplay':
+      case 'error_diagnosis':
+        return 9;
+      case 'what_if_path':
+      case 'concept_map_build':
+        return 8;
+      case 'socratic_dialogue':
+        return 7;
+      default:
+        return 8;
+    }
+  }
+
+  int _maxRoundsForScenario(String scenarioKey) {
+    switch (scenarioKey) {
+      case 'case_analysis':
+      case 'knowledge_debate':
+        return 12;
+      case 'historical_roleplay':
+      case 'error_diagnosis':
+        return 12;
+      case 'what_if_path':
+      case 'concept_map_build':
+        return 10;
+      case 'socratic_dialogue':
+        return 9;
+      default:
+        return 10;
+    }
+  }
+
+  List<String> _participantOptionsForScenario(String scenarioKey) =>
+      _scenarioParticipantOptions[scenarioKey] ?? const ['学习伙伴', '提问者', '总结者'];
+
+  List<String> _defaultParticipantNamesForScenario(String scenarioKey) =>
+      _participantOptionsForScenario(scenarioKey)
+          .take(scenarioKey == 'socratic_dialogue' ? 2 : 4)
+          .toList(growable: false);
+
+  void _toggleParticipantSelection(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    setState(() {
+      final next = List<String>.from(_selectedParticipantNames);
+      if (next.contains(trimmed)) {
+        if (next.length <= 1) {
+          return;
+        }
+        next.remove(trimmed);
+      } else if (next.length < 6) {
+        next.add(trimmed);
+      }
+      _selectedParticipantNames = next;
+    });
   }
 
   Widget _buildSetupLayout({
@@ -332,6 +468,39 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 scenarioLabels: _scenarioLabels,
                 state: state,
                 onScenarioSelected: _handleScenarioSelected,
+                onRun: () => unawaited(_runSimulation()),
+              ),
+              const SizedBox(height: 14),
+              _SimulationCompactSetupPanel(
+                topicController: _topicController,
+                selectedScenarioKey: _selectedScenarioKey,
+                scenarioLabels: _scenarioLabels,
+                scenarioDescriptions: _scenarioDescriptions,
+                isLoading: state.isLoading,
+                facilitationStyle: _facilitationStyle,
+                facilitationLabels: _facilitationLabels,
+                facilitationDescriptions: _facilitationDescriptions,
+                plannedRoundCount: _configuredRoundCount,
+                maxRoundCount: _maxRoundsForScenario(_selectedScenarioKey),
+                selectedParticipantNames: _selectedParticipantNames,
+                availableParticipantNames:
+                    _participantOptionsForScenario(_selectedScenarioKey),
+                onScenarioSelected: _handleScenarioSelected,
+                onFacilitationStyleSelected: (value) {
+                  setState(() => _facilitationStyle = value);
+                },
+                onRoundCountChanged: (value) {
+                  setState(() => _configuredRoundCount = value);
+                },
+                onParticipantToggled: _toggleParticipantSelection,
+                onResetParticipants: () {
+                  setState(() {
+                    _selectedParticipantNames =
+                        _defaultParticipantNamesForScenario(
+                      _selectedScenarioKey,
+                    );
+                  });
+                },
                 onRun: () => unawaited(_runSimulation()),
               ),
               const SizedBox(height: 14),
@@ -470,165 +639,191 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             ? _SimulationBottomTrayMode.expanded
             : _bottomTrayMode)
         : _SimulationBottomTrayMode.hidden;
+    final runtimeFacilitationStyle =
+        session?.facilitationStyle ?? _facilitationStyle;
     final setupPanel = _SimulationCompactSetupPanel(
       topicController: _topicController,
       selectedScenarioKey: _selectedScenarioKey,
       scenarioLabels: _scenarioLabels,
+      scenarioDescriptions: _scenarioDescriptions,
       isLoading: state.isLoading,
+      facilitationStyle: runtimeFacilitationStyle,
+      facilitationLabels: _facilitationLabels,
+      facilitationDescriptions: _facilitationDescriptions,
+      plannedRoundCount: plannedRoundCount,
+      maxRoundCount: _maxRoundsForScenario(_selectedScenarioKey),
+      selectedParticipantNames: _selectedParticipantNames,
+      availableParticipantNames: _participantOptionsForScenario(
+        _selectedScenarioKey,
+      ),
       onScenarioSelected: _handleScenarioSelected,
+      onFacilitationStyleSelected: (value) {
+        setState(() => _facilitationStyle = value);
+      },
+      onRoundCountChanged: (value) {
+        setState(() => _configuredRoundCount = value);
+      },
+      onParticipantToggled: _toggleParticipantSelection,
+      onResetParticipants: () {
+        setState(() {
+          _selectedParticipantNames =
+              _defaultParticipantNamesForScenario(_selectedScenarioKey);
+        });
+      },
       onRun: () => unawaited(_runSimulation()),
     );
-    return ImmersiveStageShell(
-      topBarHeight: 84,
-      bodyPadding: EdgeInsets.fromLTRB(16, 0, 16, safeBottom + 4),
-      topBar: _SimulationImmersiveTopBar(
-        topic: topic,
-        scenarioLabel: scenarioLabel,
-        roundCount: rounds.length,
-        expectedRounds: plannedRoundCount,
-        engineState: state.engineState,
-        activeSpeaker: activeSpeaker,
-        participantCount: participants.length,
-        isPaused: _isPlaybackPaused,
-        isReview: viewMode == _SimulationViewMode.review,
-        hasInsight: hasInsight,
-        settingsOpen: _settingsDrawerOpen,
-        onTogglePause: viewMode == _SimulationViewMode.review
-            ? null
-            : _togglePlaybackPause,
-        onToggleSettings: () {
-          setState(() {
-            _settingsDrawerOpen = !_settingsDrawerOpen;
-            if (_settingsDrawerOpen) {
-              _insightOverlayOpen = false;
-            }
-          });
-        },
-        onToggleInsight: hasInsight
-            ? () {
-                setState(() {
-                  _insightOverlayOpen = !_insightOverlayOpen;
-                  if (_insightOverlayOpen) {
-                    _settingsDrawerOpen = false;
-                  }
-                });
-              }
-            : null,
-      ),
-      drawer: _OverlayPanelScaffold(
-        title: '模拟设置',
-        subtitle: '设置独立覆盖在舞台上方，不再压缩讨论流。',
-        onClose: () => setState(() => _settingsDrawerOpen = false),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: setupPanel,
-        ),
-      ),
-      isDrawerOpen: _settingsDrawerOpen,
-      onDismissDrawer: () => setState(() => _settingsDrawerOpen = false),
-      bottomTray: hasInteraction
-          ? _SimulationFloatingInteractionTray(
-              mode: effectiveTrayMode,
-              prompt: interactionPrompt!,
-              onExpand: () => setState(
-                () => _bottomTrayMode = _SimulationBottomTrayMode.expanded,
-              ),
-              onCollapse: () => setState(
-                () => _bottomTrayMode = _SimulationBottomTrayMode.peek,
-              ),
-              child: _SimulationInteractionCard(
-                prompt: interactionPrompt,
-                interactionType: pendingInteraction?.interactionType ??
-                    session?.interactionType,
-                suggestedReplies: suggestedReplies,
-                options: pendingInteraction?.options ?? const [],
-                isSubmitting: state.isContinuing,
-                textController: _interactionController,
-                onReplySelected: (reply) =>
-                    unawaited(_continueSimulation(reply)),
-                onSubmitText: () =>
-                    unawaited(_continueSimulation(_interactionController.text)),
-                onContinueInChat: (reply) => unawaited(_continueInChat(reply)),
-              ),
-            )
-          : null,
-      bottomTrayMode: _toImmersiveTrayMode(effectiveTrayMode),
-      overlay: hasInsight && _insightOverlayOpen
-          ? _SimulationInsightOverlay(
-              title: topic,
-              onDismiss: () => setState(() => _insightOverlayOpen = false),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _SimulationInsightTray(
-                  summary: insightSummary ?? '',
-                  expanded: _isInsightExpanded ||
-                      viewMode == _SimulationViewMode.review,
-                  onToggleExpanded: () {
-                    setState(() {
-                      _isInsightExpanded = !_isInsightExpanded;
-                    });
+    return CustomScrollView(
+      controller: _immersiveScrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, safeBottom + 18),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: _SimulationImmersiveTopBar(
+                  topic: topic,
+                  scenarioLabel: scenarioLabel,
+                  roundCount: rounds.length,
+                  expectedRounds: plannedRoundCount,
+                  engineState: state.engineState,
+                  activeSpeaker: activeSpeaker,
+                  participantCount: participants.length,
+                  facilitationLabel:
+                      _facilitationLabels[runtimeFacilitationStyle] ?? '平衡推进',
+                  isPaused: _isPlaybackPaused,
+                  isReview: viewMode == _SimulationViewMode.review,
+                  hasInsight: hasInsight,
+                  settingsOpen: _settingsDrawerOpen,
+                  insightOpen: _insightOverlayOpen,
+                  onTogglePause: viewMode == _SimulationViewMode.review
+                      ? null
+                      : _togglePlaybackPause,
+                  onToggleSettings: () {
+                    setState(() => _settingsDrawerOpen = !_settingsDrawerOpen);
                   },
-                  session: session,
-                  onOpenTheater: session == null
-                      ? null
-                      : () => context.push(
-                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(session.topic)}',
-                          ),
-                  onOpenReport: session == null
-                      ? null
-                      : () => context.push(
-                            ReportRoutes.learningReport,
-                            extra: _buildSimulationReport(session),
-                          ),
-                  onShare: session == null
-                      ? null
-                      : () => unawaited(_shareSession(session)),
+                  onToggleInsight: hasInsight
+                      ? () {
+                          setState(
+                            () => _insightOverlayOpen = !_insightOverlayOpen,
+                          );
+                        }
+                      : null,
                 ),
               ),
-            )
-          : null,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (state.error != null) ...[
-            const SizedBox(height: 8),
-            _InlineErrorBanner(message: state.error!),
-            const SizedBox(height: 12),
-          ] else
-            const SizedBox(height: 8),
-          if (participants.isNotEmpty) ...[
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: participants.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final participant = participants[index];
-                  return _SimulationMiniParticipantPill(
-                    participant: participant,
-                    isActive: participant.name == activeSpeaker,
-                  );
-                },
+              if (state.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _InlineErrorBanner(message: state.error!),
+                ),
+              if (_settingsDrawerOpen)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: setupPanel,
+                ),
+              if (participants.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    height: 38,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: participants.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final participant = participants[index];
+                        return _SimulationMiniParticipantPill(
+                          participant: participant,
+                          isActive: participant.name == activeSpeaker,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: _SimulationTimelineCard(
+                  rounds: rounds,
+                  participants: participants,
+                  activeSpeaker: activeSpeaker,
+                  isLoading: state.isLoading,
+                  topic: topic,
+                  controller: _roundsScrollController,
+                  immersive: true,
+                  showParticipantSnapshot: false,
+                  embedInParentScroll: true,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Expanded(
-            child: _SimulationTimelineCard(
-              rounds: rounds,
-              participants: participants,
-              activeSpeaker: activeSpeaker,
-              isLoading: state.isLoading,
-              topic: topic,
-              controller: _roundsScrollController,
-              immersive: true,
-              showParticipantSnapshot: false,
-              fillAvailableHeight: true,
-            ),
+              if (hasInteraction)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _SimulationInlineInteractionSection(
+                    mode: effectiveTrayMode,
+                    prompt: interactionPrompt!,
+                    onExpand: () => setState(
+                      () =>
+                          _bottomTrayMode = _SimulationBottomTrayMode.expanded,
+                    ),
+                    onCollapse: () => setState(
+                      () => _bottomTrayMode = _SimulationBottomTrayMode.peek,
+                    ),
+                    child: _SimulationInteractionCard(
+                      prompt: interactionPrompt,
+                      interactionType: pendingInteraction?.interactionType ??
+                          session?.interactionType,
+                      suggestedReplies: suggestedReplies,
+                      options: pendingInteraction?.options ?? const [],
+                      isSubmitting: state.isContinuing,
+                      textController: _interactionController,
+                      onReplySelected: (reply) =>
+                          unawaited(_continueSimulation(reply)),
+                      onSubmitText: () => unawaited(
+                        _continueSimulation(_interactionController.text),
+                      ),
+                      onContinueInChat: (reply) =>
+                          unawaited(_continueInChat(reply)),
+                    ),
+                  ),
+                ),
+              if (hasInsight)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _SimulationInsightTray(
+                    summary: insightSummary ?? '',
+                    expanded: _isInsightExpanded ||
+                        _insightOverlayOpen ||
+                        viewMode == _SimulationViewMode.review,
+                    onToggleExpanded: () {
+                      setState(() {
+                        _isInsightExpanded = !_isInsightExpanded;
+                        _insightOverlayOpen = _isInsightExpanded;
+                      });
+                    },
+                    session: session,
+                    onOpenTheater: session == null
+                        ? null
+                        : () => context.push(
+                              '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(session.topic)}',
+                            ),
+                    onOpenReport: session == null
+                        ? null
+                        : () => context.push(
+                              ReportRoutes.learningReport,
+                              extra: _buildSimulationReport(session),
+                            ),
+                    onShare: session == null
+                        ? null
+                        : () => unawaited(_shareSession(session)),
+                  ),
+                ),
+            ]),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -653,6 +848,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     await ref.read(simulationProvider.notifier).run(
           topic: topic,
           scenarioKey: _selectedScenarioKey,
+          plannedRoundCount: _configuredRoundCount,
+          participantNames: _selectedParticipantNames,
+          facilitationStyle: _facilitationStyle,
         );
   }
 
@@ -697,16 +895,27 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
   void _scrollToLatestRound() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_roundsScrollController.hasClients) {
+      if (!mounted) {
         return;
       }
-      unawaited(
-        _roundsScrollController.animateTo(
-          _roundsScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeOutCubic,
-        ),
-      );
+      if (_immersiveScrollController.hasClients) {
+        unawaited(
+          _immersiveScrollController.animateTo(
+            _immersiveScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+          ),
+        );
+      }
+      if (_roundsScrollController.hasClients) {
+        unawaited(
+          _roundsScrollController.animateTo(
+            _roundsScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+          ),
+        );
+      }
     });
   }
 
@@ -810,19 +1019,6 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     }
     _interactionController.clear();
     await ref.read(simulationProvider.notifier).continueSimulation(normalized);
-  }
-
-  ImmersiveStageTrayMode _toImmersiveTrayMode(
-    _SimulationBottomTrayMode mode,
-  ) {
-    switch (mode) {
-      case _SimulationBottomTrayMode.peek:
-        return ImmersiveStageTrayMode.peek;
-      case _SimulationBottomTrayMode.expanded:
-        return ImmersiveStageTrayMode.expanded;
-      case _SimulationBottomTrayMode.hidden:
-        return ImmersiveStageTrayMode.hidden;
-    }
   }
 }
 
@@ -1135,10 +1331,12 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
     required this.engineState,
     required this.activeSpeaker,
     required this.participantCount,
+    required this.facilitationLabel,
     required this.isPaused,
     required this.isReview,
     required this.hasInsight,
     required this.settingsOpen,
+    required this.insightOpen,
     required this.onToggleSettings,
     this.onTogglePause,
     this.onToggleInsight,
@@ -1151,10 +1349,12 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
   final String? engineState;
   final String? activeSpeaker;
   final int participantCount;
+  final String facilitationLabel;
   final bool isPaused;
   final bool isReview;
   final bool hasInsight;
   final bool settingsOpen;
+  final bool insightOpen;
   final VoidCallback onToggleSettings;
   final VoidCallback? onTogglePause;
   final VoidCallback? onToggleInsight;
@@ -1164,146 +1364,103 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
     final titleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w800,
         );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 680;
+        final actionRow = Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (!isReview)
+              IconButton.filledTonal(
+                tooltip: isPaused ? '继续模拟' : '暂停模拟',
+                onPressed: onTogglePause,
+                icon: Icon(
+                  isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                ),
+              ),
+            if (hasInsight)
+              FilledButton.tonalIcon(
+                onPressed: onToggleInsight,
+                icon: Icon(
+                  insightOpen
+                      ? Icons.lightbulb_outline_rounded
+                      : (isReview
+                          ? Icons.insights_rounded
+                          : Icons.lightbulb_circle_rounded),
+                ),
+                label: Text(insightOpen ? '收起洞察' : '查看洞察'),
+              ),
+            FilledButton.tonalIcon(
+              onPressed: onToggleSettings,
+              icon: Icon(
+                settingsOpen ? Icons.expand_less_rounded : Icons.tune_rounded,
+              ),
+              label: Text(settingsOpen ? '收起设置' : '模拟设置'),
+            ),
+          ],
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              topic,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Text(
-                  topic,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
+                _StatusBadge(
+                  icon: Icons.theater_comedy_rounded,
+                  label: scenarioLabel,
                 ),
-                const SizedBox(height: 2),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _StatusBadge(
-                        icon: Icons.theater_comedy_rounded,
-                        label: scenarioLabel,
-                      ),
-                      const SizedBox(width: 8),
-                      _StatusBadge(
-                        icon: Icons.forum_rounded,
-                        label:
-                            '${math.max(1, roundCount)}/${math.max(expectedRounds, roundCount)} 轮',
-                      ),
-                      const SizedBox(width: 8),
-                      _StatusBadge(
-                        icon: Icons.groups_rounded,
-                        label: '$participantCount 角色',
-                      ),
-                      if ((activeSpeaker ?? '').isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        _StatusBadge(
-                          icon: Icons.mic_rounded,
-                          label: localizeSimulationText(activeSpeaker!),
-                        ),
-                      ],
-                    ],
+                _StatusBadge(
+                  icon: Icons.forum_rounded,
+                  label:
+                      '${math.max(1, roundCount)}/${math.max(expectedRounds, roundCount)} 轮',
+                ),
+                _StatusBadge(
+                  icon: Icons.groups_rounded,
+                  label: '$participantCount 角色',
+                ),
+                _StatusBadge(
+                  icon: Icons.tune_rounded,
+                  label: facilitationLabel,
+                ),
+                if ((activeSpeaker ?? '').isNotEmpty)
+                  _StatusBadge(
+                    icon: Icons.mic_rounded,
+                    label: localizeSimulationText(activeSpeaker!),
                   ),
-                ),
+                if ((engineState ?? '').isNotEmpty)
+                  _StatusBadge(
+                    icon: Icons.memory_rounded,
+                    label: localizeSimulationEngineState(engineState),
+                  ),
               ],
             ),
-          ),
-          const SizedBox(width: 12),
-          if (!isReview)
-            IconButton.filledTonal(
-              tooltip: isPaused ? '继续模拟' : '暂停模拟',
-              onPressed: onTogglePause,
-              icon: Icon(
-                isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+            const SizedBox(height: 10),
+            if (compact)
+              actionRow
+            else
+              Align(
+                alignment: Alignment.centerRight,
+                child: actionRow,
               ),
-            ),
-          const SizedBox(width: 8),
-          if (hasInsight)
-            IconButton.filledTonal(
-              tooltip: '查看洞察',
-              onPressed: onToggleInsight,
-              icon: Icon(
-                isReview
-                    ? Icons.insights_rounded
-                    : Icons.lightbulb_circle_rounded,
-              ),
-            ),
-          const SizedBox(width: 8),
-          FilledButton.tonalIcon(
-            onPressed: onToggleSettings,
-            icon: Icon(
-              settingsOpen ? Icons.close_rounded : Icons.tune_rounded,
-            ),
-            label: const Text('模拟设置'),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _OverlayPanelScaffold extends StatelessWidget {
-  const _OverlayPanelScaffold({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-    required this.onClose,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.4,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(child: child),
-        ],
-      );
-}
-
-class _SimulationFloatingInteractionTray extends StatelessWidget {
-  const _SimulationFloatingInteractionTray({
+class _SimulationInlineInteractionSection extends StatelessWidget {
+  const _SimulationInlineInteractionSection({
     required this.mode,
     required this.prompt,
     required this.child,
@@ -1320,16 +1477,17 @@ class _SimulationFloatingInteractionTray extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (mode == _SimulationBottomTrayMode.peek) {
-      return InkWell(
-        onTap: onExpand,
-        borderRadius: BorderRadius.circular(28),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      return GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: InkWell(
+          onTap: onExpand,
+          borderRadius: BorderRadius.circular(18),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: DS.info.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
@@ -1338,185 +1496,62 @@ class _SimulationFloatingInteractionTray extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  localizeSimulationText(prompt),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '轮到你回应',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      localizeSimulationText(prompt),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.keyboard_arrow_up_rounded),
+              const Icon(Icons.expand_more_rounded),
             ],
           ),
         ),
       );
     }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 10, 0),
-          child: Row(
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                '你的回应窗口',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+              Expanded(
+                child: Text(
+                  '你的回应区',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
               ),
-              const Spacer(),
               TextButton.icon(
                 onPressed: onCollapse,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                icon: const Icon(Icons.expand_less_rounded),
                 label: const Text('收起'),
               ),
             ],
           ),
-        ),
-        const Divider(height: 1),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: child,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SimulationInsightOverlay extends StatelessWidget {
-  const _SimulationInsightOverlay({
-    required this.title,
-    required this.child,
-    required this.onDismiss,
-  });
-
-  final String title;
-  final Widget child;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final useBottomSheet = width < 780;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: onDismiss,
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.22),
-            ),
-          ),
-        ),
-        Align(
-          alignment:
-              useBottomSheet ? Alignment.bottomCenter : Alignment.centerRight,
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                92,
-                16,
-                useBottomSheet ? 16 : 24,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: useBottomSheet ? double.infinity : 420,
-                  maxHeight: useBottomSheet ? 420 : double.infinity,
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.98),
-                        Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHigh
-                            .withValues(alpha: 0.96),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: DS.borderSubtle.withValues(alpha: 0.78),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 28,
-                        offset: const Offset(0, 16),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '洞察总结',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: DS.textSecondary,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: onDismiss,
-                                  icon: const Icon(Icons.close_rounded),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          Expanded(child: child),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -1780,16 +1815,40 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
     required this.topicController,
     required this.selectedScenarioKey,
     required this.scenarioLabels,
+    required this.scenarioDescriptions,
     required this.isLoading,
+    required this.facilitationStyle,
+    required this.facilitationLabels,
+    required this.facilitationDescriptions,
+    required this.plannedRoundCount,
+    required this.maxRoundCount,
+    required this.selectedParticipantNames,
+    required this.availableParticipantNames,
     required this.onScenarioSelected,
+    required this.onFacilitationStyleSelected,
+    required this.onRoundCountChanged,
+    required this.onParticipantToggled,
+    required this.onResetParticipants,
     required this.onRun,
   });
 
   final TextEditingController topicController;
   final String selectedScenarioKey;
   final Map<String, String> scenarioLabels;
+  final Map<String, String> scenarioDescriptions;
   final bool isLoading;
+  final String facilitationStyle;
+  final Map<String, String> facilitationLabels;
+  final Map<String, String> facilitationDescriptions;
+  final int plannedRoundCount;
+  final int maxRoundCount;
+  final List<String> selectedParticipantNames;
+  final List<String> availableParticipantNames;
   final ValueChanged<String> onScenarioSelected;
+  final ValueChanged<String> onFacilitationStyleSelected;
+  final ValueChanged<int> onRoundCountChanged;
+  final ValueChanged<String> onParticipantToggled;
+  final VoidCallback onResetParticipants;
   final VoidCallback onRun;
 
   @override
@@ -1807,7 +1866,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '这里只保留主题和场景选择；正式讨论仍然留在下方，不会被设置区打断。',
+              '这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -1847,6 +1906,137 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                     ),
                   )
                   .toList(),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                scenarioDescriptions[selectedScenarioKey] ?? '调整场景后，讨论的角色关系与推进方式也会一起变化。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '讨论轮数',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                _StatusBadge(
+                  icon: Icons.timelapse_rounded,
+                  label: '$plannedRoundCount / $maxRoundCount 轮',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              value: plannedRoundCount.toDouble(),
+              min: 3,
+              max: maxRoundCount.toDouble(),
+              divisions: math.max(0, maxRoundCount - 3),
+              label: '$plannedRoundCount 轮',
+              onChanged: isLoading
+                  ? null
+                  : (value) => onRoundCountChanged(value.round()),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '展开方式',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: facilitationLabels.entries.map((entry) {
+                final selected = facilitationStyle == entry.key;
+                return ChoiceChip(
+                  label: Text(entry.value),
+                  selected: selected,
+                  onSelected: isLoading
+                      ? null
+                      : (value) {
+                          if (value) {
+                            onFacilitationStyleSelected(entry.key);
+                          }
+                        },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              facilitationDescriptions[facilitationStyle] ?? '让讨论更贴合当前主题。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '参与角色',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: isLoading ? null : onResetParticipants,
+                  icon: const Icon(Icons.restart_alt_rounded),
+                  label: const Text('恢复推荐'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: availableParticipantNames.map((name) {
+                final selected = selectedParticipantNames.contains(name);
+                return FilterChip(
+                  label: Text(name),
+                  selected: selected,
+                  onSelected:
+                      isLoading ? null : (_) => onParticipantToggled(name),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              selectedParticipantNames.isEmpty
+                  ? '当前将按系统默认角色运行。'
+                  : '当前参与：${selectedParticipantNames.join('、')}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.4,
+                  ),
             ),
             const SizedBox(height: 12),
             Align(
@@ -2051,7 +2241,7 @@ class _SimulationTimelineCard extends StatelessWidget {
     this.height,
     this.immersive = false,
     this.showParticipantSnapshot = true,
-    this.fillAvailableHeight = false,
+    this.embedInParentScroll = false,
   });
 
   final List<SimulationRoundModel> rounds;
@@ -2063,7 +2253,7 @@ class _SimulationTimelineCard extends StatelessWidget {
   final double? height;
   final bool immersive;
   final bool showParticipantSnapshot;
-  final bool fillAvailableHeight;
+  final bool embedInParentScroll;
 
   @override
   Widget build(BuildContext context) {
@@ -2072,29 +2262,56 @@ class _SimulationTimelineCard extends StatelessWidget {
     };
     final timelineList = rounds.isEmpty
         ? _SimulationEmptyState(isLoading: isLoading)
-        : ListView.separated(
-            controller: controller,
-            itemCount: rounds.length,
-            separatorBuilder: (context, index) => _RoundDivider(
-              round: rounds[index].round,
-            ),
-            itemBuilder: (context, index) {
-              final round = rounds[index];
-              return SimulationChatBubble(
-                key: ValueKey(
-                  '${round.round}-${round.speaker}-${round.message}',
+        : embedInParentScroll
+            ? Column(
+                children: [
+                  for (var index = 0; index < rounds.length; index++) ...[
+                    if (index > 0)
+                      _RoundDivider(
+                        round: rounds[index - 1].round,
+                      ),
+                    SimulationChatBubble(
+                      key: ValueKey(
+                        '${rounds[index].round}-${rounds[index].speaker}-${rounds[index].message}',
+                      ),
+                      speaker: rounds[index].speaker,
+                      participant: participantByName[rounds[index].speaker],
+                      message: rounds[index].message,
+                      round: rounds[index].round,
+                      replyToSpeaker: rounds[index].replyToSpeaker,
+                      turnGoal: rounds[index].turnGoal,
+                      isSpotlighted: rounds[index].speaker == activeSpeaker &&
+                          index == rounds.length - 1,
+                    ),
+                  ],
+                ],
+              )
+            : ListView.separated(
+                controller: controller,
+                itemCount: rounds.length,
+                separatorBuilder: (context, index) => _RoundDivider(
+                  round: rounds[index].round,
                 ),
-                speaker: round.speaker,
-                participant: participantByName[round.speaker],
-                message: round.message,
-                round: round.round,
-                replyToSpeaker: round.replyToSpeaker,
-                turnGoal: round.turnGoal,
-                isSpotlighted: round.speaker == activeSpeaker &&
-                    index == rounds.length - 1,
+                itemBuilder: (context, index) {
+                  final round = rounds[index];
+                  return SimulationChatBubble(
+                    key: ValueKey(
+                      '${round.round}-${round.speaker}-${round.message}',
+                    ),
+                    speaker: round.speaker,
+                    participant: participantByName[round.speaker],
+                    message: round.message,
+                    round: round.round,
+                    replyToSpeaker: round.replyToSpeaker,
+                    turnGoal: round.turnGoal,
+                    isSpotlighted: round.speaker == activeSpeaker &&
+                        index == rounds.length - 1,
+                  );
+                },
               );
-            },
-          );
+    if (immersive && embedInParentScroll) {
+      return timelineList;
+    }
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       padding: const EdgeInsets.all(14),
@@ -2161,8 +2378,8 @@ class _SimulationTimelineCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          if (fillAvailableHeight)
-            Expanded(child: timelineList)
+          if (embedInParentScroll)
+            timelineList
           else
             SizedBox(
               height: height ?? 320,

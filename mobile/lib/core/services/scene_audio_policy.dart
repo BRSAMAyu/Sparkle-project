@@ -12,10 +12,17 @@ enum ExperienceAtmosphere {
   insightsMist,
 }
 
+enum SceneBgmSwitchBehavior {
+  switchOnEnter,
+  retainIfAdjacent,
+  keepPlaying,
+}
+
 class SceneAudioPolicy {
   const SceneAudioPolicy({
     this.track,
     this.priority = BgmPriority.route,
+    this.switchBehavior = SceneBgmSwitchBehavior.switchOnEnter,
     this.useSavedAmbient = false,
     this.ambientScene,
     this.atmosphere = ExperienceAtmosphere.none,
@@ -25,6 +32,7 @@ class SceneAudioPolicy {
 
   final BgmTrack? track;
   final BgmPriority priority;
+  final SceneBgmSwitchBehavior switchBehavior;
   final bool useSavedAmbient;
   final AmbientScene? ambientScene;
   final ExperienceAtmosphere atmosphere;
@@ -38,6 +46,7 @@ class SceneAudioPolicy {
   SceneAudioPolicy copyWith({
     BgmTrack? track,
     BgmPriority? priority,
+    SceneBgmSwitchBehavior? switchBehavior,
     bool? useSavedAmbient,
     Object? ambientScene = _unset,
     ExperienceAtmosphere? atmosphere,
@@ -47,6 +56,7 @@ class SceneAudioPolicy {
       SceneAudioPolicy(
         track: track ?? this.track,
         priority: priority ?? this.priority,
+        switchBehavior: switchBehavior ?? this.switchBehavior,
         useSavedAmbient: useSavedAmbient ?? this.useSavedAmbient,
         ambientScene: identical(ambientScene, _unset)
             ? this.ambientScene

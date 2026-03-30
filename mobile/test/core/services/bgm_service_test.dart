@@ -31,6 +31,19 @@ void main() {
     releaseApproved: true,
   );
 
+  const chatThirdEntry = BgmCatalogEntry(
+    id: 'chat_third',
+    assetPath: 'audio/bgm/profile_reflect.m4a',
+    album: 'Test Album',
+    sceneTags: ['chat', 'reading', 'soft'],
+    paletteTags: ['adaptive'],
+    energy: 0.21,
+    density: 0.18,
+    baseGain: 0.91,
+    loopable: true,
+    releaseApproved: true,
+  );
+
   const dashboardEntry = BgmCatalogEntry(
     id: 'dashboard_home',
     assetPath: 'audio/bgm/home_morning.m4a',
@@ -46,7 +59,9 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'bgm.palette': 'warm',
+      'bgm.palette': 'adaptive',
+      'bgm.intensity': 'gentle',
+      'bgm.variety': 'balanced',
     });
     await BgmService.debugResetState();
   });
@@ -66,33 +81,87 @@ void main() {
     expect(picked?.id, 'chat_soft');
   });
 
-  test('recent de-dup favors alternate entry when variety is dynamic', () {
-    final picked = BgmService.debugPickCatalogEntry(
-      entries: const [chatEntry, chatAltEntry],
+  test('unfinished scene resumes the same curated track from its saved state',
+      () async {
+    BgmService.debugSetCatalogEntries(const [chatEntry, chatAltEntry]);
+    BgmService.debugSeedSceneState(
       track: BgmTrack.chat,
-      palette: BgmPalette.adaptive,
-      tuning: const BgmUserTuning(variety: BgmVariety.dynamic),
-      recentIds: const ['chat_soft'],
+      entry: chatEntry,
+      position: const Duration(seconds: 42),
     );
 
-    expect(picked?.id, 'chat_alt');
+    final reason = await BgmService.debugResolveSelectionReason(BgmTrack.chat);
+    final assetPath = await BgmService.debugResolveSelectionAssetPath(
+      BgmTrack.chat,
+    );
+
+    expect(reason, contains('恢复 聊天 上次播放断点'));
+    expect(assetPath, chatEntry.assetPath);
   });
 
-  test('same-family transitions within 20 seconds retain current selection',
+  test('completed scene advances to the next curated track on re-entry',
       () async {
-    final now = DateTime(2026, 3, 26, 9, 0);
-    BgmService.debugSetNowProvider(() => now);
-    BgmService.debugSeedCurrentSelection(
-      track: BgmTrack.plan,
-      entry: dashboardEntry,
-      startedAt: now.subtract(const Duration(seconds: 10)),
+    const entries = [chatEntry, chatAltEntry];
+    BgmService.debugSetCatalogEntries(entries);
+    BgmService.debugSeedSceneState(
+      track: BgmTrack.chat,
+      entry: chatEntry,
+      completed: true,
+      queueCursor: 1,
     );
+    final queue = BgmService.debugCatalogQueueIds(
+      entries: entries,
+      track: BgmTrack.chat,
+      palette: BgmPalette.adaptive,
+      tuning: const BgmUserTuning(),
+    );
+
+    final assetPath = await BgmService.debugResolveSelectionAssetPath(
+      BgmTrack.chat,
+    );
+
+    final expectedEntry = entries.firstWhere((entry) => entry.id == queue[1]);
+    expect(assetPath, expectedEntry.assetPath);
+  });
+
+  test('scene playback states stay isolated per track', () {
+    BgmService.debugSeedSceneState(
+      track: BgmTrack.chat,
+      entry: chatEntry,
+      position: const Duration(seconds: 12),
+      queueCursor: 1,
+    );
+    BgmService.debugSeedSceneState(
+      track: BgmTrack.dashboard,
+      entry: dashboardEntry,
+      position: const Duration(seconds: 4),
+      queueCursor: 0,
+    );
+
+    final chatState = BgmService.debugSceneStateForTrack(BgmTrack.chat);
+    final dashboardState = BgmService.debugSceneStateForTrack(
+      BgmTrack.dashboard,
+    );
+
+    expect(chatState['trackId'], chatEntry.id);
+    expect(chatState['positionMs'], const Duration(seconds: 12).inMilliseconds);
+    expect(dashboardState['trackId'], dashboardEntry.id);
+    expect(
+      dashboardState['positionMs'],
+      const Duration(seconds: 4).inMilliseconds,
+    );
+  });
+
+  test('switch-on-enter no longer retains same-family selection by default',
+      () async {
+    BgmService.debugSeedCurrentSelection(
+        track: BgmTrack.plan, entry: dashboardEntry);
 
     final reason = await BgmService.debugResolveSelectionReason(
       BgmTrack.calendar,
     );
 
-    expect(reason, contains('同一氛围家族在 20 秒内延续当前音乐'));
+    expect(reason, isNot(contains('延续当前音乐')));
   });
 
   test('falls back to bundled mapping when catalog is empty', () async {
@@ -101,6 +170,7 @@ void main() {
     final reason = await BgmService.debugResolveSelectionReason(
       BgmTrack.dashboard,
       force: true,
+      palette: BgmPalette.piano,
     );
 
     expect(reason, contains('内置兜底'));
@@ -125,6 +195,7 @@ void main() {
     final reason = await BgmService.debugResolveSelectionReason(
       BgmTrack.insights,
       force: true,
+      palette: BgmPalette.piano,
     );
 
     expect(reason, contains('内置兜底'));
@@ -139,7 +210,7 @@ void main() {
     expect(factor, closeTo(0.54, 0.001));
   });
 
-  test('bundled-only mode bypasses catalog selection for stable playback',
+  test('curated catalog is preferred over bundled fallback by default',
       () async {
     BgmService.debugSetCatalogEntries([
       const BgmCatalogEntry(
@@ -155,14 +226,61 @@ void main() {
         releaseApproved: true,
       ),
     ]);
-    BgmService.debugSetPreferBundledPlayback(true);
 
     final assetPath = await BgmService.debugResolveSelectionAssetPath(
       BgmTrack.chat,
       force: true,
     );
 
-    expect(assetPath, isNot('audio/bgm/catalog_chat_pick.m4a'));
-    expect(assetPath, startsWith('audio/bgm/'));
+    expect(assetPath, 'audio/bgm/catalog_chat_pick.m4a');
+  });
+
+  test('dynamic variety advances queue with a non-repeating jump', () {
+    BgmService.debugSeedSceneState(
+      track: BgmTrack.chat,
+      entry: chatEntry,
+      queueCursor: 0,
+    );
+
+    BgmService.debugAdvanceSceneQueue(
+      BgmTrack.chat,
+      playlistLength: 3,
+      variety: BgmVariety.dynamic,
+    );
+
+    final state = BgmService.debugSceneStateForTrack(BgmTrack.chat);
+
+    expect(state['queueCursor'], 2);
+  });
+
+  test('dynamic queue uses the advanced cursor when resolving catalog entry',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'bgm.palette': 'warm',
+      'bgm.variety': 'dynamic',
+    });
+    await BgmService.debugResetState();
+    const entries = [chatEntry, chatAltEntry, chatThirdEntry];
+    BgmService.debugSetCatalogEntries(entries);
+    BgmService.debugSeedSceneState(
+      track: BgmTrack.chat,
+      entry: chatEntry,
+      queueCursor: 2,
+      completed: true,
+      variety: BgmVariety.dynamic,
+    );
+    final queue = BgmService.debugCatalogQueueIds(
+      entries: entries,
+      track: BgmTrack.chat,
+      palette: BgmPalette.adaptive,
+      tuning: const BgmUserTuning(variety: BgmVariety.dynamic),
+    );
+
+    final assetPath = await BgmService.debugResolveSelectionAssetPath(
+      BgmTrack.chat,
+    );
+
+    final expectedEntry = entries.firstWhere((entry) => entry.id == queue[2]);
+    expect(assetPath, expectedEntry.assetPath);
   });
 }

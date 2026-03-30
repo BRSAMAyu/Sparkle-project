@@ -127,6 +127,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
   Future<void> run({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) async {
     state = state.copyWith(
       isLoading: true,
@@ -152,6 +155,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       await for (final event in _repository.streamSimulation(
         topic: topic,
         scenarioKey: scenarioKey,
+        plannedRoundCount: plannedRoundCount,
+        participantNames: participantNames,
+        facilitationStyle: facilitationStyle,
       )) {
         _applyStreamEvent(event, topic: topic, scenarioKey: scenarioKey);
       }
@@ -159,6 +165,9 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         final session = await _repository.runSimulation(
           topic: topic,
           scenarioKey: scenarioKey,
+          plannedRoundCount: plannedRoundCount,
+          participantNames: participantNames,
+          facilitationStyle: facilitationStyle,
         );
         state = state.copyWith(
           isLoading: false,

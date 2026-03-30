@@ -1,432 +1,382 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// 责任伙伴打卡热力图组件
 ///
-/// 显示一年内每天打卡情况，类似 GitHub contribution graph
-class AccountabilityHeatmap extends StatelessWidget {
+/// 按月份展示打卡情况，支持左右滑动切换月份。
+class AccountabilityHeatmap extends StatefulWidget {
   const AccountabilityHeatmap({
-    super.key,
     required this.heatmap,
     required this.year,
+    super.key,
   });
 
   final List<Map<String, dynamic>> heatmap;
   final int year;
 
   @override
+  State<AccountabilityHeatmap> createState() => _AccountabilityHeatmapState();
+}
+
+class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
+  late final PageController _pageController;
+  late int _currentMonthPage;
+
+  static const _monthLabels = <String>[
+    '1月',
+    '2月',
+    '3月',
+    '4月',
+    '5月',
+    '6月',
+    '7月',
+    '8月',
+    '9月',
+    '10月',
+    '11月',
+    '12月',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _currentMonthPage = now.year == widget.year ? now.month - 1 : 0;
+    _pageController = PageController(initialPage: _currentMonthPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (heatmap.isEmpty) {
+    if (widget.heatmap.isEmpty) {
       return _buildEmptyState(context);
     }
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '打卡热力图 - $year',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                _buildLegend(context),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildMonthlyHeatmaps(context),
-          ],
-        ),
-      ),
-    );
-  }
+    final monthlyData = _groupByMonth();
 
-  Widget _buildEmptyState(BuildContext context) => Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: 48,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '暂无打卡记录',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-  Widget _buildLegend(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '少',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(width: 4),
-        _buildLegendDot(context, 0),
-        const SizedBox(width: 2),
-        _buildLegendDot(context, 1),
-        const SizedBox(width: 2),
-        _buildLegendDot(context, 2),
-        const SizedBox(width: 2),
-        _buildLegendDot(context, 3),
-        const SizedBox(width: 4),
-        Text(
-          '多',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    );
-
-  Widget _buildLegendDot(BuildContext context, int level) {
-    final colors = [
-      Theme.of(context).colorScheme.surfaceContainerHighest,
-      const Color(0xFF9BE9A8),
-      const Color(0xFF40C463),
-      const Color(0xFF30A14E),
-      const Color(0xFF216E39),
-    ];
-
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: colors[level],
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  Widget _buildMonthlyHeatmaps(BuildContext context) {
-    // 按月份分组
-    final monthlyData = <String, List<Map<String, dynamic>>>{};
-    for (var day in heatmap) {
-      final dateStr = day['date'] as String;
-      final date = DateTime.parse(dateStr);
-      final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
-      monthlyData.putIfAbsent(monthKey, () => []).add(day);
-    }
-
-    // 创建12个月的网格
     return Column(
-      children: [
-        _buildMonthLabels(context),
-        const SizedBox(height: 8),
-        _buildWeeksGrid(context, monthlyData),
-      ],
-    );
-  }
-
-  Widget _buildMonthLabels(BuildContext context) {
-    final months = ['一月', '二月', '三月', '四月', '五月', '六月',
-                    '七月', '八月', '九月', '十月', '十一月', '十二月',];
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 32), // Space for day labels
-      child: Row(
-        children: List.generate(12, (index) => Expanded(
-            child: Center(
-              child: Text(
-                months[index],
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ),),
-      ),
-    );
-  }
-
-  Widget _buildWeeksGrid(BuildContext context, Map<String, List<Map<String, dynamic>>> monthlyData) => Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Day labels
-        _buildDayLabels(context),
-        const SizedBox(width: 8),
-        // Heatmap grid
-        Expanded(
-          child: _buildYearGrid(context, monthlyData),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '月度打卡视图 · ${widget.year}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            _buildLegend(context),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '左右滑动切换月份，比全年 365 格更容易看清每天状态。',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 16),
+        _buildPagerHeader(context),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 344,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: 12,
+            onPageChanged: (index) {
+              setState(() {
+                _currentMonthPage = index;
+              });
+            },
+            itemBuilder: (context, index) => MonthlyHeatmap(
+              month: index + 1,
+              year: widget.year,
+              heatmap: monthlyData[index + 1] ?? const [],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(12, (index) {
+              final month = index + 1;
+              final selected = index == _currentMonthPage;
+              final count = (monthlyData[month] ?? const []).where((day) {
+                final initiator = day['initiator_checkins'] as int? ?? 0;
+                final partner = day['partner_checkins'] as int? ?? 0;
+                return initiator + partner > 0;
+              }).length;
+
+              return Padding(
+                padding: EdgeInsets.only(right: index == 11 ? 0 : 8),
+                child: ChoiceChip(
+                  selected: selected,
+                  label: Text('${_monthLabels[index]} · $count天'),
+                  onSelected: (_) {
+                    unawaited(
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
+          ),
         ),
       ],
     );
+  }
 
-  Widget _buildDayLabels(BuildContext context) {
-    final days = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+  Map<int, List<Map<String, dynamic>>> _groupByMonth() {
+    final monthlyData = <int, List<Map<String, dynamic>>>{};
+    for (final day in widget.heatmap) {
+      final rawDate = day['date']?.toString();
+      if (rawDate == null || rawDate.isEmpty) {
+        continue;
+      }
+      final date = DateTime.tryParse(rawDate);
+      if (date == null || date.year != widget.year) {
+        continue;
+      }
+      monthlyData.putIfAbsent(date.month, () => <Map<String, dynamic>>[]).add(
+            day,
+          );
+    }
+    return monthlyData;
+  }
 
-    return Column(
-      children: List.generate(7, (index) => SizedBox(
-          height: 12,
-          child: Center(
-            child: Text(
-              days[index],
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 10,
+  Widget _buildPagerHeader(BuildContext context) => Row(
+        children: [
+          IconButton(
+            onPressed: _currentMonthPage == 0
+                ? null
+                : () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                    ),
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                '${widget.year}年${_currentMonthPage + 1}月',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
             ),
           ),
-        ),),
-    );
-  }
+          IconButton(
+            onPressed: _currentMonthPage == 11
+                ? null
+                : () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                    ),
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      );
 
-  Widget _buildYearGrid(BuildContext context, Map<String, List<Map<String, dynamic>>> monthlyData) {
-    // 构建一年的格子网格 (53周 x 7天)
-    final startOfYear = DateTime(year);
-    final endOfYear = DateTime(year + 1).subtract(const Duration(days: 1));
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 53,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
-      ),
-      itemCount: 53 * 7,
-      itemBuilder: (context, index) {
-        final week = index ~/ 7;
-        final dayOfWeek = index % 7;
-
-        // 计算这个格子的日期
-        final date = _getDateForCell(year, week, dayOfWeek);
-        if (date == null || date.isBefore(startOfYear) || date.isAfter(endOfYear)) {
-          return const SizedBox.shrink();
-        }
-
-        final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-        final dayData = monthlyData.values
-            .expand((days) => days)
-            .cast<Map<String, dynamic>?>()
-            .firstWhere(
-              (day) => day?['date'] == dateKey,
-              orElse: () => null,
-            );
-
-        return _buildHeatmapCell(context, dayData, index);
-      },
-    );
-  }
-
-  DateTime? _getDateForCell(int year, int week, int dayOfWeek) {
-    try {
-      // 找到该年份的第一周的第一天（周一）
-      final firstDayOfYear = DateTime(year);
-      final firstMonday = firstDayOfYear.add(Duration(days: (8 - firstDayOfYear.weekday) % 7));
-
-      // 计算目标日期
-      final targetDate = firstMonday.add(Duration(days: week * 7 + dayOfWeek));
-      return targetDate;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Widget _buildHeatmapCell(
-    BuildContext context,
-    Map<String, dynamic>? dayData,
-    int revealIndex,
-  ) {
-    if (dayData == null) {
-      return Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(2),
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 40,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '暂无打卡记录',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
         ),
       );
-    }
 
-    final initiatorCheckins = dayData['initiator_checkins'] as int? ?? 0;
-    final partnerCheckins = dayData['partner_checkins'] as int? ?? 0;
-    final totalCheckins = initiatorCheckins + partnerCheckins;
+  Widget _buildLegend(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _legendItem(
+            context,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            label: '未打卡',
+          ),
+          const SizedBox(width: 8),
+          _legendItem(
+            context,
+            color: const Color(0xFF9BE9A8),
+            label: '单人',
+          ),
+          const SizedBox(width: 8),
+          _legendItem(
+            context,
+            color: const Color(0xFF2E7D32),
+            label: '双方',
+          ),
+        ],
+      );
 
-    // 根据打卡数决定颜色
-    Color cellColor;
-    if (totalCheckins == 0) {
-      cellColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-    } else if (totalCheckins == 1) {
-      cellColor = const Color(0xFF9BE9A8);
-    } else if (totalCheckins == 2) {
-      cellColor = const Color(0xFF40C463);
-    } else if (totalCheckins >= 3) {
-      cellColor = const Color(0xFF30A14E);
-    } else {
-      cellColor = const Color(0xFF216E39);
-    }
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 180 + (revealIndex.clamp(0, 80) * 8)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.scale(
-          scale: 0.92 + (0.08 * value),
-          child: child,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cellColor,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    );
-  }
+  Widget _legendItem(
+    BuildContext context, {
+    required Color color,
+    required String label,
+  }) =>
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      );
 }
 
 /// 月度热力图 - 单个月份的详细视图
 class MonthlyHeatmap extends StatelessWidget {
   const MonthlyHeatmap({
-    super.key,
     required this.month,
     required this.year,
     required this.heatmap,
-    required this.myUserId,
+    super.key,
   });
 
   final int month;
   final int year;
   final List<Map<String, dynamic>> heatmap;
-  final String myUserId;
+
+  static const _weekdayLabels = <String>['一', '二', '三', '四', '五', '六', '日'];
 
   @override
   Widget build(BuildContext context) {
-    // 筛选当月数据
-    final monthlyData = heatmap.where((day) {
-      final date = DateTime.parse(day['date'] as String);
-      return date.year == year && date.month == month;
-    }).toList();
-
-    if (monthlyData.isEmpty) {
-      return _buildEmptyState(context);
-    }
-
     final daysInMonth = DateTime(year, month + 1, 0).day;
-    final firstWeekday = DateTime(year, month).weekday;
+    final firstWeekdayOffset = DateTime(year, month, 1).weekday - 1;
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$year年${month}月',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildCalendarGrid(context, monthlyData, daysInMonth, firstWeekday),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
         ),
       ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) => Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            '本月暂无打卡记录',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-
-  Widget _buildCalendarGrid(
-    BuildContext context,
-    List<Map<String, dynamic>> monthlyData,
-    int daysInMonth,
-    int firstWeekday,
-  ) {
-    final weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-
-    return Column(
-      children: [
-        // Weekday headers
-        Row(
-          children: List.generate(7, (index) => Expanded(
-              child: Center(
-                child: Text(
-                  weekdays[index],
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(
+              7,
+              (index) => Expanded(
+                child: Center(
+                  child: Text(
+                    _weekdayLabels[index],
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
               ),
-            ),),
-        ),
-        const SizedBox(height: 8),
-        // Calendar grid
-        ...List.generate(6, (week) => Row(
-            children: List.generate(7, (day) {
-              final dayNumber = week * 7 + day - firstWeekday + 1;
-              final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(6, (week) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: week == 5 ? 0 : 8),
+              child: Row(
+                children: List.generate(7, (day) {
+                  final dayNumber = week * 7 + day - firstWeekdayOffset + 1;
+                  final isCurrentMonth =
+                      dayNumber > 0 && dayNumber <= daysInMonth;
 
-              if (!isCurrentMonth) {
-                return const Expanded(child: SizedBox(height: 40));
-              }
+                  if (!isCurrentMonth) {
+                    return const Expanded(child: SizedBox(height: 44));
+                  }
 
-              final dateKey = '$year-${month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
-              final dayData = monthlyData.cast<Map<String, dynamic>?>().firstWhere(
-                (d) => d?['date'] == dateKey,
-                orElse: () => null,
-              );
+                  final dateKey =
+                      '$year-${month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
+                  final dayData =
+                      heatmap.cast<Map<String, dynamic>?>().firstWhere(
+                            (d) => d?['date'] == dateKey,
+                            orElse: () => null,
+                          );
 
-              return Expanded(
-                child: _buildDayCell(context, dayData, dayNumber),
-              );
-            }),
-          ),),
-      ],
+                  return Expanded(
+                    child: _DayCell(
+                      dayNumber: dayNumber,
+                      dayData: dayData,
+                    ),
+                  );
+                }),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildDayCell(BuildContext context, Map<String, dynamic>? dayData, int dayNumber) {
-    final hasInitiatorCheckin = (dayData?['initiator_checkins'] as int? ?? 0) > 0;
-    final hasPartnerCheckin = (dayData?['partner_checkins'] as int? ?? 0) > 0;
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.dayNumber,
+    required this.dayData,
+  });
 
-    Color? cellColor;
-    IconData? icon;
+  final int dayNumber;
+  final Map<String, dynamic>? dayData;
 
-    if (hasInitiatorCheckin && hasPartnerCheckin) {
-      cellColor = const Color(0xFF216E39); // 双方都打卡
-      icon = Icons.group;
-    } else if (hasInitiatorCheckin) {
-      cellColor = const Color(0xFF40C463); // 我打卡了
-    } else if (hasPartnerCheckin) {
-      cellColor = const Color(0xFF9BE9A8); // 伙伴打卡了
-    } else {
-      cellColor = null;
-    }
+  @override
+  Widget build(BuildContext context) {
+    final initiatorCheckins = dayData?['initiator_checkins'] as int? ?? 0;
+    final partnerCheckins = dayData?['partner_checkins'] as int? ?? 0;
+    final totalCheckins = initiatorCheckins + partnerCheckins;
+    final bothCheckedIn = initiatorCheckins > 0 && partnerCheckins > 0;
+
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final cellColor = totalCheckins == 0
+        ? surface
+        : bothCheckedIn
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFF9BE9A8);
+
+    final textColor = totalCheckins == 0 ? null : Colors.white;
 
     return Container(
-      height: 40,
-      margin: const EdgeInsets.all(2),
+      height: 44,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
-        color: cellColor ?? Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
+        color: cellColor,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Stack(
         children: [
@@ -434,15 +384,25 @@ class MonthlyHeatmap extends StatelessWidget {
             child: Text(
               '$dayNumber',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: cellColor != null ? Colors.white : null,
-              ),
+                    color: textColor,
+                    fontWeight:
+                        totalCheckins == 0 ? FontWeight.w500 : FontWeight.w700,
+                  ),
             ),
           ),
-          if (icon != null)
+          if (totalCheckins > 0)
             Positioned(
-              top: 2,
-              right: 2,
-              child: Icon(icon, size: 10, color: Colors.white70),
+              right: 5,
+              top: 5,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.white
+                      .withValues(alpha: bothCheckedIn ? 0.92 : 0.7),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
         ],
       ),
