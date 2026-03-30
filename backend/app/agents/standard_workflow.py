@@ -1244,19 +1244,21 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
         )
         prompt_conversation_context = {"messages": []} if use_slim_deep_context else conversation_context
 
+    seed_library_enabled = bool((prompt_user_context or {}).get("seed_library_enabled"))
     generation_seed_examples: list[dict[str, Any]] = []
-    try:
-        generation_seed_examples = await resolve_few_shot_examples(
-            db_session=state.context_data.get("db_session"),
-            user_id=state.context_data.get("user_id") or getattr(state, "user_id", None),
-            workflow_type=str(state.context_data.get("workflow_id") or "standard_chat"),
-            chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
-            agent_role=str(getattr(generation_llm, "agent_role", agent_role) or agent_role),
-            stage="generation",
-            count=2,
-        )
-    except Exception as exc:
-        logger.warning(f"Failed to resolve generation seed examples: {exc}")
+    if seed_library_enabled:
+        try:
+            generation_seed_examples = await resolve_few_shot_examples(
+                db_session=state.context_data.get("db_session"),
+                user_id=state.context_data.get("user_id") or getattr(state, "user_id", None),
+                workflow_type=str(state.context_data.get("workflow_id") or "standard_chat"),
+                chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+                agent_role=str(getattr(generation_llm, "agent_role", agent_role) or agent_role),
+                stage="generation",
+                count=2,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to resolve generation seed examples: {exc}")
 
     if generation_seed_examples:
         prompt_user_context = inject_examples_into_user_context(
@@ -1264,6 +1266,8 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
             generation_seed_examples,
         )
         state.context_data["seed_library_example_count"] = len(generation_seed_examples)
+    else:
+        state.context_data["seed_library_example_count"] = 0
 
     # Extract intent instruction from plan_metadata (Vision Item 4b)
     # P1 Improvement: Enhanced intent instructions with stronger constraints

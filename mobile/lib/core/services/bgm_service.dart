@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 
@@ -25,6 +28,7 @@ enum BgmPalette {
 
 enum BgmMode {
   adaptive,
+  continuous,
   focusOnly,
   silent,
 }
@@ -39,6 +43,12 @@ enum BgmVariety {
   steady,
   balanced,
   dynamic,
+}
+
+enum BgmLibrarySourceKind {
+  curated,
+  imported,
+  bundled,
 }
 
 enum BgmTrack {
@@ -130,6 +140,8 @@ class BgmCatalogEntry {
     required this.baseGain,
     required this.loopable,
     required this.releaseApproved,
+    this.title,
+    this.artist,
   });
 
   factory BgmCatalogEntry.fromJson(Map<String, dynamic> json) {
@@ -161,6 +173,8 @@ class BgmCatalogEntry {
       baseGain: readNumber(json['baseGain'], 1.0).clamp(0.1, 1.2),
       loopable: json['loopable'] == true,
       releaseApproved: json['releaseApproved'] == true,
+      title: json['title']?.toString(),
+      artist: json['artist']?.toString(),
     );
   }
 
@@ -174,9 +188,18 @@ class BgmCatalogEntry {
   final double baseGain;
   final bool loopable;
   final bool releaseApproved;
+  final String? title;
+  final String? artist;
 
-  String get title {
-    final segments = id.split('_').where((segment) => segment.isNotEmpty);
+  String get displayTitle {
+    if (title case final String explicitTitle when explicitTitle.isNotEmpty) {
+      return explicitTitle;
+    }
+    final fromAssetPath = p.basenameWithoutExtension(assetPath);
+    final descriptiveSegment =
+        fromAssetPath.contains('__') ? fromAssetPath.split('__').last : id;
+    final segments =
+        descriptiveSegment.split('_').where((segment) => segment.isNotEmpty);
     return segments
         .map((segment) =>
             '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}')
@@ -223,6 +246,8 @@ class BgmPlaybackSnapshot {
     required this.palette,
     required this.intensity,
     required this.variety,
+    this.trackTitle,
+    this.artist,
     this.trackId,
     this.assetPath,
     this.album,
@@ -231,6 +256,8 @@ class BgmPlaybackSnapshot {
   final bool enabled;
   final BgmTrack? track;
   final BgmSceneProfile? scene;
+  final String? trackTitle;
+  final String? artist;
   final String? trackId;
   final String? assetPath;
   final String? album;
@@ -242,6 +269,66 @@ class BgmPlaybackSnapshot {
   final BgmPalette palette;
   final BgmIntensity intensity;
   final BgmVariety variety;
+}
+
+@immutable
+class BgmLibraryEntry {
+  const BgmLibraryEntry({
+    required this.id,
+    required this.title,
+    required this.album,
+    required this.path,
+    required this.sourceKind,
+    required this.isAsset,
+    required this.sceneTags,
+    required this.paletteTags,
+    required this.energy,
+    required this.density,
+    required this.baseGain,
+    this.artist,
+    this.addedAt,
+  });
+
+  final String id;
+  final String title;
+  final String album;
+  final String path;
+  final BgmLibrarySourceKind sourceKind;
+  final bool isAsset;
+  final List<String> sceneTags;
+  final List<String> paletteTags;
+  final double energy;
+  final double density;
+  final double baseGain;
+  final String? artist;
+  final DateTime? addedAt;
+
+  String get sourceLabel => switch (sourceKind) {
+        BgmLibrarySourceKind.curated => album,
+        BgmLibrarySourceKind.imported => '本地导入',
+        BgmLibrarySourceKind.bundled => '系统内置',
+      };
+}
+
+@immutable
+class BgmLibrarySnapshot {
+  const BgmLibrarySnapshot({
+    required this.entries,
+    required this.curatedCount,
+    required this.importedCount,
+    required this.bundledCount,
+    required this.importDirectoryPath,
+    required this.downloadDirectoryPath,
+  });
+
+  final List<BgmLibraryEntry> entries;
+  final int curatedCount;
+  final int importedCount;
+  final int bundledCount;
+  final String importDirectoryPath;
+  final String downloadDirectoryPath;
+
+  int get totalCount => entries.length;
 }
 
 @immutable
@@ -387,7 +474,7 @@ class _ResolvedBgmSelection {
   });
 
   final _ResolvedBgmSource source;
-  final BgmCatalogEntry? entry;
+  final BgmLibraryEntry? entry;
   final BgmSceneProfile scene;
   final String sourceLabel;
   final String reason;
@@ -395,6 +482,118 @@ class _ResolvedBgmSelection {
   final bool readingProtectionApplied;
   final bool focusPriorityApplied;
   final bool styleLocked;
+}
+
+@immutable
+class _ImportedBgmTrack {
+  const _ImportedBgmTrack({
+    required this.id,
+    required this.filePath,
+    required this.title,
+    required this.album,
+    required this.sceneTags,
+    required this.paletteTags,
+    required this.energy,
+    required this.density,
+    required this.baseGain,
+    required this.addedAt,
+    this.artist,
+  });
+
+  factory _ImportedBgmTrack.fromJson(Map<String, dynamic> json) {
+    List<String> readTags(Object? raw) {
+      if (raw is List) {
+        return raw.map((item) => item.toString()).toList(growable: false);
+      }
+      return const <String>[];
+    }
+
+    return _ImportedBgmTrack(
+      id: json['id']?.toString() ?? '',
+      filePath: json['filePath']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Imported Track',
+      album: json['album']?.toString() ?? '本地导入',
+      sceneTags: readTags(json['sceneTags']),
+      paletteTags: readTags(json['paletteTags']),
+      energy: ((json['energy'] as num?)?.toDouble() ?? 0.32).clamp(0.0, 1.0),
+      density: ((json['density'] as num?)?.toDouble() ?? 0.24).clamp(0.0, 1.0),
+      baseGain:
+          ((json['baseGain'] as num?)?.toDouble() ?? 0.90).clamp(0.1, 1.2),
+      addedAt: DateTime.tryParse(json['addedAt']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      artist: json['artist']?.toString(),
+    );
+  }
+
+  final String id;
+  final String filePath;
+  final String title;
+  final String album;
+  final List<String> sceneTags;
+  final List<String> paletteTags;
+  final double energy;
+  final double density;
+  final double baseGain;
+  final DateTime addedAt;
+  final String? artist;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'filePath': filePath,
+        'title': title,
+        'album': album,
+        'sceneTags': sceneTags,
+        'paletteTags': paletteTags,
+        'energy': energy,
+        'density': density,
+        'baseGain': baseGain,
+        'addedAt': addedAt.toIso8601String(),
+        'artist': artist,
+      };
+
+  BgmLibraryEntry toLibraryEntry() => BgmLibraryEntry(
+        id: id,
+        title: title,
+        album: album,
+        path: filePath,
+        sourceKind: BgmLibrarySourceKind.imported,
+        isAsset: false,
+        sceneTags: sceneTags,
+        paletteTags: paletteTags,
+        energy: energy,
+        density: density,
+        baseGain: baseGain,
+        artist: artist,
+        addedAt: addedAt,
+      );
+}
+
+BgmLibraryEntry _libraryEntryFromCatalogEntry(BgmCatalogEntry entry) =>
+    BgmLibraryEntry(
+      id: entry.id,
+      title: entry.displayTitle,
+      album: entry.album,
+      path: entry.assetPath,
+      sourceKind: BgmLibrarySourceKind.curated,
+      isAsset: true,
+      sceneTags: entry.sceneTags,
+      paletteTags: entry.paletteTags,
+      energy: entry.energy,
+      density: entry.density,
+      baseGain: entry.baseGain,
+      artist: entry.artist,
+    );
+
+class _BgmLibraryDirectories {
+  const _BgmLibraryDirectories({
+    required this.rootDirectory,
+    required this.importDirectory,
+    required this.downloadDirectory,
+  });
+
+  final Directory rootDirectory;
+  final Directory importDirectory;
+  final Directory downloadDirectory;
 }
 
 class BgmService {
@@ -422,6 +621,9 @@ class BgmService {
   static const _focusPriorityKey = 'bgm.focus_priority';
   static const _lockCurrentStyleKey = 'bgm.lock_current_style';
   static const _scenePlaybackStateKey = 'bgm.scene_playback_state_v3';
+  static const _importedTracksKey = 'bgm.imported_tracks_v1';
+  static const _libraryImportDirectoryName = 'imported';
+  static const _libraryDownloadDirectoryName = 'downloads';
 
   static AudioPlayer? _player;
   static AudioPlayer? _preloadPlayer;
@@ -441,6 +643,8 @@ class BgmService {
   static bool _persistentStateLoaded = false;
   static bool _catalogLoaded = false;
   static List<BgmCatalogEntry>? _catalogOverride;
+  static bool _importedTracksLoaded = false;
+  static List<_ImportedBgmTrack> _importedTracks = const <_ImportedBgmTrack>[];
   static bool? _preferBundledPlaybackOverride;
   static DateTime Function() _nowProvider = DateTime.now;
   static StreamSubscription<void>? _playerCompletionSubscription;
@@ -455,7 +659,7 @@ class BgmService {
   static bool _thinkingActivityActive = false;
   static bool _focusSessionActive = false;
   static BgmSceneProfile? _currentSceneProfile;
-  static BgmCatalogEntry? _currentCatalogEntry;
+  static BgmLibraryEntry? _currentLibraryEntry;
   static String _currentSourceLabel = 'Bundled fallback';
   static String _currentSelectionReason = '使用当前场景默认音乐';
   static bool _currentReadingProtectionApplied = false;
@@ -624,7 +828,7 @@ class BgmService {
     if (_currentTrack != null && player != null) {
       final target = await _targetVolume(
         _currentTrack!,
-        entry: _currentCatalogEntry,
+        entry: _currentLibraryEntry,
       );
       await player.setVolume(target);
       _currentOutputVolume = target;
@@ -728,9 +932,11 @@ class BgmService {
       enabled: await isEnabled(),
       track: _currentTrack,
       scene: _currentSceneProfile,
-      trackId: _currentCatalogEntry?.id,
-      assetPath: _currentCatalogEntry?.assetPath ?? _currentSourceKey,
-      album: _currentCatalogEntry?.album,
+      trackTitle: _currentLibraryEntry?.title,
+      artist: _currentLibraryEntry?.artist,
+      trackId: _currentLibraryEntry?.id,
+      assetPath: _currentLibraryEntry?.path ?? _currentSourceKey,
+      album: _currentLibraryEntry?.album,
       sourceLabel: _currentSourceLabel,
       selectionReason: _currentSelectionReason,
       readingProtectionApplied: _currentReadingProtectionApplied,
@@ -739,6 +945,136 @@ class BgmService {
       palette: await getPalette(),
       intensity: tuning.intensity,
       variety: tuning.variety,
+    );
+  }
+
+  static Future<BgmLibrarySnapshot> librarySnapshot() async {
+    final directories = await _ensureLibraryDirectories();
+    final curatedEntries =
+        (await _loadCatalogEntries()).map(_libraryEntryFromCatalogEntry).toList(
+              growable: false,
+            );
+    final importedEntries = (await _loadImportedTracks())
+        .map((entry) => entry.toLibraryEntry())
+        .toList(growable: false);
+    final bundledEntries = _bundledLibraryEntries();
+    return BgmLibrarySnapshot(
+      entries: <BgmLibraryEntry>[
+        ...curatedEntries,
+        ...importedEntries,
+        ...bundledEntries,
+      ],
+      curatedCount: curatedEntries.length,
+      importedCount: importedEntries.length,
+      bundledCount: bundledEntries.length,
+      importDirectoryPath: directories.importDirectory.path,
+      downloadDirectoryPath: directories.downloadDirectory.path,
+    );
+  }
+
+  static Future<List<BgmLibraryEntry>> libraryEntries() async =>
+      (await librarySnapshot()).entries;
+
+  static Future<List<BgmLibraryEntry>> importTracksFromPicker() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: const <String>[
+        'm4a',
+        'aac',
+        'mp3',
+        'wav',
+        'flac',
+        'ogg',
+      ],
+    );
+    if (result == null || result.files.isEmpty) {
+      return const <BgmLibraryEntry>[];
+    }
+
+    final directories = await _ensureLibraryDirectories();
+    final importedTracks =
+        List<_ImportedBgmTrack>.from(await _loadImportedTracks());
+    final importedEntries = <BgmLibraryEntry>[];
+    final seenPaths = importedTracks.map((item) => item.filePath).toSet();
+
+    for (final file in result.files) {
+      final sourcePath = file.path;
+      if (sourcePath == null || sourcePath.isEmpty) {
+        continue;
+      }
+      final sourceFile = File(sourcePath);
+      if (!await sourceFile.exists()) {
+        continue;
+      }
+      final targetBaseName =
+          _slugifyFileStem(p.basenameWithoutExtension(sourcePath));
+      final extension = p.extension(sourcePath).toLowerCase();
+      final targetPath = p.join(
+        directories.importDirectory.path,
+        '${DateTime.now().microsecondsSinceEpoch}_${targetBaseName.isEmpty ? 'track' : targetBaseName}$extension',
+      );
+      if (seenPaths.contains(targetPath)) {
+        continue;
+      }
+      final copiedFile = await sourceFile.copy(targetPath);
+      final importedTrack = _buildImportedTrackFromFile(copiedFile);
+      importedTracks.add(importedTrack);
+      importedEntries.add(importedTrack.toLibraryEntry());
+      seenPaths.add(targetPath);
+    }
+
+    _importedTracks = importedTracks;
+    _importedTracksLoaded = true;
+    await _persistImportedTracks();
+    await _refreshPlayback(force: true);
+    return importedEntries;
+  }
+
+  static Future<void> removeImportedTrack(String id) async {
+    final importedTracks =
+        List<_ImportedBgmTrack>.from(await _loadImportedTracks());
+    final targetIndex = importedTracks.indexWhere((entry) => entry.id == id);
+    if (targetIndex < 0) {
+      return;
+    }
+    final target = importedTracks.removeAt(targetIndex);
+    try {
+      final file = File(target.filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+    _importedTracks = importedTracks;
+    _importedTracksLoaded = true;
+    await _persistImportedTracks();
+    if (_currentLibraryEntry?.id == id) {
+      _currentLibraryEntry = null;
+      _currentSourceKey = null;
+      await _refreshPlayback(force: true);
+    }
+  }
+
+  static Future<void> playLibraryEntry(BgmLibraryEntry entry) async {
+    await init();
+    if (_shutdownRequested) {
+      return;
+    }
+    final effectiveTrack = _currentTrack ?? BgmTrack.profile;
+    final selection = _ResolvedBgmSelection(
+      source: entry.isAsset
+          ? _ResolvedBgmSource.asset(entry.path)
+          : _ResolvedBgmSource.device(entry.path),
+      entry: entry,
+      scene: _sceneProfileForTrack(effectiveTrack),
+      sourceLabel: entry.sourceLabel,
+      reason: '手动播放曲库曲目',
+    );
+    await _switchToPreparedSelection(
+      effectiveTrack,
+      selection: selection,
+      allowRecovery: false,
+      switchBehavior: SceneBgmSwitchBehavior.keepPlaying,
     );
   }
 
@@ -914,7 +1250,7 @@ class BgmService {
     final sequence = ++_duckSequence;
     final targetVolume = await _targetVolume(
       currentTrack,
-      entry: _currentCatalogEntry,
+      entry: _currentLibraryEntry,
     );
     final duckFactor = isBackNavigation ? 0.84 : 0.70;
     final duckDuration = isBackNavigation
@@ -948,7 +1284,7 @@ class BgmService {
     final sequence = ++_duckSequence;
     final targetVolume = await _targetVolume(
       currentTrack,
-      entry: _currentCatalogEntry,
+      entry: _currentLibraryEntry,
     );
     final clampedFactor = factor.clamp(0.0, 1.0);
 
@@ -980,7 +1316,7 @@ class BgmService {
     final sequence = ++_duckSequence;
     final baseTarget = await _targetVolume(
       currentTrack,
-      entry: _currentCatalogEntry,
+      entry: _currentLibraryEntry,
     );
     final boosted = (baseTarget * factor).clamp(0.0, 1.0);
 
@@ -1021,7 +1357,7 @@ class BgmService {
     _currentTrack = null;
     _currentSourceKey = null;
     _preloadedSourceKey = null;
-    _currentCatalogEntry = null;
+    _currentLibraryEntry = null;
     _currentSceneProfile = null;
     _currentSourceLabel = 'Bundled fallback';
     _currentSelectionReason = '使用当前场景默认音乐';
@@ -1042,6 +1378,8 @@ class BgmService {
   static Future<void> debugResetState() async {
     _catalogOverride = null;
     _catalogLoaded = false;
+    _importedTracksLoaded = false;
+    _importedTracks = const <_ImportedBgmTrack>[];
     _nowProvider = DateTime.now;
     _prefs = null;
     _persistentStateLoaded = false;
@@ -1050,7 +1388,7 @@ class BgmService {
     _readingActivityActive = false;
     _thinkingActivityActive = false;
     _focusSessionActive = false;
-    _currentCatalogEntry = null;
+    _currentLibraryEntry = null;
     _currentSceneProfile = null;
     _currentSourceKey = null;
     _currentTrack = null;
@@ -1089,7 +1427,8 @@ class BgmService {
         sourceKey ?? 'asset:${entry?.assetPath ?? _fallbackBgmAssetPath}';
     _currentTrack = track;
     _currentSceneProfile = _sceneProfileForTrack(track);
-    _currentCatalogEntry = entry;
+    _currentLibraryEntry =
+        entry == null ? null : _libraryEntryFromCatalogEntry(entry);
     _currentSourceKey = resolvedSourceKey;
     _currentSourceLabel = entry?.album ?? 'Bundled fallback';
     _scenePlaybackStates[track] = _buildScenePlaybackState(
@@ -1253,7 +1592,7 @@ class BgmService {
           await _player!.stop();
         }
         _currentTrack = null;
-        _currentCatalogEntry = null;
+        _currentLibraryEntry = null;
         _currentSceneProfile = null;
         _currentOutputVolume = 0;
         _currentSourceKey = null;
@@ -1295,11 +1634,19 @@ class BgmService {
 
   static Future<_BgmRegistration?> _resolveDesiredRegistration() async {
     final registration = _resolveRegistration();
-    if (registration == null) {
-      return null;
-    }
     final mode = await getMode();
     if (mode == BgmMode.silent) {
+      return null;
+    }
+    if (mode == BgmMode.continuous && _currentTrack != null) {
+      return _BgmRegistration(
+        track: _currentTrack!,
+        priority: registration?.priority ?? BgmPriority.route,
+        sequence: registration?.sequence ?? _sequence,
+        switchBehavior: SceneBgmSwitchBehavior.keepPlaying,
+      );
+    }
+    if (registration == null) {
       return null;
     }
     if (mode == BgmMode.focusOnly && !_isFocusTrack(registration.track)) {
@@ -1326,6 +1673,26 @@ class BgmService {
     SceneBgmSwitchBehavior switchBehavior =
         SceneBgmSwitchBehavior.switchOnEnter,
   }) async {
+    final selection = await _resolveSelection(
+      track,
+      force: force,
+      switchBehavior: switchBehavior,
+    );
+    await _switchToPreparedSelection(
+      track,
+      selection: selection,
+      allowRecovery: allowRecovery,
+      switchBehavior: switchBehavior,
+    );
+  }
+
+  static Future<void> _switchToPreparedSelection(
+    BgmTrack track, {
+    required _ResolvedBgmSelection selection,
+    bool allowRecovery = true,
+    SceneBgmSwitchBehavior switchBehavior =
+        SceneBgmSwitchBehavior.switchOnEnter,
+  }) async {
     if (_shutdownRequested) {
       return;
     }
@@ -1336,11 +1703,6 @@ class BgmService {
     }
 
     final previousScene = _currentSceneProfile;
-    final selection = await _resolveSelection(
-      track,
-      force: force,
-      switchBehavior: switchBehavior,
-    );
     if (_shutdownRequested || _player == null || _preloadPlayer == null) {
       return;
     }
@@ -1352,7 +1714,7 @@ class BgmService {
     if (_currentSourceKey == selection.source.cacheKey) {
       _currentTrack = track;
       _currentSceneProfile = selection.scene;
-      _currentCatalogEntry = selection.entry;
+      _currentLibraryEntry = selection.entry;
       _currentSourceLabel = selection.sourceLabel;
       _currentSelectionReason = selection.reason;
       _currentReadingProtectionApplied = selection.readingProtectionApplied;
@@ -1420,7 +1782,7 @@ class BgmService {
       _currentTrack = track;
       _currentSourceKey = selection.source.cacheKey;
       _currentSceneProfile = selection.scene;
-      _currentCatalogEntry = selection.entry;
+      _currentLibraryEntry = selection.entry;
       _currentSourceLabel = selection.sourceLabel;
       _currentSelectionReason = selection.reason;
       _currentReadingProtectionApplied = selection.readingProtectionApplied;
@@ -1475,7 +1837,7 @@ class BgmService {
       }
       _currentTrack = null;
       _currentSourceKey = null;
-      _currentCatalogEntry = null;
+      _currentLibraryEntry = null;
       _currentSceneProfile = null;
       _currentOutputVolume = 0;
     }
@@ -1566,7 +1928,7 @@ class BgmService {
 
   static Future<double> _targetVolume(
     BgmTrack track, {
-    BgmCatalogEntry? entry,
+    BgmLibraryEntry? entry,
   }) async {
     final effectiveDuck = await _effectiveDuckFactor();
     return (await getVolume()) *
@@ -1626,7 +1988,7 @@ class BgmService {
         currentTrack,
         _buildScenePlaybackState(
           assetKey: sourceKey,
-          trackId: _currentCatalogEntry?.id,
+          trackId: _currentLibraryEntry?.id,
           position: position,
           queueCursor: _sceneStateForTrack(currentTrack).queueCursor,
           completed: false,
@@ -1676,21 +2038,21 @@ class BgmService {
       return retainedSelection;
     }
 
-    final entries = await _loadCatalogEntries();
-    final catalogQueue = _buildCatalogQueue(
-      entries: entries,
+    final libraryQueue = await _buildPreferredLibraryQueue(
       scene: scene,
       palette: palette,
       tuning: tuning,
     );
-    if (!_shouldPreferBundledPlayback() && catalogQueue.isNotEmpty) {
-      final entry = catalogQueue[
-          _queueCursorForLength(track, catalogQueue.length, tuning.variety)];
+    if (!_shouldPreferBundledPlayback() && libraryQueue.isNotEmpty) {
+      final entry = libraryQueue[
+          _queueCursorForLength(track, libraryQueue.length, tuning.variety)];
       return _ResolvedBgmSelection(
-        source: _ResolvedBgmSource.asset(entry.assetPath),
+        source: entry.isAsset
+            ? _ResolvedBgmSource.asset(entry.path)
+            : _ResolvedBgmSource.device(entry.path),
         entry: entry,
         scene: scene,
-        sourceLabel: entry.album,
+        sourceLabel: entry.sourceLabel,
         reason: _buildSelectionReason(
           scene: scene,
           palette: palette,
@@ -1789,7 +2151,7 @@ class BgmService {
       }
       return _ResolvedBgmSelection(
         source: currentSource,
-        entry: _currentCatalogEntry,
+        entry: _currentLibraryEntry,
         scene: targetScene,
         sourceLabel: _currentSourceLabel,
         reason: '已锁定当前风格，延续当前音乐气质',
@@ -1807,7 +2169,7 @@ class BgmService {
       }
       return _ResolvedBgmSelection(
         source: currentSource,
-        entry: _currentCatalogEntry,
+        entry: _currentLibraryEntry,
         scene: targetScene,
         sourceLabel: _currentSourceLabel,
         reason: '页面策略要求延续当前音乐',
@@ -1828,7 +2190,7 @@ class BgmService {
       }
       return _ResolvedBgmSelection(
         source: currentSource,
-        entry: _currentCatalogEntry,
+        entry: _currentLibraryEntry,
         scene: targetScene,
         sourceLabel: _currentSourceLabel,
         reason: '相邻场景延续当前音乐',
@@ -1888,18 +2250,19 @@ class BgmService {
     final readingProtectionApplied =
         tuning.readingProtection && scene.readingFriendly;
     final focusPriorityApplied = tuning.focusPriority && scene.focusCritical;
-    final entries = await _loadCatalogEntries();
+    final entries = await _libraryEntriesForSelection();
 
     if (sceneState.trackId case final String trackId) {
       for (final entry in entries) {
         if (entry.id == trackId &&
-            entry.releaseApproved &&
-            !_missingAssetPaths.contains(entry.assetPath)) {
+            (!entry.isAsset || !_missingAssetPaths.contains(entry.path))) {
           return _ResolvedBgmSelection(
-            source: _ResolvedBgmSource.asset(entry.assetPath),
+            source: entry.isAsset
+                ? _ResolvedBgmSource.asset(entry.path)
+                : _ResolvedBgmSource.device(entry.path),
             entry: entry,
             scene: scene,
-            sourceLabel: entry.album,
+            sourceLabel: entry.sourceLabel,
             reason: '恢复 ${scene.name} 上次播放断点',
             resumePosition: sceneState.position,
             readingProtectionApplied: readingProtectionApplied,
@@ -1933,14 +2296,122 @@ class BgmService {
 
   static String _sourceLabelForResume(
     _ResolvedBgmSource source,
-    List<BgmCatalogEntry> entries,
+    List<BgmLibraryEntry> entries,
   ) {
-    final matchedEntry =
-        entries.where((entry) => entry.assetPath == source.path);
+    final matchedEntry = entries.where((entry) => entry.path == source.path);
     if (matchedEntry.isNotEmpty) {
-      return matchedEntry.first.album;
+      return matchedEntry.first.sourceLabel;
     }
-    return source.isAsset ? 'Bundled fallback' : 'Local override';
+    return source.isAsset ? '系统内置' : '本地导入';
+  }
+
+  static Future<List<BgmLibraryEntry>> _libraryEntriesForSelection() async {
+    final curated =
+        (await _loadCatalogEntries()).map(_libraryEntryFromCatalogEntry);
+    final imported =
+        (await _loadImportedTracks()).map((entry) => entry.toLibraryEntry());
+    return <BgmLibraryEntry>[
+      ...curated,
+      ...imported,
+    ];
+  }
+
+  static Future<List<BgmLibraryEntry>> _buildPreferredLibraryQueue({
+    required BgmSceneProfile scene,
+    required BgmPalette palette,
+    required BgmUserTuning tuning,
+  }) async =>
+      _buildLibraryQueue(
+        entries: await _libraryEntriesForSelection(),
+        scene: scene,
+        palette: palette,
+        tuning: tuning,
+      );
+
+  static List<BgmLibraryEntry> _buildLibraryQueue({
+    required Iterable<BgmLibraryEntry> entries,
+    required BgmSceneProfile scene,
+    required BgmPalette palette,
+    required BgmUserTuning tuning,
+  }) {
+    final approvedEntries = entries.where((entry) {
+      if (entry.isAsset) {
+        return !_missingAssetPaths.contains(entry.path);
+      }
+      return File(entry.path).existsSync();
+    }).toList(growable: false);
+    if (approvedEntries.isEmpty) {
+      return const <BgmLibraryEntry>[];
+    }
+
+    final sceneCandidates = approvedEntries.where((entry) {
+      final tags = entry.sceneTags.toSet();
+      return tags.contains(scene.family) ||
+          tags.intersection(scene.sceneTags.toSet()).isNotEmpty;
+    }).toList();
+    final candidates =
+        sceneCandidates.isNotEmpty ? sceneCandidates : approvedEntries;
+
+    final scored = candidates.map((entry) {
+      return MapEntry(
+          entry, _scoreEntryForScene(entry, scene, palette, tuning));
+    }).toList()
+      ..sort((a, b) {
+        final scoreCompare = b.value.compareTo(a.value);
+        if (scoreCompare != 0) {
+          return scoreCompare;
+        }
+        return a.key.id.compareTo(b.key.id);
+      });
+    return scored.map((item) => item.key).toList(growable: false);
+  }
+
+  static double _scoreEntryForScene(
+    BgmLibraryEntry entry,
+    BgmSceneProfile scene,
+    BgmPalette palette,
+    BgmUserTuning tuning,
+  ) {
+    double intensityTargetEnergy(BgmIntensity intensity) => switch (intensity) {
+          BgmIntensity.gentle => 0.28,
+          BgmIntensity.balanced => 0.48,
+          BgmIntensity.lush => 0.68,
+        };
+
+    double intensityTargetDensity(BgmIntensity intensity) =>
+        switch (intensity) {
+          BgmIntensity.gentle => 0.28,
+          BgmIntensity.balanced => 0.46,
+          BgmIntensity.lush => 0.64,
+        };
+
+    final targetEnergy = intensityTargetEnergy(tuning.intensity);
+    final targetDensity = intensityTargetDensity(tuning.intensity);
+    var score = 0.0;
+    final tagSet = entry.sceneTags.toSet();
+    final paletteSet = entry.paletteTags.toSet();
+    score += 40.0 * tagSet.intersection(scene.sceneTags.toSet()).length;
+    if (tagSet.contains(scene.family)) {
+      score += 24.0;
+    }
+    if (paletteSet.contains(palette.name) || paletteSet.contains('adaptive')) {
+      score += 18.0;
+    }
+    score += (1.0 - (entry.energy - targetEnergy).abs()).clamp(0.0, 1.0) * 16.0;
+    score +=
+        (1.0 - (entry.density - targetDensity).abs()).clamp(0.0, 1.0) * 14.0;
+    if (tuning.readingProtection && scene.readingFriendly) {
+      score += (1.0 - entry.density).clamp(0.0, 1.0) * 14.0;
+      score += (1.0 - entry.energy).clamp(0.0, 1.0) * 8.0;
+    }
+    if (tuning.focusPriority && scene.focusCritical) {
+      score += (1.0 - entry.energy).clamp(0.0, 1.0) * 12.0;
+      score += (1.0 - entry.density).clamp(0.0, 1.0) * 12.0;
+    }
+    if (entry.sourceKind == BgmLibrarySourceKind.curated) {
+      score += 3.0;
+    }
+    return score;
   }
 
   static List<BgmCatalogEntry> _buildCatalogQueue({
@@ -2141,7 +2612,7 @@ class BgmService {
       paletteOverride: await getPalette(),
       tuning: tuning,
     );
-    if (_currentCatalogEntry == null && queueLength <= 1) {
+    if (_currentLibraryEntry == null && queueLength <= 1) {
       try {
         await player.seek(Duration.zero);
         await player.resume();
@@ -2170,14 +2641,13 @@ class BgmService {
     final palette = paletteOverride ?? await getPalette();
     final resolvedTuning = tuning ?? await getUserTuning();
     if (!_shouldPreferBundledPlayback()) {
-      final catalogQueue = _buildCatalogQueue(
-        entries: await _loadCatalogEntries(),
+      final libraryQueue = await _buildPreferredLibraryQueue(
         scene: _sceneProfileForTrack(track),
         palette: palette,
         tuning: resolvedTuning,
       );
-      if (catalogQueue.isNotEmpty) {
-        return catalogQueue.length;
+      if (libraryQueue.isNotEmpty) {
+        return libraryQueue.length;
       }
     }
     final playlist = await _resolveEffectivePlaylist(
@@ -2479,7 +2949,7 @@ class BgmService {
       return;
     }
     await _fadeTo(
-      await _targetVolume(currentTrack, entry: _currentCatalogEntry),
+      await _targetVolume(currentTrack, entry: _currentLibraryEntry),
       duration: duration,
       steps: 5,
     );
@@ -2496,6 +2966,215 @@ class BgmService {
     return factors.fold<double>(
         1.0, (current, next) => current < next ? current : next);
   }
+
+  static Future<List<_ImportedBgmTrack>> _loadImportedTracks() async {
+    if (_importedTracksLoaded) {
+      return _importedTracks;
+    }
+    final prefs = await _getPrefs();
+    final raw = prefs.getString(_importedTracksKey);
+    if (raw == null || raw.isEmpty) {
+      _importedTracksLoaded = true;
+      _importedTracks = const <_ImportedBgmTrack>[];
+      return _importedTracks;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        _importedTracks = decoded
+            .whereType<Map<String, dynamic>>()
+            .map(_ImportedBgmTrack.fromJson)
+            .toList(growable: false);
+      } else {
+        _importedTracks = const <_ImportedBgmTrack>[];
+      }
+    } catch (_) {
+      _importedTracks = const <_ImportedBgmTrack>[];
+    }
+    _importedTracksLoaded = true;
+    return _importedTracks;
+  }
+
+  static Future<void> _persistImportedTracks() async {
+    final prefs = await _getPrefs();
+    await prefs.setString(
+      _importedTracksKey,
+      jsonEncode(_importedTracks.map((entry) => entry.toJson()).toList()),
+    );
+  }
+
+  static Future<_BgmLibraryDirectories> _ensureLibraryDirectories() async {
+    final root = await getApplicationDocumentsDirectory();
+    final bgmRoot = Directory(p.join(root.path, 'bgm_library'));
+    final importDirectory =
+        Directory(p.join(bgmRoot.path, _libraryImportDirectoryName));
+    final downloadDirectory =
+        Directory(p.join(bgmRoot.path, _libraryDownloadDirectoryName));
+    if (!await bgmRoot.exists()) {
+      await bgmRoot.create(recursive: true);
+    }
+    if (!await importDirectory.exists()) {
+      await importDirectory.create(recursive: true);
+    }
+    if (!await downloadDirectory.exists()) {
+      await downloadDirectory.create(recursive: true);
+    }
+    return _BgmLibraryDirectories(
+      rootDirectory: bgmRoot,
+      importDirectory: importDirectory,
+      downloadDirectory: downloadDirectory,
+    );
+  }
+
+  static _ImportedBgmTrack _buildImportedTrackFromFile(File file) {
+    final fileStem = p.basenameWithoutExtension(file.path);
+    final normalizedStem = fileStem.replaceFirst(RegExp(r'^\d+_'), '');
+    final title = normalizedStem
+        .split(RegExp(r'[_-]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+    return _ImportedBgmTrack(
+      id: 'imported_${_slugifyFileStem(fileStem)}_${file.lengthSync()}',
+      filePath: file.path,
+      title: title.isEmpty ? 'Imported Track' : title,
+      album: '本地导入',
+      sceneTags: const <String>[
+        'dashboard',
+        'reading',
+        'reflection',
+        'chat',
+        'insights',
+        'profile',
+        'plan',
+        'task',
+        'calendar',
+        'focus',
+        'warm',
+      ],
+      paletteTags: const <String>[
+        'adaptive',
+        'classical',
+        'piano',
+        'airy',
+        'warm',
+      ],
+      energy: 0.30,
+      density: 0.24,
+      baseGain: 0.90,
+      addedAt: _nowProvider(),
+    );
+  }
+
+  static String _slugifyFileStem(String raw) => raw
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'^_+|_+$'), '');
+
+  static List<BgmLibraryEntry> _bundledLibraryEntries() {
+    final seenPaths = <String>{};
+    final base = <BgmLibraryEntry>[
+      _bundledEntry(
+        id: 'bundled_relax_background1',
+        title: 'Relax Background',
+        path: _dashboardAsset,
+        sceneTags: const <String>['dashboard', 'home', 'warm', 'stable'],
+        paletteTags: const <String>['adaptive', 'classical', 'warm'],
+      ),
+      _bundledEntry(
+        id: 'bundled_sunset_walk',
+        title: 'Sunset Walk',
+        path: _warmAsset,
+        sceneTags: const <String>['warm', 'community', 'celebration'],
+        paletteTags: const <String>['adaptive', 'warm'],
+      ),
+      _bundledEntry(
+        id: 'bundled_oceanic_drift',
+        title: 'Oceanic Drift',
+        path: _airyAsset,
+        sceneTags: const <String>['focus', 'insights', 'galaxy'],
+        paletteTags: const <String>['adaptive', 'airy'],
+      ),
+      _bundledEntry(
+        id: 'bundled_thinking',
+        title: 'Thinking',
+        path: _thinkingAsset,
+        sceneTags: const <String>['chat', 'reading', 'insights'],
+        paletteTags: const <String>['adaptive', 'piano'],
+      ),
+      _bundledEntry(
+        id: 'bundled_calm_track_loop',
+        title: 'Calm Track Loop',
+        path: _fallbackBgmAssetPath,
+        sceneTags: const <String>['focus', 'task', 'dashboard'],
+        paletteTags: const <String>['adaptive', 'classical'],
+      ),
+      ..._adaptiveLocalOverrideFiles.entries.map(
+        (entry) => _bundledEntry(
+          id: 'bundled_${entry.key.name}',
+          title: _humanizeTrackName(entry.key.name),
+          path: 'audio/bgm/${entry.value}',
+          sceneTags: _sceneProfileForTrack(entry.key).sceneTags,
+          paletteTags: const <String>['adaptive', 'classical', 'piano'],
+        ),
+      ),
+      _bundledEntry(
+        id: 'bundled_heavenly_loop',
+        title: 'Heavenly Loop',
+        path: 'audio/bgm/heavenly_loop.m4a',
+        sceneTags: const <String>['focus', 'insights'],
+        paletteTags: const <String>['airy', 'adaptive'],
+      ),
+      _bundledEntry(
+        id: 'bundled_loop_city',
+        title: 'Loop City',
+        path: 'audio/bgm/loop_city.m4a',
+        sceneTags: const <String>['dashboard', 'community'],
+        paletteTags: const <String>['warm', 'adaptive'],
+      ),
+      _bundledEntry(
+        id: 'bundled_classical_piano_loop',
+        title: 'Classical Piano Loop',
+        path: 'audio/bgm/classical_piano_loop.m4a',
+        sceneTags: const <String>['plan', 'task', 'calendar'],
+        paletteTags: const <String>['classical', 'piano', 'adaptive'],
+      ),
+    ];
+    return base
+        .where((entry) => seenPaths.add(entry.path))
+        .toList(growable: false);
+  }
+
+  static BgmLibraryEntry _bundledEntry({
+    required String id,
+    required String title,
+    required String path,
+    required List<String> sceneTags,
+    required List<String> paletteTags,
+  }) =>
+      BgmLibraryEntry(
+        id: id,
+        title: title,
+        album: '系统内置',
+        path: path,
+        sourceKind: BgmLibrarySourceKind.bundled,
+        isAsset: true,
+        sceneTags: sceneTags,
+        paletteTags: paletteTags,
+        energy: 0.34,
+        density: 0.28,
+        baseGain: 1.0,
+      );
+
+  static String _humanizeTrackName(String raw) => raw
+      .replaceAllMapped(
+        RegExp(r'([a-z])([A-Z])'),
+        (match) => '${match.group(1)} ${match.group(2)}',
+      )
+      .split('_')
+      .map((part) =>
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 
   static Future<List<BgmCatalogEntry>> _loadCatalogEntries() async {
     if (_catalogOverride != null) {

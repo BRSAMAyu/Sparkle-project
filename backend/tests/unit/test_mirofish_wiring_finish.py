@@ -45,6 +45,17 @@ def _reset_report_cache():
     cache_service.redis = previous_redis
 
 
+def test_context_builder_preserves_seed_library_toggle_flag():
+    builder = _DummyContextBuilder()
+
+    merged = builder._merge_user_contexts(
+        {"preferences": {}},
+        {"seed_library_enabled": False},
+    )
+
+    assert merged["seed_library_enabled"] is False
+
+
 @pytest.mark.asyncio
 async def test_launch_prediction_tool_returns_preview_payload(monkeypatch):
     prediction_id = str(uuid4())

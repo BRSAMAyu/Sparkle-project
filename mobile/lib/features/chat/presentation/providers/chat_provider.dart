@@ -896,9 +896,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
       final reasoningMode = _ref.read(aiReasoningModeProvider);
+      final seedLibraryEnabled = _ref.read(chatSeedLibraryEnabledProvider);
       final extraContext = <String, dynamic>{
         if (selectedPlanId != null) 'plan_id': selectedPlanId,
         'reasoning_mode': reasoningMode,
+        'seed_library_enabled': seedLibraryEnabled,
       };
 
       // Get selected chat mode

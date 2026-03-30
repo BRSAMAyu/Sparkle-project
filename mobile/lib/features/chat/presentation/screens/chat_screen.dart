@@ -882,6 +882,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     AppFeedback.info(context, '种子库调整会从下一条消息开始生效');
   }
 
+  Future<void> _toggleSeedLibrary(
+    BuildContext context,
+    bool enabled,
+  ) async {
+    await ref.read(chatSeedLibraryEnabledProvider.notifier).setEnabled(enabled);
+    if (!mounted || !context.mounted) {
+      return;
+    }
+    AppFeedback.info(
+      context,
+      enabled ? '已开启种子库增强，下一条消息开始生效' : '已关闭种子库增强，避免上下文污染',
+    );
+  }
+
   Future<void> _navigateFromAction(String route) async {
     if (!mounted || route.isEmpty || !route.startsWith('/')) {
       return;
@@ -1191,6 +1205,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(planListProvider.select((s) => s.activePlans));
     final activePlan =
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
+    final seedLibraryEnabled = ref.watch(chatSeedLibraryEnabledProvider);
     final subscriptionState = ref.watch(subscriptionsProvider);
     final enabledSeedCount = subscriptionState.subscriptions
         .where((subscription) => subscription.isEnabled)
@@ -1311,8 +1326,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               DS.spacing8,
             ),
             child: _SeedLibraryEntryBar(
+              enabled: seedLibraryEnabled,
               enabledCount: enabledSeedCount,
               isLoading: subscriptionState.isLoading,
+              onToggle: (value) =>
+                  unawaited(_toggleSeedLibrary(context, value)),
               onTap: () => unawaited(_openSeedLibrary(context)),
             ),
           ),
@@ -2090,22 +2108,28 @@ class _QuickActionChip extends StatefulWidget {
 
 class _SeedLibraryEntryBar extends StatelessWidget {
   const _SeedLibraryEntryBar({
+    required this.enabled,
     required this.enabledCount,
     required this.isLoading,
+    required this.onToggle,
     required this.onTap,
   });
 
+  final bool enabled;
   final int enabledCount;
   final bool isLoading;
+  final ValueChanged<bool> onToggle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final label = switch ((isLoading, enabledCount)) {
-      (true, _) => '正在同步种子库状态',
-      (_, > 0) => '已启用 $enabledCount 个种子库，调整后下一条消息生效',
-      _ => '调整种子库，让接下来的回答更贴合你的风格',
+    final label = switch ((isLoading, enabled, enabledCount)) {
+      (true, _, _) => '正在同步种子库状态',
+      (_, false, _) => '种子库增强默认关闭，按需开启以避免上下文污染',
+      (_, true, > 0) => '已开启种子库增强，当前接入 $enabledCount 个已启用种子库',
+      _ => '已开启种子库增强，但还没有可用的启用种子库',
     };
+    final helper = enabled ? '下一条消息开始按种子库增强' : '关闭时所有对话都不会注入种子库';
 
     return Material(
       color: Colors.transparent,
@@ -2119,12 +2143,13 @@ class _SeedLibraryEntryBar extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: Color.alphaBlend(
-              DS.success.withValues(alpha: 0.08),
+              (enabled ? DS.success : DS.textSecondary).withValues(alpha: 0.08),
               DS.surfacePrimary,
             ),
             borderRadius: DS.borderRadius16,
             border: Border.all(
-              color: DS.success.withValues(alpha: 0.18),
+              color: (enabled ? DS.success : DS.borderStrong)
+                  .withValues(alpha: 0.18),
             ),
           ),
           child: Row(
@@ -2133,29 +2158,53 @@ class _SeedLibraryEntryBar extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: DS.success.withValues(alpha: 0.14),
+                  color: (enabled ? DS.success : DS.textSecondary)
+                      .withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.library_books_outlined,
+                  enabled
+                      ? Icons.library_books_outlined
+                      : Icons.library_add_check_outlined,
                   size: 18,
-                  color: DS.success,
+                  color: enabled ? DS.success : DS.textSecondary,
                 ),
               ),
               const SizedBox(width: DS.spacing10),
               Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: DS.bodySmall.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      helper,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: DS.spacing8),
+              Switch(
+                value: enabled,
+                onChanged: isLoading ? null : onToggle,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               Icon(
                 Icons.chevron_right_rounded,
                 size: DS.iconSizeSm,

@@ -50,11 +50,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _bgmReadingProtection = true;
   bool _bgmFocusPriority = true;
   bool _bgmLockCurrentStyle = false;
-  bool _localBgmOverridesEnabled = false;
-  int _localBgmOverrideCount = 0;
   BgmPalette? _previewingPalette;
   BgmTrack? _previewingSceneTrack;
   BgmPlaybackSnapshot? _bgmPlaybackSnapshot;
+  BgmLibrarySnapshot? _bgmLibrarySnapshot;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _sensoryReady = false;
@@ -82,7 +81,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final mode = await BgmService.getMode();
     final tuning = await BgmService.getUserTuning();
     final snapshot = await BgmService.currentPlaybackSnapshot();
-    final localOverrideCount = await BgmService.localAdaptiveOverrideCount();
+    final librarySnapshot = await BgmService.librarySnapshot();
     if (!mounted) {
       return;
     }
@@ -97,18 +96,29 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _bgmFocusPriority = tuning.focusPriority;
       _bgmLockCurrentStyle = tuning.lockCurrentStyle;
       _bgmPlaybackSnapshot = snapshot;
-      _localBgmOverrideCount = localOverrideCount;
-      _localBgmOverridesEnabled = localOverrideCount > 0;
+      _bgmLibrarySnapshot = librarySnapshot;
       _bgmReady = true;
     });
   }
 
   Future<void> _refreshBgmPlaybackSnapshot() async {
     final snapshot = await BgmService.currentPlaybackSnapshot();
+    final librarySnapshot = await BgmService.librarySnapshot();
     if (!mounted) {
       return;
     }
-    setState(() => _bgmPlaybackSnapshot = snapshot);
+    setState(() {
+      _bgmPlaybackSnapshot = snapshot;
+      _bgmLibrarySnapshot = librarySnapshot;
+    });
+  }
+
+  Future<void> _openBgmLibrary() async {
+    await context.push(UserRoutes.bgmLibrary);
+    if (!mounted) {
+      return;
+    }
+    await _loadBgmPreferences();
   }
 
   Future<void> _loadSensoryPreferences() async {
@@ -531,7 +541,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       icon: Icons.music_note_rounded,
                       title: l10n.bgmSectionTitle,
                       subtitle: _bgmReady
-                          ? l10n.bgmSectionSubtitle
+                          ? _bgmSectionSubtitle()
                           : l10n.bgmLoadingSubtitle,
                       expanded: _bgmExpanded,
                       onToggle: () =>
@@ -575,50 +585,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 .toList(),
                           ),
                           const SizedBox(height: DS.spacing10),
-                          if (_localBgmOverridesEnabled)
-                            Container(
-                              width: double.infinity,
-                              margin:
-                                  const EdgeInsets.only(bottom: DS.spacing10),
-                              padding: const EdgeInsets.all(DS.spacing12),
-                              decoration: BoxDecoration(
-                                borderRadius: DS.borderRadius12,
-                                color: Color.alphaBlend(
-                                  DS.brandPrimary.withValues(alpha: 0.08),
-                                  DS.surfaceSecondary,
-                                ),
-                                border: Border.all(
-                                  color:
-                                      DS.brandPrimary.withValues(alpha: 0.16),
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 2),
-                                    child: Icon(
-                                      Icons.library_music_rounded,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: DS.spacing10),
-                                  Expanded(
-                                    child: Text(
-                                      _bgmPalette == BgmPalette.adaptive
-                                          ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于自适应模式时，系统会优先播放你本机准备的场景音乐。'
-                                          : _bgmPalette == BgmPalette.classical
-                                              ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于精选古典模式时，系统会优先播放你本机准备的调音曲目。'
-                                              : '检测到 $_localBgmOverrideCount 首本地乐曲覆盖。切回“自适应”或“精选古典”后，系统会优先播放本机版场景音乐。',
-                                      style: DS.bodySmall.copyWith(
-                                        color: DS.textSecondary,
-                                        height: 1.45,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          _buildBgmLibrarySummaryCard(),
+                          const SizedBox(height: DS.spacing12),
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(DS.spacing12),
@@ -1614,17 +1582,90 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
   }
 
+  String _bgmSectionSubtitle() {
+    final snapshot = _bgmLibrarySnapshot;
+    if (snapshot == null) {
+      return '按页面与播放器模式管理背景音乐';
+    }
+    return '当前共 ${snapshot.totalCount} 首，可在页面策略和播放器模式之间自由切换';
+  }
+
+  Widget _buildBgmLibrarySummaryCard() {
+    final snapshot = _bgmLibrarySnapshot;
+    if (snapshot == null) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius12,
+        color: Color.alphaBlend(
+          DS.brandPrimary.withValues(alpha: 0.06),
+          DS.surfaceSecondary,
+        ),
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.library_music_rounded, size: 18),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  '曲库已更新为 ${snapshot.totalCount} 首',
+                  style: DS.bodyLarge,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => unawaited(_openBgmLibrary()),
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('打开曲库'),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildInfoChip('精选', '${snapshot.curatedCount} 首'),
+              _buildInfoChip('本地导入', '${snapshot.importedCount} 首'),
+              _buildInfoChip('系统兜底', '${snapshot.bundledCount} 首'),
+              _buildInfoChip(
+                '模式',
+                _bgmMode == BgmMode.continuous ? '播放器模式' : '页面策略模式',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '新页面里可以点播曲库、导入自己的音乐，并启用“播放器模式”让 BGM 跨页面持续不中断。',
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBgmNowPlayingCard() {
     final snapshot = _bgmPlaybackSnapshot;
     final sceneName = snapshot?.scene?.name ?? '当前未播放';
-    final trackName = snapshot?.trackId ?? '内置场景曲目';
+    final trackName = snapshot?.trackTitle ?? snapshot?.trackId ?? '内置场景曲目';
     final sourceLabel = snapshot?.sourceLabel ?? 'Bundled fallback';
     final reason = snapshot?.selectionReason ?? '等待播放信息';
     final statusText = !_bgmEnabled
         ? '背景音乐已关闭'
         : _bgmMode == BgmMode.silent
             ? '当前处于全局静音'
-            : sceneName;
+            : _bgmMode == BgmMode.continuous
+                ? '播放器模式持续播放中'
+                : sceneName;
 
     return Container(
       width: double.infinity,
@@ -1868,12 +1909,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   String _bgmModeLabel(BgmMode mode) => switch (mode) {
         BgmMode.adaptive => '跟随页面',
+        BgmMode.continuous => '播放器模式',
         BgmMode.focusOnly => '仅专注开启',
         BgmMode.silent => '全局静音',
       };
 
   String _bgmModeDescription(BgmMode mode) => switch (mode) {
         BgmMode.adaptive => '首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。',
+        BgmMode.continuous => '当前曲目会持续播放，不会因为你跳转到别的页面而被打断，适合把 App 当成舒缓音乐播放器。',
         BgmMode.focusOnly => '只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。',
         BgmMode.silent => '保留音效和触感反馈，但所有背景音乐都不会自动播放。',
       };
