@@ -225,10 +225,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             membersState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('加载成员失败，请稍后重试',
-                    style: TextStyle(color: DS.textSecondary)),
+                child: Text(
+                  '加载成员失败，请稍后重试',
+                  style: TextStyle(color: DS.textSecondary),
+                ),
               ),
-              data: (members) => _buildLeaderboard(members),
+              data: _buildLeaderboard,
             ),
           ],
         ),
@@ -342,7 +344,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         imageUrl: member.user.avatarUrl!,
                         width: 48,
                         height: 48,
-                        fit: BoxFit.cover,
                         errorWidget: _buildDefaultAvatar(member.user),
                       ),
                     )
@@ -498,64 +499,64 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                     );
                   }
 
-                  items.add(const PopupMenuDivider());
-
-                  // Mute / Warn actions for admin
-                  items.add(
-                    PopupMenuItem(
-                      value: 'mute',
-                      child: Row(
-                        children: [
-                          Icon(Icons.mic_off, size: 18, color: DS.warning),
-                          const SizedBox(width: DS.sm),
-                          Text(
-                            '禁言',
-                            style: TextStyle(color: DS.warning),
-                          ),
-                        ],
+                  items
+                    ..add(const PopupMenuDivider())
+                    // Mute / Warn actions for admin
+                    ..add(
+                      PopupMenuItem(
+                        value: 'mute',
+                        child: Row(
+                          children: [
+                            Icon(Icons.mic_off, size: 18, color: DS.warning),
+                            const SizedBox(width: DS.sm),
+                            Text(
+                              '禁言',
+                              style: TextStyle(color: DS.warning),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                  items.add(
-                    const PopupMenuItem(
-                      value: 'warn',
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning_amber_outlined, size: 18),
-                          SizedBox(width: DS.sm),
-                          Text('发出警告'),
-                        ],
+                    )
+                    ..add(
+                      const PopupMenuItem(
+                        value: 'warn',
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_outlined, size: 18),
+                            SizedBox(width: DS.sm),
+                            Text('发出警告'),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-
-                  items.add(const PopupMenuDivider());
-
-                  items.add(
-                    PopupMenuItem(
-                      value: 'kick',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person_remove, size: 18, color: DS.error),
-                          const SizedBox(width: DS.sm),
-                          Text(
-                            '移出群组',
-                            style: TextStyle(color: DS.error),
-                          ),
-                        ],
+                    )
+                    ..add(const PopupMenuDivider())
+                    ..add(
+                      PopupMenuItem(
+                        value: 'kick',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_remove, size: 18, color: DS.error),
+                            const SizedBox(width: DS.sm),
+                            Text(
+                              '移出群组',
+                              style: TextStyle(color: DS.error),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    );
 
                   return items;
                 },
               )
             : null,
         onTap: () {
-          context.pushNamed(
-            'userProfile',
-            pathParameters: {'id': member.user.id},
-            queryParameters: {'name': member.user.displayName},
+          unawaited(
+            context.pushNamed(
+              'userProfile',
+              pathParameters: {'id': member.user.id},
+              queryParameters: {'name': member.user.displayName},
+            ),
           );
         },
       ),
@@ -644,11 +645,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 .read(groupMembersProvider(widget.groupId).notifier)
                 .transferOwnership(member.user.id);
             if (mounted) {
-              context.pop(); // Go back to group detail
               AppFeedback.success(
                 context,
                 'Ownership transferred to ${member.user.displayName}',
               );
+              context.pop(); // Go back to group detail
             }
           } catch (e) {
             if (mounted) {

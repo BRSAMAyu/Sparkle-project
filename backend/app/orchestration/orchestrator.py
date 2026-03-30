@@ -1509,6 +1509,8 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                 )
                 if should_return:
+                    async for queued in self._drain_queue(queue):
+                        yield queued
                     return
 
                 # Step 12: Log route decision

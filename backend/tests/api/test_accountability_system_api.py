@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -24,9 +25,11 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
-from app.models.community import Friendship, FriendshipStatus
+from app.models.community import Friendship, FriendshipStatus, Group, GroupMember, GroupRole, GroupType
 from app.models.community import SharedResource, UserBlock
 from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.group_files import GroupFile
+from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode
 from app.models.seed_content import SeedItem, SeedLibrary
 from app.models.task import Task, TaskType
@@ -736,3 +739,74 @@ async def test_adopt_shared_resource_supports_extended_resource_types(
     await db_session.refresh(cloned_library, attribute_names=["items"])
     assert cloned_library.owner_id == target.id
     assert len(list(cloned_library.items)) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_group_file_permissions_rejects_non_admin_before_service(
+    accountability_app,
+    db_session,
+    monkeypatch,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    member = _make_user(username="member")
+    await _commit_all(db_session, owner, member)
+
+    group = Group(name="文件权限测试群", type=GroupType.SQUAD, max_members=10)
+    db_session.add(group)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=owner.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=member.id, role=GroupRole.MEMBER),
+        ]
+    )
+    stored_file = StoredFile(
+        user_id=owner.id,
+        file_name="doc.txt",
+        mime_type="text/plain",
+        file_size=16,
+        bucket="test",
+        object_key=f"permissions-{uuid4()}",
+        status="ready",
+        visibility="group",
+        retention_policy="keep",
+    )
+    db_session.add(stored_file)
+    await db_session.flush()
+    db_session.add(
+        GroupFile(
+            group_id=group.id,
+            file_id=stored_file.id,
+            shared_by_id=owner.id,
+            category="notes",
+            tags=["x"],
+            view_role=GroupRole.MEMBER,
+            download_role=GroupRole.MEMBER,
+            manage_role=GroupRole.ADMIN,
+        )
+    )
+    await db_session.commit()
+
+    update_permissions = AsyncMock()
+    monkeypatch.setattr(community_api.GroupFileService, "update_permissions", update_permissions)
+
+    state["current_user"] = member
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.put(
+            f"/community/groups/{group.id}/files/{stored_file.id}/permissions",
+            json={
+                "permissions": {
+                    "view_role": "member",
+                    "download_role": "member",
+                    "manage_role": "admin",
+                }
+            },
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "无权限修改群文件权限"
+    update_permissions.assert_not_awaited()

@@ -17,7 +17,7 @@ Updated: 2026-01-31 - 使用SQLite内存数据库避免asyncpg事件循环问题
 import pytest
 from datetime import datetime, timedelta, timezone, date
 from uuid import uuid4
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models.community import (
     Friendship,
@@ -26,10 +26,15 @@ from app.models.community import (
     GroupMember,
     GroupMessage,
     GroupRole,
+    GroupTask,
+    GroupTaskClaim,
     GroupType,
     MessageType,
     PrivateMessage,
+    SharedResource,
 )
+from app.models.file_storage import StoredFile
+from app.models.group_files import GroupFile
 from app.models.user import User
 from app.schemas.community import (
     CheckinRequest,
@@ -846,6 +851,196 @@ async def test_e2e_thread_messages(db_session, test_users):
     )
 
     assert len(thread_messages) >= 3  # 根消息 + 2个回复
+
+
+@pytest.mark.asyncio
+@pytest.mark.e2e
+async def test_e2e_group_message_rejects_revoked_reply_and_non_member_mentions(
+    db_session,
+    test_users,
+):
+    """撤回消息不可回复，且 @ 提及必须限定在群成员内。"""
+    user1, user2, outsider = test_users
+
+    group = await GroupService.create_group(
+        db_session,
+        user1.id,
+        GroupCreate(name="校验测试群", type=GroupType.SQUAD, max_members=10),
+    )
+    await GroupService.join_group(db_session, group.id, user2.id)
+    await db_session.commit()
+
+    root = await GroupMessageService.send_message(
+        db_session,
+        group.id,
+        user1.id,
+        MessageSend(message_type=MessageType.TEXT, content="原始消息"),
+    )
+    await GroupMessageService.revoke_message(db_session, group.id, root.id, user1.id)
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="不能回复已撤回的消息"):
+        await GroupMessageService.send_message(
+            db_session,
+            group.id,
+            user2.id,
+            MessageSend(
+                message_type=MessageType.TEXT,
+                content="回复撤回消息",
+                reply_to_id=root.id,
+            ),
+        )
+
+    with pytest.raises(ValueError, match="被提及用户必须是群组成员"):
+        await GroupMessageService.send_message(
+            db_session,
+            group.id,
+            user2.id,
+            MessageSend(
+                message_type=MessageType.TEXT,
+                content="@ outsider",
+                mention_user_ids=[outsider.id],
+            ),
+        )
+
+    valid_message = await GroupMessageService.send_message(
+        db_session,
+        group.id,
+        user2.id,
+        MessageSend(message_type=MessageType.TEXT, content="正常消息"),
+    )
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="被提及用户必须是群组成员"):
+        await GroupMessageService.edit_message(
+            db_session,
+            group.id,
+            valid_message.id,
+            user2.id,
+            MessageEdit(mention_user_ids=[outsider.id]),
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.e2e
+async def test_e2e_dissolve_group_cleans_related_resources(db_session, test_users):
+    """解散群组时应一并软删除挂在群上的关联资源。"""
+    user1, user2, _ = test_users
+
+    group = await GroupService.create_group(
+        db_session,
+        user1.id,
+        GroupCreate(name="解散测试群", type=GroupType.SQUAD, max_members=10),
+    )
+    await GroupService.join_group(db_session, group.id, user2.id)
+    await db_session.commit()
+
+    await GroupMessageService.send_message(
+        db_session,
+        group.id,
+        user1.id,
+        MessageSend(message_type=MessageType.TEXT, content="待清理消息"),
+    )
+    task = await GroupTaskService.create_task(
+        db_session,
+        group.id,
+        user1.id,
+        GroupTaskCreate(
+            title="待清理任务",
+            description="清理任务",
+            tags=["cleanup"],
+            estimated_minutes=20,
+            difficulty=1,
+            due_date=date.today() + timedelta(days=1),
+        ),
+    )
+    claim = await GroupTaskService.claim_task(db_session, task.id, user2.id)
+    stored_file = StoredFile(
+        user_id=user1.id,
+        file_name="note.txt",
+        mime_type="text/plain",
+        file_size=12,
+        bucket="test",
+        object_key=f"group-cleanup-{uuid4()}",
+        status="ready",
+        visibility="group",
+        retention_policy="keep",
+    )
+    db_session.add(stored_file)
+    await db_session.flush()
+    db_session.add(
+        GroupFile(
+            group_id=group.id,
+            file_id=stored_file.id,
+            shared_by_id=user1.id,
+            category="notes",
+            tags=["cleanup"],
+            view_role=GroupRole.MEMBER,
+            download_role=GroupRole.MEMBER,
+            manage_role=GroupRole.ADMIN,
+        )
+    )
+    db_session.add(
+        SharedResource(
+            group_id=group.id,
+            shared_by=user1.id,
+            task_id=claim.personal_task_id,
+            permission="view",
+        )
+    )
+    await db_session.commit()
+
+    await GroupService.dissolve_group(db_session, group.id, user1.id)
+    await db_session.commit()
+    await db_session.refresh(group)
+
+    assert group.deleted_at is not None
+
+    active_members = await db_session.scalar(
+        select(func.count(GroupMember.id)).where(
+            GroupMember.group_id == group.id,
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    active_messages = await db_session.scalar(
+        select(func.count(GroupMessage.id)).where(
+            GroupMessage.group_id == group.id,
+            GroupMessage.not_deleted_filter(),
+        )
+    )
+    active_tasks = await db_session.scalar(
+        select(func.count(GroupTask.id)).where(
+            GroupTask.group_id == group.id,
+            GroupTask.not_deleted_filter(),
+        )
+    )
+    active_claims = await db_session.scalar(
+        select(func.count(GroupTaskClaim.id))
+        .join(GroupTask, GroupTask.id == GroupTaskClaim.group_task_id)
+        .where(
+            GroupTask.group_id == group.id,
+            GroupTaskClaim.not_deleted_filter(),
+        )
+    )
+    active_files = await db_session.scalar(
+        select(func.count(GroupFile.id)).where(
+            GroupFile.group_id == group.id,
+            GroupFile.not_deleted_filter(),
+        )
+    )
+    active_shared_resources = await db_session.scalar(
+        select(func.count(SharedResource.id)).where(
+            SharedResource.group_id == group.id,
+            SharedResource.not_deleted_filter(),
+        )
+    )
+
+    assert active_members == 0
+    assert active_messages == 0
+    assert active_tasks == 0
+    assert active_claims == 0
+    assert active_files == 0
+    assert active_shared_resources == 0
 
 
 # =============================================================================

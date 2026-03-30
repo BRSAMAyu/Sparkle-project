@@ -8,7 +8,7 @@ from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -23,12 +23,14 @@ from app.models.community import (
     GroupMessage,
     GroupMessageRead,
     GroupRole,
-    GroupTask,
     GroupTaskClaim,
+    GroupTask,
     GroupType,
     MessageType,
+    SharedResource,
     UserBlock,
 )
+from app.models.group_files import GroupFile
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
@@ -105,6 +107,38 @@ async def _end_accountability_partnerships_between_users(
         partnership.ended_at = ended_at
 
     return len(partnerships)
+
+
+async def _validate_group_mentions(
+    db: AsyncSession,
+    *,
+    group_id: UUID,
+    mention_user_ids: list[UUID] | None,
+) -> list[str] | None:
+    """Ensure all mentioned users are active group members before persisting mentions."""
+    if not mention_user_ids:
+        return None
+
+    normalized_ids = []
+    seen: set[str] = set()
+    for user_id in mention_user_ids:
+        user_id_str = str(user_id)
+        if user_id_str not in seen:
+            seen.add(user_id_str)
+            normalized_ids.append(user_id_str)
+
+    result = await db.execute(
+        select(GroupMember.user_id).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id.in_(mention_user_ids),
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    member_ids = {str(user_id) for user_id in result.scalars().all()}
+    if len(member_ids) != len(normalized_ids):
+        raise ValueError("被提及用户必须是群组成员")
+
+    return normalized_ids
 
 
 class FriendshipService:
@@ -840,15 +874,60 @@ class GroupService:
         if not group:
             raise ValueError("群组不存在")
 
+        deleted_at = _utcnow()
+
         # 2. 软删除群组
         await group.delete(db, soft=True)
 
-        # 3. 软删除所有成员关系
-        from sqlalchemy import update
+        # 3. 软删除所有直接关联资源，避免产生僵尸数据
         await db.execute(
             update(GroupMember)
-            .where(GroupMember.group_id == group_id)
-            .values(is_deleted=True, deleted_at=_utcnow())
+            .where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupMessage)
+            .where(
+                GroupMessage.group_id == group_id,
+                GroupMessage.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        task_ids = select(GroupTask.id).where(GroupTask.group_id == group_id)
+        await db.execute(
+            update(GroupTaskClaim)
+            .where(
+                GroupTaskClaim.group_task_id.in_(task_ids),
+                GroupTaskClaim.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupTask)
+            .where(
+                GroupTask.group_id == group_id,
+                GroupTask.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupFile)
+            .where(
+                GroupFile.group_id == group_id,
+                GroupFile.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(SharedResource)
+            .where(
+                SharedResource.group_id == group_id,
+                SharedResource.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
         )
 
         return True
@@ -1017,17 +1096,23 @@ class GroupMessageService:
 
         if data.reply_to_id:
             reply_msg = await db.get(GroupMessage, data.reply_to_id)
-            if not reply_msg or reply_msg.group_id != group_id:
+            if not reply_msg or reply_msg.group_id != group_id or reply_msg.is_deleted:
                 raise ValueError("回复消息不存在")
+            if reply_msg.is_revoked:
+                raise ValueError("不能回复已撤回的消息")
 
         if data.thread_root_id:
             root_msg = await db.get(GroupMessage, data.thread_root_id)
-            if not root_msg or root_msg.group_id != group_id:
+            if not root_msg or root_msg.group_id != group_id or root_msg.is_deleted:
                 raise ValueError("线程根消息不存在")
+            if root_msg.is_revoked:
+                raise ValueError("不能在线程中回复已撤回的消息")
 
-        mention_user_ids = None
-        if data.mention_user_ids:
-            mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+        mention_user_ids = await _validate_group_mentions(
+            db,
+            group_id=group_id,
+            mention_user_ids=data.mention_user_ids,
+        )
 
         message = GroupMessage(
             group_id=group_id,
@@ -1087,7 +1172,11 @@ class GroupMessageService:
         if data.content_data is not None:
             msg.content_data = data.content_data
         if data.mention_user_ids is not None:
-            msg.mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+            msg.mention_user_ids = await _validate_group_mentions(
+                db,
+                group_id=group_id,
+                mention_user_ids=data.mention_user_ids,
+            )
 
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
@@ -1832,6 +1921,8 @@ class PrivateMessageService:
             reply_msg = await db.get(PrivateMessage, data.reply_to_id)
             if not reply_msg or reply_msg.is_deleted:
                 raise ValueError("回复消息不存在")
+            if reply_msg.is_revoked:
+                raise ValueError("不能回复已撤回的消息")
             if sender_id not in [reply_msg.sender_id, reply_msg.receiver_id]:
                 raise ValueError("不能回复非会话内消息")
 
@@ -1839,6 +1930,8 @@ class PrivateMessageService:
             root_msg = await db.get(PrivateMessage, data.thread_root_id)
             if not root_msg or root_msg.is_deleted:
                 raise ValueError("线程根消息不存在")
+            if root_msg.is_revoked:
+                raise ValueError("不能在线程中回复已撤回的消息")
             if sender_id not in [root_msg.sender_id, root_msg.receiver_id]:
                 raise ValueError("不能回复非会话内消息")
 

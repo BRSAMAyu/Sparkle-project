@@ -1,0 +1,92 @@
+name: E2E Smoke
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * *'
+
+concurrency:
+  group: e2e-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-smoke:
+    name: Compose E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      COMPOSE_PROJECT_NAME: sparkle-e2e
+      POSTGRES_DB: sparkle
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      REDIS_PASSWORD: redispassword
+      JWT_SECRET: ci-smoke-jwt-secret-with-32-plus-chars
+      ADMIN_SECRET: ci-smoke-admin-secret-with-32-plus-chars
+      INTERNAL_API_KEY: ci-smoke-internal-api-key
+      FULL_STACK_TESTS: '1'
+      LIVE_API_BASE_URL: http://127.0.0.1:8000/api/v1
+      LIVE_GATEWAY_BASE_URL: http://127.0.0.1:8080/api/v1
+      LIVE_WS_BASE_URL: ws://127.0.0.1:8080
+      LOCAL_SMOKE_USERNAME: chat_test
+      LOCAL_SMOKE_PASSWORD: Chat123456
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Install Host Test Dependencies
+        timeout-minutes: 10
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio pytest-timeout
+          (cd mobile && flutter pub get)
+
+      - name: Start Compose Stack
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh up
+
+      - name: Apply Alembic Migrations
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh migrate
+
+      - name: gRPC E2E Smoke
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh grpc
+
+      - name: WebSocket E2E Smoke
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh websocket
+
+      - name: Seed Live Smoke User
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh seed-user
+
+      - name: Flutter E2E Smoke
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh flutter
+
+      - name: Dump Compose Logs
+        if: failure()
+        run: scripts/run_e2e_smoke.sh logs
+
+      - name: Tear Down Compose Stack
+        if: always()
+        run: scripts/run_e2e_smoke.sh down

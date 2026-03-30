@@ -1745,7 +1745,9 @@ async def get_my_groups(
 # ============ 群消息 ============
 
 @router.post("/groups/{group_id}/messages", response_model=MessageInfo, summary="发送群消息")
+@limiter.limit("30/minute")
 async def send_message(
+    request: Request,
     group_id: UUID,
     data: MessageSend,
     current_user: User = Depends(get_current_user),
@@ -1936,6 +1938,14 @@ async def update_group_file_permissions(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        member = await GroupFileService._require_member(db, group_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if member.role not in (GroupRole.ADMIN, GroupRole.OWNER):
+        raise HTTPException(status_code=403, detail="无权限修改群文件权限")
+
+    try:
         permissions = data.permissions
         group_file = await GroupFileService.update_permissions(
             db,
@@ -1947,7 +1957,6 @@ async def update_group_file_permissions(
             manage_role=GroupRole(permissions.manage_role.value),
         )
         await db.commit()
-        member = await GroupFileService._require_member(db, group_id, current_user.id)
         return _build_group_file_info(group_file, member.role)
     except ValueError as e:
         await db.rollback()
@@ -2080,7 +2089,9 @@ async def search_group_messages(
 # ============ 私聊消息 ============
 
 @router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
+@limiter.limit("30/minute")
 async def send_private_message(
+    request: Request,
     data: PrivateMessageSend,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)

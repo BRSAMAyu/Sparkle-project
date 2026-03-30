@@ -205,5 +205,6 @@ markers = [
   "benchmark: performance benchmarks (set PERF_TESTS=1 to run)",
   "performance: performance/stress tests",
   "e2e: end-to-end tests",
+  "smoke: critical smoke coverage intended for CI compose-based end-to-end checks",
   "postgres: requires real PostgreSQL with pgvector (run in CI or with docker-compose)",
 ]

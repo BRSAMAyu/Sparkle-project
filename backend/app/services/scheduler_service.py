@@ -17,6 +17,7 @@ from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.push_service import PushService
+from app.services.community_advanced_service import OfflineQueueService
 
 
 def _utcnow() -> datetime:
@@ -42,6 +43,9 @@ class SchedulerService:
 
         # 事件保留清理 (每天凌晨2点半执行)
         self.scheduler.add_job(self.run_event_retention_cleanup, 'cron', hour=2, minute=30)
+
+        # 离线消息队列过期清理（每小时一次）
+        self.scheduler.add_job(self.run_offline_queue_cleanup, 'interval', hours=1)
 
         # 夜间复盘 (每天凌晨1点执行)
         self.scheduler.add_job(self.run_nightly_review, 'cron', hour=1, minute=0)
@@ -166,6 +170,17 @@ class SchedulerService:
                 )
         except Exception as e:
             logger.error(f"Error in event retention cleanup: {e}", exc_info=True)
+
+    async def run_offline_queue_cleanup(self):
+        """清理过期离线消息，避免队列无限增长。"""
+        logger.info("Starting offline queue cleanup...")
+        try:
+            async with AsyncSessionLocal() as db:
+                expired_count = await OfflineQueueService.cleanup_expired(db)
+                await db.commit()
+                logger.info(f"Offline queue cleanup completed: expired={expired_count}")
+        except Exception as e:
+            logger.error(f"Error in offline queue cleanup: {e}", exc_info=True)
 
     async def run_nightly_review(self):
         """
