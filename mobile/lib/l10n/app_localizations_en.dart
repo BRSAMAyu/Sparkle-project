@@ -7940,10 +7940,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyControlZoomOut => 'Galaxy Control Zoom Out';
 
   @override
-  String get galaxyEmptyMessage => 'Galaxy Empty Message';
+  String get galaxyEmptyMessage =>
+      'Unlock a few knowledge nodes or reload the map to let the constellation begin to grow.';
 
   @override
-  String get galaxyEmptyTitle => 'Galaxy Empty Title';
+  String get galaxyEmptyTitle => 'Your galaxy is still waiting to be charted';
 
   @override
   String get galaxyErrorConnectionFailed => 'Galaxy Error Connection Failed';
@@ -8019,22 +8020,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyLoadFailed => 'Galaxy Load Failed';
 
   @override
-  String get galaxyLoadFailedTitle => 'Galaxy Load Failed Title';
+  String get galaxyLoadFailedTitle => 'Galaxy failed to load';
 
   @override
-  String get galaxyLoadingMessage => 'Galaxy Loading Message';
+  String get galaxyLoadingMessage =>
+      'Mapping your current knowledge constellation...';
 
   @override
-  String get galaxyLoadingTitle => 'Galaxy Loading Title';
+  String get galaxyLoadingTitle => 'Loading galaxy';
 
   @override
-  String get galaxyNodeFocus => 'Galaxy Node Focus';
+  String get galaxyNodeFocus => 'Focus node';
 
   @override
-  String get galaxyNodeInspectConnections => 'Galaxy Node Inspect Connections';
+  String get galaxyNodeInspectConnections => 'View links';
 
   @override
-  String get galaxyNodeLocked => 'Galaxy Node Locked';
+  String get galaxyNodeLaunchPrediction => 'Run simulation';
+
+  @override
+  String get galaxyNodeLocked => 'Locked';
+
+  @override
+  String get galaxyNodeLockedHint =>
+      'Open the detail view to inspect prerequisites and plan how to unlock this node.';
 
   @override
   String galaxyNodePreviewSubtitle(Object arg0, Object arg1) {
@@ -8042,7 +8051,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyNodeUnlocked => 'Galaxy Node Unlocked';
+  String get galaxyNodeUnlocked => 'Unlocked';
 
   @override
   String get galaxyOfflineMode => 'Galaxy Offline Mode';
@@ -8102,7 +8111,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyPerfStatusOptimal => 'Galaxy Perf Status Optimal';
 
   @override
-  String get galaxyReload => 'Galaxy Reload';
+  String get galaxyReload => 'Reload galaxy';
 
   @override
   String get galaxySearchHint => 'Galaxy Search Hint';

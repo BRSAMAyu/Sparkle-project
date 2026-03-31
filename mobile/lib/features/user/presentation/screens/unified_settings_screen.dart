@@ -62,6 +62,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
+  String? _learningPreferenceStatus;
+  bool _learningPreferenceStatusIsError = false;
 
   @override
   void initState() {
@@ -284,9 +286,34 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }) {
     final notifier = ref.read(learningPreferencesProvider.notifier);
     notifier.previewPreferences(depth: depth, curiosity: curiosity);
+    if (mounted) {
+      setState(() {
+        _learningPreferenceStatus = '保存中…';
+        _learningPreferenceStatusIsError = false;
+      });
+    }
     _learningPrefsDebounce?.cancel();
-    _learningPrefsDebounce = Timer(const Duration(milliseconds: 220), () {
-      notifier.updatePreferences(depth: depth, curiosity: curiosity);
+    _learningPrefsDebounce = Timer(const Duration(milliseconds: 220), () async {
+      try {
+        await notifier.updatePreferences(depth: depth, curiosity: curiosity);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _learningPreferenceStatus = '学习模式偏好已保存';
+          _learningPreferenceStatusIsError = false;
+        });
+      } catch (e) {
+        if (!mounted) {
+          return;
+        }
+        final message = e.toString().replaceFirst('Exception: ', '').trim();
+        setState(() {
+          _learningPreferenceStatus = '保存失败：$message';
+          _learningPreferenceStatusIsError = true;
+        });
+        AppFeedback.error(context, '学习模式偏好保存失败：$message');
+      }
     });
   }
 
@@ -477,6 +504,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 curiosity: c,
                               );
                             },
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildInlineStatusMessage(
+                            _learningPreferenceStatus ?? '拖动后会自动保存到后端',
+                            isError: _learningPreferenceStatusIsError,
                           ),
                           const SizedBox(height: DS.spacing24),
                           _buildSectionHeader(
@@ -858,25 +890,46 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningFastLabel),
                                   selected: aiReasoningMode == 'fast',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('fast'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'fast',
+                                    ),
+                                  ),
                                 ),
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningBalancedLabel),
                                   selected: aiReasoningMode == 'balanced',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('balanced'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'balanced',
+                                    ),
+                                  ),
                                 ),
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningDeepLabel),
                                   selected: aiReasoningMode == 'deep',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('deep'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'deep',
+                                    ),
+                                  ),
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildSelectionPreviewCard(
+                            icon: Icons.auto_awesome_rounded,
+                            title: _aiReasoningModeTitle(l10n, aiReasoningMode),
+                            description: _aiReasoningModeDescription(
+                              l10n,
+                              aiReasoningMode,
                             ),
                           ),
                           const SizedBox(height: DS.spacing16),
@@ -1114,9 +1167,20 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             _updateNotificationPreferences(
                               context,
                               notificationLevel: level,
+                              successMessage:
+                                  '通知级别已切换为${_notificationLevelLabel(level)}',
                             ),
                           );
                         },
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _buildSelectionPreviewCard(
+                        icon: Icons.notifications_active_outlined,
+                        title:
+                            '${_notificationLevelLabel(notificationPrefs.notificationLevel)}通知',
+                        description: _notificationLevelPreview(
+                          notificationPrefs.notificationLevel,
+                        ),
                       ),
                       const Divider(height: DS.spacing24),
                       SwitchListTile(
@@ -1169,6 +1233,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               isStart: false,
                               currentValue: notificationPrefs.quietHoursEnd,
                             ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing4),
+                          child: _buildInlineStatusMessage(
+                            '支持跨午夜，例如 22:00 - 08:00；开始和结束时间不能相同。',
                           ),
                         ),
                       ],
@@ -1524,6 +1594,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
+    String? successMessage,
   }) async {
     try {
       await ref
@@ -1536,6 +1607,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             quietHoursStart: quietHoursStart,
             quietHoursEnd: quietHoursEnd,
           );
+      if (!context.mounted ||
+          successMessage == null ||
+          successMessage.isEmpty) {
+        return;
+      }
+      AppFeedback.success(context, successMessage);
     } catch (e) {
       if (!context.mounted) {
         return;
@@ -1562,11 +1639,39 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     }
 
     final formatted = _formatTimeOfDay(picked);
+    final prefs = ref.read(notificationPreferenceSettingsProvider);
+    final nextStart = isStart ? formatted : prefs.quietHoursStart;
+    final nextEnd = isStart ? prefs.quietHoursEnd : formatted;
+    if (nextStart == nextEnd) {
+      AppFeedback.info(context, '开始和结束时间不能相同');
+      return;
+    }
     await _updateNotificationPreferences(
       context,
       quietHoursStart: isStart ? formatted : null,
       quietHoursEnd: isStart ? null : formatted,
+      successMessage: isStart ? '免打扰开始时间已更新' : '免打扰结束时间已更新',
     );
+  }
+
+  Future<void> _applyAiReasoningMode(
+    BuildContext context,
+    AppLocalizations l10n,
+    String mode,
+  ) async {
+    await ref.read(aiReasoningModeProvider.notifier).setMode(mode);
+    if (!context.mounted) {
+      return;
+    }
+    final currentMode = ref.read(aiReasoningModeProvider);
+    if (currentMode == mode) {
+      AppFeedback.success(
+        context,
+        'AI 推理模式已切换为${_aiReasoningModeTitle(l10n, mode)}',
+      );
+      return;
+    }
+    AppFeedback.error(context, 'AI 推理模式切换失败，请稍后重试');
   }
 
   TimeOfDay _parseTimeOfDay(String value) {
@@ -1632,6 +1737,106 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         return '在信息量和打扰频率之间保持平衡。';
     }
   }
+
+  String _notificationLevelPreview(String level) {
+    switch (level) {
+      case 'minimal':
+        return '只保留关键提醒，例如任务即将到期、需要立即处理的系统通知。';
+      case 'verbose':
+        return '会附带更多上下文，例如为什么提醒你、下一步建议和补充说明。';
+      case 'standard':
+      default:
+        return '保留主要提醒，并在必要时补充简短背景说明，适合大多数场景。';
+    }
+  }
+
+  String _aiReasoningModeTitle(AppLocalizations l10n, String mode) {
+    switch (mode) {
+      case 'fast':
+        return l10n.aiReasoningFastLabel;
+      case 'deep':
+        return l10n.aiReasoningDeepLabel;
+      case 'balanced':
+      default:
+        return l10n.aiReasoningBalancedLabel;
+    }
+  }
+
+  String _aiReasoningModeDescription(AppLocalizations l10n, String mode) {
+    switch (mode) {
+      case 'fast':
+        return '优先更快给出结果，适合短问答、轻量查询和低延迟场景。';
+      case 'deep':
+        return '会投入更多推理预算，适合复杂问题、规划和高精度解释。';
+      case 'balanced':
+      default:
+        return '在速度和推理深度之间保持平衡，适合大多数日常使用。';
+    }
+  }
+
+  Widget _buildSelectionPreviewCard({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: DS.primaryBase, size: 18),
+            const SizedBox(width: DS.spacing10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    description,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildInlineStatusMessage(
+    String message, {
+    bool isError = false,
+  }) =>
+      Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline_rounded : Icons.check_circle_outline,
+            size: 16,
+            color: isError ? DS.error : DS.textSecondary,
+          ),
+          const SizedBox(width: DS.spacing6),
+          Expanded(
+            child: Text(
+              message,
+              style: DS.bodySmall.copyWith(
+                color: isError ? DS.error : DS.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      );
 
   Widget _buildLanguageOption(
     BuildContext context, {

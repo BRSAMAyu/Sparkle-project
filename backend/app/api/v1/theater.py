@@ -114,6 +114,19 @@ async def adopt_theater_prediction(
     )
 
 
+@router.get("/predictions/{prediction_id}")
+async def get_theater_prediction(
+    prediction_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    return await service.get_prediction(
+        user_id=UUID(user_id),
+        prediction_id=prediction_id,
+    )
+
+
 @router.post("/predictions/{prediction_id}/actuals")
 async def record_theater_actual_outcome(
     prediction_id: str,
@@ -138,6 +151,15 @@ async def get_theater_prediction_accuracy(
 ):
     service = PredictionTheaterService(db)
     return await service.get_accuracy_summary(user_id=UUID(user_id), prediction_id=prediction_id)
+
+
+@router.get("/accuracy/overview")
+async def get_theater_accuracy_overview(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    return await service.get_accuracy_overview(user_id=UUID(user_id))
 
 
 @router.post("/predictions/{prediction_id}/promote-node")

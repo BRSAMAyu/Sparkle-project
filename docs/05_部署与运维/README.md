@@ -6,14 +6,15 @@
 
 1. [LOCAL_DEVELOPMENT_GUIDE.md](./LOCAL_DEVELOPMENT_GUIDE.md)
 2. [ENV_SETUP_GUIDE.md](./ENV_SETUP_GUIDE.md)
-3. [部署指南.md](./部署指南.md)
-4. [PRODUCTION_READY_CHECKLIST.md](./PRODUCTION_READY_CHECKLIST.md)
+3. [服务器全套环境与服务配置指南_2026-03-31.md](./服务器全套环境与服务配置指南_2026-03-31.md)
+4. [部署指南.md](./部署指南.md)
+5. [PRODUCTION_READY_CHECKLIST.md](./PRODUCTION_READY_CHECKLIST.md)
 
 ## 当前高价值文档
 
 - 开发启动：`LOCAL_DEVELOPMENT_GUIDE.md`
 - 环境配置：`ENV_SETUP_GUIDE.md`、`CHINA_MIRROR_SETUP.md`
-- 部署入口：`部署指南.md`、`阶段6_部署前最终准备清单_2026-03-22.md`
+- 部署入口：`服务器全套环境与服务配置指南_2026-03-31.md`、`部署指南.md`、`阶段6_部署前最终准备清单_2026-03-22.md`
 - 生产运行：`生产稳定性基线运行手册_2026-03-20.md`
 - 后端专项配置：`backend_*` 系列文档
 

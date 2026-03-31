@@ -317,6 +317,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
   final EnhancedGalaxyRepository _repository;
   final Ref _ref;
+  // ignore: cancel_subscriptions
   StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
@@ -378,7 +379,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   @override
   void dispose() {
-    _eventsSubscription?.cancel();
+    final eventsSubscription = _eventsSubscription;
+    if (eventsSubscription != null) {
+      unawaited(eventsSubscription.cancel());
+    }
     _eventsReconnectTimer?.cancel();
     _animationTimer?.cancel();
     _viewportThrottleTimer?.cancel();
@@ -396,7 +400,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
   void _initEventsListener() {
-    _eventsSubscription?.cancel();
+    final currentSubscription = _eventsSubscription;
+    if (currentSubscription != null) {
+      unawaited(currentSubscription.cancel());
+    }
     _eventsSubscription =
         _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(
       (event) {
@@ -404,12 +411,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           _lastEventId = event.id;
         }
 
-        if (event.event == 'nodes_expanded') {
+        if (event.event == 'nodes_expanded' ||
+            event.event == 'galaxy.nodes_expanded') {
           _handleNodesExpanded(event.jsonData);
-        } else if (event.event == 'galaxy.node.updated') {
+        } else if (event.event == 'galaxy.node.updated' ||
+            event.event == 'galaxy.mastery_updated') {
           _handleNodeUpdated(event.jsonData);
         } else if (event.event == 'evidence_pack') {
           _handleEvidencePack(event.jsonData);
+        } else if (event.event == 'galaxy.error.created') {
+          _handleErrorCreated(event.jsonData);
         }
       },
       onError: (Object error, StackTrace stack) {
@@ -422,7 +433,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   void _scheduleEventsReconnect() {
     if (!mounted) return;
-    _eventsSubscription?.cancel();
+    final currentSubscription = _eventsSubscription;
+    if (currentSubscription != null) {
+      unawaited(currentSubscription.cancel());
+    }
     _eventsReconnectTimer?.cancel();
     _eventsReconnectTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) _initEventsListener();
@@ -431,7 +445,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   void _handleNodesExpanded(Map<String, dynamic>? data) {
     if (data == null || data['nodes'] == null) return;
-    loadGalaxy(forceRefresh: true);
+    unawaited(loadGalaxy(forceRefresh: true));
   }
 
   void _handleNodeUpdated(Map<String, dynamic>? data) {
@@ -483,6 +497,21 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         .where((id) => id.isNotEmpty)
         .toSet();
     setEvidenceHighlight(ids, focusId: nodeId);
+  }
+
+  void _handleErrorCreated(Map<String, dynamic>? data) {
+    if (data == null) return;
+    final linkedNodeIds = (data['linked_node_ids'] as List<dynamic>?)
+        ?.map((item) => item?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    if (linkedNodeIds != null && linkedNodeIds.isNotEmpty) {
+      setEvidenceHighlight(linkedNodeIds);
+    }
+
+    unawaited(loadGalaxy(forceRefresh: true));
   }
 
   void setFocusNode(String nodeId) {
@@ -1088,25 +1117,25 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       ...state.expandedEdgeNodeIds,
     };
     final center = viewport == Rect.zero ? Offset.zero : viewport.center;
-    final prioritized = List<GalaxyNodeModel>.from(nodes);
-    prioritized.sort((a, b) {
-      final aPinned = stickyIds.contains(a.id);
-      final bPinned = stickyIds.contains(b.id);
-      if (aPinned != bPinned) {
-        return aPinned ? -1 : 1;
-      }
+    final prioritized = List<GalaxyNodeModel>.from(nodes)
+      ..sort((a, b) {
+        final aPinned = stickyIds.contains(a.id);
+        final bPinned = stickyIds.contains(b.id);
+        if (aPinned != bPinned) {
+          return aPinned ? -1 : 1;
+        }
 
-      final importanceOrder = b.importance.compareTo(a.importance);
-      if (importanceOrder != 0) {
-        return importanceOrder;
-      }
+        final importanceOrder = b.importance.compareTo(a.importance);
+        if (importanceOrder != 0) {
+          return importanceOrder;
+        }
 
-      final aPos = posMap[a.id] ?? Offset.zero;
-      final bPos = posMap[b.id] ?? Offset.zero;
-      return (aPos - center)
-          .distanceSquared
-          .compareTo((bPos - center).distanceSquared);
-    });
+        final aPos = posMap[a.id] ?? Offset.zero;
+        final bPos = posMap[b.id] ?? Offset.zero;
+        return (aPos - center)
+            .distanceSquared
+            .compareTo((bPos - center).distanceSquared);
+      });
     return prioritized.take(maxNodes).toList();
   }
 

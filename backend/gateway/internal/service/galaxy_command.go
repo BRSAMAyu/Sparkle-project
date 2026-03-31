@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -36,20 +37,20 @@ type UnlockNodeRequest struct {
 
 // UpdateMasteryRequest contains data for updating mastery score.
 type UpdateMasteryRequest struct {
-	UserID        uuid.UUID
-	NodeID        uuid.UUID
-	MasteryDelta  float64
-	StudyMinutes  int32
-	ActivityType  string // "study", "practice", "review"
+	UserID       uuid.UUID
+	NodeID       uuid.UUID
+	MasteryDelta float64
+	StudyMinutes int32
+	ActivityType string // "study", "practice", "review"
 }
 
 // CreateRelationRequest contains data for creating a node relation.
 type CreateRelationRequest struct {
-	UserID        uuid.UUID
-	SourceNodeID  uuid.UUID
-	TargetNodeID  uuid.UUID
-	RelationType  string // "prerequisite", "related", "extends"
-	Strength      float64
+	UserID       uuid.UUID
+	SourceNodeID uuid.UUID
+	TargetNodeID uuid.UUID
+	RelationType string // "prerequisite", "related", "extends"
+	Strength     float64
 }
 
 // GalaxyCommandService handles write operations for the knowledge galaxy module.
@@ -59,6 +60,8 @@ type GalaxyCommandService struct {
 	queries    *db.Queries
 	unitOfWork *outbox.UnitOfWork
 }
+
+const maxMasteryScore = 100.0
 
 // NewGalaxyCommandService creates a new galaxy command service.
 func NewGalaxyCommandService(pool *pgxpool.Pool) *GalaxyCommandService {
@@ -232,7 +235,7 @@ func (s *GalaxyCommandService) UpdateMastery(ctx context.Context, req UpdateMast
 		// Update user_node_status mastery
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE user_node_status
-			SET mastery_score = LEAST(GREATEST(mastery_score + $3, 0), 1),
+			SET mastery_score = LEAST(GREATEST(mastery_score + $3, 0), 100),
 			    total_study_minutes = total_study_minutes + $4,
 			    study_count = study_count + 1,
 			    last_study_at = NOW(),
@@ -260,11 +263,11 @@ func (s *GalaxyCommandService) UpdateMastery(ctx context.Context, req UpdateMast
 			event.AggregateKnowledgeNode,
 			req.NodeID,
 			map[string]interface{}{
-				"node_id":        req.NodeID.String(),
-				"user_id":        req.UserID.String(),
-				"mastery_delta":  req.MasteryDelta,
-				"study_minutes":  req.StudyMinutes,
-				"activity_type":  req.ActivityType,
+				"node_id":       req.NodeID.String(),
+				"user_id":       req.UserID.String(),
+				"mastery_delta": req.MasteryDelta,
+				"study_minutes": req.StudyMinutes,
+				"activity_type": req.ActivityType,
 			},
 			event.EventMetadata{
 				UserID: req.UserID,
@@ -355,13 +358,13 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 			return fmt.Errorf("failed to record study: %w", err)
 		}
 
-		// Calculate mastery delta based on performance
-		masteryDelta := performanceScore * 0.1 // Each study session can add up to 10% mastery
+		// Calculate mastery delta on the same 0-100 scale used by Python/user_node_status.
+		masteryDelta := math.Min(performanceScore*0.1, maxMasteryScore)
 
 		// Update mastery score
 		_, err = txCtx.Tx().Exec(ctx, `
 			UPDATE user_node_status
-			SET mastery_score = LEAST(GREATEST(mastery_score + $3, 0), 1),
+			SET mastery_score = LEAST(GREATEST(mastery_score + $3, 0), 100),
 			    total_study_minutes = total_study_minutes + $4,
 			    study_count = study_count + 1,
 			    last_study_at = NOW(),

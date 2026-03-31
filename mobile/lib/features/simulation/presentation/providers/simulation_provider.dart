@@ -110,6 +110,51 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
   final SimulationRepository _repository;
   final Ref _ref;
 
+  void _hydrateFromSession(
+    SimulationSessionModel session, {
+    bool clearError = false,
+    String? error,
+  }) {
+    state = state.copyWith(
+      isLoading: false,
+      isContinuing: false,
+      session: session,
+      sessionId: session.id,
+      engineState: session.state,
+      progress: 1,
+      liveParticipants: session.participants,
+      liveRounds: session.rounds,
+      liveInsightSummary: session.insightSummary,
+      liveInteractionPrompt: session.interactionPrompt,
+      liveSuggestedReplies: session.suggestedReplies,
+      activeInteraction: session.pendingInteraction,
+      livePlannedRoundCount: session.plannedRoundCount,
+      liveFacilitationStyle: session.facilitationStyle,
+      clearError: clearError,
+      error: error,
+    );
+  }
+
+  Future<bool> _recoverSession(
+    String? sessionId, {
+    required String fallbackMessage,
+  }) async {
+    final normalizedSessionId = (sessionId ?? '').trim();
+    if (normalizedSessionId.isEmpty) {
+      return false;
+    }
+    try {
+      final session = await _repository.getSession(normalizedSessionId);
+      _hydrateFromSession(
+        session,
+        error: fallbackMessage,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> loadRecommendedSeeds({
     String? scenarioKey,
     int limit = 3,
@@ -207,7 +252,34 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final recovered = await _recoverSession(
+        state.sessionId,
+        fallbackMessage: '实时连接中断，已恢复到最近一次保存的模拟进度。',
+      );
+      if (!recovered) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
+    }
+  }
+
+  Future<void> restoreSession(String sessionId) async {
+    final normalizedSessionId = sessionId.trim();
+    if (normalizedSessionId.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      engineState: 'RESTORING',
+    );
+    try {
+      final session = await _repository.getSession(normalizedSessionId);
+      _hydrateFromSession(session, clearError: true);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
     }
   }
 
@@ -271,12 +343,18 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       }
       return true;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isContinuing: false,
-        error: e.toString(),
+      final recovered = await _recoverSession(
+        sessionId,
+        fallbackMessage: '互动流中断了，但我已经帮你恢复到最近一轮状态。',
       );
-      return false;
+      if (!recovered) {
+        state = state.copyWith(
+          isLoading: false,
+          isContinuing: false,
+          error: e.toString(),
+        );
+      }
+      return recovered;
     }
   }
 

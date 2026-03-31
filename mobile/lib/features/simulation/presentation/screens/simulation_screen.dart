@@ -28,11 +28,21 @@ class SimulationScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialTopic,
     this.initialScenarioKey,
+    this.initialSimulationSessionId,
+    this.sourcePredictionId,
+    this.sourceRouteId,
+    this.sourceRouteTitle,
+    this.sourceTargetName,
     this.initialSourceChatSessionId,
   });
 
   final String? initialTopic;
   final String? initialScenarioKey;
+  final String? initialSimulationSessionId;
+  final String? sourcePredictionId;
+  final String? sourceRouteId;
+  final String? sourceRouteTitle;
+  final String? sourceTargetName;
   final String? initialSourceChatSessionId;
 
   @override
@@ -84,6 +94,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   }) {
     final query = <String, String>{
       'topic': topic,
+      if ((widget.sourcePredictionId ?? '').trim().isNotEmpty)
+        'prediction_id': widget.sourcePredictionId!.trim(),
+      if ((widget.sourceRouteId ?? '').trim().isNotEmpty)
+        'route_id': widget.sourceRouteId!.trim(),
       if ((simulationSessionId ?? '').trim().isNotEmpty)
         'simulation_session_id': simulationSessionId!.trim(),
     };
@@ -151,6 +165,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
         final previousSession = previous?.session;
         final nextSession = next.session;
+        if ((nextSession?.topic ?? '').isNotEmpty &&
+            _topicController.text.trim().isEmpty) {
+          _topicController.text = nextSession!.topic;
+        }
         final completedNow = nextSession != null &&
             nextSession.state.toUpperCase() == 'COMPLETED' &&
             (previousSession == null ||
@@ -171,7 +189,13 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               silent: true,
             ),
       );
-      if ((widget.initialTopic ?? '').trim().isNotEmpty) {
+      if ((widget.initialSimulationSessionId ?? '').trim().isNotEmpty) {
+        unawaited(
+          ref.read(simulationProvider.notifier).restoreSession(
+                widget.initialSimulationSessionId!.trim(),
+              ),
+        );
+      } else if ((widget.initialTopic ?? '').trim().isNotEmpty) {
         unawaited(
           ref.read(simulationProvider.notifier).run(
                 topic: widget.initialTopic!.trim(),
@@ -476,6 +500,64 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     _customParticipantController.clear();
   }
 
+  Widget? _buildTheaterBridgeBanner(SimulationSessionModel? session) {
+    final routeId = (widget.sourceRouteId ?? '').trim();
+    final predictionId = (widget.sourcePredictionId ?? '').trim();
+    if (routeId.isEmpty || predictionId.isEmpty) {
+      return null;
+    }
+    final routeTitle = (widget.sourceRouteTitle ?? '').trim();
+    final targetName = (widget.sourceTargetName ?? '').trim();
+    final topic = session?.topic ?? _topicController.text.trim();
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.alt_route_rounded,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  routeTitle.isNotEmpty ? '正在验证路径「$routeTitle」' : '正在验证一条推演路径',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  targetName.isNotEmpty
+                      ? '这轮模拟来自知识剧场，目标是 $targetName。你可以随时带着当前进度回到剧场继续采纳或校准。'
+                      : '这轮模拟来自知识剧场，当前上下文会和原推演保持关联。',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.4,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.tonal(
+            onPressed: () => context.push(
+              _buildTheaterRoute(
+                topic: topic.isEmpty ? (widget.initialTopic ?? '当前模拟') : topic,
+                simulationSessionId: session?.id,
+              ),
+            ),
+            child: const Text('回到剧场'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSetupLayout({
     required BuildContext context,
     required BoxConstraints constraints,
@@ -513,6 +595,11 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   kind: ChatContinuityKind.journey,
                   subtitle: '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。',
                 ),
+                const SizedBox(height: 14),
+              ],
+              if (_buildTheaterBridgeBanner(session)
+                  case final bridgeBanner?) ...[
+                bridgeBanner,
                 const SizedBox(height: 14),
               ],
               _SimulationComposer(
@@ -787,6 +874,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           : null,
                     ),
                   ),
+                  if (_buildTheaterBridgeBanner(session)
+                      case final bridgeBanner?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: bridgeBanner,
+                    ),
                   if (state.error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),

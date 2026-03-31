@@ -443,7 +443,23 @@ class KnowledgeRetrievalService:
         limit: int = 10,
         threshold: float = 0.3
     ) -> list[KnowledgeNode]:
-        """Internal semantic search that returns KnowledgeNode models"""
+        """Internal semantic search that returns KnowledgeNode models."""
+        ranked_nodes = await self.semantic_search_ranked_nodes(
+            query=query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+        )
+        return [node for node, _score in ranked_nodes]
+
+    async def semantic_search_ranked_nodes(
+        self,
+        query: str,
+        subject_id: int | None = None,
+        limit: int = 10,
+        threshold: float = 0.3,
+    ) -> list[tuple[KnowledgeNode, float]]:
+        """Internal semantic search that returns nodes with normalized scores."""
         if not await self._vector_runtime_available():
             return []
 
@@ -479,7 +495,14 @@ class KnowledgeRetrievalService:
             return []
         matches = result.all()
 
-        return [node for node, distance in matches if distance <= threshold]
+        ranked_matches: list[tuple[KnowledgeNode, float]] = []
+        for node, distance in matches:
+            if distance is None or distance > threshold:
+                continue
+            score = max(0.0, min(1.0, 1.0 - float(distance)))
+            ranked_matches.append((node, score))
+
+        return ranked_matches
 
     async def keyword_search(
         self,

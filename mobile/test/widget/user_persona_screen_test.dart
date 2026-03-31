@@ -14,6 +14,7 @@ class _FakeUserRepository implements UserRepository {
     Map<String, dynamic>? profileContext,
     List<Map<String, dynamic>>? inferredPreferences,
     List<Map<String, dynamic>>? activePolicies,
+    this.transparentProfileError,
     this.inferredPreferencesError,
     this.resetOverrideError,
   })  : _transparentProfile = transparentProfile ??
@@ -96,14 +97,19 @@ class _FakeUserRepository implements UserRepository {
   final Map<String, dynamic> _profileContext;
   final List<Map<String, dynamic>> _inferredPreferences;
   final List<Map<String, dynamic>> _activePolicies;
+  final Object? transparentProfileError;
   final Object? inferredPreferencesError;
   final Object? resetOverrideError;
 
   final List<String> resetOverrideCalls = <String>[];
 
   @override
-  Future<Map<String, dynamic>> fetchTransparentProfile() async =>
-      _transparentProfile;
+  Future<Map<String, dynamic>> fetchTransparentProfile() async {
+    if (transparentProfileError != null) {
+      throw transparentProfileError!;
+    }
+    return _transparentProfile;
+  }
 
   @override
   Future<Map<String, dynamic>> fetchProfileContext() async => _profileContext;
@@ -217,16 +223,16 @@ class _FakeUserRepository implements UserRepository {
 }
 
 Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
-    overrides: [
-      userRepositoryProvider.overrideWithValue(repository),
-    ],
-    child: const MaterialApp(
-      home: UserPersonaScreen(),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: Locale('zh'),
-    ),
-  );
+      overrides: [
+        userRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: const MaterialApp(
+        home: UserPersonaScreen(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('zh'),
+      ),
+    );
 
 /// Helper to find the main ListView scrollable (skip nested ones).
 Finder _mainScrollable() => find.byWidgetPredicate(
@@ -280,7 +286,7 @@ void main() {
     expect(find.text('Inferred Preferences'), findsOneWidget);
     expect(
         find.textContaining('social_learning_preference: 0.2'), findsOneWidget);
-    expect(find.text('Reset'), findsOneWidget);
+    expect(find.text('重置'), findsOneWidget);
   });
 
   testWidgets('persona readable summary uses normalized rich-text pipeline',
@@ -365,6 +371,21 @@ void main() {
     expect(find.text('重试'), findsWidgets);
   });
 
+  testWidgets(
+      'persona screen degrades gracefully when transparent profile fails',
+      (WidgetTester tester) async {
+    final repository = _FakeUserRepository(
+      transparentProfileError: Exception('transparent profile failed'),
+    );
+
+    await tester.pumpWidget(_buildTestApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('核心画像暂时不可用'), findsOneWidget);
+    expect(find.textContaining('transparent profile failed'), findsOneWidget);
+    expect(find.text('记忆设置'), findsOneWidget);
+  });
+
   testWidgets('reset override triggers repository and shows success feedback',
       (WidgetTester tester) async {
     final repository = _FakeUserRepository();
@@ -376,12 +397,12 @@ void main() {
     await _expandSection(tester, '系统推断与策略');
 
     await tester.scrollUntilVisible(
-      find.text('Reset'),
+      find.text('重置'),
       300,
       scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reset'));
+    await tester.tap(find.text('重置'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -403,12 +424,12 @@ void main() {
     await _expandSection(tester, '系统推断与策略');
 
     await tester.scrollUntilVisible(
-      find.text('Reset'),
+      find.text('重置'),
       300,
       scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reset'));
+    await tester.tap(find.text('重置'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

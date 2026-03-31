@@ -30,8 +30,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _picker = ImagePicker();
 
   bool get _isSocialAccount {
-    final source = ref.read(currentUserProvider)?.registrationSource;
-    return source == 'google' || source == 'apple' || source == 'wechat';
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.registrationSource == 'guest') {
+      return false;
+    }
+    return !user.passwordLoginEnabled;
   }
 
   Future<bool> _ensureMediaPermission(String source) async {

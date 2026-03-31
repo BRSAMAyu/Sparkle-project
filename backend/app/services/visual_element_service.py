@@ -508,6 +508,7 @@ class VisualElementService:
             category=element.category,
             sort_order=element.sort_order,
             config=element.config or {},
+            unlock_requirement=element.unlock_requirement,
             is_unlocked=is_unlocked,
             is_equipped=is_equipped,
         )

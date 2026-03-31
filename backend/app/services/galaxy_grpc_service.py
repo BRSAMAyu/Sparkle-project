@@ -1,4 +1,6 @@
-from datetime import datetime
+from collections import OrderedDict
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from uuid import UUID
 
 import grpc
@@ -20,7 +22,55 @@ from app.services.galaxy.crdt_persistence import CRDTPersistenceManager
 from app.services.galaxy_service import GalaxyService
 
 # Memory cache for active YDocs to avoid reloading from DB every time
-_active_collaborative_sessions = {}
+_MAX_ACTIVE_COLLABORATIVE_SESSIONS = 128
+_COLLABORATIVE_SESSION_TTL = timedelta(minutes=30)
+_LEGACY_REVISION_TIMESTAMP_THRESHOLD_MS = 1_000_000_000_000
+
+
+@dataclass
+class _CollaborativeSessionEntry:
+    service: CollaborativeGalaxyService
+    last_accessed_at: datetime
+
+
+_active_collaborative_sessions: OrderedDict[str, _CollaborativeSessionEntry] = OrderedDict()
+
+
+def _utcnow() -> datetime:
+    return datetime.utcnow()
+
+
+def _prune_inactive_collaborative_sessions() -> None:
+    now = _utcnow()
+    expired_ids = [
+        galaxy_id
+        for galaxy_id, entry in _active_collaborative_sessions.items()
+        if now - entry.last_accessed_at > _COLLABORATIVE_SESSION_TTL
+    ]
+    for galaxy_id in expired_ids:
+        _active_collaborative_sessions.pop(galaxy_id, None)
+
+    while len(_active_collaborative_sessions) > _MAX_ACTIVE_COLLABORATIVE_SESSIONS:
+        _active_collaborative_sessions.popitem(last=False)
+
+
+def _get_active_collaborative_session(galaxy_id: str) -> CollaborativeGalaxyService | None:
+    _prune_inactive_collaborative_sessions()
+    entry = _active_collaborative_sessions.get(galaxy_id)
+    if entry is None:
+        return None
+    entry.last_accessed_at = _utcnow()
+    _active_collaborative_sessions.move_to_end(galaxy_id)
+    return entry.service
+
+
+def _store_active_collaborative_session(galaxy_id: str, service: CollaborativeGalaxyService) -> None:
+    _active_collaborative_sessions[galaxy_id] = _CollaborativeSessionEntry(
+        service=service,
+        last_accessed_at=_utcnow(),
+    )
+    _active_collaborative_sessions.move_to_end(galaxy_id)
+    _prune_inactive_collaborative_sessions()
 
 class GalaxyGrpcServiceImpl:
     def __init__(self, db_session_factory):
@@ -34,10 +84,11 @@ class GalaxyGrpcServiceImpl:
             galaxy_service = GalaxyService(db)
 
             try:
-                # Convert proto Timestamp to Python datetime
                 version = None
-                if request.version:
-                    version = datetime.fromtimestamp(request.version.seconds + request.version.nanos / 1e9)
+                revision = request.revision or None
+                if revision is not None and revision >= _LEGACY_REVISION_TIMESTAMP_THRESHOLD_MS:
+                    version = datetime.utcfromtimestamp(revision / 1000.0)
+                    revision = None
 
                 result = await galaxy_service.update_node_mastery(
                     user_id=UUID(request.user_id),
@@ -46,7 +97,7 @@ class GalaxyGrpcServiceImpl:
                     reason=request.reason,
                     version=version,
                     request_id=request.request_id,
-                    revision=request.revision
+                    revision=revision,
                 )
 
                 if not result.get("success"):
@@ -86,14 +137,13 @@ class GalaxyGrpcServiceImpl:
             persistence_manager = CRDTPersistenceManager(cache_service.redis, db)
 
             # 1. Get or create collaborative session
-            if galaxy_id in _active_collaborative_sessions:
-                collab_service = _active_collaborative_sessions[galaxy_id]
-            else:
+            collab_service = _get_active_collaborative_session(galaxy_id)
+            if collab_service is None:
                 # Restore from persistence (Redis or DB)
                 ydoc = await persistence_manager.restore(galaxy_id)
                 collab_service = CollaborativeGalaxyService(galaxy_id)
                 collab_service.ydoc = ydoc
-                _active_collaborative_sessions[galaxy_id] = collab_service
+                _store_active_collaborative_session(galaxy_id, collab_service)
 
             try:
                 # 2. Apply client update
@@ -113,6 +163,7 @@ class GalaxyGrpcServiceImpl:
 
                 # 4. Get server update
                 server_update = collab_service.get_update()
+                _store_active_collaborative_session(galaxy_id, collab_service)
 
                 return galaxy_service_pb2.SyncCollaborativeGalaxyResponse(
                     success=True,

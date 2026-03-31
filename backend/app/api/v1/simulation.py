@@ -194,6 +194,23 @@ async def continue_learning_simulation(
     return session.to_dict()
 
 
+@router.get("/sessions/{session_id}")
+async def get_learning_simulation_session(
+    session_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    engine = SimulationEngine(db)
+    try:
+        session = await engine.get_session(
+            session_id=session_id,
+            user_id=UUID(user_id),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return session.to_dict()
+
+
 @router.post("/sessions/{session_id}/continue/stream")
 async def continue_learning_simulation_stream(
     session_id: str,

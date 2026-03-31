@@ -5,6 +5,7 @@ import hashlib
 import logging
 import json
 import re
+import statistics
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -162,6 +163,12 @@ class TheaterPathOption:
     route_score: float = 0.0
     checkpoint_days: list[int] | None = None
     week_one_tasks: list[dict[str, Any]] | None = None
+    confidence_score: float = 0.0
+    completion_range_low: float = 0.0
+    completion_range_high: float = 0.0
+    mastery_range_low: float = 0.0
+    mastery_range_high: float = 0.0
+    calibration_basis: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -177,6 +184,12 @@ class TheaterPathOption:
             "route_score": round(self.route_score, 2),
             "checkpoint_days": list(self.checkpoint_days or []),
             "week_one_tasks": list(self.week_one_tasks or []),
+            "confidence_score": round(self.confidence_score, 4),
+            "completion_range_low": round(self.completion_range_low, 4),
+            "completion_range_high": round(self.completion_range_high, 4),
+            "mastery_range_low": round(self.mastery_range_low, 2),
+            "mastery_range_high": round(self.mastery_range_high, 2),
+            "calibration_basis": self.calibration_basis,
             "steps": [step.to_dict() for step in self.steps],
         }
 
@@ -224,9 +237,23 @@ class PredictionAccuracyTracker:
         predicted = cached.get("selected_prediction") if isinstance(cached.get("selected_prediction"), dict) else {}
         predicted_completion = float(predicted.get("estimated_completion_rate") or 0.0)
         predicted_mastery = float(predicted.get("estimated_mastery") or 0.0)
+        completion_range_low = predicted.get("completion_range_low")
+        completion_range_high = predicted.get("completion_range_high")
+        mastery_range_low = predicted.get("mastery_range_low")
+        mastery_range_high = predicted.get("mastery_range_high")
         completion_error = abs(predicted_completion - actual_completion_rate)
         mastery_error = abs(predicted_mastery - actual_mastery)
         accuracy_score = _clamp(1.0 - ((completion_error * 0.55) + (mastery_error / 100.0 * 0.45)), 0.0, 1.0)
+        within_completion_range = (
+            completion_range_low is not None
+            and completion_range_high is not None
+            and float(completion_range_low) <= actual_completion_rate <= float(completion_range_high)
+        )
+        within_mastery_range = (
+            mastery_range_low is not None
+            and mastery_range_high is not None
+            and float(mastery_range_low) <= actual_mastery <= float(mastery_range_high)
+        )
 
         summary = {
             "prediction_id": prediction_id,
@@ -237,6 +264,9 @@ class PredictionAccuracyTracker:
             "completion_error": round(completion_error, 4),
             "mastery_error": round(mastery_error, 2),
             "accuracy_score": round(accuracy_score, 4),
+            "within_completion_range": within_completion_range,
+            "within_mastery_range": within_mastery_range,
+            "within_predicted_range": bool(within_completion_range and within_mastery_range),
             "evaluated_at": _utcnow().isoformat(),
         }
         cached["accuracy_summary"] = summary
@@ -308,6 +338,7 @@ class PredictionTheaterService:
         mastery_map = await self._get_mastery_map(user_id)
         study_preferences = await self._build_user_learning_profile(user_id)
         pattern_names = await self._top_pattern_names(user_id)
+        calibration_profile = await self._build_prediction_calibration(user_id)
         options = self._build_path_options(
             target_name=target_context.name,
             backbone=backbone,
@@ -315,6 +346,7 @@ class PredictionTheaterService:
             horizon_days=max(7, min(horizon_days, 30)),
             study_preferences=study_preferences,
             pattern_names=pattern_names,
+            calibration_profile=calibration_profile,
             risk_overrides=(
                 await self._assess_step_risks(backbone, mastery_map)
                 if target_context.resolution_mode != "graph_explicit"
@@ -373,12 +405,14 @@ class PredictionTheaterService:
             "accuracy_tracking": self._build_accuracy_tracking(
                 prediction_id=prediction_id,
                 generated_at=generated_at,
+                calibration_profile=calibration_profile,
             ),
             "routing_notes": {
                 "patterns": pattern_names,
                 "recommended_entry": options[0].title if options else "稳扎稳打",
                 "target_resolution_mode": target_context.resolution_mode,
                 "semantic_matches": target_context.semantic_matches,
+                "calibration_profile": calibration_profile,
             },
             "preview_mode": preview_mode,
         }
@@ -1216,7 +1250,11 @@ class PredictionTheaterService:
         except Exception:
             pass
 
-        query = {"topic": str(cached.get("topic") or "")}
+        query = {
+            "topic": str(cached.get("topic") or ""),
+            "prediction_id": prediction_id,
+            "route_id": route_id,
+        }
         if cached.get("target_node_id"):
             query["target_node_id"] = str(cached.get("target_node_id"))
         deep_link = f"/theater?{urlencode(query)}"
@@ -1263,6 +1301,17 @@ class PredictionTheaterService:
             "checkpoint_dates": checkpoint_dates,
             "review_due_on": review_due_on,
         }
+
+    async def get_prediction(
+        self,
+        *,
+        user_id: UUID,
+        prediction_id: str,
+    ) -> dict[str, Any]:
+        return await self._get_prediction_for_user_or_raise(
+            prediction_id,
+            user_id=user_id,
+        )
 
     async def _write_back_to_chat(
         self,
@@ -1360,6 +1409,32 @@ class PredictionTheaterService:
             return row if isinstance(row, dict) else None
         except Exception:
             return None
+
+    async def get_accuracy_overview(self, *, user_id: UUID) -> dict[str, Any]:
+        calibration = await self._build_prediction_calibration(user_id)
+        sample_count = int(calibration.get("sample_count") or 0)
+        avg_accuracy_score = float(calibration.get("avg_accuracy_score") or 0.0)
+        coverage_rate = calibration.get("coverage_rate")
+        if sample_count == 0:
+            trend = "insufficient_data"
+        elif avg_accuracy_score >= 0.8:
+            trend = "stable"
+        elif avg_accuracy_score >= 0.65:
+            trend = "improving"
+        else:
+            trend = "needs_adjustment"
+        return {
+            "sample_count": sample_count,
+            "avg_accuracy_score": round(avg_accuracy_score, 4),
+            "completion_bias_mean": round(float(calibration.get("completion_bias_mean") or 0.0), 4),
+            "mastery_bias_mean": round(float(calibration.get("mastery_bias_mean") or 0.0), 2),
+            "completion_mae": round(float(calibration.get("completion_mae") or 0.0), 4),
+            "mastery_mae": round(float(calibration.get("mastery_mae") or 0.0), 2),
+            "coverage_rate": round(float(coverage_rate), 4) if coverage_rate is not None else None,
+            "confidence_score": round(float(calibration.get("confidence_score") or 0.0), 4),
+            "data_status": str(calibration.get("data_status") or "cold_start"),
+            "trend": trend,
+        }
 
     async def auto_check_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         pending_predictions = await self._get_pending_predictions(user_id)
@@ -2177,6 +2252,133 @@ class PredictionTheaterService:
             ttl=self.accuracy.TTL_SECONDS,
         )
 
+    async def _build_prediction_calibration(self, user_id: UUID) -> dict[str, Any]:
+        default_profile = {
+            "sample_count": 0,
+            "completion_bias_mean": 0.0,
+            "mastery_bias_mean": 0.0,
+            "completion_mae": 0.12,
+            "mastery_mae": 12.0,
+            "avg_accuracy_score": 0.0,
+            "coverage_rate": None,
+            "confidence_score": 0.42,
+            "data_status": "cold_start",
+            "strategy_profiles": {},
+        }
+        if self.db is None:
+            return default_profile
+        try:
+            result = await self.db.execute(
+                select(
+                    TheaterPrediction.selected_prediction,
+                    TheaterPrediction.accuracy_summary,
+                ).where(
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.accuracy_summary.is_not(None),
+                    TheaterPrediction.deleted_at.is_(None),
+                ).order_by(
+                    desc(TheaterPrediction.generated_at),
+                ).limit(40)
+            )
+            rows = result.all()
+        except Exception as exc:
+            logger.warning("Failed to build theater calibration profile for %s: %s", user_id, exc)
+            return default_profile
+
+        if not rows:
+            return default_profile
+
+        completion_biases: list[float] = []
+        mastery_biases: list[float] = []
+        completion_errors: list[float] = []
+        mastery_errors: list[float] = []
+        accuracy_scores: list[float] = []
+        coverage_hits = 0
+        coverage_total = 0
+        strategy_samples: dict[str, dict[str, list[float] | int]] = {}
+
+        for selected_prediction, accuracy_summary in rows:
+            if not isinstance(selected_prediction, dict) or not isinstance(accuracy_summary, dict):
+                continue
+            predicted_completion = float(
+                accuracy_summary.get("predicted_completion_rate")
+                or selected_prediction.get("estimated_completion_rate")
+                or 0.0,
+            )
+            predicted_mastery = float(
+                accuracy_summary.get("predicted_mastery")
+                or selected_prediction.get("estimated_mastery")
+                or 0.0,
+            )
+            actual_completion = float(accuracy_summary.get("actual_completion_rate") or 0.0)
+            actual_mastery = float(accuracy_summary.get("actual_mastery") or 0.0)
+            completion_bias = actual_completion - predicted_completion
+            mastery_bias = actual_mastery - predicted_mastery
+            completion_error = abs(completion_bias)
+            mastery_error = abs(mastery_bias)
+            strategy_type = str(selected_prediction.get("strategy_type") or "unknown")
+
+            completion_biases.append(completion_bias)
+            mastery_biases.append(mastery_bias)
+            completion_errors.append(completion_error)
+            mastery_errors.append(mastery_error)
+            accuracy_scores.append(float(accuracy_summary.get("accuracy_score") or 0.0))
+
+            strategy_bucket = strategy_samples.setdefault(
+                strategy_type,
+                {
+                    "completion_biases": [],
+                    "mastery_biases": [],
+                    "completion_errors": [],
+                    "mastery_errors": [],
+                    "sample_count": 0,
+                },
+            )
+            strategy_bucket["completion_biases"].append(completion_bias)
+            strategy_bucket["mastery_biases"].append(mastery_bias)
+            strategy_bucket["completion_errors"].append(completion_error)
+            strategy_bucket["mastery_errors"].append(mastery_error)
+            strategy_bucket["sample_count"] = int(strategy_bucket["sample_count"]) + 1
+
+            completion_low = selected_prediction.get("completion_range_low")
+            completion_high = selected_prediction.get("completion_range_high")
+            mastery_low = selected_prediction.get("mastery_range_low")
+            mastery_high = selected_prediction.get("mastery_range_high")
+            if all(value is not None for value in [completion_low, completion_high, mastery_low, mastery_high]):
+                coverage_total += 1
+                if (
+                    float(completion_low) <= actual_completion <= float(completion_high)
+                    and float(mastery_low) <= actual_mastery <= float(mastery_high)
+                ):
+                    coverage_hits += 1
+
+        sample_count = len(accuracy_scores)
+        if sample_count == 0:
+            return default_profile
+
+        strategy_profiles: dict[str, Any] = {}
+        for strategy_type, bucket in strategy_samples.items():
+            strategy_profiles[strategy_type] = {
+                "sample_count": int(bucket["sample_count"]),
+                "completion_bias_mean": round(statistics.mean(bucket["completion_biases"]), 4),
+                "mastery_bias_mean": round(statistics.mean(bucket["mastery_biases"]), 2),
+                "completion_mae": round(statistics.mean(bucket["completion_errors"]), 4),
+                "mastery_mae": round(statistics.mean(bucket["mastery_errors"]), 2),
+            }
+
+        return {
+            "sample_count": sample_count,
+            "completion_bias_mean": round(statistics.mean(completion_biases), 4),
+            "mastery_bias_mean": round(statistics.mean(mastery_biases), 2),
+            "completion_mae": round(statistics.mean(completion_errors), 4),
+            "mastery_mae": round(statistics.mean(mastery_errors), 2),
+            "avg_accuracy_score": round(statistics.mean(accuracy_scores), 4),
+            "coverage_rate": round((coverage_hits / coverage_total), 4) if coverage_total else None,
+            "confidence_score": round(_clamp(0.45 + min(sample_count, 20) * 0.02, 0.45, 0.9), 4),
+            "data_status": "calibrated" if sample_count >= 5 else "blended_history",
+            "strategy_profiles": strategy_profiles,
+        }
+
     def _build_path_options(
         self,
         *,
@@ -2186,6 +2388,7 @@ class PredictionTheaterService:
         horizon_days: int,
         study_preferences: dict[str, Any],
         pattern_names: list[str],
+        calibration_profile: dict[str, Any],
         risk_overrides: list[str] | None = None,
     ) -> list[TheaterPathOption]:
         node_names = [str(item.get("name") or "") for item in backbone]
@@ -2287,33 +2490,99 @@ class PredictionTheaterService:
                     )
                 )
 
+            strategy_type = str(strategy["strategy_type"])
+            strategy_stats = dict(
+                (calibration_profile.get("strategy_profiles") or {}).get(
+                    strategy_type,
+                )
+                or {},
+            )
+            sample_count = int(calibration_profile.get("sample_count") or 0)
+            session_fit = _clamp((session_minutes - 35) / 30.0, -0.3, 0.35)
+            density_penalty = max(0.0, (len(steps) - 4) * 0.038)
+            pattern_penalty = min(len(pattern_names) * 0.018, 0.12)
+            readiness = _clamp(average_mastery / 100.0, 0.0, 1.0)
+            completion_bias = float(calibration_profile.get("completion_bias_mean") or 0.0)
+            mastery_bias = float(calibration_profile.get("mastery_bias_mean") or 0.0)
+            completion_bias += float(strategy_stats.get("completion_bias_mean") or 0.0) * 0.35
+            mastery_bias += float(strategy_stats.get("mastery_bias_mean") or 0.0) * 0.35
             completion_rate = _clamp(
-                0.52 + (average_mastery / 220.0) + float(strategy["completion_bias"]) - (len(steps) / 70.0),
-                0.35,
-                0.96,
+                0.42
+                + (readiness * 0.31)
+                + (session_fit * 0.12)
+                + float(strategy["completion_bias"])
+                + completion_bias
+                - density_penalty
+                - pattern_penalty,
+                0.28,
+                0.95,
+            )
+            mastery_gain = (
+                6.0
+                + ((100.0 - average_mastery) * 0.22)
+                + (session_fit * 10.0)
+                + float(strategy["mastery_bias"])
+                + mastery_bias
+                - (len(pattern_names) * 0.9)
             )
             estimated_mastery = _clamp(
-                average_mastery + 18 + float(strategy["mastery_bias"]) - (len(pattern_names) * 1.2),
+                average_mastery + mastery_gain,
                 20,
-                96,
+                97,
             )
+            base_completion_mae = float(calibration_profile.get("completion_mae") or 0.12)
+            base_mastery_mae = float(calibration_profile.get("mastery_mae") or 13.0)
+            strategy_completion_mae = float(strategy_stats.get("completion_mae") or base_completion_mae)
+            strategy_mastery_mae = float(strategy_stats.get("mastery_mae") or base_mastery_mae)
+            cold_start_penalty = max(0.0, (8 - min(sample_count, 8)) / 8.0)
+            completion_margin = _clamp(
+                (strategy_completion_mae * 1.12)
+                + 0.03
+                + (len(steps) * 0.008)
+                + (cold_start_penalty * 0.08),
+                0.06,
+                0.24,
+            )
+            mastery_margin = _clamp(
+                (strategy_mastery_mae * 1.08)
+                + 3.0
+                + (len(steps) * 0.75)
+                + (cold_start_penalty * 5.0),
+                6.0,
+                24.0,
+            )
+            confidence_score = _clamp(
+                float(calibration_profile.get("confidence_score") or 0.42)
+                + min(sample_count, 12) * 0.012
+                + min(int(strategy_stats.get("sample_count") or 0), 6) * 0.008
+                - (len(steps) * 0.01)
+                - (cold_start_penalty * 0.12),
+                0.36,
+                0.92,
+            )
+            completion_range_low = _clamp(completion_rate - completion_margin, 0.0, 1.0)
+            completion_range_high = _clamp(completion_rate + completion_margin, 0.0, 1.0)
+            mastery_range_low = _clamp(estimated_mastery - mastery_margin, 0.0, 100.0)
+            mastery_range_high = _clamp(estimated_mastery + mastery_margin, 0.0, 100.0)
             risks = [str(strategy["risk_bias"])]
             if pattern_names:
                 risks.append(f"近期行为模式提示：{pattern_names[0]} 可能影响这条路径的稳定执行。")
             if node_names:
                 risks.append(f"{node_names[min(len(node_names) - 1, 0)]} 的掌握情况会决定后续理解是否顺滑。")
+            if sample_count < 5:
+                risks.append("这条预测仍处于冷启动阶段，建议把区间而不是单点估计当作主要参考。")
             route_score = self._route_score(
                 completion_rate=completion_rate,
                 estimated_mastery=estimated_mastery,
                 risks=risks,
-                strategy_type=str(strategy["strategy_type"]),
+                strategy_type=strategy_type,
             )
             options.append(
                 TheaterPathOption(
                     id=str(strategy["id"]),
                     title=str(strategy["title"]),
                     summary=str(strategy["summary"]),
-                    strategy_type=str(strategy["strategy_type"]),
+                    strategy_type=strategy_type,
                     expert_ids=list(strategy["expert_ids"]),
                     estimated_completion_rate=completion_rate,
                     estimated_mastery=estimated_mastery,
@@ -2322,6 +2591,16 @@ class PredictionTheaterService:
                     route_score=route_score,
                     checkpoint_days=checkpoint_days,
                     week_one_tasks=self._week_one_task_blueprints(steps=steps, target_name=target_name),
+                    confidence_score=confidence_score,
+                    completion_range_low=completion_range_low,
+                    completion_range_high=completion_range_high,
+                    mastery_range_low=mastery_range_low,
+                    mastery_range_high=mastery_range_high,
+                    calibration_basis=(
+                        "personal_history"
+                        if sample_count >= 5
+                        else ("cold_start" if sample_count == 0 else "blended_history")
+                    ),
                     steps=steps,
                 )
             )
@@ -2625,13 +2904,36 @@ class PredictionTheaterService:
         *,
         prediction_id: str,
         generated_at: datetime,
+        calibration_profile: dict[str, Any],
     ) -> dict[str, Any]:
         due_on = (generated_at.date() + timedelta(days=7)).isoformat()
+        sample_count = int(calibration_profile.get("sample_count") or 0)
+        avg_accuracy_score = float(calibration_profile.get("avg_accuracy_score") or 0.0)
+        model_confidence = float(calibration_profile.get("confidence_score") or 0.0)
+        coverage_rate = calibration_profile.get("coverage_rate")
+        data_status = str(calibration_profile.get("data_status") or "cold_start")
+        if sample_count >= 5:
+            summary_hint = (
+                f"基于你最近 {sample_count} 次已回填推演做过校准，"
+                f"当前模型稳定度约 {round(model_confidence * 100)}%。"
+            )
+        elif sample_count > 0:
+            summary_hint = (
+                f"目前只积累了 {sample_count} 次回填记录，系统会继续边用边校准，"
+                "建议把区间预测当作主参考。"
+            )
+        else:
+            summary_hint = "这还是冷启动预测，建议在 7 天后回填真实完成率和掌握度，帮系统建立你的校准基线。"
         return {
             "prediction_id": prediction_id,
             "status": "pending_feedback",
             "due_on": due_on,
-            "summary_hint": "建议在 7 天后回填真实完成率和掌握度，检查这次推演是否命中。",
+            "summary_hint": summary_hint,
+            "sample_count": sample_count,
+            "avg_accuracy_score": round(avg_accuracy_score, 4),
+            "model_confidence": round(model_confidence, 4),
+            "coverage_rate": round(float(coverage_rate), 4) if coverage_rate is not None else None,
+            "data_status": data_status,
         }
 
     def _fallback_discussion(

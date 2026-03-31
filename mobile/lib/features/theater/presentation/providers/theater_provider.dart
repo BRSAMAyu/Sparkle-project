@@ -26,6 +26,7 @@ class TheaterState {
     this.snapshot,
     this.adoptionResult,
     this.accuracySummary,
+    this.accuracyOverview,
     this.error,
   });
 
@@ -41,6 +42,7 @@ class TheaterState {
   final TheaterSnapshot? snapshot;
   final TheaterAdoptionResult? adoptionResult;
   final TheaterAccuracySummary? accuracySummary;
+  final TheaterAccuracyOverview? accuracyOverview;
   final String? error;
 
   TheaterPathOption? get selectedRoute {
@@ -71,12 +73,14 @@ class TheaterState {
     TheaterSnapshot? snapshot,
     TheaterAdoptionResult? adoptionResult,
     TheaterAccuracySummary? accuracySummary,
+    TheaterAccuracyOverview? accuracyOverview,
     String? error,
     bool clearPrediction = false,
     bool clearWhatIf = false,
     bool clearSnapshot = false,
     bool clearAdoption = false,
     bool clearAccuracy = false,
+    bool clearAccuracyOverview = false,
     bool clearError = false,
   }) =>
       TheaterState(
@@ -94,6 +98,9 @@ class TheaterState {
             clearAdoption ? null : adoptionResult ?? this.adoptionResult,
         accuracySummary:
             clearAccuracy ? null : accuracySummary ?? this.accuracySummary,
+        accuracyOverview: clearAccuracyOverview
+            ? null
+            : accuracyOverview ?? this.accuracyOverview,
         error: clearError ? null : error ?? this.error,
       );
 }
@@ -131,6 +138,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       clearSnapshot: true,
       clearAdoption: true,
       clearAccuracy: true,
+      clearAccuracyOverview: true,
     );
     try {
       var completed = false;
@@ -167,6 +175,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         selectedRouteId: selectedRouteId,
         timelineIndex: 0,
       );
+      unawaited(refreshAccuracyOverview());
       try {
         unawaited(
           _ref.read(appEventStreamServiceProvider).recordTheaterGenerated(
@@ -187,6 +196,49 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         error: _resolveErrorMessage(
           e,
           fallbackMessage: '这次推演没有成功生成，你可以稍后再试。',
+        ),
+      );
+    }
+  }
+
+  Future<void> loadPredictionById(
+    String predictionId, {
+    String? preferredRouteId,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      loadingStage: 'prediction',
+      clearError: true,
+      clearWhatIf: true,
+      clearSnapshot: true,
+      clearAdoption: true,
+      clearAccuracy: true,
+      clearAccuracyOverview: true,
+    );
+    try {
+      final prediction = await _repository.getPredictionById(predictionId);
+      final selectedRouteId = prediction.paths.any(
+        (route) => route.id == preferredRouteId,
+      )
+          ? preferredRouteId
+          : (prediction.paths.isNotEmpty ? prediction.paths.first.id : null);
+      state = state.copyWith(
+        isLoading: false,
+        loadingStage: 'done',
+        prediction: prediction,
+        selectedRouteId: selectedRouteId,
+        timelineIndex: 0,
+      );
+      _syncOverlay();
+      unawaited(refreshAccuracyOverview());
+      unawaited(refreshAccuracy());
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        loadingStage: 'idle',
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '读取这次推演失败了，你可以稍后再试。',
         ),
       );
     }
@@ -275,6 +327,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isLoading: false,
         accuracySummary: summary,
       );
+      unawaited(refreshAccuracyOverview());
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -372,6 +425,20 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         error: _resolveErrorMessage(
           e,
           fallbackMessage: '读取推演准确度失败，你可以稍后再试。',
+        ),
+      );
+    }
+  }
+
+  Future<void> refreshAccuracyOverview() async {
+    try {
+      final overview = await _repository.getAccuracyOverview();
+      state = state.copyWith(accuracyOverview: overview);
+    } catch (e) {
+      state = state.copyWith(
+        error: _resolveErrorMessage(
+          e,
+          fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',
         ),
       );
     }

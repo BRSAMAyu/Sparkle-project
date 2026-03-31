@@ -65,7 +65,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _resetInvalidStoredSession(Object error) async {
-    debugPrint('ℹ️ Stored auth session expired, clearing local auth state: $error');
+    debugPrint(
+        'ℹ️ Stored auth session expired, clearing local auth state: $error');
     await _authRepository.clearTokens();
     await _clearUserScopedLocalData();
     state = state.copyWith(
@@ -91,7 +92,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           var user = await _authRepository.getCurrentUser();
           if (user.registrationSource == 'guest') {
             try {
-              final guestId = await _ref.read(guestServiceProvider).getGuestId();
+              final guestId =
+                  await _ref.read(guestServiceProvider).getGuestId();
               if (guestId == user.username) {
                 user = await _authRepository.guestLogin(guestId);
               }
@@ -236,7 +238,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     }
   }
-
 
   Future<void> refreshUser() async {
     if (state.isAuthenticated) {
@@ -421,8 +422,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<List<AuthAuditLogModel>> getSecurityLog() =>
-      _authRepository.getSecurityLog();
+  Future<List<AuthAuditLogModel>> getSecurityLog({
+    int limit = 20,
+    int offset = 0,
+  }) =>
+      _authRepository.getSecurityLog(limit: limit, offset: offset);
 
   Future<void> deleteAccount({
     required String confirmation,

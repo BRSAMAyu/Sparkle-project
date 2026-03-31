@@ -18,6 +18,7 @@ import 'package:sparkle/features/mirofish/presentation/support/mirofish_mileston
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/features/theater/presentation/widgets/knowledge_theater_graph.dart';
@@ -27,12 +28,16 @@ class KnowledgeTheaterScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialTopic,
     this.initialTargetNodeId,
+    this.initialPredictionId,
+    this.initialRouteId,
     this.initialSourceChatSessionId,
     this.initialSimulationSessionId,
   });
 
   final String? initialTopic;
   final String? initialTargetNodeId;
+  final String? initialPredictionId;
+  final String? initialRouteId;
   final String? initialSourceChatSessionId;
   final String? initialSimulationSessionId;
 
@@ -54,6 +59,26 @@ class _KnowledgeTheaterScreenState
   bool _isTimelinePlaying = false;
   String? _selectedNodeId;
   _TheaterWorkbenchTab _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
+
+  String _buildSimulationRoute(TheaterPathOption route) {
+    final prediction = ref.read(theaterProvider).prediction;
+    final query = <String, String>{
+      'topic': prediction?.topic ?? _topicController.text.trim(),
+      'scenario_key': 'what_if_path',
+      'prediction_id': prediction?.predictionId ?? '',
+      'route_id': route.id,
+      'route_title': route.title,
+      'target_name': prediction?.targetName ?? '',
+      if ((widget.initialSourceChatSessionId ?? '').trim().isNotEmpty)
+        'source_chat_session_id': widget.initialSourceChatSessionId!.trim(),
+      if ((widget.initialSimulationSessionId ?? '').trim().isNotEmpty)
+        'simulation_session_id': widget.initialSimulationSessionId!.trim(),
+    }..removeWhere((key, value) => value.trim().isEmpty);
+    return Uri(
+      path: SimulationRoutes.simulation,
+      queryParameters: query,
+    ).toString();
+  }
 
   @override
   void initState() {
@@ -89,7 +114,14 @@ class _KnowledgeTheaterScreenState
               silent: true,
             ),
       );
-      if ((widget.initialTopic ?? '').trim().isNotEmpty) {
+      if ((widget.initialPredictionId ?? '').trim().isNotEmpty) {
+        unawaited(
+          ref.read(theaterProvider.notifier).loadPredictionById(
+                widget.initialPredictionId!.trim(),
+                preferredRouteId: widget.initialRouteId?.trim(),
+              ),
+        );
+      } else if ((widget.initialTopic ?? '').trim().isNotEmpty) {
         unawaited(_generatePrediction(widget.initialTopic!.trim()));
       }
     });
@@ -418,6 +450,7 @@ class _KnowledgeTheaterScreenState
                                   snapshot: state.snapshot,
                                   adoptionResult: state.adoptionResult,
                                   accuracySummary: state.accuracySummary,
+                                  accuracyOverview: state.accuracyOverview,
                                   accuracyTracking: prediction.accuracyTracking,
                                   isLoading: state.isLoading,
                                   isAdopting: state.isAdopting,
@@ -456,6 +489,11 @@ class _KnowledgeTheaterScreenState
                                                   sourceChatSessionId: widget
                                                       .initialSourceChatSessionId,
                                                 ),
+                                          ),
+                                  onOpenSimulation: route == null
+                                      ? null
+                                      : () => context.push(
+                                            _buildSimulationRoute(route),
                                           ),
                                   onRunWhatIf: route == null
                                       ? null
@@ -1825,6 +1863,7 @@ class _PredictionView extends StatelessWidget {
     required this.snapshot,
     required this.adoptionResult,
     required this.accuracySummary,
+    required this.accuracyOverview,
     required this.accuracyTracking,
     required this.isLoading,
     required this.isAdopting,
@@ -1838,6 +1877,7 @@ class _PredictionView extends StatelessWidget {
     required this.onToggleTimelinePlayback,
     required this.onResetTimelinePlayback,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.onRunWhatIf,
     required this.onSaveSnapshot,
     required this.onRecordActual,
@@ -1859,6 +1899,7 @@ class _PredictionView extends StatelessWidget {
   final TheaterSnapshot? snapshot;
   final TheaterAdoptionResult? adoptionResult;
   final TheaterAccuracySummary? accuracySummary;
+  final TheaterAccuracyOverview? accuracyOverview;
   final TheaterAccuracyTracking? accuracyTracking;
   final bool isLoading;
   final bool isAdopting;
@@ -1872,6 +1913,7 @@ class _PredictionView extends StatelessWidget {
   final VoidCallback onToggleTimelinePlayback;
   final VoidCallback onResetTimelinePlayback;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final ValueChanged<List<String>>? onRunWhatIf;
   final VoidCallback onSaveSnapshot;
   final VoidCallback onRecordActual;
@@ -1882,6 +1924,12 @@ class _PredictionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (prediction.paths.isEmpty) {
+      return const _TheaterEmptyState(
+        title: '这次还没生成可采纳路径',
+        message: '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。',
+      );
+    }
     final route = selectedRoute;
     final selectedNode = prediction.graphNodes
         .where((node) => node.id == selectedNodeId)
@@ -2020,6 +2068,7 @@ class _PredictionView extends StatelessWidget {
           recommendedRouteId: recommendedRouteId,
           onSelect: onRouteSelected,
           onAdopt: onAdopt,
+          onOpenSimulation: onOpenSimulation,
           isAdopting: isAdopting,
           adoptionResult: adoptionResult,
         ),
@@ -2096,11 +2145,15 @@ class _PredictionView extends StatelessWidget {
         ),
         if (accuracySummary != null) ...[
           const SizedBox(height: 14),
-          _AccuracyCard(summary: accuracySummary),
+          _AccuracyCard(
+            summary: accuracySummary,
+            overview: accuracyOverview,
+          ),
         ] else if (accuracyTracking != null) ...[
           const SizedBox(height: 14),
           _AccuracyCard.pending(
             tracking: accuracyTracking,
+            overview: accuracyOverview,
             onRecordActual: onRecordActual,
           ),
         ],
@@ -2209,6 +2262,51 @@ class _TheaterErrorCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TheaterEmptyState extends StatelessWidget {
+  const _TheaterEmptyState({
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.route_outlined,
+                size: 36,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _SemanticMatchSummary extends StatelessWidget {
@@ -2740,6 +2838,7 @@ class _RouteSection extends StatefulWidget {
     required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     required this.adoptionResult,
   });
@@ -2749,6 +2848,7 @@ class _RouteSection extends StatefulWidget {
   final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
   final TheaterAdoptionResult? adoptionResult;
 
@@ -2872,6 +2972,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       pageController: _pageController,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
+                      onOpenSimulation: widget.onOpenSimulation,
                       isAdopting: widget.isAdopting,
                     )
                   : _RouteListView(
@@ -2881,6 +2982,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       recommendedRouteId: widget.recommendedRouteId,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
+                      onOpenSimulation: widget.onOpenSimulation,
                       isAdopting: widget.isAdopting,
                     ),
             ),
@@ -2988,6 +3090,7 @@ class _RouteListView extends StatelessWidget {
     required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     super.key,
   });
@@ -2997,6 +3100,7 @@ class _RouteListView extends StatelessWidget {
   final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
 
   @override
@@ -3055,6 +3159,11 @@ class _RouteListView extends StatelessWidget {
                         onPressed: isAdopting ? null : onAdopt,
                         child: Text(isAdopting ? '采纳中' : '采纳此路径'),
                       );
+                      final simulateButton = FilledButton.tonalIcon(
+                        onPressed: onOpenSimulation,
+                        icon: const Icon(Icons.forum_outlined),
+                        label: const Text('带去模拟'),
+                      );
                       if (compact) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3062,7 +3171,14 @@ class _RouteListView extends StatelessWidget {
                             titleRow,
                             if (isSelected) ...[
                               const SizedBox(height: 10),
-                              adoptButton,
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  adoptButton,
+                                  simulateButton,
+                                ],
+                              ),
                             ],
                           ],
                         );
@@ -3071,6 +3187,8 @@ class _RouteListView extends StatelessWidget {
                         children: [
                           Expanded(child: titleRow),
                           if (isSelected) ...[
+                            const SizedBox(width: 12),
+                            simulateButton,
                             const SizedBox(width: 12),
                             adoptButton,
                           ],
@@ -3101,7 +3219,18 @@ class _RouteListView extends StatelessWidget {
                       _MetricPill(label: '日均 ${route.dailyMinutes} 分钟'),
                       _MetricPill(label: '${route.risks.length} 个风险点'),
                       _MetricPill(label: '综合 ${route.routeScore.round()} 分'),
+                      _MetricPill(
+                        label: '置信 ${(route.confidenceScore * 100).round()}%',
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '区间预测：完成率 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%，'
+                    ' 掌握度 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
                   ),
                 ],
               ),
@@ -3119,6 +3248,7 @@ class _RouteComparePager extends StatelessWidget {
     required this.pageController,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     super.key,
   });
@@ -3129,6 +3259,7 @@ class _RouteComparePager extends StatelessWidget {
   final PageController pageController;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
 
   @override
@@ -3208,18 +3339,47 @@ class _RouteComparePager extends StatelessWidget {
                                   label: '综合分',
                                   value: '${route.routeScore.round()}',
                                 ),
+                                _RouteMetricRow(
+                                  label: '置信度',
+                                  value:
+                                      '${(route.confidenceScore * 100).round()}%',
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: safeIndex == index && !isAdopting
-                                  ? onAdopt
-                                  : () => onSelect(route.id),
-                              child: Text(
-                                safeIndex == index
-                                    ? (isAdopting ? '采纳中' : '采纳此路径')
-                                    : '切换到此路径',
-                              ),
+                            Text(
+                              '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
+                              ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.tonalIcon(
+                                  onPressed: safeIndex == index
+                                      ? onOpenSimulation
+                                      : () => onSelect(route.id),
+                                  icon: const Icon(Icons.forum_outlined),
+                                  label: Text(
+                                    safeIndex == index ? '带去模拟' : '切换后模拟',
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: safeIndex == index && !isAdopting
+                                      ? onAdopt
+                                      : () => onSelect(route.id),
+                                  child: Text(
+                                    safeIndex == index
+                                        ? (isAdopting ? '采纳中' : '采纳此路径')
+                                        : '切换到此路径',
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         )
@@ -3269,7 +3429,31 @@ class _RouteComparePager extends StatelessWidget {
                                     label: '综合分',
                                     value: '${route.routeScore.round()}',
                                   ),
+                                  _RouteMetricRow(
+                                    label: '置信度',
+                                    value:
+                                        '${(route.confidenceScore * 100).round()}%',
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
+                                    ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: DS.textSecondary),
+                                  ),
                                   const Spacer(),
+                                  FilledButton.tonalIcon(
+                                    onPressed: safeIndex == index
+                                        ? onOpenSimulation
+                                        : () => onSelect(route.id),
+                                    icon: const Icon(Icons.forum_outlined),
+                                    label: Text(
+                                      safeIndex == index ? '带去模拟' : '切换后模拟',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
                                   FilledButton(
                                     onPressed: safeIndex == index && !isAdopting
                                         ? onAdopt
@@ -4247,16 +4431,19 @@ class _SnapshotSection extends StatelessWidget {
 class _AccuracyCard extends StatelessWidget {
   const _AccuracyCard({
     required this.summary,
+    required this.overview,
   })  : tracking = null,
         onRecordActual = null;
 
   const _AccuracyCard.pending({
     required this.tracking,
+    required this.overview,
     required this.onRecordActual,
   }) : summary = null;
 
   final TheaterAccuracySummary? summary;
   final TheaterAccuracyTracking? tracking;
+  final TheaterAccuracyOverview? overview;
   final VoidCallback? onRecordActual;
 
   @override
@@ -4279,6 +4466,16 @@ class _AccuracyCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text('准确度 ${(summary!.accuracyScore * 100).round()}%'),
+              const SizedBox(height: 8),
+              Text(
+                summary!.withinPredictedRange
+                    ? '这次真实结果落在预测区间内，当前模型区间覆盖命中。'
+                    : '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
             ] else if (tracking != null) ...[
               Text(
                 tracking!.summaryHint,
@@ -4299,6 +4496,40 @@ class _AccuracyCard extends StatelessWidget {
                 onPressed: onRecordActual,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('记录实际表现'),
+              ),
+            ],
+            if (overview != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MetricPill(
+                    label: '样本 ${overview!.sampleCount}',
+                  ),
+                  _MetricPill(
+                    label:
+                        '平均准确度 ${(overview!.avgAccuracyScore * 100).round()}%',
+                  ),
+                  _MetricPill(
+                    label: '模型置信 ${(overview!.confidenceScore * 100).round()}%',
+                  ),
+                  if (overview!.coverageRate != null)
+                    _MetricPill(
+                      label: '区间命中 ${(overview!.coverageRate! * 100).round()}%',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                overview!.sampleCount == 0
+                    ? '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。'
+                    : '历史偏差：完成率 ${overview!.completionBiasMean >= 0 ? '+' : ''}${(overview!.completionBiasMean * 100).round()}%，'
+                        ' 掌握度 ${overview!.masteryBiasMean >= 0 ? '+' : ''}${overview!.masteryBiasMean.round()}%。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
               ),
             ],
           ],

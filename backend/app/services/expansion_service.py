@@ -37,6 +37,61 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+_INVALID_NODE_NAME_PREFIXES = (
+    "j0",
+    "j1",
+    "j2",
+    "j3",
+    "j4",
+    "j5",
+    "j6",
+    "j7",
+    "j8",
+    "j9",
+    "decay-node-",
+    "test-",
+    "debug-",
+    "tmp-",
+    "测试主题",
+)
+_INVALID_NODE_NAME_FRAGMENTS = (
+    "sparkle rag",
+    "系统错误码",
+    "cs101 课程说明",
+)
+
+
+def is_valid_knowledge_node_name(name: str) -> bool:
+    normalized = name.strip()
+    if not normalized:
+        return False
+
+    lowered = normalized.lower()
+    if lowered in {"null", "none", "n/a", "unknown", "undefined"}:
+        return False
+
+    if lowered.startswith(_INVALID_NODE_NAME_PREFIXES):
+        return False
+    if any(fragment in lowered for fragment in _INVALID_NODE_NAME_FRAGMENTS):
+        return False
+    if re.match(r"^J\d", normalized) or re.match(r"^[a-zA-Z]\d{2,}", normalized):
+        return False
+    if len(normalized) > 36:
+        return False
+    if "�" in normalized:
+        return False
+    if not re.search(r"[A-Za-z0-9\u4e00-\u9fff]", normalized):
+        return False
+    if re.match(r"^[?？·•\-_=\s]+$", normalized):
+        return False
+    return True
+
+
+def validate_knowledge_node_name(name: str) -> None:
+    if not is_valid_knowledge_node_name(name):
+        raise ValueError(f"Invalid knowledge node name: {name!r}")
+
+
 class ExpansionService:
     """
     LLM 知识拓展服务
@@ -298,6 +353,8 @@ class ExpansionService:
             or SectorCode.VOID
         )
         normalized = self._normalize_candidate_item(candidate, index=0, fallback_sector=fallback_sector)
+        if not normalized:
+            raise ValueError("Invalid knowledge node candidate")
         existing = await self._find_existing_node(normalized["name"]) if allow_existing_match else None
         visual_data, classification_model = await self._resolve_visual_data(
             normalized,
@@ -755,6 +812,8 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             return None
         name = self._sanitize_text(raw_item.get("name"))
         if not name:
+            return None
+        if not is_valid_knowledge_node_name(name):
             return None
         relation = self._normalize_relation_type(raw_item.get("relation_to_trigger"))
         description = self._sanitize_text(raw_item.get("description")) or f"围绕{name}补充一个更完整的学习节点。"

@@ -14402,11 +14402,23 @@ abstract class AppLocalizations {
   /// **'查看连接'**
   String get galaxyNodeInspectConnections;
 
+  /// No description provided for @galaxyNodeLaunchPrediction.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演此节点'**
+  String get galaxyNodeLaunchPrediction;
+
   /// No description provided for @galaxyNodeLocked.
   ///
   /// In zh, this message translates to:
   /// **'已锁定'**
   String get galaxyNodeLocked;
+
+  /// No description provided for @galaxyNodeLockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可先查看详情了解前置关系，再决定如何解锁这个节点。'**
+  String get galaxyNodeLockedHint;
 
   /// No description provided for @galaxyNodePreviewSubtitle.
   ///

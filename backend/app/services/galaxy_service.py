@@ -14,7 +14,8 @@ from loguru import logger
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cached
+from app.config import settings
+from app.core.cache import cache_service, cached
 from app.core.event_bus import KnowledgeNodeUpdated, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
@@ -27,7 +28,7 @@ from app.schemas.galaxy import (
     SparkResult,
 )
 from app.services.embedding_service import embedding_service
-from app.services.expansion_service import ExpansionService
+from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.ontology_generator import relation_type_to_wire_name
 from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
@@ -190,6 +191,7 @@ class GalaxyService:
         # 1. Fast Write
         if tags is None:
             tags = []
+        validate_knowledge_node_name(title)
         expansion_service = ExpansionService(self.db)
         node, _ = await expansion_service.upsert_node_from_candidate(
             user_id=user_id,
@@ -479,19 +481,17 @@ class GalaxyService:
     async def semantic_search(
         self, user_id: UUID, query: str, subject_id: int | None = None, limit: int = 10, threshold: float = 0.3
     ) -> list[SearchResultItem]:
-        # Reuse hybrid search logic or semantic_search_nodes but format as SearchResultItem
-        # The original semantic_search in galaxy_service.py returned SearchResultItem.
-        # KnowledgeRetrievalService has semantic_search_nodes returning KnowledgeNode.
-        # We should map or use retrieval's hybrid search (which is better).
-        # For backward compatibility, let's reimplement simple vector search here using retrieval service's primitive
-
-        nodes = await self.retrieval.semantic_search_nodes(query, subject_id, limit, threshold)
+        ranked_nodes = await self.retrieval.semantic_search_ranked_nodes(
+            query=query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+        )
 
         results = []
-        for node in nodes:
-            # We need user status to format properly
-            status = await self.retrieval._get_user_status(user_id, node.id)
-            results.append(self.retrieval._format_search_result(node, status, 0.0))  # Score missing
+        for node, score in ranked_nodes:
+            status = await self.retrieval.get_user_node_status(user_id, node.id)
+            results.append(self.retrieval._format_search_result(node, status, score))
 
         return results
 
@@ -840,25 +840,15 @@ class GalaxyService:
 
             await self.db.flush()
 
-            # ========== Achievement Integration ==========
-            try:
-                from app.services.achievement_engine import AchievementEngine, AchievementEvent
-
-                achievement_engine = AchievementEngine(self.db)
-
-                # Node mastered event (when mastery reaches 80%+)
-                if new_mastery >= 80:
-                    await achievement_engine.process_event(
-                        user_id=str(user_id),
-                        event_type=AchievementEvent.NODE_MASTERED,
-                        node_id=str(node_id),
-                        mastery_score=new_mastery,
-                    )
-            except Exception as e:
-                logger.warning(f"Achievement processing failed in update_node_mastery: {e}")
-            # ============================================
-
             await self.db.commit()
+            await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
+
+            if new_mastery >= 80:
+                await self._process_mastery_achievement_after_commit(
+                    user_id=user_id,
+                    node_id=node_id,
+                    new_mastery=new_mastery,
+                )
 
             return {
                 "success": True,
@@ -871,6 +861,29 @@ class GalaxyService:
             await self.db.rollback()
             logger.error(f"Failed to update node mastery: {e}")
             raise e
+
+    async def _process_mastery_achievement_after_commit(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        new_mastery: int,
+    ) -> None:
+        """Process mastery achievements after the primary transaction is durable."""
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            async with AsyncSessionLocal() as achievement_db:
+                achievement_engine = AchievementEngine(achievement_db)
+                await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.NODE_MASTERED,
+                    node_id=str(node_id),
+                    mastery_score=new_mastery,
+                )
+        except Exception as e:
+            logger.warning(f"Achievement processing failed after mastery commit: {e}")
 
     # --- Async Background Processing ---
 

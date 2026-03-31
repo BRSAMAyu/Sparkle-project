@@ -76,6 +76,7 @@ dependencies:
   share_plus: ^12.0.1
   flutter_animate: ^4.5.0
   audioplayers: ^6.6.0
+  flutter_tts: ^4.2.2
   timeago: ^3.6.1
   http: ^1.2.0
   connectivity_plus: ^7.0.0

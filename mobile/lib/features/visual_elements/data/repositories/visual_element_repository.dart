@@ -14,7 +14,7 @@ class VisualElementRepository {
   final ApiClient _apiClient;
 
   /// Handle Dio exceptions
-  T _handleDioError<T>(DioException e, String functionName) {
+  Never _handleDioError(DioException e, String functionName) {
     final responseData = e.response?.data;
     final detail = switch (responseData) {
       final Map<String, dynamic> map => map['detail'] as String?,
@@ -23,6 +23,29 @@ class VisualElementRepository {
     };
     final errorMessage = detail ?? 'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
+  }
+
+  VisualElementListResponse _parseVisualElementListResponse(
+    dynamic rawPayload, {
+    required String action,
+  }) {
+    final payload = ApiResponseParser.unwrapMap(rawPayload, action: action);
+    final rawItems = payload['items'];
+    if (rawItems != null && rawItems is! List) {
+      throw Exception('$action items payload is not a list');
+    }
+
+    final items = (rawItems as List<dynamic>? ?? const <dynamic>[]).map((json) {
+      if (json is! Map<String, dynamic>) {
+        throw Exception('$action item payload is not a JSON object');
+      }
+      return VisualElementModel.fromJson(json);
+    }).toList();
+
+    return VisualElementListResponse(
+      items: items,
+      total: (payload['total'] as num?)?.toInt() ?? items.length,
+    );
   }
 
   /// Get all visual elements
@@ -50,27 +73,16 @@ class VisualElementRepository {
         ApiEndpoints.visualElements,
         queryParameters: queryParams,
       );
-
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('getVisualElements response is empty');
-      }
-
-      final items = (payload['items'] as List<dynamic>?)
-              ?.map(
-                (json) => VisualElementModel.fromJson(
-                  json as Map<String, dynamic>,
-                ),
-              )
-              .toList() ??
-          [];
-
-      return VisualElementListResponse(
-        items: items,
-        total: payload['total'] as int? ?? items.length,
+      return _parseVisualElementListResponse(
+        response.data,
+        action: 'getVisualElements',
       );
     } on DioException catch (e) {
       return _handleDioError(e, 'getVisualElements');
+    } on FormatException catch (e) {
+      throw Exception('Failed to parse getVisualElements response: $e');
+    } on TypeError catch (e) {
+      throw Exception('Failed to parse getVisualElements response: $e');
     }
   }
 
@@ -97,27 +109,16 @@ class VisualElementRepository {
         ApiEndpoints.visualElementsUnlocked,
         queryParameters: queryParams,
       );
-
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('getUnlockedElements response is empty');
-      }
-
-      final items = (payload['items'] as List<dynamic>?)
-              ?.map(
-                (json) => VisualElementModel.fromJson(
-                  json as Map<String, dynamic>,
-                ),
-              )
-              .toList() ??
-          [];
-
-      return VisualElementListResponse(
-        items: items,
-        total: payload['total'] as int? ?? items.length,
+      return _parseVisualElementListResponse(
+        response.data,
+        action: 'getUnlockedElements',
       );
     } on DioException catch (e) {
       return _handleDioError(e, 'getUnlockedElements');
+    } on FormatException catch (e) {
+      throw Exception('Failed to parse getUnlockedElements response: $e');
+    } on TypeError catch (e) {
+      throw Exception('Failed to parse getUnlockedElements response: $e');
     }
   }
 
@@ -254,32 +255,23 @@ class VisualElementRepository {
         queryParameters: {'locale': locale},
       );
 
-      final payload = ApiResponseParser.unwrapMap(
+      return _parseVisualElementListResponse(
         response.data,
         action: 'getDefaultElements',
       );
-
-      final items = (payload['items'] as List<dynamic>?)
-              ?.map(
-                (json) => VisualElementModel.fromJson(
-                  json as Map<String, dynamic>,
-                ),
-              )
-              .toList() ??
-          [];
-
-      return VisualElementListResponse(
-        items: items,
-        total: payload['total'] as int? ?? items.length,
-      );
     } on DioException catch (e) {
       return _handleDioError(e, 'getDefaultElements');
+    } on FormatException catch (e) {
+      throw Exception('Failed to parse getDefaultElements response: $e');
+    } on TypeError catch (e) {
+      throw Exception('Failed to parse getDefaultElements response: $e');
     }
   }
 
   // ========== Demo Data ==========
 
-  VisualElementListResponse _getDemoVisualElements() => VisualElementListResponse(
+  VisualElementListResponse _getDemoVisualElements() =>
+      VisualElementListResponse(
         items: [
           // Backgrounds
           VisualElementModel(
@@ -531,29 +523,21 @@ class VisualElementRepository {
     final all = _getDemoVisualElements();
     return UserVisualConfig(
       equippedBackground: all.items.firstWhere(
-        (e) =>
-            e.elementType == VisualElementType.background &&
-            e.isEquipped,
+        (e) => e.elementType == VisualElementType.background && e.isEquipped,
         orElse: () => all.items.firstWhere(
-          (e) =>
-              e.elementType == VisualElementType.background &&
-              e.isDefault,
+          (e) => e.elementType == VisualElementType.background && e.isDefault,
         ),
       ),
       equippedParticle: all.items.firstWhere(
-        (e) =>
-            e.elementType == VisualElementType.particle && e.isEquipped,
+        (e) => e.elementType == VisualElementType.particle && e.isEquipped,
         orElse: () => all.items.firstWhere(
-          (e) =>
-              e.elementType == VisualElementType.particle && e.isDefault,
+          (e) => e.elementType == VisualElementType.particle && e.isDefault,
         ),
       ),
       equippedEffect: all.items.firstWhere(
-        (e) =>
-            e.elementType == VisualElementType.effect && e.isEquipped,
+        (e) => e.elementType == VisualElementType.effect && e.isEquipped,
         orElse: () => all.items.firstWhere(
-          (e) =>
-              e.elementType == VisualElementType.effect && e.isDefault,
+          (e) => e.elementType == VisualElementType.effect && e.isDefault,
         ),
       ),
     );

@@ -136,6 +136,10 @@ async def get_optimal_time_recommendation(
                 "best_weekdays": recommendation["best_weekdays"],
                 "performance_by_hour": recommendation["performance_by_hour"],
                 "performance_by_weekday": recommendation["performance_by_weekday"],
+                "reason": recommendation["reason"],
+                "data_status": recommendation.get("data_status"),
+                "sample_size": recommendation.get("sample_size"),
+                "confidence": recommendation.get("confidence"),
             }
         }
 
@@ -230,6 +234,10 @@ async def get_predictive_dashboard(
                 "optimal_time": {
                     "best_hours": optimal["best_hours"],
                     "best_weekdays": optimal["best_weekdays"],
+                    "reason": optimal.get("reason"),
+                    "data_status": optimal.get("data_status"),
+                    "sample_size": optimal.get("sample_size"),
+                    "confidence": optimal.get("confidence"),
                 },
                 "next_intent_forecast": await service.get_next_intent_forecast(current_user.id),
                 "generated_at": service._get_current_time().isoformat(),

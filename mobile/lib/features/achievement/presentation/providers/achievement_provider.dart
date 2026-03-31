@@ -271,20 +271,78 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
   final AchievementRepository _repository;
   final Ref _ref;
 
+  Future<T> _loadWithFallback<T>(
+    Future<T> future, {
+    required T fallback,
+    required String label,
+  }) async {
+    try {
+      return await future;
+    } catch (e, stackTrace) {
+      debugPrint('Error loading achievement $label: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return fallback;
+    }
+  }
+
   /// Load all initial achievement data
   Future<void> loadInitialData() async {
     try {
       if (!mounted) return;
-      state = AchievementState.loading();
+      final previousState = state;
+      state = AchievementState(
+        achievements: previousState.achievements,
+        stats: previousState.stats,
+        streakStats: previousState.streakStats,
+        galaxySkins: previousState.galaxySkins,
+        titles: previousState.titles,
+        activeContract: previousState.activeContract,
+        isLoading: true,
+      );
 
       // Load all data in parallel
       final results = await Future.wait([
-        _repository.getAchievements(),
-        _repository.getAchievementStats(),
-        _repository.getStreakStats(),
-        _repository.getGalaxySkins(),
-        _repository.getTitles(),
-        _repository.getContractStatus(),
+        _loadWithFallback(
+          _repository.getAchievements(),
+          fallback: AchievementListResponse(
+            achievements: previousState.achievements,
+            totalAchievements: previousState.stats.totalAchievements,
+            totalUnlocked: previousState.stats.unlockedCount,
+            categories: const <String, dynamic>{},
+          ),
+          label: 'achievements',
+        ),
+        _loadWithFallback(
+          _repository.getAchievementStats(),
+          fallback: previousState.stats,
+          label: 'stats',
+        ),
+        _loadWithFallback(
+          _repository.getStreakStats(),
+          fallback: previousState.streakStats,
+          label: 'streak',
+        ),
+        _loadWithFallback(
+          _repository.getGalaxySkins(),
+          fallback: GalaxySkinListResponse(
+            skins: previousState.galaxySkins,
+            equippedSkinId: previousState.galaxySkins
+                .where((skin) => skin.isEquipped)
+                .firstOrNull
+                ?.id,
+          ),
+          label: 'skins',
+        ),
+        _loadWithFallback(
+          _repository.getTitles(),
+          fallback: previousState.titles,
+          label: 'titles',
+        ),
+        _loadWithFallback(
+          _repository.getContractStatus(),
+          fallback: previousState.activeContract,
+          label: 'contract',
+        ),
       ]);
 
       final achievementsResponse = results[0] as AchievementListResponse;

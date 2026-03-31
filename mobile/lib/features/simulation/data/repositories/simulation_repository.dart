@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 
 final simulationRepositoryProvider = Provider<SimulationRepository>(
@@ -108,4 +109,11 @@ class SimulationRepository {
           event.jsonData ?? const {},
         ),
       );
+
+  Future<SimulationSessionModel> getSession(String sessionId) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiEndpoints.simulationSession(sessionId),
+    );
+    return SimulationSessionModel.fromJson(response.data ?? const {});
+  }
 }

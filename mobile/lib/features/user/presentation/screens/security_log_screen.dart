@@ -17,8 +17,11 @@ class SecurityLogScreen extends ConsumerStatefulWidget {
 }
 
 class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
+  static const int _pageSize = 20;
   List<AuthAuditLogModel> _logs = const [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   final Set<int> _expandedIndices = {};
 
   @override
@@ -28,17 +31,50 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
   }
 
   Future<void> _loadLogs() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _hasMore = true;
+    });
     try {
-      final logs = await ref.read(authProvider.notifier).getSecurityLog();
+      final logs = await ref.read(authProvider.notifier).getSecurityLog(
+            limit: _pageSize,
+            offset: 0,
+          );
       if (!mounted) return;
       setState(() => _logs = logs);
+      _expandedIndices.clear();
+      _hasMore = logs.length == _pageSize;
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, e.toString());
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMoreLogs() async {
+    if (_isLoadingMore || !_hasMore) {
+      return;
+    }
+    setState(() => _isLoadingMore = true);
+    try {
+      final moreLogs = await ref.read(authProvider.notifier).getSecurityLog(
+            limit: _pageSize,
+            offset: _logs.length,
+          );
+      if (!mounted) return;
+      setState(() {
+        _logs = [..._logs, ...moreLogs];
+        _hasMore = moreLogs.length == _pageSize;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -341,6 +377,15 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                         ),
                       );
                     },
+                  ),
+                if (!_isLoading && _logs.isNotEmpty && _hasMore)
+                  Padding(
+                    padding: const EdgeInsets.only(top: DS.spacing8),
+                    child: SparkleButton.ghost(
+                      label: _isLoadingMore ? '加载中…' : '加载更多记录',
+                      onPressed: _isLoadingMore ? () {} : _loadMoreLogs,
+                      expand: true,
+                    ),
                   ),
               ],
             ),

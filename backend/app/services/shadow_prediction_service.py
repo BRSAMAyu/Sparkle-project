@@ -12,11 +12,16 @@ import json
 import math
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from loguru import logger
 
 from app.orchestration.schemas import ExecutablePlan, RouteDecision, ShadowPrediction
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ShadowPredictionService:
@@ -38,7 +43,7 @@ class ShadowPredictionService:
     NB_CLASS_TOKEN_PREFIX = "shadow:nb:token:"
     NB_CLASS_TOKEN_TOTAL_PREFIX = "shadow:nb:class_tokens:"
     NB_VOCAB_KEY = "shadow:nb:vocab"
-    NB_MIN_SAMPLES = 20
+    NB_MIN_SAMPLES = 6
     NB_ALPHA = 1.0
 
     def __init__(self, redis_client=None):
@@ -141,11 +146,16 @@ class ShadowPredictionService:
         return prediction
 
     async def _predict_mode(self, msg_lower: str, prediction_mode: str) -> tuple[str, float]:
+        heuristic_mode, heuristic_confidence = self._predict_mode_heuristic(msg_lower)
         if prediction_mode == "naive_bayes" and self.redis:
             predicted = await self._predict_mode_naive_bayes(msg_lower)
             if predicted is not None:
-                return predicted
-        return self._predict_mode_heuristic(msg_lower)
+                predicted_mode, nb_confidence = predicted
+                if predicted_mode == heuristic_mode:
+                    return predicted_mode, max(nb_confidence, heuristic_confidence * 0.92)
+                if nb_confidence >= heuristic_confidence + 0.08:
+                    return predicted_mode, nb_confidence
+        return heuristic_mode, heuristic_confidence
 
     def _predict_mode_heuristic(self, msg_lower: str) -> tuple[str, float]:
         complex_keywords = {
@@ -189,9 +199,19 @@ class ShadowPredictionService:
                 / (langgraph_tokens_total + self.NB_ALPHA * vocab_size)
             )
 
-        if log_langgraph > log_direct:
-            return "langgraph", 0.6
-        return "direct", 0.6
+        max_log = max(log_direct, log_langgraph)
+        direct_prob = math.exp(log_direct - max_log)
+        langgraph_prob = math.exp(log_langgraph - max_log)
+        total_prob = direct_prob + langgraph_prob
+        if total_prob <= 0:
+            return None
+        normalized_langgraph = langgraph_prob / total_prob
+        normalized_direct = direct_prob / total_prob
+        if normalized_langgraph >= normalized_direct:
+            confidence = 0.5 + (normalized_langgraph - 0.5) * 0.9
+            return "langgraph", round(confidence, 4)
+        confidence = 0.5 + (normalized_direct - 0.5) * 0.9
+        return "direct", round(confidence, 4)
 
     async def _update_naive_bayes_stats(self, user_message: str, actual_mode: str) -> None:
         if not self.redis:
@@ -331,16 +351,78 @@ class ShadowPredictionService:
         """
         if not self.redis:
             return {}
+        cutoff = _utcnow() - timedelta(hours=max(hours, 1))
+        payloads: list[dict[str, Any]] = []
+        try:
+            async for raw_key in self.redis.scan_iter(f"{self.SHADOW_REDIS_KEY_PREFIX}*"):
+                raw = await self.redis.get(raw_key)
+                if not raw:
+                    continue
+                try:
+                    payload = json.loads(raw)
+                except Exception:
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                if user_id and str(payload.get("user_id") or "") != str(user_id):
+                    continue
+                timestamp = payload.get("timestamp")
+                try:
+                    created_at = datetime.fromisoformat(str(timestamp))
+                except Exception:
+                    continue
+                if created_at < cutoff:
+                    continue
+                payloads.append(payload)
+        except Exception as e:
+            logger.warning(f"Failed to aggregate shadow accuracy stats: {e}")
+            return {}
 
-        # Simplified implementation: scan and aggregate from Redis
-        # In production, should use time series DB or dedicated analytics
+        if not payloads:
+            return {
+                "total_predictions": 0,
+                "correct_count": 0,
+                "accuracy_rate": 0.0,
+                "avg_confidence": 0.0,
+                "avg_accuracy_score": 0.0,
+                "mode_accuracy": {},
+                "data_status": "insufficient_data",
+            }
+
+        correct_count = sum(1 for payload in payloads if bool(payload.get("is_correct")))
+        avg_confidence = sum(float(payload.get("confidence") or 0.0) for payload in payloads) / len(payloads)
+        avg_accuracy_score = sum(float(payload.get("accuracy_score") or 0.0) for payload in payloads) / len(payloads)
+        mode_buckets: dict[str, dict[str, float]] = {}
+        for payload in payloads:
+            actual_mode = str(payload.get("actual_mode") or "unknown")
+            bucket = mode_buckets.setdefault(
+                actual_mode,
+                {
+                    "total": 0,
+                    "correct": 0,
+                },
+            )
+            bucket["total"] += 1
+            if bool(payload.get("predicted_mode") == actual_mode):
+                bucket["correct"] += 1
+
+        mode_accuracy = {
+            mode: {
+                "total": int(bucket["total"]),
+                "correct": int(bucket["correct"]),
+                "accuracy_rate": round(bucket["correct"] / bucket["total"], 4) if bucket["total"] else 0.0,
+            }
+            for mode, bucket in mode_buckets.items()
+        }
 
         return {
-            "total_predictions": 0,
-            "correct_count": 0,
-            "accuracy_rate": 0.0,
-            "avg_confidence": 0.0,
-            "mode_accuracy": {}
+            "total_predictions": len(payloads),
+            "correct_count": correct_count,
+            "accuracy_rate": round(correct_count / len(payloads), 4),
+            "avg_confidence": round(avg_confidence, 4),
+            "avg_accuracy_score": round(avg_accuracy_score, 4),
+            "mode_accuracy": mode_accuracy,
+            "data_status": "calibrated" if len(payloads) >= self.NB_MIN_SAMPLES else "warming_up",
         }
 
     async def predict_intent_only(

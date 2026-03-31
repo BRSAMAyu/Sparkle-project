@@ -20,6 +20,8 @@ class TheaterRoutes {
                 initialTopic: state.uri.queryParameters['topic'],
                 initialTargetNodeId:
                     state.uri.queryParameters['target_node_id'],
+                initialPredictionId: state.uri.queryParameters['prediction_id'],
+                initialRouteId: state.uri.queryParameters['route_id'],
                 initialSourceChatSessionId:
                     state.uri.queryParameters['source_chat_session_id'],
                 initialSimulationSessionId:

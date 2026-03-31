@@ -172,19 +172,22 @@ async def create_galaxy_node(
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
-    node = await galaxy_service.create_node(
-        user_id=UUID(user_id),
-        title=request.name,
-        summary=request.description,
-        subject_id=request.subject_id,
-        tags=request.keywords,
-        parent_node_id=request.parent_node_id,
-        name_en=request.name_en,
-        importance_level=request.importance_level,
-        relation_type=request.relation_to_parent,
-        relation_strength=request.relation_strength,
-        sector_weights=request.sector_weights or None,
-    )
+    try:
+        node = await galaxy_service.create_node(
+            user_id=UUID(user_id),
+            title=request.name,
+            summary=request.description,
+            subject_id=request.subject_id,
+            tags=request.keywords,
+            parent_node_id=request.parent_node_id,
+            name_en=request.name_en,
+            importance_level=request.importance_level,
+            relation_type=request.relation_to_parent,
+            relation_strength=request.relation_strength,
+            sector_weights=request.sector_weights or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     return NodeBase.from_model(node)
 
 
@@ -862,7 +865,3 @@ async def get_heatmap(
     Phase 4.2 Insight.
     """
     return await galaxy_service.get_heatmap_data(UUID(user_id))
-
-
-# 导入必要的 or_ 函数
-from sqlalchemy import or_

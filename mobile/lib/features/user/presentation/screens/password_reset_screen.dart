@@ -25,8 +25,11 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
   bool _obscureConfirm = true;
 
   bool get _isSocialAccount {
-    final source = ref.read(currentUserProvider)?.registrationSource;
-    return source == 'google' || source == 'apple' || source == 'wechat';
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.registrationSource == 'guest') {
+      return false;
+    }
+    return !user.passwordLoginEnabled;
   }
 
   @override
@@ -133,10 +136,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                     const SizedBox(height: DS.spacing16),
                   ],
                   _buildPasswordField(
-                    label:
-                        _isSocialAccount
-                            ? l10n.passwordSetLabel
-                            : l10n.passwordResetNewLabel,
+                    label: _isSocialAccount
+                        ? l10n.passwordSetLabel
+                        : l10n.passwordResetNewLabel,
                     controller: _newPasswordController,
                     obscureText: _obscureNew,
                     onToggle: () => setState(() => _obscureNew = !_obscureNew),

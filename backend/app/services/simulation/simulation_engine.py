@@ -161,6 +161,22 @@ class SimulationEngine:
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
 
+    async def get_session(
+        self,
+        *,
+        session_id: str,
+        user_id: UUID | None = None,
+    ) -> SimulationSession:
+        payload = await self._load_checkpoint(
+            session_id=session_id,
+            user_id=user_id,
+        )
+        return self._session_from_payload(
+            payload,
+            fallback_topic=str(payload.get("topic") or "学习讨论"),
+            fallback_scenario=str(payload.get("scenario_key") or "study_group"),
+        )
+
     async def run(
         self,
         *,

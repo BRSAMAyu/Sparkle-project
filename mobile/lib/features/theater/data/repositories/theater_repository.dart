@@ -177,6 +177,24 @@ class TheaterRepository {
     }
   }
 
+  Future<TheaterPrediction> getPredictionById(String predictionId) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.theaterPrediction(predictionId),
+      );
+      return TheaterPrediction.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '读取这次推演失败了，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '读取这次推演失败了，你可以稍后再试。',
+      );
+    }
+  }
+
   Future<TheaterAccuracySummary> recordActuals({
     required String predictionId,
     double? actualCompletionRate,
@@ -222,6 +240,24 @@ class TheaterRepository {
     } catch (_) {
       throw const TheaterRepositoryException(
         message: '读取推演准确度失败，你可以稍后再试。',
+      );
+    }
+  }
+
+  Future<TheaterAccuracyOverview> getAccuracyOverview() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.theaterAccuracyOverview,
+      );
+      return TheaterAccuracyOverview.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '读取推演校准概览失败，你可以稍后再试。',
       );
     }
   }

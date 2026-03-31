@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -58,6 +59,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       orElse: () => const <Map<String, dynamic>>[],
     );
     _maybeHandleInitialOverride(context, ref, inferredItems);
+    final profileLoadError = profileAsync.maybeWhen(
+      error: (error, _) => _friendlyError(error),
+      orElse: () => null,
+    );
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
@@ -80,25 +85,34 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           profileContextAsync,
           inferredAsync,
           policiesAsync,
+          profileLoadError: profileLoadError,
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text(l10n.personaLoadFailed(err.toString())),
+        error: (_, __) => _buildContent(
+          context,
+          ref,
+          l10n,
+          const <String, dynamic>{},
+          onboardingCompleted,
+          profileContextAsync,
+          inferredAsync,
+          policiesAsync,
+          profileLoadError: profileLoadError,
         ),
       ),
     );
   }
 
   Widget _buildContent(
-    BuildContext context,
-    WidgetRef ref,
-    AppLocalizations l10n,
-    Map<String, dynamic> data,
-    bool completed,
-    AsyncValue<Map<String, dynamic>> profileContextAsync,
-    AsyncValue<List<Map<String, dynamic>>> inferredPreferencesAsync,
-    AsyncValue<List<Map<String, dynamic>>> activePoliciesAsync,
-  ) {
+      BuildContext context,
+      WidgetRef ref,
+      AppLocalizations l10n,
+      Map<String, dynamic> data,
+      bool completed,
+      AsyncValue<Map<String, dynamic>> profileContextAsync,
+      AsyncValue<List<Map<String, dynamic>>> inferredPreferencesAsync,
+      AsyncValue<List<Map<String, dynamic>>> activePoliciesAsync,
+      {String? profileLoadError}) {
     final layer1 = data['layer_1'] as Map<String, dynamic>? ?? {};
     final layer2 = data['layer_2'] as Map<String, dynamic>? ?? {};
     final layer3 = data['layer_3'] as Map<String, dynamic>? ?? {};
@@ -124,14 +138,24 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           controller: _scrollController,
           padding: const EdgeInsets.all(DS.spacing16),
           children: [
+            if (profileLoadError != null) ...[
+              SparkleStaggerItem(
+                index: 0,
+                child: _buildProfileLoadWarning(profileLoadError, ref),
+              ),
+              const SizedBox(height: DS.spacing12),
+            ],
             SparkleStaggerItem(
-              index: 0,
+              index: profileLoadError != null ? 1 : 0,
               child: _buildOnboardingBanner(context, l10n, completed),
             ),
-            SparkleStaggerItem(index: 1, child: _buildQuickAccessCard(context)),
+            SparkleStaggerItem(
+              index: profileLoadError != null ? 2 : 1,
+              child: _buildQuickAccessCard(context),
+            ),
             const SizedBox(height: DS.spacing16),
             SparkleStaggerItem(
-              index: 2,
+              index: profileLoadError != null ? 3 : 2,
               child: _buildCollapsibleSection(
                 sectionKey: 'summary',
                 title: '画像解读',
@@ -297,9 +321,49 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               onPressed: () => context.push(UserRoutes.systemUpdates),
               label: '系统更新',
             ),
+            if (AppFeatureFlags.enableUserMemoryControls)
+              SparkleButton.ghost(
+                onPressed: () => context.push(MemoryRoutes.settings),
+                label: '记忆设置',
+              ),
+          ],
+        ),
+      );
+
+  Widget _buildProfileLoadWarning(String message, WidgetRef ref) =>
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: DS.warning),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    '核心画像暂时不可用',
+                    style: TextStyle(
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '已切换为降级展示，你仍然可以查看和刷新其它分区。\n$message',
+              style: TextStyle(
+                color: DS.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: DS.spacing12),
             SparkleButton.ghost(
-              onPressed: () => context.push(MemoryRoutes.settings),
-              label: '记忆设置',
+              onPressed: () => unawaited(_refreshPersona(ref)),
+              label: '重试完整画像',
             ),
           ],
         ),
@@ -650,9 +714,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final overridden = item['overridden'] == true;
     final metadata = <String, dynamic>{
       'level': adjustable ? 'editable' : 'readonly',
-      'reason': explanation.isNotEmpty
-          ? explanation
-          : '系统会根据最近行为持续更新这项推断。',
+      'reason': explanation.isNotEmpty ? explanation : '系统会根据最近行为持续更新这项推断。',
       'confidence': null,
     };
     final actions = <Widget>[
@@ -758,19 +820,23 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _policyRow(AppLocalizations l10n, Map<String, dynamic> item) {
-    final profileLabel = item['profile_label']?.toString() ?? item['profile']?.toString() ?? '策略';
-    final signal = item['signal_label']?.toString() ?? item['signal']?.toString() ?? 'policy';
+    final profileLabel = item['profile_label']?.toString() ??
+        item['profile']?.toString() ??
+        '策略';
+    final signal = item['signal_label']?.toString() ??
+        item['signal']?.toString() ??
+        'policy';
     final effect = item['effect']?.toString() ?? '';
-    final sourcePattern =
-        item['source_pattern_label']?.toString() ?? item['source_pattern']?.toString() ?? '';
+    final sourcePattern = item['source_pattern_label']?.toString() ??
+        item['source_pattern']?.toString() ??
+        '';
     return _metadataRow(
       l10n,
       '$profileLabel · $signal: $effect',
       <String, dynamic>{
         'level': 'readonly',
-        'reason': sourcePattern.isNotEmpty
-            ? '来源模式：$sourcePattern'
-            : '当前已生效的系统策略。',
+        'reason':
+            sourcePattern.isNotEmpty ? '来源模式：$sourcePattern' : '当前已生效的系统策略。',
         'confidence': null,
       },
     );
@@ -1159,6 +1225,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   ) async {
     final controller = TextEditingController(text: _formatValue(currentValue));
     final repo = ref.read(userRepositoryProvider);
+    final helperText = _preferenceInputHint(prefKey);
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1170,8 +1237,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             const SizedBox(height: DS.spacing12),
             TextField(
               controller: controller,
-              decoration:
-                  InputDecoration(labelText: l10n.personaNewPreferenceValue),
+              keyboardType: _preferenceKeyboardType(prefKey),
+              decoration: InputDecoration(
+                labelText: l10n.personaNewPreferenceValue,
+                helperText: helperText,
+              ),
             ),
           ],
         ),
@@ -1189,10 +1259,20 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 }
                 return;
               }
+              final parsedValue = _parsePreferenceInput(prefKey, nextValue);
+              if (parsedValue == null) {
+                if (context.mounted) {
+                  AppFeedback.info(
+                    context,
+                    _invalidPreferenceMessage(prefKey),
+                  );
+                }
+                return;
+              }
               try {
                 await repo.updateTransparentPreference(
                   prefKey: prefKey,
-                  value: nextValue,
+                  value: parsedValue,
                 );
                 ref.invalidate(transparentProfileProvider);
                 ref.invalidate(profileContextProvider);
@@ -1501,5 +1581,61 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       return '未知错误';
     }
     return message.replaceFirst('Exception: ', '');
+  }
+
+  TextInputType _preferenceKeyboardType(String prefKey) {
+    switch (prefKey) {
+      case 'depth_preference':
+      case 'curiosity_preference':
+        return const TextInputType.numberWithOptions(decimal: true);
+      case 'study_time_preference':
+        return TextInputType.number;
+      default:
+        return TextInputType.text;
+    }
+  }
+
+  String? _preferenceInputHint(String prefKey) {
+    switch (prefKey) {
+      case 'depth_preference':
+      case 'curiosity_preference':
+        return '请输入 0.0 到 1.0 之间的数字';
+      case 'study_time_preference':
+        return '请输入学习时长（分钟）';
+      default:
+        return null;
+    }
+  }
+
+  Object? _parsePreferenceInput(String prefKey, String rawValue) {
+    switch (prefKey) {
+      case 'depth_preference':
+      case 'curiosity_preference':
+        final value = double.tryParse(rawValue);
+        if (value == null || value < 0 || value > 1) {
+          return null;
+        }
+        return value;
+      case 'study_time_preference':
+        final minutes = int.tryParse(rawValue);
+        if (minutes == null || minutes <= 0) {
+          return null;
+        }
+        return minutes;
+      default:
+        return rawValue;
+    }
+  }
+
+  String _invalidPreferenceMessage(String prefKey) {
+    switch (prefKey) {
+      case 'depth_preference':
+      case 'curiosity_preference':
+        return '请输入 0.0 到 1.0 之间的数字';
+      case 'study_time_preference':
+        return '请输入大于 0 的分钟数';
+      default:
+        return '请输入有效的偏好值';
+    }
   }
 }

@@ -62,3 +62,26 @@ async def test_unlock_element_uses_flush_when_transaction_is_external():
 
     db.flush.assert_awaited_once()
     db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_build_element_response_includes_unlock_requirement():
+    db = MagicMock(spec=AsyncSession)
+    service = VisualElementService(db)
+    element = VisualElement(
+        id="bg_unlock",
+        name="Unlocked Background",
+        description="has requirement",
+        element_type=VisualElementType.BACKGROUND,
+        rarity=VisualElementRarity.LEGENDARY,
+        unlock_source=VisualElementUnlockSource.ACHIEVEMENT,
+        config={},
+        unlock_requirement={"achievement_id": "streak_30"},
+        is_active=True,
+        is_default=False,
+        sort_order=10,
+    )
+
+    response = service._build_element_response(element)
+
+    assert response.unlock_requirement == {"achievement_id": "streak_30"}

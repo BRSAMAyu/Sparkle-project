@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -56,6 +57,7 @@ class _BreathingSnapshot {
     required this.totalRounds,
     required this.controllerValue,
     required this.isComplete,
+    this.announcementKey,
   });
 
   final String instruction;
@@ -63,6 +65,7 @@ class _BreathingSnapshot {
   final int totalRounds;
   final double controllerValue;
   final bool isComplete;
+  final String? announcementKey;
 }
 
 class BreathingTool extends ConsumerStatefulWidget {
@@ -112,18 +115,22 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   static const int _completionNotificationId = 94200;
 
   late final AnimationController _controller;
+  late final FlutterTts _tts;
   Timer? _ticker;
 
   int _selectedDurationIndex = 1;
   int _selectedPatternIndex = 0;
   bool _isPlaying = false;
+  bool _isPaused = false;
   bool _isCompletingSession = false;
   bool _backgroundCompletionScheduled = false;
   bool _completedFromBackgroundRecovery = false;
   int _completedRounds = 0;
   int _totalRounds = 0;
+  int _elapsedBeforePauseSeconds = 0;
   String _instruction = '准备';
-  DateTime? _sessionStartedAt;
+  String? _lastAnnouncementKey;
+  DateTime? _sessionAnchorAt;
 
   _BreathingPattern get _pattern => _patterns[_selectedPatternIndex];
   int get _selectedDurationMinutes => _durations[_selectedDurationIndex];
@@ -156,12 +163,14 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _tts = FlutterTts();
     _controller = AnimationController(
       vsync: this,
       duration: Duration.zero,
       value: 0.0,
     );
     _updateTotalRounds();
+    unawaited(_configureTts());
     unawaited(_restoreState());
   }
 
@@ -169,9 +178,14 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
+    unawaited(_tts.stop());
     if (_isPlaying) {
       unawaited(_persistSession());
-      unawaited(_scheduleCompletionNotification());
+      if (_isPaused) {
+        unawaited(_cancelCompletionNotification());
+      } else {
+        unawaited(_scheduleCompletionNotification());
+      }
     } else {
       unawaited(_clearPersistedSession());
       unawaited(_cancelCompletionNotification());
@@ -186,24 +200,28 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused) {
       if (_isPlaying) {
-        _syncFromClock();
+        _syncFromClock(allowVoiceGuidance: false);
         _ticker?.cancel();
         unawaited(_persistSession());
-        unawaited(_scheduleCompletionNotification());
+        if (_isPaused) {
+          unawaited(_cancelCompletionNotification());
+        } else {
+          unawaited(_scheduleCompletionNotification());
+        }
       }
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
       final didCompleteWhileBackground = _isPlaying &&
-          _sessionStartedAt != null &&
-          DateTime.now().difference(_sessionStartedAt!).inSeconds >=
-              _targetSessionSeconds;
+          _elapsedSessionSecondsAt(DateTime.now()) >= _targetSessionSeconds;
       _completedFromBackgroundRecovery = didCompleteWhileBackground;
       unawaited(_cancelCompletionNotification());
       if (_isPlaying) {
-        _syncFromClock();
-        _startTicker();
+        _syncFromClock(allowVoiceGuidance: false);
+        if (!_isPaused) {
+          _startTicker();
+        }
       }
     }
   }
@@ -237,10 +255,15 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         return;
       }
 
-      final restoredStartedAt = DateTime.tryParse(
-        json['sessionStartedAt'] as String? ?? '',
+      final restoredAnchorAt = DateTime.tryParse(
+        json['sessionAnchorAt'] as String? ??
+            json['sessionStartedAt'] as String? ??
+            '',
       );
-      if (restoredStartedAt == null) {
+      final isPaused = json['isPaused'] as bool? ?? false;
+      final elapsedBeforePauseSeconds =
+          (json['elapsedBeforePauseSeconds'] as num?)?.toInt() ?? 0;
+      if (restoredAnchorAt == null && !isPaused) {
         await prefs.remove(_prefsSessionKey);
         return;
       }
@@ -259,8 +282,11 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       setState(() {
         _selectedPatternIndex = patternIndex;
         _selectedDurationIndex = durationIndex;
-        _sessionStartedAt = restoredStartedAt;
+        _sessionAnchorAt = isPaused ? null : restoredAnchorAt;
         _isPlaying = true;
+        _isPaused = isPaused;
+        _elapsedBeforePauseSeconds = elapsedBeforePauseSeconds;
+        _lastAnnouncementKey = null;
         _updateTotalRounds();
       });
 
@@ -273,17 +299,42 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         _controller.value = 0.0;
         setState(() {
           _isPlaying = false;
+          _isPaused = false;
           _completedRounds = _totalRounds;
           _instruction = '练习完成';
-          _sessionStartedAt = null;
+          _elapsedBeforePauseSeconds = 0;
+          _sessionAnchorAt = null;
         });
       } else {
-        _syncFromClock();
-        _startTicker();
+        _syncFromClock(allowVoiceGuidance: false);
+        if (!isPaused) {
+          _startTicker();
+        }
       }
     } catch (_) {
       await prefs.remove(_prefsSessionKey);
     }
+  }
+
+  Future<void> _configureTts() async {
+    try {
+      await _tts.setLanguage('zh-CN');
+      await _tts.setSpeechRate(0.42);
+      await _tts.setPitch(1.0);
+      await _tts.awaitSpeakCompletion(false);
+    } catch (_) {
+      // TTS is optional enhancement. Fail silently on unsupported devices.
+    }
+  }
+
+  int _elapsedSessionSecondsAt(DateTime now) {
+    final anchorElapsed = _sessionAnchorAt == null
+        ? 0
+        : now.difference(_sessionAnchorAt!).inSeconds;
+    return (_elapsedBeforePauseSeconds + anchorElapsed).clamp(
+      0,
+      _targetSessionSeconds,
+    );
   }
 
   Future<void> _persistPreferences() async {
@@ -294,13 +345,15 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
 
   Future<void> _persistSession() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!_isPlaying || _sessionStartedAt == null) {
+    if (!_isPlaying) {
       await prefs.remove(_prefsSessionKey);
       return;
     }
 
     final payload = <String, dynamic>{
-      'sessionStartedAt': _sessionStartedAt!.toIso8601String(),
+      'sessionAnchorAt': _sessionAnchorAt?.toIso8601String(),
+      'elapsedBeforePauseSeconds': _elapsedBeforePauseSeconds,
+      'isPaused': _isPaused,
       'selectedPatternIndex': _selectedPatternIndex,
       'selectedDurationIndex': _selectedDurationIndex,
     };
@@ -313,12 +366,12 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   }
 
   Future<void> _scheduleCompletionNotification() async {
-    if (!_isPlaying || _sessionStartedAt == null) {
+    if (!_isPlaying || _isPaused) {
       return;
     }
 
-    final remainingRawSeconds = _targetSessionSeconds -
-        DateTime.now().difference(_sessionStartedAt!).inSeconds;
+    final remainingRawSeconds =
+        _targetSessionSeconds - _elapsedSessionSecondsAt(DateTime.now());
     if (remainingRawSeconds <= 0) {
       return;
     }
@@ -359,8 +412,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
 
   _BreathingSnapshot _snapshotFor(DateTime now) {
     final totalRounds = _totalRounds;
-    final startedAt = _sessionStartedAt;
-    if (startedAt == null) {
+    if (!_isPlaying) {
       return _BreathingSnapshot(
         instruction: '准备',
         completedRounds: 0,
@@ -370,10 +422,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       );
     }
 
-    final elapsedSeconds = now.difference(startedAt).inSeconds.clamp(
-          0,
-          _targetSessionSeconds,
-        );
+    final elapsedSeconds = _elapsedSessionSecondsAt(now);
     if (elapsedSeconds >= _targetSessionSeconds) {
       return _BreathingSnapshot(
         instruction: '练习完成',
@@ -407,6 +456,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           totalRounds: totalRounds,
           controllerValue: controllerValue,
           isComplete: false,
+          announcementKey: '${completedRounds}_${phase.kind.name}',
         );
       }
       cursor = nextCursor;
@@ -421,8 +471,19 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     );
   }
 
-  void _syncFromClock() {
-    if (!_isPlaying || _sessionStartedAt == null) {
+  Future<void> _announceInstruction(String instruction) async {
+    try {
+      await _tts.stop();
+      await _tts.speak(instruction);
+    } catch (_) {
+      // Ignore unsupported TTS failures.
+    }
+  }
+
+  void _syncFromClock({
+    bool allowVoiceGuidance = true,
+  }) {
+    if (!_isPlaying) {
       return;
     }
 
@@ -439,6 +500,13 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       return;
     }
 
+    final announcementKey = snapshot.announcementKey;
+    final shouldAnnounce = allowVoiceGuidance &&
+        !_isPaused &&
+        announcementKey != null &&
+        announcementKey != _lastAnnouncementKey;
+    _lastAnnouncementKey = announcementKey ?? _lastAnnouncementKey;
+
     if (!mounted) {
       return;
     }
@@ -449,6 +517,10 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       _completedRounds = snapshot.completedRounds;
       _totalRounds = snapshot.totalRounds;
     });
+    if (shouldAnnounce) {
+      unawaited(_announceInstruction(snapshot.instruction));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    }
   }
 
   void _startBreathing() {
@@ -459,13 +531,52 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     setState(() {
       _updateTotalRounds();
       _isPlaying = true;
+      _isPaused = false;
       _completedRounds = 0;
       _instruction = '准备';
-      _sessionStartedAt = DateTime.now();
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = DateTime.now();
     });
     unawaited(_persistPreferences());
     unawaited(_persistSession());
     unawaited(_cancelCompletionNotification());
+    _syncFromClock();
+    _startTicker();
+  }
+
+  void _pauseBreathing() {
+    if (!_isPlaying || _isPaused) {
+      return;
+    }
+    _ticker?.cancel();
+    final now = DateTime.now();
+    final snapshot = _snapshotFor(now);
+    _elapsedBeforePauseSeconds = _elapsedSessionSecondsAt(now);
+    _lastAnnouncementKey = snapshot.announcementKey ?? _lastAnnouncementKey;
+    _controller.value = snapshot.controllerValue;
+    setState(() {
+      _isPaused = true;
+      _instruction = snapshot.instruction;
+      _completedRounds = snapshot.completedRounds;
+      _totalRounds = snapshot.totalRounds;
+      _sessionAnchorAt = null;
+    });
+    unawaited(_tts.stop());
+    unawaited(_persistSession());
+    unawaited(_cancelCompletionNotification());
+  }
+
+  void _resumeBreathing() {
+    if (!_isPlaying || !_isPaused) {
+      return;
+    }
+    setState(() {
+      _isPaused = false;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = DateTime.now();
+    });
+    unawaited(_persistSession());
     _syncFromClock();
     _startTicker();
   }
@@ -479,6 +590,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     _isCompletingSession = true;
     _ticker?.cancel();
     _completedFromBackgroundRecovery = false;
+    await _tts.stop();
     await _cancelCompletionNotification();
     await _clearPersistedSession();
     await SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete);
@@ -490,11 +602,15 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     _controller.value = 0.0;
     setState(() {
       _isPlaying = false;
+      _isPaused = false;
       _completedRounds = _totalRounds;
       _instruction = '练习完成';
-      _sessionStartedAt = null;
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = null;
     });
 
+    unawaited(_announceInstruction('练习完成'));
     if (!completedFromBackground) {
       AppFeedback.success(context, '呼吸练习已完成');
     }
@@ -505,14 +621,18 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     _ticker?.cancel();
     _isCompletingSession = false;
     _completedFromBackgroundRecovery = false;
+    unawaited(_tts.stop());
     _controller
       ..stop()
       ..value = 0;
     setState(() {
       _isPlaying = false;
+      _isPaused = false;
       _completedRounds = 0;
       _instruction = '准备';
-      _sessionStartedAt = null;
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = null;
     });
     unawaited(_clearPersistedSession());
     unawaited(_cancelCompletionNotification());
@@ -558,7 +678,9 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         ),
         ToolHeroChip(
           label: _isPlaying
-              ? '$_completedRounds / $_totalRounds 轮'
+              ? (_isPaused
+                  ? '已暂停 · $_completedRounds / $_totalRounds 轮'
+                  : '$_completedRounds / $_totalRounds 轮')
               : '${_durations[_selectedDurationIndex]} 分钟',
           accentColor: accent,
           icon: Icons.self_improvement_rounded,
@@ -570,7 +692,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           ToolSectionCard(
             accentColor: accent,
             title: '呼吸舞台',
-            subtitle: '跟着中央指令吸气、停留和呼气。',
+            subtitle:
+                _isPaused ? '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。' : '跟着中央指令吸气、停留和呼气。',
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final stageSize = constraints.maxWidth.clamp(180.0, 300.0);
@@ -672,7 +795,9 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           ToolSectionCard(
             accentColor: accent,
             title: '练习配置',
-            subtitle: _isPlaying ? '练习进行中，配置会在本轮结束后可调整。' : '先选模式，再选练习时长。',
+            subtitle: _isPlaying
+                ? (_isPaused ? '练习已暂停，恢复后会从当前阶段继续。' : '练习进行中，配置会在本轮结束后可调整。')
+                : '先选模式，再选练习时长。',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -712,19 +837,25 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       footer: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
-          final startButton = SparkleButton(
-            label: _isPlaying ? '停止练习' : '开始练习',
-            onPressed: _isPlaying ? _stopBreathing : _startBreathing,
+          final primaryButton = SparkleButton(
+            label: _isPlaying ? (_isPaused ? '继续练习' : '暂停练习') : '开始练习',
+            onPressed: _isPlaying
+                ? (_isPaused ? _resumeBreathing : _pauseBreathing)
+                : _startBreathing,
             icon: Icon(
-              _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              _isPlaying
+                  ? (_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded)
+                  : Icons.play_arrow_rounded,
             ),
             expand: true,
           );
-          final resetButton = SparkleButton(
-            label: '重置',
+          final secondaryButton = SparkleButton(
+            label: _isPlaying ? '停止练习' : '重置',
             variant: ButtonVariant.ghost,
             onPressed: _stopBreathing,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(
+              _isPlaying ? Icons.stop_rounded : Icons.refresh_rounded,
+            ),
             expand: true,
           );
 
@@ -732,18 +863,18 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                startButton,
+                primaryButton,
                 const SizedBox(height: DS.spacing12),
-                resetButton,
+                secondaryButton,
               ],
             );
           }
 
           return Row(
             children: [
-              Expanded(child: startButton),
+              Expanded(child: primaryButton),
               const SizedBox(width: DS.spacing12),
-              Expanded(child: resetButton),
+              Expanded(child: secondaryButton),
             ],
           );
         },

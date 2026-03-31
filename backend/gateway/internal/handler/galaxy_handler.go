@@ -67,6 +67,8 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.POST("/nodes/:id/spark", h.SparkNode)
 		galaxy.POST("/node/:id/mastery", h.UpdateMastery)
 		galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
+		galaxy.POST("/node/:id/update-mastery", h.UpdateMastery)
+		galaxy.POST("/nodes/:id/update-mastery", h.UpdateMastery)
 
 		// Read-heavy graph endpoints are used by page rendering and AI context hydration.
 		// Do not put them behind the tight shared rate limiter, or normal navigation can
@@ -131,44 +133,11 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 		req.StudyMinutes = 1
 	}
 
-	if h.galaxyClient == nil {
-		// Fallback to proxy if gRPC client not available
-		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
-		h.ProxyToBackend(c)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
-
-	resp, err := h.galaxyClient.UpdateNodeMastery(
-		ctx,
-		userID,
-		nodeID,
-		int32(req.StudyMinutes),
-		time.Now(),
-		"task_complete",
-	)
-	if err != nil {
-		log.Printf("Failed to spark node via gRPC, falling back to proxy: %v", err)
-		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
-		h.ProxyToBackend(c)
-		return
-	}
-
-	// Invalidate cache for this user's galaxy graph
-	if h.cache != nil {
-		cacheKey := "galaxy:graph:" + userID
-		_ = h.cache.Del(ctx, cacheKey)
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success":     true,
-		"old_mastery": resp.OldMastery,
-		"new_mastery": resp.NewMastery,
-		"revision":    resp.CurrentRevision,
-		"node_id":     nodeID,
-	})
+	// Keep spark on the REST path until gRPC has a dedicated study_minutes field/RPC.
+	// UpdateNodeMastery expects an absolute mastery score, so sending study_minutes there
+	// would overwrite progress with corrupted values.
+	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+	h.ProxyToBackend(c)
 }
 
 // UpdateMastery handles POST /galaxy/nodes/:id/mastery
@@ -227,11 +196,16 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		return
 	}
 
-	// Invalidate cache
-	if h.cache != nil {
-		cacheKey := "galaxy:graph:" + userID
-		_ = h.cache.Del(ctx, cacheKey)
+	if !resp.Success {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":            resp.Reason,
+			"current_revision": resp.CurrentRevision,
+			"node_id":          nodeID,
+		})
+		return
 	}
+
+	h.invalidateGalaxyGraphCache(ctx, userID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":     true,
@@ -240,6 +214,33 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		"revision":    resp.CurrentRevision,
 		"node_id":     nodeID,
 	})
+}
+
+func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID string) {
+	if h.cache == nil || userID == "" {
+		return
+	}
+
+	if err := h.cache.Del(ctx, "galaxy:graph:"+userID).Err(); err != nil {
+		log.Printf("Failed to delete galaxy cache key for user %s: %v", userID, err)
+	}
+
+	pattern := "*:view:get_galaxy_graph:" + userID + ":*"
+	iter := h.cache.Scan(ctx, 0, pattern, 0).Iterator()
+	var keys []string
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+	if err := iter.Err(); err != nil {
+		log.Printf("Failed to scan galaxy cache pattern for user %s: %v", userID, err)
+		return
+	}
+	if len(keys) == 0 {
+		return
+	}
+	if err := h.cache.Del(ctx, keys...).Err(); err != nil {
+		log.Printf("Failed to delete galaxy cache pattern for user %s: %v", userID, err)
+	}
 }
 
 // ProxyToBackend proxies requests to the Python backend.

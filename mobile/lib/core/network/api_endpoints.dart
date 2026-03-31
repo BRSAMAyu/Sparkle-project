@@ -134,8 +134,7 @@ class ApiEndpoints {
   static const String galaxyGraph = '/galaxy/graph';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
-  static String galaxyUpdateMastery(String id) =>
-      '/galaxy/nodes/$id/update-mastery';
+  static String galaxyUpdateMastery(String id) => '/galaxy/nodes/$id/mastery';
   static const String galaxyPredictNext = '/galaxy/predict-next';
   static const String galaxySearch = '/galaxy/search';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
@@ -168,14 +167,20 @@ class ApiEndpoints {
       '/theater/predictions/generate';
   static const String theaterWhatIf = '/theater/predictions/what-if';
   static const String theaterSnapshots = '/theater/snapshots';
+  static String theaterPrediction(String predictionId) =>
+      '/theater/predictions/$predictionId';
   static String theaterAdopt(String predictionId) =>
       '/theater/predictions/$predictionId/adopt';
   static String theaterActuals(String predictionId) =>
       '/theater/predictions/$predictionId/actuals';
   static String theaterAccuracy(String predictionId) =>
       '/theater/predictions/$predictionId/accuracy';
+  static const String theaterAccuracyOverview = '/theater/accuracy/overview';
   static String theaterPromoteNode(String predictionId) =>
       '/theater/predictions/$predictionId/promote-node';
+
+  static String simulationSession(String sessionId) =>
+      '/simulation/sessions/$sessionId';
 
   // Learning reports
   static const String learningReportsGenerate = '/learning-reports/generate';

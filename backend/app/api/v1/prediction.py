@@ -107,3 +107,25 @@ async def list_intent_types():
             ]
         }
     }
+
+
+@router.get("/shadow/stats", response_model=dict[str, Any])
+async def get_shadow_prediction_stats(
+    hours: int = 24,
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        stats = await shadow_prediction_service.get_accuracy_stats(
+            user_id=str(current_user.id),
+            hours=hours,
+        )
+        return {
+            "success": True,
+            "data": stats,
+        }
+    except Exception as e:
+        logger.error(f"Shadow stats error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Shadow stats failed: {str(e)}"
+        )
