@@ -232,6 +232,19 @@ class _PatternCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: DS.spacing8),
+                    _buildMetaBadge(
+                      icon: Icons.show_chart_rounded,
+                      label:
+                          '置信 ${(pattern.confidenceScore * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                      color: DS.prismBlue,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    _buildMetaBadge(
+                      icon: Icons.repeat_rounded,
+                      label: '出现 ${pattern.frequency} 次',
+                      color: DS.prismGreen,
+                    ),
                     if (pattern.isArchived)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -320,9 +333,7 @@ class _PatternCard extends StatelessWidget {
                 // Date
                 const SizedBox(height: DS.md),
                 Text(
-                  context.l10n.patternDiscoveredOn(
-                    Formatters.formatDateShort(pattern.createdAt),
-                  ),
+                  _buildFooterText(context),
                   style: TextStyle(
                     fontSize: 11,
                     color: DS.brandPrimary.withAlpha(100),
@@ -334,39 +345,80 @@ class _PatternCard extends StatelessWidget {
         ),
       );
 
-  Color _getTypeColor(String type) {
+  Widget _buildMetaBadge({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: color.withAlpha(28),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  String _buildFooterText(BuildContext context) {
+    final discovered = context.l10n.patternDiscoveredOn(
+      Formatters.formatDateShort(pattern.createdAt),
+    );
+    if (pattern.lastObservedAt == null) {
+      return discovered;
+    }
+    return '$discovered · 最近观察 ${Formatters.formatRelativeTime(pattern.lastObservedAt!)}';
+  }
+
+  Color _getTypeColor(PatternType type) {
     switch (type) {
-      case 'cognitive':
+      case PatternType.cognitive:
         return DS.prismBlue;
-      case 'emotional':
+      case PatternType.emotional:
         return DS.prismPurple;
-      case 'execution':
+      case PatternType.execution:
         return DS.prismGreen;
       default:
         return DS.neutral400;
     }
   }
 
-  IconData _getTypeIcon(String type) {
+  IconData _getTypeIcon(PatternType type) {
     switch (type) {
-      case 'cognitive':
+      case PatternType.cognitive:
         return Icons.psychology_rounded;
-      case 'emotional':
+      case PatternType.emotional:
         return Icons.mood_rounded;
-      case 'execution':
+      case PatternType.execution:
         return Icons.bolt_rounded;
       default:
         return Icons.diamond_outlined;
     }
   }
 
-  String _getTypeLabel(String type) {
+  String _getTypeLabel(PatternType type) {
     switch (type) {
-      case 'cognitive':
+      case PatternType.cognitive:
         return I18nService.instance.l10n.patternTypeCognitive;
-      case 'emotional':
+      case PatternType.emotional:
         return I18nService.instance.l10n.patternTypeEmotional;
-      case 'execution':
+      case PatternType.execution:
         return I18nService.instance.l10n.patternTypeExecution;
       default:
         return I18nService.instance.l10n.patternTypeDefault;

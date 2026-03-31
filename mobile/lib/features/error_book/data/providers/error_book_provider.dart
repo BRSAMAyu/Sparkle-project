@@ -319,8 +319,9 @@ class ErrorOperations extends _$ErrorOperations {
       );
 
       // 刷新相关列表
-      ref.invalidate(errorListProvider);
-      ref.invalidate(errorStatsProvider);
+      ref
+        ..invalidate(errorListProvider)
+        ..invalidate(errorStatsProvider);
 
       state = state.copyWith(isLoading: false);
       return result;
@@ -341,6 +342,7 @@ class ErrorOperations extends _$ErrorOperations {
     String? correctAnswer,
     String? subject,
     String? chapter,
+    String? questionImageUrl,
   }) async {
     state = state.copyWith(isLoading: true);
 
@@ -353,11 +355,13 @@ class ErrorOperations extends _$ErrorOperations {
         correctAnswer: correctAnswer,
         subject: subject,
         chapter: chapter,
+        questionImageUrl: questionImageUrl,
       );
 
       // 刷新详情和列表
-      ref.invalidate(errorDetailProvider(errorId));
-      ref.invalidate(errorListProvider);
+      ref
+        ..invalidate(errorDetailProvider(errorId))
+        ..invalidate(errorListProvider);
 
       state = state.copyWith(isLoading: false);
       return result;
@@ -379,8 +383,9 @@ class ErrorOperations extends _$ErrorOperations {
       await repository.deleteError(errorId);
 
       // 刷新列表和统计
-      ref.invalidate(errorListProvider);
-      ref.invalidate(errorStatsProvider);
+      ref
+        ..invalidate(errorListProvider)
+        ..invalidate(errorStatsProvider);
 
       state = state.copyWith(isLoading: false);
     } catch (e) {
@@ -432,10 +437,11 @@ class ErrorOperations extends _$ErrorOperations {
       );
 
       // 刷新详情、列表和统计
-      ref.invalidate(errorDetailProvider(errorId));
-      ref.invalidate(errorListProvider);
-      ref.invalidate(todayReviewListProvider);
-      ref.invalidate(errorStatsProvider);
+      ref
+        ..invalidate(errorDetailProvider(errorId))
+        ..invalidate(errorListProvider)
+        ..invalidate(todayReviewListProvider)
+        ..invalidate(errorStatsProvider);
 
       state = state.copyWith(isLoading: false);
       return result;

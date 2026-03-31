@@ -656,20 +656,45 @@ extension ChatNotifierActions on ChatNotifier {
       '📢 State change notification added: ${event.changeType} (${event.interventionLevel})',
     );
 
+    if (event.changeType.startsWith('plan_')) {
+      _refreshPlanRelatedState(reason: event.changeType);
+    }
+
     // Refresh notification center when receiving state change events
     _refreshNotificationCenter();
   }
 
+  void _refreshPlanRelatedState({required String reason}) {
+    unawaited(
+      _ref.read(planListProvider.notifier).refresh().catchError((Object error) {
+        debugPrint('⚠️ Failed to refresh plan list after $reason: $error');
+      }),
+    );
+    unawaited(
+      _ref.read(taskListProvider.notifier).refreshTasks().catchError((
+        Object error,
+      ) {
+        debugPrint('⚠️ Failed to refresh task list after $reason: $error');
+      }),
+    );
+    unawaited(
+      _ref.read(dashboardProvider.notifier).refresh().catchError((
+        Object error,
+      ) {
+        debugPrint('⚠️ Failed to refresh dashboard after $reason: $error');
+      }),
+    );
+  }
+
   /// 刷新通知中心
   void _refreshNotificationCenter() {
-    try {
-      // Import and refresh notification center
-      final notificationCenter = _ref.read(notificationCenterProvider.notifier);
-      notificationCenter.refresh();
-      debugPrint('🔔 Notification center refreshed due to state change');
-    } catch (e) {
-      debugPrint('⚠️ Failed to refresh notification center: $e');
-    }
+    final notificationCenter = _ref.read(notificationCenterProvider.notifier);
+    unawaited(
+      notificationCenter.refresh().catchError((Object error) {
+        debugPrint('⚠️ Failed to refresh notification center: $error');
+      }),
+    );
+    debugPrint('🔔 Notification center refreshed due to state change');
   }
 
   /// 处理 Plan Review Status Event
@@ -690,6 +715,7 @@ extension ChatNotifierActions on ChatNotifier {
     // Clear pending review if status indicates completion
     if (event.status == 'approved' || event.status == 'rejected') {
       state = state.copyWith(clearPendingReview: true);
+      _refreshPlanRelatedState(reason: 'plan_review_${event.status}');
     }
 
     // Delay clearing feedback state

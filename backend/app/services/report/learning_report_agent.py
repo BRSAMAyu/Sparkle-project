@@ -1076,7 +1076,52 @@ class LearningReportAgent:
         chat_inference: dict[str, Any],
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
         if not starter_focus:
-            return mastery, patterns, timeline
+            if mastery or patterns or timeline:
+                return mastery, patterns, timeline
+
+            inferred_topics = [
+                str(item).strip()
+                for item in list(chat_inference.get("topics") or [])
+                if str(item).strip()
+            ]
+            inferred_frictions = [
+                str(item).strip()
+                for item in list(chat_inference.get("frictions") or [])
+                if str(item).strip()
+            ]
+            fallback_topic = inferred_topics[0] if inferred_topics else "当前学习主题"
+            fallback_mastery = [
+                {
+                    "node_name": topic,
+                    "mastery_score": 45.0 - (index * 4),
+                }
+                for index, topic in enumerate(inferred_topics[:3])
+            ] or [
+                {
+                    "node_name": fallback_topic,
+                    "mastery_score": 45.0,
+                }
+            ]
+            fallback_patterns = [
+                {
+                    "pattern_name": "冷启动阶段：目标仍在收敛",
+                    "raw_pattern_name": "cold_start_goal_refinement",
+                    "confidence": 0.38,
+                    "description": inferred_frictions[0]
+                        if inferred_frictions
+                        else "当前学习记录较少，系统先根据最近表达出来的目标生成起步判断。",
+                    "solution_text": f"先围绕 {fallback_topic} 完成一次 20 分钟试跑，再回来刷新报告。",
+                }
+            ]
+            fallback_timeline = [
+                {
+                    "node_name": fallback_topic,
+                    "study_minutes": 20,
+                    "mastery_delta": 0.0,
+                    "created_at": None,
+                }
+            ]
+            return fallback_mastery, fallback_patterns, fallback_timeline
 
         hydrated_mastery = list(mastery)
         if not hydrated_mastery:

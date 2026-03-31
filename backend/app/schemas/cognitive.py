@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.models.cognitive import AnalysisStatus
+from app.models.cognitive import AnalysisStatus, PatternType
 
 # ========== Request Schemas ==========
 
@@ -59,13 +59,15 @@ class BehaviorPatternResponse(BaseModel):
     id: UUID
     user_id: UUID
     pattern_name: str
-    pattern_type: str
+    pattern_type: PatternType
     description: str | None
     solution_text: str | None
     evidence_ids: list[UUID] | None
     confidence_score: float
     frequency: int
     is_archived: bool
+    last_observed_at: datetime | None
+    last_decay_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

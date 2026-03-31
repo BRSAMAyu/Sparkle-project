@@ -280,6 +280,15 @@ class TransparencySettingsScreen extends ConsumerWidget {
   }
 }
 
+/// Safely parse [TransparencyDisplayMode] from a stored string.
+/// Returns [TransparencyDisplayMode.collapsedFloating] for unknown values.
+TransparencyDisplayMode _safeDisplayMode(String name) {
+  return TransparencyDisplayMode.values.firstWhere(
+    (e) => e.name == name,
+    orElse: () => TransparencyDisplayMode.collapsedFloating,
+  );
+}
+
 /// Transparency preferences model
 class TransparencyPreferences {
   const TransparencyPreferences({
@@ -298,7 +307,7 @@ class TransparencyPreferences {
         showTokenUsage: json['showTokenUsage'] as bool? ?? true,
         showAgentSwitching: json['showAgentSwitching'] as bool? ?? true,
         showReasoningSteps: json['showReasoningSteps'] as bool? ?? true,
-        displayMode: TransparencyDisplayMode.values.byName(
+        displayMode: _safeDisplayMode(
           json['displayMode'] as String? ?? 'collapsedFloating',
         ),
         autoCollapseOnComplete: json['autoCollapseOnComplete'] as bool? ?? true,

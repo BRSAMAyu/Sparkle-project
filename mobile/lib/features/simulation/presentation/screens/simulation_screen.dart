@@ -92,6 +92,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
   final _topicController = TextEditingController();
   final _interactionController = TextEditingController();
+  final _customParticipantController = TextEditingController();
   final _roundsScrollController = ScrollController();
   final _immersiveScrollController = ScrollController();
   late String _selectedScenarioKey;
@@ -105,6 +106,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   int _configuredRoundCount = 5;
   String _facilitationStyle = 'balanced';
   List<String> _selectedParticipantNames = const [];
+  bool _showScrollToBottomFab = false;
   List<SimulationParticipantModel>? _pausedParticipants;
   List<SimulationRoundModel>? _pausedRounds;
   String? _pausedInsightSummary;
@@ -116,16 +118,26 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     super.initState();
     _selectedScenarioKey = widget.initialScenarioKey ?? 'study_group';
     _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
+    _immersiveScrollController.addListener(_handleImmersiveScroll);
     _simulationSubscription = ref.listenManual<SimulationState>(
       simulationProvider,
       (previous, next) {
         final previousRoundCount = previous?.liveRounds.length ?? 0;
         final nextRoundCount = next.liveRounds.length;
         if (nextRoundCount > previousRoundCount && !_isPlaybackPaused) {
-          unawaited(
-            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-          );
-          _scrollToLatestRound();
+          final shouldAutoScroll = !_hasPendingUserInteraction(next);
+          if (shouldAutoScroll) {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
+            _scrollToLatestRound();
+          } else {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _handleImmersiveScroll();
+              }
+            });
+          }
         }
 
         final previousParticipantCount = previous?.liveParticipants.length ?? 0;
@@ -178,8 +190,11 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     _simulationSubscription.close();
     _topicController.dispose();
     _interactionController.dispose();
+    _customParticipantController.dispose();
     _roundsScrollController.dispose();
-    _immersiveScrollController.dispose();
+    _immersiveScrollController
+      ..removeListener(_handleImmersiveScroll)
+      ..dispose();
     super.dispose();
   }
 
@@ -440,6 +455,27 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     });
   }
 
+  void _addCustomParticipant(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    if (_selectedParticipantNames.contains(trimmed)) {
+      _customParticipantController.clear();
+      return;
+    }
+    if (_selectedParticipantNames.length >= 6) {
+      return;
+    }
+    setState(() {
+      _selectedParticipantNames = [
+        ..._selectedParticipantNames,
+        trimmed,
+      ];
+    });
+    _customParticipantController.clear();
+  }
+
   Widget _buildSetupLayout({
     required BuildContext context,
     required BoxConstraints constraints,
@@ -490,6 +526,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               const SizedBox(height: 14),
               _SimulationCompactSetupPanel(
                 topicController: _topicController,
+                customParticipantController: _customParticipantController,
                 selectedScenarioKey: _selectedScenarioKey,
                 scenarioLabels: _scenarioLabels,
                 scenarioDescriptions: _scenarioDescriptions,
@@ -502,6 +539,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 selectedParticipantNames: _selectedParticipantNames,
                 availableParticipantNames:
                     _participantOptionsForScenario(_selectedScenarioKey),
+                isHistoricalRoleplay:
+                    _selectedScenarioKey == 'historical_roleplay',
                 onScenarioSelected: _handleScenarioSelected,
                 onFacilitationStyleSelected: (value) {
                   setState(() => _facilitationStyle = value);
@@ -510,6 +549,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   setState(() => _configuredRoundCount = value);
                 },
                 onParticipantToggled: _toggleParticipantSelection,
+                onCustomParticipantAdded: _addCustomParticipant,
                 onResetParticipants: () {
                   setState(() {
                     _selectedParticipantNames =
@@ -664,6 +704,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         _facilitationStyle;
     final setupPanel = _SimulationCompactSetupPanel(
       topicController: _topicController,
+      customParticipantController: _customParticipantController,
       selectedScenarioKey: _selectedScenarioKey,
       scenarioLabels: _scenarioLabels,
       scenarioDescriptions: _scenarioDescriptions,
@@ -671,12 +712,13 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       facilitationStyle: runtimeFacilitationStyle,
       facilitationLabels: _facilitationLabels,
       facilitationDescriptions: _facilitationDescriptions,
-      plannedRoundCount: plannedRoundCount,
+      plannedRoundCount: _configuredRoundCount,
       maxRoundCount: _maxRoundsForScenario(_selectedScenarioKey),
       selectedParticipantNames: _selectedParticipantNames,
       availableParticipantNames: _participantOptionsForScenario(
         _selectedScenarioKey,
       ),
+      isHistoricalRoleplay: _selectedScenarioKey == 'historical_roleplay',
       onScenarioSelected: _handleScenarioSelected,
       onFacilitationStyleSelected: (value) {
         setState(() => _facilitationStyle = value);
@@ -685,6 +727,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         setState(() => _configuredRoundCount = value);
       },
       onParticipantToggled: _toggleParticipantSelection,
+      onCustomParticipantAdded: _addCustomParticipant,
       onResetParticipants: () {
         setState(() {
           _selectedParticipantNames =
@@ -693,158 +736,190 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       },
       onRun: () => unawaited(_runSimulation()),
     );
-    return CustomScrollView(
-      controller: _immersiveScrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, safeBottom + 18),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.card,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: _SimulationImmersiveTopBar(
-                  topic: topic,
-                  scenarioLabel: scenarioLabel,
-                  roundCount: rounds.length,
-                  expectedRounds: plannedRoundCount,
-                  engineState: state.engineState,
-                  activeSpeaker: activeSpeaker,
-                  participantCount: participants.length,
-                  facilitationLabel:
-                      _facilitationLabels[runtimeFacilitationStyle] ?? '平衡推进',
-                  isPaused: _isPlaybackPaused,
-                  isReview: viewMode == _SimulationViewMode.review,
-                  hasInsight: hasInsight,
-                  settingsOpen: _settingsDrawerOpen,
-                  insightOpen: _insightOverlayOpen,
-                  onTogglePause: viewMode == _SimulationViewMode.review
-                      ? null
-                      : _togglePlaybackPause,
-                  onToggleSettings: () {
-                    setState(() => _settingsDrawerOpen = !_settingsDrawerOpen);
-                  },
-                  onToggleInsight: hasInsight
-                      ? () {
-                          setState(
-                            () => _insightOverlayOpen = !_insightOverlayOpen,
-                          );
-                        }
-                      : null,
-                ),
-              ),
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _InlineErrorBanner(message: state.error!),
-                ),
-              if (_settingsDrawerOpen)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: setupPanel,
-                ),
-              if (participants.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: SizedBox(
-                    height: 38,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: participants.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final participant = participants[index];
-                        return _SimulationMiniParticipantPill(
-                          participant: participant,
-                          isActive: participant.name == activeSpeaker,
+    return Stack(
+      children: [
+        CustomScrollView(
+          controller: _immersiveScrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, safeBottom + 18),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.card,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: _SimulationImmersiveTopBar(
+                      topic: topic,
+                      scenarioLabel: scenarioLabel,
+                      roundCount: rounds.length,
+                      expectedRounds: plannedRoundCount,
+                      engineState: state.engineState,
+                      activeSpeaker: activeSpeaker,
+                      participantCount: participants.length,
+                      facilitationLabel:
+                          _facilitationLabels[runtimeFacilitationStyle] ??
+                              '平衡推进',
+                      isPaused: _isPlaybackPaused,
+                      isReview: viewMode == _SimulationViewMode.review,
+                      hasInsight: hasInsight,
+                      settingsOpen: _settingsDrawerOpen,
+                      insightOpen: _insightOverlayOpen,
+                      onTogglePause: viewMode == _SimulationViewMode.review
+                          ? null
+                          : _togglePlaybackPause,
+                      onToggleSettings: () {
+                        setState(
+                          () => _settingsDrawerOpen = !_settingsDrawerOpen,
                         );
                       },
+                      onToggleInsight: hasInsight
+                          ? () {
+                              setState(
+                                () =>
+                                    _insightOverlayOpen = !_insightOverlayOpen,
+                              );
+                            }
+                          : null,
                     ),
                   ),
-                ),
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: _SimulationTimelineCard(
-                  rounds: rounds,
-                  participants: participants,
-                  activeSpeaker: activeSpeaker,
-                  isLoading: state.isLoading,
-                  topic: topic,
-                  controller: _roundsScrollController,
-                  immersive: true,
-                  showParticipantSnapshot: false,
-                  embedInParentScroll: true,
+                  if (state.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _InlineErrorBanner(message: state.error!),
+                    ),
+                  if (_settingsDrawerOpen)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: setupPanel,
+                    ),
+                  if (participants.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: SizedBox(
+                        height: 38,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: participants.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final participant = participants[index];
+                            return _SimulationMiniParticipantPill(
+                              participant: participant,
+                              isActive: participant.name == activeSpeaker,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _SimulationTimelineCard(
+                      rounds: rounds,
+                      participants: participants,
+                      activeSpeaker: activeSpeaker,
+                      isLoading: state.isLoading,
+                      topic: topic,
+                      controller: _roundsScrollController,
+                      immersive: true,
+                      showParticipantSnapshot: false,
+                      embedInParentScroll: true,
+                    ),
+                  ),
+                  if (hasInteraction)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _SimulationInlineInteractionSection(
+                        mode: effectiveTrayMode,
+                        prompt: interactionPrompt!,
+                        onExpand: () => setState(
+                          () => _bottomTrayMode =
+                              _SimulationBottomTrayMode.expanded,
+                        ),
+                        onCollapse: () => setState(
+                          () =>
+                              _bottomTrayMode = _SimulationBottomTrayMode.peek,
+                        ),
+                        child: _SimulationInteractionCard(
+                          prompt: interactionPrompt,
+                          interactionType:
+                              pendingInteraction?.interactionType ??
+                                  session?.interactionType,
+                          suggestedReplies: suggestedReplies,
+                          options: pendingInteraction?.options ?? const [],
+                          isSubmitting: state.isContinuing,
+                          textController: _interactionController,
+                          onReplySelected: (reply) =>
+                              unawaited(_continueSimulation(reply)),
+                          onSubmitText: () => unawaited(
+                            _continueSimulation(_interactionController.text),
+                          ),
+                          onContinueInChat: (reply) =>
+                              unawaited(_continueInChat(reply)),
+                        ),
+                      ),
+                    ),
+                  if (hasInsight)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _SimulationInsightTray(
+                        summary: insightSummary ?? '',
+                        expanded: _isInsightExpanded ||
+                            _insightOverlayOpen ||
+                            viewMode == _SimulationViewMode.review,
+                        onToggleExpanded: () {
+                          setState(() {
+                            _isInsightExpanded = !_isInsightExpanded;
+                            _insightOverlayOpen = _isInsightExpanded;
+                          });
+                        },
+                        session: session,
+                        onOpenTheater: session == null
+                            ? null
+                            : () => context.push(
+                                  _buildTheaterRoute(
+                                    topic: session.topic,
+                                    simulationSessionId: session.id,
+                                  ),
+                                ),
+                        onOpenReport: session == null
+                            ? null
+                            : () => unawaited(
+                                  _openGeneratedLearningReport(session),
+                                ),
+                        onShare: session == null
+                            ? null
+                            : () => unawaited(_shareSession(session)),
+                        isGeneratingReport: _isGeneratingReport,
+                      ),
+                    ),
+                ]),
+              ),
+            ),
+          ],
+        ),
+        Positioned(
+          right: 16,
+          bottom: safeBottom + 20,
+          child: AnimatedSlide(
+            duration: DS.durationNormal,
+            offset: _showScrollToBottomFab ? Offset.zero : const Offset(0, 1.5),
+            child: AnimatedOpacity(
+              duration: DS.durationNormal,
+              opacity: _showScrollToBottomFab ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !_showScrollToBottomFab,
+                child: FloatingActionButton.small(
+                  heroTag: 'simulation-scroll-to-bottom',
+                  onPressed: _jumpToBottom,
+                  child: const Icon(Icons.south_rounded),
                 ),
               ),
-              if (hasInteraction)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _SimulationInlineInteractionSection(
-                    mode: effectiveTrayMode,
-                    prompt: interactionPrompt!,
-                    onExpand: () => setState(
-                      () =>
-                          _bottomTrayMode = _SimulationBottomTrayMode.expanded,
-                    ),
-                    onCollapse: () => setState(
-                      () => _bottomTrayMode = _SimulationBottomTrayMode.peek,
-                    ),
-                    child: _SimulationInteractionCard(
-                      prompt: interactionPrompt,
-                      interactionType: pendingInteraction?.interactionType ??
-                          session?.interactionType,
-                      suggestedReplies: suggestedReplies,
-                      options: pendingInteraction?.options ?? const [],
-                      isSubmitting: state.isContinuing,
-                      textController: _interactionController,
-                      onReplySelected: (reply) =>
-                          unawaited(_continueSimulation(reply)),
-                      onSubmitText: () => unawaited(
-                        _continueSimulation(_interactionController.text),
-                      ),
-                      onContinueInChat: (reply) =>
-                          unawaited(_continueInChat(reply)),
-                    ),
-                  ),
-                ),
-              if (hasInsight)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _SimulationInsightTray(
-                    summary: insightSummary ?? '',
-                    expanded: _isInsightExpanded ||
-                        _insightOverlayOpen ||
-                        viewMode == _SimulationViewMode.review,
-                    onToggleExpanded: () {
-                      setState(() {
-                        _isInsightExpanded = !_isInsightExpanded;
-                        _insightOverlayOpen = _isInsightExpanded;
-                      });
-                    },
-                    session: session,
-                    onOpenTheater: session == null
-                        ? null
-                        : () => context.push(
-                              _buildTheaterRoute(
-                                topic: session.topic,
-                                simulationSessionId: session.id,
-                              ),
-                            ),
-                    onOpenReport: session == null
-                        ? null
-                        : () => unawaited(
-                              _openGeneratedLearningReport(session),
-                            ),
-                    onShare: session == null
-                        ? null
-                        : () => unawaited(_shareSession(session)),
-                    isGeneratingReport: _isGeneratingReport,
-                  ),
-                ),
-            ]),
+            ),
           ),
         ),
       ],
@@ -941,6 +1016,35 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         );
       }
     });
+  }
+
+  bool _hasPendingUserInteraction(SimulationState state) =>
+      state.activeInteraction != null ||
+      (state.liveInteractionPrompt?.trim().isNotEmpty ?? false);
+
+  void _handleImmersiveScroll() {
+    if (!_immersiveScrollController.hasClients) {
+      return;
+    }
+    final distanceToBottom =
+        _immersiveScrollController.position.maxScrollExtent -
+            _immersiveScrollController.position.pixels;
+    final shouldShow = distanceToBottom > 120;
+    if (shouldShow != _showScrollToBottomFab && mounted) {
+      setState(() => _showScrollToBottomFab = shouldShow);
+    }
+  }
+
+  void _jumpToBottom() {
+    if (_immersiveScrollController.hasClients) {
+      unawaited(
+        _immersiveScrollController.animateTo(
+          _immersiveScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
   }
 
   int _expectedRoundsForScenario(String scenarioKey) {
@@ -1131,9 +1235,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     if (normalized.isEmpty) {
       return;
     }
-    final ok = await ref
-        .read(simulationProvider.notifier)
-        .continueSimulation(normalized);
+    final ok = await ref.read(simulationProvider.notifier).continueSimulation(
+          normalized,
+          plannedRoundCount: _configuredRoundCount,
+        );
     if (ok) {
       _interactionController.clear();
     }
@@ -1938,6 +2043,7 @@ class _SimulationInteractionCard extends StatelessWidget {
 class _SimulationCompactSetupPanel extends StatelessWidget {
   const _SimulationCompactSetupPanel({
     required this.topicController,
+    required this.customParticipantController,
     required this.selectedScenarioKey,
     required this.scenarioLabels,
     required this.scenarioDescriptions,
@@ -1949,15 +2055,18 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
     required this.maxRoundCount,
     required this.selectedParticipantNames,
     required this.availableParticipantNames,
+    required this.isHistoricalRoleplay,
     required this.onScenarioSelected,
     required this.onFacilitationStyleSelected,
     required this.onRoundCountChanged,
     required this.onParticipantToggled,
+    required this.onCustomParticipantAdded,
     required this.onResetParticipants,
     required this.onRun,
   });
 
   final TextEditingController topicController;
+  final TextEditingController customParticipantController;
   final String selectedScenarioKey;
   final Map<String, String> scenarioLabels;
   final Map<String, String> scenarioDescriptions;
@@ -1969,10 +2078,12 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
   final int maxRoundCount;
   final List<String> selectedParticipantNames;
   final List<String> availableParticipantNames;
+  final bool isHistoricalRoleplay;
   final ValueChanged<String> onScenarioSelected;
   final ValueChanged<String> onFacilitationStyleSelected;
   final ValueChanged<int> onRoundCountChanged;
   final ValueChanged<String> onParticipantToggled;
+  final ValueChanged<String> onCustomParticipantAdded;
   final VoidCallback onResetParticipants;
   final VoidCallback onRun;
 
@@ -2076,9 +2187,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               max: maxRoundCount.toDouble(),
               divisions: math.max(0, maxRoundCount - 3),
               label: '$plannedRoundCount 轮',
-              onChanged: isLoading
-                  ? null
-                  : (value) => onRoundCountChanged(value.round()),
+              onChanged: (value) => onRoundCountChanged(value.round()),
             ),
             const SizedBox(height: 8),
             Text(
@@ -2154,6 +2263,33 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 );
               }).toList(),
             ),
+            if (isHistoricalRoleplay) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: customParticipantController,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: onCustomParticipantAdded,
+                      decoration: const InputDecoration(
+                        labelText: '自定义历史人物',
+                        hintText: '例如：张居正 / 俾斯麦',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  FilledButton.tonalIcon(
+                    onPressed: () => onCustomParticipantAdded(
+                      customParticipantController.text,
+                    ),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('添加'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 10),
             Text(
               selectedParticipantNames.isEmpty
@@ -2563,10 +2699,10 @@ class _SimulationInsightTray extends StatelessWidget {
     required this.expanded,
     required this.onToggleExpanded,
     required this.session,
-    this.isGeneratingReport = false,
     required this.onOpenTheater,
     required this.onOpenReport,
     required this.onShare,
+    this.isGeneratingReport = false,
   });
 
   final String summary;

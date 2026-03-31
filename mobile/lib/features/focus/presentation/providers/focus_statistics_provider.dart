@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -176,17 +178,19 @@ class FocusStatistics extends _$FocusStatistics {
     // Get the persisted period
     final persistedPeriod = ref.watch(statsViewPeriodProvider);
 
-    Future.microtask(() {
-      if (_isDisposed) return;
-      switch (persistedPeriod) {
-        case StatsViewPeriod.today:
-          loadTodayStats();
-        case StatsViewPeriod.week:
-          loadWeeklyStats();
-        case StatsViewPeriod.month:
-          loadMonthlyStats();
-      }
-    });
+    unawaited(
+      Future.microtask(() {
+        if (_isDisposed) return;
+        switch (persistedPeriod) {
+          case StatsViewPeriod.today:
+            unawaited(loadTodayStats());
+          case StatsViewPeriod.week:
+            unawaited(loadWeeklyStats());
+          case StatsViewPeriod.month:
+            unawaited(loadMonthlyStats());
+        }
+      }),
+    );
 
     return FocusStatisticsState(period: persistedPeriod);
   }
@@ -200,11 +204,11 @@ class FocusStatistics extends _$FocusStatistics {
 
     switch (newPeriod) {
       case StatsViewPeriod.today:
-        loadTodayStats();
+        unawaited(loadTodayStats());
       case StatsViewPeriod.week:
-        loadWeeklyStats();
+        unawaited(loadWeeklyStats());
       case StatsViewPeriod.month:
-        loadMonthlyStats();
+        unawaited(loadMonthlyStats());
     }
   }
 
@@ -451,6 +455,7 @@ class FocusStatistics extends _$FocusStatistics {
     required DateTime endTime,
     required int durationMinutes,
     String focusType = 'pomodoro',
+    String status = 'completed',
     String? taskId,
     String? taskTitle,
     String? whiteNoiseType,
@@ -459,17 +464,28 @@ class FocusStatistics extends _$FocusStatistics {
   }) async {
     if (_localRepo == null) return null;
 
-    final record = FocusSessionRecordExtension.createCompleted(
-      startTime: startTime,
-      endTime: endTime,
-      durationMinutes: durationMinutes,
-      focusType: focusType,
-      taskId: taskId,
-      taskTitle: taskTitle,
-      whiteNoiseType: whiteNoiseType,
-      interruptionCount: interruptionCount,
-      qualityScore: qualityScore,
-    );
+    final record = status == 'interrupted'
+        ? FocusSessionRecordExtension.createInterrupted(
+            startTime: startTime,
+            endTime: endTime,
+            durationMinutes: durationMinutes,
+            focusType: focusType,
+            taskId: taskId,
+            taskTitle: taskTitle,
+            whiteNoiseType: whiteNoiseType,
+            interruptionCount: interruptionCount,
+          )
+        : FocusSessionRecordExtension.createCompleted(
+            startTime: startTime,
+            endTime: endTime,
+            durationMinutes: durationMinutes,
+            focusType: focusType,
+            taskId: taskId,
+            taskTitle: taskTitle,
+            whiteNoiseType: whiteNoiseType,
+            interruptionCount: interruptionCount,
+            qualityScore: qualityScore,
+          );
 
     await _localRepo!.saveSession(record);
 
@@ -486,6 +502,7 @@ class FocusStatistics extends _$FocusStatistics {
         durationMinutes: durationMinutes,
         taskId: taskId,
         focusType: focusType,
+        status: status,
         whiteNoiseType: whiteNoiseType,
       );
       await _localRepo!.markAsSynced(record.id, response.response.id);

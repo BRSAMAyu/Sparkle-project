@@ -19,19 +19,19 @@ class PatternCard extends StatelessWidget {
     LinearGradient gradient;
 
     switch (pattern.patternType) {
-      case 'cognitive':
+      case PatternType.cognitive:
         iconColor = DS.brandPrimary.shade700;
         icon = Icons.psychology;
         gradient = DS.infoGradient;
-      case 'emotional':
+      case PatternType.emotional:
         iconColor = DS.prismPurple.shade700;
         icon = Icons.sentiment_very_dissatisfied;
         gradient = DS.warningGradient;
-      case 'execution':
+      case PatternType.execution:
         iconColor = DS.success.shade700;
         icon = Icons.run_circle;
         gradient = DS.successGradient;
-      default:
+      case PatternType.unknown:
         iconColor = DS.neutral600;
         icon = Icons.help_outline;
         gradient = DS.primaryGradient;

@@ -32,6 +32,10 @@ class SeedLibraryDetailScreen extends ConsumerStatefulWidget {
 
 class _SeedLibraryDetailScreenState
     extends ConsumerState<SeedLibraryDetailScreen> {
+  ItemType? _selectedItemType;
+  DifficultyLevel? _selectedDifficulty;
+  bool _showInactiveItems = false;
+
   String _friendlyActionError(Object error) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.isEmpty || raw.toLowerCase() == 'null') {
@@ -62,12 +66,14 @@ class _SeedLibraryDetailScreenState
                     SensoryFeedbackEvent.sheetOpen,
                   ),
                 );
-                showShareResourceSheet(
-                  context,
-                  resourceType: 'seed_library',
-                  resourceId: state.library!.id,
-                  title: state.library!.name,
-                  subtitle: state.library!.description,
+                unawaited(
+                  showShareResourceSheet(
+                    context,
+                    resourceType: 'seed_library',
+                    resourceId: state.library!.id,
+                    title: state.library!.name,
+                    subtitle: state.library!.description,
+                  ),
                 );
               },
             ),
@@ -100,7 +106,8 @@ class _SeedLibraryDetailScreenState
               if (value == 'subscribe') {
                 unawaited(
                   ref
-                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .read(
+                          seedLibraryDetailProvider(widget.libraryId).notifier)
                       .toggleSubscription(),
                 );
               }
@@ -109,7 +116,9 @@ class _SeedLibraryDetailScreenState
               PopupMenuItem(
                 value: 'subscribe',
                 child: Text(
-                  state.isSubscribed ? context.l10n.seedLibraryUnsubscribe : context.l10n.seedLibrarySubscribe,
+                  state.isSubscribed
+                      ? context.l10n.seedLibraryUnsubscribe
+                      : context.l10n.seedLibrarySubscribe,
                 ),
               ),
             ],
@@ -155,6 +164,19 @@ class _SeedLibraryDetailScreenState
     }
 
     final library = state.library!;
+    final filteredItems = state.items.where((item) {
+      if (!_showInactiveItems && !item.isActive) {
+        return false;
+      }
+      if (_selectedItemType != null && item.itemType != _selectedItemType) {
+        return false;
+      }
+      if (_selectedDifficulty != null &&
+          item.difficultyLevel != _selectedDifficulty) {
+        return false;
+      }
+      return true;
+    }).toList();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -175,182 +197,143 @@ class _SeedLibraryDetailScreenState
                 child: SparkleStaggerItem(
                   index: 0,
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category and visibility badges
-                    Wrap(
-                      spacing: DS.spacing8,
-                      children: [
-                        Chip(
-                          label: Text(library.category.displayName),
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                        Chip(
-                          label: Text(library.visibility.displayName),
-                          backgroundColor:
-                              library.visibility == LibraryVisibility.official
-                                  ? DS.warningAccent
-                                  : null,
-                        ),
-                        if (library.isOfficial || library.isFeatured)
-                          Icon(
-                            library.isOfficial ? Icons.verified : Icons.star,
-                            color: library.isOfficial
-                                ? DS.warning
-                                : DS.warningLight,
-                            size: DS.iconSizeSm,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category and visibility badges
+                      Wrap(
+                        spacing: DS.spacing8,
+                        children: [
+                          Chip(
+                            label: Text(library.category.displayName),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primaryContainer,
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: DS.spacing12),
-
-                    // Description
-                    if (library.description != null) ...[
-                      Text(
-                        library.description!,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                          Chip(
+                            label: Text(library.visibility.displayName),
+                            backgroundColor:
+                                library.visibility == LibraryVisibility.official
+                                    ? DS.warningAccent
+                                    : null,
+                          ),
+                          if (library.isOfficial || library.isFeatured)
+                            Icon(
+                              library.isOfficial ? Icons.verified : Icons.star,
+                              color: library.isOfficial
+                                  ? DS.warning
+                                  : DS.warningLight,
+                              size: DS.iconSizeSm,
+                            ),
+                        ],
                       ),
                       const SizedBox(height: DS.spacing12),
-                    ],
 
-                    // Stats
-                    Wrap(
-                      spacing: DS.spacing16,
-                      runSpacing: DS.spacing8,
-                      children: [
-                        _buildStatItem(
-                          context,
-                          Icons.article_outlined,
-                          '${library.itemCount}',
-                          context.l10n.seedLibraryContent,
+                      // Description
+                      if (library.description != null) ...[
+                        Text(
+                          library.description!,
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        _buildStatItem(
-                          context,
-                          Icons.people_outline,
-                          '${library.subscriberCount}',
-                          context.l10n.seedLibrarySubscribers,
-                        ),
-                        _buildStatItem(
-                          context,
-                          Icons.visibility_outlined,
-                          '${library.usageCount}',
-                          context.l10n.seedLibraryUsage,
-                        ),
-                        if (library.qualityScore != null)
-                          _buildStatItem(
-                            context,
-                            Icons.star,
-                            library.qualityScore!.toStringAsFixed(1),
-                            context.l10n.seedLibraryQualityScore,
-                          ),
-                        if ((library.userRatingCount ?? 0) > 0)
-                          _buildStatItem(
-                            context,
-                            Icons.reviews_outlined,
-                            '${library.userRatingCount}',
-                            '用户评分',
-                          ),
+                        const SizedBox(height: DS.spacing12),
                       ],
-                    ),
 
-                    const SizedBox(height: DS.spacing16),
-                    GraphiteCardSurface(
-                      surfaceRole: SparkleSurfaceRole.panel,
-                      padding: const EdgeInsets.all(DS.spacing16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Stats
+                      Wrap(
+                        spacing: DS.spacing16,
+                        runSpacing: DS.spacing8,
                         children: [
-                          Text(
-                            '应用到系统',
-                            style: Theme.of(context).textTheme.titleMedium,
+                          _buildStatItem(
+                            context,
+                            Icons.article_outlined,
+                            '${library.itemCount}',
+                            context.l10n.seedLibraryContent,
                           ),
-                          const SizedBox(height: DS.spacing8),
-                          Text(
-                            _buildUsageExplanation(library, state),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: DS.textSecondary,
-                                ),
+                          _buildStatItem(
+                            context,
+                            Icons.people_outline,
+                            '${library.subscriberCount}',
+                            context.l10n.seedLibrarySubscribers,
                           ),
-                          const SizedBox(height: DS.spacing12),
-                          Wrap(
-                            spacing: DS.spacing8,
-                            runSpacing: DS.spacing8,
+                          _buildStatItem(
+                            context,
+                            Icons.visibility_outlined,
+                            '${library.usageCount}',
+                            context.l10n.seedLibraryUsage,
+                          ),
+                          if (library.qualityScore != null)
+                            _buildStatItem(
+                              context,
+                              Icons.star,
+                              library.qualityScore!.toStringAsFixed(1),
+                              context.l10n.seedLibraryQualityScore,
+                            ),
+                          if ((library.userRatingCount ?? 0) > 0)
+                            _buildStatItem(
+                              context,
+                              Icons.reviews_outlined,
+                              '${library.userRatingCount}',
+                              '用户评分',
+                            ),
+                        ],
+                      ),
+
+                      if (library.systemQualityScore != null ||
+                          library.userRatingAvg != null) ...[
+                        const SizedBox(height: DS.spacing16),
+                        GraphiteCardSurface(
+                          surfaceRole: SparkleSurfaceRole.panel,
+                          padding: const EdgeInsets.all(DS.spacing16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SparkleButton(
-                                onPressed: () async {
-                                  try {
-                                    final wasEnabled =
-                                        state.subscription?.isEnabled ?? false;
-                                    await ref
-                                        .read(seedLibraryDetailProvider(widget.libraryId).notifier)
-                                        .toggleApplied();
-                                    if (!context.mounted) return;
-                                    final refreshedState = ref.read(
-                                      seedLibraryDetailProvider(widget.libraryId),
-                                    );
-                                    final isNowEnabled =
-                                        refreshedState.subscription?.isEnabled ??
-                                            false;
-                                    AppFeedback.success(
-                                      context,
-                                      isNowEnabled && !wasEnabled
-                                          ? '已应用到系统'
-                                          : !isNowEnabled && wasEnabled
-                                              ? '已暂停使用该种子库'
-                                              : '种子库状态已更新',
-                                    );
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    AppFeedback.error(
-                                      context,
-                                      '应用失败：${_friendlyActionError(e)}',
-                                    );
-                                  }
-                                },
-                                label: (state.subscription?.isEnabled ?? false) ? '暂停使用' : '应用种子库',
-                                icon: Icon((state.subscription?.isEnabled ?? false)
-                                    ? Icons.pause_circle_outline
-                                    : Icons.play_circle_outline,),
+                              Text(
+                                '质量评分拆解',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                              SparkleButton.secondary(
-                                onPressed: () async {
-                                  try {
-                                    await ref
-                                        .read(seedLibraryDetailProvider(widget.libraryId).notifier)
-                                        .setAsPrimaryLibrary();
-                                    if (!context.mounted) return;
-                                    AppFeedback.success(context, '已设为优先使用');
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    AppFeedback.error(context, '设置失败：$e');
-                                  }
-                                },
-                                label: '设为主用',
-                                icon: const Icon(Icons.vertical_align_top),
+                              const SizedBox(height: DS.spacing8),
+                              Text(
+                                '列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.45,
+                                    ),
                               ),
-                              SparkleButton.ghost(
-                                onPressed: () => _showRatingSheet(context, state),
-                                label: library.currentUserRating != null ? '修改评分' : '给个评分',
-                                icon: const Icon(Icons.star_outline),
+                              const SizedBox(height: DS.spacing12),
+                              Wrap(
+                                spacing: DS.spacing12,
+                                runSpacing: DS.spacing12,
+                                children: [
+                                  if (library.qualityScore != null)
+                                    _buildQualityBadge(
+                                      context,
+                                      label: '综合',
+                                      value: library.qualityScore!,
+                                      icon: Icons.auto_awesome_outlined,
+                                    ),
+                                  if (library.systemQualityScore != null)
+                                    _buildQualityBadge(
+                                      context,
+                                      label: '系统',
+                                      value: library.systemQualityScore!,
+                                      icon: Icons.settings_suggest_outlined,
+                                    ),
+                                  if (library.userRatingAvg != null)
+                                    _buildQualityBadge(
+                                      context,
+                                      label: '用户',
+                                      value: library.userRatingAvg!,
+                                      icon: Icons.people_outline,
+                                    ),
+                                ],
                               ),
                             ],
                           ),
-                          if (state.subscription != null) ...[
-                            const SizedBox(height: DS.spacing10),
-                            Text(
-                              '当前状态：${state.subscription!.isEnabled ? '已启用' : '已订阅未启用'} · 优先级 ${state.subscription!.priority}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DS.textSecondary,
-                                  ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                        ),
+                      ],
 
-                    if (state.activeSubscriptions.isNotEmpty) ...[
-                      const SizedBox(height: DS.spacing12),
+                      const SizedBox(height: DS.spacing16),
                       GraphiteCardSurface(
                         surfaceRole: SparkleSurfaceRole.panel,
                         padding: const EdgeInsets.all(DS.spacing16),
@@ -358,55 +341,182 @@ class _SeedLibraryDetailScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '协同中的种子库',
+                              '应用到系统',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: DS.spacing8),
                             Text(
-                              '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              _buildUsageExplanation(library, state),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     color: DS.textSecondary,
                                   ),
                             ),
-                            const SizedBox(height: DS.spacing10),
+                            const SizedBox(height: DS.spacing12),
                             Wrap(
                               spacing: DS.spacing8,
                               runSpacing: DS.spacing8,
-                              children: state.activeSubscriptions.take(6).map((sub) {
-                                final isCurrent = sub.libraryId == widget.libraryId;
-                                return Chip(
-                                  label: Text(
-                                    '${sub.library?.name ?? '种子库'} · P${sub.priority}',
-                                    overflow: TextOverflow.ellipsis,
+                              children: [
+                                SparkleButton(
+                                  onPressed: () async {
+                                    try {
+                                      final wasEnabled =
+                                          state.subscription?.isEnabled ??
+                                              false;
+                                      await ref
+                                          .read(seedLibraryDetailProvider(
+                                                  widget.libraryId)
+                                              .notifier)
+                                          .toggleApplied();
+                                      if (!context.mounted) return;
+                                      final refreshedState = ref.read(
+                                        seedLibraryDetailProvider(
+                                            widget.libraryId),
+                                      );
+                                      final isNowEnabled = refreshedState
+                                              .subscription?.isEnabled ??
+                                          false;
+                                      AppFeedback.success(
+                                        context,
+                                        isNowEnabled && !wasEnabled
+                                            ? '已应用到系统'
+                                            : !isNowEnabled && wasEnabled
+                                                ? '已暂停使用该种子库'
+                                                : '种子库状态已更新',
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      AppFeedback.error(
+                                        context,
+                                        '应用失败：${_friendlyActionError(e)}',
+                                      );
+                                    }
+                                  },
+                                  label:
+                                      (state.subscription?.isEnabled ?? false)
+                                          ? '暂停使用'
+                                          : '应用种子库',
+                                  icon: Icon(
+                                    (state.subscription?.isEnabled ?? false)
+                                        ? Icons.pause_circle_outline
+                                        : Icons.play_circle_outline,
                                   ),
-                                  avatar: Icon(
-                                    isCurrent ? Icons.auto_awesome : Icons.layers_outlined,
-                                    size: DS.iconSizeXs,
-                                  ),
-                                  backgroundColor: isCurrent
-                                      ? DS.primaryBase.withValues(alpha: 0.12)
-                                      : null,
-                                );
-                              }).toList(),
+                                ),
+                                SparkleButton.secondary(
+                                  onPressed: () async {
+                                    try {
+                                      await ref
+                                          .read(seedLibraryDetailProvider(
+                                                  widget.libraryId)
+                                              .notifier)
+                                          .setAsPrimaryLibrary();
+                                      if (!context.mounted) return;
+                                      AppFeedback.success(context, '已设为优先使用');
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      AppFeedback.error(context, '设置失败：$e');
+                                    }
+                                  },
+                                  label: '设为主用',
+                                  icon: const Icon(Icons.vertical_align_top),
+                                ),
+                                SparkleButton.ghost(
+                                  onPressed: () =>
+                                      _showRatingSheet(context, state),
+                                  label: library.currentUserRating != null
+                                      ? '修改评分'
+                                      : '给个评分',
+                                  icon: const Icon(Icons.star_outline),
+                                ),
+                              ],
                             ),
+                            if (state.subscription != null) ...[
+                              const SizedBox(height: DS.spacing10),
+                              Text(
+                                '当前状态：${state.subscription!.isEnabled ? '已启用' : '已订阅未启用'} · 优先级 ${state.subscription!.priority}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                    ],
 
-                    // Tags
-                    if (library.tags != null && library.tags!.isNotEmpty) ...[
-                      const SizedBox(height: DS.spacing12),
-                      Wrap(
-                        spacing: DS.spacing8,
-                        children: library.tags!
-                            .map((tag) => Chip(
-                                label: Text(tag),
-                                labelPadding: EdgeInsets.zero,),)
-                            .toList(),
-                      ),
+                      if (state.activeSubscriptions.isNotEmpty) ...[
+                        const SizedBox(height: DS.spacing12),
+                        GraphiteCardSurface(
+                          surfaceRole: SparkleSurfaceRole.panel,
+                          padding: const EdgeInsets.all(DS.spacing16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '协同中的种子库',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: DS.spacing8),
+                              Text(
+                                '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                              ),
+                              const SizedBox(height: DS.spacing10),
+                              Wrap(
+                                spacing: DS.spacing8,
+                                runSpacing: DS.spacing8,
+                                children: state.activeSubscriptions
+                                    .take(6)
+                                    .map((sub) {
+                                  final isCurrent =
+                                      sub.libraryId == widget.libraryId;
+                                  return Chip(
+                                    label: Text(
+                                      '${sub.library?.name ?? '种子库'} · P${sub.priority}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    avatar: Icon(
+                                      isCurrent
+                                          ? Icons.auto_awesome
+                                          : Icons.layers_outlined,
+                                      size: DS.iconSizeXs,
+                                    ),
+                                    backgroundColor: isCurrent
+                                        ? DS.primaryBase.withValues(alpha: 0.12)
+                                        : null,
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Tags
+                      if (library.tags != null && library.tags!.isNotEmpty) ...[
+                        const SizedBox(height: DS.spacing12),
+                        Wrap(
+                          spacing: DS.spacing8,
+                          children: library.tags!
+                              .map(
+                                (tag) => Chip(
+                                  label: Text(tag),
+                                  labelPadding: EdgeInsets.zero,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
                     ],
-                  ],
                   ),
                 ),
               ),
@@ -439,8 +549,10 @@ class _SeedLibraryDetailScreenState
                               SensoryFeedbackEvent.selection,
                             ),
                           );
+                          unawaited(_showItemFilterSheet(context));
                         },
-                        icon: const Icon(Icons.filter_list, size: DS.iconSizeXs),
+                        icon:
+                            const Icon(Icons.filter_list, size: DS.iconSizeXs),
                         label: context.l10n.seedLibraryFilter,
                       ),
                     ],
@@ -451,7 +563,7 @@ class _SeedLibraryDetailScreenState
           ),
 
           // Items list
-          if (state.items.isEmpty)
+          if (filteredItems.isEmpty)
             SliverFillRemaining(
               child: state.isLoadingItems
                   ? const Center(child: CircularProgressIndicator())
@@ -459,11 +571,16 @@ class _SeedLibraryDetailScreenState
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.inbox_outlined,
-                              size: DS.spacing64, color: DS.textTertiary,),
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: DS.spacing64,
+                            color: DS.textTertiary,
+                          ),
                           const SizedBox(height: DS.spacing16),
                           Text(
-                            context.l10n.seedLibraryNoContent,
+                            state.items.isEmpty
+                                ? context.l10n.seedLibraryNoContent
+                                : '当前筛选条件下没有内容',
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: DS.textSecondary,
@@ -479,12 +596,14 @@ class _SeedLibraryDetailScreenState
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    if (index >= state.items.length) {
+                    if (index >= filteredItems.length) {
                       // Load more indicator
                       unawaited(
                         ref
-                            .read(seedLibraryDetailProvider(widget.libraryId)
-                                .notifier,)
+                            .read(
+                              seedLibraryDetailProvider(widget.libraryId)
+                                  .notifier,
+                            )
                             .loadItems(),
                       );
                       return const SizedBox(
@@ -493,7 +612,7 @@ class _SeedLibraryDetailScreenState
                       );
                     }
 
-                    final item = state.items[index];
+                    final item = filteredItems[index];
                     return SparkleStaggerItem(
                       index: index,
                       child: SeedItemCard(
@@ -516,7 +635,8 @@ class _SeedLibraryDetailScreenState
                       ),
                     );
                   },
-                  childCount: state.items.length + (state.hasMoreItems ? 1 : 0),
+                  childCount:
+                      filteredItems.length + (state.hasMoreItems ? 1 : 0),
                 ),
               ),
             ),
@@ -552,6 +672,37 @@ class _SeedLibraryDetailScreenState
         ],
       );
 
+  Widget _buildQualityBadge(
+    BuildContext context, {
+    required String label,
+    required double value,
+    required IconData icon,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
+        decoration: BoxDecoration(
+          color: DS.warningAccent.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: DS.warning),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              '$label ${value.toStringAsFixed(1)}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      );
+
   String _buildUsageExplanation(
     SeedLibrary library,
     SeedLibraryDetailState state,
@@ -571,12 +722,143 @@ class _SeedLibraryDetailScreenState
     return '当前尚未应用。应用后，$categoryHint。';
   }
 
+  Future<void> _showItemFilterSheet(BuildContext context) async {
+    await showSensoryModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '筛选内容',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text(
+                '按内容类型、难度和启用状态筛选当前种子库里的条目。',
+                style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text('内容类型', style: Theme.of(sheetContext).textTheme.titleSmall),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  FilterChip(
+                    label: const Text('全部'),
+                    selected: _selectedItemType == null,
+                    onSelected: (_) {
+                      setSheetState(() {
+                        _selectedItemType = null;
+                      });
+                    },
+                  ),
+                  ...ItemType.values.map(
+                    (itemType) => FilterChip(
+                      label: Text(itemType.displayName),
+                      selected: _selectedItemType == itemType,
+                      onSelected: (_) {
+                        setSheetState(() {
+                          _selectedItemType =
+                              _selectedItemType == itemType ? null : itemType;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text('难度', style: Theme.of(sheetContext).textTheme.titleSmall),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  FilterChip(
+                    label: const Text('全部'),
+                    selected: _selectedDifficulty == null,
+                    onSelected: (_) {
+                      setSheetState(() {
+                        _selectedDifficulty = null;
+                      });
+                    },
+                  ),
+                  ...DifficultyLevel.values.map(
+                    (difficulty) => FilterChip(
+                      label: Text(difficulty.displayName),
+                      selected: _selectedDifficulty == difficulty,
+                      onSelected: (_) {
+                        setSheetState(() {
+                          _selectedDifficulty =
+                              _selectedDifficulty == difficulty
+                                  ? null
+                                  : difficulty;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              SwitchListTile.adaptive(
+                value: _showInactiveItems,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('显示已停用内容'),
+                subtitle: const Text('关闭时仅展示当前仍在使用的条目'),
+                onChanged: (value) {
+                  setSheetState(() {
+                    _showInactiveItems = value;
+                  });
+                },
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      onPressed: () {
+                        setState(() {
+                          _selectedItemType = null;
+                          _selectedDifficulty = null;
+                          _showInactiveItems = false;
+                        });
+                        Navigator.of(sheetContext).pop();
+                      },
+                      label: '重置',
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton(
+                      onPressed: () {
+                        setState(() {});
+                        Navigator.of(sheetContext).pop();
+                      },
+                      label: '完成',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showRatingSheet(
     BuildContext context,
     SeedLibraryDetailState state,
   ) async {
     final commentController = TextEditingController();
-    var score = state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
+    var score =
+        state.library?.currentUserRating ?? state.library?.userRatingAvg ?? 8;
     await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -633,7 +915,8 @@ class _SeedLibraryDetailScreenState
                       onPressed: () async {
                         try {
                           await ref
-                              .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                              .read(seedLibraryDetailProvider(widget.libraryId)
+                                  .notifier)
                               .submitRating(
                                 score: score,
                                 comment: commentController.text.trim().isEmpty
@@ -688,7 +971,8 @@ class _SeedLibraryDetailScreenState
                     ...?item.tags?.map((tag) => Chip(label: Text(tag))),
                   ],
                 ),
-                if (item.content != null && item.content!.trim().isNotEmpty) ...[
+                if (item.content != null &&
+                    item.content!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
                   Text('正文', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
@@ -705,7 +989,8 @@ class _SeedLibraryDetailScreenState
                     ),
                   ),
                 ],
-                if (item.contentData != null && item.contentData!.isNotEmpty) ...[
+                if (item.contentData != null &&
+                    item.contentData!.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
                   Text('结构化内容', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
@@ -713,7 +998,8 @@ class _SeedLibraryDetailScreenState
                     surfaceRole: SparkleSurfaceRole.panel,
                     padding: const EdgeInsets.all(DS.spacing12),
                     child: SelectableText(
-                      const JsonEncoder.withIndent('  ').convert(item.contentData),
+                      const JsonEncoder.withIndent('  ')
+                          .convert(item.contentData),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontFamily: 'monospace',
                           ),
@@ -730,7 +1016,8 @@ class _SeedLibraryDetailScreenState
 
   void _showEditDialog(BuildContext context, SeedLibrary library) {
     final nameController = TextEditingController(text: library.name);
-    final descController = TextEditingController(text: library.description ?? '');
+    final descController =
+        TextEditingController(text: library.description ?? '');
     final formKey = GlobalKey<FormState>();
 
     unawaited(
@@ -769,23 +1056,22 @@ class _SeedLibraryDetailScreenState
                 Navigator.pop(ctx);
                 try {
                   await ref
-                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .read(
+                          seedLibraryDetailProvider(widget.libraryId).notifier)
                       .updateLibrary(
                         name: nameController.text.trim(),
                         description: descController.text.trim().isEmpty
                             ? null
                             : descController.text.trim(),
                       );
-                  if (mounted) {
-                    AppFeedback.success(context, '种子库已更新');
-                  }
+                  if (!context.mounted) return;
+                  AppFeedback.success(context, '种子库已更新');
                 } catch (e) {
-                  if (mounted) {
-                    AppFeedback.error(
-                      context,
-                      _friendlyActionError(e),
-                    );
-                  }
+                  if (!context.mounted) return;
+                  AppFeedback.error(
+                    context,
+                    _friendlyActionError(e),
+                  );
                 }
               },
               child: const Text('保存'),
@@ -814,7 +1100,8 @@ class _SeedLibraryDetailScreenState
               onPressed: () async {
                 try {
                   await ref
-                      .read(seedLibraryDetailProvider(widget.libraryId).notifier)
+                      .read(
+                          seedLibraryDetailProvider(widget.libraryId).notifier)
                       .deleteLibrary();
                   if (context.mounted) {
                     Navigator.pop(context);
@@ -850,146 +1137,147 @@ class _SeedLibraryDetailScreenState
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
-          padding: EdgeInsets.only(
-            left: DS.spacing16,
-            right: DS.spacing16,
-            top: DS.spacing16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setModalState) => Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '添加种子内容',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      DropdownButtonFormField<ItemType>(
-                        initialValue: itemType,
-                        decoration: const InputDecoration(
-                          labelText: '内容类型',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ItemType.values
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type.displayName),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setModalState(() => itemType = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      TextFormField(
-                        controller: titleController,
-                        decoration: const InputDecoration(
-                          labelText: '标题',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      TextFormField(
-                        controller: contentController,
-                        decoration: const InputDecoration(
-                          labelText: '内容',
-                          border: OutlineInputBorder(),
-                        ),
-                        minLines: 3,
-                        maxLines: 6,
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      TextFormField(
-                        controller: subjectController,
-                        decoration: const InputDecoration(
-                          labelText: '主题/学科',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing12),
-                      DropdownButtonFormField<DifficultyLevel?>(
-                        initialValue: difficultyLevel,
-                        decoration: const InputDecoration(
-                          labelText: '难度',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: [
-                          const DropdownMenuItem<DifficultyLevel?>(
-                            child: Text('未设置'),
+        padding: EdgeInsets.only(
+          left: DS.spacing16,
+          right: DS.spacing16,
+          top: DS.spacing16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setModalState) => Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '添加种子内容',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  DropdownButtonFormField<ItemType>(
+                    initialValue: itemType,
+                    decoration: const InputDecoration(
+                      labelText: '内容类型',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ItemType.values
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type.displayName),
                           ),
-                          ...DifficultyLevel.values.map(
-                            (level) => DropdownMenuItem(
-                              value: level,
-                              child: Text(level.displayName),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setModalState(() => difficultyLevel = value);
-                        },
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setModalState(() => itemType = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: '标题',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  TextFormField(
+                    controller: contentController,
+                    decoration: const InputDecoration(
+                      labelText: '内容',
+                      border: OutlineInputBorder(),
+                    ),
+                    minLines: 3,
+                    maxLines: 6,
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  TextFormField(
+                    controller: subjectController,
+                    decoration: const InputDecoration(
+                      labelText: '主题/学科',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  DropdownButtonFormField<DifficultyLevel?>(
+                    initialValue: difficultyLevel,
+                    decoration: const InputDecoration(
+                      labelText: '难度',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<DifficultyLevel?>(
+                        child: Text('未设置'),
                       ),
-                      const SizedBox(height: DS.spacing12),
-                      TextFormField(
-                        controller: tagsController,
-                        decoration: const InputDecoration(
-                          labelText: '标签（逗号分隔）',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SparkleButton(
-                          label: '保存内容',
-                          onPressed: () async {
-                            try {
-                              final tags = tagsController.text
-                                  .split(',')
-                                  .map((item) => item.trim())
-                                  .where((item) => item.isNotEmpty)
-                                  .toList();
-                              await ref
-                                  .read(seedLibraryDetailProvider(widget.libraryId).notifier)
-                                  .addItem(
-                                    itemType: itemType,
-                                    title: titleController.text.trim().isEmpty
-                                        ? null
-                                        : titleController.text.trim(),
-                                    content: contentController.text.trim().isEmpty
-                                        ? null
-                                        : contentController.text.trim(),
-                                    subject: subjectController.text.trim().isEmpty
-                                        ? null
-                                        : subjectController.text.trim(),
-                                    difficultyLevel: difficultyLevel,
-                                    tags: tags.isEmpty ? null : tags,
-                                  );
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                              AppFeedback.success(context, '种子内容已添加');
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              AppFeedback.error(context, '添加失败：$e');
-                            }
-                          },
-                          expand: true,
+                      ...DifficultyLevel.values.map(
+                        (level) => DropdownMenuItem(
+                          value: level,
+                          child: Text(level.displayName),
                         ),
                       ),
                     ],
+                    onChanged: (value) {
+                      setModalState(() => difficultyLevel = value);
+                    },
                   ),
-                ),
+                  const SizedBox(height: DS.spacing12),
+                  TextFormField(
+                    controller: tagsController,
+                    decoration: const InputDecoration(
+                      labelText: '标签（逗号分隔）',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SparkleButton(
+                      label: '保存内容',
+                      onPressed: () async {
+                        try {
+                          final tags = tagsController.text
+                              .split(',')
+                              .map((item) => item.trim())
+                              .where((item) => item.isNotEmpty)
+                              .toList();
+                          await ref
+                              .read(seedLibraryDetailProvider(widget.libraryId)
+                                  .notifier)
+                              .addItem(
+                                itemType: itemType,
+                                title: titleController.text.trim().isEmpty
+                                    ? null
+                                    : titleController.text.trim(),
+                                content: contentController.text.trim().isEmpty
+                                    ? null
+                                    : contentController.text.trim(),
+                                subject: subjectController.text.trim().isEmpty
+                                    ? null
+                                    : subjectController.text.trim(),
+                                difficultyLevel: difficultyLevel,
+                                tags: tags.isEmpty ? null : tags,
+                              );
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          AppFeedback.success(context, '种子内容已添加');
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          AppFeedback.error(context, '添加失败：$e');
+                        }
+                      },
+                      expand: true,
+                    ),
+                  ),
+                ],
               ),
+            ),
           ),
         ),
+      ),
     );
   }
 

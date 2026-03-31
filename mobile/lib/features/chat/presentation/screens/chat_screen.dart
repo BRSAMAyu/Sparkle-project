@@ -1207,9 +1207,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
     final seedLibraryEnabled = ref.watch(chatSeedLibraryEnabledProvider);
     final subscriptionState = ref.watch(subscriptionsProvider);
-    final enabledSeedCount = subscriptionState.subscriptions
+    final enabledSeedSubscriptions = subscriptionState.subscriptions
         .where((subscription) => subscription.isEnabled)
-        .length;
+        .toList();
+    final enabledSeedCount = enabledSeedSubscriptions.length;
+    final enabledSeedNames = enabledSeedSubscriptions
+        .map(
+          (subscription) => subscription.library == null
+              ? ''
+              : subscription.library!.name.trim(),
+        )
+        .where((name) => name.isNotEmpty)
+        .take(3)
+        .toList();
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -1328,6 +1338,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: _SeedLibraryEntryBar(
               enabled: seedLibraryEnabled,
               enabledCount: enabledSeedCount,
+              enabledNames: enabledSeedNames,
               isLoading: subscriptionState.isLoading,
               onToggle: (value) =>
                   unawaited(_toggleSeedLibrary(context, value)),
@@ -2110,6 +2121,7 @@ class _SeedLibraryEntryBar extends StatelessWidget {
   const _SeedLibraryEntryBar({
     required this.enabled,
     required this.enabledCount,
+    required this.enabledNames,
     required this.isLoading,
     required this.onToggle,
     required this.onTap,
@@ -2117,6 +2129,7 @@ class _SeedLibraryEntryBar extends StatelessWidget {
 
   final bool enabled;
   final int enabledCount;
+  final List<String> enabledNames;
   final bool isLoading;
   final ValueChanged<bool> onToggle;
   final VoidCallback onTap;
@@ -2129,7 +2142,11 @@ class _SeedLibraryEntryBar extends StatelessWidget {
       (_, true, > 0) => '已开启种子库增强，当前接入 $enabledCount 个已启用种子库',
       _ => '已开启种子库增强，但还没有可用的启用种子库',
     };
-    final helper = enabled ? '下一条消息开始按种子库增强' : '关闭时所有对话都不会注入种子库';
+    final helper = enabled
+        ? enabledNames.isEmpty
+            ? '下一条消息开始按种子库增强'
+            : '当前生效：${enabledNames.join('、')}'
+        : '关闭时所有对话都不会注入种子库';
 
     return Material(
       color: Colors.transparent,

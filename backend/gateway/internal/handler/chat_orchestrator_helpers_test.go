@@ -29,6 +29,17 @@ func TestParseEnvelopeJSONAndPayloadType(t *testing.T) {
 	}
 }
 
+func TestParseEnvelopeJSONAndPayloadTypeToolResult(t *testing.T) {
+	raw := []byte(`{"payload":{"tool_result":{"tool_call_id":"call-1","tool_name":"openclaw.run","result_json":"{\"ok\":true}"}}}`)
+	env, ok := parseEnvelopeJSON(raw)
+	if !ok {
+		t.Fatal("expected tool_result envelope to parse")
+	}
+	if got := envelopePayloadType(env.Payload); got != "tool_result" {
+		t.Fatalf("unexpected payload type: %s", got)
+	}
+}
+
 func TestDecodePayloadMap(t *testing.T) {
 	valid := json.RawMessage(`{"action_id":"a1","status":"ok"}`)
 	msgMap, err := decodePayloadMap(valid)
@@ -95,6 +106,40 @@ func TestDecodeChatRequestEnvelopeRejectsInvalidShape(t *testing.T) {
 	raw := json.RawMessage(`{"message":{"text":"bad-shape"}}`)
 	if err := decodeChatRequestEnvelope(raw, &input); err == nil {
 		t.Fatal("expected error for invalid chat_request payload shape")
+	}
+}
+
+func TestDecodeChatRequestEnvelopeToolResultProtoJSON(t *testing.T) {
+	var input chatInput
+	raw := json.RawMessage(`{
+		"sessionId":"session-2",
+		"requestId":"req-2",
+		"chatMode":"default",
+		"toolResult":{
+			"toolCallId":"call-2",
+			"toolName":"openclaw.run",
+			"resultJson":"{\"success\":true}",
+			"isError":false,
+			"errorMessage":""
+		}
+	}`)
+	if err := decodeChatRequestEnvelope(raw, &input); err != nil {
+		t.Fatalf("decodeChatRequestEnvelope returned error: %v", err)
+	}
+	if !input.IsToolResult {
+		t.Fatal("expected tool result input")
+	}
+	if input.ToolCallID != "call-2" {
+		t.Fatalf("unexpected tool call id: %q", input.ToolCallID)
+	}
+	if input.ToolName != "openclaw.run" {
+		t.Fatalf("unexpected tool name: %q", input.ToolName)
+	}
+	if input.ToolResultJSON != "{\"success\":true}" {
+		t.Fatalf("unexpected tool result json: %q", input.ToolResultJSON)
+	}
+	if input.RequestID != "req-2" {
+		t.Fatalf("unexpected request id: %q", input.RequestID)
 	}
 }
 

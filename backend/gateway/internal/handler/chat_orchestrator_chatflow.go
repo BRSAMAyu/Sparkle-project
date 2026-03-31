@@ -408,16 +408,30 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// Build ChatRequest
 	req := &agentv1.ChatRequest{
-		RequestId: reqID,
-		UserId:    userID,
-		SessionId: input.SessionID,
-		Input: &agentv1.ChatRequest_Message{
-			Message: input.Message,
-		},
+		RequestId:         reqID,
+		UserId:            userID,
+		SessionId:         input.SessionID,
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
 		ChatMode:          normalizedChatMode,
 		UserProfile:       buildAgentUserProfile(input.Nickname, userContextJSON, profileSnapshot, resolvedUser),
+	}
+
+	// Set input based on whether this is a tool result or a regular message
+	if input.IsToolResult {
+		req.Input = &agentv1.ChatRequest_ToolResult{
+			ToolResult: &agentv1.ToolResult{
+				ToolCallId:    input.ToolCallID,
+				ToolName:      input.ToolName,
+				ResultJson:    input.ToolResultJSON,
+				IsError:       input.ToolIsError,
+				ErrorMessage:  input.ToolErrorMsg,
+			},
+		}
+	} else {
+		req.Input = &agentv1.ChatRequest_Message{
+			Message: input.Message,
+		}
 	}
 	if input.ExtraContext != nil {
 		if extra, err := structpb.NewStruct(input.ExtraContext); err == nil {

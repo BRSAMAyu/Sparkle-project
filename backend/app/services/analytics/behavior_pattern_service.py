@@ -6,7 +6,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import event_bus
-from app.models.cognitive import BehaviorPattern
+from app.models.cognitive import BehaviorPattern, PatternType
 from app.models.focus import FocusSession, FocusStatus
 from app.models.task import Task, TaskStatus
 from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
@@ -67,7 +67,7 @@ class BehaviorPatternService:
             pattern = await self._create_or_update_pattern(
                 user_id=user_id,
                 pattern_name="Planning Optimism",
-                pattern_type="cognitive",
+                pattern_type=PatternType.COGNITIVE.value,
                 description=f"You tend to underestimate task duration. Last task took {t_actual}m vs estimated {t_estimated}m.",
                 solution_text="Try adding a 20% buffer to your time estimates.",
                 evidence_id=str(task_id),
@@ -103,7 +103,7 @@ class BehaviorPatternService:
              pattern = await self._create_or_update_pattern(
                 user_id=user_id,
                 pattern_name="Focus Decay",
-                pattern_type="execution",
+                pattern_type=PatternType.EXECUTION.value,
                 description="Your focus stamina has dropped by over 30% in the last 3 days.",
                 solution_text="Consider a rest day or lighter workload to recover mental energy.",
                 confidence=0.8,
@@ -131,7 +131,7 @@ class BehaviorPatternService:
             pattern = await self._create_or_update_pattern(
                 user_id=user_id,
                 pattern_name="Cognitive Blindspot",
-                pattern_type="cognitive",
+                pattern_type=PatternType.COGNITIVE.value,
                 description=f"Persistent gap in '{bs['node_name']}': {bs['reason']}",
                 solution_text=f"Review prerequisites for {bs['node_name']} before advancing.",
                 evidence_id=str(bs['node_id']),

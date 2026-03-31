@@ -67,6 +67,26 @@ class ErrorBookRoutes {
           ),
         ),
         GoRoute(
+          path: '/errors/:id/edit',
+          name: 'editError',
+          pageBuilder: (context, state) {
+            final errorId = state.pathParameters['id']!;
+            final initialError =
+                state.extra is ErrorRecord ? state.extra! as ErrorRecord : null;
+            return _buildTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: const SceneAudioPolicy(track: BgmTrack.task),
+                child: AddErrorScreen(
+                  errorId: errorId,
+                  initialError: initialError,
+                ),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
+        ),
+        GoRoute(
           path: '/errors/:id',
           name: 'errorDetail',
           pageBuilder: (context, state) {

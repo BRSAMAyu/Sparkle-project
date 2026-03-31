@@ -125,6 +125,7 @@ class ErrorBookRepository {
     String? correctAnswer,
     String? subject,
     String? chapter,
+    String? questionImageUrl,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -133,6 +134,7 @@ class ErrorBookRepository {
         if (correctAnswer != null) 'correct_answer': correctAnswer,
         if (subject != null) 'subject': subject,
         if (chapter != null) 'chapter': chapter,
+        if (questionImageUrl != null) 'question_image_url': questionImageUrl,
       };
 
       final response = await _dio.patch<Map<String, dynamic>>(

@@ -49,7 +49,8 @@ RUN uv pip install --system --no-cache \
     cryptography pydantic-settings tiktoken \
     openpyxl python-multipart \
     # HTML parsing utils (keep lightweight optional parsers)
-    beautifulsoup4 lxml
+    beautifulsoup4 lxml \
+    y-py>=0.6.0
 # Final stage
 FROM python:3.11-slim
 

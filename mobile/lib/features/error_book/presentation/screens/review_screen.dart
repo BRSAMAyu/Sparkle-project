@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
@@ -50,6 +50,29 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   final Map<String, String> _reviewResults =
       {}; // errorId -> performance (remembered/fuzzy/forgotten)
   bool _isSubmitting = false;
+  DateTime? _questionStartedAt;
+  String? _trackedErrorId;
+
+  void _ensureQuestionTracking(ErrorRecord error) {
+    if (_trackedErrorId == error.id) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _trackedErrorId = error.id;
+        _questionStartedAt = DateTime.now();
+      });
+    });
+  }
+
+  int _currentQuestionTimeSpentSeconds() {
+    final startedAt = _questionStartedAt;
+    if (startedAt == null) {
+      return 1;
+    }
+    return DateTime.now().difference(startedAt).inSeconds.clamp(1, 3600);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,13 +117,17 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           }
 
           final currentError = filteredErrors[_currentIndex];
+          _ensureQuestionTracking(currentError);
 
           return ContentConstraint(
             child: Column(
               children: [
                 // 进度条
                 _buildProgressBar(
-                    context, _currentIndex, filteredErrors.length,),
+                  context,
+                  _currentIndex,
+                  filteredErrors.length,
+                ),
 
                 // 卡片内容
                 Expanded(
@@ -149,7 +176,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16, vertical: DS.spacing12,),
+        horizontal: DS.spacing16,
+        vertical: DS.spacing12,
+      ),
       child: Column(
         children: [
           Row(
@@ -240,11 +269,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     fontSize: 16,
                   ),
                 ),
-                if (error.questionImageUrl != null) ...[
+                if (error.questionImageUrl != null &&
+                    error.questionImageUrl!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
-                  SparkleNetworkImage(
-                    imageUrl: error.questionImageUrl!,
-                    fit: BoxFit.cover,
+                  ErrorQuestionImage(
+                    imageReference: error.questionImageUrl!,
+                    height: 220,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ],
@@ -488,6 +518,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       await ref.read(errorOperationsProvider.notifier).submitReview(
             errorId: error.id,
             performance: performance,
+            timeSpentSeconds: _currentQuestionTimeSpentSeconds(),
           );
 
       // 记录结果
@@ -499,21 +530,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         _showAnswer = false;
         _showAnalysis = false;
         _isSubmitting = false;
+        _questionStartedAt = null;
+        _trackedErrorId = null;
       });
     } catch (e) {
       setState(() {
         _isSubmitting = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('提交失败: $e'),
-            backgroundColor: DS.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('提交失败: $e'),
+          backgroundColor: DS.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -683,6 +715,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                         _showAnswer = false;
                         _showAnalysis = false;
                         _reviewResults.clear();
+                        _questionStartedAt = null;
+                        _trackedErrorId = null;
                       });
                       ref.invalidate(todayReviewListProvider);
                     },

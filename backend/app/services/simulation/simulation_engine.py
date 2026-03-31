@@ -8,10 +8,13 @@ from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.llm_fallback_utils import analysis_llm
+from app.services.predictive_service import PredictiveService
 from app.services.simulation.participant_generator import generate_participants
 from app.services.simulation.scenario_templates import SCENARIOS
 from app.services.simulation.simulation_state import LearningSimulationState
@@ -282,12 +285,14 @@ class SimulationEngine:
         *,
         session_id: str,
         user_response: str,
+        updated_planned_round_count: int | None = None,
         user_id: UUID | None = None,
     ) -> SimulationSession:
         final_session: SimulationSession | None = None
         async for event_name, payload in self.continue_stream(
             session_id=session_id,
             user_response=user_response,
+            updated_planned_round_count=updated_planned_round_count,
             user_id=user_id,
             await_user_input=False,
         ):
@@ -373,6 +378,7 @@ class SimulationEngine:
         *,
         session_id: str,
         user_response: str,
+        updated_planned_round_count: int | None = None,
         user_id: UUID | None = None,
         await_user_input: bool = True,
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
@@ -386,6 +392,15 @@ class SimulationEngine:
         topic = str(checkpoint.get("topic") or "")
         scenario_key = str(checkpoint.get("scenario_key") or "study_group")
         planned_round_count = max(int(checkpoint.get("planned_round_count") or 0), 3)
+        if updated_planned_round_count is not None:
+            planned_round_count = max(
+                len(rounds) + 2,
+                self._normalize_round_target(
+                    updated_planned_round_count,
+                    current_rounds=0,
+                    scenario_key=scenario_key,
+                ),
+            )
         facilitation_style = self._normalize_facilitation_style(
             str(checkpoint.get("facilitation_style") or "balanced"),
         )
@@ -439,6 +454,22 @@ class SimulationEngine:
         user_id: UUID | None,
         await_user_input: bool,
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
+        behavioral_context: dict[str, Any] | None = None
+        if user_id is not None:
+            try:
+                predictive_service = PredictiveService(self.db)
+                behavioral_context = {
+                    "mastery_gaps": await self._get_user_mastery_gaps(user_id),
+                    "next_intent_forecast": await predictive_service.get_next_intent_forecast(
+                        user_id,
+                    ),
+                    "dropout_risk": await predictive_service.detect_dropout_risk(
+                        user_id,
+                    ),
+                }
+            except Exception:
+                behavioral_context = None
+
         while len(rounds) < max(planned_round_count, 2):
             moderator_decision = await self._moderate_next_turn(
                 topic=topic,
@@ -447,6 +478,7 @@ class SimulationEngine:
                 rounds=rounds,
                 planned_round_count=planned_round_count,
                 facilitation_style=facilitation_style,
+                behavioral_context=behavioral_context,
             )
             planned_round_count = self._normalize_round_target(
                 moderator_decision.round_target,
@@ -624,6 +656,7 @@ class SimulationEngine:
         rounds: list[dict[str, Any]],
         planned_round_count: int,
         facilitation_style: str,
+        behavioral_context: dict[str, Any] | None = None,
     ) -> ModeratorDecision:
         fallback = self._fallback_moderator_decision(
             topic=topic,
@@ -642,6 +675,9 @@ class SimulationEngine:
             for participant in participants
         ) or "- 学习伙伴"
         transcript = self._latest_exchange(rounds, limit=4)
+        behavioral_context_block = self._format_behavioral_context(
+            behavioral_context,
+        )
         data = await analysis_llm.json_call(
             [
                 {
@@ -686,6 +722,7 @@ class SimulationEngine:
                         f"计划轮次：{planned_round_count}\n"
                         f"参与者：\n{participant_prompt}\n"
                         f"最近讨论：\n{transcript}\n"
+                        f"{behavioral_context_block}"
                         "请判断下一位发言者、是否该邀请用户加入，以及讨论是否已经可以收束。"
                     ),
                 },
@@ -1068,6 +1105,58 @@ class SimulationEngine:
         return "\n".join(
             f"第 {item.get('round')} 轮：{item.get('speaker')} -> {item.get('message')}"
             for item in recent
+        )
+
+    async def _get_user_mastery_gaps(self, user_id: UUID) -> list[str]:
+        result = await self.db.execute(
+            select(KnowledgeNode.name)
+            .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(
+                UserNodeStatus.user_id == user_id,
+                UserNodeStatus.mastery_score < 60,
+            )
+            .order_by(UserNodeStatus.mastery_score.asc())
+            .limit(5)
+        )
+        return [
+            str(name).strip()
+            for name in result.scalars().all()
+            if str(name).strip()
+        ]
+
+    def _format_behavioral_context(
+        self,
+        behavioral_context: dict[str, Any] | None,
+    ) -> str:
+        if not behavioral_context:
+            return ""
+        mastery_gaps = [
+            str(item).strip()
+            for item in list(behavioral_context.get("mastery_gaps") or [])
+            if str(item).strip()
+        ]
+        intent_forecast = dict(
+            behavioral_context.get("next_intent_forecast") or {},
+        )
+        dropout_risk = dict(behavioral_context.get("dropout_risk") or {})
+        next_intent = (
+            str(intent_forecast.get("summary") or "").strip()
+            or str(intent_forecast.get("title") or "").strip()
+            or str(intent_forecast.get("predicted_action_type") or "").strip()
+            or "暂无明确预测"
+        )
+        risk_level = str(dropout_risk.get("risk_level") or "unknown").strip()
+        risk_note = (
+            "辍学风险为 high/medium，请给出更具体、可立即执行的建议。"
+            if risk_level in {"high", "medium"}
+            else "风险暂不高，可以保持探索，但建议仍要有明确落点。"
+        )
+        return (
+            "行为上下文：\n"
+            f"- 用户知识薄弱点：{('、'.join(mastery_gaps) if mastery_gaps else '暂无显著薄弱点')}\n"
+            f"- 用户下一步学习倾向：{next_intent}\n"
+            f"- 辍学风险等级：{risk_level or 'unknown'}\n"
+            f"- 主持策略提示：{risk_note}\n"
         )
 
     @staticmethod

@@ -409,4 +409,5 @@ async def test_grant_rewards_schedules_photon_compensation_after_commit_failure(
         achievement_id=achievement.id,
         achievement_name=achievement.name,
         quantity=66,
+        error_message="boom",
     )

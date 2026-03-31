@@ -30,26 +30,22 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   final TextEditingController _searchController = TextEditingController();
   LibraryCategory? _selectedCategory;
   LibraryVisibility? _selectedVisibility;
+  bool _showOfficialOnly = false;
+  bool _showFeaturedOnly = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Load initial libraries
-    Future.microtask(() {
-      ref.read(
-        seedLibraryListProvider(
-          (
-            category: _selectedCategory,
-            isFeatured: null,
-            isOfficial: null,
-            visibility: _selectedVisibility,
-            search:
-                _searchController.text.isEmpty ? null : _searchController.text,
-          ),
-        ).notifier,
+  ({
+    LibraryCategory? category,
+    LibraryVisibility? visibility,
+    bool? isOfficial,
+    bool? isFeatured,
+    String? search,
+  }) get _currentParams => (
+        category: _selectedCategory,
+        isFeatured: _showFeaturedOnly ? true : null,
+        isOfficial: _showOfficialOnly ? true : null,
+        visibility: _selectedVisibility,
+        search: _searchController.text.isEmpty ? null : _searchController.text,
       );
-    });
-  }
 
   @override
   void dispose() {
@@ -61,39 +57,27 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
     );
-    ref
-        .read(
-          seedLibraryListProvider(
-            (
-              category: _selectedCategory,
-              isFeatured: null,
-              isOfficial: null,
-              visibility: _selectedVisibility,
-              search: _searchController.text.isEmpty
-                  ? null
-                  : _searchController.text,
-            ),
-          ).notifier,
-        )
-        .refresh(
-          category: _selectedCategory,
-          visibility: _selectedVisibility,
-          search:
-              _searchController.text.isEmpty ? null : _searchController.text,
-        );
+    unawaited(
+      ref.read(seedLibraryListProvider(_currentParams).notifier).refresh(
+            category: _selectedCategory,
+            visibility: _selectedVisibility,
+            isOfficial: _showOfficialOnly ? true : null,
+            isFeatured: _showFeaturedOnly ? true : null,
+            search:
+                _searchController.text.isEmpty ? null : _searchController.text,
+          ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final params = (
-      category: _selectedCategory,
-      isFeatured: null,
-      isOfficial: null,
-      visibility: _selectedVisibility,
-      search: _searchController.text.isEmpty ? null : _searchController.text,
-    );
+    final params = _currentParams;
     final state = ref.watch(seedLibraryListProvider(params));
     final notifier = ref.read(seedLibraryListProvider(params).notifier);
+    final hasActiveFilters = _selectedCategory != null ||
+        _selectedVisibility != null ||
+        _showOfficialOnly ||
+        _showFeaturedOnly;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -107,7 +91,12 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(
+              Icons.filter_list,
+              color: hasActiveFilters
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
             onPressed: _showFilterDialog,
           ),
         ],
@@ -163,7 +152,10 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             ),
 
             // Filter chips
-            if (_selectedCategory != null || _selectedVisibility != null)
+            if (_selectedCategory != null ||
+                _selectedVisibility != null ||
+                _showOfficialOnly ||
+                _showFeaturedOnly)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
                 child: Wrap(
@@ -187,6 +179,28 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                         onDeleted: () {
                           setState(() {
                             _selectedVisibility = null;
+                          });
+                          _applyFilters();
+                        },
+                      ),
+                    if (_showOfficialOnly)
+                      Chip(
+                        label: const Text('仅官方'),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () {
+                          setState(() {
+                            _showOfficialOnly = false;
+                          });
+                          _applyFilters();
+                        },
+                      ),
+                    if (_showFeaturedOnly)
+                      Chip(
+                        label: const Text('仅精选'),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () {
+                          setState(() {
+                            _showFeaturedOnly = false;
                           });
                           _applyFilters();
                         },
@@ -226,10 +240,11 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     }
 
     if (state.libraries.isEmpty) {
-      final hasFilters =
-          _searchController.text.isNotEmpty ||
+      final hasFilters = _searchController.text.isNotEmpty ||
           _selectedCategory != null ||
-          _selectedVisibility != null;
+          _selectedVisibility != null ||
+          _showOfficialOnly ||
+          _showFeaturedOnly;
       return EmptyState(
         title: hasFilters
             ? 'No seed libraries match this filter'
@@ -244,12 +259,14 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             setState(() {
               _selectedCategory = null;
               _selectedVisibility = null;
+              _showOfficialOnly = false;
+              _showFeaturedOnly = false;
               _searchController.clear();
             });
             _applyFilters();
             return;
           }
-          context.push(SeedLibraryRoutes.createLibrary);
+          unawaited(context.push(SeedLibraryRoutes.createLibrary));
         },
       );
     }
@@ -267,7 +284,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           itemBuilder: (context, index) {
             if (index >= state.libraries.length) {
               // Load more indicator
-              notifier.loadMore();
+              unawaited(notifier.loadMore());
               return const Padding(
                 padding: EdgeInsets.all(DS.spacing16),
                 child: Center(child: CircularProgressIndicator()),
@@ -285,7 +302,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       SensoryFeedbackEvent.selection,
                     ),
                   );
-                  context.push(SeedLibraryRoutes.detail(library.id));
+                  unawaited(context.push(SeedLibraryRoutes.detail(library.id)));
                 },
               ),
             );
@@ -296,71 +313,100 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _showFilterDialog() {
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.seedLibraryFilter),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.seedLibraryCategory, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: DS.spacing8),
-            Wrap(
-              spacing: DS.spacing8,
-              children: LibraryCategory.values.map((category) {
-                final isSelected = _selectedCategory == category;
-                return FilterChip(
-                  label: Text(category.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedCategory = selected ? category : null;
-                    });
-                  },
-                );
-              }).toList(),
+    unawaited(
+      showSensoryDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.seedLibraryFilter),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.seedLibraryCategory,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                children: LibraryCategory.values.map((category) {
+                  final isSelected = _selectedCategory == category;
+                  return FilterChip(
+                    label: Text(category.displayName),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedCategory = selected ? category : null;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text(context.l10n.seedLibraryVisibility,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                children: LibraryVisibility.values.map((visibility) {
+                  final isSelected = _selectedVisibility == visibility;
+                  return FilterChip(
+                    label: Text(visibility.displayName),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedVisibility = selected ? visibility : null;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: DS.spacing16),
+              CheckboxListTile(
+                value: _showOfficialOnly,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('仅看官方'),
+                subtitle: const Text('优先查看系统维护或官方推荐的种子库'),
+                onChanged: (value) {
+                  setState(() {
+                    _showOfficialOnly = value ?? false;
+                  });
+                },
+              ),
+              CheckboxListTile(
+                value: _showFeaturedOnly,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('仅看精选'),
+                subtitle: const Text('筛出被标记为优先推荐的优质种子库'),
+                onChanged: (value) {
+                  setState(() {
+                    _showFeaturedOnly = value ?? false;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            SparkleButton.ghost(
+              onPressed: () {
+                setState(() {
+                  _selectedCategory = null;
+                  _selectedVisibility = null;
+                  _showOfficialOnly = false;
+                  _showFeaturedOnly = false;
+                });
+                Navigator.pop(context);
+                _applyFilters();
+              },
+              label: context.l10n.seedLibraryClear,
             ),
-            const SizedBox(height: DS.spacing16),
-            Text(context.l10n.seedLibraryVisibility, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: DS.spacing8),
-            Wrap(
-              spacing: DS.spacing8,
-              children: LibraryVisibility.values.map((visibility) {
-                final isSelected = _selectedVisibility == visibility;
-                return FilterChip(
-                  label: Text(visibility.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedVisibility = selected ? visibility : null;
-                    });
-                  },
-                );
-              }).toList(),
+            SparkleButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _applyFilters();
+              },
+              label: context.l10n.seedLibraryApply,
             ),
           ],
         ),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () {
-              setState(() {
-                _selectedCategory = null;
-                _selectedVisibility = null;
-              });
-              Navigator.pop(context);
-              _applyFilters();
-            },
-            label: context.l10n.seedLibraryClear,
-          ),
-          SparkleButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _applyFilters();
-            },
-            label: context.l10n.seedLibraryApply,
-          ),
-        ],
       ),
     );
   }

@@ -78,11 +78,13 @@ class SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/simulation/sessions/$sessionId/continue',
       data: {
         'user_response': userResponse,
+        if (plannedRoundCount != null) 'planned_round_count': plannedRoundCount,
       },
     );
     return SimulationSessionModel.fromJson(response.data ?? const {});
@@ -91,11 +93,14 @@ class SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       _apiClient.postStream(
         '/simulation/sessions/$sessionId/continue/stream',
         data: {
           'user_response': userResponse,
+          if (plannedRoundCount != null)
+            'planned_round_count': plannedRoundCount,
         },
       ).map(
         (event) => SimulationStreamEventModel.fromJson(

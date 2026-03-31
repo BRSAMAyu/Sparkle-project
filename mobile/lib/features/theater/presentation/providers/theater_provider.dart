@@ -18,6 +18,7 @@ class TheaterState {
     this.isSavingSnapshot = false,
     this.isAdopting = false,
     this.isPromotingNode = false,
+    this.loadingStage = 'idle',
     this.prediction,
     this.selectedRouteId,
     this.timelineIndex = 0,
@@ -32,6 +33,7 @@ class TheaterState {
   final bool isSavingSnapshot;
   final bool isAdopting;
   final bool isPromotingNode;
+  final String loadingStage;
   final TheaterPrediction? prediction;
   final String? selectedRouteId;
   final int timelineIndex;
@@ -61,6 +63,7 @@ class TheaterState {
     bool? isSavingSnapshot,
     bool? isAdopting,
     bool? isPromotingNode,
+    String? loadingStage,
     TheaterPrediction? prediction,
     String? selectedRouteId,
     int? timelineIndex,
@@ -81,6 +84,7 @@ class TheaterState {
         isSavingSnapshot: isSavingSnapshot ?? this.isSavingSnapshot,
         isAdopting: isAdopting ?? this.isAdopting,
         isPromotingNode: isPromotingNode ?? this.isPromotingNode,
+        loadingStage: loadingStage ?? this.loadingStage,
         prediction: clearPrediction ? null : prediction ?? this.prediction,
         selectedRouteId: selectedRouteId ?? this.selectedRouteId,
         timelineIndex: timelineIndex ?? this.timelineIndex,
@@ -121,6 +125,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
   }) async {
     state = state.copyWith(
       isLoading: true,
+      loadingStage: 'graph',
       clearError: true,
       clearWhatIf: true,
       clearSnapshot: true,
@@ -128,16 +133,36 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       clearAccuracy: true,
     );
     try {
-      final prediction = await _repository.generatePrediction(
+      var completed = false;
+      final predictionFuture = _repository
+          .generatePrediction(
         topic: topic,
         targetNodeId: targetNodeId,
         horizonDays: horizonDays,
         simulationSessionId: simulationSessionId,
+      )
+          .then((prediction) {
+        completed = true;
+        return prediction;
+      });
+      await _advanceLoadingStage(
+        predictionFuture,
+        stage: 'paths',
+        delay: const Duration(milliseconds: 320),
+        isCompleted: () => completed,
       );
+      await _advanceLoadingStage(
+        predictionFuture,
+        stage: 'prediction',
+        delay: const Duration(milliseconds: 420),
+        isCompleted: () => completed,
+      );
+      final prediction = await predictionFuture;
       final selectedRouteId =
           prediction.paths.isNotEmpty ? prediction.paths.first.id : null;
       state = state.copyWith(
         isLoading: false,
+        loadingStage: 'done',
         prediction: prediction,
         selectedRouteId: selectedRouteId,
         timelineIndex: 0,
@@ -158,11 +183,27 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        loadingStage: 'idle',
         error: _resolveErrorMessage(
           e,
           fallbackMessage: '这次推演没有成功生成，你可以稍后再试。',
         ),
       );
+    }
+  }
+
+  Future<void> _advanceLoadingStage(
+    Future<TheaterPrediction> predictionFuture, {
+    required String stage,
+    required Duration delay,
+    required bool Function() isCompleted,
+  }) async {
+    final finishedEarly = await Future.any<bool>([
+      predictionFuture.then((_) => true),
+      Future<bool>.delayed(delay, () => false),
+    ]);
+    if (!finishedEarly && !isCompleted()) {
+      state = state.copyWith(loadingStage: stage);
     }
   }
 

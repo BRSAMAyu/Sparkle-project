@@ -6,10 +6,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.simulation.scenario_templates import normalize_scenario_key
 from app.services.simulation.seed_extractor import SeedExtractor
@@ -38,6 +40,12 @@ class SimulationRunRequest(BaseModel):
 
 class SimulationContinueRequest(BaseModel):
     user_response: str = Field(..., min_length=1, description="用户在互动节点给出的回应")
+    planned_round_count: int | None = Field(
+        default=None,
+        ge=3,
+        le=12,
+        description="运行中更新后的目标轮数",
+    )
 
 
 class SimulationSeedResponse(BaseModel):
@@ -74,6 +82,31 @@ async def get_recommended_learning_simulation_seeds(
         scenario_key=normalized_scenario_key,
         limit=max(1, min(limit, 6)),
     )
+    try:
+        mastery_rows = await db.execute(
+            select(KnowledgeNode.name, UserNodeStatus.mastery_score)
+            .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(UserNodeStatus.user_id == UUID(user_id))
+            .order_by(UserNodeStatus.mastery_score.asc())
+            .limit(8)
+        )
+        mastery_gaps = [
+            str(name).strip().casefold()
+            for name, score in mastery_rows.all()
+            if str(name).strip() and float(score or 0.0) < 60
+        ]
+        if mastery_gaps:
+            seeds = sorted(
+                seeds,
+                key=lambda seed: (
+                    0
+                    if any(gap in seed.topic.casefold() for gap in mastery_gaps)
+                    else 1,
+                    -seed.relevance_score,
+                ),
+            )
+    except Exception:
+        pass
     return RecommendedSeedsResponse(
         scenario_key=normalized_scenario_key,
         seeds=[SimulationSeedResponse(**seed.to_dict()) for seed in seeds],
@@ -153,6 +186,7 @@ async def continue_learning_simulation(
         session = await engine.continue_run(
             session_id=session_id,
             user_response=request.user_response,
+            updated_planned_round_count=request.planned_round_count,
             user_id=UUID(user_id),
         )
     except ValueError as exc:
@@ -174,6 +208,7 @@ async def continue_learning_simulation_stream(
             async for event_name, payload in engine.continue_stream(
                 session_id=session_id,
                 user_response=request.user_response,
+                updated_planned_round_count=request.planned_round_count,
                 user_id=UUID(user_id),
             ):
                 yield f"event: {event_name}\n"

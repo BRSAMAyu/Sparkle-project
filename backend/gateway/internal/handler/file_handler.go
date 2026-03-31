@@ -359,6 +359,39 @@ func (h *FileHandler) GetDownloadURL(c *gin.Context) {
 	})
 }
 
+func (h *FileHandler) GetInternalDownloadURL(c *gin.Context) {
+	fileID, err := uuid.Parse(c.Param("file_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid file_id"})
+		return
+	}
+
+	internalMetadata, ok := h.metadata.(interface {
+		GetFileByID(ctx context.Context, fileID uuid.UUID) (service.StoredFile, error)
+	})
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal file lookup unavailable"})
+		return
+	}
+
+	record, err := internalMetadata.GetFileByID(c.Request.Context(), fileID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		return
+	}
+
+	url, err := h.storage.PresignGet(c.Request.Context(), record.ObjectKey)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate download url"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"download_url": url,
+		"expires_in":   h.storage.PresignExpirySeconds(),
+	})
+}
+
 func (h *FileHandler) GetThumbnailURL(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {

@@ -7,12 +7,22 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from pydantic import ValidationError
 
+from app.config import settings
 from app.core.business_metrics import COMPENSATION_TRIGGERED
+from app.core.event_bus import event_bus
+from app.core.event_types import (
+    TOOL_EXECUTION_COMPLETED,
+    TOOL_EXECUTION_FAILED,
+    TOOL_EXECUTION_STARTED,
+    TOOL_EXECUTION_TIMED_OUT,
+)
+from app.core.metrics import TOOL_EXECUTION_COUNT
 from app.db.session import AsyncSessionLocal
 from app.services.tool_history_service import ToolHistoryService
 from app.tools.base import ToolResult
@@ -25,6 +35,7 @@ if TYPE_CHECKING:
 @dataclass
 class StepResult:
     """Result of executing a single DAG step."""
+
     step_id: str
     tool_name: str
     tool_result: ToolResult
@@ -36,6 +47,7 @@ class StepResult:
 @dataclass
 class PlanExecutionResult:
     """Aggregate result of executing an entire plan via DAG layers."""
+
     plan_id: str
     step_results: list[StepResult] = field(default_factory=list)
     tool_results: list[ToolResult] = field(default_factory=list)
@@ -60,6 +72,52 @@ class ToolExecutor:
             await result
 
     @staticmethod
+    def _utcnow_iso() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _tool_timeout_seconds(tool: Any) -> float:
+        timeout = getattr(tool, "timeout_seconds", None)
+        if timeout is None:
+            timeout = getattr(settings, "TOOL_EXECUTION_TIMEOUT_SECONDS", 120.0)
+        try:
+            timeout_value = float(timeout)
+        except (TypeError, ValueError):
+            timeout_value = 120.0
+        return timeout_value if timeout_value > 0 else 120.0
+
+    @staticmethod
+    async def _publish_tool_event(event_type: str, payload: dict[str, Any]) -> None:
+        try:
+            await event_bus.publish(
+                event_type,
+                {
+                    "event_type": event_type,
+                    **payload,
+                },
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish tool execution event {event_type}: {exc}")
+
+    @staticmethod
+    def _dump_params(validated_params: Any, fallback: dict[str, Any]) -> dict[str, Any]:
+        if hasattr(validated_params, "model_dump"):
+            try:
+                dumped = validated_params.model_dump()
+                if isinstance(dumped, dict):
+                    return dumped
+            except Exception:
+                pass
+        if hasattr(validated_params, "__dict__"):
+            try:
+                dumped = dict(validated_params)
+                if isinstance(dumped, dict):
+                    return dumped
+            except Exception:
+                pass
+        return fallback
+
+    @staticmethod
     def _quote_bareword_values(raw: str) -> str:
         def _replace(match: re.Match[str]) -> str:
             prefix, token, suffix = match.groups()
@@ -67,7 +125,7 @@ class ToolExecutor:
                 return f"{prefix}{token}{suffix}"
             return f'{prefix}"{token}"{suffix}'
 
-        return re.sub(r'(:\s*)([A-Za-z_][A-Za-z0-9_-]*)(\s*[,}])', _replace, raw)
+        return re.sub(r"(:\s*)([A-Za-z_][A-Za-z0-9_-]*)(\s*[,}])", _replace, raw)
 
     @classmethod
     def _coerce_arguments(cls, raw: Any) -> dict[str, Any]:
@@ -107,7 +165,7 @@ class ToolExecutor:
         db_session: Any | None,
         progress_callback: Any | None = None,
         tool_call_id: str | None = None,
-        compensation_call: dict[str, Any] | None = None
+        compensation_call: dict[str, Any] | None = None,
     ) -> ToolResult:
         """
         执行单个工具调用并记录执行历史
@@ -133,7 +191,7 @@ class ToolExecutor:
                     progress_callback=progress_callback,
                     tool_call_id=tool_call_id,
                     owns_session=True,
-                    compensation_call=compensation_call
+                    compensation_call=compensation_call,
                 )
 
         return await self._execute_tool_call_with_session(
@@ -144,7 +202,7 @@ class ToolExecutor:
             progress_callback=progress_callback,
             tool_call_id=tool_call_id,
             owns_session=False,
-            compensation_call=compensation_call
+            compensation_call=compensation_call,
         )
 
     async def _execute_tool_call_with_session(
@@ -156,23 +214,39 @@ class ToolExecutor:
         progress_callback: Any | None,
         tool_call_id: str | None,
         owns_session: bool,
-        compensation_call: dict[str, Any] | None
+        compensation_call: dict[str, Any] | None,
     ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
 
         if not tool:
+            TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="not_found").inc()
             error_result = ToolResult(
                 success=False,
                 tool_name=tool_name,
+                tool_call_id=tool_call_id,
                 error_message=f"未知工具: {tool_name}",
-                suggestion="请检查工具名称是否正确"
+                suggestion="请检查工具名称是否正确",
+            )
+            await self._publish_tool_event(
+                TOOL_EXECUTION_FAILED,
+                {
+                    "user_id": str(user_id),
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "error_message": error_result.error_message,
+                    "error_type": "ToolNotFound",
+                    "timestamp": self._utcnow_iso(),
+                },
             )
             # 记录失败
             await self._record_tool_execution(
-                db_session, user_id, tool_name, False,
+                db_session,
+                user_id,
+                tool_name,
+                False,
                 error_message=f"未知工具: {tool_name}",
                 error_type="ToolNotFound",
-                use_separate_session=not owns_session
+                use_separate_session=not owns_session,
             )
             await self._commit_if_owned(db_session, owns_session)
             return error_result
@@ -181,19 +255,35 @@ class ToolExecutor:
         try:
             validated_params = tool.parameters_schema(**arguments)
         except ValidationError as e:
+            TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="validation_error").inc()
             validation_error = ToolResult(
                 success=False,
                 tool_name=tool_name,
+                tool_call_id=tool_call_id,
                 error_message=f"参数验证失败: {str(e)}",
-                suggestion="请检查参数格式是否正确"
+                suggestion="请检查参数格式是否正确",
+            )
+            await self._publish_tool_event(
+                TOOL_EXECUTION_FAILED,
+                {
+                    "user_id": str(user_id),
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "error_message": validation_error.error_message,
+                    "error_type": "ValidationError",
+                    "timestamp": self._utcnow_iso(),
+                },
             )
             # 记录参数验证失败
             await self._record_tool_execution(
-                db_session, user_id, tool_name, False,
+                db_session,
+                user_id,
+                tool_name,
+                False,
                 error_message=f"参数验证失败: {str(e)}",
                 error_type="ValidationError",
                 input_args=arguments,
-                use_separate_session=not owns_session
+                use_separate_session=not owns_session,
             )
             await self._commit_if_owned(db_session, owns_session)
             return validation_error
@@ -202,17 +292,47 @@ class ToolExecutor:
         start_time = time.time()
         executed_tool = False
         compensation_spec = self._parse_compensation_call(compensation_call)
+        timeout_seconds = self._tool_timeout_seconds(tool)
+
+        await self._publish_tool_event(
+            TOOL_EXECUTION_STARTED,
+            {
+                "user_id": str(user_id),
+                "tool_name": tool_name,
+                "tool_call_id": tool_call_id,
+                "timeout_seconds": timeout_seconds,
+                "timestamp": self._utcnow_iso(),
+            },
+        )
 
         try:
             # 执行工具
             executed_tool = True
             if getattr(tool, "is_long_running", False) and progress_callback:
-                result = await tool.execute(validated_params, user_id, db_session, tool_call_id=tool_call_id, progress_callback=progress_callback)
+                execution_coro = tool.execute(
+                    validated_params,
+                    user_id,
+                    db_session,
+                    tool_call_id=tool_call_id,
+                    progress_callback=progress_callback,
+                )
             else:
-                result = await tool.execute(validated_params, user_id, db_session, tool_call_id=tool_call_id)
+                execution_coro = tool.execute(
+                    validated_params,
+                    user_id,
+                    db_session,
+                    tool_call_id=tool_call_id,
+                )
+            result = await asyncio.wait_for(execution_coro, timeout=timeout_seconds)
+            if result.tool_call_id is None:
+                result.tool_call_id = tool_call_id
 
             # 计算执行时间
             execution_time_ms = int((time.time() - start_time) * 1000)
+            TOOL_EXECUTION_COUNT.labels(
+                tool_name=tool_name,
+                status="success" if result.success else "failed",
+            ).inc()
 
             # 记录执行成功
             await self._record_tool_execution(
@@ -223,28 +343,102 @@ class ToolExecutor:
                 execution_time_ms=execution_time_ms,
                 error_message=result.error_message,
                 tool_category=getattr(tool, "category", None),
-                input_args=dict(validated_params) if hasattr(validated_params, '__dict__') else arguments,
+                input_args=self._dump_params(validated_params, arguments),
                 output_summary=result.suggestion or str(result.data)[:200] if result.data else None,
-                use_separate_session=not owns_session
+                use_separate_session=not owns_session,
             )
             await self._commit_if_owned(db_session, owns_session)
 
             if not result.success:
+                await self._publish_tool_event(
+                    TOOL_EXECUTION_FAILED,
+                    {
+                        "user_id": str(user_id),
+                        "tool_name": tool_name,
+                        "tool_call_id": tool_call_id,
+                        "duration_ms": execution_time_ms,
+                        "error_message": result.error_message,
+                        "error_type": result.error_type,
+                        "timestamp": self._utcnow_iso(),
+                    },
+                )
                 await self._maybe_execute_compensation(
                     compensation_spec=compensation_spec,
                     user_id=user_id,
                     db_session=db_session,
                     owns_session=owns_session,
-                    reason="tool_failed"
+                    reason="tool_failed",
+                )
+            else:
+                await self._publish_tool_event(
+                    TOOL_EXECUTION_COMPLETED,
+                    {
+                        "user_id": str(user_id),
+                        "tool_name": tool_name,
+                        "tool_call_id": tool_call_id,
+                        "duration_ms": execution_time_ms,
+                        "success": True,
+                        "timestamp": self._utcnow_iso(),
+                    },
                 )
 
             return result
+
+        except asyncio.TimeoutError:
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            timeout_message = f"工具执行超时（>{timeout_seconds:.0f}s）"
+            logger.error(f"Tool execution timeout: {tool_name} after {timeout_seconds}s")
+            TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="timeout").inc()
+            await self._safe_rollback(db_session)
+            await self._record_tool_execution(
+                db_session=db_session,
+                user_id=user_id,
+                tool_name=tool_name,
+                success=False,
+                execution_time_ms=execution_time_ms,
+                error_message=timeout_message,
+                error_type="TimeoutError",
+                input_args=self._dump_params(validated_params, arguments),
+                use_separate_session=not owns_session,
+            )
+            await self._commit_if_owned(db_session, owns_session)
+            await self._publish_tool_event(
+                TOOL_EXECUTION_TIMED_OUT,
+                {
+                    "user_id": str(user_id),
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "duration_ms": execution_time_ms,
+                    "timeout_seconds": timeout_seconds,
+                    "error_message": timeout_message,
+                    "timestamp": self._utcnow_iso(),
+                },
+            )
+
+            if executed_tool:
+                await self._maybe_execute_compensation(
+                    compensation_spec=compensation_spec,
+                    user_id=user_id,
+                    db_session=db_session,
+                    owns_session=owns_session,
+                    reason="tool_timeout",
+                )
+
+            return ToolResult(
+                success=False,
+                tool_name=tool_name,
+                tool_call_id=tool_call_id,
+                error_message=timeout_message,
+                error_type="TimeoutError",
+                suggestion="请稍后重试，或缩小本次工具执行范围",
+            )
 
         except Exception as e:
             # 计算执行时间
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             logger.error(f"Tool execution error: {tool_name} - {str(e)}", exc_info=True)
+            TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="error").inc()
             await self._safe_rollback(db_session)
 
             # 记录执行异常
@@ -257,9 +451,21 @@ class ToolExecutor:
                 error_message=str(e),
                 error_type=type(e).__name__,
                 input_args=arguments,
-                use_separate_session=not owns_session
+                use_separate_session=not owns_session,
             )
             await self._commit_if_owned(db_session, owns_session)
+            await self._publish_tool_event(
+                TOOL_EXECUTION_FAILED,
+                {
+                    "user_id": str(user_id),
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "duration_ms": execution_time_ms,
+                    "error_message": str(e),
+                    "error_type": type(e).__name__,
+                    "timestamp": self._utcnow_iso(),
+                },
+            )
 
             if executed_tool:
                 await self._maybe_execute_compensation(
@@ -267,14 +473,16 @@ class ToolExecutor:
                     user_id=user_id,
                     db_session=db_session,
                     owns_session=owns_session,
-                    reason="tool_exception"
+                    reason="tool_exception",
                 )
 
             return ToolResult(
                 success=False,
                 tool_name=tool_name,
+                tool_call_id=tool_call_id,
                 error_message=f"工具执行异常: {str(e)}",
-                suggestion="请稍后重试或联系支持"
+                error_type=type(e).__name__,
+                suggestion="请稍后重试或联系支持",
             )
 
     async def _record_tool_execution(
@@ -289,7 +497,7 @@ class ToolExecutor:
         tool_category: str | None = None,
         input_args: dict[str, Any] | None = None,
         output_summary: str | None = None,
-        use_separate_session: bool = False
+        use_separate_session: bool = False,
     ) -> None:
         """
         记录工具执行到数据库
@@ -326,7 +534,7 @@ class ToolExecutor:
                         error_type=error_type,
                         tool_category=tool_category,
                         input_args=input_args,
-                        output_summary=output_summary
+                        output_summary=output_summary,
                     )
                     await history_session.commit()
                 except Exception as e:
@@ -345,7 +553,7 @@ class ToolExecutor:
                 error_type=error_type,
                 tool_category=tool_category,
                 input_args=input_args,
-                output_summary=output_summary
+                output_summary=output_summary,
             )
             await db_session.flush()
         except Exception as e:
@@ -369,22 +577,12 @@ class ToolExecutor:
         except Exception as e:
             logger.warning(f"Failed to rollback tool execution session: {e}")
 
-    def _parse_compensation_call(
-        self,
-        compensation_call: dict[str, Any] | None
-    ) -> tuple[str, dict[str, Any]] | None:
+    def _parse_compensation_call(self, compensation_call: dict[str, Any] | None) -> tuple[str, dict[str, Any]] | None:
         if not compensation_call or not isinstance(compensation_call, dict):
             return None
-        tool_name = (
-            compensation_call.get("name")
-            or compensation_call.get("tool_name")
-            or compensation_call.get("tool")
-        )
+        tool_name = compensation_call.get("name") or compensation_call.get("tool_name") or compensation_call.get("tool")
         args = (
-            compensation_call.get("params")
-            or compensation_call.get("arguments")
-            or compensation_call.get("args")
-            or {}
+            compensation_call.get("params") or compensation_call.get("arguments") or compensation_call.get("args") or {}
         )
         if not tool_name:
             return None
@@ -401,7 +599,7 @@ class ToolExecutor:
         user_id: str,
         db_session: Any,
         owns_session: bool,
-        reason: str
+        reason: str,
     ) -> None:
         if not compensation_spec:
             return
@@ -416,16 +614,13 @@ class ToolExecutor:
                 progress_callback=None,
                 tool_call_id=None,
                 owns_session=owns_session,
-                compensation_call=None
+                compensation_call=None,
             )
         except Exception as e:
             logger.warning(f"Compensation tool failed: {tool_name} - {e}")
 
     async def execute_tool_calls(
-        self,
-        tool_calls: list[dict[str, Any]],
-        user_id: str,
-        db_session: Any | None
+        self, tool_calls: list[dict[str, Any]], user_id: str, db_session: Any | None
     ) -> list[ToolResult]:
         """
         批量执行工具调用（按顺序）
@@ -445,10 +640,7 @@ class ToolExecutor:
                 user_id=user_id,
                 db_session=db_session,
                 tool_call_id=call.get("id"),
-                compensation_call=(
-                    call.get("compensation_call")
-                    or call.get("function", {}).get("compensation_call")
-                )
+                compensation_call=(call.get("compensation_call") or call.get("function", {}).get("compensation_call")),
             )
             results.append(result)
         return results
@@ -494,21 +686,21 @@ class ToolExecutor:
             resolved_layer = self._resolve_layer_params(layer, output_store)
             layer_number = layer_idx + 1
 
-            await self._notify_execution_observer(execution_observer, {
+            await self._notify_execution_observer(
+                execution_observer,
+                {
                     "event": "layer_start",
                     "layer_index": layer_idx,
                     "layer_number": layer_number,
                     "total_layers": len(layers),
                     "step_ids": [tc.id for tc in resolved_layer],
                     "tool_names": [tc.name for tc in resolved_layer],
-                })
+                },
+            )
 
             # Execute steps within this layer concurrently
             step_results = await asyncio.gather(
-                *(
-                    self._execute_step(tc, user_id, db_session, progress_callback)
-                    for tc in resolved_layer
-                ),
+                *(self._execute_step(tc, user_id, db_session, progress_callback) for tc in resolved_layer),
                 return_exceptions=True,
             )
 
@@ -529,7 +721,9 @@ class ToolExecutor:
                 result.step_results.append(sr)
                 result.tool_results.append(sr.tool_result)
 
-                await self._notify_execution_observer(execution_observer, {
+                await self._notify_execution_observer(
+                    execution_observer,
+                    {
                         "event": "step_completed",
                         "layer_index": layer_idx,
                         "layer_number": layer_number,
@@ -537,7 +731,8 @@ class ToolExecutor:
                         "tool_name": sr.tool_name,
                         "success": sr.tool_result.success,
                         "duration_ms": sr.duration_ms,
-                    })
+                    },
+                )
 
                 # Store output for downstream steps
                 if sr.output_key and sr.tool_result.success:
@@ -551,33 +746,40 @@ class ToolExecutor:
 
             result.execution_layers_completed = layer_idx + 1
 
-            await self._notify_execution_observer(execution_observer, {
+            await self._notify_execution_observer(
+                execution_observer,
+                {
                     "event": "layer_end",
                     "layer_index": layer_idx,
                     "layer_number": layer_number,
                     "total_layers": len(layers),
                     "aborted": layer_aborted,
                     "completed_steps": len(resolved_layer),
-                })
+                },
+            )
 
             if layer_aborted:
                 result.aborted = True
-                result.abort_reason = (
-                    f"Required step failed in layer {layer_idx}"
-                )
+                result.abort_reason = f"Required step failed in layer {layer_idx}"
                 logger.warning(
                     "Plan {} aborted at layer {}: required step failed",
-                    plan.plan_id, layer_idx,
+                    plan.plan_id,
+                    layer_idx,
                 )
-                await self._notify_execution_observer(execution_observer, {
+                await self._notify_execution_observer(
+                    execution_observer,
+                    {
                         "event": "execution_aborted",
                         "layer_index": layer_idx,
                         "layer_number": layer_number,
                         "reason": result.abort_reason,
-                    })
+                    },
+                )
                 break
 
-        await self._notify_execution_observer(execution_observer, {
+        await self._notify_execution_observer(
+            execution_observer,
+            {
                 "event": "execution_end",
                 "plan_id": plan.plan_id,
                 "total_layers": len(layers),
@@ -585,7 +787,8 @@ class ToolExecutor:
                 "aborted": result.aborted,
                 "abort_reason": result.abort_reason,
                 "steps_total": len(result.step_results),
-            })
+            },
+        )
 
         return result
 

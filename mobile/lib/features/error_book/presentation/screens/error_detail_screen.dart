@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 错题详情页面
@@ -59,9 +59,9 @@ class ErrorDetailScreen extends ConsumerWidget {
                   onSelected: (value) {
                     switch (value) {
                       case 'reanalyze':
-                        _reanalyze(context, ref, error);
+                        unawaited(_reanalyze(context, ref, error));
                       case 'delete':
-                        _confirmDelete(context, ref, error);
+                        unawaited(_confirmDelete(context, ref, error));
                     }
                   },
                   itemBuilder: (context) => [
@@ -230,7 +230,10 @@ class ErrorDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildMasteryBadge(
-      BuildContext context, ThemeData theme, double mastery) {
+    BuildContext context,
+    ThemeData theme,
+    double mastery,
+  ) {
     final color = mastery >= 0.8
         ? DS.success
         : mastery >= 0.5
@@ -293,7 +296,9 @@ class ErrorDetailScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSectionHeader(
-                  context, context.l10n.errorBookSimilarSummary),
+                context,
+                context.l10n.errorBookSimilarSummary,
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing16,
@@ -482,29 +487,13 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
             ),
           ),
-          if (error.questionImageUrl != null) ...[
+          if (error.questionImageUrl != null &&
+              error.questionImageUrl!.trim().isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
-            SparkleNetworkImage(
-              imageUrl: error.questionImageUrl!,
-              fit: BoxFit.cover,
+            ErrorQuestionImage(
+              imageReference: error.questionImageUrl!,
+              height: 220,
               borderRadius: BorderRadius.circular(12),
-              errorWidget: Container(
-                padding: const EdgeInsets.all(DS.spacing16),
-                color: theme.colorScheme.errorContainer,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(width: DS.spacing8),
-                    Text(
-                      context.l10n.errorBookImageLoadFailed,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ],
@@ -927,11 +916,10 @@ class ErrorDetailScreen extends ConsumerWidget {
   }
 
   void _navigateToEdit(BuildContext context, ErrorRecord error) {
-    // TRACKED(TD-005): 实现编辑功能
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.errorBookEditInProgress),
-        behavior: SnackBarBehavior.floating,
+    unawaited(
+      context.push<bool>(
+        '/errors/${error.id}/edit',
+        extra: error,
       ),
     );
   }
@@ -1024,14 +1012,16 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) {
-    context.push(
-      Uri(
-        path: '/review',
-        queryParameters: {
-          'mode': 'today',
-          if (error.subject.trim().isNotEmpty) 'subject': error.subject,
-        },
-      ).toString(),
+    unawaited(
+      context.push(
+        Uri(
+          path: '/review',
+          queryParameters: {
+            'mode': 'today',
+            if (error.subject.trim().isNotEmpty) 'subject': error.subject,
+          },
+        ).toString(),
+      ),
     );
   }
 }

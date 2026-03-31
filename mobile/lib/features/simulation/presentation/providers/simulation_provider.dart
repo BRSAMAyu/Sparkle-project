@@ -211,7 +211,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     }
   }
 
-  Future<bool> continueSimulation(String userResponse) async {
+  Future<bool> continueSimulation(
+    String userResponse, {
+    int? plannedRoundCount,
+  }) async {
     final sessionId = state.sessionId ?? state.session?.id;
     final topic = state.session?.topic ?? '';
     final scenarioKey = state.session?.scenarioKey ?? 'study_group';
@@ -233,6 +236,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       await for (final event in _repository.continueSimulationStream(
         sessionId: sessionId!,
         userResponse: userResponse.trim(),
+        plannedRoundCount: plannedRoundCount,
       )) {
         _applyStreamEvent(event, topic: topic, scenarioKey: scenarioKey);
       }
@@ -240,6 +244,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         final session = await _repository.continueSimulation(
           sessionId: sessionId,
           userResponse: userResponse.trim(),
+          plannedRoundCount: plannedRoundCount,
         );
         state = state.copyWith(
           isLoading: false,

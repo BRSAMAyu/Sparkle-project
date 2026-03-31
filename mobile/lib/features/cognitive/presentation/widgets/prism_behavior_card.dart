@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 
 /// Prism 行为模式卡片 - 用于聊天界面展示工具返回的行为分析结果
 ///
@@ -30,13 +31,15 @@ class PrismBehaviorCard extends StatelessWidget {
 
     for (final p in patterns) {
       if (p is! Map<String, dynamic>) continue;
-      final type = p['pattern_type'] as String? ?? '';
+      final type = PatternType.fromJson(p['pattern_type']);
       switch (type) {
-        case 'cognitive':
+        case PatternType.cognitive:
           cognitive.add(p);
-        case 'emotional':
+        case PatternType.emotional:
           emotional.add(p);
-        case 'execution':
+        case PatternType.execution:
+          execution.add(p);
+        case PatternType.unknown:
           execution.add(p);
       }
     }

@@ -14,6 +14,10 @@ EXECUTION_HANDED_BACK = "execution.handed_back"
 EXECUTION_TEMPLATE_SELECTED = "execution.template_selected"
 EXECUTION_NODE_SELECTED = "execution.node_selected"
 EXECUTION_QUALITY_RECORDED = "execution.quality_recorded"
+TOOL_EXECUTION_STARTED = "tool.execution.started"
+TOOL_EXECUTION_COMPLETED = "tool.execution.completed"
+TOOL_EXECUTION_FAILED = "tool.execution.failed"
+TOOL_EXECUTION_TIMED_OUT = "tool.execution.timed_out"
 
 __all__ = [
     "CAPSULE_FEEDBACK_SUBMITTED",
@@ -28,4 +32,8 @@ __all__ = [
     "EXECUTION_TEMPLATE_SELECTED",
     "EXECUTION_NODE_SELECTED",
     "EXECUTION_QUALITY_RECORDED",
+    "TOOL_EXECUTION_STARTED",
+    "TOOL_EXECUTION_COMPLETED",
+    "TOOL_EXECUTION_FAILED",
+    "TOOL_EXECUTION_TIMED_OUT",
 ]

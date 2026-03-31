@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
@@ -159,9 +161,98 @@ final dashboardProvider =
   (ref) => DashboardNotifier(ref.watch(dashboardRepositoryProvider)),
 );
 
+Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    try {
+      return Map<String, dynamic>.from(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+List<dynamic> _asDynamicList(dynamic value) {
+  if (value is List<dynamic>) {
+    return value;
+  }
+  if (value is List) {
+    return List<dynamic>.from(value);
+  }
+  return const <dynamic>[];
+}
+
+String _asString(dynamic value, {String fallback = ''}) {
+  final text = value?.toString();
+  if (text == null || text.isEmpty) {
+    return fallback;
+  }
+  return text;
+}
+
+String? _asNullableString(dynamic value) {
+  final text = _asString(value);
+  return text.isEmpty ? null : text;
+}
+
+int _asInt(dynamic value, {int fallback = 0}) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value) ?? fallback;
+  }
+  return fallback;
+}
+
+double _asDouble(dynamic value, {double fallback = 0}) {
+  if (value is double) {
+    return value;
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value) ?? fallback;
+  }
+  return fallback;
+}
+
+bool _asBool(dynamic value, {bool fallback = false}) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  if (value is String) {
+    switch (value.trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'y':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'n':
+        return false;
+      default:
+        return fallback;
+    }
+  }
+  return fallback;
+}
+
 class DashboardNotifier extends StateNotifier<DashboardState> {
   DashboardNotifier(this._repository) : super(DashboardState.loading()) {
-    Future<void>.microtask(fetchData);
+    unawaited(Future<void>.microtask(fetchData));
   }
   final DashboardRepository _repository;
 
@@ -180,90 +271,105 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       if (!mounted) return;
 
       // Parse weather data
-      final weatherMap = dashboardData['weather'] as Map<String, dynamic>;
+      final weatherRaw = dashboardData['weather'];
+      final weatherMap = _asStringKeyedMap(weatherRaw) ?? <String, dynamic>{};
       final weather = WeatherData(
-        type: weatherMap['type'] as String,
-        condition: weatherMap['condition'] as String,
+        type: _asString(weatherMap['type'], fallback: 'sunny'),
+        condition: _asString(weatherMap['condition'], fallback: 'clear'),
       );
 
       // Parse flame data
-      final flameMap = dashboardData['flame'] as Map<String, dynamic>;
+      final flameRaw = dashboardData['flame'];
+      final flameMap = _asStringKeyedMap(flameRaw) ?? <String, dynamic>{};
       final flame = FlameData(
-        level: flameMap['level'] as int,
-        brightness: (flameMap['brightness'] as num).toDouble(), // 🔧 修复：支持int和double类型
-        todayFocusMinutes: flameMap['today_focus_minutes'] as int,
-        tasksCompleted: flameMap['tasks_completed'] as int? ?? 0,
-        nudgeMessage: flameMap['nudge_message'] as String? ?? '保持专注，继续前行',
+        level: _asInt(flameMap['level'], fallback: 1),
+        brightness: _asDouble(flameMap['brightness'], fallback: 0.5),
+        todayFocusMinutes: _asInt(flameMap['today_focus_minutes']),
+        tasksCompleted: _asInt(flameMap['tasks_completed']),
+        nudgeMessage: _asString(
+          flameMap['nudge_message'],
+          fallback: '保持专注，继续前行',
+        ),
       );
 
       // Parse sprint data (nullable)
-      final sprintMap = dashboardData['sprint'] as Map<String, dynamic>?;
+      final sprintRaw = dashboardData['sprint'];
+      final sprintMap = _asStringKeyedMap(sprintRaw);
       final sprint = sprintMap != null
           ? SprintData(
-              id: sprintMap['id'] as String,
-              name: sprintMap['name'] as String,
-              progress: (sprintMap['progress'] as num).toDouble(),
-              daysLeft: sprintMap['days_left'] as int,
-              totalEstimatedHours:
-                  (sprintMap['total_estimated_hours'] as num).toDouble(),
+              id: _asString(sprintMap['id']),
+              name: _asString(sprintMap['name']),
+              progress: _asDouble(sprintMap['progress']),
+              daysLeft: _asInt(sprintMap['days_left']),
+              totalEstimatedHours: _asDouble(
+                sprintMap['total_estimated_hours'],
+              ),
             )
           : null;
 
       // Parse growth data (nullable)
-      final growthMap = dashboardData['growth'] as Map<String, dynamic>?;
+      final growthRaw = dashboardData['growth'];
+      final growthMap = _asStringKeyedMap(growthRaw);
       final growth = growthMap != null
           ? GrowthData(
-              id: growthMap['id'] as String,
-              name: growthMap['name'] as String,
-              progress: (growthMap['progress'] as num).toDouble(),
-              masteryLevel: (growthMap['mastery_level'] as num).toDouble(),
+              id: _asString(growthMap['id']),
+              name: _asString(growthMap['name']),
+              progress: _asDouble(growthMap['progress']),
+              masteryLevel: _asDouble(growthMap['mastery_level']),
             )
           : null;
 
       // Parse next actions
-      final nextActionsList = dashboardData['next_actions'] as List<dynamic>;
+      final nextActionsRaw = dashboardData['next_actions'];
+      final nextActionsList = _asDynamicList(nextActionsRaw);
       final nextActions = nextActionsList.map((item) {
-        final map = item as Map<String, dynamic>;
+        final map = _asStringKeyedMap(item) ?? <String, dynamic>{};
 
         // 🔧 修复：type字段可能是List，需要安全转换
         String typeValue;
         final typeRaw = map['type'];
         if (typeRaw is List) {
-          // 如果是List，取第一个元素或使用默认值
           typeValue = (typeRaw.isNotEmpty && typeRaw.first is String)
               ? typeRaw.first as String
               : 'learning';
         } else if (typeRaw is String) {
           typeValue = typeRaw;
         } else {
-          typeValue = 'learning'; // 默认值
+          typeValue = 'learning';
         }
 
         return TaskData(
-          id: map['id'] as String,
-          title: map['title'] as String,
-          estimatedMinutes: map['estimated_minutes'] as int,
-          priority: map['priority'] as int,
+          id: _asString(map['id']),
+          title: _asString(map['title']),
+          estimatedMinutes: _asInt(map['estimated_minutes']),
+          priority: _asInt(map['priority']),
           type: typeValue,
         );
       }).toList();
 
       // Parse cognitive data
-      final cognitiveMap = dashboardData['cognitive'] as Map<String, dynamic>;
+      final cognitiveRaw = dashboardData['cognitive'];
+      final cognitiveMap = _asStringKeyedMap(cognitiveRaw) ??
+          <String, dynamic>{'status': 'stable'};
       final cognitive = CognitiveData(
-        weeklyPattern: cognitiveMap['weekly_pattern'] as String?,
-        patternType: cognitiveMap['pattern_type'] as String?,
-        description: cognitiveMap['description'] as String?,
-        solutionText: cognitiveMap['solution_text'] as String?,
-        status: cognitiveMap['status'] as String,
-        hasNewInsight: cognitiveMap['has_new_insight'] as bool? ?? false,
+        weeklyPattern: _asNullableString(cognitiveMap['weekly_pattern']),
+        patternType: _asNullableString(cognitiveMap['pattern_type']),
+        description: _asNullableString(cognitiveMap['description']),
+        solutionText: _asNullableString(cognitiveMap['solution_text']),
+        status: _asString(cognitiveMap['status'], fallback: 'stable'),
+        hasNewInsight: _asBool(cognitiveMap['has_new_insight']),
       );
 
       final nextIntentMap =
-          predictiveData['next_intent_forecast'] as Map<String, dynamic>?;
-      final nextIntent = nextIntentMap == null
-          ? null
-          : PredictionInsightData.fromJson(nextIntentMap);
+          _asStringKeyedMap(predictiveData['next_intent_forecast']);
+      PredictionInsightData? nextIntent;
+      if (nextIntentMap != null) {
+        try {
+          nextIntent = PredictionInsightData.fromJson(nextIntentMap);
+        } catch (e) {
+          debugPrint('Invalid next_intent_forecast payload: $e');
+        }
+      }
 
       state = DashboardState(
         weather: weather,

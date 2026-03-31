@@ -15,7 +15,7 @@ from app.config import settings
 from app.config.phase5_config import phase5_config
 from app.core.event_bus import event_bus
 from app.core.event_types import PROFILE_COGNITIVE_UPDATED
-from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment
+from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment, PatternType
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
@@ -87,6 +87,13 @@ class CognitiveService:
         if not content:
             return ""
         return content if len(content) <= limit else f"{content[:limit - 1]}…"
+
+    @staticmethod
+    def _normalize_pattern_type(raw_value: Any) -> str:
+        if isinstance(raw_value, PatternType):
+            return raw_value.value
+        normalized = str(raw_value or PatternType.EXECUTION.value).strip().lower()
+        return normalized if normalized in {item.value for item in PatternType} else PatternType.EXECUTION.value
 
     async def _insert_fragment_without_embedding(self, fragment: CognitiveFragment) -> CognitiveFragment:
         values = {
@@ -543,6 +550,9 @@ class CognitiveService:
             logger.warning("DB session does not support add(); skipping pattern upsert")
             return
         pattern_name = analysis.get("pattern_name", "Unknown Pattern")
+        normalized_pattern_type = self._normalize_pattern_type(
+            analysis.get("pattern_type", PatternType.EXECUTION.value)
+        )
         new_confidence = analysis.get("confidence_score", 0)
         was_created = False
         previous_confidence = None
@@ -584,7 +594,7 @@ class CognitiveService:
             pattern = BehaviorPattern(
                 user_id=user_id,
                 pattern_name=pattern_name,
-                pattern_type=analysis.get("pattern_type", "execution"),
+                pattern_type=normalized_pattern_type,
                 description=analysis.get("description"),
                 solution_text=analysis.get("solution_text"),
                 confidence_score=new_confidence,
@@ -618,7 +628,7 @@ class CognitiveService:
                     "event_type": PROFILE_COGNITIVE_UPDATED,
                     "user_id": str(user_id),
                     "pattern_name": pattern_name,
-                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "pattern_type": normalized_pattern_type,
                     "confidence_change": confidence_change,
                     "is_new_pattern": was_created,
                 },
@@ -631,7 +641,7 @@ class CognitiveService:
                     "user_id": str(user_id),
                     "pattern_id": str(pattern.id),
                     "pattern_name": pattern_name,
-                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "pattern_type": normalized_pattern_type,
                     "confidence_score": new_confidence,
                     "source_fragment_id": str(fragment_id),
                 },
