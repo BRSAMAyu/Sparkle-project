@@ -67,6 +67,13 @@ class TypographySystem {
         letterSpacing: trackingNormal,
       );
 
+  static TextStyle titleMedium() => const TextStyle(
+        fontSize: sizeMd,
+        fontWeight: weightSemibold,
+        height: leadingNormal,
+        letterSpacing: trackingNormal,
+      );
+
   static TextStyle bodyLarge() => const TextStyle(
         fontSize: sizeMd,
         fontWeight: weightRegular,
@@ -197,6 +204,9 @@ extension TypographyThemeExtension on ThemeData {
         TextKey.titleLarge: TypographySystem.titleLarge().copyWith(
           color: colorScheme.onSurface,
         ),
+        TextKey.titleMedium: TypographySystem.titleMedium().copyWith(
+          color: colorScheme.onSurface,
+        ),
         TextKey.bodyLarge: TypographySystem.bodyLarge().copyWith(
           color: colorScheme.onSurface,
         ),
@@ -205,6 +215,9 @@ extension TypographyThemeExtension on ThemeData {
         ),
         TextKey.labelLarge: TypographySystem.labelLarge().copyWith(
           color: colorScheme.primary,
+        ),
+        TextKey.labelMedium: TypographySystem.labelLarge().copyWith(
+          color: colorScheme.onSurface,
         ),
         TextKey.labelSmall: TypographySystem.labelSmall().copyWith(
           color: colorScheme.onSurface.withValues(alpha: 0.7),

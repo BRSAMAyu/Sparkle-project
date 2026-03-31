@@ -127,6 +127,21 @@ dev_dependencies:
 
 
   stream_channel: any
+
+dependency_overrides:
+  file_picker:
+    path: third_party_plugins/file_picker
+  fluwx:
+    path: third_party_plugins/fluwx
+  flutter_local_notifications:
+    path: third_party_plugins/flutter_local_notifications
+  flutter_secure_storage:
+    path: third_party_plugins/flutter_secure_storage
+  jpush_flutter:
+    path: third_party_plugins/jpush_flutter
+  sentry_flutter:
+    path: third_party_plugins/sentry_flutter
+
 flutter:
   uses-material-design: true
   generate: true

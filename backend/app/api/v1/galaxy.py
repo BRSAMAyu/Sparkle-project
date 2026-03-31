@@ -426,19 +426,27 @@ async def apply_node_expansion_candidates(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="No candidates selected")
 
     expansion_service = ExpansionService(db)
-    created_nodes = await expansion_service.apply_expansion_candidates(
+    apply_result = await expansion_service.apply_expansion_candidates(
         node_id,
         UUID(user_id),
         candidates=[candidate.model_dump() for candidate in request.candidates],
     )
     created = [
         NodeBase.from_model(created_node)
-        for created_node in created_nodes
+        for created_node in apply_result.created_nodes
+    ]
+    reused = [
+        NodeBase.from_model(reused_node)
+        for reused_node in apply_result.reused_nodes
     ]
     return ApplyNodeExpansionResponse(
         success=True,
-        created_count=len(created),
+        requested_count=len(request.candidates),
+        applied_count=apply_result.applied_count,
+        created_count=apply_result.created_count,
+        reused_count=apply_result.reused_count,
         created_nodes=created,
+        reused_nodes=reused,
     )
 
 

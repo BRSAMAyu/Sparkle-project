@@ -37,6 +37,21 @@ val newBuildDir: Directory =
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
+    buildscript {
+        configurations.configureEach {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "com.android.tools.build" && requested.name == "gradle") {
+                    useVersion("8.11.1")
+                    because("All Android subprojects need to use the same AGP version under Gradle 8.14 / JDK 17")
+                }
+                if (requested.group == "org.jetbrains.kotlin" && requested.name == "kotlin-gradle-plugin") {
+                    useVersion("2.2.20")
+                    because("Keep legacy plugin subprojects on the same Kotlin Gradle plugin as the app")
+                }
+            }
+        }
+    }
+
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
@@ -63,11 +78,24 @@ subprojects {
         }
     }
 
-    // Ensure isar_flutter_libs is compiled with a high enough SDK for android:attr/lStar
+    // Keep problematic plugins on the same Android toolchain level as the app.
     project.plugins.withId("com.android.library") {
-        if (project.name == "isar_flutter_libs") {
+        if (project.name == "isar_flutter_libs" ||
+            project.name == "jpush_flutter" ||
+            project.name == "file_picker" ||
+            project.name == "fluwx" ||
+            project.name == "flutter_local_notifications"
+        ) {
             val android = project.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
             android?.compileSdkVersion(36)
+        }
+    }
+
+    if (project.name == "fluwx") {
+        project.tasks.matching { task ->
+            task.name == "preBuild" || (task.name.startsWith("compile") && task.name.endsWith("Kotlin"))
+        }.configureEach {
+            dependsOn("generateFluwxHelperFile")
         }
     }
 
@@ -92,14 +120,12 @@ subprojects {
 gradle.projectsEvaluated {
     allprojects {
         tasks.withType<JavaCompile>().configureEach {
-            sourceCompatibility = "1.8"
-            targetCompatibility = "1.8"
+            sourceCompatibility = "17"
+            targetCompatibility = "17"
         }
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8)
-                apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8)
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
             }
         }
     }

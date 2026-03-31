@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
@@ -39,8 +40,6 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
-import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -55,7 +54,6 @@ const _defaultAiSystemPreferences = TransparencyPreferences(
 );
 
 enum _ChatShortcutAction {
-  seedLibrary,
   newSession,
 }
 
@@ -416,8 +414,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           SparkleIconButton(
             icon: Icon(Icons.tune_rounded, color: DS.textSecondary),
-            onPressed: () => _showAiSystemSettings(context),
-            semanticLabel: l10n.chatAiSystemSettings,
+            onPressed: () => _openChatSettings(context),
+            semanticLabel: l10n.settings,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
@@ -432,23 +430,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             surfaceTintColor: DS.surfacePrimary,
             icon: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
             onSelected: (value) {
-              if (value == _ChatShortcutAction.seedLibrary) {
-                unawaited(_openSeedLibrary(context));
-              } else if (value == _ChatShortcutAction.newSession) {
+              if (value == _ChatShortcutAction.newSession) {
                 ref.read(chatProvider.notifier).startNewSession();
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem<_ChatShortcutAction>(
-                value: _ChatShortcutAction.seedLibrary,
-                child: Row(
-                  children: [
-                    Icon(Icons.library_books_outlined, size: 18),
-                    SizedBox(width: DS.spacing12),
-                    Text('调整种子库'),
-                  ],
-                ),
-              ),
               PopupMenuItem<_ChatShortcutAction>(
                 value: _ChatShortcutAction.newSession,
                 child: Row(
@@ -870,30 +856,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Future<void> _openSeedLibrary(BuildContext context) async {
-    await context.push(SeedLibraryRoutes.libraries);
-    if (!mounted || !context.mounted) {
-      return;
-    }
-    await ref.read(subscriptionsProvider.notifier).loadSubscriptions();
-    if (!mounted || !context.mounted) {
-      return;
-    }
-    AppFeedback.info(context, '种子库调整会从下一条消息开始生效');
-  }
-
-  Future<void> _toggleSeedLibrary(
-    BuildContext context,
-    bool enabled,
-  ) async {
-    await ref.read(chatSeedLibraryEnabledProvider.notifier).setEnabled(enabled);
-    if (!mounted || !context.mounted) {
-      return;
-    }
-    AppFeedback.info(
-      context,
-      enabled ? '已开启种子库增强，下一条消息开始生效' : '已关闭种子库增强，避免上下文污染',
-    );
+  void _openChatSettings(BuildContext context) {
+    unawaited(context.push(ChatRoutes.chatSettings));
   }
 
   Future<void> _navigateFromAction(String route) async {
@@ -1077,14 +1041,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                           ),
                         ),
-                        _QuickActionChip(
-                          icon: Icons.library_books_outlined,
-                          label: '调整种子库',
-                          subtitle: '优化当前会话接下来几轮的回答风格',
-                          color: DS.success,
-                          isNarrow: isNarrow,
-                          onTap: () => unawaited(_openSeedLibrary(context)),
-                        ),
                       ],
                     );
                   },
@@ -1205,21 +1161,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(planListProvider.select((s) => s.activePlans));
     final activePlan =
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
-    final seedLibraryEnabled = ref.watch(chatSeedLibraryEnabledProvider);
-    final subscriptionState = ref.watch(subscriptionsProvider);
-    final enabledSeedSubscriptions = subscriptionState.subscriptions
-        .where((subscription) => subscription.isEnabled)
-        .toList();
-    final enabledSeedCount = enabledSeedSubscriptions.length;
-    final enabledSeedNames = enabledSeedSubscriptions
-        .map(
-          (subscription) => subscription.library == null
-              ? ''
-              : subscription.library!.name.trim(),
-        )
-        .where((name) => name.isNotEmpty)
-        .take(3)
-        .toList();
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -1327,23 +1268,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   )
                 : const SizedBox.shrink(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              _chatBottomSurfaceHorizontalInset,
-              0,
-              _chatBottomSurfaceHorizontalInset,
-              DS.spacing8,
-            ),
-            child: _SeedLibraryEntryBar(
-              enabled: seedLibraryEnabled,
-              enabledCount: enabledSeedCount,
-              enabledNames: enabledSeedNames,
-              isLoading: subscriptionState.isLoading,
-              onToggle: (value) =>
-                  unawaited(_toggleSeedLibrary(context, value)),
-              onTap: () => unawaited(_openSeedLibrary(context)),
-            ),
           ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
@@ -1465,248 +1389,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final media = MediaQuery.of(context);
     return media.orientation == Orientation.portrait && media.size.width < 430;
   }
-
-  void _showAiSystemSettings(BuildContext context) {
-    unawaited(
-      showSensoryModalBottomSheet<void>(
-        context: context,
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        useRootNavigator: true,
-        isScrollControlled: true,
-        builder: (sheetContext) => Consumer(
-          builder: (context, ref, _) {
-            final preferences = ref
-                    .watch(transparencyPreferencesNotifierProvider)
-                    .valueOrNull ??
-                _defaultAiSystemPreferences;
-            final notifier =
-                ref.read(transparencyPreferencesNotifierProvider.notifier);
-            final showChatContextToggle =
-                ref.watch(showChatContextToggleProvider);
-            final showChatPredictionDock =
-                ref.watch(showChatPredictionDockProvider);
-            final showChatTransparencyCapsule =
-                ref.watch(showChatTransparencyCapsuleProvider);
-            final chatPureMode = ref.watch(chatPureModeProvider);
-            final media = MediaQuery.of(sheetContext);
-            final maxSheetHeight = media.size.height * 0.82;
-            final bottomInset = media.viewInsets.bottom;
-
-            return GraphiteModalSurface(
-              padding: EdgeInsets.zero,
-              child: SafeArea(
-                top: false,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: maxSheetHeight),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      DS.spacing20,
-                      DS.spacing12,
-                      DS.spacing20,
-                      DS.spacing20 + bottomInset,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: DS.spacing40,
-                            height: DS.spacing4,
-                            decoration: BoxDecoration(
-                              color: DS.surfaceTertiary,
-                              borderRadius:
-                                  BorderRadius.circular(DS.spacing4 / 2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing20),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.only(
-                              bottom: DS.spacing16,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding:
-                                          const EdgeInsets.all(DS.spacing10),
-                                      decoration: BoxDecoration(
-                                        color: DS.surfaceOverlay,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: DS.borderSubtle,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.auto_awesome_rounded,
-                                        color: DS.primaryBase,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: DS.spacing12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Sparkle AI System',
-                                            style: DS.titleLarge.copyWith(
-                                              color: DS.textPrimary,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '在对话中展示多 Agent 协作、模型编排与质量依据。',
-                                            style: DS.bodySmall.copyWith(
-                                              color: DS.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: DS.spacing20),
-                                _buildAiSettingTile(
-                                  title: '显示 AI 系统面板',
-                                  subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
-                                  value: preferences.enabled,
-                                  onChanged: notifier.setEnabled,
-                                ),
-                                const SizedBox(height: DS.spacing12),
-                                _buildAiSettingTile(
-                                  title: '纯净模式',
-                                  subtitle: '聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。',
-                                  value: chatPureMode,
-                                  onChanged: (value) => ref
-                                      .read(chatPureModeProvider.notifier)
-                                      .setEnabled(value),
-                                ),
-                                const SizedBox(height: DS.spacing12),
-                                _buildAiSettingTile(
-                                  title: '显示顶部选择条',
-                                  subtitle: '控制聊天页收起/展开的计划、模式和档位入口。',
-                                  value: showChatContextToggle,
-                                  onChanged: (value) => ref
-                                      .read(
-                                        showChatContextToggleProvider.notifier,
-                                      )
-                                      .setEnabled(value),
-                                ),
-                                const SizedBox(height: DS.spacing12),
-                                _buildAiSettingTile(
-                                  title: '显示预测组件',
-                                  subtitle: '控制输入框上方的行为预测与快捷建议。',
-                                  value: showChatPredictionDock,
-                                  onChanged: (value) => ref
-                                      .read(
-                                        showChatPredictionDockProvider.notifier,
-                                      )
-                                      .setEnabled(value),
-                                ),
-                                const SizedBox(height: DS.spacing12),
-                                _buildAiSettingTile(
-                                  title: '显示透明胶囊',
-                                  subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
-                                  value: showChatTransparencyCapsule,
-                                  onChanged: (value) => ref
-                                      .read(
-                                        showChatTransparencyCapsuleProvider
-                                            .notifier,
-                                      )
-                                      .setEnabled(value),
-                                ),
-                                if (preferences.enabled) ...[
-                                  const SizedBox(height: DS.spacing12),
-                                  _buildAiSettingTile(
-                                    title: '显示 Token 与成本',
-                                    subtitle: '展示本轮用量、成本估算和系统资源消耗。',
-                                    value: preferences.showTokenUsage,
-                                    onChanged: notifier.setShowTokenUsage,
-                                  ),
-                                  const SizedBox(height: DS.spacing12),
-                                  _buildAiSettingTile(
-                                    title: '显示 Agent 协作',
-                                    subtitle: '展示参与的专家、职责分工和模型协同。',
-                                    value: preferences.showAgentSwitching,
-                                    onChanged: notifier.setShowAgentSwitching,
-                                  ),
-                                  const SizedBox(height: DS.spacing12),
-                                  _buildAiSettingTile(
-                                    title: '显示推理时间线',
-                                    subtitle: '展示关键步骤、审查与反思过程。',
-                                    value: preferences.showReasoningSteps,
-                                    onChanged: notifier.setShowReasoningSteps,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.of(sheetContext).pop();
-                              unawaited(
-                                Navigator.of(context, rootNavigator: true).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        const TransparencySettingsScreen(),
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.settings_outlined),
-                            label: const Text('打开高级设置'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAiSettingTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) =>
-      GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        child: SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            title,
-            style: DS.bodyLarge.copyWith(
-              color: DS.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: DS.bodySmall.copyWith(color: DS.textSecondary),
-          ),
-          value: value,
-          onChanged: onChanged,
-        ),
-      );
 
   List<String> _buildPromptStarters(BuildContext context, String mode) {
     switch (mode) {
@@ -2115,124 +1797,6 @@ class _QuickActionChip extends StatefulWidget {
 
   @override
   State<_QuickActionChip> createState() => _QuickActionChipState();
-}
-
-class _SeedLibraryEntryBar extends StatelessWidget {
-  const _SeedLibraryEntryBar({
-    required this.enabled,
-    required this.enabledCount,
-    required this.enabledNames,
-    required this.isLoading,
-    required this.onToggle,
-    required this.onTap,
-  });
-
-  final bool enabled;
-  final int enabledCount;
-  final List<String> enabledNames;
-  final bool isLoading;
-  final ValueChanged<bool> onToggle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = switch ((isLoading, enabled, enabledCount)) {
-      (true, _, _) => '正在同步种子库状态',
-      (_, false, _) => '种子库增强默认关闭，按需开启以避免上下文污染',
-      (_, true, > 0) => '已开启种子库增强，当前接入 $enabledCount 个已启用种子库',
-      _ => '已开启种子库增强，但还没有可用的启用种子库',
-    };
-    final helper = enabled
-        ? enabledNames.isEmpty
-            ? '下一条消息开始按种子库增强'
-            : '当前生效：${enabledNames.join('、')}'
-        : '关闭时所有对话都不会注入种子库';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: DS.borderRadius16,
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing10,
-          ),
-          decoration: BoxDecoration(
-            color: Color.alphaBlend(
-              (enabled ? DS.success : DS.textSecondary).withValues(alpha: 0.08),
-              DS.surfacePrimary,
-            ),
-            borderRadius: DS.borderRadius16,
-            border: Border.all(
-              color: (enabled ? DS.success : DS.borderStrong)
-                  .withValues(alpha: 0.18),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: (enabled ? DS.success : DS.textSecondary)
-                      .withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  enabled
-                      ? Icons.library_books_outlined
-                      : Icons.library_add_check_outlined,
-                  size: 18,
-                  color: enabled ? DS.success : DS.textSecondary,
-                ),
-              ),
-              const SizedBox(width: DS.spacing10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: DS.bodySmall.copyWith(
-                        color: DS.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      helper,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Switch(
-                value: enabled,
-                onChanged: isLoading ? null : onToggle,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: DS.iconSizeSm,
-                color: DS.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ChatContextToggle extends StatelessWidget {

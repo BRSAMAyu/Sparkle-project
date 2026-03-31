@@ -420,10 +420,9 @@ packages:
   file_picker:
     dependency: "direct main"
     description:
-      name: file_picker
-      sha256: ab13ae8ef5580a411c458d6207b6774a6c237d77ac37011b13994879f68a8810
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/file_picker"
+      relative: true
+    source: path
     version: "8.3.7"
   file_selector_linux:
     dependency: transitive
@@ -558,10 +557,9 @@ packages:
   flutter_local_notifications:
     dependency: "direct main"
     description:
-      name: flutter_local_notifications
-      sha256: "674173fd3c9eda9d4c8528da2ce0ea69f161577495a9cc835a2a4ecd7eadeb35"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/flutter_local_notifications"
+      relative: true
+    source: path
     version: "17.2.4"
   flutter_local_notifications_linux:
     dependency: transitive
@@ -611,10 +609,9 @@ packages:
   flutter_secure_storage:
     dependency: "direct main"
     description:
-      name: flutter_secure_storage
-      sha256: "9cad52d75ebc511adfae3d447d5d13da15a55a92c9410e50f67335b6d21d16ea"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/flutter_secure_storage"
+      relative: true
+    source: path
     version: "9.2.4"
   flutter_secure_storage_linux:
     dependency: transitive
@@ -709,10 +706,9 @@ packages:
   fluwx:
     dependency: "direct main"
     description:
-      name: fluwx
-      sha256: d25c26a12a1fa280833105869ea255a5877695e03dc1190f0d2c027a7c989ef3
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/fluwx"
+      relative: true
+    source: path
     version: "4.6.3"
   freezed:
     dependency: "direct dev"
@@ -1039,10 +1035,9 @@ packages:
   jpush_flutter:
     dependency: "direct main"
     description:
-      name: jpush_flutter
-      sha256: cde73b8a2fb4db46f202dcd3ad1f64a6bc308db2049020f8ea59bd82dc08b10f
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/jpush_flutter"
+      relative: true
+    source: path
     version: "2.6.0"
   js:
     dependency: transitive
@@ -1559,10 +1554,9 @@ packages:
   sentry_flutter:
     dependency: "direct main"
     description:
-      name: sentry_flutter
-      sha256: "5ba2cf40646a77d113b37a07bd69f61bb3ec8a73cbabe5537b05a7c89d2656f8"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party_plugins/sentry_flutter"
+      relative: true
+    source: path
     version: "8.14.2"
   share_plus:
     dependency: "direct main"
