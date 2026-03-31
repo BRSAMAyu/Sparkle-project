@@ -11,6 +11,8 @@ import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart'
+    show TaskReminderConfig;
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -308,6 +310,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
+    final notificationPrefs = ref.watch(notificationPreferenceSettingsProvider);
+    final taskReminderConfig = ref.watch(taskReminderConfigProvider);
     final weeklyAgenda = ref.watch(weeklyAgendaProvider);
 
     return SparklePageScaffold(
@@ -1028,6 +1032,164 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               const SizedBox(height: DS.spacing20),
               GraphiteCardSurface(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      title: Text(l10n.notificationSettings),
+                      subtitle: Text(
+                        notificationPrefs.isLoaded
+                            ? '统一管理系统通知、干预通知、免打扰时段与任务提醒。'
+                            : '正在加载通知偏好...',
+                      ),
+                    ),
+                    if (!notificationPrefs.isLoaded)
+                      const LinearProgressIndicator(minHeight: 3)
+                    else ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('系统通知'),
+                        subtitle: const Text('控制任务提醒、成就、系统消息等站内通知'),
+                        value: notificationPrefs.enableSystem,
+                        onChanged: (value) => unawaited(
+                          _updateNotificationPreferences(
+                            context,
+                            enableSystem: value,
+                          ),
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('干预通知'),
+                        subtitle: const Text('控制教练/代理的干预和引导提醒'),
+                        value: notificationPrefs.enableInterventions,
+                        onChanged: (value) => unawaited(
+                          _updateNotificationPreferences(
+                            context,
+                            enableInterventions: value,
+                          ),
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      const Divider(height: DS.spacing24),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.tune_rounded),
+                        title: const Text('通知级别'),
+                        subtitle: Text(
+                          _notificationLevelDescription(
+                            notificationPrefs.notificationLevel,
+                          ),
+                        ),
+                      ),
+                      _buildSettingsDropdownField<String>(
+                        value: notificationPrefs.notificationLevel,
+                        items: [
+                          DropdownMenuItem(
+                            value: 'minimal',
+                            child: Text(
+                              _notificationLevelLabel('minimal'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'standard',
+                            child: Text(
+                              _notificationLevelLabel('standard'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'verbose',
+                            child: Text(
+                              _notificationLevelLabel('verbose'),
+                            ),
+                          ),
+                        ],
+                        onChanged: (level) {
+                          if (level == null) {
+                            return;
+                          }
+                          unawaited(
+                            _updateNotificationPreferences(
+                              context,
+                              notificationLevel: level,
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: DS.spacing24),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('免打扰时段'),
+                        subtitle: Text(
+                          notificationPrefs.quietHoursEnabled
+                              ? '${notificationPrefs.quietHoursStart} - ${notificationPrefs.quietHoursEnd}'
+                              : '关闭后，系统会按正常节奏推送通知',
+                        ),
+                        value: notificationPrefs.quietHoursEnabled,
+                        onChanged: (value) {
+                          final nextStart = notificationPrefs.quietHoursStart;
+                          final nextEnd = notificationPrefs.quietHoursEnd;
+                          unawaited(
+                            _updateNotificationPreferences(
+                              context,
+                              quietHoursEnabled: value,
+                              quietHoursStart: nextStart,
+                              quietHoursEnd: nextEnd,
+                            ),
+                          );
+                        },
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      if (notificationPrefs.quietHoursEnabled) ...[
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.nights_stay_outlined),
+                          title: const Text('开始时间'),
+                          subtitle: Text(notificationPrefs.quietHoursStart),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => unawaited(
+                            _pickQuietHoursTime(
+                              context,
+                              isStart: true,
+                              currentValue: notificationPrefs.quietHoursStart,
+                            ),
+                          ),
+                        ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.wb_sunny_outlined),
+                          title: const Text('结束时间'),
+                          subtitle: Text(notificationPrefs.quietHoursEnd),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => unawaited(
+                            _pickQuietHoursTime(
+                              context,
+                              isStart: false,
+                              currentValue: notificationPrefs.quietHoursEnd,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                    const Divider(height: DS.spacing24),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.alarm_outlined),
+                      title: Text(l10n.taskReminderSettingsTitle),
+                      subtitle: Text(
+                        _taskReminderSummary(taskReminderConfig),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push(UserRoutes.taskReminders),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
+              GraphiteCardSurface(
+                child: Column(
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
@@ -1352,6 +1514,123 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _updateNotificationPreferences(
+    BuildContext context, {
+    bool? enableSystem,
+    bool? enableInterventions,
+    String? notificationLevel,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+  }) async {
+    try {
+      await ref
+          .read(notificationPreferenceSettingsProvider.notifier)
+          .updatePreferences(
+            enableSystem: enableSystem,
+            enableInterventions: enableInterventions,
+            notificationLevel: notificationLevel,
+            quietHoursEnabled: quietHoursEnabled,
+            quietHoursStart: quietHoursStart,
+            quietHoursEnd: quietHoursEnd,
+          );
+    } catch (e) {
+      if (!context.mounted) {
+        return;
+      }
+      AppFeedback.error(
+        context,
+        '通知设置更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+      );
+    }
+  }
+
+  Future<void> _pickQuietHoursTime(
+    BuildContext context, {
+    required bool isStart,
+    required String currentValue,
+  }) async {
+    final currentTime = _parseTimeOfDay(currentValue);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: currentTime,
+    );
+    if (picked == null || !context.mounted) {
+      return;
+    }
+
+    final formatted = _formatTimeOfDay(picked);
+    await _updateNotificationPreferences(
+      context,
+      quietHoursStart: isStart ? formatted : null,
+      quietHoursEnd: isStart ? null : formatted,
+    );
+  }
+
+  TimeOfDay _parseTimeOfDay(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) {
+      return const TimeOfDay(hour: 22, minute: 0);
+    }
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 22,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _taskReminderSummary(TaskReminderConfig config) {
+    if (!config.enabled) {
+      return '已关闭';
+    }
+    if (config.reminders.isEmpty) {
+      return '已开启，但暂未选择提醒时间';
+    }
+    final labels = config.reminders.map(_formatReminderMinutes).join(' / ');
+    return '已开启 · $labels';
+  }
+
+  String _formatReminderMinutes(int minutes) {
+    if (minutes >= 1440) {
+      final days = minutes ~/ 1440;
+      return '$days天前';
+    }
+    if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      return '$hours小时前';
+    }
+    return '$minutes分钟前';
+  }
+
+  String _notificationLevelLabel(String level) {
+    switch (level) {
+      case 'minimal':
+        return '简洁';
+      case 'verbose':
+        return '详细';
+      case 'standard':
+      default:
+        return '标准';
+    }
+  }
+
+  String _notificationLevelDescription(String level) {
+    switch (level) {
+      case 'minimal':
+        return '只保留最必要的提醒，减少打扰。';
+      case 'verbose':
+        return '展示更完整的背景信息和提醒内容。';
+      case 'standard':
+      default:
+        return '在信息量和打扰频率之间保持平衡。';
+    }
   }
 
   Widget _buildLanguageOption(

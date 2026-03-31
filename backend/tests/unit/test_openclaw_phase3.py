@@ -216,6 +216,298 @@ async def test_execution_learning_handed_back_creates_aversion_pattern(
 
 
 @pytest.mark.asyncio
+async def test_execution_learning_recomputes_delegate_preference_from_recent_outcomes(
+    db_session,
+    mute_learning_side_effects,
+) -> None:
+    user = User(username="phase3delegate", email="phase3delegate@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = ExecutionLearningService(db_session)
+    latest_success_intent = None
+    latest_success_record = None
+
+    for index in range(5):
+        task = Task(
+            user_id=user.id,
+            title=f"可信任务 {index}",
+            type=TaskType.OCR,
+            tags=["research"],
+            estimated_minutes=20,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.COMPLETED,
+        )
+        db_session.add(task)
+        await db_session.commit()
+        await db_session.refresh(task)
+
+        intent = ExecutionIntent(
+            user_id=user.id,
+            task_id=task.id,
+            execution_mode=ExecutionMode.AGENT,
+            executor=ExecutorType.OPENCLAW,
+            goal=task.title,
+            instructions=[],
+            target_env=ExecutionTargetEnv.BROWSER,
+            policy={},
+            success_criteria={"type": "non_empty"},
+            result_contract={},
+            timeout_seconds=300,
+            status=ExecutionIntentStatus.SUCCEEDED,
+            trust_level=TrustLevel.TRUSTED,
+            idempotency_key=f"recompute-success:{task.id}",
+        )
+        db_session.add(intent)
+        await db_session.commit()
+        await db_session.refresh(intent)
+
+        record = ExecutionRecord(
+            execution_intent_id=intent.id,
+            user_id=user.id,
+            task_id=task.id,
+            executor_type="openclaw",
+            raw_response={"id": f"recompute-{index}"},
+            parsed_output={"summary": "done"},
+            artifacts=[],
+            trust_level=TrustLevel.TRUSTED.value,
+            duration_ms=20 * 60 * 1000,
+        )
+        db_session.add(record)
+        await db_session.commit()
+        await db_session.refresh(record)
+        latest_success_intent = intent
+        latest_success_record = record
+
+    assert latest_success_intent is not None
+    assert latest_success_record is not None
+
+    await service.handle_trusted_execution(
+        intent=latest_success_intent,
+        record=latest_success_record,
+        parsed={"success": True},
+    )
+
+    prefs = await PreferenceService(db_session).get_preferences(user.id)
+    initial_preference = prefs.inferred.get("ai_delegate_preference")
+    assert initial_preference == 0.9
+
+    for index in range(5):
+        task = Task(
+            user_id=user.id,
+            title=f"失败任务 {index}",
+            type=TaskType.OCR,
+            tags=["research"],
+            estimated_minutes=20,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.PENDING,
+        )
+        db_session.add(task)
+        await db_session.commit()
+        await db_session.refresh(task)
+
+        intent = ExecutionIntent(
+            user_id=user.id,
+            task_id=task.id,
+            execution_mode=ExecutionMode.AGENT,
+            executor=ExecutorType.OPENCLAW,
+            goal=task.title,
+            instructions=[],
+            target_env=ExecutionTargetEnv.BROWSER,
+            policy={},
+            success_criteria={"type": "non_empty"},
+            result_contract={},
+            timeout_seconds=300,
+            status=ExecutionIntentStatus.FAILED,
+            trust_level=TrustLevel.RAW,
+            idempotency_key=f"recompute-failed:{task.id}",
+        )
+        db_session.add(intent)
+        await db_session.commit()
+
+    recovery_task = Task(
+        user_id=user.id,
+        title="恢复任务",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+    )
+    db_session.add(recovery_task)
+    await db_session.commit()
+    await db_session.refresh(recovery_task)
+
+    recovery_intent = ExecutionIntent(
+        user_id=user.id,
+        task_id=recovery_task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=recovery_task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.BROWSER,
+        policy={},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.SUCCEEDED,
+        trust_level=TrustLevel.TRUSTED,
+        idempotency_key=f"recompute-recovery:{recovery_task.id}",
+    )
+    db_session.add(recovery_intent)
+    await db_session.commit()
+    await db_session.refresh(recovery_intent)
+
+    recovery_record = ExecutionRecord(
+        execution_intent_id=recovery_intent.id,
+        user_id=user.id,
+        task_id=recovery_task.id,
+        executor_type="openclaw",
+        raw_response={"id": "recompute-recovery"},
+        parsed_output={"summary": "done"},
+        artifacts=[],
+        trust_level=TrustLevel.TRUSTED.value,
+        duration_ms=20 * 60 * 1000,
+    )
+    db_session.add(recovery_record)
+    await db_session.commit()
+    await db_session.refresh(recovery_record)
+
+    await service.handle_trusted_execution(
+        intent=recovery_intent,
+        record=recovery_record,
+        parsed={"success": True},
+    )
+
+    refreshed = await PreferenceService(db_session).get_preferences(user.id)
+    assert refreshed.inferred["ai_delegate_preference"] < initial_preference
+    assert refreshed.inferred["ai_delegate_preference"] == 0.5
+
+
+@pytest.mark.asyncio
+async def test_execution_learning_safety_concern_count_decreases_after_trusted_success(
+    db_session,
+    mute_learning_side_effects,
+) -> None:
+    user = User(username="phase3safety", email="phase3safety@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = ExecutionLearningService(db_session)
+
+    rejection_task = Task(
+        user_id=user.id,
+        title="敏感操作",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=10,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(rejection_task)
+    await db_session.commit()
+    await db_session.refresh(rejection_task)
+
+    rejection_intent = ExecutionIntent(
+        user_id=user.id,
+        task_id=rejection_task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=rejection_task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.BROWSER,
+        policy={},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.HANDED_BACK,
+        trust_level=TrustLevel.RAW,
+        idempotency_key=f"safety-reject:{rejection_task.id}",
+    )
+    db_session.add(rejection_intent)
+    await db_session.commit()
+    await db_session.refresh(rejection_intent)
+
+    await service.handle_rejection_sentiment(
+        intent=rejection_intent,
+        record=None,
+        reason="这个操作有安全风险",
+    )
+    await service.handle_rejection_sentiment(
+        intent=rejection_intent,
+        record=None,
+        reason="unsafe for this account",
+    )
+
+    prefs = await PreferenceService(db_session).get_preferences(user.id)
+    assert prefs.inferred["execution.safety_concern_count"] == 2
+
+    success_task = Task(
+        user_id=user.id,
+        title="低风险操作",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=10,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+    )
+    db_session.add(success_task)
+    await db_session.commit()
+    await db_session.refresh(success_task)
+
+    success_intent = ExecutionIntent(
+        user_id=user.id,
+        task_id=success_task.id,
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal=success_task.title,
+        instructions=[],
+        target_env=ExecutionTargetEnv.BROWSER,
+        policy={},
+        success_criteria={"type": "non_empty"},
+        result_contract={},
+        timeout_seconds=300,
+        status=ExecutionIntentStatus.SUCCEEDED,
+        trust_level=TrustLevel.TRUSTED,
+        idempotency_key=f"safety-success:{success_task.id}",
+    )
+    db_session.add(success_intent)
+    await db_session.commit()
+    await db_session.refresh(success_intent)
+
+    success_record = ExecutionRecord(
+        execution_intent_id=success_intent.id,
+        user_id=user.id,
+        task_id=success_task.id,
+        executor_type="openclaw",
+        raw_response={"id": "safety-success"},
+        parsed_output={"summary": "done"},
+        artifacts=[],
+        trust_level=TrustLevel.TRUSTED.value,
+        duration_ms=10 * 60 * 1000,
+    )
+    db_session.add(success_record)
+    await db_session.commit()
+    await db_session.refresh(success_record)
+
+    await service.handle_trusted_execution(
+        intent=success_intent,
+        record=success_record,
+        parsed={"success": True},
+    )
+
+    refreshed = await PreferenceService(db_session).get_preferences(user.id)
+    assert refreshed.inferred["execution.safety_concern_count"] == 1
+
+
+@pytest.mark.asyncio
 async def test_profile_context_merges_explicit_and_inferred_preferences(db_session) -> None:
     user = User(username="phase3context", email="phase3context@example.com", hashed_password="hashed", photon_balance=0)
     db_session.add(user)

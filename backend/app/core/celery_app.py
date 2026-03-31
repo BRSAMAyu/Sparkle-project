@@ -949,16 +949,6 @@ celery_app.conf.beat_schedule = {
     # 注意: update_knowledge_galaxy 任务由 PlanService 在计划完成/里程碑达成时触发
     # 此处仅包含定期同步任务，不包含事件触发任务
 
-    # ========== 任务提醒 ==========
-
-    # 每15分钟检查并发送任务提醒
-    "task-reminders-every-15-mins": {
-        "task": "send_task_reminders",
-        "schedule": 900.0,  # 15分钟
-        "args": (),
-        "options": {"queue": "default"}
-    },
-
     # ========== 责任伙伴系统任务 ==========
 
     # 每天早上9点发送打卡提醒

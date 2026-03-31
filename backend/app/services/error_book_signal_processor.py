@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.models.error_book import ErrorRecord
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import recency_weight
 
 
 def _utcnow() -> datetime:
@@ -45,8 +46,11 @@ class ErrorBookSignalProcessor:
         if not errors:
             return
 
-        total = len(errors)
-        error_density_score = min(1.0, total / self.DENSITY_MAX_ERRORS)
+        weighted_total = sum(
+            recency_weight(error.created_at, now=_utcnow(), half_life_days=5.0, min_weight=0.25)
+            for error in errors
+        )
+        error_density_score = min(1.0, weighted_total / self.DENSITY_MAX_ERRORS)
         recurring_error_tags = self._recurring_error_tags(errors)
         error_correction_rate = self._correction_rate(errors)
 
@@ -90,14 +94,15 @@ class ErrorBookSignalProcessor:
         return filtered
 
     def _recurring_error_tags(self, errors: list[ErrorRecord]) -> list[str]:
-        tags: list[str] = []
+        weighted_tags: Counter[str] = Counter()
         for error in errors:
-            tags.extend(self._extract_tags(error))
-        if not tags:
+            weight = recency_weight(error.created_at, now=_utcnow(), half_life_days=5.0, min_weight=0.25)
+            for tag in self._extract_tags(error):
+                weighted_tags[tag] += weight
+        if not weighted_tags:
             return []
-        counter = Counter(tags)
-        recurring = [tag for tag, count in counter.items() if count >= 2]
-        recurring.sort(key=lambda item: (-counter[item], item))
+        recurring = [tag for tag, count in weighted_tags.items() if count >= 1.4]
+        recurring.sort(key=lambda item: (-weighted_tags[item], item))
         return recurring[:self.MAX_TAGS]
 
     @staticmethod
@@ -116,9 +121,11 @@ class ErrorBookSignalProcessor:
     def _correction_rate(errors: list[ErrorRecord]) -> float:
         if not errors:
             return 0.0
-        reviewed = sum(
-            1
-            for error in errors
-            if (error.review_count or 0) > 0 or error.last_reviewed_at is not None
-        )
-        return reviewed / len(errors)
+        reviewed = 0.0
+        total = 0.0
+        for error in errors:
+            weight = recency_weight(error.created_at, now=_utcnow(), half_life_days=5.0, min_weight=0.25)
+            total += weight
+            if (error.review_count or 0) > 0 or error.last_reviewed_at is not None:
+                reviewed += weight
+        return reviewed / total if total else 0.0

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -315,3 +316,47 @@ async def test_close_to_unlock_returns_achievement_with_progress_shape(db_sessio
     assert speed_learner["progress_percentage"] == 80
     assert speed_learner["user_progress"]["achievement_id"] == "speed_learner"
     assert speed_learner["user_progress"]["progress_value"] == 16
+
+
+@pytest.mark.asyncio
+async def test_close_to_unlock_excludes_db_unlocked_achievement_when_cache_is_stale(
+    db_session,
+    test_user,
+):
+    await _sync_definitions(db_session)
+    subject = await _create_subject(db_session, "math", "close-unlocked")
+    now = datetime.utcnow()
+
+    for _ in range(16):
+        await _create_node_status(
+            db_session,
+            test_user.id,
+            subject,
+            is_unlocked=True,
+            first_unlock_at=now - timedelta(hours=2),
+        )
+
+    db_session.add(
+        UserAchievement(
+            user_id=test_user.id,
+            achievement_id="speed_learner",
+            progress=1.0,
+            unlocked_at=now,
+            last_progress_update=now,
+        )
+    )
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    engine._is_unlocked = AsyncMock(return_value=False)
+
+    close_achievements = await engine.get_close_to_unlock_achievements(
+        user_id=test_user.id,
+        threshold=0.8,
+        category="hidden",
+    )
+
+    assert all(
+        item["achievement"]["id"] != "speed_learner"
+        for item in close_achievements
+    )

@@ -96,11 +96,23 @@ class GraphSyncWorker:
                 logger.error(f"消费循环错误: {e}")
                 await asyncio.sleep(1)  # 避免快速重试
 
-    async def _process_message(self, msg_id: bytes, msg_data: dict[bytes, bytes]):
+    @staticmethod
+    def _read_field(msg_data: dict[Any, Any], field: str) -> str:
+        """Read Redis stream fields regardless of decode_responses mode."""
+        value = msg_data.get(field)
+        if value is None:
+            value = msg_data.get(field.encode("utf-8"))
+        if value is None:
+            raise KeyError(field)
+        if isinstance(value, bytes):
+            return value.decode("utf-8")
+        return str(value)
+
+    async def _process_message(self, msg_id: bytes, msg_data: dict[Any, Any]):
         """处理单条消息"""
         # 解析消息
-        msg_type = msg_data[b"type"].decode('utf-8')
-        data = json.loads(msg_data[b"data"].decode('utf-8'))
+        msg_type = self._read_field(msg_data, "type")
+        data = json.loads(self._read_field(msg_data, "data"))
 
         logger.debug(f"处理消息: {msg_type} - {data.get('id', 'N/A')}")
 

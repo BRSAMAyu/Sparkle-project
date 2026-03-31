@@ -278,6 +278,7 @@ class UserContext(BaseModel):
     active_slots: dict[str, Any] | None = Field(default=None, description="Active time slots")
     daily_cap: int = Field(default=5, description="Daily interaction cap")
     persona_type: str = Field(default="coach", description="AI persona type")
+    preference_version: int = Field(default=0, description="Preference version for cache validation")
 
     class Config:
         from_attributes = True

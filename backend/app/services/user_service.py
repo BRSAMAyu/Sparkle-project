@@ -154,8 +154,17 @@ class UserService:
                     CACHE_HIT_COUNT.labels(cache_name="user_context", result="hit").inc()
                     data = json.loads(cached)
                     context = UserContext(**data)
-                    logger.debug(f"Cache HIT for user {user_id}")
-                    return context
+                    pref_service = PreferenceService(self.db, self.redis)
+                    current_version = await pref_service.get_preference_version(user_id)
+                    if context.preference_version == current_version:
+                        logger.debug(f"Cache HIT for user {user_id}")
+                        return context
+                    logger.info(
+                        "User context cache stale for %s: cached_version=%s current_version=%s",
+                        user_id,
+                        context.preference_version,
+                        current_version,
+                    )
                 CACHE_HIT_COUNT.labels(cache_name="user_context", result="miss").inc()
             except Exception as e:
                 logger.warning(f"Cache lookup failed: {e}, falling back to DB")
@@ -199,6 +208,7 @@ class UserService:
                 active_slots=active_slots,
                 daily_cap=explicit.get("daily_cap", push_pref.daily_cap if push_pref else 5),
                 persona_type=explicit.get("persona_type", push_pref.persona_type if push_pref else "coach"),
+                preference_version=prefs_center.version if prefs_center else 0,
             )
 
             # 3. Cache Write

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import PushPreference, User
+from app.models.user_preferences import UserPreferencesCenter
 from app.core.event_bus import ProfilePreferenceDeleted, ProfilePreferenceUpdated, event_bus
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.memory_service import MemoryService
@@ -37,6 +38,7 @@ class ProfileWriteService:
         self.pref_service = PreferenceService(db, redis)
         self.memory_service = MemoryService(db)
         self._override_backup_key_prefix = "user:profile:override_backup"
+        self._override_backup_ttl_seconds = 30 * 24 * 3600
 
     async def set_explicit_preference(
         self,
@@ -183,6 +185,19 @@ class ProfileWriteService:
             prefs = await self.pref_service.get_preferences(user_id)
             return prefs.version or 0
 
+        stored_explicit = await self._get_stored_explicit_preferences(user_id)
+        explicit_protected_keys = [
+            key for key in list(filtered_updates.keys())
+            if self._has_explicit_override(stored_explicit, key)
+        ]
+        for key in explicit_protected_keys:
+            filtered_updates.pop(key, None)
+            logger.debug("Skipping inferred pref %s: explicit override exists", key)
+
+        if not filtered_updates:
+            prefs = await self.pref_service.get_preferences(user_id)
+            return prefs.version or 0
+
         prefs = await self.pref_service.update_inferred(user_id, filtered_updates)
         preference_version = prefs.version or 0
 
@@ -301,6 +316,38 @@ class ProfileWriteService:
                 updates={pref_key: backup},
                 source=restore_source,
             )
+            await self._delete_inferred_backup(user_id, pref_key)
+        return result
+
+    async def restore_inferred_backup(
+        self,
+        *,
+        user_id: UUID,
+        pref_key: str,
+        source: str = "rollback_restore",
+        delete_backup: bool = False,
+    ) -> ProfileWriteResult | None:
+        backup = await self._load_inferred_backup(user_id, pref_key)
+        if backup is None:
+            return None
+
+        prefs = await self.pref_service.get_preferences(user_id)
+        current_inferred = dict(prefs.inferred or {})
+        if current_inferred.get(pref_key) == backup:
+            if delete_backup:
+                await self._delete_inferred_backup(user_id, pref_key)
+            return ProfileWriteResult(preference_version=prefs.version or 0)
+
+        current_inferred[pref_key] = backup
+        updated = await self.pref_service.update_inferred_raw(user_id, current_inferred)
+        result = ProfileWriteResult(preference_version=updated.version or 0)
+        await self._publish_preference_updated_event(
+            user_id=user_id,
+            pref_keys=[pref_key],
+            preference_version=result.preference_version,
+            source=source,
+        )
+        if delete_backup:
             await self._delete_inferred_backup(user_id, pref_key)
         return result
 
@@ -452,6 +499,7 @@ class ProfileWriteService:
                 pref_key,
                 json.dumps(payload, ensure_ascii=True),
             )
+            await self.redis.expire(self._override_backup_key(user_id), self._override_backup_ttl_seconds)
         except Exception as exc:
             logger.warning("Failed to backup inferred preference %s: %s", pref_key, exc)
 
@@ -480,3 +528,20 @@ class ProfileWriteService:
             await self.redis.hdel(self._override_backup_key(user_id), pref_key)
         except Exception as exc:
             logger.warning("Failed to delete inferred backup %s: %s", pref_key, exc)
+
+    async def _get_stored_explicit_preferences(self, user_id: UUID) -> dict[str, Any]:
+        result = await self.db.execute(
+            select(UserPreferencesCenter.explicit).where(UserPreferencesCenter.user_id == user_id)
+        )
+        explicit = result.scalar_one_or_none()
+        return dict(explicit or {})
+
+    def _has_explicit_override(self, explicit: dict[str, Any], key: str) -> bool:
+        if key not in explicit:
+            return False
+
+        default_explicit = self.pref_service.DEFAULT_EXPLICIT
+        if key not in default_explicit:
+            return True
+
+        return explicit.get(key) != default_explicit.get(key)

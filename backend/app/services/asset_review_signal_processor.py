@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.models.learning_assets import AssetStatus, LearningAsset
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import pick_with_hysteresis, recency_weight
 
 
 class AssetReviewSignalProcessor:
@@ -34,27 +35,58 @@ class AssetReviewSignalProcessor:
         if not assets:
             return
 
-        total_assets = len(assets)
-        reviewed_assets = [asset for asset in assets if (asset.review_count or 0) > 0]
-        review_engagement = len(reviewed_assets) / total_assets
+        try:
+            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+            previous_style = (prefs.inferred or {}).get("vocabulary_retention_style")
+        except Exception:
+            previous_style = None
 
-        weighted_reviews = sum(int(asset.review_count or 0) for asset in reviewed_assets)
-        if weighted_reviews > 0:
-            weighted_success = sum(
-                float(asset.review_success_rate or 0.0) * int(asset.review_count or 0)
-                for asset in reviewed_assets
+        weighted_total = 0.0
+        weighted_reviewed_assets = 0.0
+        weighted_reviews = 0.0
+        weighted_success = 0.0
+        ignored_weight = 0.0
+        style_scores = {"passive": 0.0, "consistent": 0.0, "cramming": 0.0}
+        for asset in assets:
+            observed_at = (
+                asset.last_seen_at
+                or asset.review_due_at
+                or asset.provenance_updated_at
+                or asset.updated_at
+                or asset.created_at
             )
-            review_accuracy = weighted_success / weighted_reviews
-        else:
-            review_accuracy = 0.0
+            weight = recency_weight(observed_at, half_life_days=10.0, min_weight=0.25)
+            weighted_total += weight
+            ignored_weight += min(float(asset.ignored_count or 0), 3.0) * weight
+            if (asset.review_count or 0) > 0:
+                weighted_reviewed_assets += weight
+                review_count = float(asset.review_count or 0)
+                weighted_reviews += review_count * weight
+                weighted_success += float(asset.review_success_rate or 0.0) * review_count * weight
 
-        ignored_ratio = sum(int(asset.ignored_count or 0) for asset in assets) / total_assets
-        if ignored_ratio > 0.5:
-            retention_style = "passive"
-        elif review_engagement >= 0.6 and review_accuracy >= 0.75:
-            retention_style = "consistent"
+            if (asset.ignored_count or 0) >= 2:
+                style_scores["passive"] += weight
+            elif (asset.review_count or 0) >= 2 and float(asset.review_success_rate or 0.0) >= 0.75:
+                style_scores["consistent"] += weight
+            else:
+                style_scores["cramming"] += weight
+
+        review_engagement = weighted_reviewed_assets / weighted_total if weighted_total else 0.0
+        review_accuracy = (weighted_success / weighted_reviews) if weighted_reviews > 0 else 0.0
+
+        ignored_ratio = ignored_weight / weighted_total if weighted_total else 0.0
+        if review_engagement >= 0.6 and review_accuracy >= 0.75:
+            style_scores["consistent"] += 0.25
+        elif ignored_ratio >= 0.6:
+            style_scores["passive"] += 0.25
         else:
-            retention_style = "cramming"
+            style_scores["cramming"] += 0.15
+        selected_style = pick_with_hysteresis(
+            style_scores,
+            previous_style if isinstance(previous_style, str) else None,
+            margin=0.15,
+        )
+        retention_style = selected_style if isinstance(selected_style, str) else "cramming"
 
         updates: dict[str, object] = {
             "review_engagement": round(review_engagement, 3),

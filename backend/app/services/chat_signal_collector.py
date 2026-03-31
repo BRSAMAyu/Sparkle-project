@@ -14,6 +14,7 @@ from loguru import logger
 from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import recency_weight, weighted_average
 
 
 def _utcnow() -> datetime:
@@ -48,6 +49,7 @@ class ChatSignalCollector:
         prev_entry = await self._get_latest_entry(user_id)
         follow_up = self._is_follow_up(tokens, prev_entry.get("tokens") if prev_entry else [])
         gratitude = self._detect_gratitude(user_message)
+        dissatisfaction = self._detect_dissatisfaction(user_message)
         complexity = self._estimate_complexity(user_message)
 
         entry = {
@@ -56,6 +58,7 @@ class ChatSignalCollector:
             "tokens": tokens,
             "follow_up": follow_up,
             "gratitude": gratitude,
+            "dissatisfaction": dissatisfaction,
             "complexity": complexity,
             "conversation_id": conversation_id,
             "turn_index": turn_index,
@@ -139,10 +142,16 @@ class ChatSignalCollector:
         if not entries:
             return {}
 
-        complexity_values = [float(entry.get("complexity") or 0.0) for entry in entries]
-        avg_complexity = sum(complexity_values) / len(complexity_values)
+        weighted_complexity: list[tuple[float, float]] = []
+        for entry in entries:
+            weight = self._entry_weight(entry)
+            weighted_complexity.append((float(entry.get("complexity") or 0.0), weight))
 
-        max_streak = self._max_topic_streak(entries)
+        avg_complexity = weighted_average(weighted_complexity)
+        if avg_complexity is None:
+            return {}
+
+        topic_streak_score = self._topic_streak_score(entries)
         satisfaction_rate = self._satisfaction_rate(entries)
         active_hours = self._active_hours(entries)
 
@@ -150,46 +159,49 @@ class ChatSignalCollector:
             "avg_question_complexity": round(avg_complexity, 3),
             "response_satisfaction_rate": round(satisfaction_rate, 3),
         }
-        if max_streak >= 3:
+        if topic_streak_score >= 2.1:
             updates["depth_preference_signal"] = 0.8
         if active_hours:
             updates["chat_active_hours"] = active_hours
         return updates
 
-    def _max_topic_streak(self, entries: list[dict[str, Any]]) -> int:
-        max_streak = 1
-        current = 1
+    def _topic_streak_score(self, entries: list[dict[str, Any]]) -> float:
+        max_streak = 1.0
+        current = 1.0
         for idx in range(1, len(entries)):
             tokens_a = entries[idx - 1].get("tokens") or []
             tokens_b = entries[idx].get("tokens") or []
             similarity = self._topic_similarity(tokens_a, tokens_b)
             if similarity >= self.TOPIC_SIMILARITY_THRESHOLD:
-                current += 1
+                pair_weight = (self._entry_weight(entries[idx - 1]) + self._entry_weight(entries[idx])) / 2.0
+                current += pair_weight
             else:
-                current = 1
+                current = 1.0
             max_streak = max(max_streak, current)
         return max_streak
 
-    @staticmethod
-    def _satisfaction_rate(entries: list[dict[str, Any]]) -> float:
-        positive = 0
-        total = 0
+    def _satisfaction_rate(self, entries: list[dict[str, Any]]) -> float:
+        score = 0.0
+        total = 0.0
         for entry in entries:
+            weight = self._entry_weight(entry)
             gratitude = bool(entry.get("gratitude"))
+            dissatisfaction = bool(entry.get("dissatisfaction"))
             follow_up = bool(entry.get("follow_up"))
             if gratitude:
-                positive += 1
-                total += 1
+                score += 1.0 * weight
+            elif dissatisfaction:
+                score += 0.0
             elif follow_up:
-                total += 1
+                score += 0.25 * weight
             else:
-                positive += 1
-                total += 1
-        return positive / total if total else 0.0
+                # Most plain messages are neutral rather than affirmative.
+                score += 0.5 * weight
+            total += weight
+        return score / total if total else 0.0
 
-    @staticmethod
-    def _active_hours(entries: list[dict[str, Any]]) -> list[int]:
-        counts: dict[int, int] = {}
+    def _active_hours(self, entries: list[dict[str, Any]]) -> list[int]:
+        counts: dict[int, float] = {}
         for entry in entries:
             hour = entry.get("hour")
             try:
@@ -197,9 +209,20 @@ class ChatSignalCollector:
             except (TypeError, ValueError):
                 continue
             if 0 <= hour_int <= 23:
-                counts[hour_int] = counts.get(hour_int, 0) + 1
+                counts[hour_int] = counts.get(hour_int, 0.0) + self._entry_weight(entry)
         sorted_hours = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
         return [hour for hour, _ in sorted_hours[:3]]
+
+    @staticmethod
+    def _entry_weight(entry: dict[str, Any]) -> float:
+        raw_ts = entry.get("ts")
+        if not raw_ts:
+            return 0.3
+        try:
+            parsed = datetime.fromisoformat(str(raw_ts))
+        except Exception:
+            return 0.3
+        return recency_weight(parsed, now=_utcnow(), half_life_days=2.5, min_weight=0.3)
 
     def _is_follow_up(self, tokens: list[str], prev_tokens: list[str]) -> bool:
         if not tokens or not prev_tokens:
@@ -231,6 +254,28 @@ class ChatSignalCollector:
             "thanks",
             "thx",
             "understood",
+        ]
+        return any(marker in lowered for marker in markers)
+
+    @staticmethod
+    def _detect_dissatisfaction(message: str) -> bool:
+        if not message:
+            return False
+        lowered = message.lower()
+        markers = [
+            "不对",
+            "不太对",
+            "不明白",
+            "没懂",
+            "还是不懂",
+            "这不行",
+            "不满意",
+            "不准确",
+            "错误",
+            "wrong",
+            "not right",
+            "not helpful",
+            "still confused",
         ]
         return any(marker in lowered for marker in markers)
 

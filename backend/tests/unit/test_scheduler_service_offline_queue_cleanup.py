@@ -40,6 +40,7 @@ def test_scheduler_registers_offline_queue_cleanup_job():
 
     registered = {job[0].__name__: (job[1], job[3]) for job in dummy_scheduler.jobs}
     assert "run_offline_queue_cleanup" in registered
+    assert "run_task_reminders" not in registered
     trigger, kwargs = registered["run_offline_queue_cleanup"]
     assert trigger == "interval"
     assert kwargs["hours"] == 1

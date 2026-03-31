@@ -35,6 +35,7 @@ class VocabularyService:
 
     MIN_IMPORTANCE = 1
     MAX_IMPORTANCE = 5
+    DEFAULT_REVIEW_BATCH_SIZE = 50
 
     # 旧版艾宾浩斯复习间隔 (天) - DEPRECATED，保留用于向后兼容
     REVIEW_INTERVALS = [0, 1, 2, 4, 7, 15, 30, 60]
@@ -322,14 +323,19 @@ class VocabularyService:
         return word_book
 
     @staticmethod
-    async def get_review_list(db: AsyncSession, user_id: UUID) -> list[WordBook]:
+    async def get_review_list(
+        db: AsyncSession,
+        user_id: UUID,
+        limit: int = DEFAULT_REVIEW_BATCH_SIZE,
+    ) -> list[WordBook]:
         """Get words due for review"""
+        safe_limit = max(1, limit)
         stmt = select(WordBook).where(
             and_(
                 WordBook.user_id == user_id,
                 WordBook.next_review_at <= _utcnow()
             )
-        ).order_by(WordBook.next_review_at)
+        ).order_by(WordBook.next_review_at).limit(safe_limit)
 
         result = await db.execute(stmt)
         return result.scalars().all()

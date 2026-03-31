@@ -19,7 +19,7 @@ class PersonaTool(BaseTool):
 
     async def execute(self, params: PersonaRequest, user_id: str, db_session, tool_call_id: str | None = None) -> ToolResult:
         service = ProfileSnapshotService(db_session)
-        snapshot = await service.build_profile_snapshot(UUID(user_id), params.purpose)
+        snapshot = await service.get_snapshot(UUID(user_id), params.purpose)
         return ToolResult(
             success=True,
             tool_name=self.name,

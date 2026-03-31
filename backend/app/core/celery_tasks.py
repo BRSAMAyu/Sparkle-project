@@ -600,122 +600,20 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
 @celery_app.task(bind=True, max_retries=2, name="send_task_reminders")
 def send_task_reminders(self):
     """
-    发送任务提醒（每15分钟执行一次）
+    任务提醒已在服务端停用，当前由客户端本地调度统一负责。
 
-    检查启用任务提醒的用户，为即将到期的任务发送通知。
-    提醒时间默认为：24小时前、1小时前、15分钟前
+    原有服务端实现依赖分钟级提醒窗口，但 Task.due_date 仍然是 Date 类型，
+    无法正确表达「提前 1 小时 / 15 分钟」这类语义，还会与客户端本地提醒
+    形成双通道重复通知。保留任务入口作为兼容层，避免旧部署或手动触发时报错。
     """
-    from datetime import datetime, timedelta
-
-    from app.core.cache import cache_service
-    from app.db.session import AsyncSessionLocal
-    from app.models.task import Task, TaskStatus
-    from app.models.user_settings import UserSettings
-    from app.schemas.notification import NotificationCreate
-    from app.services.notification_service import NotificationService
-    from sqlalchemy import and_, select
-
-    async def _send():
-        if cache_service.redis is None:
-            await cache_service.init_redis()
-
-        async with AsyncSessionLocal() as session:
-            # 获取启用任务提醒的用户
-            result = await session.execute(
-                select(UserSettings).where(
-                    UserSettings.task_reminders_enabled == True,
-                    UserSettings.deleted_at.is_(None),
-                )
-            )
-            settings_rows = [
-                {
-                    "user_id": settings.user_id,
-                    "task_reminder_times": list(settings.task_reminder_times or []),
-                }
-                for settings in result.scalars().all()
-            ]
-
-            sent_count = 0
-            skipped_count = 0
-
-            for settings in settings_rows:
-                user_id = settings["user_id"]
-                try:
-                    reminder_times = settings["task_reminder_times"] or [1440, 60, 15]
-
-                    # 计算提醒时间窗口
-                    now = datetime.utcnow()
-                    windows = []
-                    for minutes in reminder_times:
-                        # 窗口：目标时间前后 30 秒（因为任务是每 15 分钟运行一次）
-                        window_start = now + timedelta(minutes=minutes, seconds=-30)
-                        window_end = now + timedelta(minutes=minutes, seconds=30)
-                        windows.append((window_start.date(), window_end.date(), minutes))
-
-                    # 查询即将到期的任务
-                    for due_date_start, due_date_end, minutes in windows:
-                        tasks_result = await session.execute(
-                            select(Task).where(
-                                and_(
-                                    Task.user_id == user_id,
-                                    Task.due_date.is_not(None),
-                                    Task.due_date.between(due_date_start, due_date_end),
-                                    Task.status != TaskStatus.COMPLETED,
-                                    Task.deleted_at.is_(None),
-                                )
-                            )
-                        )
-                        tasks = tasks_result.scalars().all()
-
-                        for task in tasks:
-                            # 检查是否已发送提醒（使用 Redis 去重）
-                            reminder_key = f"task_reminder:{task.id}:{minutes}"
-                            if await cache_service.get(reminder_key):
-                                skipped_count += 1
-                                continue
-
-                            # 格式化提醒消息
-                            if minutes >= 1440:
-                                time_desc = f"{minutes // 1440}天"
-                            elif minutes >= 60:
-                                time_desc = f"{minutes // 60}小时"
-                            else:
-                                time_desc = f"{minutes}分钟"
-
-                            # 发送提醒
-                            await NotificationService.create(
-                                session,
-                                user_id,
-                                NotificationCreate(
-                                    title="任务即将到期",
-                                    content=f"任务「{task.title}」将在{time_desc}后到期",
-                                    type="task_reminder",
-                                    data={
-                                        "task_id": str(task.id),
-                                        "minutes": minutes,
-                                        "due_date": task.due_date.isoformat() if task.due_date else None,
-                                    },
-                                ),
-                            )
-
-                            # 标记已发送（24小时内有效）
-                            await cache_service.set(reminder_key, "1", ttl=86400)
-                            sent_count += 1
-
-                    await session.commit()
-
-                except Exception as e:
-                    await session.rollback()
-                    logger.warning(f"Failed to send reminders for user {user_id}: {e}")
-
-            logger.info(f"✅ Task reminders sent: {sent_count}, skipped (duplicate): {skipped_count}")
-            return {"sent_count": sent_count, "skipped_count": skipped_count}
-
-    try:
-        return _run_async(_send())
-    except Exception as exc:
-        logger.error(f"❌ Task reminders failed: {exc}")
-        raise self.retry(exc=exc, countdown=300)
+    logger.warning(
+        "send_task_reminders is disabled. Task reminders are owned by the mobile local scheduler "
+        "until the backend supports datetime-based due times."
+    )
+    return {
+        "status": "disabled",
+        "reason": "task reminders are handled by the mobile local scheduler",
+    }
 
 
 # =============================================================================
@@ -805,3 +703,80 @@ def fail_probe_task(self):
     if attempt < 1:
         raise self.retry(exc=RuntimeError("intentional acceptance retry"), countdown=1)
     raise RuntimeError("intentional acceptance failure")
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=30,
+    name="retry_achievement_photon_reward",
+)
+def retry_achievement_photon_reward(
+    self,
+    user_id: str,
+    achievement_id: str,
+    achievement_name: str,
+    quantity: int,
+):
+    """Retry failed photon rewards for achievement unlocks."""
+    from app.db.session import AsyncSessionLocal
+    from app.services.achievement_reward_observability import AchievementRewardObservability
+    from app.services.photon_service import PhotonService, PhotonTransactionType
+
+    async def _grant():
+        async with AsyncSessionLocal() as session:
+            photon_service = PhotonService(session)
+            return await photon_service.grant_photons(
+                user_id=user_id,
+                amount=quantity,
+                source=f"achievement:{achievement_id}",
+                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+                metadata={"achievement_name": achievement_name},
+                related_item_id=achievement_id,
+                record_history=True,
+            )
+
+    try:
+        result = _run_async(_grant())
+        _run_async(
+            AchievementRewardObservability.record_event(
+                status="retry_succeeded",
+                channel="celery",
+                user_id=user_id,
+                achievement_id=achievement_id,
+                achievement_name=achievement_name,
+                quantity=quantity,
+                attempt=int(self.request.retries or 0) + 1,
+            )
+        )
+        logger.info(
+            "Retried achievement photon reward successfully for achievement %s and user %s",
+            achievement_id,
+            user_id,
+        )
+        return {"status": "success", "result": result}
+    except Exception as exc:
+        attempt = int(self.request.retries or 0) + 1
+        max_retries = int(getattr(self, "max_retries", 3) or 3)
+        status = "exhausted" if attempt > max_retries else "retry_failed"
+        _run_async(
+            AchievementRewardObservability.record_event(
+                status=status,
+                channel="celery",
+                user_id=user_id,
+                achievement_id=achievement_id,
+                achievement_name=achievement_name,
+                quantity=quantity,
+                attempt=attempt,
+                error_message=str(exc),
+            )
+        )
+        logger.error(
+            "Failed to retry achievement photon reward for achievement %s and user %s: %s",
+            achievement_id,
+            user_id,
+            exc,
+        )
+        if attempt > max_retries:
+            raise
+        raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))

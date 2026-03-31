@@ -280,18 +280,53 @@ async def test_combo_info_added_when_multiple_achievements_unlock(db_session, te
     await db_session.commit()
 
     engine = AchievementEngine(db_session)
-    with patch.object(AchievementEngine, "_notify_unlocks", new_callable=AsyncMock) as notify_mock, patch.object(
-        AchievementEngine, "_notify_milestones", new_callable=AsyncMock
-    ):
-        unlocked = await engine.process_event(
-            user_id=test_user.id,
-            event_type=AchievementEvent.TASK_COMPLETED,
-        )
+    db_session.sync_session.info["external_transaction_managed"] = True
+    unlocked = await engine.process_event(
+        user_id=test_user.id,
+        event_type=AchievementEvent.TASK_COMPLETED,
+    )
 
-    notify_mock.assert_awaited_once()
     assert len(unlocked) == 2
     for entry in unlocked:
         assert entry["combo_info"]["combo"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_unlock_achievement_is_idempotent_for_existing_unlocked_record(db_session, test_user):
+    achievement = _achievement("already_unlocked")
+    existing_record = UserAchievement(
+        user_id=test_user.id,
+        achievement_id=achievement.id,
+        progress=1.0,
+        unlocked_at=datetime(2026, 3, 10, 10, 0, 0),
+    )
+    achievement.total_unlocked = 1
+    db_session.add_all([achievement, existing_record])
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    result = await engine._unlock_achievement(str(test_user.id), achievement)
+
+    assert result is None
+    await db_session.refresh(achievement)
+    assert achievement.total_unlocked == 1
+
+
+@pytest.mark.asyncio
+async def test_unlock_visual_element_delegates_to_visual_element_service(db_session, test_user):
+    engine = AchievementEngine(db_session)
+
+    with patch("app.services.visual_element_service.VisualElementService") as service_cls:
+        service = service_cls.return_value
+        service.unlock_element = AsyncMock(return_value=AsyncMock(success=True))
+
+        await engine._unlock_visual_element(str(test_user.id), "bg_aurora", "achv_1")
+
+    service.unlock_element.assert_awaited_once()
+    request = service.unlock_element.await_args.kwargs["request"]
+    assert request.element_id == "bg_aurora"
+    assert request.source == "achievement"
+    assert request.source_id == "achv_1"
 
 
 @pytest.mark.asyncio
@@ -347,3 +382,31 @@ async def test_notify_milestones_sends_websocket_payload(db_session, test_user):
     assert recipient == str(test_user.id)
     assert message["type"] == "achievement_milestone"
     assert message["data"]["milestone_percent"] == 75
+
+
+@pytest.mark.asyncio
+async def test_grant_rewards_schedules_photon_compensation_after_commit_failure(db_session, test_user):
+    achievement = _achievement(
+        "reward_retry",
+        reward_config=[{"type": "photon", "quantity": 66}],
+    )
+    engine = AchievementEngine(db_session)
+    callbacks = []
+
+    def capture_callback(callback):
+        callbacks.append(callback)
+
+    engine._enqueue_after_commit = capture_callback
+    engine._schedule_photon_reward_retry = AsyncMock()
+
+    with patch("app.services.photon_service.PhotonService.grant_photons", AsyncMock(side_effect=RuntimeError("boom"))):
+        await engine._grant_rewards(str(test_user.id), achievement)
+
+    assert len(callbacks) == 1
+    await callbacks[0]()
+    engine._schedule_photon_reward_retry.assert_awaited_once_with(
+        user_id=str(test_user.id),
+        achievement_id=achievement.id,
+        achievement_name=achievement.name,
+        quantity=66,
+    )

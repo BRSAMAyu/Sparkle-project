@@ -59,8 +59,8 @@ class VocabWord {
     // streak 2: base * 2
     // streak 3: base * 4
     final multiplier = (1 << (consecutiveCorrect - 1)).toDouble();
-    final days = baseInterval * multiplier;
-    
+    final days = (baseInterval * multiplier).clamp(0, 180).toDouble();
+
     return DateTime.now().add(Duration(days: days.toInt()));
   }
 

@@ -101,12 +101,13 @@ extension ChatNotifierActions on ChatNotifier {
               .read(taskListProvider.notifier)
               .selectExecutionTemplate(taskId, templateId);
         }
-        final intent = await _ref.read(taskListProvider.notifier).handoffTaskToAi(
-              taskId,
-              goal: _actionString(payload, 'goal').isNotEmpty
-                  ? _actionString(payload, 'goal')
-                  : null,
-            );
+        final intent =
+            await _ref.read(taskListProvider.notifier).handoffTaskToAi(
+                  taskId,
+                  goal: _actionString(payload, 'goal').isNotEmpty
+                      ? _actionString(payload, 'goal')
+                      : null,
+                );
         if (intent == null) {
           final message = _ref.read(taskListProvider).error ?? 'AI 执行发起失败';
           if (message.contains('等待队列')) {
@@ -196,8 +197,10 @@ extension ChatNotifierActions on ChatNotifier {
     }
   }
 
-  Future<void> switchPlanSession(String? planId,
-      {BuildContext? context,}) async {
+  Future<void> switchPlanSession(
+    String? planId, {
+    BuildContext? context,
+  }) async {
     cancelActiveRun(reason: 'switch_plan');
     if (planId == null) {
       // 🔧 修复：即使没有活跃计划，也尝试加载当前会话历史
@@ -275,7 +278,9 @@ extension ChatNotifierActions on ChatNotifier {
     // Show feedback after successful switch
     if (context != null && context.mounted) {
       AppFeedback.success(
-          context, I18nService.instance.l10n.chatPlanContextSwitched,);
+        context,
+        I18nService.instance.l10n.chatPlanContextSwitched,
+      );
     }
   }
 
@@ -430,9 +435,8 @@ extension ChatNotifierActions on ChatNotifier {
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
     state = state.copyWith(
       lastActionStatus: 'response_feedback_sent',
-      lastActionMessage: feedbackType == 'up'
-          ? '已收到你的反馈，这条回复已标记为有帮助'
-          : '已收到你的反馈，我们会继续改进这类回复',
+      lastActionMessage:
+          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
     );
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -512,6 +516,9 @@ extension ChatNotifierActions on ChatNotifier {
 
     // Phase 1B: Trigger close-to-unlock check
     _ref.read(closeToUnlockProvider.notifier).triggerCheck();
+    unawaited(
+      _ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
+    );
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {
@@ -544,7 +551,8 @@ extension ChatNotifierActions on ChatNotifier {
         notificationType: event.notificationType,
       );
       debugPrint(
-          '✅ Notification added to notification center: ${event.notificationId}',);
+        '✅ Notification added to notification center: ${event.notificationId}',
+      );
     } catch (e) {
       debugPrint('⚠️ Failed to add notification to center: $e');
     }

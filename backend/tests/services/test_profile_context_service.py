@@ -2,6 +2,8 @@ from datetime import datetime
 
 import pytest
 
+from app.models.user import User
+from app.services.personalization.preference_service import PreferenceService
 from app.models.cognitive import BehaviorPattern
 from app.models.error_book import ErrorRecord
 from app.models.task import Task, TaskStatus, TaskType
@@ -99,3 +101,40 @@ async def test_profile_context_service_backfills_knowledge_summary_without_node_
     assert context.knowledge_summary.recent_mastery_changes
     assert context.knowledge_summary.recent_mastery_changes[0].node_name == "完成一次指针复盘"
     assert "指针与内存" in context.knowledge_summary.active_learning_subjects
+
+
+class _RedisCache:
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str):
+        return self._store.get(key)
+
+    async def setex(self, key: str, ttl: int, value: str):
+        self._store[key] = value
+
+    async def delete(self, *keys: str):
+        for key in keys:
+            self._store.pop(key, None)
+
+
+@pytest.mark.asyncio
+async def test_profile_context_service_refreshes_stale_cached_preference_version(db_session):
+    redis = _RedisCache()
+    user = User(username="profilecache", email="profilecache@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = ProfileContextService(db_session, redis=redis)
+    first = await service.get_profile_context(user.id)
+    assert first.preference_version == 1
+    stale_cache = dict(redis._store)
+
+    await PreferenceService(db_session, redis).update_explicit(user.id, {"depth_preference": 0.2})
+    redis._store.update(stale_cache)
+
+    refreshed = await service.get_profile_context(user.id)
+
+    assert refreshed.preference_version == 2
+    assert refreshed.preferences["depth_preference"] == 0.2

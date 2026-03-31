@@ -14,6 +14,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';

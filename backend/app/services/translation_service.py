@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import time
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -325,7 +326,12 @@ class TranslationService:
                     temperature=0.3,
                 )
                 translation = response.choices[0].message.content.strip()
-                if not self._is_valid_translation_output(translation, segment.text):
+                if not self._is_valid_translation_output(
+                    translation,
+                    segment.text,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                ):
                     raise ValueError("translation model returned prompt echo instead of translated text")
                 await circuit_breaker_service.record_success(self._circuit_key(provider_name))
                 used_provider = provider_name
@@ -349,7 +355,12 @@ class TranslationService:
                 model=llm_service.chat_model
             )
             translation = response.strip()
-            if not self._is_valid_translation_output(translation, segment.text):
+            if not self._is_valid_translation_output(
+                translation,
+                segment.text,
+                source_lang=source_lang,
+                target_lang=target_lang,
+            ):
                 raise ValueError("fallback translation returned prompt echo instead of translated text")
             used_provider = "llm"
             used_model = llm_service.chat_model
@@ -372,27 +383,107 @@ class TranslationService:
         }
 
     @staticmethod
-    def _is_valid_translation_output(translation: str, source_text: str) -> bool:
-        """Reject prompt echoes and instruction leakage from model output."""
-        normalized = translation.strip().lower()
-        if not normalized:
-            return False
+    def _normalize_language_family(language_code: str | None) -> str:
+        normalized = (language_code or "").strip().lower()
+        if normalized.startswith("zh"):
+            return "zh"
+        if normalized.startswith("en"):
+            return "en"
+        if normalized.startswith("ja"):
+            return "ja"
+        if normalized.startswith("ko"):
+            return "ko"
+        return "unknown"
 
-        invalid_markers = (
+    @staticmethod
+    def _detect_language_family(text: str) -> str:
+        sample = text or ""
+        latin_chars = len(re.findall(r"[A-Za-z]", sample))
+        cjk_chars = len(re.findall(r"[\u4e00-\u9fff]", sample))
+        kana_chars = len(re.findall(r"[\u3040-\u30ff]", sample))
+        hangul_chars = len(re.findall(r"[\uac00-\ud7af]", sample))
+
+        if kana_chars > 0:
+            return "ja"
+        if hangul_chars > 0:
+            return "ko"
+        if cjk_chars >= 4 and cjk_chars * 2 >= latin_chars:
+            return "zh"
+        if cjk_chars > latin_chars:
+            return "zh"
+        if latin_chars > 0:
+            return "en"
+        return "unknown"
+
+    @staticmethod
+    def _looks_like_prompt_echo(text: str) -> bool:
+        normalized = text.strip().lower()
+        markers = (
             "translate the following text",
             "output only the translation",
             "source language:",
             "target language:",
             "domain:",
             "style:",
-            "**领域",
-            "**风格",
+            "source text:",
+            "translated text:",
             "仅输出翻译结果",
         )
-        if any(marker in normalized for marker in invalid_markers):
+
+        if normalized.startswith(("translate the following text", "output only the translation")):
+            return True
+
+        marker_hits = sum(1 for marker in markers if marker in normalized)
+        if marker_hits >= 2:
+            return True
+
+        prefixed_lines = 0
+        for line in normalized.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if any(line.startswith(marker) for marker in markers[2:]):
+                prefixed_lines += 1
+        return prefixed_lines >= 2
+
+    @classmethod
+    def _is_valid_translation_output(
+        cls,
+        translation: str,
+        source_text: str,
+        *,
+        source_lang: str | None = None,
+        target_lang: str | None = None,
+    ) -> bool:
+        """Reject prompt echoes and instruction leakage from model output."""
+        normalized = translation.strip().lower()
+        if not normalized:
             return False
 
-        return normalized != source_text.strip().lower()
+        if normalized == source_text.strip().lower():
+            return False
+
+        target_family = cls._normalize_language_family(target_lang)
+        source_family = cls._normalize_language_family(source_lang)
+        detected_family = cls._detect_language_family(translation)
+        looks_like_prompt_echo = cls._looks_like_prompt_echo(translation)
+
+        if looks_like_prompt_echo and target_family != "unknown":
+            if detected_family in {"unknown", source_family}:
+                return False
+            if detected_family != target_family:
+                return False
+
+        if (
+            target_family != "unknown"
+            and source_family != "unknown"
+            and source_family != target_family
+            and detected_family == source_family
+            and len(translation.strip()) >= max(12, len(source_text.strip()) // 2)
+        ):
+            return False
+
+        return True
 
     @staticmethod
     def _normalize_provider(provider_name: str | None) -> str:

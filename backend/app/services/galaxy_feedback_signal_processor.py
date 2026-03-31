@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.models.galaxy import ExpansionFeedback
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import pick_with_hysteresis, recency_weight, weighted_average
 
 
 class GalaxyFeedbackSignalProcessor:
@@ -35,15 +36,14 @@ class GalaxyFeedbackSignalProcessor:
         if not feedbacks:
             return
 
-        ratings = [int(item.rating) for item in feedbacks if item.rating is not None]
-        implicit_scores = [
-            max(0.0, min(1.0, float(item.implicit_score)))
-            for item in feedbacks
-            if item.implicit_score is not None
-        ]
+        try:
+            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+            previous_depth = (prefs.inferred or {}).get("preferred_expansion_depth")
+        except Exception:
+            previous_depth = None
 
-        satisfaction = self._compute_satisfaction(ratings, implicit_scores)
-        preferred_depth = self._preferred_depth(ratings, satisfaction)
+        satisfaction = self._compute_satisfaction(feedbacks)
+        preferred_depth = self._preferred_depth(feedbacks, satisfaction, previous_depth if isinstance(previous_depth, str) else None)
 
         updates: dict[str, object] = {
             "knowledge_expansion_satisfaction": round(satisfaction, 3),
@@ -76,23 +76,49 @@ class GalaxyFeedbackSignalProcessor:
         }
 
     @staticmethod
-    def _compute_satisfaction(ratings: list[int], implicit_scores: list[float]) -> float:
-        if ratings:
-            avg_rating = sum(ratings) / len(ratings)
+    def _compute_satisfaction(feedbacks: list[ExpansionFeedback]) -> float:
+        weighted_ratings: list[tuple[float, float]] = []
+        weighted_implicit: list[tuple[float, float]] = []
+        now = None
+        for item in feedbacks:
+            observed_at = getattr(item, "created_at", None)
+            weight = recency_weight(observed_at, now=now, half_life_days=7.0, min_weight=0.25)
+            if item.rating is not None:
+                weighted_ratings.append((float(item.rating), weight))
+            if item.implicit_score is not None:
+                weighted_implicit.append((max(0.0, min(1.0, float(item.implicit_score))), weight))
+
+        avg_rating = weighted_average(weighted_ratings)
+        if avg_rating is not None:
             return max(0.0, min(1.0, (avg_rating - 1.0) / 4.0))
-        if implicit_scores:
-            return sum(implicit_scores) / len(implicit_scores)
+        implicit = weighted_average(weighted_implicit)
+        if implicit is not None:
+            return implicit
         return 0.5
 
     @staticmethod
-    def _preferred_depth(ratings: list[int], satisfaction: float) -> str:
-        if ratings:
-            high_ratio = sum(1 for rating in ratings if rating >= 4) / len(ratings)
-            low_ratio = sum(1 for rating in ratings if rating <= 2) / len(ratings)
-            if high_ratio > 0.6:
-                return "deep"
-            if low_ratio > 0.4:
-                return "shallow"
+    def _preferred_depth(
+        feedbacks: list[ExpansionFeedback],
+        satisfaction: float,
+        previous: str | None = None,
+    ) -> str:
+        now = None
+        scores = {"deep": 0.0, "moderate": 0.0, "shallow": 0.0}
+        for item in feedbacks:
+            weight = recency_weight(getattr(item, "created_at", None), now=now, half_life_days=7.0, min_weight=0.25)
+            if item.rating is None:
+                continue
+            rating = int(item.rating)
+            if rating >= 4:
+                scores["deep"] += weight
+            elif rating <= 2:
+                scores["shallow"] += weight
+            else:
+                scores["moderate"] += weight
+
+        selected = pick_with_hysteresis(scores, previous, margin=0.12)
+        if isinstance(selected, str) and scores.get(selected, 0.0) > 0:
+            return selected
         if satisfaction >= 0.7:
             return "deep"
         if satisfaction <= 0.35:

@@ -14,7 +14,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/db"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
@@ -114,28 +116,83 @@ func workflowIDForChatMode(mode string) string {
 	}
 }
 
-func (h *ChatOrchestrator) resolveUserUUID(ctx context.Context, userID string) (uuid.UUID, string, error) {
+func (h *ChatOrchestrator) resolveUserIdentity(ctx context.Context, userID string) (uuid.UUID, string, *db.User, error) {
 	if parsed, err := uuid.Parse(userID); err == nil {
-		return parsed, userID, nil
+		if h.queries == nil {
+			return parsed, userID, nil, nil
+		}
+		user, err := h.queries.GetUser(ctx, pgtype.UUID{Bytes: parsed, Valid: true})
+		if err != nil {
+			return parsed, userID, nil, nil
+		}
+		return parsed, userID, &user, nil
 	}
 
 	if h.queries == nil {
-		return uuid.Nil, userID, nil
+		return uuid.Nil, userID, nil, nil
 	}
 
 	user, err := h.queries.GetUserByEmail(ctx, userID)
 	if err != nil {
-		return uuid.Nil, userID, nil
+		return uuid.Nil, userID, nil, nil
 	}
 	if !user.ID.Valid {
-		return uuid.Nil, userID, nil
+		return uuid.Nil, userID, nil, nil
 	}
 
 	parsed, err := uuid.FromBytes(user.ID.Bytes[:])
 	if err != nil {
-		return uuid.Nil, userID, nil
+		return uuid.Nil, userID, nil, nil
 	}
-	return parsed, parsed.String(), nil
+	return parsed, parsed.String(), &user, nil
+}
+
+func buildAgentUserProfile(inputNickname, userContextJSON string, snapshot *service.ChatUserProfileSnapshot, fallbackUser *db.User) *agentv1.UserProfile {
+	profile := &agentv1.UserProfile{
+		Nickname:     inputNickname,
+		Timezone:     "Asia/Shanghai",
+		Language:     "zh-CN",
+		ExtraContext: userContextJSON,
+	}
+
+	if snapshot != nil {
+		if snapshot.Nickname != "" {
+			profile.Nickname = snapshot.Nickname
+		}
+		if snapshot.Timezone != "" {
+			profile.Timezone = snapshot.Timezone
+		}
+		if snapshot.Language != "" {
+			profile.Language = snapshot.Language
+		}
+		profile.IsPro = snapshot.IsPro
+		profile.Level = snapshot.Level
+		if snapshot.AvatarURL != "" {
+			profile.AvatarUrl = snapshot.AvatarURL
+		}
+		profile.Preferences = snapshot.Preferences
+	}
+
+	if fallbackUser != nil {
+		if profile.Nickname == "" {
+			if fallbackUser.Nickname.Valid && fallbackUser.Nickname.String != "" {
+				profile.Nickname = fallbackUser.Nickname.String
+			} else {
+				profile.Nickname = fallbackUser.Username
+			}
+		}
+		if profile.AvatarUrl == "" && fallbackUser.AvatarUrl.Valid {
+			profile.AvatarUrl = fallbackUser.AvatarUrl.String
+		}
+		if profile.Level == 0 {
+			profile.Level = fallbackUser.FlameLevel
+		}
+		if !profile.IsPro {
+			profile.IsPro = fallbackUser.FlameLevel >= 3
+		}
+	}
+
+	return profile
 }
 
 func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder interface{}, userID string, input *chatInput, requestID string) bool {
@@ -176,9 +233,18 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 
 	// Resolve user identity to UUID (token sub may be email)
-	userUUID, resolvedUserID, _ := h.resolveUserUUID(ctx, userID)
+	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
 	if resolvedUserID != "" {
 		userID = resolvedUserID
+	}
+
+	var profileSnapshot *service.ChatUserProfileSnapshot
+	if h.userContext != nil && userUUID != uuid.Nil {
+		if snapshot, err := h.userContext.GetChatUserProfileSnapshot(ctx, userUUID); err != nil {
+			log.Printf("Failed to fetch chat user profile for user=%s: %v", userID, err)
+		} else {
+			profileSnapshot = snapshot
+		}
 	}
 
 	// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
@@ -351,12 +417,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
 		ChatMode:          normalizedChatMode,
-		UserProfile: &agentv1.UserProfile{
-			Nickname:     input.Nickname,
-			Timezone:     "Asia/Shanghai",
-			Language:     "zh-CN",
-			ExtraContext: userContextJSON, // P0: Inject user context here
-		},
+		UserProfile:       buildAgentUserProfile(input.Nickname, userContextJSON, profileSnapshot, resolvedUser),
 	}
 	if input.ExtraContext != nil {
 		if extra, err := structpb.NewStruct(input.ExtraContext); err == nil {

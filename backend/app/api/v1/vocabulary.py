@@ -318,11 +318,17 @@ async def get_wordbook(
 
 @router.get("/wordbook/review", summary="获取复习列表", response_model=list[WordBookResponse])
 async def get_review_list(
+    limit: int = Query(
+        vocabulary_service.DEFAULT_REVIEW_BATCH_SIZE,
+        ge=1,
+        le=200,
+        description="Maximum number of due words to return",
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """获取需要复习的单词列表"""
-    words = await vocabulary_service.get_review_list(db, current_user.id)
+    words = await vocabulary_service.get_review_list(db, current_user.id, limit=limit)
 
     result = []
     for word_entry in words:

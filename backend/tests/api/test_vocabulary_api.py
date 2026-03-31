@@ -218,6 +218,22 @@ class TestVocabularyAPI:
             data = response.json()
             assert isinstance(data, list)
             assert len(data) >= 0
+            mock_service.get_review_list.assert_awaited_once()
+            assert mock_service.get_review_list.await_args.kwargs["limit"] == 50
+
+    def test_get_review_list_accepts_custom_limit(self, vocab_client, auth_headers, mock_user):
+        with patch('app.api.v1.vocabulary.vocabulary_service') as mock_service, \
+             patch('app.api.v1.vocabulary.get_current_user', return_value=mock_user):
+            mock_service.get_review_list = AsyncMock(return_value=[])
+
+            response = vocab_client.get(
+                "/vocabulary/wordbook/review?limit=25",
+                headers=auth_headers
+            )
+
+            assert response.status_code == 200
+            mock_service.get_review_list.assert_awaited_once()
+            assert mock_service.get_review_list.await_args.kwargs["limit"] == 25
 
     def test_get_stats(self, vocab_client, auth_headers, mock_user):
         """测试获取统计"""

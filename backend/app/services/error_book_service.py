@@ -43,6 +43,8 @@ class ReviewSchedulerService:
     SM-2 Algorithm with Fuzzing/Jitter to prevent review bombing.
     """
 
+    MAX_EASINESS_FACTOR = 2.5
+
     def calculate_next_review(
         self,
         current_mastery: float,
@@ -68,7 +70,7 @@ class ReviewSchedulerService:
         # 1. Update Easiness Factor (EF)
         # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
         new_ef = easiness_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-        new_ef = max(1.3, new_ef) # SM-2 minimum EF
+        new_ef = max(1.3, min(new_ef, self.MAX_EASINESS_FACTOR)) # SM-2 EF bounded to prevent runaway intervals
 
         # 2. Update Interval
         if quality < 3:

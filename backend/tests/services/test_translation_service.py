@@ -576,3 +576,21 @@ async def test_terminology_notes_extraction(mock_cache_service, mock_llm_service
     # Should match glossary terms found in text
     note_text = " ".join(notes)
     assert "cache" in note_text.lower() or "database" in note_text.lower()
+
+
+def test_translation_validation_accepts_translated_content_with_metadata_phrase():
+    assert TranslationService._is_valid_translation_output(
+        "术语说明：保留短语 Source language: English 作为示例文本。",
+        "Source language: English",
+        source_lang="en",
+        target_lang="zh-CN",
+    ) is True
+
+
+def test_translation_validation_rejects_prompt_echo_in_source_language():
+    assert TranslationService._is_valid_translation_output(
+        "Source language: English\nTarget language: Chinese\nTranslate the following text",
+        "Hello world",
+        source_lang="en",
+        target_lang="zh-CN",
+    ) is False

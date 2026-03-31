@@ -50,6 +50,58 @@ class PhotonService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    def _is_transaction_managed_externally(self) -> bool:
+        return bool(self.db.sync_session.info.get("external_transaction_managed"))
+
+    async def _lock_user_balance_row(self, user_id: str) -> User:
+        query = (
+            select(User)
+            .options(lazyload("*"))
+            .where(User.id == user_id)
+            .with_for_update()
+        )
+        result = await self.db.execute(query)
+        user = result.scalar_one_or_none()
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+        return user
+
+    async def _find_existing_transaction(
+        self,
+        user_id: str,
+        transaction_type: str,
+        amount: int,
+        source: str,
+        related_item_id: str | None,
+    ) -> PhotonTransactionHistory | None:
+        query = (
+            select(PhotonTransactionHistory)
+            .where(
+                PhotonTransactionHistory.user_id == user_id,
+                PhotonTransactionHistory.transaction_type == transaction_type,
+                PhotonTransactionHistory.amount == amount,
+                PhotonTransactionHistory.source == source,
+                PhotonTransactionHistory.related_item_id == related_item_id,
+            )
+            .order_by(desc(PhotonTransactionHistory.created_at))
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _finalize_balance_mutation(
+        self,
+        user: User,
+        *,
+        manage_transaction: bool,
+    ) -> None:
+        if manage_transaction:
+            await self.db.commit()
+            await self.db.refresh(user)
+            return
+
+        await self.db.flush()
+
     async def _update_balance(
         self,
         user_id: str,
@@ -109,6 +161,7 @@ class PhotonService:
         metadata: dict[str, Any] | None = None,
         related_item_id: str | None = None,
         record_history: bool = False,
+        manage_transaction: bool | None = None,
     ) -> dict[str, Any]:
         """
         发放光子积分
@@ -127,9 +180,48 @@ class PhotonService:
             raise ValueError(f"Amount must be positive, got {amount}")
 
         transaction_metadata = extra_data if extra_data is not None else metadata
+        should_manage_transaction = (
+            not self._is_transaction_managed_externally()
+            if manage_transaction is None
+            else manage_transaction
+        )
+
+        locked_user: User | None = None
+        if record_history:
+            locked_user = await self._lock_user_balance_row(user_id)
+            existing_transaction = await self._find_existing_transaction(
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount=amount,
+                source=source,
+                related_item_id=related_item_id,
+            )
+            if existing_transaction is not None:
+                logger.info(
+                    "Skipped duplicate photon grant for user %s, source=%s, type=%s, related_item_id=%s",
+                    user_id,
+                    source,
+                    transaction_type,
+                    related_item_id,
+                )
+                return {
+                    "user_id": user_id,
+                    "amount": amount,
+                    "old_balance": existing_transaction.balance_before,
+                    "new_balance": existing_transaction.balance_after,
+                    "source": source,
+                    "transaction_type": transaction_type,
+                    "timestamp": existing_transaction.created_at or _utcnow(),
+                    "extra_data": existing_transaction.extra_data or transaction_metadata,
+                    "deduplicated": True,
+                }
 
         # 使用内部方法更新余额（自动删除缓存）
-        old_balance, new_balance, user = await self._update_balance(user_id, amount)
+        old_balance, new_balance, user = await self._update_balance(
+            user_id,
+            amount,
+            lock_for_update=locked_user is None,
+        )
 
         if record_history:
             await self.record_transaction(
@@ -143,9 +235,10 @@ class PhotonService:
                 extra_data=transaction_metadata,
             )
 
-        # 提交事务
-        await self.db.commit()
-        await self.db.refresh(user)
+        await self._finalize_balance_mutation(
+            user,
+            manage_transaction=should_manage_transaction,
+        )
 
         logger.info(
             f"Granted {amount} photons to user {user_id}, "
@@ -162,6 +255,7 @@ class PhotonService:
             "transaction_type": transaction_type,
             "timestamp": _utcnow(),
             "extra_data": transaction_metadata,
+            "deduplicated": False,
         }
 
     async def deduct_photons(
@@ -175,6 +269,7 @@ class PhotonService:
         related_item_id: str | None = None,
         allow_negative: bool = False,
         record_history: bool = False,
+        manage_transaction: bool | None = None,
     ) -> dict[str, Any]:
         """
         扣除光子积分
@@ -194,6 +289,11 @@ class PhotonService:
             raise ValueError(f"Amount must be positive, got {amount}")
 
         transaction_metadata = extra_data if extra_data is not None else metadata
+        should_manage_transaction = (
+            not self._is_transaction_managed_externally()
+            if manage_transaction is None
+            else manage_transaction
+        )
 
         # 先检查余额
         old_balance = await self.get_balance(user_id)
@@ -217,9 +317,10 @@ class PhotonService:
                 extra_data=transaction_metadata,
             )
 
-        # 提交事务
-        await self.db.commit()
-        await self.db.refresh(user)
+        await self._finalize_balance_mutation(
+            user,
+            manage_transaction=should_manage_transaction,
+        )
 
         logger.info(
             f"Deducted {amount} photons from user {user_id}, "

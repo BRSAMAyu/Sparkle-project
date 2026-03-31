@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/db"
 )
@@ -62,6 +63,18 @@ type UserContextData struct {
 	OverlayGeneratedAt string            `json:"overlay_generated_at,omitempty"`
 }
 
+// ChatUserProfileSnapshot captures the gateway-side user profile fields needed
+// for gRPC personalization.
+type ChatUserProfileSnapshot struct {
+	Nickname    string
+	Timezone    string
+	Language    string
+	IsPro       bool
+	Level       int32
+	AvatarURL   string
+	Preferences map[string]string
+}
+
 // UserContextService handles fetching user context data for the orchestrator
 type UserContextService struct {
 	pool    *pgxpool.Pool
@@ -74,6 +87,53 @@ func NewUserContextService(pool *pgxpool.Pool) *UserContextService {
 		pool:    pool,
 		queries: db.New(pool),
 	}
+}
+
+// GetChatUserProfileSnapshot loads the strongly typed user profile payload that
+// the Go gateway forwards to the Python agent.
+func (s *UserContextService) GetChatUserProfileSnapshot(ctx context.Context, userID uuid.UUID) (*ChatUserProfileSnapshot, error) {
+	user, err := s.queries.GetUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	explicitPrefs := map[string]any{}
+	if rawPrefs, err := s.getStoredExplicitPreferences(ctx, userID); err != nil {
+		return nil, err
+	} else if rawPrefs != nil {
+		explicitPrefs = rawPrefs
+	}
+
+	timezone := "Asia/Shanghai"
+	if value, ok := explicitPrefs["timezone"].(string); ok && value != "" {
+		timezone = value
+	}
+
+	language := "zh-CN"
+	if value, ok := explicitPrefs["language"].(string); ok && value != "" {
+		language = value
+	} else if user.AgreedLocale.Valid && user.AgreedLocale.String != "" {
+		language = user.AgreedLocale.String
+	}
+
+	nickname := user.Username
+	if user.Nickname.Valid && user.Nickname.String != "" {
+		nickname = user.Nickname.String
+	}
+
+	profile := &ChatUserProfileSnapshot{
+		Nickname:    nickname,
+		Timezone:    timezone,
+		Language:    language,
+		IsPro:       user.FlameLevel >= 3,
+		Level:       user.FlameLevel,
+		Preferences: buildProfilePreferences(user, explicitPrefs),
+	}
+	if user.AvatarUrl.Valid {
+		profile.AvatarURL = user.AvatarUrl.String
+	}
+
+	return profile, nil
 }
 
 // GetPendingTasks fetches up to `limit` pending tasks for a user, ordered by priority and due date
@@ -107,6 +167,87 @@ func (s *UserContextService) GetPendingTasks(ctx context.Context, userID uuid.UU
 	}
 
 	return tasks, nil
+}
+
+func (s *UserContextService) getStoredExplicitPreferences(ctx context.Context, userID uuid.UUID) (map[string]any, error) {
+	var explicitBytes []byte
+	err := s.pool.QueryRow(ctx, `
+		SELECT explicit
+		FROM user_preferences_center
+		WHERE user_id = $1
+	`, userID).Scan(&explicitBytes)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if len(explicitBytes) == 0 {
+		return nil, nil
+	}
+
+	explicit := map[string]any{}
+	if err := json.Unmarshal(explicitBytes, &explicit); err != nil {
+		return nil, err
+	}
+	return explicit, nil
+}
+
+func buildProfilePreferences(user db.User, explicitPrefs map[string]any) map[string]string {
+	preferences := map[string]string{
+		"depth_preference":     fmt.Sprintf("%.2f", user.DepthPreference),
+		"curiosity_preference": fmt.Sprintf("%.2f", user.CuriosityPreference),
+		"flame_level":          fmt.Sprintf("%d", user.FlameLevel),
+		"flame_brightness":     fmt.Sprintf("%.2f", user.FlameBrightness),
+		"photon_balance":       fmt.Sprintf("%d", user.PhotonBalance),
+	}
+
+	for key, value := range explicitPrefs {
+		if serialized, ok := stringifyProfilePreference(value); ok {
+			preferences[key] = serialized
+		}
+	}
+
+	return preferences
+}
+
+func stringifyProfilePreference(value any) (string, bool) {
+	switch typed := value.(type) {
+	case nil:
+		return "", false
+	case string:
+		if typed == "" {
+			return "", false
+		}
+		return typed, true
+	case bool:
+		if typed {
+			return "true", true
+		}
+		return "false", true
+	case float64:
+		return fmt.Sprintf("%.2f", typed), true
+	case float32:
+		return fmt.Sprintf("%.2f", typed), true
+	case int:
+		return fmt.Sprintf("%d", typed), true
+	case int32:
+		return fmt.Sprintf("%d", typed), true
+	case int64:
+		return fmt.Sprintf("%d", typed), true
+	case []string:
+		raw, err := json.Marshal(typed)
+		if err != nil {
+			return "", false
+		}
+		return string(raw), true
+	default:
+		raw, err := json.Marshal(typed)
+		if err != nil {
+			return "", false
+		}
+		return string(raw), true
+	}
 }
 
 // GetActivePlans fetches up to `limit` active plans for a user

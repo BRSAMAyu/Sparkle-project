@@ -7,7 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/service"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -153,5 +156,81 @@ func TestParseErrorCode(t *testing.T) {
 	}
 	if got := parseErrorCode("non_standard"); got != agentv1.ErrorCode_ERROR_CODE_UNSPECIFIED {
 		t.Fatalf("unexpected mapped error code: %v", got)
+	}
+}
+
+func TestBuildAgentUserProfileUsesResolvedSnapshot(t *testing.T) {
+	profile := buildAgentUserProfile(
+		"input-nickname",
+		`{"focus":true}`,
+		&service.ChatUserProfileSnapshot{
+			Nickname:  "stored-nickname",
+			Timezone:  "America/Los_Angeles",
+			Language:  "en-US",
+			IsPro:     true,
+			Level:     6,
+			AvatarURL: "https://example.com/avatar.png",
+			Preferences: map[string]string{
+				"depth_preference":     "0.30",
+				"curiosity_preference": "0.80",
+				"photon_balance":       "42",
+			},
+		},
+		nil,
+	)
+
+	if profile.Nickname != "stored-nickname" {
+		t.Fatalf("unexpected nickname: %q", profile.Nickname)
+	}
+	if profile.Timezone != "America/Los_Angeles" {
+		t.Fatalf("unexpected timezone: %q", profile.Timezone)
+	}
+	if profile.Language != "en-US" {
+		t.Fatalf("unexpected language: %q", profile.Language)
+	}
+	if !profile.IsPro {
+		t.Fatal("expected is_pro to be true")
+	}
+	if profile.Level != 6 {
+		t.Fatalf("unexpected level: %d", profile.Level)
+	}
+	if profile.AvatarUrl != "https://example.com/avatar.png" {
+		t.Fatalf("unexpected avatar: %q", profile.AvatarUrl)
+	}
+	if profile.Preferences["photon_balance"] != "42" {
+		t.Fatalf("unexpected preferences: %#v", profile.Preferences)
+	}
+	if profile.ExtraContext != `{"focus":true}` {
+		t.Fatalf("unexpected extra context: %q", profile.ExtraContext)
+	}
+}
+
+func TestBuildAgentUserProfileFallsBackToResolvedUser(t *testing.T) {
+	profile := buildAgentUserProfile(
+		"",
+		"",
+		nil,
+		&db.User{
+			Username:   "fallback-user",
+			Nickname:   pgtype.Text{String: "fallback-nickname", Valid: true},
+			AvatarUrl:  pgtype.Text{String: "https://example.com/fallback.png", Valid: true},
+			FlameLevel: 4,
+		},
+	)
+
+	if profile.Nickname != "fallback-nickname" {
+		t.Fatalf("unexpected fallback nickname: %q", profile.Nickname)
+	}
+	if profile.AvatarUrl != "https://example.com/fallback.png" {
+		t.Fatalf("unexpected fallback avatar: %q", profile.AvatarUrl)
+	}
+	if profile.Level != 4 {
+		t.Fatalf("unexpected fallback level: %d", profile.Level)
+	}
+	if !profile.IsPro {
+		t.Fatal("expected fallback is_pro to be true")
+	}
+	if profile.Timezone != "Asia/Shanghai" {
+		t.Fatalf("unexpected fallback timezone: %q", profile.Timezone)
 	}
 }
