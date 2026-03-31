@@ -52,6 +52,7 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
       _bgmToken = BgmService.activate(
         policy.track!,
         priority: policy.priority,
+        switchBehavior: policy.switchBehavior,
       );
     } else {
       unawaited(
@@ -59,6 +60,7 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
           _bgmToken!,
           track: policy.track!,
           priority: policy.priority,
+          switchBehavior: policy.switchBehavior,
         ),
       );
     }

@@ -29,6 +29,8 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
   bool _isGeneratingPreview = false;
   File? _previewFile;
   String? _previewSignature;
+  String? _scheduledPreviewSignature;
+  String? _previewError;
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +58,14 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
     final signature =
         '${selectedPreset.id}::$_selectedTemplateId::${selectedPayload.title}::${selectedPayload.subtitle ?? ''}';
 
-    if (_previewSignature != signature && !_isGeneratingPreview) {
+    if (_previewSignature != signature &&
+        !_isGeneratingPreview &&
+        _scheduledPreviewSignature != signature) {
+      _scheduledPreviewSignature = signature;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scheduledPreviewSignature = null;
         if (!mounted) return;
-        unawaited(_generatePreview(selectedPayload, signature));
+        unawaited(_requestPreviewGeneration(selectedPayload, signature));
       });
     }
 
@@ -153,6 +159,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             _PosterPreviewCard(
               isGenerating: _isGeneratingPreview,
               previewFile: _previewFile,
+              errorMessage: _previewError,
             ),
             const SizedBox(height: DS.spacing16),
             Wrap(
@@ -175,12 +182,18 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                 ),
                 SizedBox(
                   width: double.infinity,
-                  child: SparkleButton.secondary(
+                  child: SparkleButton(
                     expand: true,
                     icon: const Icon(Icons.refresh_rounded),
                     label: '重新生成预览',
+                    variant: ButtonVariant.secondary,
+                    disabled: _isGeneratingPreview,
                     onPressed: () => unawaited(
-                      _generatePreview(selectedPayload, signature, force: true),
+                      _requestPreviewGeneration(
+                        selectedPayload,
+                        signature,
+                        force: true,
+                      ),
                     ),
                   ),
                 ),
@@ -192,22 +205,60 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
     );
   }
 
+  Future<void> _requestPreviewGeneration(
+    UniversalSharePayload payload,
+    String signature, {
+    bool force = false,
+  }) async {
+    if (_isGeneratingPreview) {
+      return;
+    }
+    await _generatePreview(payload, signature, force: force);
+  }
+
   Future<void> _generatePreview(
     UniversalSharePayload payload,
     String signature, {
     bool force = false,
   }) async {
-    if (!force && _previewSignature == signature) return;
+    if (!force && _previewSignature == signature && _previewFile != null) {
+      return;
+    }
     setState(() {
       _isGeneratingPreview = true;
       _previewSignature = signature;
+      _previewError = null;
     });
-    final file = await SharePosterService().generatePoster(context, payload);
-    if (!mounted) return;
-    setState(() {
-      _previewFile = file;
-      _isGeneratingPreview = false;
-    });
+    try {
+      final file = await SharePosterService().generatePoster(context, payload);
+      if (!mounted) return;
+      setState(() {
+        _previewFile = file;
+        _previewError = file == null ? '暂时无法生成预览，请稍后重试。' : null;
+      });
+      if (file == null) {
+        AppFeedback.error(context, '海报预览生成失败，请稍后重试');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _previewError = _friendlyError(error);
+      });
+      AppFeedback.error(context, '海报预览生成失败：${_friendlyError(error)}');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isGeneratingPreview = false;
+      });
+    }
+  }
+
+  String _friendlyError(Object error) {
+    final message = error.toString().trim();
+    if (message.isEmpty) {
+      return '未知错误';
+    }
+    return message.replaceFirst('Exception: ', '');
   }
 
   List<_PosterPreset> _buildPresets(
@@ -442,10 +493,12 @@ class _PosterPreviewCard extends StatelessWidget {
   const _PosterPreviewCard({
     required this.isGenerating,
     required this.previewFile,
+    this.errorMessage,
   });
 
   final bool isGenerating;
   final File? previewFile;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -464,16 +517,29 @@ class _PosterPreviewCard extends StatelessWidget {
               color: DS.surfacePrimary,
               child: isGenerating
                   ? const Center(child: CircularProgressIndicator())
-                  : previewFile != null
-                      ? Image.file(previewFile!, fit: BoxFit.cover)
-                      : Center(
-                          child: Text(
-                            '预览生成中',
-                            style: DS.bodyMedium.copyWith(
-                              color: DS.textSecondary,
+                  : errorMessage != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(DS.spacing16),
+                            child: Text(
+                              errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: DS.bodyMedium.copyWith(
+                                color: DS.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
+                        )
+                      : previewFile != null
+                          ? Image.file(previewFile!, fit: BoxFit.cover)
+                          : Center(
+                              child: Text(
+                                '预览生成中',
+                                style: DS.bodyMedium.copyWith(
+                                  color: DS.textSecondary,
+                                ),
+                              ),
+                            ),
             ),
           ),
         ),

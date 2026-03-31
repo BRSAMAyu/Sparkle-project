@@ -6,7 +6,6 @@ part 'notification_center_provider.g.dart';
 
 /// Notification Center State
 class NotificationCenterState {
-
   const NotificationCenterState({
     this.notifications = const [],
     this.isLoading = false,
@@ -23,12 +22,13 @@ class NotificationCenterState {
     bool? isLoading,
     String? error,
     int? unreadCount,
-  }) => NotificationCenterState(
-      notifications: notifications ?? this.notifications,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      unreadCount: unreadCount ?? this.unreadCount,
-    );
+  }) =>
+      NotificationCenterState(
+        notifications: notifications ?? this.notifications,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+        unreadCount: unreadCount ?? this.unreadCount,
+      );
 }
 
 /// Notification Center Notifier
@@ -54,11 +54,12 @@ class NotificationCenter extends _$NotificationCenter {
         unreadOnly: unreadOnly,
         sourceType: sourceType,
       );
+      final dedupedNotifications = _dedupeNotifications(notifications);
 
-      final unreadCount = notifications.where((n) => !n.isRead).length;
+      final unreadCount = dedupedNotifications.where((n) => !n.isRead).length;
 
       state = state.copyWith(
-        notifications: notifications,
+        notifications: dedupedNotifications,
         isLoading: false,
         unreadCount: unreadCount,
       );
@@ -100,7 +101,8 @@ class NotificationCenter extends _$NotificationCenter {
       await _repository.markAllAsRead();
 
       // Update local state
-      final updatedNotifications = state.notifications.map((n) => n.copyWith(isRead: true)).toList();
+      final updatedNotifications =
+          state.notifications.map((n) => n.copyWith(isRead: true)).toList();
 
       state = state.copyWith(
         notifications: updatedNotifications,
@@ -117,9 +119,8 @@ class NotificationCenter extends _$NotificationCenter {
       await _repository.deleteNotification(notificationId, type);
 
       // Remove from local state
-      final updatedNotifications = state.notifications
-          .where((n) => n.id != notificationId)
-          .toList();
+      final updatedNotifications =
+          state.notifications.where((n) => n.id != notificationId).toList();
 
       final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
 
@@ -138,9 +139,8 @@ class NotificationCenter extends _$NotificationCenter {
       await _repository.clearReadNotifications();
 
       // Remove read notifications from local state
-      final updatedNotifications = state.notifications
-          .where((n) => !n.isRead)
-          .toList();
+      final updatedNotifications =
+          state.notifications.where((n) => !n.isRead).toList();
 
       state = state.copyWith(
         notifications: updatedNotifications,
@@ -178,7 +178,10 @@ class NotificationCenter extends _$NotificationCenter {
     }
 
     // 添加到列表开头
-    final updatedNotifications = [notification, ...state.notifications];
+    final updatedNotifications = _dedupeNotifications([
+      notification,
+      ...state.notifications,
+    ]);
 
     // 更新未读计数
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
@@ -191,9 +194,8 @@ class NotificationCenter extends _$NotificationCenter {
 
   /// 从列表中移除通知
   void removeNotification(String notificationId) {
-    final updatedNotifications = state.notifications
-        .where((n) => n.id != notificationId)
-        .toList();
+    final updatedNotifications =
+        state.notifications.where((n) => n.id != notificationId).toList();
 
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
 
@@ -205,7 +207,9 @@ class NotificationCenter extends _$NotificationCenter {
 
   /// 更新单个通知（用于实时更新已读状态等）
   void updateNotification(UnifiedNotification updated) {
-    final updatedNotifications = state.notifications.map((n) => n.id == updated.id ? updated : n).toList();
+    final updatedNotifications = state.notifications
+        .map((n) => n.id == updated.id ? updated : n)
+        .toList();
 
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
 
@@ -213,6 +217,42 @@ class NotificationCenter extends _$NotificationCenter {
       notifications: updatedNotifications,
       unreadCount: unreadCount,
     );
+  }
+
+  List<UnifiedNotification> _dedupeNotifications(
+    List<UnifiedNotification> notifications,
+  ) {
+    final deduped = <UnifiedNotification>[];
+    final seenIds = <String>{};
+    final seenFingerprints = <String>{};
+
+    for (final notification in notifications) {
+      if (notification.id.isNotEmpty && !seenIds.add(notification.id)) {
+        continue;
+      }
+
+      final fingerprint = _notificationFingerprint(notification);
+      if (!seenFingerprints.add(fingerprint)) {
+        continue;
+      }
+
+      deduped.add(notification);
+    }
+
+    deduped.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return deduped;
+  }
+
+  String _notificationFingerprint(UnifiedNotification notification) {
+    final createdAtSeconds =
+        notification.createdAt.toUtc().millisecondsSinceEpoch ~/ 1000;
+    return [
+      notification.sourceType,
+      notification.type ?? '',
+      notification.title.trim(),
+      notification.content.trim(),
+      createdAtSeconds.toString(),
+    ].join('|');
   }
 }
 

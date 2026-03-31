@@ -109,151 +109,153 @@ class TaskShareCard extends StatelessWidget {
           builder: (context) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             return Container(
-          width: 260,
-          decoration: BoxDecoration(
-            gradient: isDarkMode
-                ? LinearGradient(
-                    colors: [
-                      DS.success.withValues(alpha: 0.1),
-                      DS.brandPrimary.withValues(alpha: 0.05),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isDarkMode ? null : DS.surfacePanel,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(
-              color: isDarkMode
-                  ? DS.success.withValues(alpha: 0.3)
-                  : DS.borderSubtle,
-            ),
-            boxShadow: DS.shadowSm,
-          ),
-          child: Stack(
-            children: [
-              // Background decoration
-              Positioned(
-                right: -20,
-                bottom: -20,
-                child: Icon(
-                  Icons.check_circle_outline,
-                  size: 100,
-                  color: DS.success.withValues(alpha: 0.1),
+              width: 260,
+              decoration: BoxDecoration(
+                gradient: isDarkMode
+                    ? LinearGradient(
+                        colors: [
+                          DS.success.withValues(alpha: 0.1),
+                          DS.brandPrimary.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isDarkMode ? null : DS.surfacePanel,
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: isDarkMode
+                      ? DS.success.withValues(alpha: 0.3)
+                      : DS.borderSubtle,
                 ),
+                boxShadow: DS.shadowSm,
               ),
-              Padding(
-                padding: const EdgeInsets.all(DS.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(DS.sm),
-                          decoration: BoxDecoration(
-                            color: DS.success.withValues(alpha: 0.15),
-                            borderRadius: DS.borderRadius8,
-                          ),
-                          child: Icon(
-                            Icons.task_alt,
-                            color: DS.success,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: DS.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '任务完成',
-                                style: TextStyle(
-                                  fontSize: DS.fontSizeXs,
-                                  color: DS.textTertiary,
-                                ),
-                              ),
-                              Text(
-                                taskTitle,
-                                style: TextStyle(
-                                  fontWeight: DS.fontWeightBold,
-                                  fontSize: DS.fontSizeBase,
-                                  color: DS.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+              child: Stack(
+                children: [
+                  // Background decoration
+                  Positioned(
+                    right: -20,
+                    bottom: -20,
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      size: 100,
+                      color: DS.success.withValues(alpha: 0.1),
                     ),
-
-                    if (taskDescription != null &&
-                        taskDescription!.isNotEmpty) ...[
-                      const SizedBox(height: DS.sm),
-                      Text(
-                        taskDescription!,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: DS.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-
-                    const SizedBox(height: DS.md),
-
-                    // Stats row
-                    Wrap(
-                      spacing: DS.md,
-                      runSpacing: DS.sm,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(DS.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (duration != null) _buildStat('时长', '${duration}m'),
-                        if (points != null) ...[
-                          _buildStat('积分', '+$points'),
-                        ],
-                        if (streak != null && streak! > 0) ...[
-                          _buildStat('连胜', '$streak🔥'),
-                        ],
-                      ],
-                    ),
-
-                    if (completedAt != null) ...[
-                      const SizedBox(height: DS.sm),
-                      Text(
-                        _formatTime(completedAt!),
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: DS.textTertiary,
-                        ),
-                      ),
-                    ],
-                    if (onAdopt != null) ...[
-                      const SizedBox(height: DS.sm),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: TextButton.icon(
-                            icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                            label: const Text(
-                              '采纳任务',
-                              overflow: TextOverflow.ellipsis,
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(DS.sm),
+                              decoration: BoxDecoration(
+                                color: DS.success.withValues(alpha: 0.15),
+                                borderRadius: DS.borderRadius8,
+                              ),
+                              child: Icon(
+                                Icons.task_alt,
+                                color: DS.success,
+                                size: 20,
+                              ),
                             ),
-                            onPressed: onAdopt,
-                          ),
+                            const SizedBox(width: DS.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '任务完成',
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeXs,
+                                      color: DS.textTertiary,
+                                    ),
+                                  ),
+                                  Text(
+                                    taskTitle,
+                                    style: TextStyle(
+                                      fontWeight: DS.fontWeightBold,
+                                      fontSize: DS.fontSizeBase,
+                                      color: DS.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
+
+                        if (taskDescription != null &&
+                            taskDescription!.isNotEmpty) ...[
+                          const SizedBox(height: DS.sm),
+                          Text(
+                            taskDescription!,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              color: DS.textSecondary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+
+                        const SizedBox(height: DS.md),
+
+                        // Stats row
+                        Wrap(
+                          spacing: DS.md,
+                          runSpacing: DS.sm,
+                          children: [
+                            if (duration != null)
+                              _buildStat('时长', '${duration}m'),
+                            if (points != null) ...[
+                              _buildStat('积分', '+$points'),
+                            ],
+                            if (streak != null && streak! > 0) ...[
+                              _buildStat('连胜', '$streak 天'),
+                            ],
+                          ],
+                        ),
+
+                        if (completedAt != null) ...[
+                          const SizedBox(height: DS.sm),
+                          Text(
+                            _formatTime(completedAt!),
+                            style: TextStyle(
+                              fontSize: DS.fontSizeXs,
+                              color: DS.textTertiary,
+                            ),
+                          ),
+                        ],
+                        if (onAdopt != null) ...[
+                          const SizedBox(height: DS.sm),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: TextButton.icon(
+                                icon: const Icon(Icons.add_task,
+                                    size: DS.iconSizeSm),
+                                label: const Text(
+                                  '采纳任务',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onPressed: onAdopt,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
             );
           },
         ),

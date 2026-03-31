@@ -4,7 +4,6 @@ BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
 from __future__ import annotations
 
 import json
-from statistics import median
 from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
@@ -20,6 +19,11 @@ from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.cognitive_service import CognitiveService
 from app.services.plan_state_service import PlanStateService
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import (
+    classify_band_with_hysteresis,
+    recency_weight,
+    weighted_median,
+)
 
 
 def _utcnow() -> datetime:
@@ -329,16 +333,18 @@ class BehaviorSignalCollector:
         if not tasks:
             return {}
 
-        ratios: list[float] = []
-        note_lengths: list[int] = []
+        now = _utcnow()
+        ratios: list[tuple[float, float]] = []
+        note_lengths: list[tuple[float, float]] = []
         for task in tasks:
             estimated = int(task.estimated_minutes or 0)
             actual = int(task.actual_minutes or 0)
+            weight = recency_weight(task.completed_at, now=now, half_life_days=5.0, min_weight=0.25)
             if estimated > 0 and actual > 0:
-                ratios.append(abs(actual - estimated) / estimated)
+                ratios.append((abs(actual - estimated) / estimated, weight))
             note = (task.user_note or "").strip()
             if note:
-                note_lengths.append(len(note))
+                note_lengths.append((len(note), weight))
 
         feedback_result = await self.db.execute(
             select(TaskFeedback)
@@ -353,31 +359,44 @@ class BehaviorSignalCollector:
 
         if not note_lengths:
             note_lengths = [
-                len((feedback.feedback_text or "").strip())
+                (
+                    len((feedback.feedback_text or "").strip()),
+                    recency_weight(feedback.created_at, now=now, half_life_days=5.0, min_weight=0.25),
+                )
                 for feedback in feedbacks
                 if (feedback.feedback_text or "").strip()
             ]
 
-        avg_note_length = (sum(note_lengths) / len(note_lengths)) if note_lengths else 0.0
-        if avg_note_length > 50:
-            reflection_depth = "deep"
-        elif avg_note_length > 0:
-            reflection_depth = "light"
-        else:
-            reflection_depth = "none"
+        weighted_note_total = sum(length * weight for length, weight in note_lengths)
+        weighted_note_count = sum(weight for _, weight in note_lengths)
+        avg_note_length = (weighted_note_total / weighted_note_count) if weighted_note_count else 0.0
+
+        try:
+            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+            inferred = prefs.inferred or {}
+        except Exception:
+            inferred = {}
+
+        reflection_depth = classify_band_with_hysteresis(
+            avg_note_length,
+            str(inferred.get("task_reflection_depth") or "") or None,
+            low_enter=10.0,
+            high_enter=55.0,
+            low_exit=18.0,
+            high_exit=45.0,
+            low_label="none",
+            mid_label="light",
+            high_label="deep",
+        )
 
         updates: dict[str, object] = {
             "task_reflection_depth": reflection_depth,
             "difficulty_feedback_ratio": difficulty_feedback_ratio,
         }
         if ratios:
-            updates["task_difficulty_accuracy"] = round(float(median(ratios)), 3)
-
-        try:
-            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
-            inferred = prefs.inferred or {}
-        except Exception:
-            return updates
+            weighted_ratio_median = weighted_median(ratios)
+            if weighted_ratio_median is not None:
+                updates["task_difficulty_accuracy"] = round(float(weighted_ratio_median), 3)
 
         filtered: dict[str, object] = {}
         for key, value in updates.items():
@@ -390,23 +409,26 @@ class BehaviorSignalCollector:
         if not feedbacks:
             return {"too_hard": 0.0, "too_easy": 0.0, "just_right": 0.0}
 
-        total = len(feedbacks)
+        now = _utcnow()
         buckets = {
-            "too_hard": 0,
-            "too_easy": 0,
-            "just_right": 0,
+            "too_hard": 0.0,
+            "too_easy": 0.0,
+            "just_right": 0.0,
         }
+        total = 0.0
         for feedback in feedbacks:
+            weight = recency_weight(feedback.created_at, now=now, half_life_days=5.0, min_weight=0.25)
+            total += weight
             category = str(feedback.category or "").strip().lower()
             if category == TaskFeedbackCategory.TOO_DIFFICULT.value:
-                buckets["too_hard"] += 1
+                buckets["too_hard"] += weight
             elif category == TaskFeedbackCategory.TOO_EASY.value:
-                buckets["too_easy"] += 1
+                buckets["too_easy"] += weight
             elif category == TaskFeedbackCategory.JUST_RIGHT.value:
-                buckets["just_right"] += 1
+                buckets["just_right"] += weight
 
         return {
-            key: round(count / total, 3)
+            key: round(count / total, 3) if total else 0.0
             for key, count in buckets.items()
         }
 

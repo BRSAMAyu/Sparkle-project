@@ -5,7 +5,9 @@ Sufficiency Checker
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
 from __future__ import annotations
+from collections import OrderedDict
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Literal
 
@@ -89,6 +91,9 @@ class SufficiencyChecker:
         "can_infer": [],
     }
     LLM_ELIGIBLE_INTENTS = {"create_plan", "time_planning"}
+    CLARIFICATION_LOOP_THRESHOLD = 2
+    CLARIFICATION_TRACK_TTL = timedelta(minutes=15)
+    MAX_TRACKED_CLARIFICATIONS = 256
 
     def __init__(self, strict_mode: bool = False):
         """
@@ -96,6 +101,7 @@ class SufficiencyChecker:
             strict_mode: 严格模式，缺失任何可选字段也会询问
         """
         self.strict_mode = strict_mode
+        self._clarification_history: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     async def check(
         self,
@@ -104,6 +110,7 @@ class SufficiencyChecker:
         conversation_context: list[dict[str, Any]],
         user_message: str | None = None,
         use_llm_fallback: bool = False,
+        tracking_key: str | None = None,
     ) -> SufficiencyCheckResult:
         """
         检查是否有足够信息执行意图
@@ -178,7 +185,81 @@ class SufficiencyChecker:
             f"missing_fields={result.missing_fields}"
         )
 
+        self._apply_clarification_loop_guard(
+            result=result,
+            intent=intent,
+            tracking_key=tracking_key,
+        )
         return result
+
+    @staticmethod
+    def _now() -> datetime:
+        return datetime.now(timezone.utc)
+
+    def _cleanup_history(self, now: datetime) -> None:
+        expired_before = now - self.CLARIFICATION_TRACK_TTL
+        stale_keys = [
+            key
+            for key, entry in self._clarification_history.items()
+            if not isinstance(entry.get("last_seen_at"), datetime)
+            or entry["last_seen_at"] < expired_before
+        ]
+        for key in stale_keys:
+            self._clarification_history.pop(key, None)
+        while len(self._clarification_history) > self.MAX_TRACKED_CLARIFICATIONS:
+            self._clarification_history.popitem(last=False)
+
+    def _clarification_fingerprint(self, *, intent: str, result: SufficiencyCheckResult) -> str:
+        questions = tuple(question.strip() for question in result.clarification_questions if question.strip())
+        missing_fields = tuple(sorted(str(field).strip() for field in result.missing_fields if str(field).strip()))
+        clarification_text = (result.clarification_text or "").strip()
+        return repr((intent, missing_fields, questions, clarification_text))
+
+    def _apply_clarification_loop_guard(
+        self,
+        *,
+        result: SufficiencyCheckResult,
+        intent: str,
+        tracking_key: str | None,
+    ) -> None:
+        if not tracking_key:
+            return
+
+        now = self._now()
+        self._cleanup_history(now)
+
+        if result.status != SufficiencyStatus.NEED_CLARIFICATION:
+            self._clarification_history.pop(tracking_key, None)
+            return
+
+        fingerprint = self._clarification_fingerprint(intent=intent, result=result)
+        entry = self._clarification_history.get(tracking_key)
+        if entry and entry.get("fingerprint") == fingerprint:
+            entry["count"] = int(entry.get("count", 0)) + 1
+            entry["last_seen_at"] = now
+            self._clarification_history.move_to_end(tracking_key)
+        else:
+            entry = {
+                "fingerprint": fingerprint,
+                "count": 1,
+                "last_seen_at": now,
+            }
+            self._clarification_history[tracking_key] = entry
+
+        if int(entry.get("count", 0)) < self.CLARIFICATION_LOOP_THRESHOLD:
+            return
+
+        logger.warning(
+            "Sufficiency clarification loop detected: tracking_key={}, intent={}, fingerprint={}",
+            tracking_key,
+            intent,
+            fingerprint,
+        )
+        self._clarification_history.pop(tracking_key, None)
+        result.status = SufficiencyStatus.SUFFICIENT
+        result.recommended_action = "proceed"
+        result.clarification_questions = []
+        result.clarification_text = None
 
     def _has_field_value(self, field: str, entities: dict[str, Any]) -> bool:
         """检查字段是否有有效值"""

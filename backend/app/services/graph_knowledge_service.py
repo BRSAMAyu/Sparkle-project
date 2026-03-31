@@ -18,7 +18,9 @@ from app.core.age_client import get_age_client
 from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.graph_models import KnowledgeVertex
+from app.services.expansion_service import ExpansionService
 from app.services.knowledge_service import KnowledgeService
+from app.services.node_sector_service import dominant_sector_from_weights
 
 
 def _utcnow() -> datetime:
@@ -49,7 +51,8 @@ class GraphKnowledgeService:
         importance_level: int = 1,
         keywords: list[str] = None,
         source_type: str = "user_created",
-        source_task_id: uuid.UUID | None = None
+        source_task_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> KnowledgeNode:
         """
         创建知识节点（双写）
@@ -60,20 +63,25 @@ class GraphKnowledgeService:
         if keywords is None:
             keywords = []
 
-        # 1. 写入 Postgres
-        node = KnowledgeNode(
-            id=uuid.uuid4(),
-            name=name,
-            description=description,
-            sector_code=sector_code,
-            importance_level=importance_level,
-            keywords=keywords,
+        expansion_service = ExpansionService(self.db)
+        node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id or uuid.uuid4(),
+            candidate={
+                "name": name,
+                "description": description,
+                "importance_level": importance_level,
+                "keywords": keywords,
+                "sector_weights": {sector_code: 100},
+            },
             source_type=source_type,
-            source_task_id=source_task_id,
-            created_at=_utcnow(),
-            updated_at=_utcnow()
+            generate_embedding=False,
+            unlock_for_user=user_id is not None,
+            commit=False,
+            invalidate_caches=user_id is not None,
         )
-
+        node.source_task_id = source_task_id
+        node.sector_classification_model = "graph_knowledge_service"
+        node.sector_classified_at = node.sector_classified_at or _utcnow()
         self.db.add(node)
         await self.db.flush()
 
@@ -87,7 +95,7 @@ class GraphKnowledgeService:
                         "id": str(node.id),
                         "name": node.name,
                         "description": node.description,
-                        "sector": node.sector_code,
+                        "sector": node.dominant_sector_code,
                         "importance": node.importance_level,
                         "keywords": ",".join(node.keywords),
                         "source_type": node.source_type,
@@ -97,6 +105,7 @@ class GraphKnowledgeService:
             )
             logger.debug(f"节点 {node.id} 已加入同步队列")
 
+        await self.db.commit()
         return node
 
     async def create_node_relation(
@@ -358,7 +367,7 @@ class GraphKnowledgeService:
                 name=node.name,
                 description=node.description or "",
                 importance=node.importance_level or 1,
-                sector=node.sector_code or "VOID",
+                sector=dominant_sector_from_weights(node.sector_weights or {}).value,
                 keywords=node.keywords or [],
                 source_type=node.source_type or "seed",
                 created_at=node.created_at

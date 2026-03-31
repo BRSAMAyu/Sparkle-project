@@ -22,6 +22,36 @@ class _SessionFactory:
         return False
 
 
+class _FakeWebSocket:
+    def __init__(self) -> None:
+        self.accepted = False
+        self.sent: list[str] = []
+        self.user_id: str | None = None
+
+    async def accept(self):
+        self.accepted = True
+
+    async def send_text(self, payload: str):
+        self.sent.append(payload)
+
+
+class _FakeRedis:
+    def __init__(self, items: list[str] | None = None) -> None:
+        self._queue = list(items or [])
+        self._presence: dict[str, str] = {}
+
+    async def setex(self, key: str, _: int, value: str):
+        self._presence[key] = value
+
+    async def lpop(self, key: str):
+        if not self._queue:
+            return None
+        return self._queue.pop(0)
+
+    async def lpush(self, key: str, value: str):
+        self._queue.insert(0, value)
+
+
 @pytest.mark.asyncio
 async def test_offline_websocket_message_creates_notification(db_session, monkeypatch):
     user_id = uuid4()
@@ -68,3 +98,22 @@ async def test_offline_websocket_message_creates_notification(db_session, monkey
     assert notifications[0].content == "你有一条新的计划建议"
     assert updates[-1][0] == str(user_id)
     assert updates[-1][1]["category"] == "notification"
+
+
+@pytest.mark.asyncio
+async def test_connect_user_replays_offline_queue_messages():
+    manager = ConnectionManager()
+    manager.redis = _FakeRedis(
+        [
+            '{"user_id":"u1","message_id":"m1","message":{"type":"notification","content":"hello"}}',
+            '{"user_id":"u1","message_id":"m2","message":{"type":"notification","content":"world"}}',
+        ]
+    )
+    websocket = _FakeWebSocket()
+
+    await manager.connect_user(websocket, "u1")
+
+    assert websocket.accepted is True
+    assert len(websocket.sent) == 2
+    assert '"content": "hello"' in websocket.sent[0]
+    assert '"content": "world"' in websocket.sent[1]

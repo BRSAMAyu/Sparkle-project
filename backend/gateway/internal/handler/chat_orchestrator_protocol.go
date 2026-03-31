@@ -409,6 +409,8 @@ func envelopePayloadType(payload map[string]json.RawMessage) string {
 	switch {
 	case payload["chat_request"] != nil:
 		return "chat_request"
+	case payload["tool_result"] != nil:
+		return "tool_result"
 	case payload["action_feedback"] != nil:
 		return "action_feedback"
 	case payload["focus_completed"] != nil:
@@ -442,6 +444,16 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 	switch content := req.GetInput().(type) {
 	case *agentv1.ChatRequest_Message:
 		input.Message = content.Message
+	case *agentv1.ChatRequest_ToolResult:
+		if content.ToolResult != nil {
+			tr := content.ToolResult
+			input.IsToolResult = true
+			input.ToolCallID = tr.GetToolCallId()
+			input.ToolName = tr.GetToolName()
+			input.ToolResultJSON = tr.GetResultJson()
+			input.ToolIsError = tr.GetIsError()
+			input.ToolErrorMsg = tr.GetErrorMessage()
+		}
 	default:
 		return fmt.Errorf("unsupported chat_request input")
 	}

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
@@ -67,6 +68,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   void initState() {
     super.initState();
     _selectedSubjectCode = _resolveInitialSubject(widget.initialSubject);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_loadHistory());
+    });
   }
 
   @override
@@ -106,6 +110,186 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     }
   }
 
+  Future<void> _loadHistory({bool silent = true}) async {
+    try {
+      await ref.read(cognitiveProvider.notifier).loadFragments(limit: 50);
+    } catch (e) {
+      if (!silent && mounted) {
+        AppFeedback.error(context, '加载历史胶囊失败: $e');
+      }
+    }
+  }
+
+  List<CognitiveFragmentModel> _historyEntries(
+    List<CognitiveFragmentModel> items,
+  ) {
+    final result = items
+        .where(
+          (item) =>
+              item.sourceType == 'flash_capsule' ||
+              item.sourceType == 'capsule',
+        )
+        .toList()
+      ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+    return result;
+  }
+
+  Future<void> _openHistory() async {
+    await _loadHistory(silent: false);
+    if (!mounted) {
+      return;
+    }
+
+    final history = _historyEntries(ref.read(cognitiveProvider).fragments);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            decoration: BoxDecoration(
+              color: DS.surfacePrimary,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing20,
+                DS.spacing16,
+                DS.spacing20,
+                DS.spacing24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DS.border,
+                        borderRadius: DS.borderRadiusFull,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  Text(
+                    '历史胶囊',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    history.isEmpty ? '还没有保存过闪念胶囊。' : '这里会显示你之前保存过的闪念与思考胶囊。',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  Expanded(
+                    child: history.isEmpty
+                        ? ToolEmptyState(
+                            icon: Icons.history_rounded,
+                            title: '暂无历史胶囊',
+                            description: '保存一次闪念胶囊后，就能在这里继续回看。',
+                            accentColor: DS.warning,
+                          )
+                        : ListView.separated(
+                            itemCount: history.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: DS.spacing12),
+                            itemBuilder: (context, index) {
+                              final item = history[index];
+                              final lines = item.content
+                                  .split('\n')
+                                  .map((line) => line.trim())
+                                  .where((line) => line.isNotEmpty)
+                                  .toList(growable: false);
+                              final title =
+                                  lines.isEmpty ? '未命名胶囊' : lines.first;
+                              final detail = lines.length > 1
+                                  ? lines.skip(1).join('\n')
+                                  : '暂无补充描述';
+                              final pending = (item.tags ?? const <String>[])
+                                  .contains('pending_sync');
+
+                              return DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: DS.surfaceSecondary,
+                                  borderRadius: DS.borderRadius16,
+                                  border: Border.all(color: DS.border),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(DS.spacing16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              title,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                fontWeight: DS.fontWeightBold,
+                                              ),
+                                            ),
+                                          ),
+                                          _HistoryChip(
+                                            label: item.sourceType ==
+                                                    'flash_capsule'
+                                                ? '闪念'
+                                                : '思考',
+                                          ),
+                                          if (pending) ...[
+                                            const SizedBox(width: DS.spacing8),
+                                            const _HistoryChip(label: '待同步'),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: DS.spacing10),
+                                      Text(
+                                        detail,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: DS.textSecondary,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: DS.spacing10),
+                                      Text(
+                                        _formatTimestamp(item.createdAt),
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: DS.textTertiary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _submit() async {
     final topic = _topicController.text.trim();
     final description = _descriptionController.text.trim();
@@ -123,22 +307,38 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         (item) => item.code == _selectedSubjectCode,
         orElse: () => _subjectOptions.first,
       );
-      await ref.read(errorOperationsProvider.notifier).createError(
-            questionText: topic,
-            userAnswer: description,
-            subject: selectedSubject.code,
-            chapter: selectedSubject.label,
-          );
-      await ref.read(cognitiveProvider.notifier).createFragment(
-            content: '[$_selectedErrorType] $topic\n$description',
-            sourceType: 'flash_capsule',
-            taskId: widget.taskId,
-          );
+      final fragment =
+          await ref.read(cognitiveProvider.notifier).createFragment(
+                content: '[$_selectedErrorType] $topic\n$description',
+                sourceType: 'flash_capsule',
+                taskId: widget.taskId,
+              );
+      if (fragment == null) {
+        throw Exception('胶囊保存失败，请稍后重试');
+      }
+
+      var syncedToErrorBook = true;
+      try {
+        await ref.read(errorOperationsProvider.notifier).createError(
+              questionText: topic,
+              userAnswer: description,
+              subject: selectedSubject.code,
+              chapter: selectedSubject.label,
+            );
+      } catch (_) {
+        syncedToErrorBook = false;
+      }
+
+      await _loadHistory();
 
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) {
         Navigator.pop(context);
-        AppFeedback.success(context, '已记录到错题本，并写入认知棱镜');
+        if (syncedToErrorBook) {
+          AppFeedback.success(context, '已保存胶囊，并同步到错题本');
+        } else {
+          AppFeedback.info(context, '胶囊已保存，错题本同步稍后重试');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -151,6 +351,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   @override
   Widget build(BuildContext context) {
     final accent = DS.warning;
+    final cognitiveState = ref.watch(cognitiveProvider);
+    final historyCount = _historyEntries(cognitiveState.fragments).length;
     return ToolShell(
       surface: widget.surface,
       icon: Icons.lightbulb_outline_rounded,
@@ -168,6 +370,11 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           label: _selectedErrorType,
           accentColor: accent,
           icon: Icons.label_rounded,
+        ),
+        ToolHeroChip(
+          label: historyCount == 0 ? '暂无历史胶囊' : '$historyCount 条历史胶囊',
+          accentColor: accent,
+          icon: Icons.history_rounded,
         ),
       ],
       body: Column(
@@ -257,14 +464,53 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           ),
         ],
       ),
-      footer: SparkleButton(
-        label: _isSubmitting ? '记录中...' : '保存胶囊',
-        onPressed: _isSubmitting ? null : _submit,
-        icon: const Icon(Icons.check_rounded),
-        loading: _isSubmitting,
-        expand: true,
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final historyButton = SparkleButton(
+            label: '查看历史',
+            variant: ButtonVariant.ghost,
+            onPressed: _isSubmitting ? null : _openHistory,
+            icon: const Icon(Icons.history_rounded),
+            expand: true,
+          );
+          final saveButton = SparkleButton(
+            label: _isSubmitting ? '记录中...' : '保存胶囊',
+            onPressed: _isSubmitting ? null : _submit,
+            icon: const Icon(Icons.check_rounded),
+            loading: _isSubmitting,
+            expand: true,
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                historyButton,
+                const SizedBox(height: DS.spacing12),
+                saveButton,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: historyButton),
+              const SizedBox(width: DS.spacing12),
+              Expanded(child: saveButton),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  String _formatTimestamp(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day $hour:$minute';
   }
 }
 
@@ -303,6 +549,33 @@ class _SubjectDropdown extends StatelessWidget {
                   .toList(),
               onChanged: onChanged,
             ),
+          ),
+        ),
+      );
+}
+
+class _HistoryChip extends StatelessWidget {
+  const _HistoryChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8,
+            vertical: DS.spacing4,
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: DS.warning,
+                  fontWeight: DS.fontWeightBold,
+                ),
           ),
         ),
       );

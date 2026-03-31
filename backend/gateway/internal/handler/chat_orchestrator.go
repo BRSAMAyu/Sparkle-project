@@ -44,6 +44,13 @@ type chatInput struct {
 	IncludeReferences bool                   `json:"include_references,omitempty"`
 	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
 	ChatMode          string                 `json:"chat_mode,omitempty"`
+	// Tool result fields — populated when the client sends back a tool execution result.
+	ToolCallID    string `json:"tool_call_id,omitempty"`
+	ToolName      string `json:"tool_name,omitempty"`
+	ToolResultJSON string `json:"tool_result_json,omitempty"`
+	ToolIsError   bool   `json:"tool_is_error,omitempty"`
+	ToolErrorMsg  string `json:"tool_error_message,omitempty"`
+	IsToolResult  bool   `json:"-"` // internal flag
 }
 
 type wsMode int
@@ -86,6 +93,12 @@ func (c *chatInput) Reset() {
 	c.IncludeReferences = false
 	c.ExtraContext = nil
 	c.ChatMode = ""
+	c.ToolCallID = ""
+	c.ToolName = ""
+	c.ToolResultJSON = ""
+	c.ToolIsError = false
+	c.ToolErrorMsg = ""
+	c.IsToolResult = false
 }
 
 // stringBuilderPool reuses string builders for text accumulation
@@ -344,22 +357,50 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					_ = writer.WriteJSON(gin.H{"type": "pong"})
 					return false
 				case "action_feedback":
-					h.handleActionFeedback(conn, msgMap, userID, authToken)
+					h.handleActionFeedback(writer, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
-					h.handleInterventionFeedback(conn, msgMap, userID, authToken)
+					h.handleInterventionFeedback(writer, msgMap, userID, authToken)
 					return false
 				case "response_feedback":
-					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
+					h.handleResponseFeedback(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "plan_review_feedback":
-					h.handlePlanReviewFeedback(conn, msgMap, userID, c.Request.Context())
+					h.handlePlanReviewFeedback(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID, authToken)
 					return false
+				case "tool_result":
+					// Legacy JSON routing for tool results
+					toolInput := chatInputPool.Get().(*chatInput)
+					toolInput.Reset()
+					toolInput.IsToolResult = true
+					toolInput.ToolCallID, _ = msgMap["tool_call_id"].(string)
+					toolInput.ToolName, _ = msgMap["tool_name"].(string)
+					toolInput.ToolResultJSON, _ = msgMap["result_json"].(string)
+					toolInput.ToolIsError, _ = msgMap["is_error"].(bool)
+					toolInput.ToolErrorMsg, _ = msgMap["error_message"].(string)
+					toolInput.SessionID, _ = msgMap["session_id"].(string)
+					toolInput.RequestID, _ = msgMap["request_id"].(string)
+
+					return func() bool {
+						defer func() {
+							toolInput.Reset()
+							chatInputPool.Put(toolInput)
+						}()
+						msgCtx := c.Request.Context()
+						ctx2, span2 := tracer.Start(msgCtx, "HandleToolResult")
+						span2.SetAttributes(
+							attribute.String("user_id", userID),
+							attribute.String("tool_call_id", toolInput.ToolCallID),
+							attribute.String("tool_name", toolInput.ToolName),
+						)
+						defer span2.End()
+						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
+					}()
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(conn, msgMap, userID)
+					h.handleUpdateNodeMastery(writer, msgMap, userID)
 					return false
 				case "message", "":
 					// Continue with normal chat message handling
@@ -461,6 +502,34 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 
 				return h.handleChatMessage(msgCtx, responder, userID, input, envelope.RequestID)
+			case "tool_result":
+				// Envelope routing for tool results (e.g. OpenClaw execution results)
+				toolInput := chatInputPool.Get().(*chatInput)
+				toolInput.Reset()
+				defer func() {
+					toolInput.Reset()
+					chatInputPool.Put(toolInput)
+				}()
+
+				// Decode tool result from envelope payload
+				msgMap, mapErr := decodePayloadMap(envelope.Payload["tool_result"])
+				if mapErr != nil {
+					responder.SendError("invalid_argument", "Invalid tool_result payload", false)
+					return false
+				}
+				toolInput.IsToolResult = true
+				toolInput.ToolCallID, _ = msgMap["tool_call_id"].(string)
+				toolInput.ToolName, _ = msgMap["tool_name"].(string)
+				toolInput.ToolResultJSON, _ = msgMap["result_json"].(string)
+				toolInput.ToolIsError, _ = msgMap["is_error"].(bool)
+				toolInput.ToolErrorMsg, _ = msgMap["error_message"].(string)
+				toolInput.SessionID, _ = msgMap["session_id"].(string)
+
+				span.SetAttributes(
+					attribute.String("tool_call_id", toolInput.ToolCallID),
+					attribute.String("tool_name", toolInput.ToolName),
+				)
+				return h.handleChatMessage(msgCtx, responder, userID, toolInput, envelope.RequestID)
 			case "action_feedback":
 				msgMap, err := decodePayloadMap(envelope.Payload["action_feedback"])
 				if err != nil {

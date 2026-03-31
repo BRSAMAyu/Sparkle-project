@@ -484,18 +484,28 @@ class DocumentService:
             except Exception as exc:
                 logger.warning(f"Ontology drafting failed for file {file_id}, fallback to section heuristic: {exc}")
 
-        # 2. Create Root Node
-        root_node = KnowledgeNode(
-            name=file_record.file_name,
-            description=f"Imported from {file_record.file_name}",
+        from app.services.expansion_service import ExpansionService
+
+        expansion_service = ExpansionService(db_session)
+        root_node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": file_record.file_name,
+                "description": f"Imported from {file_record.file_name}",
+                "importance_level": 3,
+                "keywords": ["document_import", "heuristic:root"],
+            },
             source_type="document_import",
-            source_file_id=file_id,
-            status="draft",
-            importance_level=3,
-            is_seed=False
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=False,
+            invalidate_caches=False,
+            allow_existing_match=False,
+            node_updates={
+                "source_file_id": file_id,
+                "status": "draft",
+            },
         )
-        db_session.add(root_node)
-        await db_session.flush() # Get ID
 
         # 3. Create Section Nodes (Simple Heuristic)
         # Group chunks by section_title
@@ -512,19 +522,33 @@ class DocumentService:
                 root_node.chunk_refs = chunk_indices
                 continue
 
-            # Create child node
-            child = KnowledgeNode(
-                name=title[:50], # Truncate long titles
-                parent_id=root_node.id,
+            await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate={
+                    "name": title[:50],
+                    "description": None,
+                    "importance_level": 1,
+                    "keywords": ["document_import", "heuristic:section"],
+                    "relation_to_trigger": "parent_child",
+                    "relation_strength": 0.65,
+                },
+                trigger_node_id=root_node.id,
+                parent_node_id=root_node.id,
                 source_type="document_import",
-                source_file_id=file_id,
-                status="draft",
-                chunk_refs=chunk_indices,
-                is_seed=False
+                generate_embedding=False,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
+                allow_existing_match=False,
+                node_updates={
+                    "source_file_id": file_id,
+                    "status": "draft",
+                    "chunk_refs": chunk_indices,
+                },
             )
-            db_session.add(child)
 
         await db_session.commit()
+        await expansion_service._invalidate_after_graph_mutation(user_id)
         logger.info(f"Drafted knowledge nodes for file {file_id}")
 
     # ... existing clean_and_summarize ...

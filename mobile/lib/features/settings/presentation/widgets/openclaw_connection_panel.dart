@@ -28,7 +28,7 @@ const _openClawGuestPresets = <_OpenClawConnectionPreset>[
   _OpenClawConnectionPreset(
     id: 'guest_local_main',
     label: '访客模式默认引擎',
-    description: '为本机演示环境准备好的默认连接，适合先快速体验 OpenClaw。',
+    description: '为本机演示环境准备好的默认地址与协议；若令牌具备执行写权限可直接体验，否则建议改用设备配对。',
     config: OpenClawConnectionConfig(
       gatewayUrl: 'http://127.0.0.1:18789',
       authToken: 'd1c836b87e26db7e164522b01bf346a2d7226b17',
@@ -327,7 +327,14 @@ class _OpenClawConnectionPanelState
 
   Future<void> _retryQueuedRequests(OpenClawConnectionService service) async {
     if (!service.isConnected) {
-      _showSnackBar('执行引擎尚未连接，暂时无法重试队列', isError: true);
+      _showSnackBar(
+        service.hasExecutionPermissionIssue
+            ? '当前网关可访问，但没有执行权限，暂时无法重试队列'
+            : service.hasExecutionEndpointIssue
+                ? '当前网关可访问，但执行入口不可用，暂时无法重试队列'
+                : '执行引擎尚未连接，暂时无法重试队列',
+        isError: true,
+      );
       return;
     }
 
@@ -352,6 +359,62 @@ class _OpenClawConnectionPanelState
     );
   }
 
+  bool _hasExecutionPermissionIssue(String? message) {
+    final normalized = (message ?? '').toLowerCase();
+    return normalized.contains('operator.write') ||
+        normalized.contains('scope') ||
+        normalized.contains('权限');
+  }
+
+  bool _hasExecutionEndpointIssue(String? message) =>
+      (message ?? '').contains('/v1/responses');
+
+  Widget _buildTroubleshootingCard(String message) {
+    final permissionIssue = _hasExecutionPermissionIssue(message);
+    final endpointIssue = _hasExecutionEndpointIssue(message);
+    final title = permissionIssue
+        ? '网关在线，但当前令牌没有执行权限'
+        : endpointIssue
+            ? '网关在线，但执行接口没有准备好'
+            : '需要补一层执行链路排查';
+    final body = permissionIssue
+        ? '当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。'
+        : endpointIssue
+            ? '当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。'
+            : '建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: DS.spacing10),
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: DS.bodyMedium.copyWith(
+              color: DS.warning,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            body,
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = ref.watch(openClawConnectionProvider);
@@ -368,15 +431,20 @@ class _OpenClawConnectionPanelState
           (preset) => preset != null,
           orElse: () => null,
         );
+    final hasPermissionIssue =
+        _hasExecutionPermissionIssue(service.info.errorMessage);
     final statusTone = switch (service.info.status) {
       OpenClawConnectionStatus.connected => OpenClawVisualTone.connected,
       OpenClawConnectionStatus.connecting => OpenClawVisualTone.active,
+      OpenClawConnectionStatus.error when hasPermissionIssue =>
+        OpenClawVisualTone.attention,
       OpenClawConnectionStatus.error => OpenClawVisualTone.offline,
       OpenClawConnectionStatus.disconnected => OpenClawVisualTone.offline,
     };
     final statusTitle = switch (service.info.status) {
       OpenClawConnectionStatus.connected => '已准备好接手任务',
       OpenClawConnectionStatus.connecting => '正在确认连接状态',
+      OpenClawConnectionStatus.error when hasPermissionIssue => '网关在线，但没有执行权限',
       OpenClawConnectionStatus.error => '暂时还没连上',
       OpenClawConnectionStatus.disconnected => '还没有接入 OpenClaw',
     };
@@ -384,6 +452,8 @@ class _OpenClawConnectionPanelState
       OpenClawConnectionStatus.connected =>
         '连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。',
       OpenClawConnectionStatus.connecting => '我们正在确认引擎状态，保存后的结果会同步显示在这里。',
+      OpenClawConnectionStatus.error when hasPermissionIssue =>
+        '当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。',
       OpenClawConnectionStatus.error =>
         service.info.errorMessage ?? '先检查地址、认证方式和传输协议，再重新测试连接。',
       OpenClawConnectionStatus.disconnected =>
@@ -439,6 +509,9 @@ class _OpenClawConnectionPanelState
                 ),
             ],
           ),
+          if (service.info.status == OpenClawConnectionStatus.error &&
+              (service.info.errorMessage ?? '').isNotEmpty)
+            _buildTroubleshootingCard(service.info.errorMessage!),
           SizedBox(height: spacing),
           Text(
             '快速接入',
@@ -496,7 +569,7 @@ class _OpenClawConnectionPanelState
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
-                      '已选中“${selectedPreset.label}”。连接细节会自动填入，你只需要测试连接或保存即可。',
+                      '已选中“${selectedPreset.label}”。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。',
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,

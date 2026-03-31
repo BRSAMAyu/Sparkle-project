@@ -127,6 +127,8 @@ class ContextBuilderMixin:
             merged["focus_stats"] = grpc_context["focus_stats"]
         if "recent_progress" in grpc_context:
             merged["recent_progress"] = grpc_context["recent_progress"]
+        if "seed_library_enabled" in grpc_context:
+            merged["seed_library_enabled"] = bool(grpc_context["seed_library_enabled"])
 
         logger.debug(f"Merged context keys: {list(merged.keys())}")
         return merged

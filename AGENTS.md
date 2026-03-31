@@ -150,7 +150,7 @@ docker exec -it sparkle_db psql -U postgres -d sparkle
 ```
 
 ## Documentation
-- **Primary**: `docs/深度技术讲解教案_完整版.md`
+- **Primary**: `docs/README.md`
 - **Architecture**: `docs/00_项目概览/02_技术架构.md`
 - **API**: `docs/02_技术设计文档/03_API参考.md`
 - **Knowledge Graph**: `docs/02_技术设计文档/02_知识星图系统设计_v3.0.md`

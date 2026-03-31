@@ -10,10 +10,12 @@ import re
 from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
+import httpx
 from loguru import logger
 from sqlalchemy import String, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
 from app.core.llm_client import llm_client
 from app.models.achievement import UserStreakStats
@@ -37,11 +39,16 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+SPARKLE_FILE_REFERENCE_PREFIX = "sparkle-file://"
+
+
 class ReviewSchedulerService:
     """
     复习计划调度服务
     SM-2 Algorithm with Fuzzing/Jitter to prevent review bombing.
     """
+
+    MAX_EASINESS_FACTOR = 2.5
 
     def calculate_next_review(
         self,
@@ -68,7 +75,7 @@ class ReviewSchedulerService:
         # 1. Update Easiness Factor (EF)
         # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
         new_ef = easiness_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-        new_ef = max(1.3, new_ef) # SM-2 minimum EF
+        new_ef = max(1.3, min(new_ef, self.MAX_EASINESS_FACTOR)) # SM-2 EF bounded to prevent runaway intervals
 
         # 2. Update Interval
         if quality < 3:
@@ -264,10 +271,43 @@ class ErrorBookService:
     async def _run_ocr(self, image_url: str) -> str:
         """使用 GLM OCR 进行图片文字识别。"""
         try:
-            text = await ocr_service.ocr_for_math(image_url)
+            resolved_image_url = await self._resolve_question_image_url(image_url)
+            if not resolved_image_url:
+                return ""
+            text = await ocr_service.ocr_for_math(resolved_image_url)
             return text
         except Exception as e:
             logger.error(f"OCR failed for image {image_url}: {e}")
+            return ""
+
+    async def _resolve_question_image_url(self, image_url: str) -> str:
+        if not image_url.startswith(SPARKLE_FILE_REFERENCE_PREFIX):
+            return image_url
+
+        file_id = image_url.removeprefix(SPARKLE_FILE_REFERENCE_PREFIX).strip()
+        if not file_id:
+            return ""
+
+        gateway_url = (settings.GATEWAY_URL or "").rstrip("/")
+        if not gateway_url:
+            logger.warning("Cannot resolve sparkle-file image without GATEWAY_URL")
+            return ""
+
+        headers: dict[str, str] = {}
+        if settings.INTERNAL_API_KEY:
+            headers["X-Internal-API-Key"] = settings.INTERNAL_API_KEY
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{gateway_url}/internal/files/{file_id}/download",
+                    headers=headers,
+                )
+            response.raise_for_status()
+            payload = response.json()
+            return str(payload.get("download_url") or "")
+        except Exception as exc:
+            logger.warning(f"Failed to resolve sparkle-file image {file_id}: {exc}")
             return ""
 
     async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> list[KnowledgeNode]:

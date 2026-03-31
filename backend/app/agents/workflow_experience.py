@@ -569,6 +569,22 @@ async def resolve_few_shot_examples(
                     collected.append(item)
                     if len(collected) >= count:
                         return collected
+            if len(collected) < count:
+                fallback_examples = await service.get_few_shot_examples(
+                    db=db_session,
+                    user_id=user_uuid,
+                    count=count - len(collected),
+                )
+                for item in fallback_examples:
+                    key = (str(item.get("input") or ""), str(item.get("output") or ""))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    collected.append(item)
+                    if len(collected) >= count:
+                        return collected
+            if collected:
+                return collected
         except Exception as exc:
             logger.warning(f"[WorkflowExperience] Seed library lookup failed: {exc}")
 

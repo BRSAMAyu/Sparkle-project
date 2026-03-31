@@ -44,6 +44,7 @@ async def create_fragment(
 
     fragment = await service.create_fragment(
         user_id=user_id,
+        fragment_id=fragment_in.id,
         content=fragment_in.content,
         source_type=fragment_in.source_type,
         resource_type=fragment_in.resource_type,

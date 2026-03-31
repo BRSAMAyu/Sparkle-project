@@ -8,6 +8,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     required this.node,
     required this.onFocus,
     required this.onInspectConnections,
+    required this.onViewDetails,
     required this.onLaunchPrediction,
     super.key,
   });
@@ -15,6 +16,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
   final GalaxyNodeModel node;
   final VoidCallback onFocus;
   final VoidCallback onInspectConnections;
+  final VoidCallback onViewDetails;
   final VoidCallback onLaunchPrediction;
 
   @override
@@ -151,6 +153,17 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (!node.isUnlocked) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.galaxyNodeLockedHint,
+                    style: TextStyle(
+                      color: secondaryColor,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
@@ -195,7 +208,17 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: _CardActionButton(
-                    label: '推演此节点',
+                    label: l10n.viewDetails,
+                    icon: Icons.menu_book_rounded,
+                    color: sectorColor,
+                    onPressed: onViewDetails,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: _CardActionButton(
+                    label: l10n.galaxyNodeLaunchPrediction,
                     icon: Icons.auto_graph_rounded,
                     color: sectorColor,
                     onPressed: onLaunchPrediction,

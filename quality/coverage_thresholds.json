@@ -1,0 +1,65 @@
+{
+  "python": {
+    "global": 35,
+    "paths": [
+      {
+        "path": "app/core",
+        "threshold": 30
+      },
+      {
+        "path": "app/orchestration",
+        "threshold": 15
+      },
+      {
+        "path": "app/routing",
+        "threshold": 22
+      },
+      {
+        "path": "app/api",
+        "threshold": 15
+      }
+    ]
+  },
+  "go": {
+    "global": 14,
+    "paths": [
+      {
+        "path": "internal/handler",
+        "threshold": 18
+      },
+      {
+        "path": "internal/service",
+        "threshold": 14
+      },
+      {
+        "path": "internal/db",
+        "threshold": 12
+      }
+    ]
+  },
+  "flutter": {
+    "global": 15,
+    "paths": [
+      {
+        "path": "mobile/lib/features/chat",
+        "threshold": 12
+      },
+      {
+        "path": "mobile/lib/features/plan",
+        "threshold": 7
+      },
+      {
+        "path": "mobile/lib/features/task",
+        "threshold": 7
+      },
+      {
+        "path": "mobile/lib/features/home",
+        "threshold": 7
+      },
+      {
+        "path": "mobile/lib/core/network",
+        "threshold": 10
+      }
+    ]
+  }
+}

@@ -11,10 +11,11 @@ from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cached
+from app.config import settings
+from app.core.cache import cache_service, cached
 from app.core.event_bus import KnowledgeNodeUpdated, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
@@ -27,12 +28,13 @@ from app.schemas.galaxy import (
     SparkResult,
 )
 from app.services.embedding_service import embedding_service
-from app.services.expansion_service import ExpansionService
+from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.ontology_generator import relation_type_to_wire_name
 from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
+from app.services.node_sector_service import NodeSectorService
 
 
 def _utcnow() -> datetime:
@@ -173,6 +175,12 @@ class GalaxyService:
         subject_id: int | None = None,
         tags: list[str] = None,
         parent_node_id: UUID | None = None,
+        *,
+        name_en: str | None = None,
+        importance_level: int = 3,
+        relation_type: str = "related",
+        relation_strength: float = 0.7,
+        sector_weights: dict[str, int] | None = None,
     ) -> KnowledgeNode:
         """
         Create a new knowledge node.
@@ -183,7 +191,28 @@ class GalaxyService:
         # 1. Fast Write
         if tags is None:
             tags = []
-        node = await self.structure.create_node(user_id, title, summary, subject_id, tags, parent_node_id)
+        validate_knowledge_node_name(title)
+        expansion_service = ExpansionService(self.db)
+        node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": title,
+                "name_en": name_en,
+                "description": summary,
+                "importance_level": importance_level,
+                "relation_to_trigger": relation_type,
+                "relation_strength": relation_strength,
+                "keywords": tags,
+                "sector_weights": sector_weights or {},
+            },
+            parent_node_id=parent_node_id,
+            subject_id=subject_id,
+            source_type="user_created",
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=True,
+            invalidate_caches=True,
+        )
 
         # 2. Async Background Processing (Managed)
         from app.core.task_manager import task_manager
@@ -221,72 +250,69 @@ class GalaxyService:
         subject: str | None = None,
     ) -> dict[str, object]:
         ontology = await self.auto_generate_ontology(document_text, subject)
-
-        root_node = KnowledgeNode(
-            name=file_name[:255],
-            description=f"Imported from {file_name}",
+        expansion_service = ExpansionService(self.db)
+        root_node, _ = await expansion_service.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": file_name[:255],
+                "description": f"Imported from {file_name}",
+                "importance_level": 3,
+                "keywords": ["document_import", "ontology:root", *(["subject:" + subject] if subject else [])],
+            },
             subject_id=subject_id,
             source_type="document_import",
-            source_file_id=file_id,
-            status="draft",
-            importance_level=3,
-            is_seed=False,
-            keywords=["document_import", "ontology:root", *(["subject:" + subject] if subject else [])],
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=False,
+            invalidate_caches=False,
+            allow_existing_match=False,
+            node_updates={
+                "source_file_id": file_id,
+                "status": "draft",
+            },
         )
-        self.db.add(root_node)
-        await self.db.flush()
-
-        root_status = UserNodeStatus(
-            user_id=user_id,
-            node_id=root_node.id,
-            is_unlocked=True,
-            mastery_score=0,
-            first_unlock_at=_utcnow(),
-        )
-        self.db.add(root_status)
 
         created_nodes: list[KnowledgeNode] = []
         created_relations: list[NodeRelation] = []
         node_by_name: dict[str, KnowledgeNode] = {}
 
         for candidate in ontology.nodes:
-            child = KnowledgeNode(
-                name=candidate.name[:255],
-                description=candidate.summary,
-                keywords=[
-                    *list(dict.fromkeys([*candidate.keywords[:8], f"node_type:{candidate.node_type.lower()}"])),
-                ],
-                importance_level=candidate.importance_level,
+            child, _ = await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate={
+                    "name": candidate.name[:255],
+                    "description": candidate.summary,
+                    "keywords": [
+                        *list(dict.fromkeys([*candidate.keywords[:8], f"node_type:{candidate.node_type.lower()}"])),
+                    ],
+                    "importance_level": candidate.importance_level,
+                    "relation_to_trigger": "parent_child",
+                    "relation_strength": 0.65,
+                },
+                trigger_node_id=root_node.id,
+                parent_node_id=root_node.id,
                 subject_id=subject_id,
-                parent_id=root_node.id,
                 source_type="document_import",
-                source_file_id=file_id,
-                status="draft",
-                is_seed=False,
+                generate_embedding=False,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
+                allow_existing_match=False,
+                node_updates={
+                    "source_file_id": file_id,
+                    "status": "draft",
+                },
             )
-            self.db.add(child)
-            await self.db.flush()
-            self.db.add(
-                UserNodeStatus(
-                    user_id=user_id,
-                    node_id=child.id,
-                    is_unlocked=True,
-                    mastery_score=0,
-                    first_unlock_at=_utcnow(),
+            parent_relation = await self.db.scalar(
+                select(NodeRelation).where(
+                    NodeRelation.source_node_id == root_node.id,
+                    NodeRelation.target_node_id == child.id,
                 )
             )
+            if parent_relation:
+                created_relations.append(parent_relation)
             node_by_name[candidate.name] = child
             created_nodes.append(child)
-            created_relations.append(
-                NodeRelation(
-                    source_node_id=root_node.id,
-                    target_node_id=child.id,
-                    relation_type="parent_child",
-                    strength=0.65,
-                    created_by="document_import",
-                )
-            )
-            self.db.add(created_relations[-1])
 
         for relation in ontology.relations:
             source = node_by_name.get(relation.source_name)
@@ -304,6 +330,7 @@ class GalaxyService:
             created_relations.append(edge)
 
         await self.db.commit()
+        await expansion_service._invalidate_after_graph_mutation(user_id)
         return {
             "root_node": root_node,
             "created_nodes": created_nodes,
@@ -333,6 +360,10 @@ class GalaxyService:
         # 1. Get Structure
         nodes_with_status, relations = await self.structure.get_graph_view(
             user_id, sector_code, include_locked, zoom_level
+        )
+        await NodeSectorService(self.db).ensure_backfill_for_user(
+            user_id=user_id,
+            candidate_nodes=[node for node, _ in nodes_with_status],
         )
 
         # 2. Get Stats (Parallelizable if needed, but fast enough)
@@ -450,19 +481,17 @@ class GalaxyService:
     async def semantic_search(
         self, user_id: UUID, query: str, subject_id: int | None = None, limit: int = 10, threshold: float = 0.3
     ) -> list[SearchResultItem]:
-        # Reuse hybrid search logic or semantic_search_nodes but format as SearchResultItem
-        # The original semantic_search in galaxy_service.py returned SearchResultItem.
-        # KnowledgeRetrievalService has semantic_search_nodes returning KnowledgeNode.
-        # We should map or use retrieval's hybrid search (which is better).
-        # For backward compatibility, let's reimplement simple vector search here using retrieval service's primitive
-
-        nodes = await self.retrieval.semantic_search_nodes(query, subject_id, limit, threshold)
+        ranked_nodes = await self.retrieval.semantic_search_ranked_nodes(
+            query=query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+        )
 
         results = []
-        for node in nodes:
-            # We need user status to format properly
-            status = await self.retrieval._get_user_status(user_id, node.id)
-            results.append(self.retrieval._format_search_result(node, status, 0.0))  # Score missing
+        for node, score in ranked_nodes:
+            status = await self.retrieval.get_user_node_status(user_id, node.id)
+            results.append(self.retrieval._format_search_result(node, status, score))
 
         return results
 
@@ -603,28 +632,46 @@ class GalaxyService:
             return dt
 
         update_time = _to_utc_naive(version) or _utcnow()
+        bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
 
         try:
             # === ATOMIC UPDATE WITH OPTIMISTIC LOCKING ===
             # If revision is provided, use atomic conditional UPDATE to prevent race conditions
             if revision is not None:
-                # Atomic update: WHERE revision = expected_revision, returns row only if matched
+                # Atomic update: lock the expected revision row, then update and return the pre-update mastery.
                 atomic_update = text("""
-                    UPDATE user_node_status
-                    SET mastery_score = :mastery,
-                        updated_at = :updated_at,
-                        last_study_at = :updated_at,
-                        is_unlocked = true,
-                        revision = revision + 1
-                    WHERE user_id = :user_id
-                      AND node_id = :node_id
-                      AND revision = :expected_revision
-                    RETURNING mastery_score, revision
+                    WITH current AS (
+                        SELECT mastery_score
+                        FROM user_node_status
+                        WHERE user_id = :user_id
+                          AND node_id = :node_id
+                          AND revision = :expected_revision
+                        FOR UPDATE
+                    ),
+                    updated AS (
+                        UPDATE user_node_status AS status
+                        SET mastery_score = :mastery,
+                            bkt_mastery_prob = :bkt_mastery_prob,
+                            bkt_last_updated_at = :updated_at,
+                            updated_at = :updated_at,
+                            last_study_at = :updated_at,
+                            last_interacted_at = :updated_at,
+                            is_unlocked = true,
+                            revision = status.revision + 1
+                        FROM current
+                        WHERE status.user_id = :user_id
+                          AND status.node_id = :node_id
+                          AND status.revision = :expected_revision
+                        RETURNING status.revision AS new_revision
+                    )
+                    SELECT current.mastery_score AS old_mastery, updated.new_revision
+                    FROM current, updated
                 """)
                 result = await self.db.execute(atomic_update, {
                     "user_id": user_id,
                     "node_id": node_id,
                     "mastery": new_mastery,
+                    "bkt_mastery_prob": bkt_mastery_prob,
                     "expected_revision": revision,
                     "updated_at": update_time,
                 })
@@ -644,16 +691,10 @@ class GalaxyService:
                     logger.warning(
                         f"Atomic update conflict for node {node_id}. Expected revision {revision}, current is {current_revision}"
                     )
+                    await self.db.rollback()
                     return {"success": False, "reason": "conflict", "current_revision": current_revision}
 
-                # Get old mastery for audit log
-                old_mastery_query = text("""
-                    SELECT mastery_score FROM user_node_status
-                    WHERE user_id = :user_id AND node_id = :node_id
-                """)
-                old_result = await self.db.execute(old_mastery_query, {"user_id": user_id, "node_id": node_id})
-                old_row = old_result.fetchone()
-                old_mastery = old_row[0] if old_row else 0
+                old_mastery = row[0] if row else 0
                 new_revision = row[1]
 
             else:
@@ -683,8 +724,6 @@ class GalaxyService:
                     current_revision = 0
 
                 new_revision = current_revision + 1
-                bkt_mastery_prob = max(0.0, min(float(new_mastery) / 100.0, 1.0))
-
                 # UPSERT pattern for non-revision cases
                 upsert_query = text("""
                     INSERT INTO user_node_status (
@@ -801,23 +840,15 @@ class GalaxyService:
 
             await self.db.flush()
 
-            # ========== Achievement Integration ==========
-            try:
-                from app.services.achievement_engine import AchievementEngine, AchievementEvent
+            await self.db.commit()
+            await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
 
-                achievement_engine = AchievementEngine(self.db)
-
-                # Node mastered event (when mastery reaches 80%+)
-                if new_mastery >= 80:
-                    await achievement_engine.process_event(
-                        user_id=str(user_id),
-                        event_type=AchievementEvent.NODE_MASTERED,
-                        node_id=str(node_id),
-                        mastery_score=new_mastery,
-                    )
-            except Exception as e:
-                logger.warning(f"Achievement processing failed in update_node_mastery: {e}")
-            # ============================================
+            if new_mastery >= 80:
+                await self._process_mastery_achievement_after_commit(
+                    user_id=user_id,
+                    node_id=node_id,
+                    new_mastery=new_mastery,
+                )
 
             return {
                 "success": True,
@@ -830,6 +861,29 @@ class GalaxyService:
             await self.db.rollback()
             logger.error(f"Failed to update node mastery: {e}")
             raise e
+
+    async def _process_mastery_achievement_after_commit(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        new_mastery: int,
+    ) -> None:
+        """Process mastery achievements after the primary transaction is durable."""
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            async with AsyncSessionLocal() as achievement_db:
+                achievement_engine = AchievementEngine(achievement_db)
+                await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.NODE_MASTERED,
+                    node_id=str(node_id),
+                    mastery_score=new_mastery,
+                )
+        except Exception as e:
+            logger.warning(f"Achievement processing failed after mastery commit: {e}")
 
     # --- Async Background Processing ---
 

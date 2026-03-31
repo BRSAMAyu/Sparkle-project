@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.embedding_service import embedding_service
+from app.services.expansion_service import ExpansionService
 
 
 def _utcnow() -> datetime:
@@ -86,24 +87,28 @@ class KnowledgeIntegrationService:
                 source_text, translation, context, language, source_url
             )
 
-            node = KnowledgeNode(
-                id=uuid.uuid4(),
-                name=source_text,
-                name_en=source_text if language == "en" else None,
-                description=description,
-                keywords=[source_text, translation, domain] if domain else [source_text, translation],
-                importance_level=1,
-                is_seed=False,
-                source_type="translation",
-                source_file_id=source_document_id,
-                status="draft",  # Allow user review before publishing
+            expansion_service = ExpansionService(self.db)
+            node, _ = await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate={
+                    "name": source_text,
+                    "name_en": source_text if language == "en" else None,
+                    "description": description,
+                    "keywords": [source_text, translation, domain] if domain else [source_text, translation],
+                    "importance_level": 1,
+                },
                 subject_id=subject_id,
-                created_at=_utcnow(),
-                updated_at=_utcnow(),
+                source_type="translation",
+                generate_embedding=False,
+                unlock_for_user=False,
+                commit=False,
+                invalidate_caches=False,
+                allow_existing_match=False,
+                node_updates={
+                    "source_file_id": source_document_id,
+                    "status": "draft",
+                },
             )
-
-            self.db.add(node)
-            await self.db.flush()
 
             logger.info(f"✅ Created vocabulary node: {source_text} → {translation} (id={node.id})")
 
@@ -112,6 +117,7 @@ class KnowledgeIntegrationService:
                 user_id=user_id,
                 node_id=node.id,
                 mastery_score=0.0,
+                bkt_mastery_prob=0.0,
                 is_unlocked=True,
                 first_unlock_at=_utcnow(),
                 created_at=_utcnow(),
@@ -124,6 +130,7 @@ class KnowledgeIntegrationService:
             await self._schedule_first_review(user_status)
 
             await self.db.commit()
+            await expansion_service._invalidate_after_graph_mutation(user_id)
             await self.db.refresh(node)
 
             # Generate embedding asynchronously
@@ -158,6 +165,7 @@ class KnowledgeIntegrationService:
                 user_id=user_id,
                 node_id=node.id,
                 mastery_score=0.0,
+                bkt_mastery_prob=0.0,
                 is_unlocked=True,
                 first_unlock_at=_utcnow(),
                 created_at=_utcnow(),

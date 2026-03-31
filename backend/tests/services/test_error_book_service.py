@@ -10,7 +10,7 @@ def _utcnow() -> datetime:
 
 
 from app.services.error_book_service import ErrorBookService
-from app.schemas.error_book import ErrorRecordCreate, ErrorQueryParams, SubjectEnum
+from app.schemas.error_book import ErrorRecordCreate, ErrorQueryParams, ReviewPerformanceEnum, SubjectEnum
 from app.models.error_book import ErrorRecord
 # Import models to ensure they are registered in SQLAlchemy mapper
 from app.models.audit_log import SecurityAuditLog
@@ -210,3 +210,17 @@ async def test_search_knowledge_nodes_keyword_fallback_when_vector_search_unavai
 
     assert results == [node]
     db_mock.execute.assert_awaited_once()
+
+
+def test_review_scheduler_caps_easiness_factor_growth():
+    service = ErrorBookService(MagicMock(spec=AsyncSession))
+
+    _, new_ef, _, _ = service.review_scheduler.calculate_next_review(
+        current_mastery=0.9,
+        easiness_factor=2.5,
+        interval_days=30.0,
+        review_count=8,
+        performance=ReviewPerformanceEnum.REMEMBERED,
+    )
+
+    assert new_ef == 2.5

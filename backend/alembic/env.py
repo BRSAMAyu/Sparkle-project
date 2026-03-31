@@ -48,6 +48,7 @@ from app.models import (
     StrategyNode, SemanticLink,
     # Recommendation models
     UserSimilarity, ItemSimilarity, UserItemInteraction, UserLearningProfile, RecommendationCache, LeaderboardSnapshot,
+    CandidateActionFeedback,
     NightlyReview,
     # Seed Content Library
     SeedLibrary, SeedItem, UserLibrarySubscription,

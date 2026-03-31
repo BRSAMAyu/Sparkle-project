@@ -31,14 +31,16 @@ class ProfileSnapshotService:
         user_id: UUID,
         purpose: str,
         profile_context: ProfileContext | None = None,
+        force_refresh: bool = False,
     ) -> dict[str, Any]:
         cache_key = f"persona:snapshot:{user_id}:{purpose}"
-        if self.redis:
+        if self.redis and not force_refresh:
             cached = await self.redis.get(cache_key)
             if cached:
                 return json.loads(cached)
 
         snapshot = await self._build_snapshot(user_id, purpose, profile_context=profile_context)
+        snapshot["audit_token"] = self._sign_snapshot_payload(user_id, snapshot)
         if self.redis:
             await self.redis.setex(cache_key, 300, json.dumps(snapshot, ensure_ascii=False))
 
@@ -46,8 +48,19 @@ class ProfileSnapshotService:
         return snapshot
 
     async def get_snapshot(self, user_id: UUID, purpose: str) -> dict[str, Any]:
-        """Backward-compatible alias for legacy callers."""
-        return await self.build_profile_snapshot(user_id, purpose)
+        """Return the latest verified snapshot for a purpose, rebuilding if needed."""
+        record = await self._load_latest_snapshot_record(user_id, purpose)
+        if record is None:
+            return await self.build_profile_snapshot(user_id, purpose, force_refresh=True)
+
+        snapshot = dict(record.snapshot_data or {})
+        integrity = self.verify_integrity(user_id, snapshot)
+        if integrity == "valid":
+            return snapshot
+        if integrity == "legacy":
+            return await self.build_profile_snapshot(user_id, purpose, force_refresh=True)
+
+        return await self.build_profile_snapshot(user_id, purpose, force_refresh=True)
 
     async def _build_snapshot(
         self,
@@ -66,10 +79,8 @@ class ProfileSnapshotService:
             capabilities = await self._collect_capabilities(user_id)
         last_update_event_id = await self._get_last_event_id(user_id)
 
-        audit_token = self._sign_audit_token(user_id, last_update_event_id)
         return {
             "persona_version": self.persona_version,
-            "audit_token": audit_token,
             "purpose": purpose,
             "tags": tags,
             "capabilities": capabilities,
@@ -116,10 +127,53 @@ class ProfileSnapshotService:
         row = result.first()
         return row[0] if row else None
 
-    def _sign_audit_token(self, user_id: UUID, last_event_id: str | None) -> str:
+    def _sign_snapshot_payload(self, user_id: UUID, snapshot: dict[str, Any]) -> str:
+        payload = self._canonicalize_snapshot(user_id, snapshot)
+        digest = hmac.new(self.audit_secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+        return digest
+
+    def _sign_legacy_audit_token(self, user_id: UUID, last_event_id: str | None) -> str:
         msg = f"{user_id}:{self.persona_version}:{last_event_id or 'none'}"
         digest = hmac.new(self.audit_secret.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
         return digest
+
+    def _canonicalize_snapshot(self, user_id: UUID, snapshot: dict[str, Any]) -> str:
+        payload = {
+            key: value
+            for key, value in snapshot.items()
+            if key != "audit_token"
+        }
+        envelope = {
+            "user_id": str(user_id),
+            "snapshot": payload,
+        }
+        return json.dumps(envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+    def verify_integrity(self, user_id: UUID, snapshot: dict[str, Any]) -> str:
+        token = str(snapshot.get("audit_token") or "")
+        if not token:
+            return "invalid"
+
+        expected = self._sign_snapshot_payload(user_id, snapshot)
+        if hmac.compare_digest(token, expected):
+            return "valid"
+
+        legacy_expected = self._sign_legacy_audit_token(user_id, snapshot.get("last_update_event_id"))
+        if hmac.compare_digest(token, legacy_expected):
+            return "legacy"
+
+        return "invalid"
+
+    async def _load_latest_snapshot_record(self, user_id: UUID, purpose: str) -> PersonaSnapshot | None:
+        stmt = select(PersonaSnapshot).where(
+            PersonaSnapshot.user_id == user_id
+        ).order_by(desc(PersonaSnapshot.created_at)).limit(20)
+        result = await self.db.execute(stmt)
+        for record in result.scalars().all():
+            snapshot = record.snapshot_data or {}
+            if isinstance(snapshot, dict) and snapshot.get("purpose") == purpose:
+                return record
+        return None
 
     async def _persist_snapshot(self, user_id: UUID, snapshot: dict[str, Any]) -> None:
         stmt = select(PersonaSnapshot).where(

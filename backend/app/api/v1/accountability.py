@@ -28,6 +28,7 @@ from app.models.user import User
 from app.schemas.leaderboard import LeaderboardType
 from app.schemas.community import UserBrief as CommunityUserBrief
 from app.services.accountability_notification_service import _user_display_name
+from app.services.community_service import UserBlockService
 from app.services.leaderboard_service import LeaderboardService
 
 router = APIRouter()
@@ -35,6 +36,30 @@ router = APIRouter()
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+async def _ensure_partnership_access(
+    db: AsyncSession,
+    partnership: AccountabilityPartnership,
+    current_user: User,
+    *,
+    require_active: bool = False,
+) -> UUID:
+    """Validate the current user can access a partnership surface."""
+    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    partner_id = _other_user_id(partnership, current_user.id)
+    if await UserBlockService.has_block_relationship(db, current_user.id, partner_id):
+        raise HTTPException(status_code=403, detail="Partnership access is no longer available")
+
+    if partnership.status == AccountabilityStatus.ENDED:
+        raise HTTPException(status_code=403, detail="Partnership is no longer active")
+
+    if require_active and partnership.status != AccountabilityStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Partnership is not active")
+
+    return partner_id
 
 
 # ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -938,10 +963,7 @@ async def get_accountability_dashboard(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    partner_id = _other_user_id(partnership, current_user.id)
+    partner_id = await _ensure_partnership_access(db, partnership, current_user, require_active=True)
     return AccountabilityDashboardOut(
         partnership=await _build_partnership_out(db, partnership, current_user),
         stats=await _build_partnership_stats_payload(db, partnership, current_user),
@@ -975,12 +997,7 @@ async def nudge_partner(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if partnership.status != AccountabilityStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Partnership is not active")
-
+    partner_id = await _ensure_partnership_access(db, partnership, current_user, require_active=True)
     nudge_key = f"accountability:nudge:{partnership_id}:{current_user.id}"
     cooldown_seconds = 2 * 60 * 60
     # Go through the cache service abstraction so the cooldown still works when
@@ -989,7 +1006,6 @@ async def nudge_partner(
     if already_locked:
         raise HTTPException(status_code=429, detail="Nudge cooldown is still active")
 
-    partner_id = _other_user_id(partnership, current_user.id)
     sender = await db.get(User, current_user.id)
     sender_name = _user_display_name(sender, "你的伙伴")
     message = body.message.strip() if body.message else ""
@@ -1067,11 +1083,7 @@ async def daily_checkin(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if partnership.status != AccountabilityStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Partnership is not active")
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
 
     timezone_name = _user_timezone(current_user)
     today_start, today_end = _day_range_for_timezone(timezone_name)
@@ -1141,9 +1153,7 @@ async def get_partnership_stats(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
     return await _build_partnership_stats_payload(db, partnership, current_user)
 
 
@@ -1159,9 +1169,7 @@ async def get_partnership_timeline(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
     return await _build_partnership_timeline_payload(db, partnership_id, limit=limit)
 
 
@@ -1180,9 +1188,7 @@ async def get_partnership_heatmap(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
     return await _build_partnership_heatmap_payload(db, partnership, year=year)
 
 
@@ -1201,8 +1207,7 @@ async def like_checkin(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(current_user.id) != str(partnership.initiator_id) and str(current_user.id) != str(partnership.partner_id):
-        raise HTTPException(status_code=403, detail="Only partners can like checkins")
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
 
     if str(checkin.user_id) == str(current_user.id):
         raise HTTPException(status_code=400, detail="Cannot like your own checkin")
@@ -1242,8 +1247,7 @@ async def encourage_checkin(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(current_user.id) != str(partnership.initiator_id) and str(current_user.id) != str(partnership.partner_id):
-        raise HTTPException(status_code=403, detail="Only partners can send encouragement")
+    await _ensure_partnership_access(db, partnership, current_user, require_active=True)
 
     if str(checkin.user_id) == str(current_user.id):
         raise HTTPException(status_code=400, detail="Cannot encourage your own checkin")
@@ -1327,17 +1331,13 @@ async def get_partnership_achievements(
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership not found")
 
-    if str(partnership.initiator_id) != str(current_user.id) and str(partnership.partner_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    partner_id = await _ensure_partnership_access(db, partnership, current_user, require_active=True)
 
     from app.services.accountability_achievement_service import (
         accountability_achievement_service,
     )
 
     achievements = accountability_achievement_service.ACCOUNTABILITY_ACHIEVEMENTS
-    partner_id = (
-        partnership.partner_id if str(partnership.initiator_id) == str(current_user.id) else partnership.initiator_id
-    )
 
     # 获取双方成就
     my_achievements = set()

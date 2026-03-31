@@ -150,6 +150,8 @@ from app.models.calendar_event import CalendarEvent, EventSource
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+from app.models.theater_candidate_bundle import TheaterCandidateBundle
+from app.models.theater_prediction import TheaterPrediction
 from app.models.user import PushPreference, User, UserDevice
 from app.models.user_memory_settings import UserMemorySettings
 from app.models.user_preferences import UserPreferencesCenter
@@ -328,6 +330,8 @@ __all__ = [
     "TaskResourceLink",
     "TaskKnowledgeLink",
     "TaskResourceType",
+    "TheaterCandidateBundle",
+    "TheaterPrediction",
     # Next Action Selection
     "NextActionSelection",
     # Review System

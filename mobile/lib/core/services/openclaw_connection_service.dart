@@ -44,7 +44,8 @@ class OpenClawConnectionConfig {
 
   bool get isConfigured => normalizedGatewayUrl.isNotEmpty;
   bool get isPaired => (deviceToken ?? '').trim().isNotEmpty;
-  String get normalizedGatewayUrl => gatewayUrl.trim().replaceAll(RegExp(r'/+$'), '');
+  String get normalizedGatewayUrl =>
+      gatewayUrl.trim().replaceAll(RegExp(r'/+$'), '');
 
   Map<String, dynamic> toJson() => {
         'gateway_url': normalizedGatewayUrl,
@@ -115,12 +116,10 @@ class OpenClawPairingSession {
   factory OpenClawPairingSession.fromJson(Map<String, dynamic> json) =>
       OpenClawPairingSession(
         code: json['code']?.toString() ?? '',
-        createdAt:
-            DateTime.tryParse(json['created_at']?.toString() ?? '') ??
-                DateTime.now(),
-        expiresAt:
-            DateTime.tryParse(json['expires_at']?.toString() ?? '') ??
-                DateTime.now().add(const Duration(minutes: 10)),
+        createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now(),
+        expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '') ??
+            DateTime.now().add(const Duration(minutes: 10)),
       );
 
   final String code;
@@ -155,9 +154,8 @@ class OpenClawQueuedRequest {
         templateId: json['template_id']?.toString(),
         source: json['source']?.toString() ?? 'task_execution',
         priority: (json['priority'] as num?)?.toInt() ?? 0,
-        enqueuedAt:
-            DateTime.tryParse(json['enqueued_at']?.toString() ?? '') ??
-                DateTime.now(),
+        enqueuedAt: DateTime.tryParse(json['enqueued_at']?.toString() ?? '') ??
+            DateTime.now(),
       );
 
   final String id;
@@ -199,6 +197,37 @@ class OpenClawConnectionService extends ChangeNotifier {
       List.unmodifiable(_queuedRequests);
   int get queuedRequestCount => _queuedRequests.length;
   bool get isConnected => _info.status == OpenClawConnectionStatus.connected;
+  bool get hasExecutionPermissionIssue {
+    final normalized = (_info.errorMessage ?? '').toLowerCase();
+    return normalized.contains('operator.write') ||
+        normalized.contains('scope') ||
+        (normalized.contains('权限'));
+  }
+
+  bool get hasExecutionEndpointIssue =>
+      (_info.errorMessage ?? '').contains('/v1/responses');
+
+  bool get isGatewayReachable =>
+      isConnected || hasExecutionPermissionIssue || hasExecutionEndpointIssue;
+
+  void markExecutionUnavailable(String message) {
+    final normalized = message.trim();
+    _info = _info.copyWith(
+      status: OpenClawConnectionStatus.error,
+      errorMessage: normalized.isEmpty ? 'OpenClaw 执行当前不可用' : normalized,
+      lastCheckedAt: DateTime.now(),
+    );
+    notifyListeners();
+  }
+
+  void markExecutionAvailable({String? message}) {
+    _info = _info.copyWith(
+      status: OpenClawConnectionStatus.connected,
+      errorMessage: message,
+      lastCheckedAt: DateTime.now(),
+    );
+    notifyListeners();
+  }
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
@@ -226,9 +255,11 @@ class OpenClawConnectionService extends ChangeNotifier {
         if (decoded is List) {
           _queuedRequests = decoded
               .whereType<Map<dynamic, dynamic>>()
-              .map((item) => OpenClawQueuedRequest.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ),)
+              .map(
+                (item) => OpenClawQueuedRequest.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList()
             ..sort((a, b) {
               final byPriority = b.priority.compareTo(a.priority);
@@ -398,10 +429,12 @@ class OpenClawConnectionService extends ChangeNotifier {
 
     try {
       final stopwatch = Stopwatch()..start();
-      final response = await http.get(
-        Uri.parse('${config.normalizedGatewayUrl}/health'),
-        headers: _buildHeaders(config),
-      ).timeout(const Duration(seconds: 8));
+      final response = await http
+          .get(
+            Uri.parse('${config.normalizedGatewayUrl}/health'),
+            headers: _buildHeaders(config),
+          )
+          .timeout(const Duration(seconds: 8));
       stopwatch.stop();
 
       Map<String, dynamic>? body;
@@ -410,12 +443,22 @@ class OpenClawConnectionService extends ChangeNotifier {
       } catch (_) {}
 
       if (response.statusCode == 200) {
+        final executionProbe = config.transport == 'responses_http'
+            ? await _probeExecutionCapability(config)
+            : null;
+        if (executionProbe != null &&
+            executionProbe.status != OpenClawConnectionStatus.connected) {
+          return executionProbe;
+        }
         return OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.connected,
           latencyMs: stopwatch.elapsedMilliseconds,
           nodeCount: (body?['node_count'] as num?)?.toInt() ??
               (body?['connected_nodes'] as num?)?.toInt(),
-          capabilities: _extractCapabilities(body),
+          capabilities: <String>[
+            ..._extractCapabilities(body),
+            if (config.transport == 'responses_http') '执行写权限',
+          ].toSet().toList(),
           lastCheckedAt: DateTime.now(),
         );
       }
@@ -424,6 +467,63 @@ class OpenClawConnectionService extends ChangeNotifier {
         status: OpenClawConnectionStatus.error,
         latencyMs: stopwatch.elapsedMilliseconds,
         errorMessage: 'HTTP ${response.statusCode}',
+        lastCheckedAt: DateTime.now(),
+      );
+    } catch (e) {
+      return OpenClawConnectionInfo(
+        status: OpenClawConnectionStatus.error,
+        errorMessage: e.toString(),
+        lastCheckedAt: DateTime.now(),
+      );
+    }
+  }
+
+  Future<OpenClawConnectionInfo> _probeExecutionCapability(
+    OpenClawConnectionConfig config,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${config.normalizedGatewayUrl}/v1/responses'),
+            headers: <String, String>{
+              ..._buildHeaders(config),
+              'Content-Type': 'application/json',
+            },
+            body: '{}',
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 400 || response.statusCode == 422) {
+        return OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.connected,
+          lastCheckedAt: DateTime.now(),
+        );
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        return OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.error,
+          errorMessage: _extractErrorMessage(response.body) ??
+              '缺少 OpenClaw 执行权限，请检查令牌 scope',
+          lastCheckedAt: DateTime.now(),
+        );
+      }
+
+      if (response.statusCode == 404) {
+        return OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.error,
+          errorMessage: 'OpenClaw 执行接口不可用（/v1/responses 未找到）',
+          lastCheckedAt: DateTime.now(),
+        );
+      }
+
+      return OpenClawConnectionInfo(
+        status: response.statusCode < 500
+            ? OpenClawConnectionStatus.connected
+            : OpenClawConnectionStatus.error,
+        errorMessage: response.statusCode < 500
+            ? null
+            : 'OpenClaw 执行接口异常（HTTP ${response.statusCode}）',
         lastCheckedAt: DateTime.now(),
       );
     } catch (e) {
@@ -453,7 +553,8 @@ class OpenClawConnectionService extends ChangeNotifier {
     final capabilities = <String>[];
     final rawCaps = body['capabilities'];
     if (rawCaps is List) {
-      capabilities.addAll(rawCaps.map((item) => '$item').where((item) => item.isNotEmpty));
+      capabilities.addAll(
+          rawCaps.map((item) => '$item').where((item) => item.isNotEmpty));
     }
     if (body['supports_nodes'] == true) {
       capabilities.add('节点发现');
@@ -465,6 +566,27 @@ class OpenClawConnectionService extends ChangeNotifier {
       capabilities.add('质量闭环');
     }
     return capabilities.toSet().toList();
+  }
+
+  String? _extractErrorMessage(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final error = decoded['error'];
+        if (error is Map<String, dynamic>) {
+          final message = error['message']?.toString().trim();
+          if ((message ?? '').isNotEmpty) {
+            return message;
+          }
+        }
+        final message = decoded['message']?.toString().trim();
+        if ((message ?? '').isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    final trimmed = body.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<void> _persistQueue() async {

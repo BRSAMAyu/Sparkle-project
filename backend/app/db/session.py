@@ -16,6 +16,8 @@ from sqlalchemy.pool import NullPool
 from app.config import settings
 from app.db.url import to_async_database_url
 
+_EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
+
 
 def _sanitize_asyncpg_url(url: str) -> tuple[str, str | None, str | None]:
     parsed = make_url(url)
@@ -115,12 +117,14 @@ async def get_db() -> AsyncSession:
     """
     async with AsyncSessionLocal() as session:
         try:
+            session.sync_session.info[_EXTERNAL_TRANSACTION_MANAGED_KEY] = True
             yield session
             await session.commit()
         except Exception:
             await session.rollback()
             raise
         finally:
+            session.sync_session.info.pop(_EXTERNAL_TRANSACTION_MANAGED_KEY, None)
             await session.close()
 
 
@@ -131,11 +135,13 @@ async def get_db_no_commit() -> AsyncSession:
     """
     async with AsyncSessionLocal() as session:
         try:
+            session.sync_session.info[_EXTERNAL_TRANSACTION_MANAGED_KEY] = True
             yield session
         except Exception:
             await session.rollback()
             raise
         finally:
+            session.sync_session.info.pop(_EXTERNAL_TRANSACTION_MANAGED_KEY, None)
             await session.close()
 
 

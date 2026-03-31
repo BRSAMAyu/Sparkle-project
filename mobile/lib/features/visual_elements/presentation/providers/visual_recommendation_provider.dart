@@ -6,7 +6,8 @@ import 'package:sparkle/features/visual_elements/domain/services/visual_recommen
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 
 final visualRecommendationServiceProvider =
-    Provider<VisualRecommendationService>((ref) => VisualRecommendationService());
+    Provider<VisualRecommendationService>(
+        (ref) => VisualRecommendationService());
 
 /// Derive current user activity state from dashboard + streak signals.
 final userActivityStateProvider = Provider<UserActivityState>((ref) {
@@ -15,8 +16,8 @@ final userActivityStateProvider = Provider<UserActivityState>((ref) {
   final now = TimeOfDay.now();
   final isNight = now.hour >= 21 || now.hour < 6;
 
-  if (dashboard.isLoading) {
-    return isNight ? UserActivityState.night : UserActivityState.relax;
+  if (dashboard.isLoading || achievement.isLoading) {
+    return UserActivityState.relax;
   }
 
   if (dashboard.sprint != null) return UserActivityState.sprint;
@@ -34,9 +35,13 @@ final visualRecommendationProvider =
     FutureProvider<List<VisualRecommendation>>((ref) async {
   final service = ref.watch(visualRecommendationServiceProvider);
   final state = ref.watch(visualElementsNotifierProvider);
+  final dashboard = ref.watch(dashboardProvider);
+  final achievement = ref.watch(achievementProvider);
   final activityState = ref.watch(userActivityStateProvider);
 
-  if (state.isLoading) return [];
+  if (state.isLoading || dashboard.isLoading || achievement.isLoading) {
+    return [];
+  }
 
   final availableElements = state.unlockedElements.isNotEmpty
       ? state.unlockedElements

@@ -14,6 +14,7 @@ import pytest
 import pytest_asyncio
 import asyncio
 import json
+import os
 from typing import List, Dict, Any
 from datetime import datetime
 import websockets
@@ -24,6 +25,12 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.models.user import User
 from app.models.plan import Plan, PlanStage, PlanType
+
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("FULL_STACK_TESTS") != "1",
+    reason="Requires full WebSocket stack with Gateway + gRPC + DB + Redis.",
+)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -75,6 +82,7 @@ class TestWebSocketConnection:
             assert data["type"] == "pong"
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_connection_with_invalid_token(self, websocket_url: str):
         """Test WebSocket connection rejection with invalid token"""
         uri = f"{websocket_url}?token=invalid_token_12345"
@@ -122,6 +130,7 @@ class TestChatMessageFlow:
     """Test complete chat message flow through the stack"""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_simple_chat_message(
         self,
         websocket_url: str,
@@ -291,6 +300,7 @@ class TestWebSocketErrorHandling:
     """Test WebSocket error handling"""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_malformed_message(
         self,
         websocket_url: str,

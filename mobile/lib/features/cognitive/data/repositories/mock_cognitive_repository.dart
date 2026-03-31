@@ -5,7 +5,8 @@ import 'package:sparkle/features/cognitive/data/repositories/i_cognitive_reposit
 class MockCognitiveRepository implements ICognitiveRepository {
   @override
   Future<CognitiveFragmentModel> createFragment(
-      CognitiveFragmentCreate data,) async {
+    CognitiveFragmentCreate data,
+  ) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     return CognitiveFragmentModel(
       id: 'mock-frag-${DateTime.now().millisecondsSinceEpoch}',
@@ -20,8 +21,10 @@ class MockCognitiveRepository implements ICognitiveRepository {
   }
 
   @override
-  Future<List<CognitiveFragmentModel>> getFragments(
-      {int limit = 20, int skip = 0,}) async {
+  Future<List<CognitiveFragmentModel>> getFragments({
+    int limit = 20,
+    int skip = 0,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 800));
     return [
       CognitiveFragmentModel(
@@ -63,11 +66,14 @@ class MockCognitiveRepository implements ICognitiveRepository {
         id: 'pattern-1',
         userId: 'user-1',
         patternName: '畏难性拖延',
-        patternType: 'emotional', // cognitive, emotional, execution
+        patternType: PatternType.emotional,
         description: '当面对难度较大或不确定的任务（如物理大作业）时，倾向于通过处理琐事（如整理桌面、回消息）来推迟开始时间。',
         solutionText: '尝试"5分钟起步法"：告诉自己只做5分钟，降低心理门槛。',
         evidenceIds: ['frag-1'],
+        confidenceScore: 0.82,
+        frequency: 6,
         isArchived: false,
+        lastObservedAt: DateTime.now().subtract(const Duration(hours: 18)),
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
         updatedAt: DateTime.now().subtract(const Duration(days: 1)),
       ),
@@ -75,11 +81,14 @@ class MockCognitiveRepository implements ICognitiveRepository {
         id: 'pattern-2',
         userId: 'user-1',
         patternName: '深夜突击习惯',
-        patternType: 'execution',
+        patternType: PatternType.execution,
         description: '习惯在晚上10点后才开始处理最重要、最烧脑的学习任务，导致睡眠延迟和次日精力不足。',
         solutionText: '调整生物钟，尝试在早上头脑最清醒时攻克一道难题。',
         evidenceIds: [],
+        confidenceScore: 0.74,
+        frequency: 4,
         isArchived: false,
+        lastObservedAt: DateTime.now().subtract(const Duration(days: 3)),
         createdAt: DateTime.now().subtract(const Duration(days: 10)),
         updatedAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
@@ -87,11 +96,15 @@ class MockCognitiveRepository implements ICognitiveRepository {
         id: 'pattern-3',
         userId: 'user-1',
         patternName: '完美主义倾向',
-        patternType: 'cognitive',
+        patternType: PatternType.cognitive,
         description: '在做PPT或写报告时，过度纠结于排版和措辞，导致核心内容产出效率低下。',
         solutionText: '采用"草稿-迭代"模式，先完成内容框架，最后统一调整格式。',
         evidenceIds: [],
+        confidenceScore: 0.68,
+        frequency: 9,
         isArchived: true, // 已克服
+        lastObservedAt: DateTime.now().subtract(const Duration(days: 18)),
+        lastDecayAt: DateTime.now().subtract(const Duration(days: 7)),
         createdAt: DateTime.now().subtract(const Duration(days: 30)),
         updatedAt: DateTime.now().subtract(const Duration(days: 15)),
       ),

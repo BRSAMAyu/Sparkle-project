@@ -59,6 +59,7 @@ async def test_gateway_ws_execute_returns_approval_result(monkeypatch) -> None:
                 "ok": True,
                 "payload": {
                     "runId": "run-1",
+                    "status": "accepted",
                     "acceptedAt": "2026-03-27T00:00:00Z",
                     "sessionKey": "sparkle:main:user:task",
                 },
@@ -93,6 +94,8 @@ async def test_gateway_ws_execute_returns_approval_result(monkeypatch) -> None:
     assert response["approval"]["id"] == "approval-1"
     assert response["required_action"]["approval_id"] == "approval-1"
     assert websocket.sent[0]["method"] == "connect"
+    assert websocket.sent[0]["params"]["client"]["id"] == "gateway-client"
+    assert websocket.sent[0]["params"]["client"]["mode"] == "backend"
     assert websocket.sent[1]["method"] == "agent"
 
 
@@ -108,6 +111,7 @@ async def test_gateway_ws_execute_collects_output_and_waits_for_completion(monke
                 "ok": True,
                 "payload": {
                     "runId": "run-2",
+                    "status": "accepted",
                     "acceptedAt": "2026-03-27T00:00:00Z",
                     "sessionKey": "sparkle:main:user:task",
                 },
@@ -122,7 +126,19 @@ async def test_gateway_ws_execute_collects_output_and_waits_for_completion(monke
                 "event": "agent",
                 "payload": {"stream": "lifecycle", "phase": "end"},
             },
-            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"status": "ok"}},
+            {
+                "type": "res",
+                "id": "sparkle-2",
+                "ok": True,
+                "payload": {
+                    "runId": "run-2",
+                    "status": "ok",
+                    "result": {
+                        "payloads": [{"text": '{"summary":"done"}'}],
+                        "meta": {"agentMeta": {"lastCallUsage": {"input": 1, "output": 1}}},
+                    },
+                },
+            },
         ]
     )
     monkeypatch.setattr(
@@ -143,12 +159,12 @@ async def test_gateway_ws_execute_collects_output_and_waits_for_completion(monke
 
     assert response["status"] == "completed"
     assert response["output"][0]["content"][0]["text"] == '{"summary":"done"}'
-    assert websocket.sent[2]["method"] == "agent.wait"
+    assert websocket.sent[1]["method"] == "agent"
 
 
 @pytest.mark.asyncio
 async def test_gateway_ws_resolve_approval_resumes_run(monkeypatch) -> None:
-    websocket = _FakeWebSocket(
+    resolve_socket = _FakeWebSocket(
         [
             {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-1", "ts": 1}},
             {"type": "res", "id": "sparkle-1", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
@@ -163,12 +179,19 @@ async def test_gateway_ws_resolve_approval_resumes_run(monkeypatch) -> None:
                 "event": "agent",
                 "payload": {"stream": "lifecycle", "phase": "end"},
             },
-            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"status": "ok"}},
         ]
     )
+    wait_socket = _FakeWebSocket(
+        [
+            {"type": "event", "event": "connect.challenge", "payload": {"nonce": "nonce-2", "ts": 2}},
+            {"type": "res", "id": "sparkle-3", "ok": True, "payload": {"type": "hello-ok", "protocol": 3}},
+            {"type": "res", "id": "sparkle-4", "ok": True, "payload": {"status": "ok"}},
+        ]
+    )
+    connections = iter([_FakeConnect(resolve_socket), _FakeConnect(wait_socket)])
     monkeypatch.setattr(
         "app.adapters.openclaw.gateway_ws_client.websockets.connect",
-        lambda *args, **kwargs: _FakeConnect(websocket),
+        lambda *args, **kwargs: next(connections),
     )
 
     client = OpenClawGatewayWebSocketClient(_make_config())
@@ -182,8 +205,8 @@ async def test_gateway_ws_resolve_approval_resumes_run(monkeypatch) -> None:
 
     assert response["status"] == "completed"
     assert response["output"][0]["content"][0]["text"] == '{"summary":"approved"}'
-    assert websocket.sent[1]["method"] == "exec.approval.resolve"
-    assert websocket.sent[2]["method"] == "agent.wait"
+    assert resolve_socket.sent[1]["method"] == "exec.approval.resolve"
+    assert wait_socket.sent[1]["method"] == "agent.wait"
 
 
 @pytest.mark.asyncio

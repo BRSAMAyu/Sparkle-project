@@ -56,6 +56,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filterState = ref.watch(errorFilterProvider);
+    final hasAdvancedFilters =
+        (filterState.chapterFilter?.trim().isNotEmpty ?? false) ||
+            filterState.showOnlyNeedReview ||
+            filterState.cognitiveDimension != null;
 
     // 构建查询参数
     final query = filterState.toQuery();
@@ -74,7 +78,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: _showSearch ? _buildSearchField() : Text(context.l10n.errorBookTitle),
+        title: _showSearch
+            ? _buildSearchField()
+            : Text(context.l10n.errorBookTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -94,7 +100,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(
+              Icons.filter_list,
+              color: hasAdvancedFilters ? theme.colorScheme.primary : null,
+            ),
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
@@ -151,8 +160,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                     theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 child: Row(
                   children: [
-                    Icon(Icons.psychology,
-                        size: 16, color: theme.colorScheme.primary,),
+                    Icon(
+                      Icons.psychology,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: DS.spacing8),
                     Text(
                       context.l10n.errorBookCognitiveFilter(
@@ -260,7 +272,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
           return Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing6, vertical: 2,),
+              horizontal: DS.spacing6,
+              vertical: 2,
+            ),
             decoration: BoxDecoration(
               color: type == 'needReview'
                   ? DS.error
@@ -434,27 +448,121 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Future<void> _showFilterDialog(BuildContext context) async {
-    // TRACKED(TD-005): 实现更多筛选选项（掌握度、章节等）
+    final current = ref.read(errorFilterProvider);
+    final chapterController = TextEditingController(
+      text: current.chapterFilter ?? '',
+    );
+    var needReviewOnly = current.showOnlyNeedReview;
+    var cognitiveDimension = current.cognitiveDimension;
+
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.errorBookFilterTitle),
-        content: Text(context.l10n.featureInDevelopment),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () {
-              ref.read(errorFilterProvider.notifier).reset();
-              Navigator.of(context).pop();
-            },
-            label: context.l10n.commonReset,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.errorBookFilterTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: chapterController,
+                  decoration: const InputDecoration(
+                    labelText: '章节',
+                    hintText: '例如：函数、力学、电磁学',
+                    prefixIcon: Icon(Icons.folder_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing16),
+                SwitchListTile.adaptive(
+                  value: needReviewOnly,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('仅显示待复习'),
+                  subtitle: const Text('和顶部“待复习”标签页配合使用'),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      needReviewOnly = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  '认知维度',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    FilterChip(
+                      label: const Text('全部'),
+                      selected: cognitiveDimension == null,
+                      onSelected: (_) {
+                        setDialogState(() {
+                          cognitiveDimension = null;
+                        });
+                      },
+                    ),
+                    ...CognitiveDimension.values.map(
+                      (dimension) => FilterChip(
+                        label: Text(dimension.label),
+                        selected: cognitiveDimension == dimension,
+                        onSelected: (_) {
+                          setDialogState(() {
+                            cognitiveDimension = cognitiveDimension == dimension
+                                ? null
+                                : dimension;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.confirm),
-          ),
-        ],
+          actions: [
+            SparkleButton.ghost(
+              onPressed: () {
+                setDialogState(() {
+                  chapterController.clear();
+                  needReviewOnly = false;
+                  cognitiveDimension = null;
+                });
+              },
+              label: context.l10n.commonReset,
+            ),
+            SparkleButton.ghost(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              label: context.l10n.cancel,
+            ),
+            FilledButton(
+              onPressed: () {
+                ref.read(errorFilterProvider.notifier)
+                  ..setChapter(
+                    chapterController.text.trim().isEmpty
+                        ? null
+                        : chapterController.text.trim(),
+                  )
+                  ..setCognitiveDimension(cognitiveDimension);
+                final currentNeedReview =
+                    ref.read(errorFilterProvider).showOnlyNeedReview;
+                if (currentNeedReview != needReviewOnly) {
+                  ref.read(errorFilterProvider.notifier).toggleNeedReview();
+                }
+                Navigator.of(dialogContext).pop();
+              },
+              child: Text(context.l10n.confirm),
+            ),
+          ],
+        ),
       ),
     );
+    chapterController.dispose();
   }
 }
 

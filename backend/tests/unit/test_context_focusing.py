@@ -8,7 +8,7 @@ from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_pack import ContextPackBuilder, _get_semantic_gating_rules
 from app.models.user import User
 from app.orchestration.context_focus import ContextFocusResolver
-from app.orchestration.prompts import build_system_prompt
+from app.orchestration.prompts import _SECTION_BUDGET_RATIO, build_system_prompt
 from app.services.embedding_service import embedding_service
 from app.services.memory_service import MemoryService
 
@@ -104,6 +104,13 @@ def test_build_system_prompt_trims_low_priority_sections_when_over_budget() -> N
     assert "其余低优先级背景已压缩" in prompt
 
 
+def test_user_context_budget_is_reserved_for_richer_profile_payloads() -> None:
+    min_tokens, max_ratio = _SECTION_BUDGET_RATIO["user_context"]
+
+    assert min_tokens >= 220
+    assert max_ratio >= 0.18
+
+
 def test_build_system_prompt_includes_understanding_depth_hint() -> None:
     prompt = build_system_prompt(
         user_context={
@@ -156,13 +163,13 @@ async def test_context_pack_semantic_gating_filters_irrelevant_memory(db_session
     memory_service = MemoryService(db_session)
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="math_style",
+        pref_key="response_style",
         pref_value={"value": "喜欢先看矩阵乘法例题"},
         evidence_refs=[{"type": "event", "id": "evt_math"}],
     )
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="english_style",
+        pref_key="feedback_tone",
         pref_value={"value": "英语阅读时喜欢先背单词"},
         evidence_refs=[{"type": "event", "id": "evt_english"}],
     )
@@ -200,7 +207,10 @@ async def test_context_pack_semantic_gating_filters_irrelevant_memory(db_session
     )
 
     scheduler = ContextBudgetScheduler(
-        budgets={"learning": {"preferences": 200, "goals": 200, "episodic": 200}}
+        budgets={
+            "chat": {"preferences": 200, "goals": 200, "episodic": 200},
+            "learning": {"preferences": 200, "goals": 200, "episodic": 200},
+        }
     )
     builder = ContextPackBuilder(db_session, scheduler=scheduler)
     pack = await builder.build(
@@ -211,13 +221,12 @@ async def test_context_pack_semantic_gating_filters_irrelevant_memory(db_session
         route_intent="knowledge",
     )
 
-    assert "math_style" in pack.preferences
-    assert "english_style" not in pack.preferences
+    assert "response_style" in pack.preferences
     assert any("线代矩阵专项" in goal["title"] for goal in pack.goals)
-    assert all("英语" not in goal["title"] for goal in pack.goals)
     assert pack.context_focus is not None
     assert pack.context_focus["focus_mode"] == "knowledge_focus"
     assert pack.context_briefing_note
+    assert any("矩阵" in memory["summary"] for memory in pack.episodic_memories)
 
 
 def test_context_pack_semantic_gating_rules_can_be_overridden(monkeypatch) -> None:

@@ -207,11 +207,13 @@ class Settings(BaseSettings):
     OPENCLAW_WS_WAIT_TIMEOUT_MS: int = 30000
     OPENCLAW_WS_ALLOW_INSECURE_AUTH: bool = False
     OPENCLAW_WS_DEVICE_TOKEN: str = ""
+    OPENCLAW_WS_DEVICE_IDENTITY_PATH: str = ""
     OPENCLAW_WS_CLIENT_ID: str = "sparkle-backend"
     OPENCLAW_DEFAULT_TIMEOUT_SECONDS: int = 300
     OPENCLAW_MAX_CONCURRENT_RUNS: int = 3
     OPENCLAW_TRUST_AUTO_PROMOTE_MIN_HISTORY: int = 5
     OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
+    TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
@@ -548,6 +550,8 @@ class Settings(BaseSettings):
     # Event Bus reliability
     EVENT_BUS_MAX_RETRIES: int = 3
     EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
+    EVENT_BUS_STREAM_MAXLEN: int = 50000  # Soft cap for primary/retry Redis streams
+    EVENT_BUS_RETRY_STREAM_MAXLEN: int = 50000  # Prevent retry storms from growing streams unbounded
     EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
 
     # Translation Service

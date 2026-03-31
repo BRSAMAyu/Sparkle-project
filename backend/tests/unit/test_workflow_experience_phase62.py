@@ -58,3 +58,48 @@ async def test_resolve_few_shot_examples_falls_back_to_builtin():
 
     assert len(examples) == 1
     assert "根因" in examples[0]["output"] or "根因" in (examples[0].get("explanation") or "")
+
+
+@pytest.mark.asyncio
+async def test_resolve_few_shot_examples_falls_back_to_generic_seed_library(
+    monkeypatch,
+):
+    class _FakeSeedLibraryService:
+        async def get_few_shot_examples(
+            self,
+            db,
+            user_id,
+            subject=None,
+            difficulty_level=None,
+            task_type=None,
+            tags=None,
+            match_all_tags=False,
+            count=3,
+        ):
+            if tags:
+                return []
+            return [
+                {
+                    "input": "怎样开始学习 LLM？",
+                    "output": "先理解 Transformer 基础，再进入预训练、微调与评测。",
+                    "explanation": "通用已启用示例",
+                }
+            ][:count]
+
+    monkeypatch.setattr(
+        "app.services.seed_library_service.SeedLibraryService",
+        _FakeSeedLibraryService,
+    )
+
+    examples = await resolve_few_shot_examples(
+        db_session=object(),
+        user_id="11111111-1111-1111-1111-111111111111",
+        workflow_type="standard_chat",
+        chat_mode="standard",
+        agent_role="generation",
+        stage="generation",
+        count=1,
+    )
+
+    assert len(examples) == 1
+    assert examples[0]["explanation"] == "通用已启用示例"

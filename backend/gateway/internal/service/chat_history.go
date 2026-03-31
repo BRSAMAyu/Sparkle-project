@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -27,6 +28,13 @@ const (
 	breakerRetryMaxAge   = 2 * time.Minute // 超过此时间的消息丢弃（防止堆积无限增长）
 	breakerRetryBufMax   = 500             // 本地重试缓冲上限
 )
+
+var errRetryBufferOverflow = errors.New("chat history retry buffer overflow")
+var errChatHistoryForbidden = errors.New("chat history forbidden")
+
+func ErrChatHistoryForbidden() error {
+	return errChatHistoryForbidden
+}
 
 // retryEntry 保存一条待重试的消息及其首次入队时间
 type retryEntry struct {
@@ -192,6 +200,7 @@ func (s *ChatHistoryService) PublishConnectionEvent(ctx context.Context, userID 
 
 func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []byte) error {
 	pipe := s.rdb.Pipeline()
+	bufferOverflow := false
 
 	// 1. Write to cache (for AI context, with TTL)
 	cacheKey := "chat:history:" + sid
@@ -223,6 +232,7 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 		if len(s.retryBuf) < breakerRetryBufMax {
 			s.retryBuf = append(s.retryBuf, retryEntry{msg: msg, enqueuedAt: time.Now()})
 		} else {
+			bufferOverflow = true
 			log.Printf("[ChatHistoryService] Retry buffer full, dropping message (queue: %d/%d)", qLen, threshold)
 		}
 		s.retryMu.Unlock()
@@ -259,7 +269,13 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	}
 
 	_, err = pipe.Exec(ctx)
-	return err
+	if err != nil {
+		return err
+	}
+	if bufferOverflow {
+		return errRetryBufferOverflow
+	}
+	return nil
 }
 
 func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID string, limit, offset int) ([]ChatHistoryMessage, error) {
@@ -274,7 +290,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	messages, err := s.getMessagesFromRedis(ctx, userID, sessionID, limit, offset)
 	if err != nil {
 		// Security errors must not be swallowed — never fallback to DB on access denial
-		if err.Error() == "forbidden" {
+		if errors.Is(err, errChatHistoryForbidden) {
 			return nil, err
 		}
 		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
@@ -312,7 +328,7 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 	}
 	// If meta exists and owner doesn't match, reject immediately (even if messages list is empty)
 	if owner != "" && owner != userID {
-		return nil, fmt.Errorf("forbidden")
+		return nil, errChatHistoryForbidden
 	}
 
 	cacheKey := "chat:history:" + sessionID
@@ -378,7 +394,7 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 			return nil, err
 		}
 		if exists {
-			return nil, fmt.Errorf("forbidden")
+			return nil, errChatHistoryForbidden
 		}
 		return []ChatHistoryMessage{}, nil
 	}

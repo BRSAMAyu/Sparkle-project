@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -19,6 +20,19 @@ class _ScalarResult:
 
     def scalar_one_or_none(self):
         return self._value
+
+    def scalar(self):
+        return self._value
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        if self._value is None:
+            return []
+        if isinstance(self._value, list):
+            return self._value
+        return [self._value]
 
 
 class _AsyncNullContext:
@@ -127,9 +141,11 @@ class TestCommunitySecurity:
         blocker_id = uuid4()
         blocked_id = uuid4()
         friendship = SimpleNamespace(soft_delete=MagicMock())
+        partnership = SimpleNamespace(status="active", ended_at=None)
 
         existing_block_result = _ScalarResult(None)
         friendship_result = _ScalarResult(friendship)
+        partnership_result = _ScalarResult([partnership])
 
         async def refresh_side_effect(obj):
             if getattr(obj, "blocker_id", None) is None:
@@ -137,7 +153,7 @@ class TestCommunitySecurity:
             if getattr(obj, "blocked_id", None) is None:
                 obj.blocked_id = blocked_id
 
-        mock_db.execute.side_effect = [existing_block_result, friendship_result]
+        mock_db.execute.side_effect = [existing_block_result, friendship_result, partnership_result]
         mock_db.refresh.side_effect = refresh_side_effect
 
         block = await UserBlockService.block_user(
@@ -151,7 +167,35 @@ class TestCommunitySecurity:
         assert block.blocked_id == blocked_id
         assert block.reason == "测试拉黑"
         friendship.soft_delete.assert_called_once()
+        assert partnership.ended_at is not None
         assert mock_db.flush.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_delete_friendship_also_ends_partnerships(self, mock_db):
+        """删好友时应同时结束双方的责任伙伴关系。"""
+        from app.services.community_service import FriendshipService
+
+        user_id = uuid4()
+        other_user_id = uuid4()
+        friendship = SimpleNamespace(
+            user_id=user_id,
+            friend_id=other_user_id,
+            delete=AsyncMock(),
+        )
+        partnership = SimpleNamespace(status="active", ended_at=None)
+
+        mock_db.execute.side_effect = [_ScalarResult(friendship), _ScalarResult([partnership])]
+
+        result = await FriendshipService.delete_friendship(
+            db=mock_db,
+            user_id=user_id,
+            friendship_id=uuid4(),
+        )
+
+        assert result is True
+        friendship.delete.assert_awaited_once_with(mock_db, soft=True)
+        assert partnership.ended_at is not None
+        mock_db.flush.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_block_user_twice_raises(self, mock_db):
@@ -188,7 +232,11 @@ class TestCommunitySecurity:
             reason=None,
         )
 
-        mock_db.execute.side_effect = [_ScalarResult(existing_block), _ScalarResult(None)]
+        mock_db.execute.side_effect = [
+            _ScalarResult(existing_block),
+            _ScalarResult(None),
+            _ScalarResult([]),
+        ]
 
         block = await UserBlockService.block_user(
             db=mock_db,
@@ -219,6 +267,90 @@ class TestCommunitySecurity:
 
         assert result is True
         existing_block.soft_delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_friend_request_integrity_error_accepts_reverse_pending(self, mock_db):
+        """双向同时发起请求时，唯一约束冲突后应回退为自动接受。"""
+        from app.models.community import FriendshipStatus
+        from app.services.community_service import FriendshipService
+
+        user_id = uuid4()
+        target_id = uuid4()
+        reverse_pending = SimpleNamespace(
+            user_id=min(user_id, target_id, key=str),
+            friend_id=max(user_id, target_id, key=str),
+            status=FriendshipStatus.PENDING,
+            initiated_by=target_id,
+        )
+
+        mock_db.execute.side_effect = [
+            _ScalarResult(None),  # user row lock
+            _ScalarResult(None),  # reverse pending pre-check
+            _ScalarResult(None),  # existing relationship pre-check
+            _ScalarResult(reverse_pending),  # re-query after IntegrityError
+        ]
+        mock_db.flush.side_effect = [
+            IntegrityError("insert", {}, Exception("duplicate key")),
+            None,
+        ]
+
+        result = await FriendshipService.send_friend_request(mock_db, user_id, target_id)
+
+        assert result is reverse_pending
+        assert reverse_pending.status == FriendshipStatus.ACCEPTED
+        mock_db.refresh.assert_awaited_once_with(reverse_pending)
+
+    @pytest.mark.asyncio
+    async def test_join_group_integrity_error_maps_to_already_member(self, mock_db):
+        """加入群组时若并发插入触发唯一约束，应返回明确错误。"""
+        from app.services.community_service import GroupService
+
+        group_id = uuid4()
+        user_id = uuid4()
+        group = SimpleNamespace(id=group_id, max_members=5)
+
+        mock_db.execute.side_effect = [
+            _ScalarResult(group),  # locked group
+            _ScalarResult(None),  # existing membership pre-check
+            _ScalarResult(1),  # current member count
+        ]
+        mock_db.flush.side_effect = IntegrityError("insert", {}, Exception("duplicate key"))
+
+        with pytest.raises(ValueError, match="已是群组成员"):
+            await GroupService.join_group(mock_db, group_id, user_id)
+
+    @pytest.mark.asyncio
+    async def test_claim_task_integrity_error_maps_to_already_claimed(self, mock_db, monkeypatch):
+        """认领群任务时若并发写入 claim 失败，应返回明确错误。"""
+        from app.models.community import GroupType
+        from app.services.community_service import GroupTaskService
+        from app.services.task_service import TaskService
+
+        task_id = uuid4()
+        user_id = uuid4()
+        group_task = SimpleNamespace(
+            id=task_id,
+            title="群任务",
+            tags=["focus"],
+            estimated_minutes=30,
+            difficulty=2,
+            due_date=None,
+            total_claims=0,
+            group=SimpleNamespace(name="测试群", type=GroupType.SQUAD),
+        )
+
+        mock_db.execute.side_effect = [
+            _ScalarResult(group_task),
+            _ScalarResult(None),
+        ]
+        mock_db.flush.side_effect = [
+            None,
+            IntegrityError("insert", {}, Exception("duplicate key")),
+        ]
+        monkeypatch.setattr(TaskService, "_next_top_order_index", AsyncMock(return_value=0))
+
+        with pytest.raises(ValueError, match="已认领此任务"):
+            await GroupTaskService.claim_task(mock_db, task_id, user_id)
         mock_db.flush.assert_awaited()
 
     @pytest.mark.asyncio
@@ -233,3 +365,23 @@ class TestCommunitySecurity:
 
         assert await UserBlockService.is_blocked(mock_db, blocked_user_id, blocker_id) is True
         assert await UserBlockService.is_blocked(mock_db, blocked_user_id, blocker_id) is False
+
+    @pytest.mark.asyncio
+    async def test_share_resource_rejects_block_relationship(self, mock_db):
+        """有拉黑关系时不允许继续向对方分享资源。"""
+        from app.models.community import SharedResourceType
+        from app.services.collaboration_service import CollaborationService
+
+        user_id = uuid4()
+        target_user_id = uuid4()
+
+        mock_db.execute.side_effect = [_ScalarResult(object())]
+
+        with pytest.raises(ValueError, match="blocked user"):
+            await CollaborationService.share_resource(
+                db=mock_db,
+                user_id=user_id,
+                resource_type=SharedResourceType.TASK,
+                resource_id=uuid4(),
+                target_user_id=target_user_id,
+            )

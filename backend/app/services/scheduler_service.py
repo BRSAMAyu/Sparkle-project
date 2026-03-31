@@ -5,7 +5,6 @@ from loguru import logger
 from sqlalchemy import select
 
 from app.config import settings
-from app.core.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
@@ -17,6 +16,7 @@ from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.push_service import PushService
+from app.services.community_advanced_service import OfflineQueueService
 
 
 def _utcnow() -> datetime:
@@ -31,9 +31,6 @@ class SchedulerService:
         # 智能推送循环 (每15分钟运行一次，PushService 内部会做更细致的频控)
         self.scheduler.add_job(self.run_smart_push_cycle, 'interval', minutes=15)
 
-        # 任务提醒检查 (每15分钟运行一次)
-        self.scheduler.add_job(self.run_task_reminders, 'interval', minutes=15)
-
         # 每日衰减任务 (每天凌晨3点执行)
         self.scheduler.add_job(self.apply_daily_decay, 'cron', hour=3, minute=0)
 
@@ -42,6 +39,9 @@ class SchedulerService:
 
         # 事件保留清理 (每天凌晨2点半执行)
         self.scheduler.add_job(self.run_event_retention_cleanup, 'cron', hour=2, minute=30)
+
+        # 离线消息队列过期清理（每小时一次）
+        self.scheduler.add_job(self.run_offline_queue_cleanup, 'interval', hours=1)
 
         # 夜间复盘 (每天凌晨1点执行)
         self.scheduler.add_job(self.run_nightly_review, 'cron', hour=1, minute=0)
@@ -77,18 +77,6 @@ class SchedulerService:
         async with AsyncSessionLocal() as db:
             push_service = PushService(db)
             await push_service.process_all_users()
-
-    async def run_task_reminders(self):
-        """
-        执行任务提醒检查
-        通过 Celery 异步发送任务到期提醒
-        """
-        logger.info("Starting task reminders check...")
-        try:
-            from app.core.celery_app import celery_app
-            celery_app.send_task("send_task_reminders", queue="default")
-        except Exception as e:
-            logger.error(f"Failed to trigger task reminders: {e}")
 
     # async def check_fragmented_time(self):
     #     """
@@ -166,6 +154,17 @@ class SchedulerService:
                 )
         except Exception as e:
             logger.error(f"Error in event retention cleanup: {e}", exc_info=True)
+
+    async def run_offline_queue_cleanup(self):
+        """清理过期离线消息，避免队列无限增长。"""
+        logger.info("Starting offline queue cleanup...")
+        try:
+            async with AsyncSessionLocal() as db:
+                expired_count = await OfflineQueueService.cleanup_expired(db)
+                await db.commit()
+                logger.info(f"Offline queue cleanup completed: expired={expired_count}")
+        except Exception as e:
+            logger.error(f"Error in offline queue cleanup: {e}", exc_info=True)
 
     async def run_nightly_review(self):
         """

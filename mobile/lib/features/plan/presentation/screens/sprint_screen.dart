@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 
 class SprintScreen extends ConsumerWidget {
   const SprintScreen({super.key});
@@ -33,7 +36,7 @@ class SprintScreen extends ConsumerWidget {
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.archive_outlined),
-              onPressed: () => context.push('/plans/history'),
+              onPressed: () => unawaited(context.push('/plans/history')),
             ),
           ),
           if (activeSprint != null)
@@ -41,7 +44,7 @@ class SprintScreen extends ConsumerWidget {
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.open_in_new),
               onPressed: () {
-                context.push('/plans/${activeSprint.id}');
+                unawaited(context.push('/plans/${activeSprint.id}'));
               },
             ),
           if (activeSprint != null)
@@ -49,7 +52,7 @@ class SprintScreen extends ConsumerWidget {
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () {
-                context.push('/plans/${activeSprint.id}/edit');
+                unawaited(context.push('/plans/${activeSprint.id}/edit'));
               },
             ),
         ],
@@ -106,7 +109,7 @@ class _NoActiveSprintView extends StatelessWidget {
                 const SizedBox(height: DS.xl),
                 SparkleButton(
                   onPressed: () {
-                    context.push('/plans/new?type=sprint');
+                    unawaited(context.push('/plans/new?type=sprint'));
                   },
                   icon: const Icon(Icons.add),
                   label: 'Create Sprint Plan',
@@ -183,6 +186,7 @@ class _SprintHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays ?? 0;
+    final parsed = PlanDescriptionCodec.parse(plan.description);
 
     return Padding(
       padding: const EdgeInsets.all(DS.lg),
@@ -197,9 +201,21 @@ class _SprintHeader extends StatelessWidget {
             ),
             const SizedBox(height: DS.sm),
             Text(
-              plan.description ?? '',
+              parsed.overview.isNotEmpty
+                  ? parsed.overview
+                  : (plan.description ?? ''),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (parsed.schedule.isNotEmpty) ...[
+              const SizedBox(height: DS.sm),
+              Text(
+                parsed.schedule,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.5,
+                    ),
+              ),
+            ],
             const SizedBox(height: DS.lg),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -251,7 +267,7 @@ class _SprintAchievementsProgressState
   @override
   void initState() {
     super.initState();
-    _loadCloseToUnlock();
+    unawaited(_loadCloseToUnlock());
   }
 
   Future<void> _loadCloseToUnlock() async {
@@ -329,8 +345,9 @@ class _SprintAchievementsProgressState
                         ],
                       ),
                       SparkleButton.ghost(
-                        onPressed: () =>
-                            context.push('/achievements?type=sprint'),
+                        onPressed: () => unawaited(
+                          context.push('/achievements?type=sprint'),
+                        ),
                         label: 'View All',
                       ),
                     ],

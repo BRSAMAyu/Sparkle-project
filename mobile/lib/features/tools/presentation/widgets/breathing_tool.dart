@@ -1,7 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
@@ -25,7 +31,44 @@ class _BreathingPattern {
   int get cycleSeconds => inhale + hold + exhale + rest;
 }
 
-class BreathingTool extends StatefulWidget {
+enum _BreathingPhaseKind {
+  inhale,
+  holdExpanded,
+  exhale,
+  holdCollapsed,
+}
+
+class _BreathingPhase {
+  const _BreathingPhase({
+    required this.label,
+    required this.seconds,
+    required this.kind,
+  });
+
+  final String label;
+  final int seconds;
+  final _BreathingPhaseKind kind;
+}
+
+class _BreathingSnapshot {
+  const _BreathingSnapshot({
+    required this.instruction,
+    required this.completedRounds,
+    required this.totalRounds,
+    required this.controllerValue,
+    required this.isComplete,
+    this.announcementKey,
+  });
+
+  final String instruction;
+  final int completedRounds;
+  final int totalRounds;
+  final double controllerValue;
+  final bool isComplete;
+  final String? announcementKey;
+}
+
+class BreathingTool extends ConsumerStatefulWidget {
   const BreathingTool({
     super.key,
     this.surface = ToolSurface.page,
@@ -34,11 +77,11 @@ class BreathingTool extends StatefulWidget {
   final ToolSurface surface;
 
   @override
-  State<BreathingTool> createState() => _BreathingToolState();
+  ConsumerState<BreathingTool> createState() => _BreathingToolState();
 }
 
-class _BreathingToolState extends State<BreathingTool>
-    with SingleTickerProviderStateMixin {
+class _BreathingToolState extends ConsumerState<BreathingTool>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const List<int> _durations = [1, 3, 5, 8];
   static const List<_BreathingPattern> _patterns = [
     _BreathingPattern(
@@ -66,120 +109,555 @@ class _BreathingToolState extends State<BreathingTool>
       rest: 2,
     ),
   ];
+  static const String _prefsPatternKey = 'breathing.pattern_index';
+  static const String _prefsDurationKey = 'breathing.duration_index';
+  static const String _prefsSessionKey = 'breathing.active_session';
+  static const int _completionNotificationId = 94200;
 
   late final AnimationController _controller;
-  Timer? _timer;
+  late final FlutterTts _tts;
+  Timer? _ticker;
 
   int _selectedDurationIndex = 1;
   int _selectedPatternIndex = 0;
   bool _isPlaying = false;
+  bool _isPaused = false;
+  bool _isCompletingSession = false;
+  bool _backgroundCompletionScheduled = false;
+  bool _completedFromBackgroundRecovery = false;
   int _completedRounds = 0;
   int _totalRounds = 0;
+  int _elapsedBeforePauseSeconds = 0;
   String _instruction = '准备';
+  String? _lastAnnouncementKey;
+  DateTime? _sessionAnchorAt;
 
   _BreathingPattern get _pattern => _patterns[_selectedPatternIndex];
+  int get _selectedDurationMinutes => _durations[_selectedDurationIndex];
+  int get _targetSessionSeconds => _selectedDurationMinutes * 60;
+
+  List<_BreathingPhase> get _phases => <_BreathingPhase>[
+        _BreathingPhase(
+          label: '吸气',
+          seconds: _pattern.inhale,
+          kind: _BreathingPhaseKind.inhale,
+        ),
+        _BreathingPhase(
+          label: '停留',
+          seconds: _pattern.hold,
+          kind: _BreathingPhaseKind.holdExpanded,
+        ),
+        _BreathingPhase(
+          label: '呼气',
+          seconds: _pattern.exhale,
+          kind: _BreathingPhaseKind.exhale,
+        ),
+        _BreathingPhase(
+          label: '停留',
+          seconds: _pattern.rest,
+          kind: _BreathingPhaseKind.holdCollapsed,
+        ),
+      ].where((phase) => phase.seconds > 0).toList(growable: false);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _tts = FlutterTts();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: Duration.zero,
       value: 0.0,
     );
     _updateTotalRounds();
+    unawaited(_configureTts());
+    unawaited(_restoreState());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _ticker?.cancel();
+    unawaited(_tts.stop());
+    if (_isPlaying) {
+      unawaited(_persistSession());
+      if (_isPaused) {
+        unawaited(_cancelCompletionNotification());
+      } else {
+        unawaited(_scheduleCompletionNotification());
+      }
+    } else {
+      unawaited(_clearPersistedSession());
+      unawaited(_cancelCompletionNotification());
+    }
     _controller.dispose();
     super.dispose();
   }
 
-  void _updateTotalRounds() {
-    final seconds = _durations[_selectedDurationIndex] * 60;
-    _totalRounds = (seconds / _pattern.cycleSeconds).ceil();
-  }
-
-  void _startBreathing() {
-    setState(() {
-      _isPlaying = true;
-      _completedRounds = 0;
-      _updateTotalRounds();
-    });
-    _runPhase(0);
-  }
-
-  void _stopBreathing() {
-    _timer?.cancel();
-    _controller.stop();
-    _controller.value = 0;
-    setState(() {
-      _isPlaying = false;
-      _instruction = '准备';
-    });
-  }
-
-  void _runPhase(int phaseIndex) {
-    if (!_isPlaying) {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      if (_isPlaying) {
+        _syncFromClock(allowVoiceGuidance: false);
+        _ticker?.cancel();
+        unawaited(_persistSession());
+        if (_isPaused) {
+          unawaited(_cancelCompletionNotification());
+        } else {
+          unawaited(_scheduleCompletionNotification());
+        }
+      }
       return;
     }
 
-    final phases = <({
-      String label,
-      int seconds,
-      bool grow,
-      bool holdExpanded,
-    })>[
-      (label: '吸气', seconds: _pattern.inhale, grow: true, holdExpanded: false),
-      (label: '停留', seconds: _pattern.hold, grow: false, holdExpanded: true),
-      (label: '呼气', seconds: _pattern.exhale, grow: false, holdExpanded: false),
-      (label: '停留', seconds: _pattern.rest, grow: false, holdExpanded: false),
-    ].where((phase) => phase.seconds > 0).toList();
+    if (state == AppLifecycleState.resumed) {
+      final didCompleteWhileBackground = _isPlaying &&
+          _elapsedSessionSecondsAt(DateTime.now()) >= _targetSessionSeconds;
+      _completedFromBackgroundRecovery = didCompleteWhileBackground;
+      unawaited(_cancelCompletionNotification());
+      if (_isPlaying) {
+        _syncFromClock(allowVoiceGuidance: false);
+        if (!_isPaused) {
+          _startTicker();
+        }
+      }
+    }
+  }
 
-    if (phaseIndex >= phases.length) {
-      final nextRound = _completedRounds + 1;
-      if (nextRound >= _totalRounds) {
-        _stopBreathing();
-        AppFeedback.success(context, '呼吸练习已完成');
+  Future<void> _restoreState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPatternIndex =
+        (prefs.getInt(_prefsPatternKey) ?? _selectedPatternIndex)
+            .clamp(0, _patterns.length - 1);
+    final savedDurationIndex =
+        (prefs.getInt(_prefsDurationKey) ?? _selectedDurationIndex)
+            .clamp(0, _durations.length - 1);
+
+    if (mounted) {
+      setState(() {
+        _selectedPatternIndex = savedPatternIndex;
+        _selectedDurationIndex = savedDurationIndex;
+        _updateTotalRounds();
+      });
+    }
+
+    final rawSession = prefs.getString(_prefsSessionKey);
+    if (rawSession == null || rawSession.isEmpty) {
+      return;
+    }
+
+    try {
+      final json = jsonDecode(rawSession);
+      if (json is! Map<String, dynamic>) {
+        await prefs.remove(_prefsSessionKey);
+        return;
+      }
+
+      final restoredAnchorAt = DateTime.tryParse(
+        json['sessionAnchorAt'] as String? ??
+            json['sessionStartedAt'] as String? ??
+            '',
+      );
+      final isPaused = json['isPaused'] as bool? ?? false;
+      final elapsedBeforePauseSeconds =
+          (json['elapsedBeforePauseSeconds'] as num?)?.toInt() ?? 0;
+      if (restoredAnchorAt == null && !isPaused) {
+        await prefs.remove(_prefsSessionKey);
+        return;
+      }
+
+      final patternIndex =
+          ((json['selectedPatternIndex'] as num?)?.toInt() ?? savedPatternIndex)
+              .clamp(0, _patterns.length - 1);
+      final durationIndex = ((json['selectedDurationIndex'] as num?)?.toInt() ??
+              savedDurationIndex)
+          .clamp(0, _durations.length - 1);
+
+      if (!mounted) {
         return;
       }
 
       setState(() {
-        _completedRounds = nextRound;
+        _selectedPatternIndex = patternIndex;
+        _selectedDurationIndex = durationIndex;
+        _sessionAnchorAt = isPaused ? null : restoredAnchorAt;
+        _isPlaying = true;
+        _isPaused = isPaused;
+        _elapsedBeforePauseSeconds = elapsedBeforePauseSeconds;
+        _lastAnnouncementKey = null;
+        _updateTotalRounds();
       });
-      _runPhase(0);
+
+      final snapshot = _snapshotFor(DateTime.now());
+      if (snapshot.isComplete) {
+        await _clearPersistedSession();
+        if (!mounted) {
+          return;
+        }
+        _controller.value = 0.0;
+        setState(() {
+          _isPlaying = false;
+          _isPaused = false;
+          _completedRounds = _totalRounds;
+          _instruction = '练习完成';
+          _elapsedBeforePauseSeconds = 0;
+          _sessionAnchorAt = null;
+        });
+      } else {
+        _syncFromClock(allowVoiceGuidance: false);
+        if (!isPaused) {
+          _startTicker();
+        }
+      }
+    } catch (_) {
+      await prefs.remove(_prefsSessionKey);
+    }
+  }
+
+  Future<void> _configureTts() async {
+    try {
+      await _tts.setLanguage('zh-CN');
+      await _tts.setSpeechRate(0.42);
+      await _tts.setPitch(1.0);
+      await _tts.awaitSpeakCompletion(false);
+    } catch (_) {
+      // TTS is optional enhancement. Fail silently on unsupported devices.
+    }
+  }
+
+  int _elapsedSessionSecondsAt(DateTime now) {
+    final anchorElapsed = _sessionAnchorAt == null
+        ? 0
+        : now.difference(_sessionAnchorAt!).inSeconds;
+    return (_elapsedBeforePauseSeconds + anchorElapsed).clamp(
+      0,
+      _targetSessionSeconds,
+    );
+  }
+
+  Future<void> _persistPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_prefsPatternKey, _selectedPatternIndex);
+    await prefs.setInt(_prefsDurationKey, _selectedDurationIndex);
+  }
+
+  Future<void> _persistSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!_isPlaying) {
+      await prefs.remove(_prefsSessionKey);
       return;
     }
 
-    final phase = phases[phaseIndex];
-    setState(() {
-      _instruction = phase.label;
-    });
+    final payload = <String, dynamic>{
+      'sessionAnchorAt': _sessionAnchorAt?.toIso8601String(),
+      'elapsedBeforePauseSeconds': _elapsedBeforePauseSeconds,
+      'isPaused': _isPaused,
+      'selectedPatternIndex': _selectedPatternIndex,
+      'selectedDurationIndex': _selectedDurationIndex,
+    };
+    await prefs.setString(_prefsSessionKey, jsonEncode(payload));
+  }
 
-    if (phase.grow) {
-      _controller.duration = Duration(seconds: phase.seconds);
-      unawaited(_controller.forward(from: _controller.value));
-    } else if (phase.holdExpanded) {
-      _controller.stop();
-      _controller.value = 1;
-    } else {
-      _controller.duration = Duration(seconds: phase.seconds);
-      unawaited(
-        _controller.reverse(
-          from: _controller.value == 0 ? 1 : _controller.value,
-        ),
+  Future<void> _clearPersistedSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsSessionKey);
+  }
+
+  Future<void> _scheduleCompletionNotification() async {
+    if (!_isPlaying || _isPaused) {
+      return;
+    }
+
+    final remainingRawSeconds =
+        _targetSessionSeconds - _elapsedSessionSecondsAt(DateTime.now());
+    if (remainingRawSeconds <= 0) {
+      return;
+    }
+    final remainingSeconds =
+        remainingRawSeconds.clamp(1, _targetSessionSeconds);
+    final notificationService = ref.read(notificationServiceProvider);
+    await notificationService.scheduleNotification(
+      id: _completionNotificationId,
+      title: '呼吸练习完成',
+      body: '本轮呼吸练习已经结束，回来感受一下身体状态。',
+      scheduledDate: DateTime.now().add(Duration(seconds: remainingSeconds)),
+      payload: <String, dynamic>{
+        'type': 'breathing_complete',
+        'pattern': _pattern.label,
+        'duration_minutes': _selectedDurationMinutes,
+      },
+    );
+    _backgroundCompletionScheduled = true;
+  }
+
+  Future<void> _cancelCompletionNotification() async {
+    final notificationService = ref.read(notificationServiceProvider);
+    await notificationService.cancelNotification(_completionNotificationId);
+    _backgroundCompletionScheduled = false;
+  }
+
+  void _updateTotalRounds() {
+    final cycleSeconds = _pattern.cycleSeconds == 0 ? 1 : _pattern.cycleSeconds;
+    _totalRounds = (_targetSessionSeconds / cycleSeconds).ceil();
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      _syncFromClock();
+    });
+  }
+
+  _BreathingSnapshot _snapshotFor(DateTime now) {
+    final totalRounds = _totalRounds;
+    if (!_isPlaying) {
+      return _BreathingSnapshot(
+        instruction: '准备',
+        completedRounds: 0,
+        totalRounds: totalRounds,
+        controllerValue: 0.0,
+        isComplete: false,
       );
     }
 
-    _timer?.cancel();
-    _timer = Timer(Duration(seconds: phase.seconds), () {
-      if (!mounted) {
-        return;
+    final elapsedSeconds = _elapsedSessionSecondsAt(now);
+    if (elapsedSeconds >= _targetSessionSeconds) {
+      return _BreathingSnapshot(
+        instruction: '练习完成',
+        completedRounds: totalRounds,
+        totalRounds: totalRounds,
+        controllerValue: 0.0,
+        isComplete: true,
+      );
+    }
+
+    final cycleSeconds = _pattern.cycleSeconds == 0 ? 1 : _pattern.cycleSeconds;
+    final completedRounds = elapsedSeconds ~/ cycleSeconds;
+    final secondsIntoCycle = elapsedSeconds % cycleSeconds;
+
+    var cursor = 0;
+    for (final phase in _phases) {
+      final nextCursor = cursor + phase.seconds;
+      if (secondsIntoCycle < nextCursor) {
+        final phaseElapsed = secondsIntoCycle - cursor;
+        final progress =
+            phase.seconds == 0 ? 1.0 : phaseElapsed / phase.seconds;
+        final controllerValue = switch (phase.kind) {
+          _BreathingPhaseKind.inhale => progress.clamp(0.0, 1.0),
+          _BreathingPhaseKind.holdExpanded => 1.0,
+          _BreathingPhaseKind.exhale => (1.0 - progress).clamp(0.0, 1.0),
+          _BreathingPhaseKind.holdCollapsed => 0.0,
+        };
+        return _BreathingSnapshot(
+          instruction: phase.label,
+          completedRounds: completedRounds,
+          totalRounds: totalRounds,
+          controllerValue: controllerValue,
+          isComplete: false,
+          announcementKey: '${completedRounds}_${phase.kind.name}',
+        );
       }
-      _runPhase(phaseIndex + 1);
+      cursor = nextCursor;
+    }
+
+    return _BreathingSnapshot(
+      instruction: '准备',
+      completedRounds: completedRounds,
+      totalRounds: totalRounds,
+      controllerValue: 0.0,
+      isComplete: false,
+    );
+  }
+
+  Future<void> _announceInstruction(String instruction) async {
+    try {
+      await _tts.stop();
+      await _tts.speak(instruction);
+    } catch (_) {
+      // Ignore unsupported TTS failures.
+    }
+  }
+
+  void _syncFromClock({
+    bool allowVoiceGuidance = true,
+  }) {
+    if (!_isPlaying) {
+      return;
+    }
+
+    final snapshot = _snapshotFor(DateTime.now());
+    if (snapshot.isComplete) {
+      if (!_isCompletingSession) {
+        unawaited(
+          _handleCompletion(
+            completedFromBackground: _backgroundCompletionScheduled ||
+                _completedFromBackgroundRecovery,
+          ),
+        );
+      }
+      return;
+    }
+
+    final announcementKey = snapshot.announcementKey;
+    final shouldAnnounce = allowVoiceGuidance &&
+        !_isPaused &&
+        announcementKey != null &&
+        announcementKey != _lastAnnouncementKey;
+    _lastAnnouncementKey = announcementKey ?? _lastAnnouncementKey;
+
+    if (!mounted) {
+      return;
+    }
+
+    _controller.value = snapshot.controllerValue;
+    setState(() {
+      _instruction = snapshot.instruction;
+      _completedRounds = snapshot.completedRounds;
+      _totalRounds = snapshot.totalRounds;
     });
+    if (shouldAnnounce) {
+      unawaited(_announceInstruction(snapshot.instruction));
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    }
+  }
+
+  void _startBreathing() {
+    _ticker?.cancel();
+    _isCompletingSession = false;
+    _completedFromBackgroundRecovery = false;
+    _backgroundCompletionScheduled = false;
+    setState(() {
+      _updateTotalRounds();
+      _isPlaying = true;
+      _isPaused = false;
+      _completedRounds = 0;
+      _instruction = '准备';
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = DateTime.now();
+    });
+    unawaited(_persistPreferences());
+    unawaited(_persistSession());
+    unawaited(_cancelCompletionNotification());
+    _syncFromClock();
+    _startTicker();
+  }
+
+  void _pauseBreathing() {
+    if (!_isPlaying || _isPaused) {
+      return;
+    }
+    _ticker?.cancel();
+    final now = DateTime.now();
+    final snapshot = _snapshotFor(now);
+    _elapsedBeforePauseSeconds = _elapsedSessionSecondsAt(now);
+    _lastAnnouncementKey = snapshot.announcementKey ?? _lastAnnouncementKey;
+    _controller.value = snapshot.controllerValue;
+    setState(() {
+      _isPaused = true;
+      _instruction = snapshot.instruction;
+      _completedRounds = snapshot.completedRounds;
+      _totalRounds = snapshot.totalRounds;
+      _sessionAnchorAt = null;
+    });
+    unawaited(_tts.stop());
+    unawaited(_persistSession());
+    unawaited(_cancelCompletionNotification());
+  }
+
+  void _resumeBreathing() {
+    if (!_isPlaying || !_isPaused) {
+      return;
+    }
+    setState(() {
+      _isPaused = false;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = DateTime.now();
+    });
+    unawaited(_persistSession());
+    _syncFromClock();
+    _startTicker();
+  }
+
+  Future<void> _handleCompletion({
+    required bool completedFromBackground,
+  }) async {
+    if (_isCompletingSession) {
+      return;
+    }
+    _isCompletingSession = true;
+    _ticker?.cancel();
+    _completedFromBackgroundRecovery = false;
+    await _tts.stop();
+    await _cancelCompletionNotification();
+    await _clearPersistedSession();
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete);
+
+    if (!mounted) {
+      return;
+    }
+
+    _controller.value = 0.0;
+    setState(() {
+      _isPlaying = false;
+      _isPaused = false;
+      _completedRounds = _totalRounds;
+      _instruction = '练习完成';
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = null;
+    });
+
+    unawaited(_announceInstruction('练习完成'));
+    if (!completedFromBackground) {
+      AppFeedback.success(context, '呼吸练习已完成');
+    }
+    _isCompletingSession = false;
+  }
+
+  void _stopBreathing() {
+    _ticker?.cancel();
+    _isCompletingSession = false;
+    _completedFromBackgroundRecovery = false;
+    unawaited(_tts.stop());
+    _controller
+      ..stop()
+      ..value = 0;
+    setState(() {
+      _isPlaying = false;
+      _isPaused = false;
+      _completedRounds = 0;
+      _instruction = '准备';
+      _elapsedBeforePauseSeconds = 0;
+      _lastAnnouncementKey = null;
+      _sessionAnchorAt = null;
+    });
+    unawaited(_clearPersistedSession());
+    unawaited(_cancelCompletionNotification());
+  }
+
+  Future<void> _updatePattern(int index) async {
+    if (_isPlaying) {
+      return;
+    }
+    setState(() {
+      _selectedPatternIndex = index;
+      _updateTotalRounds();
+    });
+    await _persistPreferences();
+  }
+
+  Future<void> _updateDuration(int index) async {
+    if (_isPlaying) {
+      return;
+    }
+    setState(() {
+      _selectedDurationIndex = index;
+      _updateTotalRounds();
+    });
+    await _persistPreferences();
   }
 
   @override
@@ -200,7 +678,9 @@ class _BreathingToolState extends State<BreathingTool>
         ),
         ToolHeroChip(
           label: _isPlaying
-              ? '$_completedRounds / $_totalRounds 轮'
+              ? (_isPaused
+                  ? '已暂停 · $_completedRounds / $_totalRounds 轮'
+                  : '$_completedRounds / $_totalRounds 轮')
               : '${_durations[_selectedDurationIndex]} 分钟',
           accentColor: accent,
           icon: Icons.self_improvement_rounded,
@@ -212,7 +692,8 @@ class _BreathingToolState extends State<BreathingTool>
           ToolSectionCard(
             accentColor: accent,
             title: '呼吸舞台',
-            subtitle: '跟着中央指令吸气、停留和呼气。',
+            subtitle:
+                _isPaused ? '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。' : '跟着中央指令吸气、停留和呼气。',
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final stageSize = constraints.maxWidth.clamp(180.0, 300.0);
@@ -314,7 +795,9 @@ class _BreathingToolState extends State<BreathingTool>
           ToolSectionCard(
             accentColor: accent,
             title: '练习配置',
-            subtitle: '先选模式，再选练习时长。',
+            subtitle: _isPlaying
+                ? (_isPaused ? '练习已暂停，恢复后会从当前阶段继续。' : '练习进行中，配置会在本轮结束后可调整。')
+                : '先选模式，再选练习时长。',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -326,12 +809,7 @@ class _BreathingToolState extends State<BreathingTool>
                     (index) => ToolChoiceChip(
                       label: _patterns[index].label,
                       selected: _selectedPatternIndex == index,
-                      onTap: () {
-                        setState(() {
-                          _selectedPatternIndex = index;
-                          _updateTotalRounds();
-                        });
-                      },
+                      onTap: () => unawaited(_updatePattern(index)),
                       accentColor: accent,
                     ),
                   ),
@@ -345,12 +823,7 @@ class _BreathingToolState extends State<BreathingTool>
                     (index) => ToolChoiceChip(
                       label: '${_durations[index]} 分钟',
                       selected: _selectedDurationIndex == index,
-                      onTap: () {
-                        setState(() {
-                          _selectedDurationIndex = index;
-                          _updateTotalRounds();
-                        });
-                      },
+                      onTap: () => unawaited(_updateDuration(index)),
                       accentColor: accent,
                       icon: Icons.timer_outlined,
                     ),
@@ -364,19 +837,25 @@ class _BreathingToolState extends State<BreathingTool>
       footer: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
-          final startButton = SparkleButton(
-            label: _isPlaying ? '停止练习' : '开始练习',
-            onPressed: _isPlaying ? _stopBreathing : _startBreathing,
+          final primaryButton = SparkleButton(
+            label: _isPlaying ? (_isPaused ? '继续练习' : '暂停练习') : '开始练习',
+            onPressed: _isPlaying
+                ? (_isPaused ? _resumeBreathing : _pauseBreathing)
+                : _startBreathing,
             icon: Icon(
-              _isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              _isPlaying
+                  ? (_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded)
+                  : Icons.play_arrow_rounded,
             ),
             expand: true,
           );
-          final resetButton = SparkleButton(
-            label: '重置',
+          final secondaryButton = SparkleButton(
+            label: _isPlaying ? '停止练习' : '重置',
             variant: ButtonVariant.ghost,
             onPressed: _stopBreathing,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(
+              _isPlaying ? Icons.stop_rounded : Icons.refresh_rounded,
+            ),
             expand: true,
           );
 
@@ -384,18 +863,18 @@ class _BreathingToolState extends State<BreathingTool>
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                startButton,
+                primaryButton,
                 const SizedBox(height: DS.spacing12),
-                resetButton,
+                secondaryButton,
               ],
             );
           }
 
           return Row(
             children: [
-              Expanded(child: startButton),
+              Expanded(child: primaryButton),
               const SizedBox(width: DS.spacing12),
-              Expanded(child: resetButton),
+              Expanded(child: secondaryButton),
             ],
           );
         },

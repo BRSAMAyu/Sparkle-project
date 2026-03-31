@@ -316,6 +316,11 @@ class EventBus:
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
         self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
         self.dlq_maxlen = getattr(settings, "EVENT_BUS_DLQ_MAXLEN", 10000)
+        self.retry_stream_maxlen = getattr(
+            settings,
+            "EVENT_BUS_RETRY_STREAM_MAXLEN",
+            getattr(settings, "EVENT_BUS_STREAM_MAXLEN", 50000),
+        )
         # Idempotency store for deduplication
         self._idempotency = None  # Lazy initialized
 
@@ -402,7 +407,11 @@ class EventBus:
         retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
-        await self.redis.xadd(stream, self._serialize_stream_body(retry_payload))
+        await self.redis.xadd(
+            stream,
+            self._serialize_stream_body(retry_payload),
+            maxlen=self.retry_stream_maxlen,
+        )
         await self.redis.xack(stream, group_name, message_id)
         logger.warning(
             "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} error={}",

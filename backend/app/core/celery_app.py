@@ -108,6 +108,7 @@ celery_app.conf.update(
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
+        "classify_node_sector_batch": {"queue": "glm_batch"},
         "daily_report": {"queue": "default"},
         "send_task_reminders": {"queue": "default"},
         "generate_daily_capsules_for_all": {"queue": "default"},
@@ -493,6 +494,36 @@ def analyze_cognitive_fragment_batch(
         raise self.retry(exc=exc, countdown=countdown)
 
 
+@celery_app.task(bind=True, max_retries=3, name="classify_node_sector_batch")
+def classify_node_sector_batch(
+    self,
+    user_id: str,
+    node_ids: list[str],
+    model_key: str | None = None,
+):
+    """使用 GLM batch 队列为知识节点回填多星域归属。"""
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.node_sector_service import NodeSectorService
+
+    async def _classify():
+        async with AsyncSessionLocal() as session:
+            service = NodeSectorService(session)
+            return await service.classify_nodes_by_ids(
+                user_id=UUID(user_id),
+                node_ids=[UUID(node_id) for node_id in node_ids],
+                model_key=model_key,
+            )
+
+    try:
+        return _run_async(_classify())
+    except Exception as exc:
+        logger.error(f"Node sector batch classification failed: {exc}")
+        countdown = 60 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown)
+
+
 @celery_app.task(bind=True, max_retries=3, name="update_knowledge_galaxy")
 def update_knowledge_galaxy(
     self,
@@ -571,7 +602,8 @@ def update_knowledge_galaxy(
                         if existing_node:
                             # Update mastery level
                             await knowledge_service.update_node_mastery(
-                                existing_node.id,
+                                user_id=user_uuid,
+                                node_id=existing_node.id,
                                 mastery_delta=concept.get("mastery_delta", 0.1),
                             )
                             result["nodes_updated"] += 1
@@ -916,16 +948,6 @@ celery_app.conf.beat_schedule = {
 
     # 注意: update_knowledge_galaxy 任务由 PlanService 在计划完成/里程碑达成时触发
     # 此处仅包含定期同步任务，不包含事件触发任务
-
-    # ========== 任务提醒 ==========
-
-    # 每15分钟检查并发送任务提醒
-    "task-reminders-every-15-mins": {
-        "task": "send_task_reminders",
-        "schedule": 900.0,  # 15分钟
-        "args": (),
-        "options": {"queue": "default"}
-    },
 
     # ========== 责任伙伴系统任务 ==========
 

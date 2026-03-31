@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 
 /// Seed library list state
 class SeedLibraryListState {
-
   const SeedLibraryListState({
     this.libraries = const [],
     this.isLoading = false,
@@ -24,20 +25,27 @@ class SeedLibraryListState {
     String? error,
     int? page,
     bool? hasMore,
-  }) => SeedLibraryListState(
-      libraries: libraries ?? this.libraries,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      page: page ?? this.page,
-      hasMore: hasMore ?? this.hasMore,
-    );
+  }) =>
+      SeedLibraryListState(
+        libraries: libraries ?? this.libraries,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+        page: page ?? this.page,
+        hasMore: hasMore ?? this.hasMore,
+      );
 }
 
 /// Seed library list notifier
 class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
-  SeedLibraryListNotifier(this._repository) : super(const SeedLibraryListState());
+  SeedLibraryListNotifier(this._repository)
+      : super(const SeedLibraryListState());
 
   final SeedLibraryRepository _repository;
+  LibraryCategory? _lastCategory;
+  LibraryVisibility? _lastVisibility;
+  bool? _lastIsOfficial;
+  bool? _lastIsFeatured;
+  String? _lastSearch;
 
   Future<void> loadLibraries({
     LibraryCategory? category,
@@ -48,6 +56,12 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
     bool refresh = false,
   }) async {
     if (state.isLoading) return;
+
+    _lastCategory = category;
+    _lastVisibility = visibility;
+    _lastIsOfficial = isOfficial;
+    _lastIsFeatured = isFeatured;
+    _lastSearch = search;
 
     if (refresh) {
       state = const SeedLibraryListState();
@@ -66,7 +80,8 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
       );
 
       state = state.copyWith(
-        libraries: refresh ? response.items : [...state.libraries, ...response.items],
+        libraries:
+            refresh ? response.items : [...state.libraries, ...response.items],
         isLoading: false,
         page: state.page + 1,
         hasMore: response.page < response.totalPages,
@@ -81,7 +96,13 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
 
   Future<void> loadMore() async {
     if (!state.hasMore || state.isLoading) return;
-    await loadLibraries();
+    await loadLibraries(
+      category: _lastCategory,
+      visibility: _lastVisibility,
+      isOfficial: _lastIsOfficial,
+      isFeatured: _lastIsFeatured,
+      search: _lastSearch,
+    );
   }
 
   Future<void> refresh({
@@ -104,7 +125,6 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
 
 /// Single library state
 class SeedLibraryDetailState {
-
   const SeedLibraryDetailState({
     this.library,
     this.items = const [],
@@ -139,26 +159,27 @@ class SeedLibraryDetailState {
     List<UserLibrarySubscription>? activeSubscriptions,
     int? itemsPage,
     bool? hasMoreItems,
-  }) => SeedLibraryDetailState(
-      library: library ?? this.library,
-      items: items ?? this.items,
-      isLoadingLibrary: isLoadingLibrary ?? this.isLoadingLibrary,
-      isLoadingItems: isLoadingItems ?? this.isLoadingItems,
-      error: error,
-      isSubscribed: isSubscribed ?? this.isSubscribed,
-      subscription: subscription ?? this.subscription,
-      activeSubscriptions: activeSubscriptions ?? this.activeSubscriptions,
-      itemsPage: itemsPage ?? this.itemsPage,
-      hasMoreItems: hasMoreItems ?? this.hasMoreItems,
-    );
+  }) =>
+      SeedLibraryDetailState(
+        library: library ?? this.library,
+        items: items ?? this.items,
+        isLoadingLibrary: isLoadingLibrary ?? this.isLoadingLibrary,
+        isLoadingItems: isLoadingItems ?? this.isLoadingItems,
+        error: error,
+        isSubscribed: isSubscribed ?? this.isSubscribed,
+        subscription: subscription ?? this.subscription,
+        activeSubscriptions: activeSubscriptions ?? this.activeSubscriptions,
+        itemsPage: itemsPage ?? this.itemsPage,
+        hasMoreItems: hasMoreItems ?? this.hasMoreItems,
+      );
 }
 
 /// Single library notifier
 class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   SeedLibraryDetailNotifier(this._repository, this.libraryId)
       : super(const SeedLibraryDetailState()) {
-    loadLibrary();
-    loadItems();
+    unawaited(loadLibrary());
+    unawaited(loadItems());
   }
 
   final SeedLibraryRepository _repository;
@@ -215,9 +236,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         isSubscribed: false,
         subscription: null,
         activeSubscriptions: const [],
-        error: state.library == null
-            ? _friendlyError(e, '种子库状态加载失败，请稍后再试')
-            : null,
+        error:
+            state.library == null ? _friendlyError(e, '种子库状态加载失败，请稍后再试') : null,
       );
     }
   }
@@ -326,8 +346,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       final raw = e.toString().toLowerCase();
       if (raw.contains('already subscribe')) {
         await loadLibrary();
-        final existing =
-            state.subscription ?? await _repository.findMySubscriptionForLibrary(libraryId);
+        final existing = state.subscription ??
+            await _repository.findMySubscriptionForLibrary(libraryId);
         if (existing != null) {
           final updated = await _repository.updateSubscription(
             libraryId,
@@ -492,7 +512,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
 
 /// Subscriptions state
 class SubscriptionsState {
-
   const SubscriptionsState({
     this.subscriptions = const [],
     this.isLoading = false,
@@ -506,11 +525,12 @@ class SubscriptionsState {
     List<UserLibrarySubscription>? subscriptions,
     bool? isLoading,
     String? error,
-  }) => SubscriptionsState(
-      subscriptions: subscriptions ?? this.subscriptions,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
+  }) =>
+      SubscriptionsState(
+        subscriptions: subscriptions ?? this.subscriptions,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+      );
 }
 
 /// Subscriptions notifier
@@ -565,15 +585,15 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
       } catch (e) {
         // Revert on error
         state = state.copyWith(
-          subscriptions: List.from(state.subscriptions)..insert(existingIndex, subscription),
+          subscriptions: List.from(state.subscriptions)
+            ..insert(existingIndex, subscription),
         );
         state = state.copyWith(error: e.toString());
       }
     } else {
       // Subscribe
       try {
-        final newSubscription =
-            await _repository.subscribeToLibrary(libraryId);
+        final newSubscription = await _repository.subscribeToLibrary(libraryId);
         final library = await _repository.getLibrary(libraryId);
         state = state.copyWith(
           subscriptions: [
@@ -589,26 +609,30 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
 }
 
 /// Providers
-final seedLibraryListProvider =
-    StateNotifierProvider.family<SeedLibraryListNotifier, SeedLibraryListState, ({
-  LibraryCategory? category,
-  LibraryVisibility? visibility,
-  bool? isOfficial,
-  bool? isFeatured,
-  String? search,
-})?>(
+final seedLibraryListProvider = StateNotifierProvider.family<
+    SeedLibraryListNotifier,
+    SeedLibraryListState,
+    ({
+      LibraryCategory? category,
+      LibraryVisibility? visibility,
+      bool? isOfficial,
+      bool? isFeatured,
+      String? search,
+    })?>(
   (ref, filters) {
     final repository = ref.watch(seedLibraryRepositoryProvider);
     final notifier = SeedLibraryListNotifier(repository);
 
     if (filters != null) {
-      notifier.loadLibraries(
-        category: filters.category,
-        visibility: filters.visibility,
-        isOfficial: filters.isOfficial,
-        isFeatured: filters.isFeatured,
-        search: filters.search,
-        refresh: true,
+      unawaited(
+        notifier.loadLibraries(
+          category: filters.category,
+          visibility: filters.visibility,
+          isOfficial: filters.isOfficial,
+          isFeatured: filters.isFeatured,
+          search: filters.search,
+          refresh: true,
+        ),
       );
     }
 
@@ -616,8 +640,8 @@ final seedLibraryListProvider =
   },
 );
 
-final seedLibraryDetailProvider =
-    StateNotifierProvider.family<SeedLibraryDetailNotifier, SeedLibraryDetailState, String>(
+final seedLibraryDetailProvider = StateNotifierProvider.family<
+    SeedLibraryDetailNotifier, SeedLibraryDetailState, String>(
   (ref, libraryId) {
     final repository = ref.watch(seedLibraryRepositoryProvider);
     return SeedLibraryDetailNotifier(repository, libraryId);
@@ -630,7 +654,7 @@ final subscriptionsProvider =
     final repository = ref.watch(seedLibraryRepositoryProvider);
     final notifier = SubscriptionsNotifier(repository);
     // Auto-load subscriptions
-    notifier.loadSubscriptions();
+    unawaited(notifier.loadSubscriptions());
     return notifier;
   },
 );

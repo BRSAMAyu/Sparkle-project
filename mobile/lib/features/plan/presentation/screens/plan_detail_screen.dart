@@ -14,6 +14,7 @@ import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
@@ -48,6 +49,17 @@ class PlanDetailScreen extends ConsumerWidget {
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.share_outlined),
                   onPressed: () => unawaited(_showShareSheet(context, plan)),
+                ),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+            planAsync.maybeWhen(
+              data: (plan) => Tooltip(
+                message: '编辑计划',
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => context.push('/plans/${plan.id}/edit'),
                 ),
               ),
               orElse: () => const SizedBox.shrink(),
@@ -115,6 +127,7 @@ class _PlanOverviewTab extends ConsumerWidget {
     final targetDate = plan.targetDate != null
         ? Formatters.formatDateMedium(plan.targetDate!)
         : null;
+    final parsedDescription = PlanDescriptionCodec.parse(plan.description);
 
     return ContentConstraint(
       child: ListView(
@@ -165,7 +178,13 @@ class _PlanOverviewTab extends ConsumerWidget {
                   plan.name,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                if (plan.description != null &&
+                if (parsedDescription.overview.isNotEmpty) ...[
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    parsedDescription.overview,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ] else if (plan.description != null &&
                     plan.description!.isNotEmpty) ...[
                   const SizedBox(height: DS.sm),
                   Text(
@@ -198,10 +217,50 @@ class _PlanOverviewTab extends ConsumerWidget {
               ],
             ),
           ),
+          if (parsedDescription.hasStructuredSections) ...[
+            const SizedBox(height: DS.lg),
+            if (parsedDescription.schedule.isNotEmpty)
+              _PlanRichSection(
+                title: '每日节奏',
+                icon: Icons.schedule_rounded,
+                content: parsedDescription.schedule,
+              ),
+            if (parsedDescription.scope.isNotEmpty)
+              _PlanRichSection(
+                title: '计划边界',
+                icon: Icons.rule_folder_outlined,
+                content: parsedDescription.scope,
+              ),
+            if (parsedDescription.taskBlueprint.isNotEmpty)
+              _PlanRichSection(
+                title: '任务编排',
+                icon: Icons.account_tree_outlined,
+                content: parsedDescription.taskBlueprint,
+              ),
+            if (parsedDescription.guide.isNotEmpty)
+              _PlanRichSection(
+                title: 'AI执行指南',
+                icon: Icons.auto_awesome_rounded,
+                content: parsedDescription.guide,
+              ),
+          ],
           const SizedBox(height: DS.lg),
-          Text(
-            l10n.planRelatedTasks,
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.planRelatedTasks,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              SparkleButton.ghost(
+                onPressed: () => context.push(
+                  '/tasks/new?planId=${plan.id}&planName=${Uri.encodeComponent(plan.name)}',
+                ),
+                icon: const Icon(Icons.add_task_rounded),
+                label: '新增计划任务',
+              ),
+            ],
           ),
           const SizedBox(height: DS.sm),
           if (plan.tasks == null || plan.tasks!.isEmpty)
@@ -332,6 +391,48 @@ class _PlanMetaChip extends StatelessWidget {
                   ),
             ),
           ],
+        ),
+      );
+}
+
+class _PlanRichSection extends StatelessWidget {
+  const _PlanRichSection({
+    required this.title,
+    required this.icon,
+    required this.content,
+  });
+
+  final String title;
+  final IconData icon;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing16),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: DS.brandPrimaryConst),
+                  const SizedBox(width: DS.spacing8),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              SelectableText(
+                content,
+                style: DS.bodyMedium.copyWith(height: 1.6),
+              ),
+            ],
+          ),
         ),
       );
 }

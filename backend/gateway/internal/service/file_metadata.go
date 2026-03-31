@@ -88,6 +88,17 @@ func (s *FileMetadataService) GetFile(ctx context.Context, fileID uuid.UUID, use
 	return scanStoredFile(row)
 }
 
+func (s *FileMetadataService) GetFileByID(ctx context.Context, fileID uuid.UUID) (StoredFile, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
+			status, visibility, created_at, updated_at, deleted_at
+		FROM stored_files
+		WHERE id = $1 AND deleted_at IS NULL
+	`, fileID)
+
+	return scanStoredFile(row)
+}
+
 func (s *FileMetadataService) GetFileForGroupView(
 	ctx context.Context,
 	fileID uuid.UUID,

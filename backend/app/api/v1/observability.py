@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
 from app.models.user import User
 from app.orchestration.run_ledger import RunLedgerStore
+from app.services.achievement_reward_observability import AchievementRewardObservability
 
 router = APIRouter(
     prefix="/admin/observability",
@@ -46,3 +47,11 @@ async def get_run_ledger_by_response(response_id: str, _: User = Depends(get_cur
         "events": events,
         "event_count": len(events),
     }
+
+
+@router.get("/achievement-photon-compensations")
+async def get_achievement_photon_compensations(
+    limit: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(get_current_active_superuser),
+):
+    return await AchievementRewardObservability.get_dashboard_payload(limit=limit)

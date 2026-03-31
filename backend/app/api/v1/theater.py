@@ -17,6 +17,7 @@ class TheaterGenerateRequest(BaseModel):
     topic: str = Field(..., min_length=1, description="学习目标或主题")
     target_node_id: UUID | None = Field(default=None, description="可选的目标节点 ID")
     horizon_days: int = Field(default=14, ge=7, le=30, description="推演周期天数")
+    simulation_session_id: str | None = Field(default=None, description="来源学习模拟会话 ID")
 
 
 class TheaterWhatIfRequest(BaseModel):
@@ -43,6 +44,10 @@ class TheaterActualOutcomeRequest(BaseModel):
     actual_mastery: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
+class TheaterPromoteNodeRequest(BaseModel):
+    theater_node_id: str = Field(..., min_length=1)
+
+
 @router.post("/predictions/generate")
 async def generate_theater_prediction(
     request: TheaterGenerateRequest,
@@ -56,6 +61,7 @@ async def generate_theater_prediction(
             topic=request.topic,
             target_node_id=request.target_node_id,
             horizon_days=request.horizon_days,
+            simulation_session_id=request.simulation_session_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -108,6 +114,19 @@ async def adopt_theater_prediction(
     )
 
 
+@router.get("/predictions/{prediction_id}")
+async def get_theater_prediction(
+    prediction_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    return await service.get_prediction(
+        user_id=UUID(user_id),
+        prediction_id=prediction_id,
+    )
+
+
 @router.post("/predictions/{prediction_id}/actuals")
 async def record_theater_actual_outcome(
     prediction_id: str,
@@ -130,6 +149,32 @@ async def get_theater_prediction_accuracy(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    del user_id
     service = PredictionTheaterService(db)
-    return await service.get_accuracy_summary(prediction_id)
+    return await service.get_accuracy_summary(user_id=UUID(user_id), prediction_id=prediction_id)
+
+
+@router.get("/accuracy/overview")
+async def get_theater_accuracy_overview(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    return await service.get_accuracy_overview(user_id=UUID(user_id))
+
+
+@router.post("/predictions/{prediction_id}/promote-node")
+async def promote_theater_node(
+    prediction_id: str,
+    request: TheaterPromoteNodeRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PredictionTheaterService(db)
+    try:
+        return await service.promote_node_to_galaxy(
+            user_id=UUID(user_id),
+            prediction_id=prediction_id,
+            theater_node_id=request.theater_node_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

@@ -490,9 +490,17 @@ class AuthRepository {
     }
   }
 
-  Future<List<AuthAuditLogModel>> getSecurityLog() async {
-    final response =
-        await _apiClient.get<List<dynamic>>(ApiEndpoints.securityLog);
+  Future<List<AuthAuditLogModel>> getSecurityLog({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<List<dynamic>>(
+      ApiEndpoints.securityLog,
+      queryParameters: {
+        'limit': limit,
+        'offset': offset,
+      },
+    );
     final data = response.data ?? const <dynamic>[];
     return data
         .whereType<Map<String, dynamic>>()

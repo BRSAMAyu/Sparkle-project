@@ -5,6 +5,7 @@ Dynamic Tool Registry
 from __future__ import annotations
 import importlib
 import inspect
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -33,12 +34,15 @@ class DynamicToolRegistry:
     _instance = None
     _tools: dict[str, BaseTool] = {}
     _tool_info: dict[str, ToolInfo] = {}
+    _registered_packages: set[str] = set()
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._tools = {}
             cls._instance._tool_info = {}
+            cls._instance._registered_packages = set()
+            cls._instance._registration_lock = threading.RLock()
         return cls._instance
 
     def register_tool(self, tool: BaseTool) -> None:
@@ -48,8 +52,25 @@ class DynamicToolRegistry:
         Args:
             tool: 工具实例
         """
-        self._tools[tool.name] = tool
-        logger.info(f"Registered tool: {tool.name} ({tool.category.value})")
+        with self._registration_lock:
+            self._tools[tool.name] = tool
+            self._tool_info[tool.name] = self._build_tool_info(tool)
+            logger.info(f"Registered tool: {tool.name} ({tool.category.value})")
+
+    def ensure_package_registered(self, package_path: str, recursive: bool = True) -> int:
+        """
+        Register a package at most once per process.
+
+        This closes the race where multiple startup paths all check for an empty
+        registry and try to scan the same package simultaneously.
+        """
+        with self._registration_lock:
+            if package_path in self._registered_packages:
+                return 0
+            registered = self.register_from_package(package_path, recursive=recursive)
+            if registered > 0:
+                self._registered_packages.add(package_path)
+            return registered
 
     def register_from_module(self, module_path: str, class_name: str = None) -> bool:
         """
@@ -143,11 +164,13 @@ class DynamicToolRegistry:
         Returns:
             Optional[BaseTool]: 工具实例
         """
-        return self._tools.get(name)
+        with self._registration_lock:
+            return self._tools.get(name)
 
     def get_all_tools(self) -> list[BaseTool]:
         """获取所有工具实例"""
-        return list(self._tools.values())
+        with self._registration_lock:
+            return list(self._tools.values())
 
     def get_tools_by_category(self, category: ToolCategory) -> list[BaseTool]:
         """
@@ -159,7 +182,8 @@ class DynamicToolRegistry:
         Returns:
             List[BaseTool]: 工具列表
         """
-        return [t for t in self._tools.values() if t.category == category]
+        with self._registration_lock:
+            return [t for t in self._tools.values() if t.category == category]
 
     def get_openai_tools_schema(self) -> list[dict]:
         """
@@ -168,7 +192,8 @@ class DynamicToolRegistry:
         Returns:
             List[dict]: 工具模式列表
         """
-        return [tool.to_openai_schema() for tool in self._tools.values()]
+        with self._registration_lock:
+            return [tool.to_openai_schema() for tool in self._tools.values()]
 
     def get_tools_description(self, category: ToolCategory | None = None) -> str:
         """
@@ -180,7 +205,8 @@ class DynamicToolRegistry:
         Returns:
             str: 格式化的工具描述
         """
-        tools = self._tools.values()
+        with self._registration_lock:
+            tools = list(self._tools.values())
         if category:
             tools = [t for t in tools if t.category == category]
 
@@ -205,23 +231,14 @@ class DynamicToolRegistry:
         Returns:
             Optional[ToolInfo]: 工具信息
         """
-        if name in self._tool_info:
-            return self._tool_info[name]
-
-        tool = self._tools.get(name)
-        if tool:
-            info = ToolInfo(
-                name=tool.name,
-                description=tool.description,
-                parameters_schema=tool.parameters_schema,
-                category=tool.category,
-                module_path=tool.__class__.__module__,
-                class_name=tool.__class__.__name__
-            )
+        with self._registration_lock:
+            tool = self._tools.get(name)
+            if tool is None:
+                self._tool_info.pop(name, None)
+                return None
+            info = self._build_tool_info(tool)
             self._tool_info[name] = info
             return info
-
-        return None
 
     def list_tools(self, verbose: bool = False) -> list[dict[str, Any]]:
         """
@@ -233,8 +250,10 @@ class DynamicToolRegistry:
         Returns:
             List[Dict[str, Any]]: 工具信息列表
         """
+        with self._registration_lock:
+            tools = list(self._tools.values())
         result = []
-        for tool in self._tools.values():
+        for tool in tools:
             info = {
                 "name": tool.name,
                 "description": tool.description,
@@ -257,19 +276,33 @@ class DynamicToolRegistry:
         Returns:
             bool: 是否成功
         """
-        if name in self._tools:
-            del self._tools[name]
-            if name in self._tool_info:
-                del self._tool_info[name]
-            logger.info(f"Unregistered tool: {name}")
-            return True
-        return False
+        with self._registration_lock:
+            if name in self._tools:
+                del self._tools[name]
+                if name in self._tool_info:
+                    del self._tool_info[name]
+                logger.info(f"Unregistered tool: {name}")
+                return True
+            return False
+
+    @staticmethod
+    def _build_tool_info(tool: BaseTool) -> ToolInfo:
+        return ToolInfo(
+            name=tool.name,
+            description=tool.description,
+            parameters_schema=tool.parameters_schema,
+            category=tool.category,
+            module_path=tool.__class__.__module__,
+            class_name=tool.__class__.__name__,
+        )
 
     def clear_all(self) -> None:
         """清空所有工具"""
-        self._tools.clear()
-        self._tool_info.clear()
-        logger.info("All tools cleared")
+        with self._registration_lock:
+            self._tools.clear()
+            self._tool_info.clear()
+            self._registered_packages.clear()
+            logger.info("All tools cleared")
 
     def _is_valid_tool_class(self, obj: type) -> bool:
         """

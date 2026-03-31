@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 
@@ -115,6 +117,7 @@ class _UniversalShareBottomSheetState
   int _selectedCaptionIndex = 0;
 
   bool _showPrivacySettings = false;
+  String? _activeActionKey;
 
   @override
   void initState() {
@@ -122,7 +125,7 @@ class _UniversalShareBottomSheetState
     _selectedTemplateId = widget.payload.templateId;
     _privacySettings = widget.payload.privacySettings;
     _captionOptions = _shareService.buildCaptionOptions(widget.payload);
-    _initializeAndPrepare();
+    unawaited(_initializeAndPrepare());
   }
 
   Future<void> _initializeAndPrepare() async {
@@ -212,7 +215,7 @@ class _UniversalShareBottomSheetState
       _selectedTemplateId = templateId;
       _isLoading = true;
     });
-    _prepareShareCard();
+    unawaited(_prepareShareCard());
   }
 
   void _onPrivacySettingsChanged(UniversalSharePrivacySettings settings) {
@@ -222,8 +225,38 @@ class _UniversalShareBottomSheetState
       _privacySettings = settings;
       _isLoading = true;
     });
-    _prepareShareCard();
+    unawaited(_prepareShareCard());
   }
+
+  Future<void> _runShareAction(
+    String actionKey,
+    Future<void> Function() action,
+  ) async {
+    if (_activeActionKey != null) {
+      return;
+    }
+
+    setState(() {
+      _activeActionKey = actionKey;
+    });
+
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _activeActionKey = null;
+        });
+      }
+    }
+  }
+
+  IconData _captionChipIcon(ShareCaptionStyle style) => switch (style) {
+        ShareCaptionStyle.flex => Icons.auto_awesome_rounded,
+        ShareCaptionStyle.cinematic => Icons.movie_filter_rounded,
+        ShareCaptionStyle.humble => Icons.eco_rounded,
+        ShareCaptionStyle.invite => Icons.groups_rounded,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -399,8 +432,9 @@ class _UniversalShareBottomSheetState
                       template.name,
                       style: TextStyle(
                         fontSize: DS.fontSizeXs,
-                        fontWeight:
-                            isSelected ? DS.fontWeightBold : DS.fontWeightMedium,
+                        fontWeight: isSelected
+                            ? DS.fontWeightBold
+                            : DS.fontWeightMedium,
                         color: isSelected ? DS.brandPrimary : DS.textPrimary,
                       ),
                       textAlign: TextAlign.center,
@@ -654,7 +688,7 @@ class _UniversalShareBottomSheetState
                   _isLoading = true;
                   _errorMessage = null;
                 });
-                _prepareShareCard();
+                unawaited(_prepareShareCard());
               },
               icon: const Icon(Icons.refresh),
               label: Text(context.l10n.shareRegenerateCard),
@@ -668,55 +702,62 @@ class _UniversalShareBottomSheetState
           // WeChat options (conditional)
           if (_wechatAvailable && _wechatInstalled) ...[
             _buildShareOption(
+              actionKey: 'wechat_session',
               icon: Icons.chat,
               label: context.l10n.shareToWeChatFriends,
               color: const Color(0xFF07C160),
-              onTap: () => _shareToWeChatSession(),
+              onTap: _shareToWeChatSession,
             ),
             _buildShareOption(
+              actionKey: 'wechat_timeline',
               icon: Icons.timeline,
               label: context.l10n.shareToWeChatMoments,
               color: const Color(0xFF07C160),
-              onTap: () => _shareToWeChatTimeline(),
+              onTap: _shareToWeChatTimeline,
             ),
           ],
 
           // System share
           _buildShareOption(
+            actionKey: 'system_share',
             icon: Icons.share,
             label: context.l10n.shareToSystem,
             color: DS.brandPrimary,
-            onTap: () => _shareToSystem(),
+            onTap: _shareToSystem,
           ),
           _buildShareOption(
+            actionKey: 'copy_caption',
             icon: Icons.content_copy_rounded,
             label: '复制分享文案',
             color: const Color(0xFF8B6CEB),
-            onTap: () => _copySelectedCaption(),
+            onTap: _copySelectedCaption,
           ),
 
           // Community share
           _buildShareOption(
+            actionKey: 'community_share',
             icon: Icons.groups,
             label: context.l10n.shareToCommunity,
             color: DS.info,
-            onTap: () => _shareToCommunity(),
+            onTap: _shareToCommunity,
           ),
 
           // Save to gallery
           _buildShareOption(
+            actionKey: 'save_image',
             icon: Icons.save_alt,
             label: context.l10n.saveImageToGallery,
             color: DS.success,
-            onTap: () => _saveToGallery(),
+            onTap: _saveToGallery,
           ),
 
           // Copy link
           _buildShareOption(
+            actionKey: 'copy_link',
             icon: Icons.link,
             label: context.l10n.copyDeepLink,
             color: DS.warning,
-            onTap: () => _copyDeepLink(),
+            onTap: _copyDeepLink,
           ),
         ],
       );
@@ -760,7 +801,18 @@ class _UniversalShareBottomSheetState
               final selected = index == _selectedCaptionIndex;
               return ChoiceChip(
                 selected: selected,
-                label: Text('${option.icon} ${option.title}'),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _captionChipIcon(option.style),
+                      size: 16,
+                      color: selected ? DS.brandPrimary : DS.textSecondary,
+                    ),
+                    const SizedBox(width: DS.spacing6),
+                    Text(option.title),
+                  ],
+                ),
                 onSelected: (_) {
                   setState(() {
                     _selectedCaptionIndex = index;
@@ -793,13 +845,14 @@ class _UniversalShareBottomSheetState
   }
 
   Widget _buildShareOption({
+    required String actionKey,
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) =>
       InkWell(
-        onTap: onTap,
+        onTap: _activeActionKey == null ? onTap : null,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -828,10 +881,24 @@ class _UniversalShareBottomSheetState
                   ),
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: DS.neutral400,
-                size: 16,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: _activeActionKey == actionKey
+                    ? SizedBox(
+                        key: ValueKey('loading_$actionKey'),
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        ),
+                      )
+                    : Icon(
+                        key: ValueKey('idle_$actionKey'),
+                        Icons.arrow_forward_ios,
+                        color: DS.neutral400,
+                        size: 16,
+                      ),
               ),
             ],
           ),
@@ -841,74 +908,92 @@ class _UniversalShareBottomSheetState
   Future<void> _shareToWeChatSession() async {
     if (_shareCardFile == null) return;
 
-    final result = await _shareService.shareToWeChatSession(_shareCardFile!);
-    _handleShareResult(result);
+    await _runShareAction('wechat_session', () async {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+      final result = await _shareService.shareToWeChatSession(_shareCardFile!);
+      _handleShareResult(result);
+    });
   }
 
   Future<void> _shareToWeChatTimeline() async {
     if (_shareCardFile == null) return;
 
-    final result = await _shareService.shareToWeChatTimeline(_shareCardFile!);
-    _handleShareResult(result);
+    await _runShareAction('wechat_timeline', () async {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+      final result = await _shareService.shareToWeChatTimeline(_shareCardFile!);
+      _handleShareResult(result);
+    });
   }
 
   Future<void> _shareToSystem() async {
     if (_shareCardFile == null) return;
 
-    final result = await _shareService.shareToSystem(
-      imageFile: _shareCardFile!,
-      text: _captionOptions[_selectedCaptionIndex].caption,
-    );
-    _handleShareResult(result);
+    await _runShareAction('system_share', () async {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+      final result = await _shareService.shareToSystem(
+        imageFile: _shareCardFile!,
+        text: _captionOptions[_selectedCaptionIndex].caption,
+      );
+      _handleShareResult(result);
+    });
   }
 
   Future<void> _copySelectedCaption() async {
-    await _shareService.copyText(_captionOptions[_selectedCaptionIndex].caption);
-    if (mounted) {
-      AppFeedback.success(context, '分享文案已复制');
-    }
+    await _runShareAction('copy_caption', () async {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+      await _shareService
+          .copyText(_captionOptions[_selectedCaptionIndex].caption);
+      if (mounted) {
+        AppFeedback.success(context, '分享文案已复制');
+      }
+    });
   }
 
   Future<void> _shareToCommunity() async {
-    final rootContext = Navigator.of(context, rootNavigator: true).context;
-    Navigator.of(context).pop();
+    await _runShareAction('community_share', () async {
+      final rootNavigator = Navigator.of(context, rootNavigator: true);
+      final modalNavigator = Navigator.of(context);
+      final l10n = context.l10n;
 
-    if (widget.onCommunityShare != null) {
-      widget.onCommunityShare!();
-      return;
-    }
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen);
+      if (!mounted) return;
 
-    // Check if content type is supported for community sharing
-    final unsupportedTypes = [ShareableContentType.learningReport];
-    if (unsupportedTypes.contains(widget.payload.contentType)) {
-      if (mounted) {
-        AppFeedback.warning(
-          context,
-          context.l10n.shareTypeNotSupportedYet,
-        );
+      final rootContext = rootNavigator.context;
+      modalNavigator.pop();
+
+      if (widget.onCommunityShare != null) {
+        widget.onCommunityShare!();
+        return;
       }
-      return;
-    }
 
-    // Default: show community share sheet
-    await showShareResourceSheet(
-      rootContext,
-      resourceType: widget.payload.contentType.stringValue,
-      resourceId: widget.payload.resourceId,
-      title: widget.payload.title,
-      subtitle: widget.payload.subtitle,
-    );
+      final unsupportedTypes = [ShareableContentType.learningReport];
+      if (unsupportedTypes.contains(widget.payload.contentType)) {
+        AppFeedback.warning(rootContext, l10n.shareTypeNotSupportedYet);
+        return;
+      }
+
+      await showShareResourceSheet(
+        rootContext,
+        resourceType: widget.payload.contentType.stringValue,
+        resourceId: widget.payload.resourceId,
+        title: widget.payload.title,
+        subtitle: widget.payload.subtitle,
+      );
+    });
   }
 
   Future<void> _saveToGallery() async {
     if (_shareCardFile == null) return;
 
-    final result = await _shareService.saveToGallery(
-      _shareCardFile!,
-      name: '${widget.payload.contentType.stringValue}_${widget.payload.resourceId}',
-    );
+    await _runShareAction('save_image', () async {
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm);
+      final result = await _shareService.saveToGallery(
+        _shareCardFile!,
+        name:
+            '${widget.payload.contentType.stringValue}_${widget.payload.resourceId}',
+      );
+      if (!mounted) return;
 
-    if (mounted) {
       if (result.isSuccess) {
         AppFeedback.success(context, context.l10n.savedToGallery);
       } else if (result.error == 'Permission denied') {
@@ -921,28 +1006,33 @@ class _UniversalShareBottomSheetState
       } else {
         AppFeedback.error(context, context.l10n.gallerySaveFailed);
       }
-    }
+    });
   }
 
   Future<void> _copyDeepLink() async {
-    final deepLink = widget.payload.deepLink;
+    await _runShareAction('copy_link', () async {
+      final deepLink = widget.payload.deepLink;
 
-    await Clipboard.setData(ClipboardData(text: deepLink));
+      await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+      await Clipboard.setData(ClipboardData(text: deepLink));
 
-    if (mounted) {
-      AppFeedback.success(context, context.l10n.linkCopied);
-    }
+      if (mounted) {
+        AppFeedback.success(context, context.l10n.linkCopied);
+      }
+    });
   }
 
   void _handleShareResult(UniversalShareResult result) {
     if (result.isSuccess) {
       Navigator.of(context).pop();
     } else if (result.error == 'Permission denied' ||
-        result.error?.contains('unavailable') == true) {
+        (result.error?.contains('unavailable') ?? false)) {
       AppFeedback.warning(context, context.l10n.wechatNotInstalled);
     } else if (result.error != null) {
       AppFeedback.error(
-          context, context.l10n.shareFailed(result.error!),);
+        context,
+        context.l10n.shareFailed(result.error!),
+      );
     }
   }
 }

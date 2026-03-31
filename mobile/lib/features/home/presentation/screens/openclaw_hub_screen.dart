@@ -136,7 +136,14 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
 
   Future<void> _retryQueuedRequests(OpenClawConnectionService service) async {
     if (!service.isConnected) {
-      _showSnackBar('执行引擎尚未连接，暂时无法重试队列', isError: true);
+      _showSnackBar(
+        service.hasExecutionPermissionIssue
+            ? '当前网关可访问，但没有执行权限，暂时无法重试队列'
+            : service.hasExecutionEndpointIssue
+                ? '当前网关可访问，但执行入口不可用，暂时无法重试队列'
+                : '执行引擎尚未连接，暂时无法重试队列',
+        isError: true,
+      );
       return;
     }
     final dispatched =
@@ -203,41 +210,62 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     final latestRecord = latestTask == null
         ? null
         : taskState.taskExecutionRecords[latestTask.id];
+    final hasExecutionPermissionIssue = connection.hasExecutionPermissionIssue;
+    final hasExecutionEndpointIssue = connection.hasExecutionEndpointIssue;
+    final isGatewayReachable = connection.isGatewayReachable;
 
     final overviewTone = connection.isConnected
         ? OpenClawVisualTone.connected
-        : connection.queuedRequestCount > 0
-            ? OpenClawVisualTone.offline
-            : info.status == OpenClawConnectionStatus.connecting
-                ? OpenClawVisualTone.active
-                : OpenClawVisualTone.attention;
+        : isGatewayReachable
+            ? OpenClawVisualTone.attention
+            : connection.queuedRequestCount > 0
+                ? OpenClawVisualTone.offline
+                : info.status == OpenClawConnectionStatus.connecting
+                    ? OpenClawVisualTone.active
+                    : OpenClawVisualTone.attention;
     final overviewTitle = switch ((
+      hasExecutionPermissionIssue,
+      hasExecutionEndpointIssue,
       connection.isConnected,
       connection.queuedRequestCount > 0,
       connection.config.isConfigured
     )) {
-      (true, _, _) => 'OpenClaw 已准备好接手',
-      (false, true, _) => '已有任务在等它恢复',
-      (false, false, true) => '连接信息已保存，当前还没连上',
+      (true, _, _, _, _) => '网关在线，但没有执行权限',
+      (false, true, _, _, _) => '网关在线，但执行入口不可用',
+      (false, false, true, _, _) => 'OpenClaw 已准备好接手',
+      (false, false, false, true, _) => '已有任务在等它恢复',
+      (false, false, false, false, true) => '连接信息已保存，当前还没连上',
       _ => '先接入 OpenClaw，再开始稳定委派',
     };
     final overviewSubtitle = switch ((
+      hasExecutionPermissionIssue,
+      hasExecutionEndpointIssue,
       connection.isConnected,
       latestIntent != null,
       connection.queuedRequestCount > 0
     )) {
-      (true, true, _) =>
+      (true, _, _, _, _) =>
+        '当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。',
+      (false, true, _, _, _) =>
+        '当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。',
+      (false, false, true, true, _) =>
         '最近一次执行状态是“${latestIntent?.statusLabel ?? '已记录'}”，你可以从这里继续查看连接、队列和活动。',
-      (true, false, _) => '连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。',
-      (false, _, true) =>
+      (false, false, true, false, _) => '连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。',
+      (false, false, false, _, true) =>
         '你已经有 ${connection.queuedRequestCount} 个委派在等待恢复连接，先把引擎重新连上会最有效。',
       _ => '连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。',
     };
-    final primaryActionHint =
-        switch ((connection.isConnected, connection.queuedRequestCount > 0)) {
-      (true, true) => '现在最值得先做的是把等待队列重新提交。',
-      (false, true) => '现在最值得先做的是恢复连接，让已排队的任务继续执行。',
-      (true, false) => '现在最值得先做的是回到聊天或任务页发起新的委派。',
+    final primaryActionHint = switch ((
+      hasExecutionPermissionIssue,
+      hasExecutionEndpointIssue,
+      connection.isConnected,
+      connection.queuedRequestCount > 0
+    )) {
+      (true, _, _, _) => '现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。',
+      (false, true, _, _) => '现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。',
+      (false, false, true, true) => '现在最值得先做的是把等待队列重新提交。',
+      (false, false, false, true) => '现在最值得先做的是恢复连接，让已排队的任务继续执行。',
+      (false, false, true, false) => '现在最值得先做的是回到聊天或任务页发起新的委派。',
       _ => '现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。',
     };
 
@@ -261,11 +289,20 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                 metrics: [
                   OpenClawMetricPill(
                     icon: Icons.sensors_rounded,
-                    label: connection.isConnected ? '已连接' : '未连接',
-                    tone: connection.isConnected
-                        ? OpenClawVisualTone.connected
-                        : OpenClawVisualTone.offline,
-                    emphasized: connection.isConnected,
+                    label: connection.hasExecutionPermissionIssue
+                        ? '已连接但无执行权限'
+                        : connection.hasExecutionEndpointIssue
+                            ? '已连接但执行入口异常'
+                            : isGatewayReachable
+                                ? '已连接'
+                                : '未连接',
+                    tone:
+                        hasExecutionPermissionIssue || hasExecutionEndpointIssue
+                            ? OpenClawVisualTone.attention
+                            : isGatewayReachable
+                                ? OpenClawVisualTone.connected
+                                : OpenClawVisualTone.offline,
+                    emphasized: isGatewayReachable,
                   ),
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
@@ -425,11 +462,15 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ),
                     const SizedBox(height: DS.spacing10),
                     Text(
-                      connection.isConnected
-                          ? '当前连接保持稳定，适合继续使用现有方式直接委派。'
-                          : connection.config.isConfigured
-                              ? '配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。'
-                              : '第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。',
+                      connection.hasExecutionPermissionIssue
+                          ? '这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。'
+                          : connection.hasExecutionEndpointIssue
+                              ? '网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。'
+                              : connection.isConnected
+                                  ? '当前连接保持稳定，适合继续使用现有方式直接委派。'
+                                  : connection.config.isConfigured
+                                      ? '配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。'
+                                      : '第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。',
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,

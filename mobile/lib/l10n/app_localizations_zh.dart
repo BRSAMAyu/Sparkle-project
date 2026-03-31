@@ -7737,7 +7737,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyNodeInspectConnections => '查看连接';
 
   @override
+  String get galaxyNodeLaunchPrediction => '推演此节点';
+
+  @override
   String get galaxyNodeLocked => '已锁定';
+
+  @override
+  String get galaxyNodeLockedHint => '可先查看详情了解前置关系，再决定如何解锁这个节点。';
 
   @override
   String galaxyNodePreviewSubtitle(Object arg0, Object arg1) {

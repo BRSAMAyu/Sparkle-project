@@ -316,8 +316,8 @@ FORCE_STAMP=1 make db-migrate
 
 - **项目 README:** [README.md](README.md)
 - **Claude Code 开发指南:** [CLAUDE.md](CLAUDE.md)
-- **认知引擎设计:** [docs/09_Cognitive_Nexus/](docs/09_Cognitive_Nexus/)
-- **深度技术讲解:** [docs/深度技术讲解教案_完整版.md](docs/深度技术讲解教案_完整版.md)
+- **认知与编排说明:** [docs/01_核心模块文档/09_认知学习与编排引擎.md](../01_核心模块文档/09_认知学习与编排引擎.md)
+- **开发文档入口:** [docs/README.md](../README.md)
 
 ---
 

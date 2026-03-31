@@ -55,11 +55,13 @@ class LangGraphPlanner:
         "query_error_history": StepCriteria(expected_output_keys=["errors"], max_duration_ms=10000, required=False),
     }
 
-    def __init__(self, redis_client=None):
+    def __init__(self, redis_client=None, circuit_breaker=None):
         self.redis = redis_client
         # Phase 2: Use planning-only graph (no ToolNode)
         # This ensures planner does NOT execute tools
         self.graph = sparkle_planning_graph
+        # Optional: Inject circuit breaker for resilience
+        self.circuit_breaker = circuit_breaker
         logger.info("LangGraphPlanner initialized with planning-only graph (no tool execution)")
 
     async def plan(
@@ -174,14 +176,37 @@ class LangGraphPlanner:
 
         logger.info(f"Starting LangGraph planning for session {session_id}")
 
+        # Circuit breaker check (Phase 3)
+        if self.circuit_breaker:
+            allowed, reason = await self.circuit_breaker.allow_request()
+            if not allowed:
+                logger.warning(f"LangGraph planning blocked by circuit breaker: {reason}")
+                return self.build_fallback_plan(
+                    message=message,
+                    snapshot=snapshot,
+                    user_id=user_id,
+                    session_id=session_id,
+                    rationale=f"Circuit breaker OPEN: {reason}. Using synthesized fallback plan.",
+                    plan_version=plan_version,
+                )
+
         try:
             # The planning graph will complete when agents generate tool_calls
             # It will NOT execute them (no ToolNode in planning graph)
             result_state = await self.graph.ainvoke(initial_state, config)
             final_state = result_state
 
+            # Record success in circuit breaker
+            if self.circuit_breaker:
+                await self.circuit_breaker.on_success()
+
         except Exception as e:
             logger.error(f"LangGraph planning error: {e}")
+
+            # Record failure in circuit breaker
+            if self.circuit_breaker:
+                await self.circuit_breaker.on_failure(error=str(e))
+
             return self.build_fallback_plan(
                 message=message,
                 snapshot=snapshot,

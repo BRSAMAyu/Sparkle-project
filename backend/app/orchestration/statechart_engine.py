@@ -267,6 +267,9 @@ class StateGraph:
         Merges results back into the main state.
         Strategy: Clone state for each branch -> Gather -> Merge.
         """
+        # Remember original message count before parallel execution
+        original_message_count = len(state.messages)
+
         # Create a clone for each branch to avoid race conditions on the same dicts
         # Note: This is a shallow clone strategy. For complex objects, be careful.
         tasks = []
@@ -292,26 +295,15 @@ class StateGraph:
                 logger.error(f"Parallel branch {i} failed: {res}")
                 state.errors.append(f"Parallel branch {i} failed: {str(res)}")
             elif isinstance(res, WorkflowState):
-                # Append new messages
-                res.messages[len(state.messages):] # Only take new ones if strictly append-only?
-                # Actually, simpler to just append everything generated in the branch
-                # But since we cloned, 'state.messages' length is the baseline.
-                # Let's just blindly extend for now, assuming parallel branches don't chat over each other much.
-                # Better: Filter for messages added during branch execution.
-
-                # We can't easily diff messages without IDs.
-                # Let's assume branches add unique messages.
-                # A safer way is to return the delta.
-
                 # Merge Context
                 state.context_data.update(res.context_data)
 
-                # Merge messages (Naively append diff)
-                # Ideally, each branch should produce a distinct set of outputs.
-                # We'll just take the messages that are NOT in the original state.
-                # (This clone check is imperfect but works for POC)
-                if len(res.messages) > len(state.messages):
-                     # Append the tail
-                     state.messages.extend(res.messages[len(state.messages):])
+                # Merge messages: each branch started with a clone that had
+                # original_message_count messages. Any messages beyond that
+                # are new from this branch.
+                if len(res.messages) > original_message_count:
+                    for msg in res.messages[original_message_count:]:
+                        if msg not in state.messages:
+                            state.messages.append(msg)
 
         return state

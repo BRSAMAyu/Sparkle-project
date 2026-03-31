@@ -357,7 +357,7 @@ async def main():
         print("=" * 70)
         print("\n建议:")
         print("  1. 运行测试: python scripts/test_graph_queries.py")
-        print("  2. 查看文档: docs/06_安全与质量报告/04_生产级修复总结.md")
+        print("  2. 查看文档: docs/05_部署与运维/生产稳定性基线运行手册_2026-03-20.md")
 
     except Exception as e:
         logger.error(f"迁移失败: {e}")

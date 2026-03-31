@@ -11,6 +11,8 @@ import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart'
+    show TaskReminderConfig;
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -50,17 +52,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _bgmReadingProtection = true;
   bool _bgmFocusPriority = true;
   bool _bgmLockCurrentStyle = false;
-  bool _localBgmOverridesEnabled = false;
-  int _localBgmOverrideCount = 0;
   BgmPalette? _previewingPalette;
   BgmTrack? _previewingSceneTrack;
   BgmPlaybackSnapshot? _bgmPlaybackSnapshot;
+  BgmLibrarySnapshot? _bgmLibrarySnapshot;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
   bool _sensoryReady = false;
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
+  String? _learningPreferenceStatus;
+  bool _learningPreferenceStatusIsError = false;
 
   @override
   void initState() {
@@ -82,7 +85,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final mode = await BgmService.getMode();
     final tuning = await BgmService.getUserTuning();
     final snapshot = await BgmService.currentPlaybackSnapshot();
-    final localOverrideCount = await BgmService.localAdaptiveOverrideCount();
+    final librarySnapshot = await BgmService.librarySnapshot();
     if (!mounted) {
       return;
     }
@@ -97,18 +100,29 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _bgmFocusPriority = tuning.focusPriority;
       _bgmLockCurrentStyle = tuning.lockCurrentStyle;
       _bgmPlaybackSnapshot = snapshot;
-      _localBgmOverrideCount = localOverrideCount;
-      _localBgmOverridesEnabled = localOverrideCount > 0;
+      _bgmLibrarySnapshot = librarySnapshot;
       _bgmReady = true;
     });
   }
 
   Future<void> _refreshBgmPlaybackSnapshot() async {
     final snapshot = await BgmService.currentPlaybackSnapshot();
+    final librarySnapshot = await BgmService.librarySnapshot();
     if (!mounted) {
       return;
     }
-    setState(() => _bgmPlaybackSnapshot = snapshot);
+    setState(() {
+      _bgmPlaybackSnapshot = snapshot;
+      _bgmLibrarySnapshot = librarySnapshot;
+    });
+  }
+
+  Future<void> _openBgmLibrary() async {
+    await context.push(UserRoutes.bgmLibrary);
+    if (!mounted) {
+      return;
+    }
+    await _loadBgmPreferences();
   }
 
   Future<void> _loadSensoryPreferences() async {
@@ -272,9 +286,34 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }) {
     final notifier = ref.read(learningPreferencesProvider.notifier);
     notifier.previewPreferences(depth: depth, curiosity: curiosity);
+    if (mounted) {
+      setState(() {
+        _learningPreferenceStatus = '保存中…';
+        _learningPreferenceStatusIsError = false;
+      });
+    }
     _learningPrefsDebounce?.cancel();
-    _learningPrefsDebounce = Timer(const Duration(milliseconds: 220), () {
-      notifier.updatePreferences(depth: depth, curiosity: curiosity);
+    _learningPrefsDebounce = Timer(const Duration(milliseconds: 220), () async {
+      try {
+        await notifier.updatePreferences(depth: depth, curiosity: curiosity);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _learningPreferenceStatus = '学习模式偏好已保存';
+          _learningPreferenceStatusIsError = false;
+        });
+      } catch (e) {
+        if (!mounted) {
+          return;
+        }
+        final message = e.toString().replaceFirst('Exception: ', '').trim();
+        setState(() {
+          _learningPreferenceStatus = '保存失败：$message';
+          _learningPreferenceStatusIsError = true;
+        });
+        AppFeedback.error(context, '学习模式偏好保存失败：$message');
+      }
     });
   }
 
@@ -298,6 +337,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
+    final notificationPrefs = ref.watch(notificationPreferenceSettingsProvider);
+    final taskReminderConfig = ref.watch(taskReminderConfigProvider);
     final weeklyAgenda = ref.watch(weeklyAgendaProvider);
 
     return SparklePageScaffold(
@@ -464,6 +505,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               );
                             },
                           ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildInlineStatusMessage(
+                            _learningPreferenceStatus ?? '拖动后会自动保存到后端',
+                            isError: _learningPreferenceStatusIsError,
+                          ),
                           const SizedBox(height: DS.spacing24),
                           _buildSectionHeader(
                             Icons.auto_awesome,
@@ -531,7 +577,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       icon: Icons.music_note_rounded,
                       title: l10n.bgmSectionTitle,
                       subtitle: _bgmReady
-                          ? l10n.bgmSectionSubtitle
+                          ? _bgmSectionSubtitle()
                           : l10n.bgmLoadingSubtitle,
                       expanded: _bgmExpanded,
                       onToggle: () =>
@@ -575,50 +621,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 .toList(),
                           ),
                           const SizedBox(height: DS.spacing10),
-                          if (_localBgmOverridesEnabled)
-                            Container(
-                              width: double.infinity,
-                              margin:
-                                  const EdgeInsets.only(bottom: DS.spacing10),
-                              padding: const EdgeInsets.all(DS.spacing12),
-                              decoration: BoxDecoration(
-                                borderRadius: DS.borderRadius12,
-                                color: Color.alphaBlend(
-                                  DS.brandPrimary.withValues(alpha: 0.08),
-                                  DS.surfaceSecondary,
-                                ),
-                                border: Border.all(
-                                  color:
-                                      DS.brandPrimary.withValues(alpha: 0.16),
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 2),
-                                    child: Icon(
-                                      Icons.library_music_rounded,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: DS.spacing10),
-                                  Expanded(
-                                    child: Text(
-                                      _bgmPalette == BgmPalette.adaptive
-                                          ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于自适应模式时，系统会优先播放你本机准备的场景音乐。'
-                                          : _bgmPalette == BgmPalette.classical
-                                              ? '古典乐库已启用（$_localBgmOverrideCount 首）。当前处于精选古典模式时，系统会优先播放你本机准备的调音曲目。'
-                                              : '检测到 $_localBgmOverrideCount 首本地乐曲覆盖。切回“自适应”或“精选古典”后，系统会优先播放本机版场景音乐。',
-                                      style: DS.bodySmall.copyWith(
-                                        color: DS.textSecondary,
-                                        height: 1.45,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          _buildBgmLibrarySummaryCard(),
+                          const SizedBox(height: DS.spacing12),
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(DS.spacing12),
@@ -886,25 +890,46 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningFastLabel),
                                   selected: aiReasoningMode == 'fast',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('fast'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'fast',
+                                    ),
+                                  ),
                                 ),
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningBalancedLabel),
                                   selected: aiReasoningMode == 'balanced',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('balanced'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'balanced',
+                                    ),
+                                  ),
                                 ),
                                 ChoiceChip(
                                   label: Text(l10n.aiReasoningDeepLabel),
                                   selected: aiReasoningMode == 'deep',
-                                  onSelected: (_) => ref
-                                      .read(aiReasoningModeProvider.notifier)
-                                      .setMode('deep'),
+                                  onSelected: (_) => unawaited(
+                                    _applyAiReasoningMode(
+                                      context,
+                                      l10n,
+                                      'deep',
+                                    ),
+                                  ),
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildSelectionPreviewCard(
+                            icon: Icons.auto_awesome_rounded,
+                            title: _aiReasoningModeTitle(l10n, aiReasoningMode),
+                            description: _aiReasoningModeDescription(
+                              l10n,
+                              aiReasoningMode,
                             ),
                           ),
                           const SizedBox(height: DS.spacing16),
@@ -1057,6 +1082,181 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               const SizedBox(height: DS.spacing20),
               // Notification permission status card
               _buildNotificationPermissionCard(context, l10n),
+              const SizedBox(height: DS.spacing20),
+              GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      title: Text(l10n.notificationSettings),
+                      subtitle: Text(
+                        notificationPrefs.isLoaded
+                            ? '统一管理系统通知、干预通知、免打扰时段与任务提醒。'
+                            : '正在加载通知偏好...',
+                      ),
+                    ),
+                    if (!notificationPrefs.isLoaded)
+                      const LinearProgressIndicator(minHeight: 3)
+                    else ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('系统通知'),
+                        subtitle: const Text('控制任务提醒、成就、系统消息等站内通知'),
+                        value: notificationPrefs.enableSystem,
+                        onChanged: (value) => unawaited(
+                          _updateNotificationPreferences(
+                            context,
+                            enableSystem: value,
+                          ),
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('干预通知'),
+                        subtitle: const Text('控制教练/代理的干预和引导提醒'),
+                        value: notificationPrefs.enableInterventions,
+                        onChanged: (value) => unawaited(
+                          _updateNotificationPreferences(
+                            context,
+                            enableInterventions: value,
+                          ),
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      const Divider(height: DS.spacing24),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.tune_rounded),
+                        title: const Text('通知级别'),
+                        subtitle: Text(
+                          _notificationLevelDescription(
+                            notificationPrefs.notificationLevel,
+                          ),
+                        ),
+                      ),
+                      _buildSettingsDropdownField<String>(
+                        value: notificationPrefs.notificationLevel,
+                        items: [
+                          DropdownMenuItem(
+                            value: 'minimal',
+                            child: Text(
+                              _notificationLevelLabel('minimal'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'standard',
+                            child: Text(
+                              _notificationLevelLabel('standard'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'verbose',
+                            child: Text(
+                              _notificationLevelLabel('verbose'),
+                            ),
+                          ),
+                        ],
+                        onChanged: (level) {
+                          if (level == null) {
+                            return;
+                          }
+                          unawaited(
+                            _updateNotificationPreferences(
+                              context,
+                              notificationLevel: level,
+                              successMessage:
+                                  '通知级别已切换为${_notificationLevelLabel(level)}',
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      _buildSelectionPreviewCard(
+                        icon: Icons.notifications_active_outlined,
+                        title:
+                            '${_notificationLevelLabel(notificationPrefs.notificationLevel)}通知',
+                        description: _notificationLevelPreview(
+                          notificationPrefs.notificationLevel,
+                        ),
+                      ),
+                      const Divider(height: DS.spacing24),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('免打扰时段'),
+                        subtitle: Text(
+                          notificationPrefs.quietHoursEnabled
+                              ? '${notificationPrefs.quietHoursStart} - ${notificationPrefs.quietHoursEnd}'
+                              : '关闭后，系统会按正常节奏推送通知',
+                        ),
+                        value: notificationPrefs.quietHoursEnabled,
+                        onChanged: (value) {
+                          final nextStart = notificationPrefs.quietHoursStart;
+                          final nextEnd = notificationPrefs.quietHoursEnd;
+                          unawaited(
+                            _updateNotificationPreferences(
+                              context,
+                              quietHoursEnabled: value,
+                              quietHoursStart: nextStart,
+                              quietHoursEnd: nextEnd,
+                            ),
+                          );
+                        },
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      if (notificationPrefs.quietHoursEnabled) ...[
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.nights_stay_outlined),
+                          title: const Text('开始时间'),
+                          subtitle: Text(notificationPrefs.quietHoursStart),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => unawaited(
+                            _pickQuietHoursTime(
+                              context,
+                              isStart: true,
+                              currentValue: notificationPrefs.quietHoursStart,
+                            ),
+                          ),
+                        ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.wb_sunny_outlined),
+                          title: const Text('结束时间'),
+                          subtitle: Text(notificationPrefs.quietHoursEnd),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => unawaited(
+                            _pickQuietHoursTime(
+                              context,
+                              isStart: false,
+                              currentValue: notificationPrefs.quietHoursEnd,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing4),
+                          child: _buildInlineStatusMessage(
+                            '支持跨午夜，例如 22:00 - 08:00；开始和结束时间不能相同。',
+                          ),
+                        ),
+                      ],
+                    ],
+                    const Divider(height: DS.spacing24),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.alarm_outlined),
+                      title: Text(l10n.taskReminderSettingsTitle),
+                      subtitle: Text(
+                        _taskReminderSummary(taskReminderConfig),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push(UserRoutes.taskReminders),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: DS.spacing20),
               GraphiteCardSurface(
                 child: Column(
@@ -1386,6 +1586,258 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
+  Future<void> _updateNotificationPreferences(
+    BuildContext context, {
+    bool? enableSystem,
+    bool? enableInterventions,
+    String? notificationLevel,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+    String? successMessage,
+  }) async {
+    try {
+      await ref
+          .read(notificationPreferenceSettingsProvider.notifier)
+          .updatePreferences(
+            enableSystem: enableSystem,
+            enableInterventions: enableInterventions,
+            notificationLevel: notificationLevel,
+            quietHoursEnabled: quietHoursEnabled,
+            quietHoursStart: quietHoursStart,
+            quietHoursEnd: quietHoursEnd,
+          );
+      if (!context.mounted ||
+          successMessage == null ||
+          successMessage.isEmpty) {
+        return;
+      }
+      AppFeedback.success(context, successMessage);
+    } catch (e) {
+      if (!context.mounted) {
+        return;
+      }
+      AppFeedback.error(
+        context,
+        '通知设置更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+      );
+    }
+  }
+
+  Future<void> _pickQuietHoursTime(
+    BuildContext context, {
+    required bool isStart,
+    required String currentValue,
+  }) async {
+    final currentTime = _parseTimeOfDay(currentValue);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: currentTime,
+    );
+    if (picked == null || !context.mounted) {
+      return;
+    }
+
+    final formatted = _formatTimeOfDay(picked);
+    final prefs = ref.read(notificationPreferenceSettingsProvider);
+    final nextStart = isStart ? formatted : prefs.quietHoursStart;
+    final nextEnd = isStart ? prefs.quietHoursEnd : formatted;
+    if (nextStart == nextEnd) {
+      AppFeedback.info(context, '开始和结束时间不能相同');
+      return;
+    }
+    await _updateNotificationPreferences(
+      context,
+      quietHoursStart: isStart ? formatted : null,
+      quietHoursEnd: isStart ? null : formatted,
+      successMessage: isStart ? '免打扰开始时间已更新' : '免打扰结束时间已更新',
+    );
+  }
+
+  Future<void> _applyAiReasoningMode(
+    BuildContext context,
+    AppLocalizations l10n,
+    String mode,
+  ) async {
+    await ref.read(aiReasoningModeProvider.notifier).setMode(mode);
+    if (!context.mounted) {
+      return;
+    }
+    final currentMode = ref.read(aiReasoningModeProvider);
+    if (currentMode == mode) {
+      AppFeedback.success(
+        context,
+        'AI 推理模式已切换为${_aiReasoningModeTitle(l10n, mode)}',
+      );
+      return;
+    }
+    AppFeedback.error(context, 'AI 推理模式切换失败，请稍后重试');
+  }
+
+  TimeOfDay _parseTimeOfDay(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) {
+      return const TimeOfDay(hour: 22, minute: 0);
+    }
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 22,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _taskReminderSummary(TaskReminderConfig config) {
+    if (!config.enabled) {
+      return '已关闭';
+    }
+    if (config.reminders.isEmpty) {
+      return '已开启，但暂未选择提醒时间';
+    }
+    final labels = config.reminders.map(_formatReminderMinutes).join(' / ');
+    return '已开启 · $labels';
+  }
+
+  String _formatReminderMinutes(int minutes) {
+    if (minutes >= 1440) {
+      final days = minutes ~/ 1440;
+      return '$days天前';
+    }
+    if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      return '$hours小时前';
+    }
+    return '$minutes分钟前';
+  }
+
+  String _notificationLevelLabel(String level) {
+    switch (level) {
+      case 'minimal':
+        return '简洁';
+      case 'verbose':
+        return '详细';
+      case 'standard':
+      default:
+        return '标准';
+    }
+  }
+
+  String _notificationLevelDescription(String level) {
+    switch (level) {
+      case 'minimal':
+        return '只保留最必要的提醒，减少打扰。';
+      case 'verbose':
+        return '展示更完整的背景信息和提醒内容。';
+      case 'standard':
+      default:
+        return '在信息量和打扰频率之间保持平衡。';
+    }
+  }
+
+  String _notificationLevelPreview(String level) {
+    switch (level) {
+      case 'minimal':
+        return '只保留关键提醒，例如任务即将到期、需要立即处理的系统通知。';
+      case 'verbose':
+        return '会附带更多上下文，例如为什么提醒你、下一步建议和补充说明。';
+      case 'standard':
+      default:
+        return '保留主要提醒，并在必要时补充简短背景说明，适合大多数场景。';
+    }
+  }
+
+  String _aiReasoningModeTitle(AppLocalizations l10n, String mode) {
+    switch (mode) {
+      case 'fast':
+        return l10n.aiReasoningFastLabel;
+      case 'deep':
+        return l10n.aiReasoningDeepLabel;
+      case 'balanced':
+      default:
+        return l10n.aiReasoningBalancedLabel;
+    }
+  }
+
+  String _aiReasoningModeDescription(AppLocalizations l10n, String mode) {
+    switch (mode) {
+      case 'fast':
+        return '优先更快给出结果，适合短问答、轻量查询和低延迟场景。';
+      case 'deep':
+        return '会投入更多推理预算，适合复杂问题、规划和高精度解释。';
+      case 'balanced':
+      default:
+        return '在速度和推理深度之间保持平衡，适合大多数日常使用。';
+    }
+  }
+
+  Widget _buildSelectionPreviewCard({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: DS.primaryBase, size: 18),
+            const SizedBox(width: DS.spacing10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    description,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildInlineStatusMessage(
+    String message, {
+    bool isError = false,
+  }) =>
+      Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline_rounded : Icons.check_circle_outline,
+            size: 16,
+            color: isError ? DS.error : DS.textSecondary,
+          ),
+          const SizedBox(width: DS.spacing6),
+          Expanded(
+            child: Text(
+              message,
+              style: DS.bodySmall.copyWith(
+                color: isError ? DS.error : DS.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      );
+
   Widget _buildLanguageOption(
     BuildContext context, {
     required String title,
@@ -1614,17 +2066,90 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return l10n.weeklyAgendaSummary(activeCount, busyCount, fragmentedCount);
   }
 
+  String _bgmSectionSubtitle() {
+    final snapshot = _bgmLibrarySnapshot;
+    if (snapshot == null) {
+      return '按页面与播放器模式管理背景音乐';
+    }
+    return '当前共 ${snapshot.totalCount} 首，可在页面策略和播放器模式之间自由切换';
+  }
+
+  Widget _buildBgmLibrarySummaryCard() {
+    final snapshot = _bgmLibrarySnapshot;
+    if (snapshot == null) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        borderRadius: DS.borderRadius12,
+        color: Color.alphaBlend(
+          DS.brandPrimary.withValues(alpha: 0.06),
+          DS.surfaceSecondary,
+        ),
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.library_music_rounded, size: 18),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  '曲库已更新为 ${snapshot.totalCount} 首',
+                  style: DS.bodyLarge,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => unawaited(_openBgmLibrary()),
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('打开曲库'),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildInfoChip('精选', '${snapshot.curatedCount} 首'),
+              _buildInfoChip('本地导入', '${snapshot.importedCount} 首'),
+              _buildInfoChip('系统兜底', '${snapshot.bundledCount} 首'),
+              _buildInfoChip(
+                '模式',
+                _bgmMode == BgmMode.continuous ? '播放器模式' : '页面策略模式',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '新页面里可以点播曲库、导入自己的音乐，并启用“播放器模式”让 BGM 跨页面持续不中断。',
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBgmNowPlayingCard() {
     final snapshot = _bgmPlaybackSnapshot;
     final sceneName = snapshot?.scene?.name ?? '当前未播放';
-    final trackName = snapshot?.trackId ?? '内置场景曲目';
+    final trackName = snapshot?.trackTitle ?? snapshot?.trackId ?? '内置场景曲目';
     final sourceLabel = snapshot?.sourceLabel ?? 'Bundled fallback';
     final reason = snapshot?.selectionReason ?? '等待播放信息';
     final statusText = !_bgmEnabled
         ? '背景音乐已关闭'
         : _bgmMode == BgmMode.silent
             ? '当前处于全局静音'
-            : sceneName;
+            : _bgmMode == BgmMode.continuous
+                ? '播放器模式持续播放中'
+                : sceneName;
 
     return Container(
       width: double.infinity,
@@ -1868,12 +2393,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   String _bgmModeLabel(BgmMode mode) => switch (mode) {
         BgmMode.adaptive => '跟随页面',
+        BgmMode.continuous => '播放器模式',
         BgmMode.focusOnly => '仅专注开启',
         BgmMode.silent => '全局静音',
       };
 
   String _bgmModeDescription(BgmMode mode) => switch (mode) {
         BgmMode.adaptive => '首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。',
+        BgmMode.continuous => '当前曲目会持续播放，不会因为你跳转到别的页面而被打断，适合把 App 当成舒缓音乐播放器。',
         BgmMode.focusOnly => '只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。',
         BgmMode.silent => '保留音效和触感反馈，但所有背景音乐都不会自动播放。',
       };

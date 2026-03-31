@@ -18,6 +18,7 @@ import 'package:sparkle/features/mirofish/presentation/support/mirofish_mileston
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
+import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/features/theater/presentation/widgets/knowledge_theater_graph.dart';
@@ -27,17 +28,25 @@ class KnowledgeTheaterScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialTopic,
     this.initialTargetNodeId,
+    this.initialPredictionId,
+    this.initialRouteId,
     this.initialSourceChatSessionId,
+    this.initialSimulationSessionId,
   });
 
   final String? initialTopic;
   final String? initialTargetNodeId;
+  final String? initialPredictionId;
+  final String? initialRouteId;
   final String? initialSourceChatSessionId;
+  final String? initialSimulationSessionId;
 
   @override
   ConsumerState<KnowledgeTheaterScreen> createState() =>
       _KnowledgeTheaterScreenState();
 }
+
+enum _TheaterWorkbenchTab { graph, paths, discussion, calibration }
 
 class _KnowledgeTheaterScreenState
     extends ConsumerState<KnowledgeTheaterScreen> {
@@ -49,6 +58,27 @@ class _KnowledgeTheaterScreenState
   bool _playCelebration = false;
   bool _isTimelinePlaying = false;
   String? _selectedNodeId;
+  _TheaterWorkbenchTab _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
+
+  String _buildSimulationRoute(TheaterPathOption route) {
+    final prediction = ref.read(theaterProvider).prediction;
+    final query = <String, String>{
+      'topic': prediction?.topic ?? _topicController.text.trim(),
+      'scenario_key': 'what_if_path',
+      'prediction_id': prediction?.predictionId ?? '',
+      'route_id': route.id,
+      'route_title': route.title,
+      'target_name': prediction?.targetName ?? '',
+      if ((widget.initialSourceChatSessionId ?? '').trim().isNotEmpty)
+        'source_chat_session_id': widget.initialSourceChatSessionId!.trim(),
+      if ((widget.initialSimulationSessionId ?? '').trim().isNotEmpty)
+        'simulation_session_id': widget.initialSimulationSessionId!.trim(),
+    }..removeWhere((key, value) => value.trim().isEmpty);
+    return Uri(
+      path: SimulationRoutes.simulation,
+      queryParameters: query,
+    ).toString();
+  }
 
   @override
   void initState() {
@@ -72,6 +102,7 @@ class _KnowledgeTheaterScreenState
           _selectedNodeId = nextPrediction.graphNodes.isEmpty
               ? null
               : nextPrediction.graphNodes.first.id;
+          _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
           unawaited(_celebrateTheaterMilestone(nextPrediction));
         }
       },
@@ -83,7 +114,14 @@ class _KnowledgeTheaterScreenState
               silent: true,
             ),
       );
-      if ((widget.initialTopic ?? '').trim().isNotEmpty) {
+      if ((widget.initialPredictionId ?? '').trim().isNotEmpty) {
+        unawaited(
+          ref.read(theaterProvider.notifier).loadPredictionById(
+                widget.initialPredictionId!.trim(),
+                preferredRouteId: widget.initialRouteId?.trim(),
+              ),
+        );
+      } else if ((widget.initialTopic ?? '').trim().isNotEmpty) {
         unawaited(_generatePrediction(widget.initialTopic!.trim()));
       }
     });
@@ -103,10 +141,14 @@ class _KnowledgeTheaterScreenState
       return;
     }
     _stopTimelinePlayback();
+    setState(() {
+      _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
+    });
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     await ref.read(theaterProvider.notifier).generatePrediction(
           topic: topic.trim(),
           targetNodeId: widget.initialTargetNodeId,
+          simulationSessionId: widget.initialSimulationSessionId,
         );
   }
 
@@ -237,154 +279,253 @@ class _KnowledgeTheaterScreenState
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final compactHeight = constraints.maxHeight < 720;
-                    final predictionBody = AnimatedSwitcher(
-                      duration: DS.durationNormal,
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: prediction == null
-                          ? _TheaterIntroState(
-                              key: const ValueKey('theater-intro'),
-                              isLoading: state.isLoading,
-                              latestSnapshot: state.snapshot,
-                              suggestions: simulationState.recommendedSeeds,
-                              error: state.error,
-                              onStartFirstPrediction: () => unawaited(
-                                _generatePrediction(_topicController.text),
-                              ),
-                              onRetry: () => unawaited(
-                                _generatePrediction(_topicController.text),
-                              ),
-                              onChangeTarget: () {
-                                _topicController.clear();
-                                ref
-                                    .read(theaterProvider.notifier)
-                                    .clearError();
-                              },
-                            )
-                          : _PredictionView(
-                              key: ValueKey(prediction.predictionId),
-                              prediction: prediction,
-                              selectedRoute: route,
-                              timeline: timeline,
-                              timelineIndex: timelineIndex,
-                              focusNodeIds: focusNodeIds,
-                              selectedNodeId: _selectedNodeId,
-                              isTimelinePlaying: _isTimelinePlaying,
-                              recommendedRouteId: prediction.recommendedRouteId,
-                              whatIfResult: state.whatIfResult,
-                              snapshot: state.snapshot,
-                              adoptionResult: state.adoptionResult,
-                              accuracySummary: state.accuracySummary,
-                              accuracyTracking: prediction.accuracyTracking,
-                              isLoading: state.isLoading,
-                              isAdopting: state.isAdopting,
-                              isSavingSnapshot: state.isSavingSnapshot,
-                              error: state.error,
-                              onRouteSelected: (routeId) => ref
-                                  .read(theaterProvider.notifier)
-                                  .selectRoute(routeId),
-                              onTimelineSelected: (index) {
-                                unawaited(
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.selection,
-                                  ),
-                                );
-                                if (_isTimelinePlaying) {
-                                  _stopTimelinePlayback();
-                                }
-                                ref
-                                    .read(theaterProvider.notifier)
-                                    .setTimelineIndex(index);
-                              },
-                              onToggleTimelinePlayback:
-                                  _toggleTimelinePlayback,
-                              onResetTimelinePlayback: _resetTimelinePlayback,
-                              onAdopt: route == null
-                                  ? null
-                                  : () => unawaited(
-                                        ref
-                                            .read(theaterProvider.notifier)
-                                            .adoptSelectedRouteWithSource(
-                                              sourceChatSessionId: widget
-                                                  .initialSourceChatSessionId,
-                                            ),
-                                      ),
-                              onRunWhatIf: route == null
-                                  ? null
-                                  : (nodeIds) => unawaited(
-                                        ref
-                                            .read(theaterProvider.notifier)
-                                            .runWhatIfForSteps(nodeIds),
-                                      ),
-                              onSaveSnapshot: () => unawaited(
-                                ref.read(theaterProvider.notifier).saveSnapshot(),
-                              ),
-                              onNodeTap: (node) => unawaited(
-                                _handleNodeTap(node, route),
-                              ),
-                              onRecordActual: () => unawaited(
-                                _showActualOutcomeSheet(),
-                              ),
-                              onEdgeLongPress: (edge, globalPosition) =>
-                                  unawaited(
-                                _showEdgeTooltip(edge, globalPosition),
-                              ),
-                            ),
-                    );
-
-                    final contentChildren = <Widget>[
-                      if ((widget.initialSourceChatSessionId ?? '')
-                          .trim()
-                          .isNotEmpty) ...[
-                        ChatContinuityBanner(
-                          sourceChatSessionId:
-                              widget.initialSourceChatSessionId!.trim(),
-                          kind: ChatContinuityKind.journey,
-                          subtitle:
-                              '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      _ComposerCard(
-                        controller: _topicController,
+                    if (prediction == null) {
+                      final introBody = _TheaterIntroState(
+                        key: const ValueKey('theater-intro'),
                         isLoading: state.isLoading,
+                        loadingStage: state.loadingStage,
+                        latestSnapshot: state.snapshot,
                         suggestions: simulationState.recommendedSeeds,
-                        onSuggestionTap: (topic) {
-                          _topicController.text = topic;
-                          unawaited(_generatePrediction(topic));
-                        },
-                        onSubmit: () => unawaited(
+                        error: state.error,
+                        onStartFirstPrediction: () => unawaited(
                           _generatePrediction(_topicController.text),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ];
+                        onRetry: () => unawaited(
+                          _generatePrediction(_topicController.text),
+                        ),
+                        onChangeTarget: () {
+                          _topicController.clear();
+                          ref.read(theaterProvider.notifier).clearError();
+                        },
+                      );
 
-                    if (compactHeight) {
+                      final contentChildren = <Widget>[
+                        if ((widget.initialSourceChatSessionId ?? '')
+                            .trim()
+                            .isNotEmpty) ...[
+                          ChatContinuityBanner(
+                            sourceChatSessionId:
+                                widget.initialSourceChatSessionId!.trim(),
+                            kind: ChatContinuityKind.journey,
+                            subtitle:
+                                '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        _ComposerCard(
+                          controller: _topicController,
+                          isLoading: state.isLoading,
+                          suggestions: simulationState.recommendedSeeds,
+                          onSuggestionTap: (topic) {
+                            _topicController.text = topic;
+                            unawaited(_generatePrediction(topic));
+                          },
+                          onSubmit: () => unawaited(
+                            _generatePrediction(_topicController.text),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ];
+
                       return ListView(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          math.max(
+                            24,
+                            MediaQuery.of(context).padding.bottom + 16,
+                          ),
+                        ),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         children: [
                           ...contentChildren,
-                          SizedBox(
-                            height: math.max(
-                              420,
-                              constraints.maxHeight - 96,
-                            ),
-                            child: predictionBody,
-                          ),
+                          introBody,
                         ],
                       );
                     }
 
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          ...contentChildren,
-                          Expanded(child: predictionBody),
-                        ],
-                      ),
+                    return CustomScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            12,
+                            16,
+                            math.max(
+                              20,
+                              MediaQuery.of(context).padding.bottom + 14,
+                            ),
+                          ),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              if ((widget.initialSourceChatSessionId ?? '')
+                                  .trim()
+                                  .isNotEmpty) ...[
+                                ChatContinuityBanner(
+                                  sourceChatSessionId:
+                                      widget.initialSourceChatSessionId!.trim(),
+                                  kind: ChatContinuityKind.journey,
+                                  subtitle:
+                                      '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              GraphiteCardSurface(
+                                surfaceRole: SparkleSurfaceRole.card,
+                                padding: const EdgeInsets.all(14),
+                                child: _TheaterImmersiveTopBar(
+                                  topic: prediction.topic,
+                                  targetName: prediction.targetName,
+                                  targetResolutionMode:
+                                      prediction.targetResolutionMode,
+                                  semanticMatchCount:
+                                      prediction.semanticMatches.length,
+                                  selectedRoute: route,
+                                  onOpenSettings: () => unawaited(
+                                    _openSettingsSheet(
+                                      prediction: prediction,
+                                      state: state,
+                                      simulationState: simulationState,
+                                    ),
+                                  ),
+                                  onShare: () =>
+                                      unawaited(_showTheaterShareSheet()),
+                                  onOpenGalaxy:
+                                      prediction.hasMappedGalaxyReferences
+                                          ? () => context.go(GalaxyRoutes.home)
+                                          : null,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              if (constraints.maxWidth < 340 &&
+                                  prediction.paths.isNotEmpty) ...[
+                                _CompactRoutePreviewCard(
+                                  selectedRoute: route ??
+                                      prediction.paths.firstWhere(
+                                        (item) =>
+                                            item.id ==
+                                            prediction.recommendedRouteId,
+                                        orElse: () => prediction.paths.first,
+                                      ),
+                                  recommendedRouteId:
+                                      prediction.recommendedRouteId,
+                                  alternatives: prediction.paths
+                                      .where(
+                                        (item) =>
+                                            item.id !=
+                                            (route?.id ??
+                                                prediction.recommendedRouteId),
+                                      )
+                                      .toList(),
+                                  onOpenPathWorkbench: () {
+                                    setState(
+                                      () => _activeWorkbenchTab =
+                                          _TheaterWorkbenchTab.paths,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              SizedBox(
+                                height: math.max(
+                                  520,
+                                  constraints.maxHeight - 72,
+                                ),
+                                child: _PredictionView(
+                                  key: ValueKey(prediction.predictionId),
+                                  prediction: prediction,
+                                  selectedRoute: route,
+                                  timeline: timeline,
+                                  timelineIndex: timelineIndex,
+                                  focusNodeIds: focusNodeIds,
+                                  selectedNodeId: _selectedNodeId,
+                                  isTimelinePlaying: _isTimelinePlaying,
+                                  recommendedRouteId:
+                                      prediction.recommendedRouteId,
+                                  whatIfResult: state.whatIfResult,
+                                  snapshot: state.snapshot,
+                                  adoptionResult: state.adoptionResult,
+                                  accuracySummary: state.accuracySummary,
+                                  accuracyOverview: state.accuracyOverview,
+                                  accuracyTracking: prediction.accuracyTracking,
+                                  isLoading: state.isLoading,
+                                  isAdopting: state.isAdopting,
+                                  isSavingSnapshot: state.isSavingSnapshot,
+                                  error: state.error,
+                                  activeTab: _activeWorkbenchTab,
+                                  onWorkbenchTabChanged: (tab) {
+                                    setState(() => _activeWorkbenchTab = tab);
+                                  },
+                                  onRouteSelected: (routeId) => ref
+                                      .read(theaterProvider.notifier)
+                                      .selectRoute(routeId),
+                                  onTimelineSelected: (index) {
+                                    unawaited(
+                                      SensoryFeedbackService.emit(
+                                        SensoryFeedbackEvent.selection,
+                                      ),
+                                    );
+                                    if (_isTimelinePlaying) {
+                                      _stopTimelinePlayback();
+                                    }
+                                    ref
+                                        .read(theaterProvider.notifier)
+                                        .setTimelineIndex(index);
+                                  },
+                                  onToggleTimelinePlayback:
+                                      _toggleTimelinePlayback,
+                                  onResetTimelinePlayback:
+                                      _resetTimelinePlayback,
+                                  onAdopt: route == null
+                                      ? null
+                                      : () => unawaited(
+                                            ref
+                                                .read(theaterProvider.notifier)
+                                                .adoptSelectedRouteWithSource(
+                                                  sourceChatSessionId: widget
+                                                      .initialSourceChatSessionId,
+                                                ),
+                                          ),
+                                  onOpenSimulation: route == null
+                                      ? null
+                                      : () => context.push(
+                                            _buildSimulationRoute(route),
+                                          ),
+                                  onRunWhatIf: route == null
+                                      ? null
+                                      : (nodeIds) => unawaited(
+                                            ref
+                                                .read(theaterProvider.notifier)
+                                                .runWhatIfForSteps(nodeIds),
+                                          ),
+                                  onSaveSnapshot: () => unawaited(
+                                    ref
+                                        .read(theaterProvider.notifier)
+                                        .saveSnapshot(),
+                                  ),
+                                  isPromotingNode: state.isPromotingNode,
+                                  onPromoteNodeToGalaxy: (node) =>
+                                      unawaited(_promoteNodeToGalaxy(node)),
+                                  onNodeTap: (node) => unawaited(
+                                    _handleNodeTap(node, route),
+                                  ),
+                                  onRecordActual: () => unawaited(
+                                    _showActualOutcomeSheet(),
+                                  ),
+                                  onEdgeLongPress: (edge, globalPosition) =>
+                                      unawaited(
+                                    _showEdgeTooltip(edge, globalPosition),
+                                  ),
+                                ),
+                              ),
+                            ]),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -431,8 +572,8 @@ class _KnowledgeTheaterScreenState
         subtitle: shareRoute?.summary ?? prediction.topic,
         description: '推演主题：${prediction.topic}',
         metadata: <String, dynamic>{
-          'progress': ((shareRoute?.estimatedCompletionRate ?? 0.72) * 100)
-              .round(),
+          'progress':
+              ((shareRoute?.estimatedCompletionRate ?? 0.72) * 100).round(),
           'mastery': (shareRoute?.estimatedMastery ??
                   shareNode?.predictedMastery ??
                   72)
@@ -448,13 +589,11 @@ class _KnowledgeTheaterScreenState
       onCommunityShare: () => unawaited(
         showShareResourceSheet(
           context,
-          resourceType: state.adoptionResult != null
-              ? 'plan'
-              : 'knowledge_node',
-          resourceId:
-              state.adoptionResult?.planId ??
-                  shareNode?.id ??
-                  prediction.targetNodeId,
+          resourceType:
+              state.adoptionResult != null ? 'plan' : 'knowledge_node',
+          resourceId: state.adoptionResult?.planId ??
+              shareNode?.id ??
+              prediction.targetNodeId,
           title: state.adoptionResult?.planName ??
               shareRoute?.title ??
               shareNode?.name ??
@@ -552,10 +691,49 @@ class _KnowledgeTheaterScreenState
     masteryController.dispose();
   }
 
+  Future<void> _openSettingsSheet({
+    required TheaterPrediction prediction,
+    required TheaterState state,
+    required SimulationState simulationState,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final screenHeight = MediaQuery.of(sheetContext).size.height;
+        return SafeArea(
+          child: SizedBox(
+            height: math.min(480, screenHeight * 0.65),
+            child: _TheaterSettingsDrawer(
+              controller: _topicController,
+              isLoading: state.isLoading,
+              currentTargetName: prediction.targetName,
+              suggestions: simulationState.recommendedSeeds,
+              sourceChatSessionId: widget.initialSourceChatSessionId,
+              onClose: () => Navigator.of(sheetContext).pop(),
+              onSuggestionTap: (topic) {
+                Navigator.of(sheetContext).pop();
+                _topicController.text = topic;
+                unawaited(_generatePrediction(topic));
+              },
+              onSubmit: () {
+                Navigator.of(sheetContext).pop();
+                unawaited(_generatePrediction(_topicController.text));
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showNodeDetailSheet({
     required TheaterGraphNode node,
     required TheaterPathOption? selectedRoute,
     required ValueChanged<String>? onRunWhatIf,
+    required Future<void> Function(TheaterGraphNode node) onPromoteNode,
+    required bool isPromotingNode,
   }) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     final canRunWhatIf =
@@ -565,157 +743,193 @@ class _KnowledgeTheaterScreenState
         .firstOrNull;
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) {
         final scheme = Theme.of(sheetContext).colorScheme;
         final delta = node.predictedMastery - node.currentMastery;
+        final mediaQuery = MediaQuery.of(sheetContext);
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  node.name,
-                  style:
-                      Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  node.description.isEmpty
-                      ? '这个节点是当前推演中的关键知识点。'
-                      : node.description,
-                  style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.45,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _NodeStatChip(
-                      label: '当前掌握度',
-                      value: '${node.currentMastery.round()}%',
-                    ),
-                    _NodeStatChip(
-                      label: '预测掌握度',
-                      value: '${node.predictedMastery.round()}%',
-                    ),
-                    _NodeStatChip(
-                      label: '变化',
-                      value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
-                      accent: delta >= 0 ? DS.success : scheme.error,
-                    ),
-                    _NodeStatChip(
-                      label: '风险',
-                      value: _riskLabel(node.riskLevel),
-                      accent: _riskColor(node.riskLevel, scheme),
-                    ),
-                  ],
-                ),
-                if (matchedStep != null) ...[
-                  const SizedBox(height: 18),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              4,
+              20,
+              math.max(24, mediaQuery.viewInsets.bottom + 16),
+            ),
+            child: SizedBox(
+              height: mediaQuery.size.height * 0.82,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
                   Text(
-                    '它在当前路径里的作用',
+                    node.name,
+                    style: Theme.of(sheetContext)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    node.description.isEmpty
+                        ? '这个节点是当前推演中的关键知识点。'
+                        : node.description,
                     style:
-                        Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                        Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
                             ),
                   ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${matchedStep.dayLabel} · 第 ${matchedStep.index} 步',
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(
-                                color: _riskColor(node.riskLevel, scheme),
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          matchedStep.rationale,
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: DS.textSecondary,
-                                height: 1.45,
-                              ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '下一步动作：先用约 ${matchedStep.estimatedMinutes} 分钟处理这个节点，再进入后续步骤。',
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color: DS.textSecondary,
-                                height: 1.45,
-                              ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _NodeStatChip(
+                        label: '当前掌握度',
+                        value: '${node.currentMastery.round()}%',
+                      ),
+                      _NodeStatChip(
+                        label: '预测掌握度',
+                        value: '${node.predictedMastery.round()}%',
+                      ),
+                      _NodeStatChip(
+                        label: '变化',
+                        value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
+                        accent: delta >= 0 ? DS.success : scheme.error,
+                      ),
+                      _NodeStatChip(
+                        label: '风险',
+                        value: _riskLabel(node.riskLevel),
+                        accent: _riskColor(node.riskLevel, scheme),
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    FilledButton.tonal(
-                      onPressed: canRunWhatIf && onRunWhatIf != null
-                          ? () {
-                              Navigator.of(sheetContext).pop();
-                              onRunWhatIf(node.id);
-                            }
-                          : null,
-                      child: const Text('开始 What-If'),
+                  if (matchedStep != null) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      '它在当前路径里的作用',
+                      style:
+                          Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                     ),
-                    OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        unawaited(
-                          context.push(
-                            GalaxyRoutes.knowledgeDetail.replaceFirst(
-                              ':id',
-                              node.id,
-                            ),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${matchedStep.dayLabel} · 第 ${matchedStep.index} 步',
+                            style: Theme.of(sheetContext)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: _riskColor(node.riskLevel, scheme),
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
-                        );
-                      },
-                      child: const Text('查看 Galaxy'),
+                          const SizedBox(height: 6),
+                          Text(
+                            matchedStep.rationale,
+                            style: Theme.of(sheetContext)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.45,
+                                ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            '下一步动作：先用约 ${matchedStep.estimatedMinutes} 分钟处理这个节点，再进入后续步骤。',
+                            style: Theme.of(sheetContext)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.45,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-                if (!canRunWhatIf) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做 What-If。',
-                    style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                          color: DS.textSecondary,
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: canRunWhatIf && onRunWhatIf != null
+                            ? () {
+                                Navigator.of(sheetContext).pop();
+                                onRunWhatIf(node.id);
+                              }
+                            : null,
+                        child: const Text('开始假设推演'),
+                      ),
+                      FilledButton(
+                        onPressed: isPromotingNode
+                            ? null
+                            : () {
+                                Navigator.of(sheetContext).pop();
+                                unawaited(onPromoteNode(node));
+                              },
+                        child: Text(
+                          _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
                         ),
+                      ),
+                      OutlinedButton(
+                        onPressed: (node.mappedGalaxyNodeId ?? '').isEmpty
+                            ? null
+                            : () {
+                                Navigator.of(sheetContext).pop();
+                                unawaited(
+                                  context.push(
+                                    GalaxyRoutes.knowledgeDetail.replaceFirst(
+                                      ':id',
+                                      node.mappedGalaxyNodeId!,
+                                    ),
+                                  ),
+                                );
+                              },
+                        child: const Text('查看星图参考'),
+                      ),
+                    ],
                   ),
+                  if (!canRunWhatIf) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。',
+                      style:
+                          Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                    ),
+                  ],
+                  if ((node.mappedGalaxyNodeId ?? '').isEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。',
+                      style:
+                          Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -736,7 +950,63 @@ class _KnowledgeTheaterScreenState
           : (nodeId) => unawaited(
                 ref.read(theaterProvider.notifier).runWhatIfForStep(nodeId),
               ),
+      onPromoteNode: _promoteNodeToGalaxy,
+      isPromotingNode: ref.read(theaterProvider).isPromotingNode,
     );
+  }
+
+  Future<void> _promoteNodeToGalaxy(TheaterGraphNode node) async {
+    final mappedNodeId = (node.mappedGalaxyNodeId ?? '').trim();
+    final opensExisting = node.sourceType == 'graph_explicit' ||
+        node.sourceType == 'hybrid_reference';
+    if (opensExisting && mappedNodeId.isNotEmpty) {
+      if (!mounted) {
+        return;
+      }
+      await context.push(
+        GalaxyRoutes.knowledgeDetail.replaceFirst(':id', mappedNodeId),
+      );
+      return;
+    }
+
+    final result =
+        await ref.read(theaterProvider.notifier).promoteNodeToGalaxy(node.id);
+    if (!mounted) {
+      return;
+    }
+    if (result == null) {
+      final errorMessage = ref.read(theaterProvider).error ?? '加入知识星图失败，请稍后再试。';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            result.created
+                ? '已将「${result.nodeName}」加入知识星图，可以继续完善节点内容。'
+                : '已定位到知识星图中的「${result.nodeName}」，你可以继续完善节点内容。',
+          ),
+          action: SnackBarAction(
+            label: '去完善',
+            onPressed: () {
+              unawaited(
+                context.push(
+                  GalaxyRoutes.knowledgeDetail.replaceFirst(
+                    ':id',
+                    result.galaxyNodeId,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
   }
 
   Future<void> _showEdgeTooltip(
@@ -861,9 +1131,15 @@ class _NodeStatChip extends StatelessWidget {
 }
 
 class _SelectedNodeBanner extends StatelessWidget {
-  const _SelectedNodeBanner({required this.node});
+  const _SelectedNodeBanner({
+    required this.node,
+    required this.isPromotingNode,
+    required this.onPromoteToGalaxy,
+  });
 
   final TheaterGraphNode node;
+  final bool isPromotingNode;
+  final VoidCallback onPromoteToGalaxy;
 
   @override
   Widget build(BuildContext context) {
@@ -928,6 +1204,40 @@ class _SelectedNodeBanner extends StatelessWidget {
                     '${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}%',
                 accent: masteryDelta >= 0 ? DS.success : DS.error,
               ),
+              _NodeStatChip(
+                label: '来源',
+                value: _nodeSourceLabel(node),
+                accent: accent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              FilledButton.icon(
+                onPressed: isPromotingNode ? null : onPromoteToGalaxy,
+                icon: Icon(
+                  _nodeCanOpenGalaxy(node)
+                      ? Icons.open_in_new_rounded
+                      : Icons.add_circle_outline_rounded,
+                ),
+                label: Text(
+                  _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
+                child: Text(
+                  _nodeBannerHint(node),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                ),
+              ),
             ],
           ),
         ],
@@ -966,13 +1276,15 @@ class _ComposerCard extends StatelessWidget {
       metrics: <MirofishStageMetric>[
         MirofishStageMetric(
           label: '当前目标',
-          value: controller.text.trim().isEmpty ? '等待输入' : controller.text.trim(),
+          value:
+              controller.text.trim().isEmpty ? '等待输入' : controller.text.trim(),
           accent: DS.info,
           icon: Icons.flag_rounded,
         ),
         MirofishStageMetric(
           label: '推荐切入',
-          value: topSuggestions.isEmpty ? '输入后即可开始' : topSuggestions.first.topic,
+          value:
+              topSuggestions.isEmpty ? '输入后即可开始' : topSuggestions.first.topic,
           accent: DS.warning,
           icon: Icons.lightbulb_rounded,
         ),
@@ -1064,9 +1376,317 @@ class _ComposerCard extends StatelessWidget {
   }
 }
 
+class _TheaterImmersiveTopBar extends StatelessWidget {
+  const _TheaterImmersiveTopBar({
+    required this.topic,
+    required this.targetName,
+    required this.targetResolutionMode,
+    required this.semanticMatchCount,
+    required this.selectedRoute,
+    required this.onOpenSettings,
+    required this.onShare,
+    required this.onOpenGalaxy,
+  });
+
+  final String topic;
+  final String targetName;
+  final String targetResolutionMode;
+  final int semanticMatchCount;
+  final TheaterPathOption? selectedRoute;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onShare;
+  final VoidCallback? onOpenGalaxy;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  topic,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: '调整目标',
+                onPressed: onOpenSettings,
+                icon: const Icon(Icons.tune_rounded),
+              ),
+              IconButton.filledTonal(
+                tooltip: '分享推演',
+                onPressed: onShare,
+                icon: const Icon(Icons.share_outlined),
+              ),
+              IconButton.filledTonal(
+                tooltip: onOpenGalaxy == null ? '当前没有可打开的知识星图参考节点' : '查看知识星图',
+                onPressed: onOpenGalaxy,
+                icon: const Icon(Icons.auto_graph_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _MetricPill(label: '目标 · $targetName'),
+                const SizedBox(width: 8),
+                if (selectedRoute != null) ...[
+                  _MetricPill(label: '路径 · ${selectedRoute!.title}'),
+                  const SizedBox(width: 8),
+                ],
+                _MetricPill(
+                  label: '模式 · ${_targetModeLabel(targetResolutionMode)}',
+                ),
+                const SizedBox(width: 8),
+                _MetricPill(
+                  label: semanticMatchCount > 0
+                      ? '参考映射 $semanticMatchCount'
+                      : '纯自由推演',
+                ),
+                const SizedBox(width: 8),
+                _MetricPill(
+                  label:
+                      '掌握度 ${selectedRoute?.estimatedMastery.round() ?? '--'}%',
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+}
+
+class _TheaterSettingsDrawer extends StatelessWidget {
+  const _TheaterSettingsDrawer({
+    required this.controller,
+    required this.isLoading,
+    required this.currentTargetName,
+    required this.suggestions,
+    required this.onSuggestionTap,
+    required this.onSubmit,
+    required this.onClose,
+    this.sourceChatSessionId,
+  });
+
+  final TextEditingController controller;
+  final bool isLoading;
+  final String currentTargetName;
+  final List<SimulationSeedModel> suggestions;
+  final ValueChanged<String> onSuggestionTap;
+  final VoidCallback onSubmit;
+  final VoidCallback onClose;
+  final String? sourceChatSessionId;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '调整推演目标',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+              children: [
+                if ((sourceChatSessionId ?? '').trim().isNotEmpty) ...[
+                  ChatContinuityBanner(
+                    sourceChatSessionId: sourceChatSessionId!.trim(),
+                    kind: ChatContinuityKind.journey,
+                    subtitle: '这次推演仍然承接你刚才的对话上下文。',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Text(
+                  '当前目标：$currentTargetName',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: DS.info,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  textInputAction: TextInputAction.go,
+                  onSubmitted: (_) {
+                    if (!isLoading) {
+                      onSubmit();
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    labelText: '重新设定推演目标',
+                    hintText: '例如：两周内掌握线性代数的特征值部分',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: isLoading ? null : onSubmit,
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                  label: Text(isLoading ? '推演中...' : '生成新推演'),
+                ),
+                if (suggestions.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    '建议起点',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: suggestions.take(6).map((seed) {
+                      final topic = seed.topic.trim();
+                      if (topic.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return ActionChip(
+                        avatar: const Icon(Icons.bolt_rounded, size: 16),
+                        label: Text(topic),
+                        onPressed: () => onSuggestionTap(topic),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+}
+
+class _TheaterWorkbenchTabs extends StatelessWidget {
+  const _TheaterWorkbenchTabs({
+    required this.activeTab,
+    required this.onChanged,
+  });
+
+  final _TheaterWorkbenchTab activeTab;
+  final ValueChanged<_TheaterWorkbenchTab> onChanged;
+
+  Key _tabKey(_TheaterWorkbenchTab tab) =>
+      ValueKey<String>('theater-workbench-tab-${tab.name}');
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 420) {
+            const items = <({
+              _TheaterWorkbenchTab value,
+              String label,
+              IconData icon,
+            })>[
+              (
+                value: _TheaterWorkbenchTab.graph,
+                label: '图谱',
+                icon: Icons.hub_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.paths,
+                label: '路径',
+                icon: Icons.route_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.discussion,
+                label: '讨论',
+                icon: Icons.forum_rounded,
+              ),
+              (
+                value: _TheaterWorkbenchTab.calibration,
+                label: '校准',
+                icon: Icons.tune_rounded,
+              ),
+            ];
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: items
+                  .map(
+                    (item) => ChoiceChip(
+                      key: _tabKey(item.value),
+                      avatar: Icon(item.icon, size: 16),
+                      label: Text(item.label),
+                      selected: activeTab == item.value,
+                      onSelected: (_) => onChanged(item.value),
+                    ),
+                  )
+                  .toList(),
+            );
+          }
+          return SegmentedButton<_TheaterWorkbenchTab>(
+            segments: const [
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.graph,
+                label: Text('图谱'),
+                icon: Icon(Icons.hub_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.paths,
+                label: Text('路径'),
+                icon: Icon(Icons.route_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.discussion,
+                label: Text('讨论'),
+                icon: Icon(Icons.forum_rounded),
+              ),
+              ButtonSegment<_TheaterWorkbenchTab>(
+                value: _TheaterWorkbenchTab.calibration,
+                label: Text('校准'),
+                icon: Icon(Icons.tune_rounded),
+              ),
+            ],
+            selected: <_TheaterWorkbenchTab>{activeTab},
+            onSelectionChanged: (selection) => onChanged(selection.first),
+            showSelectedIcon: false,
+          );
+        },
+      );
+}
+
 class _TheaterIntroState extends StatelessWidget {
   const _TheaterIntroState({
     required this.isLoading,
+    required this.loadingStage,
     required this.latestSnapshot,
     required this.suggestions,
     required this.error,
@@ -1077,6 +1697,7 @@ class _TheaterIntroState extends StatelessWidget {
   });
 
   final bool isLoading;
+  final String loadingStage;
   final TheaterSnapshot? latestSnapshot;
   final List<SimulationSeedModel> suggestions;
   final String? error;
@@ -1087,10 +1708,12 @@ class _TheaterIntroState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const _PredictionLoadingState();
+      return _PredictionLoadingState(loadingStage: loadingStage);
     }
 
-    return ListView(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (error != null) ...[
           _TheaterErrorCard(
@@ -1240,19 +1863,25 @@ class _PredictionView extends StatelessWidget {
     required this.snapshot,
     required this.adoptionResult,
     required this.accuracySummary,
+    required this.accuracyOverview,
     required this.accuracyTracking,
     required this.isLoading,
     required this.isAdopting,
+    required this.isPromotingNode,
     required this.isSavingSnapshot,
     required this.error,
+    required this.activeTab,
+    required this.onWorkbenchTabChanged,
     required this.onRouteSelected,
     required this.onTimelineSelected,
     required this.onToggleTimelinePlayback,
     required this.onResetTimelinePlayback,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.onRunWhatIf,
     required this.onSaveSnapshot,
     required this.onRecordActual,
+    required this.onPromoteNodeToGalaxy,
     required this.onNodeTap,
     required this.onEdgeLongPress,
     super.key,
@@ -1270,25 +1899,37 @@ class _PredictionView extends StatelessWidget {
   final TheaterSnapshot? snapshot;
   final TheaterAdoptionResult? adoptionResult;
   final TheaterAccuracySummary? accuracySummary;
+  final TheaterAccuracyOverview? accuracyOverview;
   final TheaterAccuracyTracking? accuracyTracking;
   final bool isLoading;
   final bool isAdopting;
+  final bool isPromotingNode;
   final bool isSavingSnapshot;
   final String? error;
+  final _TheaterWorkbenchTab activeTab;
+  final ValueChanged<_TheaterWorkbenchTab> onWorkbenchTabChanged;
   final ValueChanged<String> onRouteSelected;
   final ValueChanged<int> onTimelineSelected;
   final VoidCallback onToggleTimelinePlayback;
   final VoidCallback onResetTimelinePlayback;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final ValueChanged<List<String>>? onRunWhatIf;
   final VoidCallback onSaveSnapshot;
   final VoidCallback onRecordActual;
+  final ValueChanged<TheaterGraphNode> onPromoteNodeToGalaxy;
   final ValueChanged<TheaterGraphNode> onNodeTap;
   final void Function(TheaterGraphEdge edge, Offset globalPosition)
       onEdgeLongPress;
 
   @override
   Widget build(BuildContext context) {
+    if (prediction.paths.isEmpty) {
+      return const _TheaterEmptyState(
+        title: '这次还没生成可采纳路径',
+        message: '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。',
+      );
+    }
     final route = selectedRoute;
     final selectedNode = prediction.graphNodes
         .where((node) => node.id == selectedNodeId)
@@ -1299,208 +1940,258 @@ class _PredictionView extends StatelessWidget {
     final safeTimelineIndex = routeTimeline.isEmpty
         ? 0
         : timelineIndex.clamp(0, routeTimeline.length - 1);
-    return ListView(
+    final activeRoute = route ??
+        prediction.paths.firstWhere(
+          (item) => item.id == recommendedRouteId,
+          orElse: () => prediction.paths.first,
+        );
+    final compactWidth = MediaQuery.sizeOf(context).width < 420;
+
+    final graphTab = ListView(
+      key: const PageStorageKey<String>('theater-graph-tab'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
-        _SectionEntrance(
-          delay: 0,
-          child: MirofishStageHeader(
-            icon: Icons.auto_graph_rounded,
-            eyebrow: '推演决策面板',
-            title: prediction.topic,
-            subtitle: route == null
-                ? '围绕 ${prediction.targetName}，先看推荐路径、关键风险和知识依赖，再决定采纳哪一种方案。'
-                : '当前正在查看「${route.title}」，重点是 ${route.summary}',
-            metrics: <MirofishStageMetric>[
-              MirofishStageMetric(
-                label: '推荐路径',
-                value: prediction.paths
-                        .firstWhere(
-                          (item) => item.id == prediction.recommendedRouteId,
-                          orElse: () => prediction.paths.first,
-                        )
-                        .title,
-                accent: DS.success,
-                icon: Icons.star_rounded,
+        GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          padding: const EdgeInsets.all(14),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MetricPill(label: '推荐路径 · ${activeRoute.title}'),
+              _MetricPill(
+                label: '预计掌握 ${activeRoute.estimatedMastery.round()}%',
               ),
-              MirofishStageMetric(
-                label: '预计掌握度',
-                value:
-                    '${(route ?? prediction.paths.firstWhere((item) => item.id == prediction.recommendedRouteId, orElse: () => prediction.paths.first)).estimatedMastery.round()}%',
-                accent: DS.info,
-                icon: Icons.stacked_line_chart_rounded,
+              _MetricPill(label: '风险 · ${_headlineRisk(activeRoute)}'),
+              _MetricPill(
+                label:
+                    '模式 · ${_targetModeLabel(prediction.targetResolutionMode)}',
               ),
-              MirofishStageMetric(
-                label: '主要风险',
-                value: _headlineRisk(
-                  route ??
-                      prediction.paths.firstWhere(
-                        (item) => item.id == prediction.recommendedRouteId,
-                        orElse: () => prediction.paths.first,
-                      ),
-                ),
-                accent: DS.warning,
-                icon: Icons.warning_amber_rounded,
+              _MetricPill(
+                label: prediction.semanticMatches.isNotEmpty
+                    ? '映射参考 ${prediction.semanticMatches.length}'
+                    : '候选待入图',
               ),
+              _MetricPill(label: '${prediction.graphNodes.length} 个节点'),
             ],
-            primaryLabel: route == null ? '查看推荐路径' : '采纳当前路径',
-            onPrimaryTap: route == null
-                ? () => onRouteSelected(prediction.recommendedRouteId)
-                : onAdopt,
-            accent: DS.brandPrimary,
           ),
         ),
-        const SizedBox(height: 14),
-        _SectionEntrance(
-          delay: 120,
-          child: GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '关系图谱',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+        const SizedBox(height: 12),
+        GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '关系图谱主舞台',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  _MetricPill(
+                    label: prediction.hasMappedGalaxyReferences
+                        ? '含星图参考'
+                        : '独立自由图谱',
+                  ),
+                  if (routeTimeline.isNotEmpty)
+                    _MetricPill(
+                      label: routeTimeline[safeTimelineIndex].label,
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        ' ${prediction.graphNodes.length} 节点',
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
                     ),
-                  ],
+              ),
+              const SizedBox(height: 10),
+              if (prediction.semanticMatches.isNotEmpty) ...[
+                _SemanticMatchSummary(matches: prediction.semanticMatches),
+                const SizedBox(height: 12),
+              ],
+              if (selectedNode != null) ...[
+                _SelectedNodeBanner(
+                  node: selectedNode,
+                  isPromotingNode: isPromotingNode,
+                  onPromoteToGalaxy: () => onPromoteNodeToGalaxy(selectedNode),
                 ),
                 const SizedBox(height: 12),
-                if (selectedNode != null) ...[
-                  _SelectedNodeBanner(node: selectedNode),
-                  const SizedBox(height: 12),
-                ],
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: InteractiveViewer(
-                    minScale: 0.9,
-                    maxScale: 2.2,
-                    boundaryMargin: const EdgeInsets.all(32),
-                    child: KnowledgeTheaterGraph(
-                      nodes: prediction.graphNodes,
-                      edges: prediction.graphEdges,
-                      focusNodeIds: focusNodeIds,
-                      selectedNodeId: selectedNodeId,
-                      routeNodeIds: route?.steps
-                              .map((step) => step.nodeId)
-                              .toList() ??
-                          const <String>[],
-                      onNodeTap: onNodeTap,
-                      onEdgeLongPress: onEdgeLongPress,
-                    ),
-                  ),
-                ),
               ],
-            ),
+              SizedBox(
+                height: math.max(460, MediaQuery.sizeOf(context).height * 0.66),
+                child: KnowledgeTheaterGraph(
+                  nodes: prediction.graphNodes,
+                  edges: prediction.graphEdges,
+                  focusNodeIds: focusNodeIds,
+                  selectedNodeId: selectedNodeId,
+                  routeNodeIds:
+                      route?.steps.map((step) => step.nodeId).toList() ??
+                          const <String>[],
+                  onNodeTap: onNodeTap,
+                  onEdgeLongPress: onEdgeLongPress,
+                  expandToFill: true,
+                ),
+              ),
+            ],
           ),
         ),
-        if (timeline.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _SectionEntrance(
-            delay: 220,
-            child: _TimelineSection(
-              timeline: routeTimeline,
-              selectedIndex: safeTimelineIndex,
-              turns: prediction.discussionTurns,
-              isPlaying: isTimelinePlaying,
-              onSelected: onTimelineSelected,
-              onTogglePlayback: onToggleTimelinePlayback,
-              onReset: onResetTimelinePlayback,
-              branchTimeline: whatIfResult?.branchTimeline ?? const [],
-            ),
+        if (compactWidth && prediction.paths.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _CompactRoutePreviewCard(
+            selectedRoute: activeRoute,
+            recommendedRouteId: recommendedRouteId,
+            alternatives: prediction.paths
+                .where((item) => item.id != activeRoute.id)
+                .toList(),
+            onOpenPathWorkbench: () =>
+                onWorkbenchTabChanged(_TheaterWorkbenchTab.paths),
           ),
         ],
-        const SizedBox(height: 14),
-        _SectionEntrance(
-          delay: 320,
-          child: _RouteSection(
-            routes: prediction.paths,
-            selectedRouteId: route?.id,
-            recommendedRouteId: recommendedRouteId,
-            onSelect: onRouteSelected,
-            onAdopt: onAdopt,
-            isAdopting: isAdopting,
-            adoptionResult: adoptionResult,
-          ),
+      ],
+    );
+
+    final pathTab = ListView(
+      key: const PageStorageKey<String>('theater-paths-tab'),
+      children: [
+        _RouteSection(
+          routes: prediction.paths,
+          selectedRouteId: route?.id,
+          recommendedRouteId: recommendedRouteId,
+          onSelect: onRouteSelected,
+          onAdopt: onAdopt,
+          onOpenSimulation: onOpenSimulation,
+          isAdopting: isAdopting,
+          adoptionResult: adoptionResult,
         ),
         if (route != null && prediction.paths.length > 1) ...[
           const SizedBox(height: 14),
-          _SectionEntrance(
-            delay: 380,
-            child: _RouteComparisonCard(
-              selectedRoute: route,
-              recommendedRouteId: recommendedRouteId,
-              alternatives: prediction.paths.where((item) => item.id != route.id).toList(),
-            ),
+          _RouteComparisonCard(
+            selectedRoute: route,
+            recommendedRouteId: recommendedRouteId,
+            alternatives:
+                prediction.paths.where((item) => item.id != route.id).toList(),
           ),
         ],
         if (route != null) ...[
           const SizedBox(height: 14),
-          _SectionEntrance(
-            delay: 420,
-            child: _WhatIfSection(
-              route: route,
-              result: whatIfResult,
-              onRun: onRunWhatIf,
-            ),
+          _WhatIfSection(
+            route: route,
+            result: whatIfResult,
+            onRun: onRunWhatIf,
           ),
         ],
-        const SizedBox(height: 14),
-        _SectionEntrance(
-          delay: 520,
-          child: _DiscussionSection(turns: prediction.discussionTurns),
+      ],
+    );
+
+    final discussionTab = ListView(
+      key: const PageStorageKey<String>('theater-discussion-tab'),
+      children: [
+        if (timeline.isNotEmpty) ...[
+          _TimelineSection(
+            timeline: routeTimeline,
+            selectedIndex: safeTimelineIndex,
+            turns: prediction.discussionTurns,
+            isPlaying: isTimelinePlaying,
+            onSelected: onTimelineSelected,
+            onTogglePlayback: onToggleTimelinePlayback,
+            onReset: onResetTimelinePlayback,
+            branchTimeline: whatIfResult?.branchTimeline ?? const [],
+          ),
+          const SizedBox(height: 14),
+        ],
+        _DiscussionSection(turns: prediction.discussionTurns),
+      ],
+    );
+
+    final calibrationTab = ListView(
+      key: const PageStorageKey<String>('theater-calibration-tab'),
+      children: [
+        GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '校准与落地',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '把推演变成计划、快照和真实反馈，形成闭环。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
-        _SectionEntrance(
-          delay: 620,
-          child: _SnapshotSection(
-            snapshot: snapshot,
-            isSaving: isSavingSnapshot,
-            onSave: onSaveSnapshot,
-          ),
+        _SnapshotSection(
+          snapshot: snapshot,
+          isSaving: isSavingSnapshot,
+          onSave: onSaveSnapshot,
         ),
         if (accuracySummary != null) ...[
           const SizedBox(height: 14),
-          _SectionEntrance(
-            delay: 720,
-            child: _AccuracyCard(summary: accuracySummary),
+          _AccuracyCard(
+            summary: accuracySummary,
+            overview: accuracyOverview,
           ),
         ] else if (accuracyTracking != null) ...[
           const SizedBox(height: 14),
-          _SectionEntrance(
-            delay: 720,
-            child: _AccuracyCard.pending(
-              tracking: accuracyTracking,
-              onRecordActual: onRecordActual,
-            ),
+          _AccuracyCard.pending(
+            tracking: accuracyTracking,
+            overview: accuracyOverview,
+            onRecordActual: onRecordActual,
           ),
         ],
         if (error != null) ...[
           const SizedBox(height: 14),
-          _TheaterErrorCard(
-            message: error!,
-          ),
+          _TheaterErrorCard(message: error!),
         ],
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        _TheaterWorkbenchTabs(
+          activeTab: activeTab,
+          onChanged: onWorkbenchTabChanged,
+        ),
+        const SizedBox(height: 12),
+        if (error != null && activeTab != _TheaterWorkbenchTab.calibration) ...[
+          _TheaterErrorCard(message: error!),
+          const SizedBox(height: 12),
+        ],
+        if (isLoading) ...[
+          const LinearProgressIndicator(minHeight: 3),
+          const SizedBox(height: 12),
+        ],
+        Expanded(
+          child: IndexedStack(
+            index: activeTab.index,
+            children: [
+              graphTab,
+              pathTab,
+              discussionTab,
+              calibrationTab,
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -1573,37 +2264,278 @@ class _TheaterErrorCard extends StatelessWidget {
   }
 }
 
-class _PredictionLoadingState extends StatelessWidget {
-  const _PredictionLoadingState();
+class _TheaterEmptyState extends StatelessWidget {
+  const _TheaterEmptyState({
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.route_outlined,
+                size: 36,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _SemanticMatchSummary extends StatelessWidget {
+  const _SemanticMatchSummary({
+    required this.matches,
+  });
+
+  final List<TheaterSemanticMatch> matches;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = matches.take(2).toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI 正在分析知识结构...',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+          Text(
+            '自由节点与星图参考',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  '节点会逐步亮起，路径卡片和专家讨论会依次出现。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                      ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            preview
+                .map(
+                  (item) =>
+                      '${item.freeformNodeName} 对应参考 ${item.galaxyNodeName}',
+                )
+                .join('；'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
                 ),
-                const SizedBox(height: 20),
-                const _SkeletonGraphStage(),
-              ],
-            ),
           ),
         ],
-      );
+      ),
+    );
+  }
+}
+
+class _PredictionLoadingState extends StatefulWidget {
+  const _PredictionLoadingState({
+    required this.loadingStage,
+  });
+
+  final String loadingStage;
+
+  @override
+  State<_PredictionLoadingState> createState() =>
+      _PredictionLoadingStateState();
+}
+
+class _PredictionLoadingStateState extends State<_PredictionLoadingState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  static const List<
+      ({
+        String key,
+        String title,
+        IconData icon,
+      })> _stages = [
+    (
+      key: 'graph',
+      title: '构建知识图谱',
+      icon: Icons.hub_rounded,
+    ),
+    (
+      key: 'paths',
+      title: '分析学习路径',
+      icon: Icons.route_rounded,
+    ),
+    (
+      key: 'prediction',
+      title: '生成风险预测',
+      icon: Icons.analytics_rounded,
+    ),
+    (
+      key: 'done',
+      title: '准备推演完成',
+      icon: Icons.check_circle_rounded,
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    unawaited(_controller.repeat(reverse: true));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int _stageIndex(String stage) {
+    final index = _stages.indexWhere((item) => item.key == stage);
+    return index >= 0 ? index : 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStageIndex = _stageIndex(widget.loadingStage);
+    final scheme = Theme.of(context).colorScheme;
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'AI 正在搭建这场推演...',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 18),
+          ...List.generate(_stages.length, (index) {
+            final item = _stages[index];
+            final isCompleted = index < currentStageIndex;
+            final isCurrent = index == currentStageIndex;
+            final accent = isCompleted
+                ? DS.success
+                : (isCurrent
+                    ? DS.info
+                    : scheme.outline.withValues(alpha: 0.65));
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == _stages.length - 1 ? 0 : 12,
+              ),
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final pulseScale =
+                      isCurrent ? (0.96 + (_controller.value * 0.08)) : 1.0;
+                  return Row(
+                    children: [
+                      Transform.scale(
+                        scale: pulseScale,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.32),
+                            ),
+                          ),
+                          child: isCompleted
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  color: DS.success,
+                                  size: 20,
+                                )
+                              : Icon(
+                                  item.icon,
+                                  color: accent,
+                                  size: 20,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isCurrent || isCompleted
+                                        ? null
+                                        : DS.textSecondary,
+                                  ),
+                        ),
+                      ),
+                      if (isCurrent)
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(accent),
+                          ),
+                        )
+                      else if (isCompleted)
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: DS.success,
+                          size: 18,
+                        )
+                      else
+                        Icon(
+                          Icons.more_horiz_rounded,
+                          color: scheme.outline.withValues(alpha: 0.8),
+                          size: 18,
+                        ),
+                    ],
+                  );
+                },
+              ),
+            );
+          }),
+          const SizedBox(height: 20),
+          const _SkeletonGraphStage(),
+        ],
+      ),
+    );
+  }
 }
 
 class _SkeletonGraphStage extends StatefulWidget {
@@ -1703,50 +2635,6 @@ class _SkeletonNode extends StatelessWidget {
       );
 }
 
-class _SectionEntrance extends StatefulWidget {
-  const _SectionEntrance({
-    required this.child,
-    required this.delay,
-  });
-
-  final Widget child;
-  final int delay;
-
-  @override
-  State<_SectionEntrance> createState() => _SectionEntranceState();
-}
-
-class _SectionEntranceState extends State<_SectionEntrance> {
-  bool _visible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(
-      Future<void>.delayed(
-        Duration(milliseconds: widget.delay > 140 ? 140 : widget.delay),
-      ).then((_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() => _visible = true);
-      }),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedSlide(
-        duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
-        curve: Curves.easeOutCubic,
-        offset: _visible ? Offset.zero : const Offset(0, 0.06),
-        child: AnimatedOpacity(
-          duration: context.reduceMotion ? Duration.zero : DS.durationNormal,
-          opacity: _visible ? 1 : 0,
-          child: widget.child,
-        ),
-      );
-}
-
 class _TimelineSection extends StatelessWidget {
   const _TimelineSection({
     required this.timeline,
@@ -1798,7 +2686,7 @@ class _TimelineSection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '现在可以按天拖动预测进度，直接对比基线路径和 What-If 分支的差异。',
+                '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -1950,6 +2838,7 @@ class _RouteSection extends StatefulWidget {
     required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     required this.adoptionResult,
   });
@@ -1959,6 +2848,7 @@ class _RouteSection extends StatefulWidget {
   final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
   final TheaterAdoptionResult? adoptionResult;
 
@@ -2043,9 +2933,10 @@ class _RouteSectionState extends State<_RouteSection> {
                     children: [
                       Text(
                         '路径对比',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                       ),
                       const SizedBox(height: 12),
                       SingleChildScrollView(
@@ -2081,6 +2972,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       pageController: _pageController,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
+                      onOpenSimulation: widget.onOpenSimulation,
                       isAdopting: widget.isAdopting,
                     )
                   : _RouteListView(
@@ -2090,6 +2982,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       recommendedRouteId: widget.recommendedRouteId,
                       onSelect: widget.onSelect,
                       onAdopt: widget.onAdopt,
+                      onOpenSimulation: widget.onOpenSimulation,
                       isAdopting: widget.isAdopting,
                     ),
             ),
@@ -2141,6 +3034,55 @@ String _headlineRisk(TheaterPathOption route) {
   return firstRisk;
 }
 
+String _targetModeLabel(String mode) {
+  switch (mode) {
+    case 'graph_explicit':
+      return '图谱锚定';
+    case 'hybrid_semantic':
+      return '智能混合';
+    case 'freeform_only':
+      return '自由推演';
+    default:
+      return '推演中';
+  }
+}
+
+bool _nodeCanOpenGalaxy(TheaterGraphNode node) =>
+    (node.mappedGalaxyNodeId ?? '').trim().isNotEmpty &&
+    (node.sourceType == 'graph_explicit' ||
+        node.sourceType == 'hybrid_reference');
+
+String _nodePrimaryGalaxyActionLabel(
+  TheaterGraphNode node,
+  bool isPromotingNode,
+) {
+  if (isPromotingNode) {
+    return '同步中...';
+  }
+  return _nodeCanOpenGalaxy(node) ? '打开知识星图' : '加入知识星图';
+}
+
+String _nodeSourceLabel(TheaterGraphNode node) {
+  switch (node.sourceType) {
+    case 'graph_explicit':
+      return '星图节点';
+    case 'hybrid_reference':
+      return '参考映射';
+    default:
+      return node.candidateStatus == 'pending_review' ? '候选节点' : '自由节点';
+  }
+}
+
+String _nodeBannerHint(TheaterGraphNode node) {
+  if (_nodeCanOpenGalaxy(node)) {
+    return '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+  }
+  if ((node.mappedGalaxyNodeId ?? '').trim().isNotEmpty) {
+    return '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+  }
+  return '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+}
+
 class _RouteListView extends StatelessWidget {
   const _RouteListView({
     required this.routes,
@@ -2148,6 +3090,7 @@ class _RouteListView extends StatelessWidget {
     required this.recommendedRouteId,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     super.key,
   });
@@ -2157,6 +3100,7 @@ class _RouteListView extends StatelessWidget {
   final String recommendedRouteId;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
 
   @override
@@ -2215,6 +3159,11 @@ class _RouteListView extends StatelessWidget {
                         onPressed: isAdopting ? null : onAdopt,
                         child: Text(isAdopting ? '采纳中' : '采纳此路径'),
                       );
+                      final simulateButton = FilledButton.tonalIcon(
+                        onPressed: onOpenSimulation,
+                        icon: const Icon(Icons.forum_outlined),
+                        label: const Text('带去模拟'),
+                      );
                       if (compact) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2222,7 +3171,14 @@ class _RouteListView extends StatelessWidget {
                             titleRow,
                             if (isSelected) ...[
                               const SizedBox(height: 10),
-                              adoptButton,
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  adoptButton,
+                                  simulateButton,
+                                ],
+                              ),
                             ],
                           ],
                         );
@@ -2231,6 +3187,8 @@ class _RouteListView extends StatelessWidget {
                         children: [
                           Expanded(child: titleRow),
                           if (isSelected) ...[
+                            const SizedBox(width: 12),
+                            simulateButton,
                             const SizedBox(width: 12),
                             adoptButton,
                           ],
@@ -2261,7 +3219,18 @@ class _RouteListView extends StatelessWidget {
                       _MetricPill(label: '日均 ${route.dailyMinutes} 分钟'),
                       _MetricPill(label: '${route.risks.length} 个风险点'),
                       _MetricPill(label: '综合 ${route.routeScore.round()} 分'),
+                      _MetricPill(
+                        label: '置信 ${(route.confidenceScore * 100).round()}%',
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '区间预测：完成率 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%，'
+                    ' 掌握度 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
                   ),
                 ],
               ),
@@ -2279,6 +3248,7 @@ class _RouteComparePager extends StatelessWidget {
     required this.pageController,
     required this.onSelect,
     required this.onAdopt,
+    required this.onOpenSimulation,
     required this.isAdopting,
     super.key,
   });
@@ -2289,6 +3259,7 @@ class _RouteComparePager extends StatelessWidget {
   final PageController pageController;
   final ValueChanged<String> onSelect;
   final VoidCallback? onAdopt;
+  final VoidCallback? onOpenSimulation;
   final bool isAdopting;
 
   @override
@@ -2368,18 +3339,47 @@ class _RouteComparePager extends StatelessWidget {
                                   label: '综合分',
                                   value: '${route.routeScore.round()}',
                                 ),
+                                _RouteMetricRow(
+                                  label: '置信度',
+                                  value:
+                                      '${(route.confidenceScore * 100).round()}%',
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: safeIndex == index && !isAdopting
-                                  ? onAdopt
-                                  : () => onSelect(route.id),
-                              child: Text(
-                                safeIndex == index
-                                    ? (isAdopting ? '采纳中' : '采纳此路径')
-                                    : '切换到此路径',
-                              ),
+                            Text(
+                              '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
+                              ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.tonalIcon(
+                                  onPressed: safeIndex == index
+                                      ? onOpenSimulation
+                                      : () => onSelect(route.id),
+                                  icon: const Icon(Icons.forum_outlined),
+                                  label: Text(
+                                    safeIndex == index ? '带去模拟' : '切换后模拟',
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: safeIndex == index && !isAdopting
+                                      ? onAdopt
+                                      : () => onSelect(route.id),
+                                  child: Text(
+                                    safeIndex == index
+                                        ? (isAdopting ? '采纳中' : '采纳此路径')
+                                        : '切换到此路径',
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         )
@@ -2429,7 +3429,31 @@ class _RouteComparePager extends StatelessWidget {
                                     label: '综合分',
                                     value: '${route.routeScore.round()}',
                                   ),
+                                  _RouteMetricRow(
+                                    label: '置信度',
+                                    value:
+                                        '${(route.confidenceScore * 100).round()}%',
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
+                                    ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: DS.textSecondary),
+                                  ),
                                   const Spacer(),
+                                  FilledButton.tonalIcon(
+                                    onPressed: safeIndex == index
+                                        ? onOpenSimulation
+                                        : () => onSelect(route.id),
+                                    icon: const Icon(Icons.forum_outlined),
+                                    label: Text(
+                                      safeIndex == index ? '带去模拟' : '切换后模拟',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
                                   FilledButton(
                                     onPressed: safeIndex == index && !isAdopting
                                         ? onAdopt
@@ -2629,6 +3653,100 @@ class _MetricPill extends StatelessWidget {
       );
 }
 
+class _CompactRoutePreviewCard extends StatelessWidget {
+  const _CompactRoutePreviewCard({
+    required this.selectedRoute,
+    required this.recommendedRouteId,
+    required this.alternatives,
+    required this.onOpenPathWorkbench,
+  });
+
+  final TheaterPathOption selectedRoute;
+  final String recommendedRouteId;
+  final List<TheaterPathOption> alternatives;
+  final VoidCallback onOpenPathWorkbench;
+
+  @override
+  Widget build(BuildContext context) {
+    final compareRoute = alternatives.firstWhere(
+      (item) => item.id == recommendedRouteId,
+      orElse: () => alternatives.firstOrNull ?? selectedRoute,
+    );
+    final focusSummary = selectedRoute.summary.trim().isNotEmpty
+        ? selectedRoute.summary.trim()
+        : _buildFallbackSummary(selectedRoute);
+    final compareSummary = compareRoute.id == selectedRoute.id
+        ? null
+        : (compareRoute.summary.trim().isNotEmpty
+            ? compareRoute.summary.trim()
+            : _buildFallbackSummary(compareRoute));
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '路径对比',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            focusSummary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+          if (compareSummary != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '对照路径：$compareSummary',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MetricPill(label: '当前 · ${selectedRoute.title}'),
+              _MetricPill(
+                label: '掌握 ${selectedRoute.estimatedMastery.round()}%',
+              ),
+              _MetricPill(label: '时间 ${selectedRoute.dailyMinutes} 分/天'),
+              if (compareRoute.id != selectedRoute.id)
+                _MetricPill(label: '对照 · ${compareRoute.title}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onOpenPathWorkbench,
+            icon: const Icon(Icons.route_rounded),
+            label: const Text('进入路径页细比'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildFallbackSummary(TheaterPathOption route) {
+    if (route.steps.isEmpty) {
+      return route.title;
+    }
+    final first = route.steps.first.nodeName;
+    final last = route.steps.last.nodeName;
+    if (route.steps.length == 1) {
+      return '先聚焦 $first。';
+    }
+    return '先补 $first，再推进 $last。';
+  }
+}
+
 class _TimelineMetricTile extends StatelessWidget {
   const _TimelineMetricTile({
     required this.label,
@@ -2826,7 +3944,7 @@ class _BranchDeltaCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'What-If 分支对比',
+            '假设分支对比',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -2841,7 +3959,7 @@ class _BranchDeltaCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? 'What-If'}',
+            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? '假设推演'}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -3012,7 +4130,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                     ),
             icon: const Icon(Icons.alt_route),
             label: Text(
-              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整 What-If 结果',
+              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整假设推演结果',
             ),
           ),
           if (widget.result != null) ...[
@@ -3279,7 +4397,9 @@ class _SnapshotSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  snapshot == null ? '把当前推演保存下来，稍后可以继续回看。' : '已保存：${snapshot!.title}',
+                  snapshot == null
+                      ? '把当前推演保存下来，稍后可以继续回看。'
+                      : '已保存：${snapshot!.title}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -3311,16 +4431,19 @@ class _SnapshotSection extends StatelessWidget {
 class _AccuracyCard extends StatelessWidget {
   const _AccuracyCard({
     required this.summary,
+    required this.overview,
   })  : tracking = null,
         onRecordActual = null;
 
   const _AccuracyCard.pending({
     required this.tracking,
+    required this.overview,
     required this.onRecordActual,
   }) : summary = null;
 
   final TheaterAccuracySummary? summary;
   final TheaterAccuracyTracking? tracking;
+  final TheaterAccuracyOverview? overview;
   final VoidCallback? onRecordActual;
 
   @override
@@ -3343,6 +4466,16 @@ class _AccuracyCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text('准确度 ${(summary!.accuracyScore * 100).round()}%'),
+              const SizedBox(height: 8),
+              Text(
+                summary!.withinPredictedRange
+                    ? '这次真实结果落在预测区间内，当前模型区间覆盖命中。'
+                    : '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
             ] else if (tracking != null) ...[
               Text(
                 tracking!.summaryHint,
@@ -3363,6 +4496,40 @@ class _AccuracyCard extends StatelessWidget {
                 onPressed: onRecordActual,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('记录实际表现'),
+              ),
+            ],
+            if (overview != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MetricPill(
+                    label: '样本 ${overview!.sampleCount}',
+                  ),
+                  _MetricPill(
+                    label:
+                        '平均准确度 ${(overview!.avgAccuracyScore * 100).round()}%',
+                  ),
+                  _MetricPill(
+                    label: '模型置信 ${(overview!.confidenceScore * 100).round()}%',
+                  ),
+                  if (overview!.coverageRate != null)
+                    _MetricPill(
+                      label: '区间命中 ${(overview!.coverageRate! * 100).round()}%',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                overview!.sampleCount == 0
+                    ? '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。'
+                    : '历史偏差：完成率 ${overview!.completionBiasMean >= 0 ? '+' : ''}${(overview!.completionBiasMean * 100).round()}%，'
+                        ' 掌握度 ${overview!.masteryBiasMean >= 0 ? '+' : ''}${overview!.masteryBiasMean.round()}%。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
               ),
             ],
           ],

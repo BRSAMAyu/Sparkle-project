@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import json
 import re
+import statistics
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -20,9 +22,13 @@ from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import PlanType
 from app.models.task import TaskType
+from app.models.theater_candidate_bundle import TheaterCandidateBundle
+from app.models.theater_prediction import TheaterPrediction
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.insight_copy import present_pattern_name
+from app.services.galaxy_service import GalaxyService
+from app.services.expansion_service import ExpansionService
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
@@ -30,6 +36,8 @@ from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.cognitive_service import CognitiveService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -122,6 +130,7 @@ class TheaterPathStep:
     estimated_minutes: int
     day_label: str
     checkpoint_label: str | None = None
+    mapped_galaxy_node_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,6 +144,7 @@ class TheaterPathStep:
             "estimated_minutes": self.estimated_minutes,
             "day_label": self.day_label,
             "checkpoint_label": self.checkpoint_label,
+            "mapped_galaxy_node_id": self.mapped_galaxy_node_id,
         }
 
 
@@ -153,6 +163,12 @@ class TheaterPathOption:
     route_score: float = 0.0
     checkpoint_days: list[int] | None = None
     week_one_tasks: list[dict[str, Any]] | None = None
+    confidence_score: float = 0.0
+    completion_range_low: float = 0.0
+    completion_range_high: float = 0.0
+    mastery_range_low: float = 0.0
+    mastery_range_high: float = 0.0
+    calibration_basis: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -168,6 +184,12 @@ class TheaterPathOption:
             "route_score": round(self.route_score, 2),
             "checkpoint_days": list(self.checkpoint_days or []),
             "week_one_tasks": list(self.week_one_tasks or []),
+            "confidence_score": round(self.confidence_score, 4),
+            "completion_range_low": round(self.completion_range_low, 4),
+            "completion_range_high": round(self.completion_range_high, 4),
+            "mastery_range_low": round(self.mastery_range_low, 2),
+            "mastery_range_high": round(self.mastery_range_high, 2),
+            "calibration_basis": self.calibration_basis,
             "steps": [step.to_dict() for step in self.steps],
         }
 
@@ -179,6 +201,7 @@ class TheaterTargetContext:
     target_node_id: str | None
     resolution_mode: str
     backbone: list[dict[str, Any]]
+    semantic_matches: list[dict[str, Any]]
 
 
 class PredictionAccuracyTracker:
@@ -214,9 +237,23 @@ class PredictionAccuracyTracker:
         predicted = cached.get("selected_prediction") if isinstance(cached.get("selected_prediction"), dict) else {}
         predicted_completion = float(predicted.get("estimated_completion_rate") or 0.0)
         predicted_mastery = float(predicted.get("estimated_mastery") or 0.0)
+        completion_range_low = predicted.get("completion_range_low")
+        completion_range_high = predicted.get("completion_range_high")
+        mastery_range_low = predicted.get("mastery_range_low")
+        mastery_range_high = predicted.get("mastery_range_high")
         completion_error = abs(predicted_completion - actual_completion_rate)
         mastery_error = abs(predicted_mastery - actual_mastery)
         accuracy_score = _clamp(1.0 - ((completion_error * 0.55) + (mastery_error / 100.0 * 0.45)), 0.0, 1.0)
+        within_completion_range = (
+            completion_range_low is not None
+            and completion_range_high is not None
+            and float(completion_range_low) <= actual_completion_rate <= float(completion_range_high)
+        )
+        within_mastery_range = (
+            mastery_range_low is not None
+            and mastery_range_high is not None
+            and float(mastery_range_low) <= actual_mastery <= float(mastery_range_high)
+        )
 
         summary = {
             "prediction_id": prediction_id,
@@ -227,6 +264,9 @@ class PredictionAccuracyTracker:
             "completion_error": round(completion_error, 4),
             "mastery_error": round(mastery_error, 2),
             "accuracy_score": round(accuracy_score, 4),
+            "within_completion_range": within_completion_range,
+            "within_mastery_range": within_mastery_range,
+            "within_predicted_range": bool(within_completion_range and within_mastery_range),
             "evaluated_at": _utcnow().isoformat(),
         }
         cached["accuracy_summary"] = summary
@@ -242,7 +282,7 @@ class PredictionAccuracyTracker:
 class PredictionTheaterService:
     SNAPSHOT_PREFIX = "theater:snapshot:"
     SNAPSHOT_TTL_SECONDS = 60 * 60 * 24 * 7
-    MAX_GRAPH_NODES = 12
+    MAX_GRAPH_NODES = 14
     PREDICTION_TIMEOUT_SECONDS = 30.0
 
     def __init__(self, db: AsyncSession):
@@ -259,6 +299,7 @@ class PredictionTheaterService:
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
         preview_mode: bool = False,
+        simulation_session_id: str | None = None,
     ) -> dict[str, Any]:
         try:
             return await asyncio.wait_for(
@@ -268,6 +309,7 @@ class PredictionTheaterService:
                     target_node_id=target_node_id,
                     horizon_days=horizon_days,
                     preview_mode=preview_mode,
+                    simulation_session_id=simulation_session_id,
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
@@ -282,6 +324,7 @@ class PredictionTheaterService:
         target_node_id: UUID | None = None,
         horizon_days: int = 14,
         preview_mode: bool = False,
+        simulation_session_id: str | None = None,
     ) -> dict[str, Any]:
         target_context = await self._resolve_target_context(
             user_id=user_id,
@@ -295,6 +338,7 @@ class PredictionTheaterService:
         mastery_map = await self._get_mastery_map(user_id)
         study_preferences = await self._build_user_learning_profile(user_id)
         pattern_names = await self._top_pattern_names(user_id)
+        calibration_profile = await self._build_prediction_calibration(user_id)
         options = self._build_path_options(
             target_name=target_context.name,
             backbone=backbone,
@@ -302,17 +346,24 @@ class PredictionTheaterService:
             horizon_days=max(7, min(horizon_days, 30)),
             study_preferences=study_preferences,
             pattern_names=pattern_names,
+            calibration_profile=calibration_profile,
             risk_overrides=(
                 await self._assess_step_risks(backbone, mastery_map)
-                if target_context.resolution_mode == "free_mode"
+                if target_context.resolution_mode != "graph_explicit"
                 else None
             ),
         )
         selected_prediction = options[0].to_dict() if options else {}
+        prediction_id = str(uuid4())
         graph_bundle = {"nodes": [], "edges": []}
         discussion: list[dict[str, Any]] = []
+        candidate_bundle_id = ""
         if not preview_mode:
-            graph_bundle = await self._build_graph_bundle(backbone, mastery_map)
+            graph_bundle = await self._build_graph_bundle(
+                backbone,
+                mastery_map,
+                target_context=target_context,
+            )
             discussion = await self._build_discussion(
                 topic=topic,
                 target_name=target_context.name,
@@ -320,20 +371,28 @@ class PredictionTheaterService:
                 graph_bundle=graph_bundle,
                 pattern_names=pattern_names,
             )
+            if target_context.resolution_mode != "graph_explicit":
+                candidate_bundle_id = await self._persist_candidate_bundle(
+                    user_id=user_id,
+                    prediction_id=prediction_id,
+                    topic=topic,
+                    target_context=target_context,
+                    graph_bundle=graph_bundle,
+                )
         generated_at = _utcnow()
         timeline = self._build_timeline(
             options,
             discussion,
             horizon_days=max(7, min(horizon_days, 30)),
         )
-
-        prediction_id = str(uuid4())
         payload = {
             "prediction_id": prediction_id,
             "user_id": str(user_id),
             "topic": topic,
+            "simulation_session_id": simulation_session_id,
             "target_node_id": target_context.target_node_id,
             "target_name": target_context.name,
+            "candidate_bundle_id": candidate_bundle_id,
             "horizon_days": horizon_days,
             "generated_at": generated_at.isoformat(),
             "paths": [option.to_dict() for option in options],
@@ -346,19 +405,25 @@ class PredictionTheaterService:
             "accuracy_tracking": self._build_accuracy_tracking(
                 prediction_id=prediction_id,
                 generated_at=generated_at,
+                calibration_profile=calibration_profile,
             ),
             "routing_notes": {
                 "patterns": pattern_names,
                 "recommended_entry": options[0].title if options else "稳扎稳打",
                 "target_resolution_mode": target_context.resolution_mode,
+                "semantic_matches": target_context.semantic_matches,
+                "calibration_profile": calibration_profile,
             },
             "preview_mode": preview_mode,
         }
         await self.accuracy.record_prediction(payload)
+        await self._persist_prediction(payload)
         if not preview_mode:
             query = {"topic": topic}
             if target_context.target_node_id:
                 query["target_node_id"] = target_context.target_node_id
+            if simulation_session_id:
+                query["simulation_session_id"] = simulation_session_id
             deep_link = f"/theater?{urlencode(query)}"
             await SystemUpdateService().enqueue(
                 user_id,
@@ -376,9 +441,11 @@ class PredictionTheaterService:
                         "target_node_id": target_context.target_node_id,
                         "target_name": target_context.name,
                         "topic": topic,
+                        "simulation_session_id": simulation_session_id,
                         "title": options[0].title if options else target_context.name,
                         "path_count": len(options),
                         "deep_link": deep_link,
+                        "candidate_bundle_id": candidate_bundle_id,
                         "target_resolution_mode": target_context.resolution_mode,
                         "prediction_preview": {
                             "prediction_id": prediction_id,
@@ -390,6 +457,8 @@ class PredictionTheaterService:
                     },
                 ),
             )
+        if not preview_mode and target_context.resolution_mode != "graph_explicit" and self.db is not None:
+            await self.db.commit()
         return payload
 
     async def _resolve_target_context(
@@ -406,16 +475,7 @@ class PredictionTheaterService:
                 target_node_id=target_node_id,
             )
             return await self._build_target_context_from_node(user_id=user_id, target_node=target_node)
-
-        try:
-            target_node = await self._resolve_target_node_for_user(
-                user_id=user_id,
-                topic=topic,
-                target_node_id=None,
-            )
-        except ValueError:
-            return await self._build_free_mode_target_context(topic)
-        return await self._build_target_context_from_node(user_id=user_id, target_node=target_node)
+        return await self._build_free_mode_target_context(topic)
 
     async def _build_target_context_from_node(
         self,
@@ -428,15 +488,36 @@ class PredictionTheaterService:
             target_node.id,
             include_related_suggestions=True,
         )
-        backbone = [item for item in learning_path if not item.get("is_optional")]
+        backbone = []
+        for item in learning_path:
+            if item.get("is_optional"):
+                continue
+            node_id = str(item.get("id") or "")
+            if not node_id:
+                continue
+            backbone.append(
+                {
+                    "id": node_id,
+                    "name": str(item.get("name") or "当前主题"),
+                    "description": str(item.get("description") or target_node.description or ""),
+                    "node_type": "target" if bool(item.get("is_target")) else "concept",
+                    "is_target": bool(item.get("is_target")),
+                "source_type": "graph_explicit",
+                "mapped_galaxy_node_id": node_id,
+                "candidate_status": None,
+                "aliases": [],
+                "sector_weights": dict(item.get("sector_weights") or {}),
+            }
+            )
         if not backbone:
             raise ValueError("Unable to generate a learning backbone for the selected topic")
         return TheaterTargetContext(
             name=str(target_node.name or "当前主题"),
             description=str(target_node.description or ""),
             target_node_id=str(target_node.id),
-            resolution_mode="knowledge_graph",
+            resolution_mode="graph_explicit",
             backbone=backbone,
+            semantic_matches=[],
         )
 
     async def _build_free_mode_target_context(self, topic: str) -> TheaterTargetContext:
@@ -446,16 +527,26 @@ class PredictionTheaterService:
                 {
                     "role": "system",
                     "content": (
-                        "Return strict JSON with keys target_name, description, prerequisites, milestones. "
-                        "This is for a free-mode learning theater when no knowledge graph node is found."
+                        "你是学习路径推演助手。请只返回严格 JSON 对象，不要输出 Markdown。"
+                        "必须包含字段：target_name、description、prerequisites、core_concepts、"
+                        "milestones、misconceptions、applications、aliases。"
+                        "所有字段值都必须使用中文表达；术语缩写如 LLM、RAG 可以保留。"
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"User topic: {topic}\n"
-                        "Extract the most likely learning target, 2-4 prerequisite concepts, and 1-2 milestone outcomes. "
-                        "Keep it concrete and beginner-friendly."
+                        f"学习主题：{topic}\n"
+                        "请把它理解为一个需要自由推演的学习目标，输出：\n"
+                        "1. 一个清晰的目标名称。\n"
+                        "2. 一段中文描述。\n"
+                        "3. 2-4 个前置知识。\n"
+                        "4. 3-5 个核心概念。\n"
+                        "5. 2-3 个里程碑。\n"
+                        "6. 1-3 个常见误区。\n"
+                        "7. 1-2 个典型应用场景。\n"
+                        "8. 1-3 个别名或相关叫法。\n"
+                        "请偏向结构化学习视角，而不是只给课程目录。"
                     ),
                 },
             ],
@@ -463,29 +554,48 @@ class PredictionTheaterService:
             temperature=0.2,
         )
         parsed = payload if isinstance(payload, dict) else fallback
-        for field in ("target_name", "description", "prerequisites", "milestones"):
+        for field in (
+            "target_name",
+            "description",
+            "prerequisites",
+            "core_concepts",
+            "milestones",
+            "misconceptions",
+            "applications",
+            "aliases",
+        ):
             if field not in parsed or parsed.get(field) in (None, "", []):
                 parsed[field] = self._default_free_mode_field(field, topic, fallback=fallback)
         target_name = str(parsed.get("target_name") or fallback["target_name"]).strip() or fallback["target_name"]
         description = str(parsed.get("description") or fallback["description"]).strip() or fallback["description"]
         prerequisites = self._coerce_string_list(parsed.get("prerequisites")) or list(fallback["prerequisites"])
+        core_concepts = self._coerce_string_list(parsed.get("core_concepts")) or list(fallback["core_concepts"])
         milestones = self._coerce_string_list(parsed.get("milestones")) or list(fallback["milestones"])
-        backbone_names = self._dedupe_preserve_order([*prerequisites, target_name, *milestones])
-        backbone = [
-            {
-                "id": f"free-step-{index + 1}",
-                "name": name,
-                "description": description if index == 0 else f"{target_name} 自由模式推演中的关键阶段",
-                "is_target": index == max(len(backbone_names) - 2, 0),
-            }
-            for index, name in enumerate(backbone_names[:5])
-        ]
+        misconceptions = self._coerce_string_list(parsed.get("misconceptions")) or list(fallback["misconceptions"])
+        applications = self._coerce_string_list(parsed.get("applications")) or list(fallback["applications"])
+        aliases = self._coerce_string_list(parsed.get("aliases")) or list(fallback["aliases"])
+        backbone = self._build_freeform_backbone(
+            target_name=target_name,
+            description=description,
+            prerequisites=prerequisites,
+            core_concepts=core_concepts,
+            milestones=milestones,
+            misconceptions=misconceptions,
+            applications=applications,
+            aliases=aliases,
+        )
+        enriched_backbone, semantic_matches = await self._semantic_enrich_freeform_nodes(
+            topic=topic,
+            target_name=target_name,
+            backbone=backbone,
+        )
         return TheaterTargetContext(
             name=target_name,
             description=description,
             target_node_id=None,
-            resolution_mode="free_mode",
-            backbone=backbone,
+            resolution_mode="hybrid_semantic" if semantic_matches else "freeform_only",
+            backbone=enriched_backbone,
+            semantic_matches=semantic_matches,
         )
 
     def _default_free_mode_field(
@@ -502,23 +612,41 @@ class PredictionTheaterService:
             return base["description"]
         if field == "prerequisites":
             return list(base["prerequisites"])
+        if field == "core_concepts":
+            return list(base["core_concepts"])
         if field == "milestones":
             return list(base["milestones"])
+        if field == "misconceptions":
+            return list(base["misconceptions"])
+        if field == "applications":
+            return list(base["applications"])
+        if field == "aliases":
+            return list(base["aliases"])
         return ""
 
     def _fallback_free_mode_target(self, topic: str) -> dict[str, Any]:
         terms = _normalized_topic_terms(topic)
         candidates = [term for term in terms if len(term) >= 2]
         target_name = candidates[0] if candidates else topic.strip() or "当前学习主题"
+        normalized_target = target_name if target_name.endswith("学习路径") else f"{target_name} 学习路径"
         prerequisites = candidates[1:4]
         if not prerequisites:
-            prerequisites = [f"{target_name} 的核心概念", f"{target_name} 的关键步骤"]
-        milestones = [f"{target_name} 的典型练习", f"{target_name} 的迁移应用"]
+            prerequisites = [f"{target_name} 的基础概念", f"{target_name} 的问题框架"]
+        core_concepts = [
+            f"{target_name} 的基本原理",
+            f"{target_name} 的关键组成",
+            f"{target_name} 的实践流程",
+        ]
+        milestones = [f"完成一个 {target_name} 入门案例", f"能够解释 {target_name} 的核心思路"]
         return {
-            "target_name": target_name,
-            "description": f"围绕 {target_name} 生成一条不依赖既有图谱节点的自由模式学习路径。",
+            "target_name": normalized_target,
+            "description": f"围绕 {target_name} 生成一张独立于现有知识星图的中文自由推演概念图。",
             "prerequisites": prerequisites[:3],
+            "core_concepts": core_concepts[:4],
             "milestones": milestones[:2],
+            "misconceptions": [f"把 {target_name} 当成零散技巧记忆，而不是系统能力"],
+            "applications": [f"用 {target_name} 解决一个真实问题"],
+            "aliases": [target_name],
         }
 
     @staticmethod
@@ -539,6 +667,188 @@ class PredictionTheaterService:
             if normalized and normalized not in deduped:
                 deduped.append(normalized)
         return deduped
+
+    def _build_freeform_backbone(
+        self,
+        *,
+        target_name: str,
+        description: str,
+        prerequisites: list[str],
+        core_concepts: list[str],
+        milestones: list[str],
+        misconceptions: list[str],
+        applications: list[str],
+        aliases: list[str],
+    ) -> list[dict[str, Any]]:
+        nodes: list[dict[str, Any]] = []
+
+        def append_nodes(items: list[str], *, node_type: str, is_target: bool = False) -> None:
+            for item in items:
+                name = str(item).strip()
+                if not name:
+                    continue
+                nodes.append(
+                    {
+                        "id": f"free-node-{len(nodes) + 1}",
+                        "name": name,
+                        "description": self._freeform_node_description(
+                            target_name=target_name,
+                            description=description,
+                            node_name=name,
+                            node_type=node_type,
+                        ),
+                        "node_type": node_type,
+                        "is_target": is_target,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": aliases if is_target else [],
+                        "sector_weights": {},
+                    }
+                )
+
+        append_nodes(prerequisites[:3], node_type="prerequisite")
+        append_nodes(core_concepts[:4], node_type="concept")
+        append_nodes([target_name], node_type="target", is_target=True)
+        append_nodes(milestones[:2], node_type="milestone")
+        append_nodes(applications[:2], node_type="application")
+        append_nodes(misconceptions[:2], node_type="misconception")
+
+        deduped: list[dict[str, Any]] = []
+        seen_names: set[str] = set()
+        for node in nodes:
+            normalized_name = str(node.get("name") or "").strip().lower()
+            if not normalized_name or normalized_name in seen_names:
+                continue
+            seen_names.add(normalized_name)
+            deduped.append(node)
+
+        if len(deduped) < 8:
+            append_nodes(
+                [
+                    f"{target_name} 的评估标准",
+                    f"{target_name} 的常见任务",
+                    f"{target_name} 的迁移练习",
+                ],
+                node_type="concept",
+            )
+            deduped = []
+            seen_names = set()
+            for node in nodes:
+                normalized_name = str(node.get("name") or "").strip().lower()
+                if not normalized_name or normalized_name in seen_names:
+                    continue
+                seen_names.add(normalized_name)
+                deduped.append(node)
+        return deduped[: self.MAX_GRAPH_NODES]
+
+    @staticmethod
+    def _freeform_node_description(
+        *,
+        target_name: str,
+        description: str,
+        node_name: str,
+        node_type: str,
+    ) -> str:
+        mapping = {
+            "prerequisite": f"{node_name} 是进入 {target_name} 前需要先补齐的前置基础。",
+            "concept": f"{node_name} 是理解 {target_name} 时必须真正吃透的核心概念。",
+            "target": description or f"{target_name} 是本轮推演的核心目标。",
+            "milestone": f"{node_name} 是衡量 {target_name} 是否开始成形的阶段里程碑。",
+            "application": f"{node_name} 展示了 {target_name} 可以落地到什么样的真实场景。",
+            "misconception": f"{node_name} 是学习 {target_name} 时最容易踩到的误区。",
+        }
+        return mapping.get(node_type, description or f"{node_name} 是 {target_name} 推演图中的关键节点。")
+
+    async def _semantic_enrich_freeform_nodes(
+        self,
+        *,
+        topic: str,
+        target_name: str,
+        backbone: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        if self.db is None or not backbone:
+            return backbone, []
+        galaxy = GalaxyService(self.db)
+        enriched: list[dict[str, Any]] = []
+        semantic_matches: list[dict[str, Any]] = []
+        for node in backbone:
+            updated = dict(node)
+            queries = self._dedupe_preserve_order(
+                [
+                    str(node.get("name") or ""),
+                    *self._coerce_string_list(node.get("aliases")),
+                    topic,
+                    target_name,
+                ]
+            )
+            best_match: dict[str, Any] | None = None
+            for query in queries[:3]:
+                try:
+                    results = await galaxy.semantic_search_nodes(query, limit=2, threshold=0.22)
+                except Exception:
+                    results = []
+                for candidate in results:
+                    confidence = self._semantic_match_confidence(
+                        query=query,
+                        node_name=str(node.get("name") or ""),
+                        candidate_name=str(candidate.name or ""),
+                        candidate_description=str(candidate.description or ""),
+                    )
+                    if confidence < 0.56:
+                        continue
+                    payload = self._build_semantic_match_payload(
+                        freeform_node=node,
+                        query=query,
+                        candidate=candidate,
+                        confidence=confidence,
+                    )
+                    if best_match is None or float(payload["confidence"]) > float(best_match["confidence"]):
+                        best_match = payload
+            if best_match is not None:
+                updated["mapped_galaxy_node_id"] = str(best_match["galaxy_node_id"])
+                updated["sector_weights"] = dict(best_match.get("sector_weights") or {})
+                semantic_matches.append(best_match)
+            enriched.append(updated)
+        return enriched, semantic_matches
+
+    @staticmethod
+    def _semantic_match_confidence(
+        *,
+        query: str,
+        node_name: str,
+        candidate_name: str,
+        candidate_description: str,
+    ) -> float:
+        query_terms = {term for term in re.split(r"[\s/,_-]+", query.lower()) if len(term) >= 2}
+        source_terms = {term for term in re.split(r"[\s/,_-]+", node_name.lower()) if len(term) >= 2}
+        candidate_terms = {
+            term
+            for term in re.split(r"[\s/,_-]+", f"{candidate_name} {candidate_description}".lower())
+            if len(term) >= 2
+        }
+        overlap = len((query_terms | source_terms) & candidate_terms)
+        contains = 1.0 if node_name and node_name.lower() in f"{candidate_name} {candidate_description}".lower() else 0.0
+        return _clamp((overlap * 0.14) + (contains * 0.32) + 0.28, 0.0, 0.96)
+
+    def _build_semantic_match_payload(
+        self,
+        *,
+        freeform_node: dict[str, Any],
+        query: str,
+        candidate: KnowledgeNode,
+        confidence: float,
+    ) -> dict[str, Any]:
+        return {
+            "freeform_node_id": str(freeform_node.get("id") or ""),
+            "freeform_node_name": str(freeform_node.get("name") or ""),
+            "galaxy_node_id": str(candidate.id),
+            "galaxy_node_name": str(candidate.name or ""),
+            "confidence": round(confidence, 2),
+            "evidence": f"“{freeform_node.get('name') or query}” 与知识星图节点“{candidate.name or ''}”语义接近，可作为参考映射。",
+            "query": query,
+            "sector_weights": dict(getattr(candidate, "sector_weights", None) or {}),
+        }
 
     async def _assess_step_risks(
         self,
@@ -741,6 +1051,95 @@ class PredictionTheaterService:
         await cache_service.set(f"{self.SNAPSHOT_PREFIX}{snapshot_id}", snapshot, ttl=self.SNAPSHOT_TTL_SECONDS)
         return snapshot
 
+    async def promote_node_to_galaxy(
+        self,
+        *,
+        user_id: UUID,
+        prediction_id: str,
+        theater_node_id: str,
+    ) -> dict[str, Any]:
+        cached = await self._get_prediction_or_raise(prediction_id)
+        graph = dict(cached.get("graph") or {})
+        nodes = [
+            node
+            for node in list(graph.get("nodes") or [])
+            if isinstance(node, dict)
+        ]
+        node = next(
+            (item for item in nodes if str(item.get("id") or "") == theater_node_id),
+            None,
+        )
+        if node is None:
+            raise ValueError("Theater node not found in this prediction")
+
+        source_type = str(node.get("source_type") or "freeform")
+        mapped_node_id = self._maybe_uuid(node.get("mapped_galaxy_node_id"))
+        if mapped_node_id is not None and source_type in {"graph_explicit", "hybrid_reference"}:
+            existing = await self.db.get(KnowledgeNode, mapped_node_id)
+            if existing is not None:
+                await self._patch_prediction_cache_with_promoted_node(
+                    cached=cached,
+                    prediction_id=prediction_id,
+                    theater_node_id=theater_node_id,
+                    galaxy_node_id=str(existing.id),
+                    candidate_status=None,
+                )
+                return {
+                    "prediction_id": prediction_id,
+                    "theater_node_id": theater_node_id,
+                    "node_name": existing.name,
+                    "galaxy_node_id": str(existing.id),
+                    "created": False,
+                    "source_type": source_type,
+                }
+
+        payload = await self._build_galaxy_candidate_from_prediction(
+            user_id=user_id,
+            cached=cached,
+            theater_node=node,
+        )
+        expansion_service = ExpansionService(self.db)
+        try:
+            promoted_node, created = await expansion_service.upsert_node_from_candidate(
+                user_id=user_id,
+                candidate=payload["candidate"],
+                trigger_node_id=payload["trigger_node_id"],
+                parent_node_id=payload["parent_node_id"],
+                subject_id=payload["subject_id"],
+                source_type="theater_candidate",
+                generate_embedding=True,
+                unlock_for_user=True,
+                commit=False,
+                invalidate_caches=False,
+            )
+            await self._record_candidate_bundle_promotion(
+                prediction_id=prediction_id,
+                theater_node_id=theater_node_id,
+                galaxy_node=promoted_node,
+                commit=False,
+            )
+            await self.db.commit()
+        except Exception:
+            await self.db.rollback()
+            raise
+
+        await expansion_service._invalidate_after_graph_mutation(user_id)
+        await self._patch_prediction_cache_with_promoted_node(
+            cached=cached,
+            prediction_id=prediction_id,
+            theater_node_id=theater_node_id,
+            galaxy_node_id=str(promoted_node.id),
+            candidate_status=None,
+        )
+        return {
+            "prediction_id": prediction_id,
+            "theater_node_id": theater_node_id,
+            "node_name": promoted_node.name,
+            "galaxy_node_id": str(promoted_node.id),
+            "created": created,
+            "source_type": source_type,
+        }
+
     async def adopt_prediction(
         self,
         *,
@@ -775,6 +1174,11 @@ class PredictionTheaterService:
             "route_id": route_id,
             "target_node_id": cached.get("target_node_id"),
             "target_name": target_name,
+            "candidate_bundle_id": cached.get("candidate_bundle_id"),
+            "target_resolution_mode": cached.get("target_resolution_mode"),
+            "semantic_matches": (
+                dict(cached.get("routing_notes") or {}).get("semantic_matches") or []
+            ),
             "steps": steps,
         }
         self.db.add(plan)
@@ -800,7 +1204,7 @@ class PredictionTheaterService:
 
         risk_steps = [step for step in steps if str(step.get("risk_level") or "") in {"medium", "high"}]
         for step in risk_steps[:3]:
-            node_id = step.get("node_id")
+            node_id = step.get("mapped_galaxy_node_id") or step.get("node_id")
             if not node_id:
                 continue
             try:
@@ -816,6 +1220,11 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
+        await self._update_prediction_db(prediction_id, {
+            "adopted_plan_id": plan.id,
+            "adopted_at": _utcnow(),
+            "selected_prediction": selected_route,
+        })
 
         try:
             await CognitiveService(self.db).create_fragment(
@@ -841,7 +1250,11 @@ class PredictionTheaterService:
         except Exception:
             pass
 
-        query = {"topic": str(cached.get("topic") or "")}
+        query = {
+            "topic": str(cached.get("topic") or ""),
+            "prediction_id": prediction_id,
+            "route_id": route_id,
+        }
         if cached.get("target_node_id"):
             query["target_node_id"] = str(cached.get("target_node_id"))
         deep_link = f"/theater?{urlencode(query)}"
@@ -889,6 +1302,17 @@ class PredictionTheaterService:
             "review_due_on": review_due_on,
         }
 
+    async def get_prediction(
+        self,
+        *,
+        user_id: UUID,
+        prediction_id: str,
+    ) -> dict[str, Any]:
+        return await self._get_prediction_for_user_or_raise(
+            prediction_id,
+            user_id=user_id,
+        )
+
     async def _write_back_to_chat(
         self,
         *,
@@ -923,7 +1347,7 @@ class PredictionTheaterService:
         actual_completion_rate: float | None = None,
         actual_mastery: float | None = None,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         target_node_id = cached.get("target_node_id")
         adopted_plan_id = cached.get("adopted_plan_id")
 
@@ -958,10 +1382,59 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
+        await self._update_prediction_db(prediction_id, {
+            "accuracy_status": "recorded",
+            "accuracy_summary": summary,
+            "accuracy_tracking": cached["accuracy_tracking"],
+        })
         return summary
 
-    async def get_accuracy_summary(self, prediction_id: str) -> dict[str, Any] | None:
-        return await self.accuracy.get_summary(prediction_id)
+    async def get_accuracy_summary(self, *, user_id: UUID, prediction_id: str) -> dict[str, Any] | None:
+        await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
+        cached = await self.accuracy.get_summary(prediction_id)
+        if cached is not None:
+            return cached
+        # DB fallback
+        if self.db is None:
+            return None
+        try:
+            result = await self.db.execute(
+                select(TheaterPrediction.accuracy_summary).where(
+                    TheaterPrediction.prediction_id == prediction_id,
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.deleted_at.is_(None),
+                )
+            )
+            row = result.scalar_one_or_none()
+            return row if isinstance(row, dict) else None
+        except Exception:
+            return None
+
+    async def get_accuracy_overview(self, *, user_id: UUID) -> dict[str, Any]:
+        calibration = await self._build_prediction_calibration(user_id)
+        sample_count = int(calibration.get("sample_count") or 0)
+        avg_accuracy_score = float(calibration.get("avg_accuracy_score") or 0.0)
+        coverage_rate = calibration.get("coverage_rate")
+        if sample_count == 0:
+            trend = "insufficient_data"
+        elif avg_accuracy_score >= 0.8:
+            trend = "stable"
+        elif avg_accuracy_score >= 0.65:
+            trend = "improving"
+        else:
+            trend = "needs_adjustment"
+        return {
+            "sample_count": sample_count,
+            "avg_accuracy_score": round(avg_accuracy_score, 4),
+            "completion_bias_mean": round(float(calibration.get("completion_bias_mean") or 0.0), 4),
+            "mastery_bias_mean": round(float(calibration.get("mastery_bias_mean") or 0.0), 2),
+            "completion_mae": round(float(calibration.get("completion_mae") or 0.0), 4),
+            "mastery_mae": round(float(calibration.get("mastery_mae") or 0.0), 2),
+            "coverage_rate": round(float(coverage_rate), 4) if coverage_rate is not None else None,
+            "confidence_score": round(float(calibration.get("confidence_score") or 0.0), 4),
+            "data_status": str(calibration.get("data_status") or "cold_start"),
+            "trend": trend,
+        }
 
     async def auto_check_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         pending_predictions = await self._get_pending_predictions(user_id)
@@ -992,30 +1465,51 @@ class PredictionTheaterService:
 
     async def _get_pending_predictions(self, user_id: UUID) -> list[dict[str, Any]]:
         redis_client = cache_service.redis
-        if redis_client is None:
-            return []
+        redis_ids: set[str] = set()
         results: list[dict[str, Any]] = []
-        indexed_prediction_ids = await redis_client.smembers(
-            f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
-        )
-        prediction_keys = [
-            f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
-            for raw_id in indexed_prediction_ids
-        ]
-        if not prediction_keys:
-            async for raw_key in redis_client.scan_iter(f"{self.accuracy.PREDICTION_KEY_PREFIX}*"):
-                key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
-                prediction_keys.append(key)
-        for key in prediction_keys:
-            cached = await cache_service.get(key)
-            if not isinstance(cached, dict):
-                continue
-            if str(cached.get("user_id") or "").strip() != str(user_id):
-                continue
-            accuracy_tracking = dict(cached.get("accuracy_tracking") or {})
-            if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
-                continue
-            results.append(cached)
+        if redis_client is not None:
+            indexed_prediction_ids = await redis_client.smembers(
+                f"{self.accuracy.USER_PREDICTION_INDEX_PREFIX}{user_id}"
+            )
+            prediction_keys = [
+                f"{self.accuracy.PREDICTION_KEY_PREFIX}{raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)}"
+                for raw_id in indexed_prediction_ids
+            ]
+            if not prediction_keys:
+                async for raw_key in redis_client.scan_iter(f"{self.accuracy.PREDICTION_KEY_PREFIX}*"):
+                    key = raw_key.decode() if isinstance(raw_key, bytes) else str(raw_key)
+                    prediction_keys.append(key)
+            for key in prediction_keys:
+                cached = await cache_service.get(key)
+                if not isinstance(cached, dict):
+                    continue
+                if str(cached.get("user_id") or "").strip() != str(user_id):
+                    continue
+                accuracy_tracking = dict(cached.get("accuracy_tracking") or {})
+                if str(accuracy_tracking.get("status") or "").strip() != "pending_feedback":
+                    continue
+                results.append(cached)
+                redis_ids.add(str(cached.get("prediction_id") or ""))
+
+        # DB fallback: fill in predictions that Redis missed (expired or
+        # never cached) and that are due for accuracy evaluation.
+        if self.db is not None:
+            try:
+                db_result = await self.db.execute(
+                    select(TheaterPrediction).where(
+                        TheaterPrediction.user_id == user_id,
+                        TheaterPrediction.accuracy_status == "pending_feedback",
+                        TheaterPrediction.accuracy_due_on <= _utcnow(),
+                        TheaterPrediction.deleted_at.is_(None),
+                    ).order_by(desc(TheaterPrediction.generated_at))
+                )
+                rows = db_result.scalars().all()
+                for row in rows:
+                    if row.prediction_id in redis_ids:
+                        continue  # Already have it from Redis
+                    results.append(self._prediction_row_to_payload(row))
+            except Exception as exc:
+                logger.warning("DB fallback for pending predictions failed: %s", exc)
         return results
 
     async def _compute_actual_from_prediction(
@@ -1037,7 +1531,7 @@ class PredictionTheaterService:
                 if isinstance(step, dict)
             ]
             candidate_node_ids = [
-                self._maybe_uuid(step.get("node_id"))
+                self._maybe_uuid(step.get("mapped_galaxy_node_id") or step.get("node_id"))
                 for step in route_steps
             ]
             valid_node_ids = [node_id for node_id in candidate_node_ids if node_id is not None]
@@ -1305,15 +1799,27 @@ class PredictionTheaterService:
         self,
         backbone: list[dict[str, Any]],
         mastery_map: dict[str, float],
+        *,
+        target_context: TheaterTargetContext,
     ) -> dict[str, Any]:
+        if target_context.resolution_mode != "graph_explicit":
+            return self._build_synthetic_graph_bundle(
+                backbone,
+                mastery_map,
+                semantic_matches=target_context.semantic_matches,
+            )
         node_ids: list[UUID] = []
         for item in backbone[: self.MAX_GRAPH_NODES]:
             try:
                 node_ids.append(UUID(str(item["id"])))
             except (KeyError, TypeError, ValueError):
-                return self._build_synthetic_graph_bundle(backbone, mastery_map)
+                return self._build_synthetic_graph_bundle(
+                    backbone,
+                    mastery_map,
+                    semantic_matches=target_context.semantic_matches,
+                )
         result = await self.db.execute(
-            select(KnowledgeNode.id, KnowledgeNode.name, KnowledgeNode.description)
+            select(KnowledgeNode.id, KnowledgeNode.name, KnowledgeNode.description, KnowledgeNode.sector_weights)
             .where(KnowledgeNode.id.in_(node_ids))
         )
         rows = result.all()
@@ -1325,8 +1831,17 @@ class PredictionTheaterService:
                 "current_mastery": round(mastery_map.get(str(node_id), 0.0), 2),
                 "predicted_mastery": round(_clamp(mastery_map.get(str(node_id), 0.0) + 18, 8, 100), 2),
                 "risk_level": "high" if mastery_map.get(str(node_id), 0.0) < 45 else ("medium" if mastery_map.get(str(node_id), 0.0) < 70 else "low"),
+                "source_type": "graph_explicit",
+                "mapped_galaxy_node_id": str(node_id),
+                "candidate_status": None,
+                "aliases": [],
+                "sector_weights": dict(sector_weights or {}),
+                "is_target": any(
+                    str(item.get("id") or "") == str(node_id) and bool(item.get("is_target"))
+                    for item in backbone
+                ),
             }
-            for node_id, name, description in rows
+            for node_id, name, description, sector_weights in rows
         }
         edge_rows = (
             await self.db.execute(
@@ -1344,6 +1859,9 @@ class PredictionTheaterService:
                 "target_id": str(target_id),
                 "relation_type": str(relation_type or "related").lower(),
                 "strength": float(strength or 0.5),
+                "confidence": round(_clamp(float(strength or 0.5) + 0.22, 0.45, 0.96), 2),
+                "evidence": f"知识星图里已存在 {relation_type or 'related'} 关系。",
+                "source_type": "graph_explicit",
             }
             for source_id, target_id, relation_type, strength in edge_rows
         ]
@@ -1356,6 +1874,9 @@ class PredictionTheaterService:
                     "target_id": ordered_ids[index + 1],
                     "relation_type": "prerequisite",
                     "strength": 0.58,
+                    "confidence": 0.61,
+                    "evidence": "根据显式目标路径补出的前置顺序。",
+                    "source_type": "graph_explicit",
                 }
                 for index in range(len(ordered_ids) - 1)
             ]
@@ -1366,6 +1887,7 @@ class PredictionTheaterService:
         backbone: list[dict[str, Any]],
         mastery_map: dict[str, float],
         risk_overrides: list[str] | None = None,
+        semantic_matches: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         nodes = []
         ordered_ids: list[str] = []
@@ -1373,7 +1895,8 @@ class PredictionTheaterService:
         for index, item in enumerate(backbone[: self.MAX_GRAPH_NODES]):
             node_id = str(item.get("id") or f"free-step-{index + 1}")
             ordered_ids.append(node_id)
-            current_mastery = mastery_map.get(node_id, _clamp(34 + index * 7, 18, 74))
+            mastery_key = str(item.get("mapped_galaxy_node_id") or node_id)
+            current_mastery = mastery_map.get(mastery_key, _clamp(34 + index * 7, 18, 74))
             nodes.append(
                 {
                     "id": node_id,
@@ -1390,19 +1913,471 @@ class PredictionTheaterService:
                             total=total,
                         )
                     ),
+                    "source_type": str(item.get("source_type") or "freeform"),
+                    "mapped_galaxy_node_id": (
+                        str(item.get("mapped_galaxy_node_id") or "") or None
+                    ),
+                    "candidate_status": item.get("candidate_status"),
+                    "aliases": list(item.get("aliases") or []),
+                    "sector_weights": dict(item.get("sector_weights") or {}),
+                    "is_target": bool(item.get("is_target")),
+                    "node_type": str(item.get("node_type") or "concept"),
                 }
             )
-        edges = [
-            {
-                "id": f"{ordered_ids[index]}_{ordered_ids[index + 1]}_free_mode",
-                "source_id": ordered_ids[index],
-                "target_id": ordered_ids[index + 1],
-                "relation_type": "prerequisite",
-                "strength": round(_clamp(0.66 - index * 0.06, 0.36, 0.76), 2),
+        edges = self._build_freeform_edges(backbone[: self.MAX_GRAPH_NODES])
+
+        reference_nodes: list[dict[str, Any]] = []
+        reference_edges: list[dict[str, Any]] = []
+        for match in semantic_matches or []:
+            freeform_node_id = str(match.get("freeform_node_id") or "")
+            galaxy_node_id = str(match.get("galaxy_node_id") or "")
+            galaxy_node_name = str(match.get("galaxy_node_name") or "")
+            if not freeform_node_id or not galaxy_node_id or not galaxy_node_name:
+                continue
+            ref_id = f"ref-{galaxy_node_id}"
+            if not any(node["id"] == ref_id for node in reference_nodes):
+                reference_nodes.append(
+                    {
+                        "id": ref_id,
+                        "name": galaxy_node_name,
+                        "description": str(match.get("evidence") or "来自知识星图的语义参考节点。"),
+                        "current_mastery": 0.0,
+                        "predicted_mastery": 0.0,
+                        "risk_level": "low",
+                        "source_type": "hybrid_reference",
+                        "mapped_galaxy_node_id": galaxy_node_id,
+                        "candidate_status": None,
+                        "aliases": [],
+                        "sector_weights": dict(match.get("sector_weights") or {}),
+                        "is_target": False,
+                        "node_type": "reference",
+                    }
+                )
+            reference_edges.append(
+                {
+                    "id": f"{freeform_node_id}_{ref_id}_semantic_reference",
+                    "source_id": freeform_node_id,
+                    "target_id": ref_id,
+                    "relation_type": "compare",
+                    "strength": 0.42,
+                    "confidence": float(match.get("confidence") or 0.58),
+                    "evidence": str(match.get("evidence") or "与知识星图中的相关节点存在语义映射。"),
+                    "source_type": "hybrid_reference",
+                }
+            )
+        return {"nodes": [*nodes, *reference_nodes], "edges": [*edges, *reference_edges]}
+
+    def _build_freeform_edges(self, backbone: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        prerequisites = [item for item in backbone if str(item.get("node_type") or "") == "prerequisite"]
+        concepts = [item for item in backbone if str(item.get("node_type") or "") == "concept"]
+        targets = [item for item in backbone if bool(item.get("is_target"))]
+        milestones = [item for item in backbone if str(item.get("node_type") or "") == "milestone"]
+        applications = [item for item in backbone if str(item.get("node_type") or "") == "application"]
+        misconceptions = [item for item in backbone if str(item.get("node_type") or "") == "misconception"]
+
+        edges: list[dict[str, Any]] = []
+
+        def add_edge(
+            source_id: str,
+            target_id: str,
+            relation_type: str,
+            strength: float,
+            evidence: str,
+            *,
+            source_type: str = "freeform",
+        ) -> None:
+            if not source_id or not target_id or source_id == target_id:
+                return
+            edge_id = f"{source_id}_{target_id}_{relation_type}"
+            if any(item["id"] == edge_id for item in edges):
+                return
+            edges.append(
+                {
+                    "id": edge_id,
+                    "source_id": source_id,
+                    "target_id": target_id,
+                    "relation_type": relation_type,
+                    "strength": round(strength, 2),
+                    "confidence": round(_clamp(strength + 0.18, 0.42, 0.94), 2),
+                    "evidence": evidence,
+                "source_type": source_type,
+                }
+            )
+
+        target = targets[0] if targets else None
+        for item in prerequisites:
+            for concept in concepts[:2]:
+                add_edge(
+                    str(item.get("id") or ""),
+                    str(concept.get("id") or ""),
+                    "prerequisite",
+                    0.66,
+                    f"{item.get('name') or ''} 是理解 {concept.get('name') or ''} 前要先补的基础。",
+                )
+        if target is not None:
+            for concept in concepts:
+                add_edge(
+                    str(concept.get("id") or ""),
+                    str(target.get("id") or ""),
+                    "part_of",
+                    0.72,
+                    f"{concept.get('name') or ''} 构成了目标 {target.get('name') or ''} 的核心部分。",
+                )
+            for item in prerequisites:
+                add_edge(
+                    str(item.get("id") or ""),
+                    str(target.get("id") or ""),
+                    "depends_on",
+                    0.58,
+                    f"{target.get('name') or ''} 需要建立在 {item.get('name') or ''} 之上。",
+                )
+            for milestone in milestones:
+                add_edge(
+                    str(target.get("id") or ""),
+                    str(milestone.get("id") or ""),
+                    "application",
+                    0.63,
+                    f"{milestone.get('name') or ''} 可以作为 {target.get('name') or ''} 的阶段性产出。",
+                )
+            for application in applications:
+                add_edge(
+                    str(target.get("id") or ""),
+                    str(application.get("id") or ""),
+                    "application",
+                    0.68,
+                    f"{application.get('name') or ''} 体现了 {target.get('name') or ''} 的落地方向。",
+                )
+            for misconception in misconceptions:
+                add_edge(
+                    str(misconception.get("id") or ""),
+                    str(target.get("id") or ""),
+                    "confusion_with",
+                    0.48,
+                    f"{misconception.get('name') or ''} 是学习 {target.get('name') or ''} 时容易出现的误区。",
+                )
+        for index in range(max(len(concepts) - 1, 0)):
+            add_edge(
+                str(concepts[index].get("id") or ""),
+                str(concepts[index + 1].get("id") or ""),
+                "compare",
+                0.44,
+                f"{concepts[index].get('name') or ''} 与 {concepts[index + 1].get('name') or ''} 需要放在一起理解与对比。",
+            )
+        ordered_ids = [str(item.get("id") or "") for item in backbone if str(item.get("id") or "")]
+        for index in range(len(ordered_ids) - 1):
+            add_edge(
+                ordered_ids[index],
+                ordered_ids[index + 1],
+                "depends_on",
+                0.39,
+                "这两个节点在推演节奏上存在连续推进关系。",
+            )
+        return edges
+
+    async def _persist_candidate_bundle(
+        self,
+        *,
+        user_id: UUID,
+        prediction_id: str,
+        topic: str,
+        target_context: TheaterTargetContext,
+        graph_bundle: dict[str, Any],
+    ) -> str:
+        if self.db is None:
+            return ""
+        bundle = TheaterCandidateBundle(
+            user_id=user_id,
+            prediction_id=prediction_id,
+            topic=topic,
+            target_name=target_context.name,
+            target_resolution_mode=target_context.resolution_mode,
+            status="pending_review",
+            nodes_payload=list(graph_bundle.get("nodes") or []),
+            edges_payload=list(graph_bundle.get("edges") or []),
+            semantic_matches=list(target_context.semantic_matches or []),
+            source_metadata={
+                "target_description": target_context.description,
+                "target_node_id": target_context.target_node_id,
+                "backbone_node_ids": [str(item.get("id") or "") for item in target_context.backbone],
+            },
+        )
+        self.db.add(bundle)
+        await self.db.flush()
+        return str(bundle.id)
+
+    async def _build_galaxy_candidate_from_prediction(
+        self,
+        *,
+        user_id: UUID,
+        cached: dict[str, Any],
+        theater_node: dict[str, Any],
+    ) -> dict[str, Any]:
+        del user_id
+        parent_node_id: UUID | None = None
+        trigger_node_id: UUID | None = None
+        relation_type = "related"
+        relation_strength = 0.68
+        graph = dict(cached.get("graph") or {})
+        nodes_by_id = {
+            str(item.get("id") or ""): item
+            for item in list(graph.get("nodes") or [])
+            if isinstance(item, dict)
+        }
+        for edge in list(graph.get("edges") or []):
+            if not isinstance(edge, dict):
+                continue
+            source_id = str(edge.get("source_id") or "")
+            target_id = str(edge.get("target_id") or "")
+            if theater_node.get("id") not in {source_id, target_id}:
+                continue
+            neighbor_id = target_id if source_id == theater_node.get("id") else source_id
+            neighbor = dict(nodes_by_id.get(neighbor_id) or {})
+            mapped_neighbor_id = self._maybe_uuid(
+                neighbor.get("mapped_galaxy_node_id") or neighbor.get("id")
+            )
+            if mapped_neighbor_id is None:
+                continue
+            parent_node_id = mapped_neighbor_id
+            trigger_node_id = mapped_neighbor_id
+            relation_type = str(edge.get("relation_type") or "related")
+            relation_strength = float(edge.get("strength") or 0.68)
+            break
+
+        if parent_node_id is None:
+            target_node_id = self._maybe_uuid(cached.get("target_node_id"))
+            parent_node_id = target_node_id
+            trigger_node_id = target_node_id
+
+        subject_id: int | None = None
+        if parent_node_id is not None:
+            parent_node = await self.db.get(KnowledgeNode, parent_node_id)
+            if parent_node is not None:
+                subject_id = getattr(parent_node, "subject_id", None)
+
+        candidate = {
+            "name": str(theater_node.get("name") or "未命名节点"),
+            "name_en": None,
+            "description": str(theater_node.get("description") or ""),
+            "importance_level": 4 if bool(theater_node.get("is_target")) else 3,
+            "relation_to_trigger": relation_type,
+            "relation_strength": relation_strength,
+            "keywords": self._dedupe_preserve_order(
+                [
+                    *self._coerce_string_list(theater_node.get("aliases")),
+                    str(cached.get("topic") or ""),
+                    str(cached.get("target_name") or ""),
+                ]
+            ),
+            "sector_weights": dict(theater_node.get("sector_weights") or {}),
+        }
+        return {
+            "candidate": candidate,
+            "parent_node_id": parent_node_id,
+            "trigger_node_id": trigger_node_id,
+            "subject_id": subject_id,
+        }
+
+    async def _record_candidate_bundle_promotion(
+        self,
+        *,
+        prediction_id: str,
+        theater_node_id: str,
+        galaxy_node: KnowledgeNode,
+        commit: bool = True,
+    ) -> None:
+        if self.db is None:
+            return
+        result = await self.db.execute(
+            select(TheaterCandidateBundle).where(TheaterCandidateBundle.prediction_id == prediction_id)
+        )
+        bundle = result.scalar_one_or_none()
+        if bundle is None:
+            return
+        metadata = dict(bundle.source_metadata or {})
+        promoted_nodes = dict(metadata.get("promoted_nodes") or {})
+        promoted_nodes[theater_node_id] = {
+            "galaxy_node_id": str(galaxy_node.id),
+            "name": galaxy_node.name,
+            "promoted_at": _utcnow().isoformat(),
+        }
+        metadata["promoted_nodes"] = promoted_nodes
+        bundle.source_metadata = metadata
+        bundle.status = "partially_applied"
+        self.db.add(bundle)
+        if commit:
+            await self.db.commit()
+
+    async def _patch_prediction_cache_with_promoted_node(
+        self,
+        *,
+        cached: dict[str, Any],
+        prediction_id: str,
+        theater_node_id: str,
+        galaxy_node_id: str,
+        candidate_status: str | None,
+    ) -> None:
+        graph = dict(cached.get("graph") or {})
+        graph_nodes = []
+        for item in list(graph.get("nodes") or []):
+            if not isinstance(item, dict):
+                continue
+            updated = dict(item)
+            if str(updated.get("id") or "") == theater_node_id:
+                updated["mapped_galaxy_node_id"] = galaxy_node_id
+                updated["candidate_status"] = candidate_status
+            graph_nodes.append(updated)
+        graph["nodes"] = graph_nodes
+        cached["graph"] = graph
+        cached["candidate_bundle_id"] = str(cached.get("candidate_bundle_id") or "")
+
+        updated_paths = []
+        for path in list(cached.get("paths") or []):
+            if not isinstance(path, dict):
+                continue
+            updated_path = dict(path)
+            updated_steps = []
+            for step in list(path.get("steps") or []):
+                if not isinstance(step, dict):
+                    continue
+                updated_step = dict(step)
+                if str(updated_step.get("node_id") or "") == theater_node_id:
+                    updated_step["mapped_galaxy_node_id"] = galaxy_node_id
+                updated_steps.append(updated_step)
+            updated_path["steps"] = updated_steps
+            updated_paths.append(updated_path)
+        cached["paths"] = updated_paths
+        await cache_service.set(
+            f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}",
+            cached,
+            ttl=self.accuracy.TTL_SECONDS,
+        )
+
+    async def _build_prediction_calibration(self, user_id: UUID) -> dict[str, Any]:
+        default_profile = {
+            "sample_count": 0,
+            "completion_bias_mean": 0.0,
+            "mastery_bias_mean": 0.0,
+            "completion_mae": 0.12,
+            "mastery_mae": 12.0,
+            "avg_accuracy_score": 0.0,
+            "coverage_rate": None,
+            "confidence_score": 0.42,
+            "data_status": "cold_start",
+            "strategy_profiles": {},
+        }
+        if self.db is None:
+            return default_profile
+        try:
+            result = await self.db.execute(
+                select(
+                    TheaterPrediction.selected_prediction,
+                    TheaterPrediction.accuracy_summary,
+                ).where(
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.accuracy_summary.is_not(None),
+                    TheaterPrediction.deleted_at.is_(None),
+                ).order_by(
+                    desc(TheaterPrediction.generated_at),
+                ).limit(40)
+            )
+            rows = result.all()
+        except Exception as exc:
+            logger.warning("Failed to build theater calibration profile for %s: %s", user_id, exc)
+            return default_profile
+
+        if not rows:
+            return default_profile
+
+        completion_biases: list[float] = []
+        mastery_biases: list[float] = []
+        completion_errors: list[float] = []
+        mastery_errors: list[float] = []
+        accuracy_scores: list[float] = []
+        coverage_hits = 0
+        coverage_total = 0
+        strategy_samples: dict[str, dict[str, list[float] | int]] = {}
+
+        for selected_prediction, accuracy_summary in rows:
+            if not isinstance(selected_prediction, dict) or not isinstance(accuracy_summary, dict):
+                continue
+            predicted_completion = float(
+                accuracy_summary.get("predicted_completion_rate")
+                or selected_prediction.get("estimated_completion_rate")
+                or 0.0,
+            )
+            predicted_mastery = float(
+                accuracy_summary.get("predicted_mastery")
+                or selected_prediction.get("estimated_mastery")
+                or 0.0,
+            )
+            actual_completion = float(accuracy_summary.get("actual_completion_rate") or 0.0)
+            actual_mastery = float(accuracy_summary.get("actual_mastery") or 0.0)
+            completion_bias = actual_completion - predicted_completion
+            mastery_bias = actual_mastery - predicted_mastery
+            completion_error = abs(completion_bias)
+            mastery_error = abs(mastery_bias)
+            strategy_type = str(selected_prediction.get("strategy_type") or "unknown")
+
+            completion_biases.append(completion_bias)
+            mastery_biases.append(mastery_bias)
+            completion_errors.append(completion_error)
+            mastery_errors.append(mastery_error)
+            accuracy_scores.append(float(accuracy_summary.get("accuracy_score") or 0.0))
+
+            strategy_bucket = strategy_samples.setdefault(
+                strategy_type,
+                {
+                    "completion_biases": [],
+                    "mastery_biases": [],
+                    "completion_errors": [],
+                    "mastery_errors": [],
+                    "sample_count": 0,
+                },
+            )
+            strategy_bucket["completion_biases"].append(completion_bias)
+            strategy_bucket["mastery_biases"].append(mastery_bias)
+            strategy_bucket["completion_errors"].append(completion_error)
+            strategy_bucket["mastery_errors"].append(mastery_error)
+            strategy_bucket["sample_count"] = int(strategy_bucket["sample_count"]) + 1
+
+            completion_low = selected_prediction.get("completion_range_low")
+            completion_high = selected_prediction.get("completion_range_high")
+            mastery_low = selected_prediction.get("mastery_range_low")
+            mastery_high = selected_prediction.get("mastery_range_high")
+            if all(value is not None for value in [completion_low, completion_high, mastery_low, mastery_high]):
+                coverage_total += 1
+                if (
+                    float(completion_low) <= actual_completion <= float(completion_high)
+                    and float(mastery_low) <= actual_mastery <= float(mastery_high)
+                ):
+                    coverage_hits += 1
+
+        sample_count = len(accuracy_scores)
+        if sample_count == 0:
+            return default_profile
+
+        strategy_profiles: dict[str, Any] = {}
+        for strategy_type, bucket in strategy_samples.items():
+            strategy_profiles[strategy_type] = {
+                "sample_count": int(bucket["sample_count"]),
+                "completion_bias_mean": round(statistics.mean(bucket["completion_biases"]), 4),
+                "mastery_bias_mean": round(statistics.mean(bucket["mastery_biases"]), 2),
+                "completion_mae": round(statistics.mean(bucket["completion_errors"]), 4),
+                "mastery_mae": round(statistics.mean(bucket["mastery_errors"]), 2),
             }
-            for index in range(len(ordered_ids) - 1)
-        ]
-        return {"nodes": nodes, "edges": edges}
+
+        return {
+            "sample_count": sample_count,
+            "completion_bias_mean": round(statistics.mean(completion_biases), 4),
+            "mastery_bias_mean": round(statistics.mean(mastery_biases), 2),
+            "completion_mae": round(statistics.mean(completion_errors), 4),
+            "mastery_mae": round(statistics.mean(mastery_errors), 2),
+            "avg_accuracy_score": round(statistics.mean(accuracy_scores), 4),
+            "coverage_rate": round((coverage_hits / coverage_total), 4) if coverage_total else None,
+            "confidence_score": round(_clamp(0.45 + min(sample_count, 20) * 0.02, 0.45, 0.9), 4),
+            "data_status": "calibrated" if sample_count >= 5 else "blended_history",
+            "strategy_profiles": strategy_profiles,
+        }
 
     def _build_path_options(
         self,
@@ -1413,10 +2388,17 @@ class PredictionTheaterService:
         horizon_days: int,
         study_preferences: dict[str, Any],
         pattern_names: list[str],
+        calibration_profile: dict[str, Any],
         risk_overrides: list[str] | None = None,
     ) -> list[TheaterPathOption]:
         node_names = [str(item.get("name") or "") for item in backbone]
-        average_mastery = sum(mastery_map.get(str(item["id"]), 0.0) for item in backbone) / max(len(backbone), 1)
+        average_mastery = sum(
+            mastery_map.get(
+                str(item.get("mapped_galaxy_node_id") or item.get("id") or ""),
+                0.0,
+            )
+            for item in backbone
+        ) / max(len(backbone), 1)
         session_minutes = int(study_preferences.get("average_session_minutes") or 40)
         strategies = [
             {
@@ -1462,7 +2444,10 @@ class PredictionTheaterService:
             checkpoint_days = self._checkpoint_days_for_horizon(horizon_days)
             for step_index, item in enumerate(ordered_backbone, start=1):
                 node_id = str(item.get("id") or "")
-                current_mastery = mastery_map.get(node_id, 0.0)
+                current_mastery = mastery_map.get(
+                    str(item.get("mapped_galaxy_node_id") or node_id),
+                    0.0,
+                )
                 predicted_mastery = _clamp(current_mastery + (18 - step_index * 1.5) + float(strategy["mastery_bias"]), 8, 100)
                 risk_level = (
                     str(risk_overrides[step_index - 1]).strip().lower()
@@ -1483,7 +2468,7 @@ class PredictionTheaterService:
                     is_target=bool(item.get("is_target")),
                 )
                 checkpoint_label = (
-                    f"Checkpoint · Day {day_slot}"
+                    f"检查点 · 第 {day_slot} 天"
                     if day_slot in checkpoint_days or step_index == total_steps
                     else None
                 )
@@ -1497,38 +2482,107 @@ class PredictionTheaterService:
                         predicted_mastery=predicted_mastery,
                         risk_level=risk_level,
                         estimated_minutes=estimated_minutes,
-                        day_label=f"Day {day_slot}",
+                        day_label=f"第 {day_slot} 天",
                         checkpoint_label=checkpoint_label,
+                        mapped_galaxy_node_id=(
+                            str(item.get("mapped_galaxy_node_id") or "") or None
+                        ),
                     )
                 )
 
+            strategy_type = str(strategy["strategy_type"])
+            strategy_stats = dict(
+                (calibration_profile.get("strategy_profiles") or {}).get(
+                    strategy_type,
+                )
+                or {},
+            )
+            sample_count = int(calibration_profile.get("sample_count") or 0)
+            session_fit = _clamp((session_minutes - 35) / 30.0, -0.3, 0.35)
+            density_penalty = max(0.0, (len(steps) - 4) * 0.038)
+            pattern_penalty = min(len(pattern_names) * 0.018, 0.12)
+            readiness = _clamp(average_mastery / 100.0, 0.0, 1.0)
+            completion_bias = float(calibration_profile.get("completion_bias_mean") or 0.0)
+            mastery_bias = float(calibration_profile.get("mastery_bias_mean") or 0.0)
+            completion_bias += float(strategy_stats.get("completion_bias_mean") or 0.0) * 0.35
+            mastery_bias += float(strategy_stats.get("mastery_bias_mean") or 0.0) * 0.35
             completion_rate = _clamp(
-                0.52 + (average_mastery / 220.0) + float(strategy["completion_bias"]) - (len(steps) / 70.0),
-                0.35,
-                0.96,
+                0.42
+                + (readiness * 0.31)
+                + (session_fit * 0.12)
+                + float(strategy["completion_bias"])
+                + completion_bias
+                - density_penalty
+                - pattern_penalty,
+                0.28,
+                0.95,
+            )
+            mastery_gain = (
+                6.0
+                + ((100.0 - average_mastery) * 0.22)
+                + (session_fit * 10.0)
+                + float(strategy["mastery_bias"])
+                + mastery_bias
+                - (len(pattern_names) * 0.9)
             )
             estimated_mastery = _clamp(
-                average_mastery + 18 + float(strategy["mastery_bias"]) - (len(pattern_names) * 1.2),
+                average_mastery + mastery_gain,
                 20,
-                96,
+                97,
             )
+            base_completion_mae = float(calibration_profile.get("completion_mae") or 0.12)
+            base_mastery_mae = float(calibration_profile.get("mastery_mae") or 13.0)
+            strategy_completion_mae = float(strategy_stats.get("completion_mae") or base_completion_mae)
+            strategy_mastery_mae = float(strategy_stats.get("mastery_mae") or base_mastery_mae)
+            cold_start_penalty = max(0.0, (8 - min(sample_count, 8)) / 8.0)
+            completion_margin = _clamp(
+                (strategy_completion_mae * 1.12)
+                + 0.03
+                + (len(steps) * 0.008)
+                + (cold_start_penalty * 0.08),
+                0.06,
+                0.24,
+            )
+            mastery_margin = _clamp(
+                (strategy_mastery_mae * 1.08)
+                + 3.0
+                + (len(steps) * 0.75)
+                + (cold_start_penalty * 5.0),
+                6.0,
+                24.0,
+            )
+            confidence_score = _clamp(
+                float(calibration_profile.get("confidence_score") or 0.42)
+                + min(sample_count, 12) * 0.012
+                + min(int(strategy_stats.get("sample_count") or 0), 6) * 0.008
+                - (len(steps) * 0.01)
+                - (cold_start_penalty * 0.12),
+                0.36,
+                0.92,
+            )
+            completion_range_low = _clamp(completion_rate - completion_margin, 0.0, 1.0)
+            completion_range_high = _clamp(completion_rate + completion_margin, 0.0, 1.0)
+            mastery_range_low = _clamp(estimated_mastery - mastery_margin, 0.0, 100.0)
+            mastery_range_high = _clamp(estimated_mastery + mastery_margin, 0.0, 100.0)
             risks = [str(strategy["risk_bias"])]
             if pattern_names:
                 risks.append(f"近期行为模式提示：{pattern_names[0]} 可能影响这条路径的稳定执行。")
             if node_names:
                 risks.append(f"{node_names[min(len(node_names) - 1, 0)]} 的掌握情况会决定后续理解是否顺滑。")
+            if sample_count < 5:
+                risks.append("这条预测仍处于冷启动阶段，建议把区间而不是单点估计当作主要参考。")
             route_score = self._route_score(
                 completion_rate=completion_rate,
                 estimated_mastery=estimated_mastery,
                 risks=risks,
-                strategy_type=str(strategy["strategy_type"]),
+                strategy_type=strategy_type,
             )
             options.append(
                 TheaterPathOption(
                     id=str(strategy["id"]),
                     title=str(strategy["title"]),
                     summary=str(strategy["summary"]),
-                    strategy_type=str(strategy["strategy_type"]),
+                    strategy_type=strategy_type,
                     expert_ids=list(strategy["expert_ids"]),
                     estimated_completion_rate=completion_rate,
                     estimated_mastery=estimated_mastery,
@@ -1537,6 +2591,16 @@ class PredictionTheaterService:
                     route_score=route_score,
                     checkpoint_days=checkpoint_days,
                     week_one_tasks=self._week_one_task_blueprints(steps=steps, target_name=target_name),
+                    confidence_score=confidence_score,
+                    completion_range_low=completion_range_low,
+                    completion_range_high=completion_range_high,
+                    mastery_range_low=mastery_range_low,
+                    mastery_range_high=mastery_range_high,
+                    calibration_basis=(
+                        "personal_history"
+                        if sample_count >= 5
+                        else ("cold_start" if sample_count == 0 else "blended_history")
+                    ),
                     steps=steps,
                 )
             )
@@ -1570,19 +2634,20 @@ class PredictionTheaterService:
                 {
                     "role": "system",
                     "content": (
-                        "Return strict JSON with a turns array. Each turn needs agent_id, display_name, "
-                        "turn_type, content, related_node_ids."
+                        "你是知识推演剧场里的圆桌主持。请只返回严格 JSON 对象，包含 turns 数组。"
+                        "每个 turn 必须包含 agent_id、display_name、turn_type、content、related_node_ids。"
+                        "所有 content 必须是自然流畅的中文。"
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Topic: {topic}\n"
-                        f"Target: {target_name}\n"
-                        f"Path options: {[item.to_dict() for item in options]}\n"
-                        f"Graph: {graph_bundle}\n"
-                        f"Behavior patterns: {pattern_names}\n"
-                        "Create 3-4 concise roundtable turns that compare the paths and point to the main risks."
+                        f"主题：{topic}\n"
+                        f"目标：{target_name}\n"
+                        f"路径候选：{[item.to_dict() for item in options]}\n"
+                        f"关系图：{graph_bundle}\n"
+                        f"行为模式：{pattern_names}\n"
+                        "请生成 3-4 段简洁的中文圆桌讨论，比较这些路径、指出主要风险，并给出取舍建议。"
                     ),
                 },
             ],
@@ -1653,7 +2718,7 @@ class PredictionTheaterService:
                 frames.append(
                     {
                         "index": len(frames),
-                        "label": f"Day {day}",
+                        "label": f"第 {day} 天",
                         "day_index": day,
                         "route_id": option.id,
                         "focus_node_ids": focus_node_ids,
@@ -1734,7 +2799,7 @@ class PredictionTheaterService:
             frames.append(
                 {
                     "index": day - 1,
-                    "label": f"Day {day}",
+                    "label": f"第 {day} 天",
                     "day_index": day,
                     "route_id": str(route.get("id") or ""),
                     "focus_node_ids": [str(active_step.get("node_id") or "")] if active_step else [],
@@ -1743,7 +2808,7 @@ class PredictionTheaterService:
                     "projected_completion_rate": round(completion_value, 4),
                     "active_step_node_id": str(active_step.get("node_id") or ""),
                     "active_step_title": str(active_step.get("node_name") or "分支推演"),
-                    "compare_label": "What-If 分支",
+                    "compare_label": "假设分支",
                     "branch_type": "what_if",
                 }
             )
@@ -1759,12 +2824,12 @@ class PredictionTheaterService:
     ) -> list[dict[str, Any]]:
         created: list[dict[str, Any]] = []
         for index, step in enumerate(list(route.get("steps") or [])[:3]):
-            node_id = self._maybe_uuid(step.get("node_id"))
+            node_id = self._maybe_uuid(step.get("mapped_galaxy_node_id") or step.get("node_id"))
             due_date = date.today() + timedelta(days=min(index * 2, 6))
             task = await TaskService.create(
                 self.db,
                 TaskCreate(
-                    title=f"{step.get('day_label') or f'Day {index + 1}'} · 推进 {step.get('node_name') or target_name}",
+                    title=f"{step.get('day_label') or f'第 {index + 1} 天'} · 推进 {step.get('node_name') or target_name}",
                     type=TaskType.LEARNING,
                     plan_id=plan_id,
                     tags=["theater_path", str(route.get("strategy_type") or "route")],
@@ -1791,7 +2856,7 @@ class PredictionTheaterService:
             task = await TaskService.create(
                 self.db,
                 TaskCreate(
-                    title=f"Checkpoint · 回看 {target_name} 的推演进度",
+                    title=f"检查点 · 回看 {target_name} 的推演进度",
                     type=TaskType.REFLECTION,
                     plan_id=plan_id,
                     tags=["theater_checkpoint"],
@@ -1839,13 +2904,36 @@ class PredictionTheaterService:
         *,
         prediction_id: str,
         generated_at: datetime,
+        calibration_profile: dict[str, Any],
     ) -> dict[str, Any]:
         due_on = (generated_at.date() + timedelta(days=7)).isoformat()
+        sample_count = int(calibration_profile.get("sample_count") or 0)
+        avg_accuracy_score = float(calibration_profile.get("avg_accuracy_score") or 0.0)
+        model_confidence = float(calibration_profile.get("confidence_score") or 0.0)
+        coverage_rate = calibration_profile.get("coverage_rate")
+        data_status = str(calibration_profile.get("data_status") or "cold_start")
+        if sample_count >= 5:
+            summary_hint = (
+                f"基于你最近 {sample_count} 次已回填推演做过校准，"
+                f"当前模型稳定度约 {round(model_confidence * 100)}%。"
+            )
+        elif sample_count > 0:
+            summary_hint = (
+                f"目前只积累了 {sample_count} 次回填记录，系统会继续边用边校准，"
+                "建议把区间预测当作主参考。"
+            )
+        else:
+            summary_hint = "这还是冷启动预测，建议在 7 天后回填真实完成率和掌握度，帮系统建立你的校准基线。"
         return {
             "prediction_id": prediction_id,
             "status": "pending_feedback",
             "due_on": due_on,
-            "summary_hint": "建议在 7 天后回填真实完成率和掌握度，检查这次推演是否命中。",
+            "summary_hint": summary_hint,
+            "sample_count": sample_count,
+            "avg_accuracy_score": round(avg_accuracy_score, 4),
+            "model_confidence": round(model_confidence, 4),
+            "coverage_rate": round(float(coverage_rate), 4) if coverage_rate is not None else None,
+            "data_status": data_status,
         }
 
     def _fallback_discussion(
@@ -1887,10 +2975,102 @@ class PredictionTheaterService:
         ]
 
     async def _get_prediction_or_raise(self, prediction_id: str) -> dict[str, Any]:
+        # 1. Hot path: Redis cache
         cached = await cache_service.get(f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}")
-        if not isinstance(cached, dict):
+        if isinstance(cached, dict):
+            return cached
+
+        # 2. DB fallback
+        if self.db is None:
             raise ValueError("Prediction not found or expired")
-        return cached
+        result = await self.db.execute(
+            select(TheaterPrediction).where(
+                TheaterPrediction.prediction_id == prediction_id,
+                TheaterPrediction.deleted_at.is_(None),
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            raise ValueError("Prediction not found or expired")
+
+        # 3. Reconstruct full payload dict
+        payload = self._prediction_row_to_payload(row)
+
+        # 4. Hydrate graph from linked TheaterCandidateBundle
+        await self._hydrate_graph_from_bundle(payload)
+
+        # 4. Backfill Redis cache for subsequent reads
+        try:
+            await cache_service.set(
+                f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}",
+                payload,
+                ttl=self.accuracy.TTL_SECONDS,
+            )
+        except Exception:
+            pass  # Cache backfill failure is non-critical
+        return payload
+
+    async def _get_prediction_for_user_or_raise(self, prediction_id: str, *, user_id: UUID) -> dict[str, Any]:
+        payload = await self._get_prediction_or_raise(prediction_id)
+        owner_id = str(payload.get("user_id") or "").strip()
+        if owner_id and owner_id != str(user_id):
+            raise NotFoundError(
+                message="没有找到相关预测记录",
+                detail={"error_code": "THEATER_PREDICTION_NOT_FOUND"},
+            )
+        return payload
+
+    def _prediction_row_to_payload(self, row: TheaterPrediction) -> dict[str, Any]:
+        """Reconstruct the full payload dict from a DB row.
+
+        Graph data is loaded eagerly from the linked TheaterCandidateBundle.
+        Callers must invoke ``await _hydrate_graph_from_bundle(payload)`` after
+        getting the result if they need the graph populated.
+        """
+        payload: dict[str, Any] = {
+            "prediction_id": row.prediction_id,
+            "user_id": str(row.user_id) if row.user_id else "",
+            "topic": row.topic,
+            "simulation_session_id": row.simulation_session_id,
+            "target_node_id": str(row.target_node_id) if row.target_node_id else None,
+            "target_name": row.target_name,
+            "candidate_bundle_id": str(row.candidate_bundle_id) if row.candidate_bundle_id else None,
+            "horizon_days": row.horizon_days,
+            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+            "paths": row.paths or [],
+            "discussion_turns": row.discussion_turns or [],
+            "timeline": row.timeline or [],
+            "selected_prediction": row.selected_prediction or {},
+            "recommended_route_id": row.recommended_route_id or "",
+            "target_resolution_mode": row.target_resolution_mode,
+            "accuracy_tracking": row.accuracy_tracking or {},
+            "routing_notes": row.routing_notes or {},
+            "preview_mode": row.preview_mode,
+        }
+        if row.adopted_plan_id:
+            payload["adopted_plan_id"] = str(row.adopted_plan_id)
+        if row.adopted_at:
+            payload["adopted_at"] = row.adopted_at.isoformat()
+        if row.accuracy_summary:
+            payload["accuracy_summary"] = row.accuracy_summary
+        # Placeholder — will be populated by _hydrate_graph_from_bundle
+        payload["graph"] = {"nodes": [], "edges": []}
+        return payload
+
+    async def _hydrate_graph_from_bundle(self, payload: dict[str, Any]) -> None:
+        """Populate the ``graph`` key from the linked TheaterCandidateBundle."""
+        bundle_id = self._maybe_uuid(payload.get("candidate_bundle_id"))
+        if bundle_id is None or self.db is None:
+            return
+        try:
+            bundle = await self.db.get(TheaterCandidateBundle, bundle_id)
+            if bundle is not None:
+                payload["graph"] = {
+                    "nodes": list(bundle.nodes_payload or []),
+                    "edges": list(bundle.edges_payload or []),
+                }
+        except Exception:
+            pass  # Non-critical; callers that don't need graph still work
 
     @staticmethod
     def _find_route(payload: dict[str, Any], route_id: str) -> dict[str, Any]:
@@ -1937,3 +3117,92 @@ class PredictionTheaterService:
         if strategy_type == "personalized":
             return f"{node_name} 被切进小步节奏里，目的是降低启动阻力并提高连续完成率。"
         return f"{node_name} 是前置链的一环，先补齐它能减少后续推导中的理解断层。"
+
+    # ------------------------------------------------------------------
+    # DB persistence helpers
+    # ------------------------------------------------------------------
+
+    async def _persist_prediction(self, payload: dict[str, Any]) -> None:
+        """Write prediction to DB after Redis cache. Failure is non-blocking."""
+        if self.db is None:
+            return
+        prediction_id = str(payload.get("prediction_id") or "").strip()
+        if not prediction_id:
+            return
+        try:
+            accuracy_tracking = dict(payload.get("accuracy_tracking") or {})
+            due_on_raw = str(accuracy_tracking.get("due_on") or "").strip()
+            due_on: datetime | None = None
+            if due_on_raw:
+                try:
+                    due_on = datetime.fromisoformat(due_on_raw)
+                except (TypeError, ValueError):
+                    pass
+            generated_at_raw = payload.get("generated_at")
+            generated_at: datetime | None = None
+            if isinstance(generated_at_raw, str):
+                try:
+                    generated_at = datetime.fromisoformat(generated_at_raw)
+                except (TypeError, ValueError):
+                    pass
+            if generated_at is None:
+                generated_at = _utcnow()
+
+            candidate_bundle_id = self._maybe_uuid(payload.get("candidate_bundle_id"))
+            target_node_id = self._maybe_uuid(payload.get("target_node_id"))
+
+            # Use a savepoint so best-effort persistence failures do not poison
+            # or roll back the caller's outer transaction.
+            async with self.db.begin_nested():
+                row = TheaterPrediction(
+                    prediction_id=prediction_id,
+                    user_id=self._maybe_uuid(payload.get("user_id")),
+                    topic=str(payload.get("topic") or ""),
+                    target_name=str(payload.get("target_name") or ""),
+                    target_node_id=target_node_id,
+                    target_resolution_mode=str(payload.get("target_resolution_mode") or "freeform_only"),
+                    horizon_days=int(payload.get("horizon_days") or 14),
+                    preview_mode=bool(payload.get("preview_mode")),
+                    generated_at=generated_at,
+                    candidate_bundle_id=candidate_bundle_id,
+                    simulation_session_id=payload.get("simulation_session_id"),
+                    recommended_route_id=payload.get("recommended_route_id"),
+                    accuracy_status=str(accuracy_tracking.get("status") or "pending_feedback"),
+                    accuracy_due_on=due_on,
+                    paths=list(payload.get("paths") or []),
+                    discussion_turns=list(payload.get("discussion_turns") or []),
+                    timeline=list(payload.get("timeline") or []),
+                    selected_prediction=payload.get("selected_prediction"),
+                    routing_notes=dict(payload.get("routing_notes") or {}),
+                    accuracy_tracking=accuracy_tracking,
+                )
+                self.db.add(row)
+                await self.db.flush()
+        except Exception as exc:
+            logger.warning("Failed to persist prediction %s to DB: %s", prediction_id, exc)
+
+    async def _update_prediction_db(
+        self,
+        prediction_id: str,
+        updates: dict[str, Any],
+    ) -> None:
+        """Update a persisted prediction row. Failure is non-blocking."""
+        if self.db is None:
+            return
+        try:
+            # Keep best-effort updates isolated from the caller's transaction.
+            async with self.db.begin_nested():
+                result = await self.db.execute(
+                    select(TheaterPrediction).where(
+                        TheaterPrediction.prediction_id == prediction_id,
+                        TheaterPrediction.deleted_at.is_(None),
+                    )
+                )
+                row = result.scalar_one_or_none()
+                if row is None:
+                    return
+                for key, value in updates.items():
+                    setattr(row, key, value)
+                await self.db.flush()
+        except Exception as exc:
+            logger.warning("Failed to update prediction %s in DB: %s", prediction_id, exc)

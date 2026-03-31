@@ -132,14 +132,13 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   Future<void> _loadExecutionProfile() async {
     try {
       final response = await ref.read(apiClientProvider).get<dynamic>(
-        ApiEndpoints.executionProfileSummary,
-      );
+            ApiEndpoints.executionProfileSummary,
+          );
       final data = response.data;
       if (!mounted) return;
       setState(() {
-        _executionProfile = data is Map
-            ? Map<String, dynamic>.from(data)
-            : null;
+        _executionProfile =
+            data is Map ? Map<String, dynamic>.from(data) : null;
         _executionProfileLoaded = true;
       });
     } catch (_) {
@@ -263,8 +262,9 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       ? null
                       : _averageMastery(previousReport),
                 ),
-                primaryLabel:
-                    weakestNode == null ? '打开知识星图' : '优先处理 ${weakestNode.nodeName}',
+                primaryLabel: weakestNode == null
+                    ? '打开知识星图'
+                    : '优先处理 ${weakestNode.nodeName}',
                 onPrimaryTap: weakestNode == null
                     ? () => unawaited(_openReportDeepLink(GalaxyRoutes.home))
                     : () => unawaited(
@@ -318,7 +318,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 actionCards: report.actionCards,
                 weakestNode: weakestNode,
                 strongestNode: strongestNode,
-                onOpenGalaxy: () => unawaited(_openReportDeepLink(GalaxyRoutes.home)),
+                onOpenGalaxy: () =>
+                    unawaited(_openReportDeepLink(GalaxyRoutes.home)),
                 onOpenTheater: weakestNode == null
                     ? null
                     : () => unawaited(
@@ -500,6 +501,30 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 delay: 260,
                 child: _ExecutionStatsSection(profile: _executionProfile!),
               ),
+            ] else if (_executionProfileLoaded) ...[
+              const SizedBox(height: 14),
+              _AnimatedReportSection(
+                delay: 260,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.insights_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '执行画像暂时没有加载出来，不影响你先阅读本次学习报告。',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.4,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
             const SizedBox(height: 14),
             _AnimatedReportSection(
@@ -559,12 +584,23 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 children: [
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.card,
-                    child: SparkleMarkdown(
-                      content: report.markdown,
-                      textColor: Theme.of(context).colorScheme.onSurface,
-                      codeBackgroundColor:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                      linkColor: Theme.of(context).colorScheme.primary,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: SparkleMarkdown(
+                            content: report.markdown,
+                            textColor: Theme.of(context).colorScheme.onSurface,
+                            codeBackgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            linkColor: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -828,9 +864,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   ) {
     final deduped = <String, _HistoricalReportEntry>{};
     for (final entry in entries) {
-      final existing = deduped[entry.report.reportId];
+      final reportId = entry.report.reportId.trim();
+      final dedupeKey =
+          reportId.isNotEmpty ? reportId : jsonEncode(entry.report.toJson());
+      final existing = deduped[dedupeKey];
       if (existing == null || entry.createdAt.isAfter(existing.createdAt)) {
-        deduped[entry.report.reportId] = entry;
+        deduped[dedupeKey] = entry;
       }
     }
     final list = deduped.values.toList()
@@ -1281,15 +1320,15 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
         ),
       );
     }
-    final showStudyMinutes = widget.studyMinutes.length == widget.values.length &&
-        widget.studyMinutes.any((item) => item > 0);
-    final selectedIndex =
-        (_selectedIndex ?? (widget.values.length - 1)).clamp(0, widget.values.length - 1);
+    final showStudyMinutes =
+        widget.studyMinutes.length == widget.values.length &&
+            widget.studyMinutes.any((item) => item > 0);
+    final selectedIndex = (_selectedIndex ?? (widget.values.length - 1))
+        .clamp(0, widget.values.length - 1);
     final selectedLabel = widget.labels[selectedIndex];
     final selectedMastery = (widget.values[selectedIndex] * 100).round();
-    final selectedMinutes = showStudyMinutes
-        ? widget.studyMinutes[selectedIndex].round()
-        : null;
+    final selectedMinutes =
+        showStudyMinutes ? widget.studyMinutes[selectedIndex].round() : null;
     final maxStudyMinutes = showStudyMinutes && widget.studyMinutes.isNotEmpty
         ? widget.studyMinutes.reduce((a, b) => a > b ? a : b).round()
         : 0;
@@ -1340,8 +1379,8 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final axisWidth = showStudyMinutes ? 46.0 : 0.0;
-              final chartWidth =
-                  (constraints.maxWidth - axisWidth).clamp(0.0, double.infinity);
+              final chartWidth = (constraints.maxWidth - axisWidth)
+                  .clamp(0.0, double.infinity);
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1388,25 +1427,31 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                         children: [
                           Text(
                             '$maxStudyMinutes分',
-                            style:
-                                Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: DS.warning,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: DS.warning,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                           Text(
                             '${(maxStudyMinutes / 2).round()}分',
-                            style:
-                                Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: DS.textSecondary,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                ),
                           ),
                           Text(
                             '0分',
-                            style:
-                                Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: DS.textSecondary,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: DS.textSecondary,
+                                ),
                           ),
                         ],
                       ),
@@ -1436,7 +1481,9 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
         ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: widget.labels.asMap().entries
+          children: widget.labels
+              .asMap()
+              .entries
               .map(
                 (entry) => Expanded(
                   child: Text(
@@ -1479,8 +1526,7 @@ class _ReportDiagnosisStrip extends StatelessWidget {
     final delta = previousAverageMastery == null
         ? null
         : averageMastery - previousAverageMastery!;
-    final sortedDiagnosisCards = [...diagnosisCards]
-      ..sort(
+    final sortedDiagnosisCards = [...diagnosisCards]..sort(
         (
           LearningReportDiagnosticCard a,
           LearningReportDiagnosticCard b,
@@ -1525,7 +1571,7 @@ class _ReportDiagnosisStrip extends StatelessWidget {
               title: '主要短板',
               headline: weakestNode == null
                   ? '待生成'
-                  : '${weakestNode!.nodeName} ${weakestNode!.masteryScore.round()}%',
+                  : '${weakestNode?.nodeName ?? '薄弱项'} ${weakestNode?.masteryScore.round() ?? 0}%',
               body: weakestNode == null
                   ? '当前还没有足够数据定位短板。'
                   : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
@@ -1858,7 +1904,7 @@ class _ReportActionCard extends StatelessWidget {
             Text(
               weakestNode == null
                   ? '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。'
-                  : '优先围绕 ${weakestNode!.nodeName} 收口，再用 ${strongestNode?.nodeName ?? '当前强项'} 做迁移练习，能更快把整体掌握度拉起来。',
+                  : '优先围绕 ${weakestNode?.nodeName ?? '薄弱项'} 收口，再用 ${strongestNode?.nodeName ?? '当前强项'} 做迁移练习，能更快把整体掌握度拉起来。',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.5,
@@ -1892,7 +1938,7 @@ class _ReportActionCard extends StatelessWidget {
                     FilledButton.tonalIcon(
                       onPressed: onOpenTheater,
                       icon: const Icon(Icons.theater_comedy_outlined),
-                      label: Text('推演 ${weakestNode!.nodeName}'),
+                      label: Text('推演 ${weakestNode?.nodeName ?? '薄弱项'}'),
                     ),
                   FilledButton.tonalIcon(
                     onPressed: onOpenSimulation,
@@ -2425,46 +2471,46 @@ class _ReportStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: DS.bodySmall.copyWith(color: DS.textTertiary),
-            ),
-            const SizedBox(height: DS.spacing4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: color,
-                        fontWeight: DS.fontWeightBold,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: DS.bodySmall.copyWith(color: DS.textTertiary),
+              ),
+              const SizedBox(height: DS.spacing4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: color,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(width: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Text(
+                      unit,
+                      style: DS.bodySmall.copyWith(
+                        color: color.withValues(alpha: 0.72),
                       ),
-                ),
-                const SizedBox(width: 2),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                    unit,
-                    style: DS.bodySmall.copyWith(
-                      color: color.withValues(alpha: 0.72),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class _AnimatedReportSection extends StatefulWidget {

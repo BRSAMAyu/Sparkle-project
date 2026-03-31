@@ -11,6 +11,7 @@ class TimerWidget extends StatefulWidget {
     super.key,
     this.initialSeconds = 0,
     this.maxSeconds,
+    this.autoStart = false,
     this.onTick,
     this.onComplete,
     this.onStateChange,
@@ -18,6 +19,7 @@ class TimerWidget extends StatefulWidget {
   final int initialSeconds;
   final int? maxSeconds; // For progress visualization
   final TimerMode mode;
+  final bool autoStart;
   final void Function(int seconds)? onTick;
   final VoidCallback? onComplete;
   final void Function(bool isRunning)? onStateChange;
@@ -27,17 +29,21 @@ class TimerWidget extends StatefulWidget {
 }
 
 class _TimerWidgetState extends State<TimerWidget>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   Timer? _timer;
   late int _currentSeconds;
+  int _elapsedSeconds = 0;
   bool _isRunning = false;
+  DateTime? _runStartedAt;
+  bool _didComplete = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _currentSeconds = widget.initialSeconds;
+    WidgetsBinding.instance.addObserver(this);
+    _resetToInitialState();
 
     _pulseController = AnimationController(
       vsync: this,
@@ -46,50 +52,150 @@ class _TimerWidgetState extends State<TimerWidget>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      widget.onTick?.call(_currentSeconds);
+      if (widget.autoStart) {
+        _startTimer();
+      }
+    });
   }
 
   @override
   void didUpdateWidget(TimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialSeconds != widget.initialSeconds && !_isRunning) {
-      setState(() {
-        _currentSeconds = widget.initialSeconds;
+      setState(_resetToInitialState);
+      widget.onTick?.call(_currentSeconds);
+    }
+
+    if (!_isRunning && !oldWidget.autoStart && widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isRunning) {
+          _startTimer();
+        }
       });
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_isRunning) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _syncFromClock(notifyTick: false);
+      _stopPeriodicTicker();
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _syncFromClock();
+      if (_isRunning && !_didComplete) {
+        _startPeriodicTicker();
+      }
+    }
+  }
+
+  void _resetToInitialState() {
+    _elapsedSeconds = 0;
+    _currentSeconds = widget.initialSeconds;
+    _runStartedAt = null;
+    _didComplete =
+        widget.mode == TimerMode.countDown && widget.initialSeconds == 0;
+  }
+
   void _startTimer() {
     if (_isRunning) return;
+    _didComplete = false;
+    _runStartedAt = DateTime.now();
     setState(() => _isRunning = true);
     widget.onStateChange?.call(true);
     unawaited(_pulseController.repeat(reverse: true));
+    _syncFromClock();
+    _startPeriodicTicker();
+  }
 
+  void _startPeriodicTicker() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (widget.mode == TimerMode.countUp) {
-        setState(() => _currentSeconds++);
-        widget.onTick?.call(_currentSeconds);
-      } else {
-        if (_currentSeconds > 0) {
-          setState(() => _currentSeconds--);
-          widget.onTick?.call(_currentSeconds);
-        } else {
-          _stopTimer(notify: false);
-          widget.onComplete?.call();
-        }
+      if (!_isRunning) {
+        timer.cancel();
+        return;
       }
+      _syncFromClock();
     });
   }
 
-  void _stopTimer({bool notify = true}) {
-    if (!_isRunning) return;
+  void _stopPeriodicTicker() {
     _timer?.cancel();
+    _timer = null;
+  }
+
+  int _displayedSecondsForElapsed(int elapsedSeconds) {
+    if (widget.mode == TimerMode.countUp) {
+      return elapsedSeconds;
+    }
+    return max(widget.initialSeconds - elapsedSeconds, 0);
+  }
+
+  void _syncFromClock({bool notifyTick = true}) {
+    if (!_isRunning || _runStartedAt == null) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final elapsedSinceStart = now.difference(_runStartedAt!).inSeconds;
+    final nextElapsed =
+        _elapsedSeconds + (elapsedSinceStart < 0 ? 0 : elapsedSinceStart);
+    _runStartedAt = now;
+
+    final nextDisplayed = _displayedSecondsForElapsed(nextElapsed);
+    final didComplete =
+        widget.mode == TimerMode.countDown && nextDisplayed <= 0;
+
+    setState(() {
+      _elapsedSeconds = nextElapsed;
+      _currentSeconds = nextDisplayed;
+    });
+
+    if (notifyTick) {
+      widget.onTick?.call(_currentSeconds);
+    }
+
+    if (didComplete && !_didComplete) {
+      _didComplete = true;
+      _stopTimerInternal(syncClock: false, notify: false);
+      widget.onTick?.call(_currentSeconds);
+      widget.onComplete?.call();
+    }
+  }
+
+  void _stopTimer({bool notify = true}) {
+    _stopTimerInternal(syncClock: true, notify: notify);
+  }
+
+  void _stopTimerInternal({required bool syncClock, bool notify = true}) {
+    if (!_isRunning) return;
+    if (syncClock) {
+      _syncFromClock();
+    }
+    _stopPeriodicTicker();
+    _runStartedAt = null;
     setState(() => _isRunning = false);
     _pulseController
       ..stop()

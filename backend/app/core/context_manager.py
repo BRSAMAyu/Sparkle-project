@@ -82,6 +82,30 @@ class ContextOrchestrator:
         self.preference_service = PreferenceService(db_session, redis_client)
         self.profile_context_service = ProfileContextService(db_session, redis_client)
 
+    def _get_error_book_service(self, db_session: AsyncSession | None = None) -> ErrorBookService:
+        db = db_session or self.db
+        if db is self.db:
+            return self.error_book_service
+        return ErrorBookService(db)
+
+    def _get_user_service(self, db_session: AsyncSession | None = None) -> UserService:
+        db = db_session or self.db
+        if db is self.db:
+            return self.user_service
+        return UserService(db, self.redis)
+
+    def _get_preference_service(self, db_session: AsyncSession | None = None) -> PreferenceService:
+        db = db_session or self.db
+        if db is self.db:
+            return self.preference_service
+        return PreferenceService(db, self.redis)
+
+    def _get_profile_context_service(self, db_session: AsyncSession | None = None) -> ProfileContextService:
+        db = db_session or self.db
+        if db is self.db:
+            return self.profile_context_service
+        return ProfileContextService(db, self.redis)
+
     async def get_user_context(self, user_id: str, force_refresh: bool = False) -> CognitiveContext:
         """
         Get aggregated user context.
@@ -232,14 +256,13 @@ class ContextOrchestrator:
 
     async def _get_error_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Error Book stats and recent errors"""
-        # Use provided session or fall back to self.db
-        db = db_session if db_session is not None else self.db
+        service = self._get_error_book_service(db_session)
         # 1. Stats
-        stats = await self.error_book_service.get_review_stats(user_id)
+        stats = await service.get_review_stats(user_id)
 
         # 2. Recent Errors (Top 5 pending review or just created)
         # We want "Recent High Frequency Errors" or just "Recent Errors"
-        errors, _ = await self.error_book_service.list_errors(
+        errors, _ = await service.list_errors(
             user_id,
             ErrorQueryParams(page=1, page_size=5, need_review=False) # Just latest
         )
@@ -290,14 +313,15 @@ class ContextOrchestrator:
 
     async def _get_user_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch User Context and Analytics"""
+        service = self._get_user_service()
         # 1. Context
-        user_ctx = await self.user_service.get_context(user_id)
+        user_ctx = await service.get_context(user_id)
         preferences = {}
         if user_ctx and user_ctx.preferences:
             preferences = user_ctx.preferences
 
         # 2. Analytics
-        analytics = await self.user_service.get_analytics_summary(user_id)
+        analytics = await service.get_analytics_summary(user_id)
 
         return {
             "preferences": preferences,
@@ -306,10 +330,10 @@ class ContextOrchestrator:
 
     async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch analytics metrics only."""
-        return await self.user_service.get_analytics_summary(user_id)
+        return await self._get_user_service(db_session).get_analytics_summary(user_id)
 
     async def _get_profile_context(self, user_id: UUID, db_session: AsyncSession | None = None):
-        return await self.profile_context_service.get_profile_context(user_id)
+        return await self._get_profile_context_service(db_session).get_profile_context(user_id)
 
     async def _get_preference_version(self, user_id: str) -> int:
         """
@@ -317,7 +341,7 @@ class ContextOrchestrator:
         用于验证缓存是否过期（偏好修改后会递增版本号）。
         """
         try:
-            prefs = await self.preference_service.get_preferences(UUID(user_id))
+            prefs = await self._get_preference_service().get_preferences(UUID(user_id))
             return prefs.version or 0
         except Exception as e:
             logger.warning(f"Failed to get preference version for {user_id}: {e}")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -23,11 +24,20 @@ from app.models.accountability import (
     AccountabilitySlotType,
     AccountabilityStatus,
 )
-from app.models.community import Friendship, FriendshipStatus
+from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from app.models.community import Friendship, FriendshipStatus, Group, GroupMember, GroupRole, GroupType
+from app.models.community import SharedResource, UserBlock
+from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.group_files import GroupFile
+from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode
+from app.models.seed_content import SeedItem, SeedLibrary
+from app.models.task import Task, TaskType
 from app.models.user import User
 from app.services.accountability_notification_service import (
     accountability_notification_service,
 )
+from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 
@@ -53,6 +63,9 @@ class _FakeRedis:
         return self._store.get(key)
 
     async def setex(self, key: str, _: int, value: str) -> None:
+        self._store[key] = value
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
         self._store[key] = value
 
 
@@ -229,6 +242,26 @@ async def _create_checkin(
     )
     await _commit_all(db_session, checkin)
     return checkin
+
+
+async def _create_task(
+    db_session,
+    *,
+    user: User,
+    title: str = "共享任务",
+) -> Task:
+    task = Task(
+        user_id=user.id,
+        title=title,
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=30,
+        difficulty=1,
+        energy_cost=1,
+        priority=1,
+    )
+    await _commit_all(db_session, task)
+    return task
 
 
 @pytest.mark.asyncio
@@ -465,3 +498,315 @@ async def test_overview_dashboard_nudge_friend_profile_and_context_are_populated
     context_payload = context.json()
     assert context_payload["accountability_summary"]["has_core_partner"] is True
     assert context_payload["accountability_summary"]["slot_type"] == "core"
+
+
+@pytest.mark.asyncio
+async def test_send_friend_request_creates_notification_for_target(
+    accountability_app,
+    db_session,
+    monkeypatch,
+):
+    app, state = accountability_app
+    requester = _make_user(username="requester")
+    target = _make_user(username="target")
+    await _commit_all(db_session, requester, target)
+
+    recorded: dict[str, object] = {}
+
+    async def _fake_notification_create(db, user_id, obj_in, push_via_websocket=True):
+        recorded["user_id"] = user_id
+        recorded["title"] = obj_in.title
+        recorded["content"] = obj_in.content
+        recorded["type"] = obj_in.type
+        recorded["data"] = obj_in.data
+        return None
+
+    monkeypatch.setattr(NotificationService, "create", staticmethod(_fake_notification_create))
+
+    state["current_user"] = requester
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/community/friends/request",
+            json={"target_user_id": str(target.id), "message": "一起学习吧"},
+        )
+
+    assert response.status_code == 200
+    assert recorded["user_id"] == target.id
+    assert recorded["title"] == "新的好友请求"
+    assert recorded["type"] == "friend_request"
+    assert recorded["data"]["from_user_id"] == str(requester.id)
+
+
+@pytest.mark.asyncio
+async def test_block_user_ends_partnership_and_hides_dashboard(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    partner = _make_user(username="partner")
+    await _commit_all(db_session, owner, partner)
+
+    friendship = await _create_friendship(db_session, owner, partner)
+    partnership = await _create_partnership(
+        db_session,
+        initiator=owner,
+        partner=partner,
+        friendship=friendship,
+        status=AccountabilityStatus.ACTIVE,
+    )
+
+    state["current_user"] = owner
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        block_response = await client.post(
+            "/community/users/block",
+            json={"target_user_id": str(partner.id), "reason": "停止联系"},
+        )
+        dashboard_response = await client.get(f"/accountability/{partnership.id}/dashboard")
+
+    await db_session.refresh(partnership)
+
+    assert block_response.status_code == 200
+    assert partnership.status == AccountabilityStatus.ENDED
+    assert partnership.ended_at is not None
+    assert dashboard_response.status_code == 403
+    assert dashboard_response.json()["detail"] in {
+        "Partnership access is no longer available",
+        "Partnership is no longer active",
+    }
+
+
+@pytest.mark.asyncio
+async def test_nudge_partner_rejects_when_block_relationship_exists(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    partner = _make_user(username="partner")
+    await _commit_all(db_session, owner, partner)
+
+    friendship = await _create_friendship(db_session, owner, partner)
+    partnership = await _create_partnership(
+        db_session,
+        initiator=owner,
+        partner=partner,
+        friendship=friendship,
+        status=AccountabilityStatus.ACTIVE,
+    )
+    await _commit_all(
+        db_session,
+        UserBlock(blocker_id=partner.id, blocked_id=owner.id, reason="不再联系"),
+    )
+
+    state["current_user"] = owner
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            f"/accountability/{partnership.id}/nudge",
+            json={"message": "今天别忘了打卡"},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Partnership access is no longer available"
+
+
+@pytest.mark.asyncio
+async def test_adopt_shared_resource_rejects_non_target_user(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    target = _make_user(username="target")
+    intruder = _make_user(username="intruder")
+    await _commit_all(db_session, owner, target, intruder)
+
+    task = await _create_task(db_session, user=owner)
+    shared = SharedResource(
+        shared_by=owner.id,
+        target_user_id=target.id,
+        task_id=task.id,
+        permission="view",
+    )
+    await _commit_all(db_session, shared)
+
+    state["current_user"] = intruder
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(f"/community/shared-resources/{shared.id}/adopt")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "无权采纳该共享资源"
+
+
+@pytest.mark.asyncio
+async def test_adopt_shared_resource_supports_extended_resource_types(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    target = _make_user(username="target")
+    await _commit_all(db_session, owner, target)
+
+    knowledge_node = KnowledgeNode(name="二叉树", description="树结构", importance_level=2)
+    fragment = CognitiveFragment(
+        user_id=owner.id,
+        source_type="capsule",
+        resource_type="text",
+        content="注意力会在晚间下滑",
+        severity=2,
+    )
+    capsule = CuriosityCapsule(
+        user_id=owner.id,
+        title="为什么树会退化",
+        content="当插入顺序特殊时，树会退化成链表。",
+        is_read=False,
+    )
+    library = SeedLibrary(
+        name="算法例题库",
+        description="常见算法题",
+        category="few_shot",
+        visibility="private",
+        owner_id=owner.id,
+        language="zh",
+    )
+    pattern = BehaviorPattern(
+        user_id=owner.id,
+        pattern_name="Planning Fallacy",
+        pattern_type="cognitive",
+        description="总是低估任务耗时",
+    )
+    db_session.add_all([knowledge_node, fragment, capsule, library, pattern])
+    await db_session.flush()
+
+    seed_item = SeedItem(
+        library_id=library.id,
+        item_type="example",
+        title="双指针",
+        content="用双指针缩小搜索区间",
+        order_index=0,
+        is_active=True,
+    )
+    db_session.add(seed_item)
+    await db_session.flush()
+
+    shared_resources = [
+        SharedResource(shared_by=owner.id, target_user_id=target.id, knowledge_node_id=knowledge_node.id),
+        SharedResource(shared_by=owner.id, target_user_id=target.id, cognitive_fragment_id=fragment.id),
+        SharedResource(shared_by=owner.id, target_user_id=target.id, curiosity_capsule_id=capsule.id),
+        SharedResource(shared_by=owner.id, target_user_id=target.id, seed_library_id=library.id),
+        SharedResource(shared_by=owner.id, target_user_id=target.id, behavior_pattern_id=pattern.id),
+    ]
+    db_session.add_all(shared_resources)
+    await db_session.commit()
+
+    state["current_user"] = target
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        responses = [
+            await client.post(f"/community/shared-resources/{shared_resources[0].id}/adopt"),
+            await client.post(f"/community/shared-resources/{shared_resources[1].id}/adopt"),
+            await client.post(f"/community/shared-resources/{shared_resources[2].id}/adopt"),
+            await client.post(f"/community/shared-resources/{shared_resources[3].id}/adopt"),
+            await client.post(f"/community/shared-resources/{shared_resources[4].id}/adopt"),
+        ]
+
+    for response in responses:
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    assert responses[0].json()["resource_type"] == "knowledge_node"
+    assert responses[1].json()["resource_type"] == "cognitive_fragment"
+    assert responses[2].json()["resource_type"] == "curiosity_capsule"
+    assert responses[3].json()["resource_type"] == "seed_library"
+    assert responses[4].json()["resource_type"] == "cognitive_prism_pattern"
+
+    cloned_library = await db_session.get(SeedLibrary, responses[3].json()["new_resource_id"])
+    await db_session.refresh(cloned_library, attribute_names=["items"])
+    assert cloned_library.owner_id == target.id
+    assert len(list(cloned_library.items)) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_group_file_permissions_rejects_non_admin_before_service(
+    accountability_app,
+    db_session,
+    monkeypatch,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    member = _make_user(username="member")
+    await _commit_all(db_session, owner, member)
+
+    group = Group(name="文件权限测试群", type=GroupType.SQUAD, max_members=10)
+    db_session.add(group)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=owner.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=member.id, role=GroupRole.MEMBER),
+        ]
+    )
+    stored_file = StoredFile(
+        user_id=owner.id,
+        file_name="doc.txt",
+        mime_type="text/plain",
+        file_size=16,
+        bucket="test",
+        object_key=f"permissions-{uuid4()}",
+        status="ready",
+        visibility="group",
+        retention_policy="keep",
+    )
+    db_session.add(stored_file)
+    await db_session.flush()
+    db_session.add(
+        GroupFile(
+            group_id=group.id,
+            file_id=stored_file.id,
+            shared_by_id=owner.id,
+            category="notes",
+            tags=["x"],
+            view_role=GroupRole.MEMBER,
+            download_role=GroupRole.MEMBER,
+            manage_role=GroupRole.ADMIN,
+        )
+    )
+    await db_session.commit()
+
+    update_permissions = AsyncMock()
+    monkeypatch.setattr(community_api.GroupFileService, "update_permissions", update_permissions)
+
+    state["current_user"] = member
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.put(
+            f"/community/groups/{group.id}/files/{stored_file.id}/permissions",
+            json={
+                "permissions": {
+                    "view_role": "member",
+                    "download_role": "member",
+                    "manage_role": "admin",
+                }
+            },
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "无权限修改群文件权限"
+    update_permissions.assert_not_awaited()

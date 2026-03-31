@@ -5,9 +5,10 @@ Achievement Engine Service
 from __future__ import annotations
 import asyncio
 from datetime import timezone, date, datetime, timedelta
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from loguru import logger
+from sqlalchemy import event
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,11 +30,38 @@ from app.models.achievement import (
 from app.models.community import GroupTaskClaim
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
+from app.services.achievement_reward_observability import AchievementRewardObservability
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+_EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
+_AFTER_COMMIT_TASKS_KEY = "achievement_after_commit_tasks"
+
+
+@event.listens_for(AsyncSession.sync_session_class, "after_commit")
+def _run_achievement_after_commit_tasks(session) -> None:
+    callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
+    if not callbacks:
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.warning("Skipping achievement after-commit callbacks because no event loop is running")
+        return
+
+    for callback in callbacks:
+        loop.create_task(callback())
+
+
+@event.listens_for(AsyncSession.sync_session_class, "after_rollback")
+@event.listens_for(AsyncSession.sync_session_class, "after_soft_rollback")
+def _clear_achievement_after_commit_tasks(session, *_args) -> None:
+    session.info.pop(_AFTER_COMMIT_TASKS_KEY, None)
 
 
 class AchievementEvent:
@@ -110,6 +138,13 @@ class AchievementEngine:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
+        callbacks = self.db.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
+        callbacks.append(callback)
+
+    def _is_transaction_managed_externally(self) -> bool:
+        return bool(self.db.sync_session.info.get(_EXTERNAL_TRANSACTION_MANAGED_KEY))
 
     @staticmethod
     def _coerce_activity_date(value: date | datetime | None) -> date | None:
@@ -207,7 +242,8 @@ class AchievementEngine:
             # 检查是否解锁
             if progress >= 1.0:
                 unlock_data = await self._unlock_achievement(user_id, achievement)
-                unlocked.append(unlock_data)
+                if unlock_data:
+                    unlocked.append(unlock_data)
 
         # 4. 处理连击检测
         combo_info = None
@@ -220,11 +256,20 @@ class AchievementEngine:
 
         # 5. 发送通知和触发视觉效果
         if unlocked:
-            await self._notify_unlocks(user_id, unlocked)
+            self._enqueue_after_commit(
+                lambda: self._notify_unlocks(user_id, unlocked)
+            )
 
         # 6. 发送里程碑通知
         if milestones:
-            await self._notify_milestones(user_id, milestones)
+            self._enqueue_after_commit(
+                lambda: self._notify_milestones(user_id, milestones)
+            )
+
+        if self._is_transaction_managed_externally():
+            await self.db.flush()
+        else:
+            await self.db.commit()
 
         return unlocked
 
@@ -734,9 +779,16 @@ class AchievementEngine:
         self,
         user_id: str,
         achievement: Achievement
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """解锁成就"""
         now = _utcnow()
+
+        locked_achievement_result = await self.db.execute(
+            select(Achievement)
+            .where(Achievement.id == achievement.id)
+            .with_for_update()
+        )
+        locked_achievement = locked_achievement_result.scalar_one()
 
         # 更新用户成就记录
         query = select(UserAchievement).where(
@@ -744,60 +796,68 @@ class AchievementEngine:
                 UserAchievement.user_id == user_id,
                 UserAchievement.achievement_id == achievement.id
             )
-        )
+        ).with_for_update()
         result = await self.db.execute(query)
         user_achievement = result.scalar_one_or_none()
+
+        if user_achievement and user_achievement.unlocked_at is not None:
+            return None
 
         if not user_achievement:
             user_achievement = UserAchievement(
                 user_id=user_id,
-                achievement_id=achievement.id,
+                achievement_id=locked_achievement.id,
                 progress=1.0,
-                unlocked_at=now
+                unlocked_at=now,
+                last_progress_update=now,
             )
             self.db.add(user_achievement)
         else:
             user_achievement.unlocked_at = now
             user_achievement.progress = 1.0
+            user_achievement.last_progress_update = now
 
         # 检查是否首位解锁者
         is_first = False
-        if not achievement.first_unlocker_id:
-            achievement.first_unlocker_id = user_id
+        if not locked_achievement.first_unlocker_id:
+            locked_achievement.first_unlocker_id = user_id
             user_achievement.is_first_unlocker = True
             is_first = True
 
         # 更新全局统计
-        achievement.total_unlocked += 1
-
-        await self.db.commit()
-
-        # 清除缓存
-        cache_key = f"{settings.APP_NAME}:achievement:{user_id}:{achievement.id}:unlocked"
-        await cache_service.delete(cache_key)
-        await cache_service.delete_pattern(
-            f"{settings.APP_NAME}:achievement:{user_id}:*"
-        )
+        locked_achievement.total_unlocked += 1
+        await self.db.flush()
 
         # 处理奖励
-        await self._grant_rewards(user_id, achievement)
-        reward_preview = self._build_reward_preview(achievement.reward_config)
-        surface_preview = self._surface_preview_for_rewards(achievement.reward_config)
+        await self._grant_rewards(user_id, locked_achievement)
+        reward_preview = self._build_reward_preview(locked_achievement.reward_config)
+        surface_preview = self._surface_preview_for_rewards(locked_achievement.reward_config)
         unlock_payload = {
-            "achievement_id": achievement.id,
-            "name": achievement.name,
-            "rarity": achievement.rarity,
-            "visual_effect": achievement.visual_config,
-            "visual_effect_type": achievement.visual_effect_type,
-            "rewards": achievement.reward_config,
+            "achievement_id": locked_achievement.id,
+            "name": locked_achievement.name,
+            "rarity": locked_achievement.rarity,
+            "visual_effect": locked_achievement.visual_config,
+            "visual_effect_type": locked_achievement.visual_effect_type,
+            "rewards": locked_achievement.reward_config,
             "reward_preview": reward_preview,
             "surface_preview": surface_preview,
             "is_first": is_first,
             "unlocked_at": now,
         }
-        asyncio.create_task(self._broadcast_unlock_signals(user_id, unlock_payload))
+
+        self._enqueue_after_commit(
+            lambda: self._finalize_unlock_side_effects(user_id, unlock_payload)
+        )
 
         return unlock_payload
+
+    async def _finalize_unlock_side_effects(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
+        cache_key = f"{settings.APP_NAME}:achievement:{user_id}:{unlock_payload['achievement_id']}:unlocked"
+        await cache_service.delete(cache_key)
+        await cache_service.delete_pattern(
+            f"{settings.APP_NAME}:achievement:{user_id}:*"
+        )
+        await self._broadcast_unlock_signals(user_id, unlock_payload)
 
     async def _broadcast_unlock_signals(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
         try:
@@ -835,6 +895,145 @@ class AchievementEngine:
             )
         except Exception as exc:
             logger.warning(f"Failed to broadcast achievement unlock signals: {exc}")
+
+    async def _schedule_photon_reward_retry(
+        self,
+        *,
+        user_id: str,
+        achievement_id: str,
+        achievement_name: str,
+        quantity: int,
+        error_message: str | None = None,
+    ) -> None:
+        await AchievementRewardObservability.record_event(
+            status="scheduled",
+            channel="post_commit",
+            user_id=user_id,
+            achievement_id=achievement_id,
+            achievement_name=achievement_name,
+            quantity=quantity,
+            error_message=error_message,
+        )
+
+        payload = {
+            "user_id": str(user_id),
+            "achievement_id": achievement_id,
+            "achievement_name": achievement_name,
+            "quantity": quantity,
+        }
+
+        try:
+            from app.core.celery_tasks import retry_achievement_photon_reward
+
+            retry_achievement_photon_reward.delay(**payload)
+            await AchievementRewardObservability.record_event(
+                status="enqueued",
+                channel="celery",
+                user_id=user_id,
+                achievement_id=achievement_id,
+                achievement_name=achievement_name,
+                quantity=quantity,
+            )
+            logger.info(
+                "Queued photon reward compensation for achievement %s and user %s",
+                achievement_id,
+                user_id,
+            )
+            return
+        except Exception as exc:
+            logger.warning(
+                "Failed to enqueue photon reward compensation for achievement %s: %s. Falling back to local retry.",
+                achievement_id,
+                exc,
+            )
+            await AchievementRewardObservability.record_event(
+                status="enqueue_failed",
+                channel="celery",
+                user_id=user_id,
+                achievement_id=achievement_id,
+                achievement_name=achievement_name,
+                quantity=quantity,
+                error_message=str(exc),
+            )
+
+        await self._retry_photon_reward_locally(**payload)
+
+    async def _retry_photon_reward_locally(
+        self,
+        *,
+        user_id: str,
+        achievement_id: str,
+        achievement_name: str,
+        quantity: int,
+    ) -> None:
+        from app.db.session import AsyncSessionLocal
+        from app.services.photon_service import PhotonService, PhotonTransactionType
+
+        delay_seconds = 1
+        for attempt in range(1, 4):
+            try:
+                async with AsyncSessionLocal() as session:
+                    photon_service = PhotonService(session)
+                    await photon_service.grant_photons(
+                        user_id=user_id,
+                        amount=quantity,
+                        source=f"achievement:{achievement_id}",
+                        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+                        metadata={"achievement_name": achievement_name},
+                        related_item_id=achievement_id,
+                        record_history=True,
+                    )
+                logger.info(
+                    "Photon reward compensation succeeded for achievement %s on local retry attempt %s",
+                    achievement_id,
+                    attempt,
+                )
+                await AchievementRewardObservability.record_event(
+                    status="retry_succeeded",
+                    channel="local",
+                    user_id=user_id,
+                    achievement_id=achievement_id,
+                    achievement_name=achievement_name,
+                    quantity=quantity,
+                    attempt=attempt,
+                )
+                return
+            except Exception as exc:
+                logger.warning(
+                    "Photon reward local retry %s failed for achievement %s: %s",
+                    attempt,
+                    achievement_id,
+                    exc,
+                )
+                await AchievementRewardObservability.record_event(
+                    status="retry_failed",
+                    channel="local",
+                    user_id=user_id,
+                    achievement_id=achievement_id,
+                    achievement_name=achievement_name,
+                    quantity=quantity,
+                    attempt=attempt,
+                    error_message=str(exc),
+                )
+                if attempt == 3:
+                    break
+                await asyncio.sleep(delay_seconds)
+                delay_seconds *= 2
+
+        logger.error(
+            "Photon reward compensation exhausted retries for achievement %s and user %s",
+            achievement_id,
+            user_id,
+        )
+        await AchievementRewardObservability.record_event(
+            status="exhausted",
+            channel="local",
+            user_id=user_id,
+            achievement_id=achievement_id,
+            achievement_name=achievement_name,
+            quantity=quantity,
+            attempt=3,
+        )
 
     async def _grant_rewards(self, user_id: str, achievement: Achievement):
         """发放奖励"""
@@ -888,11 +1087,22 @@ class AchievementEngine:
                             metadata={"achievement_name": achievement.name},
                             related_item_id=achievement.id,
                             record_history=True,
+                            manage_transaction=False,
                         )
 
                         logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
                     except Exception as e:
                         logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
+                        self._enqueue_after_commit(
+                            lambda user_id=str(user_id), achievement_id=achievement.id, achievement_name=achievement.name, quantity=quantity, error_message=str(e):
+                            self._schedule_photon_reward_retry(
+                                user_id=user_id,
+                                achievement_id=achievement_id,
+                                achievement_name=achievement_name,
+                                quantity=quantity,
+                                error_message=error_message,
+                            )
+                        )
 
                 case "visual_element":
                     # 解锁视觉元素
@@ -946,28 +1156,19 @@ class AchievementEngine:
 
     async def _unlock_visual_element(self, user_id: str, element_id: str, achievement_id: str):
         """解锁视觉元素"""
-        from app.models.visual_element import UserVisualElement
+        from app.schemas.visual_element import UnlockElementRequest
+        from app.services.visual_element_service import VisualElementService
 
-        # 检查是否已解锁
-        query = select(UserVisualElement).where(
-            and_(
-                UserVisualElement.user_id == user_id,
-                UserVisualElement.element_id == element_id
-            )
-        )
-        result = await self.db.execute(query)
-        user_element = result.scalar_one_or_none()
-
-        if not user_element:
-            user_element = UserVisualElement(
-                user_id=user_id,
+        visual_service = VisualElementService(self.db)
+        response = await visual_service.unlock_element(
+            user_id=user_id,
+            request=UnlockElementRequest(
                 element_id=element_id,
-                unlocked_at=_utcnow(),
-                unlock_source="achievement",
-                source_id=achievement_id
-            )
-            self.db.add(user_element)
-            await self.db.flush()
+                source="achievement",
+                source_id=achievement_id,
+            ),
+        )
+        if response.success:
             logger.info(f"Unlocked visual element {element_id} for user {user_id} via achievement {achievement_id}")
 
     async def _notify_unlocks(self, user_id: str, unlocked: list[dict]):
@@ -1782,11 +1983,22 @@ class AchievementEngine:
             UserAchievementProgressPayload,
         )
 
+        unlocked_result = await self.db.execute(
+            select(UserAchievement.achievement_id).where(
+                and_(
+                    UserAchievement.user_id == user_id,
+                    UserAchievement.unlocked_at.is_not(None),
+                )
+            )
+        )
+        unlocked_ids = set(unlocked_result.scalars().all())
+
         close_achievements = []
 
         for achievement in all_achievements:
-            # 跳过已解锁的
-            if await self._is_unlocked(user_id, achievement.id):
+            # 先以数据库记录为准，再用缓存短路未命中的场景，
+            # 避免事务提交后的短暂缓存窗口把已解锁成就继续当作“即将解锁”返回。
+            if achievement.id in unlocked_ids or await self._is_unlocked(user_id, achievement.id):
                 continue
 
             # 检查前置条件
@@ -1925,6 +2137,7 @@ class ContractService:
                 },
                 related_item_id=str(contract.id),
                 record_history=True,
+                manage_transaction=False,
             )
 
             logger.info(f"Contract rewards granted: {reward_amount} photons to user {contract.user_id}")
@@ -1949,6 +2162,7 @@ class ContractService:
                 },
                 related_item_id=str(contract.id),
                 record_history=True,
+                manage_transaction=False,
             )
 
             logger.info(f"Contract photons deducted: {contract.photon_stake} from user {contract.user_id}")

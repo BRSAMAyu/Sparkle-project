@@ -28,16 +28,16 @@ class NightlyReviewPanel extends ConsumerWidget {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               DS.spacing16,
-              0,
+              DS.spacing4,
               DS.spacing16,
-              compact ? DS.spacing8 : DS.spacing10,
+              compact ? DS.spacing12 : DS.spacing16,
             ),
             child: DashboardEntrance(
               index: 6,
               slideOffset: const Offset(0, -0.06),
               duration: DS.durationFast,
               child: DashboardPressable(
-                onTap: () => context.push('/review?mode=today'),
+                onTap: () => context.push('/review-plan'),
                 borderRadius: DS.borderRadius16,
                 child: MaterialStyler(
                   material: AppMaterials.ceramic(context),
@@ -74,7 +74,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                         ),
                       ),
                       InkWell(
-                        onTap: () => context.push('/review?mode=today'),
+                        onTap: () => context.push('/review-plan'),
                         borderRadius: BorderRadius.circular(999),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(

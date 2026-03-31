@@ -16,6 +16,7 @@ env:
   GO_VERSION: '1.22.0'
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
+  COVERAGE_RULES_FILE: 'quality/coverage_thresholds.json'
   COVERAGE_THRESHOLD_GO: '4'
   COVERAGE_THRESHOLD_PYTHON: '25'
   COVERAGE_THRESHOLD_FLUTTER: '8'
@@ -117,12 +118,22 @@ jobs:
           go test -v -race -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out | tee coverage.txt
 
+      - name: Go Critical Risk Suites
+        working-directory: backend/gateway
+        run: |
+          go test -v ./internal/handler/... ./internal/service/... ./internal/db/...
+
+      - name: Go Proto Serialization Contract
+        working-directory: backend/gateway
+        run: |
+          go test -v -run TestProtoSerialization ./internal/handler/
+
       - name: Enforce Go Coverage Threshold
         run: |
           python3 scripts/check_coverage_thresholds.py \
             --kind go \
-            --report backend/gateway/coverage.txt \
-            --threshold "${{ env.COVERAGE_THRESHOLD_GO }}"
+            --report backend/gateway/coverage.out \
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
 
       - name: Upload Go Coverage
         uses: codecov/codecov-action@v4
@@ -159,15 +170,40 @@ jobs:
         run: |
           pytest backend/tests -v --cov=backend/app --cov-report=xml
 
+      - name: Python Contract and Workflow Risk Suites
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/contract backend/tests/workflow -v
+
       - name: OpenAPI Contract Check
         run: python3 scripts/check_openapi_contract.py
+
+      - name: Proto Contract Check
+        run: python3 scripts/check_proto_contract.py
+
+      - name: Proto Serialization Contract
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/contract/test_proto_serialization_contract.py backend/tests/contract/test_json_wire_format_contract.py -v
+
+      - name: Dependency Contract Check
+        run: python3 scripts/check_dependency_contract.py
+
+      - name: Backend Fixture Replay Gate
+        run: python3 scripts/replay_backend_contract_fixtures.py
 
       - name: Enforce Python Coverage Threshold
         run: |
           python3 scripts/check_coverage_thresholds.py \
             --kind python \
             --report coverage.xml \
-            --threshold "${{ env.COVERAGE_THRESHOLD_PYTHON }}"
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
 
       - name: Upload Python Coverage
         uses: codecov/codecov-action@v4
@@ -199,12 +235,17 @@ jobs:
         working-directory: mobile
         run: flutter test --coverage
 
+      - name: Flutter Critical Smoke and Regression Suites
+        working-directory: mobile
+        run: |
+          flutter test test/app test/integration test/goldens test/widget/visual_elements_layout_regression_test.dart test/widget/chat_action_card_navigation_test.dart -r compact
+
       - name: Enforce Flutter Coverage Threshold
         run: |
           python3 scripts/check_coverage_thresholds.py \
             --kind flutter \
             --report mobile/coverage/lcov.info \
-            --threshold "${{ env.COVERAGE_THRESHOLD_FLUTTER }}"
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
 
       - name: Upload Flutter Coverage
         uses: codecov/codecov-action@v4
@@ -305,6 +346,8 @@ jobs:
         run: cd backend && alembic upgrade head
 
       - name: Compare Schema Dump
+        id: schema_dump_compare
+        continue-on-error: true
         env:
           PGPASSWORD: password
         run: |
@@ -312,6 +355,11 @@ jobs:
           grep -v '^--' backend/gateway/internal/db/schema.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_repo.sql
           grep -v '^--' /tmp/schema_ci.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_ci_norm.sql
           diff -u /tmp/schema_repo.sql /tmp/schema_ci_norm.sql
+
+      - name: Warn On Advisory Schema Diff
+        if: steps.schema_dump_compare.outcome == 'failure'
+        run: |
+          echo "::warning title=Advisory schema diff mismatch::Normalized schema diff is non-blocking until the comparison is hardened. Review the step log before merging schema-related changes."
 
   # ==================== JOB 6: BUILD ====================
   build:

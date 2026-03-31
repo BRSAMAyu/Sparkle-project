@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1
 RUN pip install --no-cache-dir uv
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=5 update && apt-get install -y --fix-missing --no-install-recommends -o Acquire::Retries=5 \
     build-essential \
     gcc \
     libc6-dev \
@@ -30,7 +30,8 @@ COPY uv.lock* .
 # Install dependencies using uv with locked version (if available) or requirements.txt
 # For faster, more reproducible builds, ensure uv.lock is generated locally with: uv lock
 RUN if [ -f uv.lock ]; then \
-      uv pip install --system --no-cache --requirements uv.lock; \
+      uv export --frozen --no-dev --no-emit-project --no-header --format requirements-txt -o /tmp/requirements.lock.txt; \
+      uv pip install --system --no-cache -r /tmp/requirements.lock.txt; \
     else \
       uv pip install --system --no-cache -r requirements.txt || \
       pip install --no-cache-dir -r requirements.txt; \
@@ -39,6 +40,8 @@ RUN if [ -f uv.lock ]; then \
 # 一次性补齐所有大概率缺失的 AI 核心包
 # 补齐所有 AI 和文档处理包
 RUN uv pip install --system --no-cache \
+    celery \
+    grpcio-reflection \
     pdfplumber pypdf python-docx python-pptx \
     langgraph langchain-openai langchain-anthropic \
     langchain-community langchain-core langchain-text-splitters \
@@ -46,7 +49,8 @@ RUN uv pip install --system --no-cache \
     cryptography pydantic-settings tiktoken \
     openpyxl python-multipart \
     # HTML parsing utils (keep lightweight optional parsers)
-    beautifulsoup4 lxml
+    beautifulsoup4 lxml \
+    y-py>=0.6.0
 # Final stage
 FROM python:3.11-slim
 
@@ -59,7 +63,7 @@ ENV PYTHONUNBUFFERED=1
 RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 
 # Install runtime dependencies (libpq5 for PostgreSQL, curl for healthchecks)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=5 update && apt-get install -y --fix-missing --no-install-recommends -o Acquire::Retries=5 \
     libpq5 \
     liblzo2-2 \
     libglib2.0-0 \

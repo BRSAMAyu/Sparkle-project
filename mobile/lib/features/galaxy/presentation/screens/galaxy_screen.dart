@@ -17,6 +17,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
@@ -73,7 +74,7 @@ class GalaxyScreen extends ConsumerStatefulWidget {
 }
 
 class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   static const bool _useDarkGalaxyTheme = true;
 
   late final GalaxyGestureHandler _gestureHandler;
@@ -95,6 +96,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final Animation<double> _tapFeedbackAnimation;
   late final ProviderSubscription<GalaxyDisplaySettings>
       _displaySettingsSubscription;
+  late final ProviderSubscription<GalaxyState> _galaxySubscription;
 
   GalaxyGraphResponse? _graph;
   Map<String, Offset> _positions = const <String, Offset>{};
@@ -159,6 +161,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   int _layoutOptimizationEpoch = 0;
   Map<String, Offset> _layoutBlendStartPositions = const <String, Offset>{};
   Map<String, Offset> _layoutBlendTargetPositions = const <String, Offset>{};
+  bool _didApplyProviderGraph = false;
+  bool? _nextProviderGraphPreserveCamera;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -180,6 +187,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       galaxyDisplaySettingsProvider,
       (previous, next) => _applyDisplaySettings(previous: previous, next: next),
       fireImmediately: true,
+    );
+    _galaxySubscription = ref.listenManual<GalaxyState>(
+      galaxyProvider,
+      _handleGalaxyStateChanged,
     );
     _flingTicker = createTicker(_handleFlingTick);
     _physicsTicker = createTicker(_handlePhysicsTick);
@@ -268,10 +279,52 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..dispose();
     _entranceController.dispose();
     _displaySettingsSubscription.close();
+    _galaxySubscription.close();
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
+  }
+
+  void _handleGalaxyStateChanged(GalaxyState? previous, GalaxyState next) {
+    if (!mounted) {
+      return;
+    }
+
+    if (next.isLoading && !_isLoading) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
+
+    if (next.lastError != null && !next.isLoading) {
+      setState(() {
+        _isLoading = false;
+        _loadError = next.lastError!.message;
+      });
+    }
+
+    final graphChanged = previous == null ||
+        !identical(previous.nodes, next.nodes) ||
+        !identical(previous.edges, next.edges) ||
+        previous.userFlameIntensity != next.userFlameIntensity;
+    if (!graphChanged) {
+      return;
+    }
+
+    final preserveCamera =
+        _nextProviderGraphPreserveCamera ?? _didApplyProviderGraph;
+    _nextProviderGraphPreserveCamera = null;
+    _didApplyProviderGraph = true;
+    _applyGraphData(
+      GalaxyGraphResponse(
+        nodes: next.nodes,
+        edges: next.edges,
+        userFlameIntensity: next.userFlameIntensity,
+      ),
+      preserveCamera: preserveCamera,
+    );
   }
 
   Future<void> _loadGraph({
@@ -286,24 +339,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       });
     }
 
-    final repository = ref.read(enhancedGalaxyRepositoryProvider);
-    final result = await repository.getGraph(forceRefresh: forceRefresh);
+    _nextProviderGraphPreserveCamera = preserveCamera;
+    await ref
+        .read(galaxyProvider.notifier)
+        .loadGalaxy(forceRefresh: forceRefresh);
+  }
 
-    if (!mounted) {
+  void _syncProviderSelection(String? nodeId) {
+    final notifier = ref.read(galaxyProvider.notifier);
+    if (nodeId == null) {
+      notifier.deselectNode();
       return;
     }
+    notifier.selectNode(nodeId);
+  }
 
-    if (result.isSuccess && result.data != null) {
-      _applyGraphData(result.data!, preserveCamera: preserveCamera);
-      return;
-    }
-
-    if (!preserveCamera) {
-      setState(() {
-        _isLoading = false;
-        _loadError = result.error ?? context.l10n.galaxyLoadFailed;
-      });
-    }
+  void _syncProviderScale(double scale) {
+    ref.read(galaxyProvider.notifier).updateScale(scale);
   }
 
   void _applyGraphData(
@@ -638,6 +690,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _camera = _camera.applyZoom(command.scaleDelta, command.focalPoint);
         _microDriftOffsets = const <String, Offset>{};
       });
+      _syncProviderScale(_camera.scale);
       return;
     }
 
@@ -663,6 +716,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           _cancelTapFeedbackState();
           _clearPreviewState();
         });
+        _syncProviderSelection(null);
         return;
       }
 
@@ -683,6 +737,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           );
           _spotlightNodeIds = _spotlightSetFor(tappedNode.id);
         });
+        _syncProviderSelection(tappedNode.id);
         return;
       }
 
@@ -698,6 +753,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           _selectedNodeId = null;
           _clearPreviewState();
         });
+        _syncProviderSelection(null);
         return;
       }
 
@@ -718,6 +774,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           anchor: _camera.worldToScreen(command.hit!.worldPosition),
         );
       });
+      _syncProviderSelection(previewNode.id);
       _schedulePreviewDismiss();
       return;
     }
@@ -754,6 +811,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _positions = updatedPositions;
         _microDriftOffsets = const <String, Offset>{};
       });
+      _syncProviderSelection(command.nodeId);
       return;
     }
 
@@ -781,6 +839,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _spotlightAnchorId = null;
         _spotlightNodeIds = const <String>{};
       });
+      _syncProviderSelection(null);
       _fitOverviewAnimated();
       return;
     }
@@ -825,6 +884,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _spotlightAnchorId = nodeId;
       _spotlightNodeIds = _spotlightSetFor(nodeId);
     });
+    _syncProviderSelection(nodeId);
     _tapFeedbackController
       ..stop()
       ..reset();
@@ -1090,22 +1150,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       return;
     }
 
-    final result = await ref
-        .read(enhancedGalaxyRepositoryProvider)
-        .getGraph(forceRefresh: true);
-    if (!mounted || !result.isSuccess || result.data == null) {
-      return;
-    }
-
-    final nextGraph = result.data!;
-    GalaxyNodeModel? nextNode;
-    for (final node in nextGraph.nodes) {
-      if (node.id == nodeId) {
-        nextNode = node;
-        break;
-      }
-    }
-    _applyGraphData(nextGraph, preserveCamera: true);
+    final nextNode = _nodesById[nodeId];
     if (previousNode != null && nextNode != null) {
       _triggerMasteryCelebrationIfNeeded(previousNode, nextNode);
     }
@@ -1150,6 +1195,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _spotlightAnchorId = nextNode.id;
       _spotlightNodeIds = emphasis;
     });
+    _syncProviderSelection(nextNode.id);
 
     if (entry.emphasizeNeighbors) {
       unawaited(
@@ -1291,6 +1337,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _spotlightNodeIds = emphasis;
       _clearPreviewState();
     });
+    _syncProviderSelection(nodeId);
     _animateCameraTo(
       targetCamera,
       duration: const Duration(milliseconds: 520),
@@ -1318,6 +1365,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _spotlightNodeIds = _spotlightSetFor(previewNode.id);
       _clearPreviewState();
     });
+    _syncProviderSelection(previewNode.id);
   }
 
   void _handleMiniMapNavigate(Offset worldPoint) {
@@ -1492,6 +1540,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         maxScale: end.maxScale,
       );
     });
+    _syncProviderScale(scale);
   }
 
   void _animateCameraTo(
@@ -1558,6 +1607,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _draggingNodeId = null;
     _isBuildAnimating = true;
     _activeReplaySpeedMultiplier = speedMultiplier;
+    _syncProviderSelection(null);
     _buildReplayController
       ..duration = Duration(milliseconds: _currentBuildReplayDurationMs())
       ..stop()
@@ -1896,39 +1946,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (name.isEmpty || name.toLowerCase() == 'null' || name.contains('�')) {
       return false;
     }
-    const blockedPrefixes = <String>[
-      'J1',
-      'J2',
-      'J3',
-      'J4',
-      'J5',
-      'J6',
-      'J7',
-      'J8',
-      'J9',
-      'J0',
-      'decay-node-',
-      'test-',
-      'debug-',
-      'tmp-',
-      '测试主题',
-    ];
-    const blockedFragments = <String>[
-      'Sparkle RAG',
-      '系统错误码',
-      'CS101 课程说明',
-    ];
-    if (blockedPrefixes.any(name.startsWith) ||
-        blockedFragments.any(name.contains)) {
-      return false;
-    }
-    if (RegExp(r'^J\d').hasMatch(name) ||
-        RegExp(r'^[a-zA-Z]\d{2,}').hasMatch(name)) {
-      return false;
-    }
-    if (name.length > 36) {
-      return false;
-    }
     final hasReadableGlyph = RegExp(
       r'[A-Za-z0-9\u4E00-\u9FFF]',
     ).hasMatch(name);
@@ -2218,6 +2235,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     const isDarkMode = _useDarkGalaxyTheme;
     const backgroundColor = isDarkMode ? Color(0xFF060A12) : Color(0xFFF5F6F8);
     final displaySettings = ref.watch(galaxyDisplaySettingsProvider);
@@ -2273,6 +2291,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 foregroundColor: Colors.white,
                 title: context.l10n.galaxyLoadingTitle,
                 message: context.l10n.galaxyLoadingMessage,
+                highlights: <String>[
+                  context.l10n.searchNodes,
+                  '推演模式',
+                  context.l10n.galaxyOverviewNodes,
+                ],
                 showLoader: true,
               );
             }
@@ -2292,10 +2315,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               return _StatusPanel(
                 backgroundColor: backgroundColor,
                 foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                title: 'Your galaxy is still waiting to be charted',
-                message:
-                    'Unlock a few knowledge nodes or reload the map to let the constellation begin to grow.',
-                actionLabel: 'Reload galaxy',
+                title: context.l10n.galaxyEmptyTitle,
+                message: context.l10n.galaxyEmptyMessage,
+                actionLabel: context.l10n.galaxyReload,
                 onAction: _loadGraph,
               );
             }
@@ -2401,6 +2423,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                             node: _previewNode!,
                             onFocus: _focusPreviewNode,
                             onInspectConnections: _inspectPreviewConnections,
+                            onViewDetails: () => unawaited(
+                              _openKnowledgeDetail(_previewNode!.id),
+                            ),
                             onLaunchPrediction: _launchPredictionForPreviewNode,
                           ),
                         ),
@@ -2420,8 +2445,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                     key: ValueKey(currentSector.name),
                                     label: SectorConfig.getStyle(currentSector)
                                         .name,
-                                    color:
-                                        SectorConfig.getColor(currentSector),
+                                    color: SectorConfig.getColor(currentSector),
                                     isDarkMode: isDarkMode,
                                   ),
                           ),
@@ -2518,6 +2542,7 @@ class _StatusPanel extends StatelessWidget {
     required this.backgroundColor,
     required this.foregroundColor,
     required this.title,
+    this.highlights = const <String>[],
     this.showLoader = false,
     this.message,
     this.actionLabel,
@@ -2527,6 +2552,7 @@ class _StatusPanel extends StatelessWidget {
   final Color backgroundColor;
   final Color foregroundColor;
   final String title;
+  final List<String> highlights;
   final bool showLoader;
   final String? message;
   final String? actionLabel;
@@ -2596,6 +2622,43 @@ class _StatusPanel extends StatelessWidget {
                           height: 1.5,
                         ),
                         textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (highlights.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: highlights
+                            .map(
+                              (item) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      foregroundColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: foregroundColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    color:
+                                        foregroundColor.withValues(alpha: 0.72),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
                       ),
                     ],
                     if (showLoader) ...[

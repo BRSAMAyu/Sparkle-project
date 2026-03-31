@@ -82,7 +82,7 @@ class GraphStructureEvolutionService:
     async def record_engagement(self, *, user_id: UUID, node_id: UUID, minutes: int = 0) -> None:
         status = await self.db.get(UserNodeStatus, (user_id, node_id))
         if not status:
-            status = UserNodeStatus(user_id=user_id, node_id=node_id, is_unlocked=True)
+            status = UserNodeStatus(user_id=user_id, node_id=node_id, is_unlocked=True, bkt_mastery_prob=0.0)
             self.db.add(status)
         status.total_minutes = int(status.total_minutes or 0) + max(0, minutes)
         status.total_study_minutes = int(status.total_study_minutes or 0) + max(0, minutes)

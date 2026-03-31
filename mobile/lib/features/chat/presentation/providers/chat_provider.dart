@@ -14,6 +14,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -31,11 +32,13 @@ import 'package:sparkle/features/chat/presentation/widgets/content_review_card.d
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
 import 'package:sparkle/features/file/file.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
+import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -896,9 +899,30 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
       final reasoningMode = _ref.read(aiReasoningModeProvider);
+      final seedLibraryEnabled = _ref.read(chatSeedLibraryEnabledProvider);
+      final activeSeedSubscriptions = _ref
+          .read(subscriptionsProvider)
+          .subscriptions
+          .where((subscription) => subscription.isEnabled)
+          .toList()
+        ..sort((a, b) => b.priority.compareTo(a.priority));
       final extraContext = <String, dynamic>{
         if (selectedPlanId != null) 'plan_id': selectedPlanId,
         'reasoning_mode': reasoningMode,
+        'seed_library_enabled': seedLibraryEnabled,
+        if (seedLibraryEnabled) ...{
+          'active_seed_library_ids':
+              activeSeedSubscriptions.map((sub) => sub.libraryId).toList(),
+          'active_seed_libraries': activeSeedSubscriptions
+              .map(
+                (sub) => {
+                  'library_id': sub.libraryId,
+                  'priority': sub.priority,
+                  'name': sub.library?.name,
+                },
+              )
+              .toList(),
+        },
       };
 
       // Get selected chat mode

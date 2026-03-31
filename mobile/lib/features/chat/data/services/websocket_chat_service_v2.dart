@@ -943,6 +943,10 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
   }
 }
 
+@visibleForTesting
+ChatStreamEvent parseChatEventForTest(String jsonString) =>
+    _parseChatEvent(jsonString);
+
 /// WebSocket 连接状态
 enum WsConnectionState {
   disconnected,
@@ -1641,12 +1645,23 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   /// 检测错误是否为401认证失败
   bool _is401Error(dynamic error) {
+    return looksLikeAuthFailure(error);
+  }
+
+  @visibleForTesting
+  static bool looksLikeAuthFailure(dynamic error) {
     final errorStr = error.toString().toLowerCase();
-    return errorStr.contains('401') ||
+    return errorStr.contains('status code: 401') ||
+        errorStr.contains('http 401') ||
+        errorStr.contains(' 401 ') ||
+        errorStr.startsWith('401') ||
         errorStr.contains('unauthorized') ||
-        errorStr.contains('jwt') ||
-        errorStr.contains('token') ||
-        errorStr.contains('authentication');
+        errorStr.contains('invalid token') ||
+        errorStr.contains('token expired') ||
+        errorStr.contains('jwt expired') ||
+        errorStr.contains('authentication failed') ||
+        errorStr.contains('auth failed') ||
+        errorStr.contains('4401');
   }
 
   /// 处理401错误：自动刷新Token并重连

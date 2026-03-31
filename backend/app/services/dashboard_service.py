@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
@@ -23,8 +24,14 @@ def _utcnow() -> datetime:
 
 
 class DashboardService:
+    DASHBOARD_CACHE_TTL_SECONDS = 300
+
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @classmethod
+    def _dashboard_cache_key(cls, user_id: UUID) -> str:
+        return f"dashboard:status:{user_id}"
 
     async def generate_daily_report(self) -> dict[str, Any]:
         """
@@ -66,6 +73,11 @@ class DashboardService:
         """
         Get all data for the dashboard
         """
+        cache_key = self._dashboard_cache_key(user_id)
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return cached
+
         user = await self._get_user(user_id)
 
         # Get active sprint
@@ -86,7 +98,7 @@ class DashboardService:
         # Calculate today's focus minutes from completed tasks
         today_focus_minutes = await self._get_today_focus_minutes(user_id)
 
-        return {
+        payload = {
             "weather": weather,
             "flame": {
                 "level": user.flame_level,
@@ -98,6 +110,12 @@ class DashboardService:
             "next_actions": next_actions,
             "cognitive": cognitive
         }
+        await cache_service.set(
+            cache_key,
+            payload,
+            ttl=self.DASHBOARD_CACHE_TTL_SECONDS,
+        )
+        return payload
 
     async def _get_user(self, user_id: UUID) -> User:
         result = await self.db.execute(select(User).where(User.id == user_id))
@@ -245,20 +263,28 @@ class DashboardService:
         """Check recent cognitive fragments for anxiety"""
         two_days_ago = _utcnow() - timedelta(days=2)
 
-        query = select(CognitiveFragment).where(
+        total_query = select(func.count(CognitiveFragment.id)).where(
             and_(
                 CognitiveFragment.user_id == user_id,
                 CognitiveFragment.created_at >= two_days_ago
             )
         )
-        result = await self.db.execute(query)
-        fragments = result.scalars().all()
+        total_result = await self.db.execute(total_query)
+        total_count = total_result.scalar() or 0
 
-        if not fragments:
+        if total_count == 0:
             return 0.0
 
-        anxiety_count = sum(1 for f in fragments if f.sentiment == "anxious")
-        return anxiety_count / len(fragments)
+        anxiety_query = select(func.count(CognitiveFragment.id)).where(
+            and_(
+                CognitiveFragment.user_id == user_id,
+                CognitiveFragment.created_at >= two_days_ago,
+                CognitiveFragment.sentiment == "anxious",
+            )
+        )
+        anxiety_result = await self.db.execute(anxiety_query)
+        anxiety_count = anxiety_result.scalar() or 0
+        return anxiety_count / total_count
 
     async def _calculate_weather(self, user_id: UUID, user: User, sprint: dict | None) -> dict:
         """

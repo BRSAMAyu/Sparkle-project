@@ -27,15 +27,19 @@ class NotificationCenterRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       final notifications = _demoNotifications();
-      return notifications.where((item) {
-        if (unreadOnly && item.isRead) {
-          return false;
-        }
-        if (sourceType != null && item.sourceType != sourceType) {
-          return false;
-        }
-        return true;
-      }).skip(skip).take(limit).toList();
+      return notifications
+          .where((item) {
+            if (unreadOnly && item.isRead) {
+              return false;
+            }
+            if (sourceType != null && item.sourceType != sourceType) {
+              return false;
+            }
+            return true;
+          })
+          .skip(skip)
+          .take(limit)
+          .toList();
     }
 
     try {
@@ -51,9 +55,11 @@ class NotificationCenterRepository {
         queryParameters: queryParams,
       );
 
-      final data = ApiResponseParser.unwrapList(response.data, action: 'getNotifications');
+      final data = ApiResponseParser.unwrapList(response.data,
+          action: 'getNotifications');
       return data
-          .map((json) => UnifiedNotification.fromJson(json as Map<String, dynamic>))
+          .map((json) =>
+              UnifiedNotification.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw _handleError(e);
@@ -106,7 +112,8 @@ class NotificationCenterRepository {
         '/notification-center/notifications/mark-all-read',
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'markAllAsRead');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'markAllAsRead');
       return payload['count'] as int? ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -116,7 +123,9 @@ class NotificationCenterRepository {
   /// Delete a notification
   Future<void> deleteNotification(String notificationId, String type) async {
     if (DemoDataService.isDemoMode) {
-      DemoDataService().demoNotifications.removeWhere((item) => item['id'] == notificationId);
+      DemoDataService()
+          .demoNotifications
+          .removeWhere((item) => item['id'] == notificationId);
       return;
     }
     try {
@@ -142,7 +151,8 @@ class NotificationCenterRepository {
         '/notification-center/notifications/clear-read',
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'clearReadNotifications');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'clearReadNotifications');
       return payload['count'] as int? ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -162,7 +172,8 @@ class NotificationCenterRepository {
       final all = _demoNotifications();
       final filtered = all.where((item) {
         if (type != null && item.type != type) return false;
-        if (startDate != null && item.createdAt.isBefore(startDate)) return false;
+        if (startDate != null && item.createdAt.isBefore(startDate))
+          return false;
         if (endDate != null && item.createdAt.isAfter(endDate)) return false;
         if (search != null && search.isNotEmpty) {
           final keyword = search.toLowerCase();
@@ -205,11 +216,13 @@ class NotificationCenterRepository {
         };
       }
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getNotificationHistory');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'getNotificationHistory');
 
       // Parse items
       final items = (payload['items'] as List? ?? [])
-          .map((json) => UnifiedNotification.fromJson(json as Map<String, dynamic>))
+          .map((json) =>
+              UnifiedNotification.fromJson(json as Map<String, dynamic>))
           .toList();
 
       return {
@@ -230,7 +243,8 @@ class NotificationCenterRepository {
       final notifications = _demoNotifications();
       final totalSent = notifications.length;
       final totalViewed = notifications.where((item) => item.isRead).length;
-      final totalClicked = notifications.where((item) => item.priority == 'high').length;
+      final totalClicked =
+          notifications.where((item) => item.priority == 'high').length;
       final hourlyDistribution = List<int>.generate(24, (hour) {
         if (hour >= 8 && hour <= 10) return 3;
         if (hour >= 12 && hour <= 14) return 2;
@@ -250,30 +264,54 @@ class NotificationCenterRepository {
         byType: {
           'system': NotificationTypeStats(
             type: 'system',
-            sent: notifications.where((item) => item.sourceType == 'system').length,
-            viewed: notifications.where((item) => item.sourceType == 'system' && item.isRead).length,
-            clicked: notifications.where((item) => item.sourceType == 'system' && item.priority == 'high').length,
+            sent: notifications
+                .where((item) => item.sourceType == 'system')
+                .length,
+            viewed: notifications
+                .where((item) => item.sourceType == 'system' && item.isRead)
+                .length,
+            clicked: notifications
+                .where((item) =>
+                    item.sourceType == 'system' && item.priority == 'high')
+                .length,
             viewRate: 0.9,
             clickRate: 0.55,
           ),
           'intervention': NotificationTypeStats(
             type: 'intervention',
-            sent: notifications.where((item) => item.sourceType == 'intervention').length,
-            viewed: notifications.where((item) => item.sourceType == 'intervention' && item.isRead).length,
-            clicked: notifications.where((item) => item.sourceType == 'intervention' && item.priority == 'high').length,
+            sent: notifications
+                .where((item) => item.sourceType == 'intervention')
+                .length,
+            viewed: notifications
+                .where(
+                    (item) => item.sourceType == 'intervention' && item.isRead)
+                .length,
+            clicked: notifications
+                .where((item) =>
+                    item.sourceType == 'intervention' &&
+                    item.priority == 'high')
+                .length,
             viewRate: 0.88,
             clickRate: 0.62,
           ),
         },
         trends: [
           NotificationTrendData(
-            date: DateTime.now().subtract(const Duration(days: 2)).toIso8601String().split('T').first,
+            date: DateTime.now()
+                .subtract(const Duration(days: 2))
+                .toIso8601String()
+                .split('T')
+                .first,
             sent: 7,
             viewed: 6,
             clicked: 4,
           ),
           NotificationTrendData(
-            date: DateTime.now().subtract(const Duration(days: 1)).toIso8601String().split('T').first,
+            date: DateTime.now()
+                .subtract(const Duration(days: 1))
+                .toIso8601String()
+                .split('T')
+                .first,
             sent: 8,
             viewed: 7,
             clicked: 5,
@@ -299,7 +337,8 @@ class NotificationCenterRepository {
         throw Exception('No analytics data received');
       }
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAnalytics');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getAnalytics');
       return NotificationAnalytics.fromJson(payload);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -311,11 +350,12 @@ class NotificationCenterRepository {
     if (DemoDataService.isDemoMode) {
       // Return mock preferences for demo mode
       return {
-        'enable_system_notifications': true,
-        'enable_intervention_notifications': true,
+        'enable_system': true,
+        'enable_interventions': true,
+        'notification_level': 'standard',
+        'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',
         'quiet_hours_end': '08:00',
-        'sound_enabled': true,
       };
     }
 
@@ -324,7 +364,8 @@ class NotificationCenterRepository {
         '/notification-center/preferences',
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPreferences');
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getPreferences');
       return payload;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -332,15 +373,17 @@ class NotificationCenterRepository {
   }
 
   /// Update notification preferences
-  Future<Map<String, dynamic>> updatePreferences(Map<String, dynamic> updates) async {
+  Future<Map<String, dynamic>> updatePreferences(
+      Map<String, dynamic> updates) async {
     if (DemoDataService.isDemoMode) {
       // Return updated mock preferences for demo mode
       return {
-        'enable_system_notifications': true,
-        'enable_intervention_notifications': true,
+        'enable_system': true,
+        'enable_interventions': true,
+        'notification_level': 'standard',
+        'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',
         'quiet_hours_end': '08:00',
-        'sound_enabled': true,
         ...updates,
       };
     }
@@ -351,7 +394,8 @@ class NotificationCenterRepository {
         data: updates,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePreferences');
+      final payload = ApiResponseParser.unwrapMap(response.data,
+          action: 'updatePreferences');
       return payload;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -372,12 +416,12 @@ class NotificationCenterRepository {
           title: item['title'] as String,
           content: item['message'] as String,
           type: item['type'] as String?,
-          priority: item['type'] == 'achievement' ||
-                  item['type'] == 'task_reminder'
-              ? 'high'
-              : item['type'] == 'plan_progress'
-                  ? 'medium'
-                  : 'low',
+          priority:
+              item['type'] == 'achievement' || item['type'] == 'task_reminder'
+                  ? 'high'
+                  : item['type'] == 'plan_progress'
+                      ? 'medium'
+                      : 'low',
           isRead: item['is_read'] as bool? ?? false,
           createdAt: DateTime.parse(item['created_at'] as String),
           readAt: item['read_at'] == null
@@ -411,7 +455,7 @@ class NotificationCenterRepository {
           return Exception('Request failed: $message');
       }
     } else if (e.type == DioExceptionType.connectionTimeout ||
-               e.type == DioExceptionType.receiveTimeout) {
+        e.type == DioExceptionType.receiveTimeout) {
       return Exception('Connection timeout. Please check your network.');
     } else if (e.type == DioExceptionType.connectionError) {
       return Exception('Connection error. Please check your network.');
@@ -422,7 +466,8 @@ class NotificationCenterRepository {
 }
 
 @riverpod
-NotificationCenterRepository notificationCenterRepository(NotificationCenterRepositoryRef ref) {
+NotificationCenterRepository notificationCenterRepository(
+    NotificationCenterRepositoryRef ref) {
   final client = ref.watch(apiClientProvider);
   return NotificationCenterRepository(client);
 }

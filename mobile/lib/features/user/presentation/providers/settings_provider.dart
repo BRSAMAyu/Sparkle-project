@@ -9,6 +9,7 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/data/repositories/prediction_repository.dart';
+import 'package:sparkle/features/notification_center/data/repositories/notification_center_repository.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -25,6 +26,7 @@ const String kShowChatPredictionDockKey = 'settings_show_chat_prediction_dock';
 const String kShowChatTransparencyCapsuleKey =
     'settings_show_chat_transparency_capsule';
 const String kChatPureModeKey = 'settings_chat_pure_mode';
+const String kChatSeedLibraryEnabledKey = 'settings_chat_seed_library_enabled';
 const String kMotionIntensityLevelPreferenceKey =
     'settings_motion_intensity_level';
 
@@ -63,15 +65,80 @@ final taskReminderConfigProvider =
   TaskReminderConfigNotifier.new,
 );
 
+/// Provider for notification center preferences
+final notificationPreferenceSettingsProvider = StateNotifierProvider<
+    NotificationPreferenceSettingsNotifier, NotificationPreferenceSettings>(
+  NotificationPreferenceSettingsNotifier.new,
+);
+
 /// Provider for weekly agenda data
 final weeklyAgendaProvider =
     StateNotifierProvider<WeeklyAgendaNotifier, Map<String, dynamic>>(
   WeeklyAgendaNotifier.new,
 );
 
+class NotificationPreferenceSettings {
+  const NotificationPreferenceSettings({
+    this.enableSystem = true,
+    this.enableInterventions = true,
+    this.notificationLevel = 'standard',
+    this.quietHoursEnabled = false,
+    this.quietHoursStart = '22:00',
+    this.quietHoursEnd = '08:00',
+    this.isLoaded = false,
+  });
+
+  final bool enableSystem;
+  final bool enableInterventions;
+  final String notificationLevel;
+  final bool quietHoursEnabled;
+  final String quietHoursStart;
+  final String quietHoursEnd;
+  final bool isLoaded;
+
+  NotificationPreferenceSettings copyWith({
+    bool? enableSystem,
+    bool? enableInterventions,
+    String? notificationLevel,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+    bool? isLoaded,
+  }) =>
+      NotificationPreferenceSettings(
+        enableSystem: enableSystem ?? this.enableSystem,
+        enableInterventions: enableInterventions ?? this.enableInterventions,
+        notificationLevel: notificationLevel ?? this.notificationLevel,
+        quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+        quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+        quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
+        isLoaded: isLoaded ?? this.isLoaded,
+      );
+
+  static NotificationPreferenceSettings fromJson(Map<String, dynamic> json) =>
+      NotificationPreferenceSettings(
+        enableSystem: json['enable_system'] as bool? ?? true,
+        enableInterventions: json['enable_interventions'] as bool? ?? true,
+        notificationLevel: json['notification_level'] as String? ?? 'standard',
+        quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
+        quietHoursStart: json['quiet_hours_start'] as String? ?? '22:00',
+        quietHoursEnd: json['quiet_hours_end'] as String? ?? '08:00',
+        isLoaded: true,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'enable_system': enableSystem,
+        'enable_interventions': enableInterventions,
+        'notification_level': notificationLevel,
+        'quiet_hours_enabled': quietHoursEnabled,
+        'quiet_hours_start': quietHoursStart,
+        'quiet_hours_end': quietHoursEnd,
+      };
+}
+
 class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
   WeeklyAgendaNotifier(this._ref) : super({}) {
-    _loadFromSettings();
+    unawaited(_loadFromSettings());
   }
 
   final Ref _ref;
@@ -110,10 +177,10 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
   TaskReminderConfigNotifier(this._ref) : super(const TaskReminderConfig()) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _loadFromSettings();
+        unawaited(_loadFromSettings());
       }
     });
-    _loadFromSettings();
+    unawaited(_loadFromSettings());
   }
 
   final Ref _ref;
@@ -167,6 +234,68 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
     } catch (e) {
       // Revert on error
       state = prevState;
+      rethrow;
+    }
+  }
+}
+
+class NotificationPreferenceSettingsNotifier
+    extends StateNotifier<NotificationPreferenceSettings> {
+  NotificationPreferenceSettingsNotifier(this._ref)
+      : super(const NotificationPreferenceSettings()) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        unawaited(_loadPreferences());
+      }
+    });
+    unawaited(_loadPreferences());
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadPreferences() async {
+    final user = _ref.read(authProvider).user;
+    if (user == null) {
+      state = const NotificationPreferenceSettings();
+      return;
+    }
+
+    try {
+      final repo = _ref.read(notificationCenterRepositoryProvider);
+      final prefs = await repo.getPreferences();
+      state = NotificationPreferenceSettings.fromJson(prefs);
+    } catch (_) {
+      state = state.copyWith(isLoaded: true);
+    }
+  }
+
+  Future<void> updatePreferences({
+    bool? enableSystem,
+    bool? enableInterventions,
+    String? notificationLevel,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+  }) async {
+    final previousState = state;
+    final nextState = previousState.copyWith(
+      enableSystem: enableSystem,
+      enableInterventions: enableInterventions,
+      notificationLevel: notificationLevel,
+      quietHoursEnabled: quietHoursEnabled,
+      quietHoursStart: quietHoursStart,
+      quietHoursEnd: quietHoursEnd,
+      isLoaded: true,
+    );
+
+    state = nextState;
+
+    try {
+      final repo = _ref.read(notificationCenterRepositoryProvider);
+      final saved = await repo.updatePreferences(nextState.toJson());
+      state = NotificationPreferenceSettings.fromJson(saved);
+    } catch (e) {
+      state = previousState;
       rethrow;
     }
   }
@@ -355,6 +484,14 @@ final chatPureModeProvider =
     StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
   (ref) => SimpleBoolPreferenceNotifier(
     storageKey: kChatPureModeKey,
+    defaultValue: false,
+  ),
+);
+
+final chatSeedLibraryEnabledProvider =
+    StateNotifierProvider<SimpleBoolPreferenceNotifier, bool>(
+  (ref) => SimpleBoolPreferenceNotifier(
+    storageKey: kChatSeedLibraryEnabledKey,
     defaultValue: false,
   ),
 );

@@ -946,12 +946,22 @@ async def rollback_preference(
         source_type="user_state",
         source="rollback",
     )
+    restored = await profile_write_service.restore_inferred_backup(
+        user_id=current_user.id,
+        pref_key=payload.pref_key,
+        source="rollback_restore",
+        delete_backup=True,
+    )
     return {
         "status": "ok",
         "from_version": current.version,
         "to_version": previous.version,
         "new_version": result.history_version,
-        "preference_version": result.preference_version,
+        "preference_version": (
+            restored.preference_version
+            if restored is not None
+            else result.preference_version
+        ),
     }
 
 

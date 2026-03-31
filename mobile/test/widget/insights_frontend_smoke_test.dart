@@ -39,6 +39,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> runSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) async =>
       const SimulationSessionModel(
         id: 's-1',
@@ -54,6 +57,9 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> streamSimulation({
     required String topic,
     required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
 
@@ -121,6 +127,7 @@ class _StaticTheaterNotifier extends TheaterNotifier {
     required String topic,
     String? targetNodeId,
     int horizonDays = 14,
+    String? simulationSessionId,
   }) async {}
 
   @override
@@ -478,9 +485,12 @@ void main() {
           headline: '最近两轮掌握度正在回升',
           summary: '先把短板收口，再扩大练习范围会更稳。',
           historyPoints: <LearningTrendPoint>[
-            LearningTrendPoint(label: '3/10', averageMastery: 61, studyMinutes: 42),
-            LearningTrendPoint(label: '3/17', averageMastery: 66, studyMinutes: 56),
-            LearningTrendPoint(label: '3/24', averageMastery: 72, studyMinutes: 63),
+            LearningTrendPoint(
+                label: '3/10', averageMastery: 61, studyMinutes: 42),
+            LearningTrendPoint(
+                label: '3/17', averageMastery: 66, studyMinutes: 56),
+            LearningTrendPoint(
+                label: '3/24', averageMastery: 72, studyMinutes: 63),
           ],
           comparisons: <LearningTrendComparison>[
             LearningTrendComparison(
@@ -513,7 +523,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('knowledge theater screen remains stable with prediction on compact width',
+    testWidgets(
+        'knowledge theater screen remains stable with prediction on compact width',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 760));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -673,7 +684,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('compact insight hub card remains stable on dashboard-sized layout',
+    testWidgets(
+        'compact insight hub card remains stable on dashboard-sized layout',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 196));
       addTearDown(() => tester.binding.setSurfaceSize(null));

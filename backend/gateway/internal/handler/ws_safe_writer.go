@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -24,7 +25,11 @@ func newWSSafeWriter(conn *websocket.Conn, writeWait time.Duration) *wsSafeWrite
 }
 
 func (w *wsSafeWriter) withLock(fn func() error) error {
-	<-w.writeMu
+	select {
+	case <-w.writeMu:
+	case <-time.After(w.writeWait):
+		return fmt.Errorf("ws writer lock timeout after %s", w.writeWait)
+	}
 	defer func() {
 		w.writeMu <- struct{}{}
 	}()

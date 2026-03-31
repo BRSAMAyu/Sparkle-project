@@ -17,11 +17,6 @@ async def test_theater_free_mode_generates_preview_when_node_lookup_fails(monkey
 
     monkeypatch.setattr(
         service,
-        "_resolve_target_node_for_user",
-        AsyncMock(side_effect=ValueError('No knowledge node found for topic "Rust"')),
-    )
-    monkeypatch.setattr(
-        service,
         "_get_mastery_map",
         AsyncMock(return_value={}),
     )
@@ -45,10 +40,47 @@ async def test_theater_free_mode_generates_preview_when_node_lookup_fails(monkey
         AsyncMock(
             return_value={
                 "target_name": "Rust 学习路径",
-                "description": "面向系统编程初学者的自由模式推演。",
+                "description": "面向系统编程初学者的中文自由推演。",
                 "prerequisites": ["变量与类型", "所有权", "借用"],
+                "core_concepts": ["生命周期", "错误处理", "模块化"],
                 "milestones": ["完成一个命令行小项目"],
+                "misconceptions": ["把所有权理解成语法规则死记"],
+                "applications": ["编写命令行工具"],
+                "aliases": ["Rust 入门"],
             }
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_semantic_enrich_freeform_nodes",
+        AsyncMock(
+            return_value=(
+                [
+                    {
+                        "id": "free-node-1",
+                        "name": "变量与类型",
+                        "description": "前置",
+                        "node_type": "prerequisite",
+                        "is_target": False,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": [],
+                    },
+                    {
+                        "id": "free-node-2",
+                        "name": "Rust 学习路径",
+                        "description": "目标",
+                        "node_type": "target",
+                        "is_target": True,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": ["Rust 入门"],
+                    },
+                ],
+                [],
+            )
         ),
     )
 
@@ -60,8 +92,92 @@ async def test_theater_free_mode_generates_preview_when_node_lookup_fails(monkey
 
     assert payload["target_name"] == "Rust 学习路径"
     assert payload["target_node_id"] is None
-    assert payload["routing_notes"]["target_resolution_mode"] == "free_mode"
+    assert payload["routing_notes"]["target_resolution_mode"] == "freeform_only"
     assert payload["paths"]
+    assert all("Day" not in step["day_label"] for step in payload["paths"][0]["steps"])
+
+
+@pytest.mark.asyncio
+async def test_theater_hybrid_semantic_keeps_freeform_target(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+
+    monkeypatch.setattr(service, "_get_mastery_map", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        service,
+        "_build_user_learning_profile",
+        AsyncMock(return_value={"average_session_minutes": 35}),
+    )
+    monkeypatch.setattr(service, "_top_pattern_names", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service.accuracy, "record_prediction", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        "app.services.theater.prediction_theater_service.analysis_llm.json_call",
+        AsyncMock(
+            return_value={
+                "target_name": "LLM 学习路径",
+                "description": "围绕大语言模型的中文推演。",
+                "prerequisites": ["概率基础", "Python 基础"],
+                "core_concepts": ["Transformer", "预训练", "对齐"],
+                "milestones": ["能解释 LLM 工作流程"],
+                "misconceptions": ["把提示词工程当成全部能力"],
+                "applications": ["搭建一个问答原型"],
+                "aliases": ["大语言模型"],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_semantic_enrich_freeform_nodes",
+        AsyncMock(
+            return_value=(
+                [
+                    {
+                        "id": "free-node-1",
+                        "name": "Transformer",
+                        "description": "核心概念",
+                        "node_type": "concept",
+                        "is_target": False,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": "11111111-1111-1111-1111-111111111111",
+                        "candidate_status": "pending_review",
+                        "aliases": [],
+                    },
+                    {
+                        "id": "free-node-2",
+                        "name": "LLM 学习路径",
+                        "description": "目标",
+                        "node_type": "target",
+                        "is_target": True,
+                        "source_type": "freeform",
+                        "mapped_galaxy_node_id": None,
+                        "candidate_status": "pending_review",
+                        "aliases": ["大语言模型"],
+                    },
+                ],
+                [
+                    {
+                        "freeform_node_id": "free-node-1",
+                        "freeform_node_name": "Transformer",
+                        "galaxy_node_id": "11111111-1111-1111-1111-111111111111",
+                        "galaxy_node_name": "Transformer",
+                        "confidence": 0.82,
+                        "evidence": "语义接近，可作为参考映射。",
+                    }
+                ],
+            )
+        ),
+    )
+
+    payload = await service.generate_prediction(
+        user_id=uuid4(),
+        topic="我想系统学习 LLM",
+        preview_mode=True,
+    )
+
+    assert payload["target_name"] == "LLM 学习路径"
+    assert payload["target_node_id"] is None
+    assert payload["target_resolution_mode"] == "hybrid_semantic"
+    assert payload["routing_notes"]["semantic_matches"]
+    assert payload["paths"][0]["steps"][0]["mapped_galaxy_node_id"] == "11111111-1111-1111-1111-111111111111"
 
 
 @pytest.mark.asyncio

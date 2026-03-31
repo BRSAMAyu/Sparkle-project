@@ -114,7 +114,16 @@ class ProfileContextService:
                 cached = await self.redis.get(cache_key)
                 if cached:
                     data = json.loads(cached)
-                    return ProfileContext(**data)
+                    context = ProfileContext(**data)
+                    current_version = await self.pref_service.get_preference_version(user_id)
+                    if context.preference_version == current_version:
+                        return context
+                    logger.info(
+                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s",
+                        user_id,
+                        context.preference_version,
+                        current_version,
+                    )
             except Exception as exc:
                 logger.warning(f"ProfileContext cache read failed: {exc}")
 

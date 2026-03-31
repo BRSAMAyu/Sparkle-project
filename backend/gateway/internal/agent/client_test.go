@@ -46,7 +46,7 @@ func TestClientNewClient(t *testing.T) {
 		{
 			name: "valid_insecure_connection",
 			cfg: &config.Config{
-				AgentAddress:   "localhost:50051",
+				AgentAddress:    "localhost:50051",
 				AgentTLSEnabled: false,
 			},
 			expectErr: false, // gRPC NewClient is non-blocking, so it succeeds even if server is offline
@@ -55,7 +55,7 @@ func TestClientNewClient(t *testing.T) {
 		{
 			name: "invalid_address",
 			cfg: &config.Config{
-				AgentAddress:   "invalid:invalid",
+				AgentAddress:    "invalid:invalid",
 				AgentTLSEnabled: false,
 			},
 			expectErr: true,
@@ -239,9 +239,9 @@ func TestServerStreamingPattern(t *testing.T) {
 				CreatedAt:  1700000001,
 			},
 			{
-				ResponseId: "resp-3",
-				RequestId:  "req-1",
-				CreatedAt:  1700000002,
+				ResponseId:   "resp-3",
+				RequestId:    "req-1",
+				CreatedAt:    1700000002,
 				FinishReason: agentv1.FinishReason_STOP,
 			},
 		}
@@ -305,18 +305,32 @@ func TestConnectionRetry(t *testing.T) {
 	})
 }
 
+func TestShouldReconnect(t *testing.T) {
+	t.Run("reconnects_on_unavailable", func(t *testing.T) {
+		assert.True(t, shouldReconnect(status.Error(codes.Unavailable, "service unavailable")))
+	})
+
+	t.Run("reconnects_on_deadline_exceeded", func(t *testing.T) {
+		assert.True(t, shouldReconnect(status.Error(codes.DeadlineExceeded, "timeout")))
+	})
+
+	t.Run("does_not_reconnect_on_invalid_argument", func(t *testing.T) {
+		assert.False(t, shouldReconnect(status.Error(codes.InvalidArgument, "bad request")))
+	})
+}
+
 // ============================================================
 // TLS Configuration Tests
 // ============================================================
 
 func TestTLSConfiguration(t *testing.T) {
 	tests := []struct {
-		name              string
-		tlsEnabled        bool
-		caCertPath        string
-		serverName        string
+		name               string
+		tlsEnabled         bool
+		caCertPath         string
+		serverName         string
 		insecureSkipVerify bool
-		desc              string
+		desc               string
 	}{
 		{
 			name:       "tls_disabled",
@@ -324,30 +338,30 @@ func TestTLSConfiguration(t *testing.T) {
 			desc:       "Should use insecure credentials",
 		},
 		{
-			name:              "tls_enabled_with_ca",
-			tlsEnabled:        true,
-			caCertPath:        "/path/to/ca.crt",
-			serverName:        "localhost",
+			name:               "tls_enabled_with_ca",
+			tlsEnabled:         true,
+			caCertPath:         "/path/to/ca.crt",
+			serverName:         "localhost",
 			insecureSkipVerify: false,
-			desc:              "Should use CA certificate for verification",
+			desc:               "Should use CA certificate for verification",
 		},
 		{
-			name:              "tls_enabled_skip_verify",
-			tlsEnabled:        true,
-			serverName:        "localhost",
+			name:               "tls_enabled_skip_verify",
+			tlsEnabled:         true,
+			serverName:         "localhost",
 			insecureSkipVerify: true,
-			desc:              "Should skip TLS verification",
+			desc:               "Should skip TLS verification",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{
-				AgentAddress:         "localhost:50051",
-				AgentTLSEnabled:       tt.tlsEnabled,
-				AgentTLSCACertPath:    tt.caCertPath,
-				AgentTLSServerName:    tt.serverName,
-				AgentTLSInsecure:      tt.insecureSkipVerify,
+				AgentAddress:       "localhost:50051",
+				AgentTLSEnabled:    tt.tlsEnabled,
+				AgentTLSCACertPath: tt.caCertPath,
+				AgentTLSServerName: tt.serverName,
+				AgentTLSInsecure:   tt.insecureSkipVerify,
 			}
 
 			assert.Equal(t, tt.tlsEnabled, cfg.AgentTLSEnabled, tt.desc)

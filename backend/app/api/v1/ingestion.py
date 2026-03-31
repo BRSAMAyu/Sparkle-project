@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import tempfile
@@ -6,6 +7,7 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from loguru import logger
 
+from app.config import settings
 from app.core.cache import cache_service
 from app.services.document_service import document_service
 
@@ -20,6 +22,8 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 # 清洗后内容的最大大小（10MB）
 MAX_CLEANED_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+DOCUMENT_CLEANING_CONCURRENCY = max(1, int(os.getenv("SPARKLE_DOCUMENT_CLEAN_CONCURRENCY", "3")))
+_DOCUMENT_CLEANING_SEMAPHORE = asyncio.Semaphore(DOCUMENT_CLEANING_CONCURRENCY)
 
 def check_disk_space(required_bytes: int) -> bool:
     """
@@ -43,7 +47,8 @@ def check_disk_space(required_bytes: int) -> bool:
 async def _process_document_task(task_id: str, file_path: str, options: dict):
     """Background task wrapper with proper error handling"""
     try:
-        await document_service.clean_and_summarize(file_path, task_id, options)
+        async with _DOCUMENT_CLEANING_SEMAPHORE:
+            await document_service.clean_and_summarize(file_path, task_id, options)
     except Exception as e:
         logger.error(f"Background task {task_id} failed: {e}", exc_info=True)
         # 更新任务状态为失败，通知用户
@@ -89,6 +94,11 @@ async def clean_document(
         file_size = 0
         file_content = await file.read()
         file_size = len(file_content)
+        if file_size > settings.MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum upload size is {settings.MAX_UPLOAD_SIZE} bytes."
+            )
         required_space = file_size * 3  # 原始文件 + 临时文件 + 处理结果
 
         if not check_disk_space(required_space):

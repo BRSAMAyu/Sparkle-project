@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 
 /// Seed Item Card Widget
@@ -98,14 +101,22 @@ class SeedItemCard extends StatelessWidget {
                       if (item.content != null)
                         Padding(
                           padding: const EdgeInsets.only(top: DS.spacing4),
-                          child: Text(
-                            item.content!,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: DS.textSecondary,
-                                    ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          child: IgnorePointer(
+                            child: ClipRect(
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxHeight: 42),
+                                child: SparkleMarkdown(
+                                  content: item.content!,
+                                  textColor: DS.textSecondary,
+                                  codeBackgroundColor: DS.surfaceTertiary,
+                                  linkColor: DS.primaryBase,
+                                  fontSize: 13,
+                                  lineHeight: 1.4,
+                                  contentRole: SparkleMarkdownRole.seedBody,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
 
@@ -158,13 +169,12 @@ class SeedItemCard extends StatelessWidget {
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert),
                     onSelected: (value) {
-                      switch (value) {
-                        case 'share':
-                          onShare?.call();
-                        case 'edit':
-                          onEdit?.call();
-                        case 'delete':
-                          _showDeleteDialog(context);
+                      if (value == 'share') {
+                        onShare?.call();
+                      } else if (value == 'edit') {
+                        onEdit?.call();
+                      } else if (value == 'delete') {
+                        _showDeleteDialog(context);
                       }
                     },
                     itemBuilder: (context) => [
@@ -257,24 +267,26 @@ class SeedItemCard extends StatelessWidget {
   }
 
   void _showDeleteDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除内容'),
-        content: const Text('确定要删除这个内容吗？'),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () => Navigator.pop(context),
-            label: '取消',
-          ),
-          SparkleButton.destructive(
-            onPressed: () {
-              Navigator.pop(context);
-              onDelete?.call();
-            },
-            label: '删除',
-          ),
-        ],
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('删除内容'),
+          content: const Text('确定要删除这个内容吗？'),
+          actions: [
+            SparkleButton.ghost(
+              onPressed: () => Navigator.pop(context),
+              label: '取消',
+            ),
+            SparkleButton.destructive(
+              onPressed: () {
+                Navigator.pop(context);
+                onDelete?.call();
+              },
+              label: '删除',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,17 +29,21 @@ class LearningForecastScreen extends ConsumerStatefulWidget {
 class _LearningForecastScreenState
     extends ConsumerState<LearningForecastScreen> {
   bool _isLoading = true;
+  String? _errorMessage;
   Map<String, dynamic>? _dashboardData;
   Map<DateTime, double> _heatmapData = const <DateTime, double>{};
 
   @override
   void initState() {
     super.initState();
-    _loadDashboard();
+    unawaited(_loadDashboard());
   }
 
   Future<void> _loadDashboard() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final results = await Future.wait<dynamic>([
@@ -55,10 +61,13 @@ class _LearningForecastScreenState
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        AppFeedback.error(context, '加载失败: $e');
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '加载失败: $e';
+      });
     }
   }
 
@@ -69,12 +78,12 @@ class _LearningForecastScreenState
 
     return <DateTime, double>{
       for (final record in days)
-        DateTime(record.day.year, record.day.month, record.day.day):
-            switch (record.status) {
-              StreakDayStatus.active => 1.0,
-              StreakDayStatus.frozen => 0.55,
-              StreakDayStatus.missed => 0.0,
-            },
+        DateTime(record.day.year, record.day.month, record.day.day): switch (
+            record.status) {
+          StreakDayStatus.active => 1.0,
+          StreakDayStatus.frozen => 0.55,
+          StreakDayStatus.missed => 0.0,
+        },
     };
   }
 
@@ -101,69 +110,132 @@ class _LearningForecastScreenState
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : ContentConstraint(
-                child: RefreshIndicator(
-                  onRefresh: _loadDashboard,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(DS.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        _buildHeader(),
-                        const SizedBox(height: DS.xl),
-
-                        // Nightly Review
-                        _buildSectionTitle('夜间复盘'),
-                        const SizedBox(height: DS.md),
-                        const NightlyReviewPanel(compact: true),
-                        const SizedBox(height: DS.xl),
-
-                        // Engagement Heatmap
-                        _buildSectionTitle('学习活跃度分析'),
-                        const SizedBox(height: DS.md),
-                        EngagementHeatmap(
-                          data: _heatmapData,
-                          onDayTap: (date) => context.push(
-                            '/calendar/day?date=${date.toIso8601String()}',
-                          ),
+            : (_dashboardData == null
+                ? ContentConstraint(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.xl),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.insights_outlined,
+                              size: 40,
+                              color: DS.textSecondary,
+                            ),
+                            const SizedBox(height: DS.md),
+                            Text(
+                              _errorMessage ?? '预测数据暂时还没准备好',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: DS.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: DS.sm),
+                            Text(
+                              '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: DS.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: DS.lg),
+                            FilledButton.icon(
+                              onPressed: _loadDashboard,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('重新加载'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: DS.xl),
-
-                        // Insights Cards
-                        _buildSectionTitle('AI 洞察'),
-                        const SizedBox(height: DS.md),
-
-                        // Engagement Forecast
-                        PredictiveInsightsCard(
-                          type: 'engagement',
-                          data: (_dashboardData?['engagement_forecast']
-                                  as Map<String, dynamic>?) ??
-                              {},
-                        ),
-                        const SizedBox(height: DS.lg),
-
-                        // Risk Assessment
-                        PredictiveInsightsCard(
-                          type: 'risk',
-                          data: (_dashboardData?['dropout_risk']
-                                  as Map<String, dynamic>?) ??
-                              {},
-                        ),
-                        const SizedBox(height: DS.xl),
-
-                        // Optimal Time Recommendation
-                        _buildOptimalTimeSection(),
-                        const SizedBox(height: DS.xl),
-
-                        // Learning Tips
-                        _buildLearningTips(),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
+                  )
+                : ContentConstraint(
+                    child: RefreshIndicator(
+                      onRefresh: _loadDashboard,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(DS.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_errorMessage != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(DS.md),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .errorContainer
+                                      .withValues(alpha: 0.7),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: DS.lg),
+                            ],
+                            // Header
+                            _buildHeader(),
+                            const SizedBox(height: DS.xl),
+
+                            // Nightly Review
+                            _buildSectionTitle('夜间复盘'),
+                            const SizedBox(height: DS.md),
+                            const NightlyReviewPanel(compact: true),
+                            const SizedBox(height: DS.xl),
+
+                            // Engagement Heatmap
+                            _buildSectionTitle('学习活跃度分析'),
+                            const SizedBox(height: DS.md),
+                            EngagementHeatmap(
+                              data: _heatmapData,
+                              onDayTap: (date) => context.push(
+                                '/calendar/day?date=${date.toIso8601String()}',
+                              ),
+                            ),
+                            const SizedBox(height: DS.xl),
+
+                            // Insights Cards
+                            _buildSectionTitle('AI 洞察'),
+                            const SizedBox(height: DS.md),
+
+                            // Engagement Forecast
+                            PredictiveInsightsCard(
+                              type: 'engagement',
+                              data: (_dashboardData?['engagement_forecast']
+                                      as Map<String, dynamic>?) ??
+                                  {},
+                            ),
+                            const SizedBox(height: DS.lg),
+
+                            // Risk Assessment
+                            PredictiveInsightsCard(
+                              type: 'risk',
+                              data: (_dashboardData?['dropout_risk']
+                                      as Map<String, dynamic>?) ??
+                                  {},
+                            ),
+                            const SizedBox(height: DS.xl),
+
+                            // Optimal Time Recommendation
+                            _buildOptimalTimeSection(),
+                            const SizedBox(height: DS.xl),
+
+                            // Learning Tips
+                            _buildLearningTips(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )),
       );
 
   Widget _buildHeader() => MaterialStyler(
@@ -220,9 +292,21 @@ class _LearningForecastScreenState
   Widget _buildOptimalTimeSection() {
     final optimalTime = _dashboardData?['optimal_time'];
     if (optimalTime == null) return const SizedBox.shrink();
+    final optimalTimeMap = Map<String, dynamic>.from(
+      optimalTime as Map<String, dynamic>,
+    );
 
-    final bestHours = optimalTime['best_hours'] as List? ?? [];
-    final bestWeekdays = optimalTime['best_weekdays'] as List? ?? [];
+    final bestHours = (optimalTimeMap['best_hours'] as List? ?? const [])
+        .map((item) => (item as num?)?.toInt() ?? 0)
+        .toList(growable: false);
+    final bestWeekdays = (optimalTimeMap['best_weekdays'] as List? ?? const [])
+        .map((item) => (item as num?)?.toInt() ?? 0)
+        .toList(growable: false);
+    final reason = optimalTimeMap['reason']?.toString() ?? '';
+    final sampleSize = (optimalTimeMap['sample_size'] as num?)?.toInt() ?? 0;
+    final confidence = (optimalTimeMap['confidence'] as num?)?.toDouble() ?? 0;
+    final dataStatus = optimalTimeMap['data_status']?.toString() ?? 'ok';
+    final hasRecommendations = bestHours.isNotEmpty || bestWeekdays.isNotEmpty;
 
     return Card(
       elevation: 2,
@@ -247,55 +331,90 @@ class _LearningForecastScreenState
               ],
             ),
             const SizedBox(height: DS.lg),
+            Text(
+              hasRecommendations
+                  ? '基于 $sampleSize 条学习记录，当前推荐置信度 ${(confidence * 100).round()}%。'
+                  : (reason.isEmpty ? '还没有足够数据生成稳定推荐。' : reason),
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+            if (!hasRecommendations) ...[
+              const SizedBox(height: DS.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.md),
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  dataStatus == 'insufficient_data'
+                      ? '先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。'
+                      : reason,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
 
             // Best Hours
-            const Text(
-              '推荐学习时段',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: DS.sm),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: bestHours
-                  .map(
-                    (hour) => Chip(
-                      label: Text(
-                        '$hour:00-${hour + 1}:00',
-                        style: const TextStyle(fontSize: 12),
+            if (bestHours.isNotEmpty) ...[
+              const SizedBox(height: DS.lg),
+              const Text(
+                '推荐学习时段',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: DS.sm),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: bestHours
+                    .map(
+                      (hour) => Chip(
+                        label: Text(
+                          '$hour:00-${hour + 1}:00',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: DS.spacing8),
                       ),
-                      backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: DS.spacing8),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: DS.lg),
+                    )
+                    .toList(),
+              ),
+            ],
 
             // Best Weekdays
-            const Text(
-              '推荐学习日',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: DS.sm),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: bestWeekdays
-                  .map(
-                    (day) => Chip(
-                      label: Text(
-                        _getWeekdayName(day as int),
-                        style: const TextStyle(fontSize: 12),
+            if (bestWeekdays.isNotEmpty) ...[
+              const SizedBox(height: DS.lg),
+              const Text(
+                '推荐学习日',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: DS.sm),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: bestWeekdays
+                    .map(
+                      (day) => Chip(
+                        label: Text(
+                          _getWeekdayName(day),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: DS.success.withValues(alpha: 0.1),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: DS.spacing8),
                       ),
-                      backgroundColor: DS.success.withValues(alpha: 0.1),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: DS.spacing8),
-                    ),
-                  )
-                  .toList(),
-            ),
+                    )
+                    .toList(),
+              ),
+            ],
           ],
         ),
       ),

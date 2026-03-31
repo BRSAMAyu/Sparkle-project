@@ -188,7 +188,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -342,6 +342,7 @@ class ChatOrchestrator(
         logger.info("ChatOrchestrator initialized with GroundingValidator and UnifiedIntentRouter")
 
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
+        # Note: Circuit breaker will be injected after initialization
         self.lang_graph_planner = LangGraphPlanner(redis_client)
         self.snapshot_manager = StateSnapshotManager(redis_client)
         logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
@@ -356,6 +357,9 @@ class ChatOrchestrator(
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
         self._track_task(asyncio.create_task(self.langgraph_breaker.initialize()))
+
+        # Inject circuit breaker into LangGraphPlanner
+        self.lang_graph_planner.circuit_breaker = self.langgraph_breaker
 
         # Phase 3: Observability
         self.observability = observability_logger
@@ -452,24 +456,35 @@ class ChatOrchestrator(
         return "normal"
 
     def _evict_oldest_droppable_stream_item(self, queue: asyncio.Queue) -> bool:
-        internal_queue = getattr(queue, "_queue", None)
-        if internal_queue is None:
+        drained_items: list[agent_service_pb2.ChatResponse] = []
+        retained_items: list[agent_service_pb2.ChatResponse] = []
+        dropped = False
+
+        try:
+            while True:
+                drained_items.append(queue.get_nowait())
+        except asyncio.QueueEmpty:
+            pass
+
+        if not drained_items:
             return False
 
-        items = list(internal_queue)
-        for index, item in enumerate(items):
-            if isinstance(item, agent_service_pb2.ChatResponse) and self._response_priority(item) == "droppable":
-                del items[index]
-                internal_queue.clear()
-                internal_queue.extend(items)
+        for item in drained_items:
+            if (
+                not dropped
+                and isinstance(item, agent_service_pb2.ChatResponse)
+                and self._response_priority(item) == "droppable"
+            ):
+                queue.task_done()
+                dropped = True
+                continue
+            retained_items.append(item)
 
-                unfinished = getattr(queue, "_unfinished_tasks", None)
-                if isinstance(unfinished, int) and unfinished > 0:
-                    queue._unfinished_tasks = unfinished - 1
-                    if queue._unfinished_tasks == 0:
-                        queue._finished.set()
-                return True
-        return False
+        for item in retained_items:
+            queue.put_nowait(item)
+            queue.task_done()
+
+        return dropped
 
     async def _enqueue_stream_response(self, queue: asyncio.Queue, resp: agent_service_pb2.ChatResponse) -> None:
         priority = self._response_priority(resp)
@@ -571,10 +586,8 @@ class ChatOrchestrator(
     def _ensure_tools_registered(self):
         """Ensure tools are registered in the registry"""
         try:
-            # Check if tools are already registered
-            if len(dynamic_tool_registry.get_all_tools()) == 0:
-                # Auto-discover tools from app.tools package
-                dynamic_tool_registry.register_from_package("app.tools")
+            registered = dynamic_tool_registry.ensure_package_registered("app.tools")
+            if registered > 0:
                 logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
 
             # Fix 3: 刷新 validator allowlist（与工具注册联动）
@@ -630,15 +643,42 @@ class ChatOrchestrator(
             "生成学习报告",
         )
 
-        inferred: list[str] = []
-        if any(keyword in message for keyword in prediction_keywords):
-            inferred.append("launch_prediction")
-        if any(keyword in message for keyword in simulation_keywords):
-            inferred.append("run_quick_simulation")
-        report_context = ("报告" in message or "总结" in message or "复盘" in message) and any(
-            keyword in message for keyword in ("学习", "掌握", "进度", "本周", "这周", "最近")
+        negation_markers = (
+            "不需要",
+            "不要",
+            "不用",
+            "无需",
+            "先别",
+            "别",
+            "不想",
+            "先不",
+            "暂时不",
+            "先不要",
+            "not ",
+            "don't ",
+            "do not ",
+            "no ",
         )
-        if any(keyword in message for keyword in report_keywords) or report_context:
+
+        def _has_positive_keyword(keywords: tuple[str, ...]) -> bool:
+            for keyword in keywords:
+                start = message.find(keyword)
+                while start != -1:
+                    prefix = message[max(0, start - 8):start]
+                    if not any(marker in prefix for marker in negation_markers):
+                        return True
+                    start = message.find(keyword, start + len(keyword))
+            return False
+
+        inferred: list[str] = []
+        if _has_positive_keyword(prediction_keywords):
+            inferred.append("launch_prediction")
+        if _has_positive_keyword(simulation_keywords):
+            inferred.append("run_quick_simulation")
+        report_context = _has_positive_keyword(("报告", "总结", "复盘")) and _has_positive_keyword(
+            ("学习", "掌握", "进度", "本周", "这周", "最近")
+        )
+        if _has_positive_keyword(report_keywords) or report_context:
             inferred.append("generate_learning_report")
         return inferred
 
@@ -1469,6 +1509,8 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                 )
                 if should_return:
+                    async for queued in self._drain_queue(queue):
+                        yield queued
                     return
 
                 # Step 12: Log route decision
@@ -1565,6 +1607,7 @@ class ChatOrchestrator(
                     followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
+                    await self._update_state(session_id, STATE_DONE, "Response completed")
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()

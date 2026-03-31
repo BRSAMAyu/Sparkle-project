@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -804,6 +804,10 @@ class AdaptiveReplanner:
             last_time = datetime.fromisoformat(last_str)
         except Exception:
             return False
+        if last_time.tzinfo is None:
+            last_time = last_time.replace(tzinfo=timezone.utc)
+        else:
+            last_time = last_time.astimezone(timezone.utc)
         return _utcnow() - last_time < cooldown
 
     def _build_feedback_entry(

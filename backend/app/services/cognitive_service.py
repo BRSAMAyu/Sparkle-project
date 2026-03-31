@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import threading
 from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -14,7 +15,7 @@ from app.config import settings
 from app.config.phase5_config import phase5_config
 from app.core.event_bus import event_bus
 from app.core.event_types import PROFILE_COGNITIVE_UPDATED
-from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment
+from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment, PatternType
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
@@ -28,6 +29,8 @@ def _utcnow() -> datetime:
 
 
 _VECTOR_RUNTIME_ENABLED = True
+_VECTOR_RUNTIME_DISABLED_USERS: set[str] = set()
+_VECTOR_RUNTIME_STATE_LOCK = threading.Lock()
 
 
 class CognitiveService:
@@ -54,6 +57,26 @@ class CognitiveService:
             logger.warning(f"Disabling cognitive vector runtime fallback: {reason}")
         _VECTOR_RUNTIME_ENABLED = False
 
+    @staticmethod
+    def _normalize_vector_runtime_user_key(user_id: UUID | str | None) -> str:
+        return str(user_id or "")
+
+    @staticmethod
+    def _is_vector_runtime_enabled_for_user(user_id: UUID | str | None) -> bool:
+        with _VECTOR_RUNTIME_STATE_LOCK:
+            if not _VECTOR_RUNTIME_ENABLED:
+                return False
+            return CognitiveService._normalize_vector_runtime_user_key(user_id) not in _VECTOR_RUNTIME_DISABLED_USERS
+
+    @staticmethod
+    def _disable_vector_runtime_for_user(user_id: UUID | str | None, reason: str) -> None:
+        user_key = CognitiveService._normalize_vector_runtime_user_key(user_id)
+        with _VECTOR_RUNTIME_STATE_LOCK:
+            if user_key in _VECTOR_RUNTIME_DISABLED_USERS:
+                return
+            _VECTOR_RUNTIME_DISABLED_USERS.add(user_key)
+        logger.warning("Disabling cognitive vector runtime fallback for user {}: {}", user_key, reason)
+
     def _sanitize_content(self, content: str) -> str:
         """Sanitize user content for logging."""
         if not content:
@@ -64,6 +87,13 @@ class CognitiveService:
         if not content:
             return ""
         return content if len(content) <= limit else f"{content[:limit - 1]}…"
+
+    @staticmethod
+    def _normalize_pattern_type(raw_value: Any) -> str:
+        if isinstance(raw_value, PatternType):
+            return raw_value.value
+        normalized = str(raw_value or PatternType.EXECUTION.value).strip().lower()
+        return normalized if normalized in {item.value for item in PatternType} else PatternType.EXECUTION.value
 
     async def _insert_fragment_without_embedding(self, fragment: CognitiveFragment) -> CognitiveFragment:
         values = {
@@ -152,7 +182,8 @@ class CognitiveService:
         logger.info(f"Creating fragment {fragment.id} for user {user_id}: {self._sanitize_content(content)}")
 
         # 2. Generate Embedding
-        if _VECTOR_RUNTIME_ENABLED:
+        vector_runtime_enabled = self._is_vector_runtime_enabled_for_user(user_id)
+        if vector_runtime_enabled:
             try:
                 embedding = await embedding_service.get_embedding(content)
                 fragment.embedding = embedding
@@ -169,7 +200,7 @@ class CognitiveService:
             if not self._is_vector_runtime_error(exc):
                 raise
 
-            self._disable_vector_runtime(str(exc))
+            self._disable_vector_runtime_for_user(user_id, str(exc))
             fragment.embedding = None
             fragment = await self._insert_fragment_without_embedding(fragment)
 
@@ -299,7 +330,8 @@ class CognitiveService:
                 # 2. RAG: Retrieve Similar Fragments (Raw + HyDE)
                 similar_fragments: list[CognitiveFragment] = []
                 fragment_embedding = None
-                if _VECTOR_RUNTIME_ENABLED:
+                vector_runtime_enabled = self._is_vector_runtime_enabled_for_user(user_id)
+                if vector_runtime_enabled:
                     fragment_embedding = fragment.__dict__.get("embedding")
                     if fragment_embedding is None:
                         try:
@@ -309,12 +341,13 @@ class CognitiveService:
                             fragment_embedding = embedding_result.scalar_one_or_none()
                         except Exception as exc:
                             if self._is_vector_runtime_error(exc):
-                                self._disable_vector_runtime(str(exc))
+                                self._disable_vector_runtime_for_user(user_id, str(exc))
+                                vector_runtime_enabled = False
                                 fragment_embedding = None
                             else:
                                 raise
 
-                if _VECTOR_RUNTIME_ENABLED and fragment_embedding is not None:
+                if vector_runtime_enabled and fragment_embedding is not None:
                     try:
                         rag_query = (
                             select(CognitiveFragment)
@@ -328,7 +361,8 @@ class CognitiveService:
                         similar_fragments = rag_result.scalars().all()
                     except Exception as exc:
                         if self._is_vector_runtime_error(exc):
-                            self._disable_vector_runtime(str(exc))
+                            self._disable_vector_runtime_for_user(user_id, str(exc))
+                            vector_runtime_enabled = False
                             similar_fragments = []
                         else:
                             raise
@@ -336,7 +370,7 @@ class CognitiveService:
                 # HyDE: only for short queries
                 hyde_fragments: list[CognitiveFragment] = []
                 use_hyde = (
-                    _VECTOR_RUNTIME_ENABLED
+                    vector_runtime_enabled
                     and
                     phase5_config.HYDE_ENABLED
                     and fragment.content
@@ -363,7 +397,8 @@ class CognitiveService:
                                 hyde_fragments = hyde_result.scalars().all()
                             except Exception as exc:
                                 if self._is_vector_runtime_error(exc):
-                                    self._disable_vector_runtime(str(exc))
+                                    self._disable_vector_runtime_for_user(user_id, str(exc))
+                                    vector_runtime_enabled = False
                                     hyde_fragments = []
                                 else:
                                     raise
@@ -515,6 +550,9 @@ class CognitiveService:
             logger.warning("DB session does not support add(); skipping pattern upsert")
             return
         pattern_name = analysis.get("pattern_name", "Unknown Pattern")
+        normalized_pattern_type = self._normalize_pattern_type(
+            analysis.get("pattern_type", PatternType.EXECUTION.value)
+        )
         new_confidence = analysis.get("confidence_score", 0)
         was_created = False
         previous_confidence = None
@@ -541,10 +579,12 @@ class CognitiveService:
             if pattern.evidence_ids:
                 # evidence_ids is JSON list
                 try:
-                    ev_list = json.loads(pattern.evidence_ids) if isinstance(pattern.evidence_ids, str) else pattern.evidence_ids
+                    ev_list = json.loads(pattern.evidence_ids) if isinstance(pattern.evidence_ids, str) else list(pattern.evidence_ids)
                     if str(fragment_id) not in ev_list:
                             ev_list.append(str(fragment_id))
+                            from sqlalchemy.orm.attributes import flag_modified
                             pattern.evidence_ids = ev_list
+                            flag_modified(pattern, "evidence_ids")
                 except (json.JSONDecodeError, TypeError):
                     pattern.evidence_ids = [str(fragment_id)]
             else:
@@ -554,7 +594,7 @@ class CognitiveService:
             pattern = BehaviorPattern(
                 user_id=user_id,
                 pattern_name=pattern_name,
-                pattern_type=analysis.get("pattern_type", "execution"),
+                pattern_type=normalized_pattern_type,
                 description=analysis.get("description"),
                 solution_text=analysis.get("solution_text"),
                 confidence_score=new_confidence,
@@ -588,7 +628,7 @@ class CognitiveService:
                     "event_type": PROFILE_COGNITIVE_UPDATED,
                     "user_id": str(user_id),
                     "pattern_name": pattern_name,
-                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "pattern_type": normalized_pattern_type,
                     "confidence_change": confidence_change,
                     "is_new_pattern": was_created,
                 },
@@ -601,7 +641,7 @@ class CognitiveService:
                     "user_id": str(user_id),
                     "pattern_id": str(pattern.id),
                     "pattern_name": pattern_name,
-                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "pattern_type": normalized_pattern_type,
                     "confidence_score": new_confidence,
                     "source_fragment_id": str(fragment_id),
                 },

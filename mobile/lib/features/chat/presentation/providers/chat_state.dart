@@ -96,6 +96,8 @@ class TransparencyPresentationState {
 }
 
 class ChatState {
+  static const int maxRetainedMessages = 500;
+
   ChatState({
     this.isLoading = false,
     this.isSending = false,
@@ -141,8 +143,7 @@ class ChatState {
     this.activeRunId,
     this.runPhase = ChatRunPhase.idle,
     this.activeRunSummary,
-    this.transparencyPresentationState =
-        const TransparencyPresentationState(),
+    this.transparencyPresentationState = const TransparencyPresentationState(),
   });
 
   final bool isLoading;
@@ -190,6 +191,17 @@ class ChatState {
   final ChatRunPhase runPhase;
   final ActiveRunSummary? activeRunSummary;
   final TransparencyPresentationState transparencyPresentationState;
+
+  static List<ChatMessageModel> _boundedMessages(
+    List<ChatMessageModel> messages,
+  ) {
+    if (messages.length <= maxRetainedMessages) {
+      return messages;
+    }
+    return List<ChatMessageModel>.unmodifiable(
+      messages.sublist(messages.length - maxRetainedMessages),
+    );
+  }
 
   bool get hasActiveRun => activeRunId != null && runPhase.isActive;
   bool get shouldShowStatusIndicator => hasActiveRun && aiStatus != null;
@@ -270,7 +282,7 @@ class ChatState {
         hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
         conversationId:
             clearConversation ? null : conversationId ?? this.conversationId,
-        messages: messages ?? this.messages,
+        messages: _boundedMessages(messages ?? this.messages),
         error: clearError ? null : error ?? this.error,
         errorCode: clearError ? null : errorCode ?? this.errorCode,
         isErrorRetryable:
@@ -336,13 +348,12 @@ class ChatState {
         dagExecutionSignal: clearDagExecution
             ? null
             : dagExecutionSignal ?? this.dagExecutionSignal,
-        activeRunId:
-            clearActiveRunId ? null : activeRunId ?? this.activeRunId,
+        activeRunId: clearActiveRunId ? null : activeRunId ?? this.activeRunId,
         runPhase: runPhase ?? this.runPhase,
         activeRunSummary: clearActiveRunSummary
             ? null
             : activeRunSummary ?? this.activeRunSummary,
-        transparencyPresentationState: transparencyPresentationState ??
-            this.transparencyPresentationState,
+        transparencyPresentationState:
+            transparencyPresentationState ?? this.transparencyPresentationState,
       );
 }

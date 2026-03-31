@@ -8,8 +8,10 @@
 - 余额不足检查
 """
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.shop import PhotonTransactionHistory
 from app.services.photon_service import PhotonService, PhotonTransactionType
 from app.models.user import User
 
@@ -158,3 +160,65 @@ async def test_get_balance_with_cache(db_session: AsyncSession, test_user: User)
     # 第二次查询（应该从缓存读取）
     balance2 = await service.get_balance(str(test_user.id))
     assert balance2 == 200  # 从缓存读取的值
+
+
+@pytest.mark.asyncio
+async def test_grant_photons_is_idempotent_for_achievement_rewards(
+    db_session: AsyncSession,
+    test_user: User,
+):
+    service = PhotonService(db_session)
+
+    first = await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=80,
+        source="achievement:achv_repeatable",
+        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+        related_item_id="achv_repeatable",
+        metadata={"achievement_name": "重复奖励测试"},
+        record_history=True,
+    )
+    second = await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=80,
+        source="achievement:achv_repeatable",
+        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+        related_item_id="achv_repeatable",
+        metadata={"achievement_name": "重复奖励测试"},
+        record_history=True,
+    )
+
+    assert first["new_balance"] == 80
+    assert second["deduplicated"] is True
+    assert await service.get_balance(str(test_user.id)) == 80
+
+    history_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id,
+            PhotonTransactionHistory.related_item_id == "achv_repeatable",
+        )
+    )
+    history = history_result.scalars().all()
+    assert len(history) == 1
+
+
+@pytest.mark.asyncio
+async def test_grant_photons_skips_commit_when_transaction_managed_externally(
+    db_session: AsyncSession,
+    test_user: User,
+):
+    service = PhotonService(db_session)
+    db_session.sync_session.info["external_transaction_managed"] = True
+
+    await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=40,
+        source="achievement:managed",
+        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+        related_item_id="managed",
+        record_history=True,
+    )
+
+    await db_session.rollback()
+    await db_session.refresh(test_user)
+    assert test_user.photon_balance == 0

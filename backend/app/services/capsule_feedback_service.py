@@ -15,6 +15,7 @@ from app.core.event_bus import event_bus
 from app.core.event_types import CAPSULE_FEEDBACK_SUBMITTED, CAPSULE_REGENERATE_REQUESTED
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.curiosity_capsule import CuriosityCapsule
+from app.services.cognitive_service import CognitiveService
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -112,6 +113,15 @@ class CapsuleFeedbackService:
         await db.commit()
         await db.refresh(feedback)
 
+        await self._sync_feedback_to_cognitive(
+            user_id=user_id,
+            capsule=capsule,
+            feedback=feedback,
+            depth_delta=depth_delta,
+            curiosity_delta=curiosity_delta,
+            db=db,
+        )
+
         await event_bus.publish(
             CAPSULE_FEEDBACK_SUBMITTED,
             {
@@ -140,6 +150,67 @@ class CapsuleFeedbackService:
             )
 
         return feedback
+
+    async def _sync_feedback_to_cognitive(
+        self,
+        *,
+        user_id: UUID,
+        capsule: CuriosityCapsule,
+        feedback: CapsuleFeedback,
+        depth_delta: float | None,
+        curiosity_delta: float | None,
+        db: AsyncSession,
+    ) -> None:
+        """将胶囊反馈同步为认知碎片，并触发行为模式分析。"""
+        fragment_parts = [f"胶囊《{capsule.title}》的反馈："]
+        if feedback.rating is not None:
+            fragment_parts.append(f"评分 {feedback.rating}/5。")
+        if feedback.helpful is True:
+            fragment_parts.append("用户认为这条胶囊有帮助。")
+        elif feedback.helpful is False:
+            fragment_parts.append("用户认为这条胶囊帮助不大。")
+        if feedback.category:
+            fragment_parts.append(f"反馈类型：{feedback.category}。")
+        if feedback.comment:
+            fragment_parts.append(f"用户补充：{feedback.comment.strip()}")
+        if depth_delta is not None:
+            fragment_parts.append(f"深度偏好变化：{depth_delta:+.2f}。")
+        if curiosity_delta is not None:
+            fragment_parts.append(f"好奇心偏好变化：{curiosity_delta:+.2f}。")
+
+        error_tags: list[str] = []
+        if feedback.category:
+            error_tags.append(f"capsule_feedback.{feedback.category}")
+        if feedback.helpful is False:
+            error_tags.append("capsule_feedback.not_helpful")
+
+        severity = 2 if feedback.helpful is False or (feedback.rating or 0) <= 2 else 1
+        try:
+            cognitive_service = CognitiveService(db)
+            fragment = await cognitive_service.create_fragment(
+                user_id=user_id,
+                content=" ".join(fragment_parts),
+                source_type="capsule_feedback",
+                resource_type="curiosity_capsule",
+                context_tags={
+                    "capsule_id": str(capsule.id),
+                    "capsule_title": capsule.title,
+                    "feedback_id": str(feedback.id),
+                    "feedback_category": str(feedback.category or ""),
+                    "helpful": feedback.helpful,
+                    "rating": feedback.rating,
+                    "depth_delta": depth_delta,
+                    "curiosity_delta": curiosity_delta,
+                    "related_task_id": str(capsule.related_task_id) if capsule.related_task_id else "",
+                },
+                error_tags=error_tags or None,
+                severity=severity,
+                task_id=capsule.related_task_id,
+                source_event_id=f"capsule_feedback:{feedback.id}",
+            )
+            await cognitive_service.analyze_behavior(user_id, fragment.id)
+        except Exception as exc:
+            logger.warning(f"[Feedback] Failed to sync capsule feedback to cognitive loop: {exc}")
 
     async def _update_inferred_preferences(
         self,

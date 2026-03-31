@@ -5,11 +5,14 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/home/presentation/screens/openclaw_hub_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/task/presentation/screens/task_reminder_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/account_security_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/admin_operations_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/bgm_library_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.dart';
@@ -30,6 +33,7 @@ class UserRoutes {
   static const String personaOnboarding = '/onboarding/persona';
   static const String editProfile = '/profile/edit';
   static const String settings = '/profile/settings';
+  static const String bgmLibrary = '/profile/music-library';
   static const String persona = '/profile/persona';
   static const String posterStudio = '/profile/posters';
   static const String systemUpdates = '/profile/system-updates';
@@ -44,6 +48,7 @@ class UserRoutes {
   static const String deleteAccount = '/profile/delete-account';
   static const String guestUpgrade = '/profile/upgrade-guest';
   static const String adminOperations = '/profile/admin-operations';
+  static const String taskReminders = '/profile/task-reminders';
 
   static void popOrGo(BuildContext context, {required String fallback}) {
     final navigator = Navigator.of(context);
@@ -85,6 +90,21 @@ class UserRoutes {
                 trackOverride: BgmTrack.profile,
               ),
               child: const UnifiedSettingsScreen(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: bgmLibrary,
+          name: 'bgmLibrary',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive
+                  .audioPolicy(trackOverride: BgmTrack.profile)
+                  .copyWith(
+                    switchBehavior: SceneBgmSwitchBehavior.keepPlaying,
+                  ),
+              child: const BgmLibraryScreen(),
             ),
           ),
         ),
@@ -218,6 +238,14 @@ class UserRoutes {
               ),
               child: const AdminOperationsScreen(),
             ),
+          ),
+        ),
+        GoRoute(
+          path: taskReminders,
+          name: 'taskReminderSettings',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: const TaskReminderSettingsScreen(),
           ),
         ),
         GoRoute(

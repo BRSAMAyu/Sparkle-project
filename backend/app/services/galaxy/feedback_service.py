@@ -227,6 +227,7 @@ class GalaxyFeedbackService:
                     user_id=user_id,
                     node_id=node_id,
                     mastery_score=max(self.MIN_MASTERY, min(self.MAX_MASTERY, int(score * 10))),
+                    bkt_mastery_prob=max(0.0, min(float(score), 1.0)),
                     is_unlocked=True,
                     first_unlock_at=_utcnow(),
                     last_study_at=_utcnow()

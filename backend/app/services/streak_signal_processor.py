@@ -14,6 +14,7 @@ from app.core.cache import cache_service
 from app.models.achievement import UserStreakStats
 from app.models.user import User
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import classify_band_with_hysteresis, recency_weight
 
 
 def _utcnow() -> datetime:
@@ -41,15 +42,27 @@ class StreakSignalProcessor:
         current = int(streak.current_streak or 0)
         maximum = max(int(streak.max_streak or 0), int(streak.longest_streak or 0), 1)
         total_checkin_days = int(streak.total_checkin_days or 0)
+        activity_weight = recency_weight(
+            streak.last_activity_date,
+            now=_utcnow(),
+            half_life_days=5.0,
+            min_weight=0.15,
+        )
 
-        streak_consistency = current / maximum
-        checkin_regularity = min(1.0, total_checkin_days / registered_days)
-        if current > 7:
-            motivation_type = "streak_driven"
-        elif current < 3:
-            motivation_type = "task_driven"
-        else:
-            motivation_type = "balanced"
+        streak_consistency = min(1.0, (current / maximum) * activity_weight)
+        checkin_regularity = min(1.0, (total_checkin_days / registered_days) * activity_weight)
+        previous_motivation = await self._current_inferred_value(user_id, "motivation_type")
+        motivation_type = classify_band_with_hysteresis(
+            float(current),
+            previous_motivation if isinstance(previous_motivation, str) else None,
+            low_enter=3.0,
+            high_enter=7.0,
+            low_exit=4.0,
+            high_exit=6.0,
+            low_label="task_driven",
+            mid_label="balanced",
+            high_label="streak_driven",
+        )
 
         updates: dict[str, object] = {
             "streak_consistency": round(streak_consistency, 3),
@@ -80,6 +93,14 @@ class StreakSignalProcessor:
             for key, value in updates.items()
             if inferred.get(key) != value
         }
+
+    async def _current_inferred_value(self, user_id: UUID, key: str) -> object | None:
+        try:
+            prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+        except Exception:
+            return None
+        inferred = prefs.inferred or {}
+        return inferred.get(key)
 
     @staticmethod
     def _registered_days(created_at: datetime | None) -> int:

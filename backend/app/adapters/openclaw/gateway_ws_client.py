@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import inspect
 import json
+import platform
+from pathlib import Path
 from dataclasses import dataclass, field
-from time import monotonic
+from time import monotonic, time
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlparse, urlunparse
+import unicodedata
 
 import websockets
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from loguru import logger
 
 from app.adapters.openclaw.config import OpenClawConfig
@@ -22,6 +28,7 @@ from app.adapters.openclaw.client import (
 )
 
 EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
+_ED25519_SPKI_PREFIX = bytes.fromhex("302a300506032b6570032100")
 
 
 def _coerce_ws_url(config: OpenClawConfig) -> str:
@@ -128,6 +135,35 @@ class _GatewayRunCapture:
 
         return result
 
+    def observe_final_response(self, payload: dict[str, Any]) -> None:
+        status = str(payload.get("status") or "").lower()
+        if status == "error":
+            summary = payload.get("summary")
+            if isinstance(summary, str) and summary.strip():
+                self.error_message = summary.strip()
+
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return
+
+        final_texts: list[str] = []
+        for item in result.get("payloads") or []:
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if isinstance(text, str) and text.strip():
+                final_texts.append(text.strip())
+        if final_texts:
+            self.output_parts = final_texts
+
+        meta = result.get("meta") or {}
+        if isinstance(meta, dict):
+            agent_meta = meta.get("agentMeta") or {}
+            if isinstance(agent_meta, dict):
+                usage = agent_meta.get("lastCallUsage") or agent_meta.get("usage")
+                if isinstance(usage, dict):
+                    self.usage = usage
+
     def _resolve_status(self, wait_status: str) -> str:
         if self.approval:
             return "requires_action"
@@ -206,46 +242,61 @@ class OpenClawGatewayWebSocketClient:
             await self._handshake(websocket)
 
             buffered_events: list[dict[str, Any]] = []
-            accepted = await self._rpc(
-                websocket,
-                method="agent",
-                params=request_body,
-                on_event=lambda frame: buffered_events.append(frame),
-            )
-            run_id = accepted.get("runId")
-            if not run_id:
-                raise OpenClawExecutionError("Gateway `agent` did not return a runId")
+            request_id = await self._send_request(websocket, method="agent", params=request_body)
+            capture: _GatewayRunCapture | None = None
+            deadline = monotonic() + max(float(timeout_seconds), 1.0)
 
-            session_key = accepted.get("sessionKey") or request_body.get("sessionKey") or ""
-            capture = _GatewayRunCapture(run_id=str(run_id), session_key=str(session_key))
-            for frame in buffered_events:
-                capture.observe(frame)
-                await self._dispatch_event_callback(event_callback, frame)
+            while monotonic() < deadline:
+                remaining = max(deadline - monotonic(), 0.1)
+                try:
+                    frame = await self._recv_json(websocket, timeout_seconds=min(1.0, remaining))
+                except asyncio.TimeoutError:
+                    continue
 
-            if capture.approval:
-                return capture.build_result(status_override="requires_action")
+                frame_type = frame.get("type")
+                if frame_type == "event":
+                    buffered_events.append(frame)
+                    if capture is not None:
+                        capture.observe(frame)
+                        await self._dispatch_event_callback(event_callback, frame)
+                        if capture.approval:
+                            return capture.build_result(status_override="requires_action")
+                    continue
 
-            terminal_reached = await self._await_run_state(
-                websocket,
-                capture=capture,
-                timeout_seconds=timeout_seconds,
-                event_callback=event_callback,
-                stop_on_approval=True,
-            )
-            if capture.approval:
-                return capture.build_result(status_override="requires_action")
+                if frame_type != "res" or frame.get("id") != request_id:
+                    continue
+                if not frame.get("ok", False):
+                    raise OpenClawExecutionError(self._extract_gateway_error(frame))
 
-            wait_payload = await self._rpc(
-                websocket,
-                method="agent.wait",
-                params={
-                    "runId": capture.run_id,
-                    "timeoutMs": self._effective_wait_timeout_ms(timeout_seconds),
-                },
-                on_event=lambda frame: self._observe_capture_and_callback(capture, frame, event_callback),
-            )
-            status_override = "timed_out" if not terminal_reached and wait_payload.get("status") == "timeout" else None
-            return capture.build_result(wait_payload=wait_payload, status_override=status_override)
+                payload = frame.get("payload")
+                payload = payload if isinstance(payload, dict) else {}
+                payload_status = str(payload.get("status") or "").lower()
+                if payload_status == "accepted":
+                    run_id = str(payload.get("runId") or request_body.get("idempotencyKey") or "").strip()
+                    if not run_id:
+                        raise OpenClawExecutionError("Gateway `agent` did not return a runId")
+                    session_key = str(payload.get("sessionKey") or request_body.get("sessionKey") or "").strip()
+                    capture = _GatewayRunCapture(run_id=run_id, session_key=session_key)
+                    for buffered in buffered_events:
+                        capture.observe(buffered)
+                        await self._dispatch_event_callback(event_callback, buffered)
+                    if capture.approval:
+                        return capture.build_result(status_override="requires_action")
+                    continue
+
+                if capture is None:
+                    run_id = str(payload.get("runId") or request_body.get("idempotencyKey") or "").strip()
+                    session_key = str(payload.get("sessionKey") or request_body.get("sessionKey") or "").strip()
+                    capture = _GatewayRunCapture(run_id=run_id or "gateway-run", session_key=session_key)
+                    for buffered in buffered_events:
+                        capture.observe(buffered)
+                        await self._dispatch_event_callback(event_callback, buffered)
+
+                capture.observe_final_response(payload)
+                status_override = "completed" if payload_status == "ok" else "failed"
+                return capture.build_result(status_override=status_override)
+
+        raise OpenClawTimeout(f"OpenClaw execution timed out after {timeout_seconds}s")
 
     async def resolve_approval(
         self,
@@ -285,16 +336,11 @@ class OpenClawGatewayWebSocketClient:
             if capture.approval:
                 return capture.build_result(status_override="requires_action")
 
-            wait_payload = await self._rpc(
-                websocket,
-                method="agent.wait",
-                params={
-                    "runId": run_id,
-                    "timeoutMs": self._effective_wait_timeout_ms(timeout_seconds),
-                },
-                on_event=lambda frame: self._observe_capture_and_callback(capture, frame, event_callback),
-            )
-            return capture.build_result(wait_payload=wait_payload)
+        wait_payload = await self._wait_for_run_completion(
+            run_id=run_id,
+            timeout_seconds=timeout_seconds,
+        )
+        return capture.build_result(wait_payload=wait_payload)
 
     async def cancel_run(
         self,
@@ -328,12 +374,18 @@ class OpenClawGatewayWebSocketClient:
     ) -> dict[str, Any]:
         async with self._connect() as websocket:
             await self._handshake(websocket)
-            params: dict[str, Any] = {
-                "connected": connected_only,
-            }
-            if last_connected:
-                params["lastConnected"] = last_connected
-            return await self._rpc(websocket, method="node.list", params=params)
+            payload = await self._rpc(websocket, method="node.list", params={})
+            if not connected_only and not last_connected:
+                return payload
+            items = payload.get("items") or payload.get("nodes") or payload.get("paired") or []
+            filtered: list[Any] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                if connected_only and not bool(item.get("connected", item.get("isConnected", False))):
+                    continue
+                filtered.append(item)
+            return {"items": filtered}
 
     async def invoke_node(
         self,
@@ -356,6 +408,44 @@ class OpenClawGatewayWebSocketClient:
             if idempotency_key:
                 payload["idempotencyKey"] = idempotency_key
             return await self._rpc(websocket, method="node.invoke", params=payload)
+
+    async def _send_request(
+        self,
+        websocket,
+        *,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> str:
+        self._request_counter += 1
+        request_id = f"sparkle-{self._request_counter}"
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "req",
+                    "id": request_id,
+                    "method": method,
+                    "params": params or {},
+                }
+            )
+        )
+        return request_id
+
+    async def _wait_for_run_completion(
+        self,
+        *,
+        run_id: str,
+        timeout_seconds: int,
+    ) -> dict[str, Any]:
+        async with self._connect() as websocket:
+            await self._handshake(websocket)
+            return await self._rpc(
+                websocket,
+                method="agent.wait",
+                params={
+                    "runId": run_id,
+                    "timeoutMs": self._effective_wait_timeout_ms(timeout_seconds),
+                },
+            )
 
     async def _await_run_state(
         self,
@@ -407,14 +497,20 @@ class OpenClawGatewayWebSocketClient:
         if self._config.ws_device_token:
             auth_payload["deviceToken"] = self._config.ws_device_token
 
+        platform_name = self._resolve_platform_name()
+        device_family = self._resolve_device_family(platform_name)
+
         params: dict[str, Any] = {
             "minProtocol": self._config.ws_protocol_version,
             "maxProtocol": self._config.ws_protocol_version,
             "client": {
-                "id": self._config.ws_client_id,
+                "id": "gateway-client",
+                "displayName": self._config.ws_client_id or "Sparkle Backend",
                 "version": self._config.ws_client_version,
-                "platform": "sparkle-backend",
-                "mode": "operator",
+                "platform": platform_name,
+                "deviceFamily": device_family,
+                "mode": "backend",
+                "instanceId": self._config.ws_client_id or "sparkle-backend",
             },
             "role": "operator",
             "scopes": ["operator.read", "operator.write", "operator.approvals"],
@@ -426,9 +522,149 @@ class OpenClawGatewayWebSocketClient:
             "userAgent": f"{self._config.ws_client_id}/{self._config.ws_client_version}",
         }
         if nonce and self._config.ws_device_token:
-            params["device"] = {"nonce": nonce}
+            params["device"] = self._build_device_payload(
+                nonce=nonce,
+                client_id=str(params["client"]["id"]),
+                client_mode=str(params["client"]["mode"]),
+                platform_name=platform_name,
+                device_family=device_family,
+                scopes=list(params["scopes"]),
+            )
 
         await self._rpc(websocket, method="connect", params=params)
+
+    def _build_device_payload(
+        self,
+        *,
+        nonce: str,
+        client_id: str,
+        client_mode: str,
+        platform_name: str,
+        device_family: str,
+        scopes: list[str],
+    ) -> dict[str, Any]:
+        identity = self._load_device_identity()
+        signed_at_ms = int(time() * 1000)
+        signature_token = self._config.auth_token or self._config.ws_device_token
+        payload = self._build_device_auth_payload_v3(
+            device_id=identity["device_id"],
+            client_id=client_id,
+            client_mode=client_mode,
+            scopes=scopes,
+            signed_at_ms=signed_at_ms,
+            signature_token=signature_token,
+            nonce=nonce,
+            platform_name=platform_name,
+            device_family=device_family,
+        )
+        signature = identity["private_key"].sign(payload.encode("utf-8"))
+        return {
+            "id": identity["device_id"],
+            "publicKey": identity["public_key_base64url"],
+            "signature": self._base64url_encode(signature),
+            "signedAt": signed_at_ms,
+            "nonce": nonce,
+        }
+
+    def _load_device_identity(self) -> dict[str, Any]:
+        raw_path = (self._config.ws_device_identity_path or "").strip()
+        if not raw_path:
+            raise OpenClawConfigurationError(
+                "Gateway WS transport requires OPENCLAW_WS_DEVICE_IDENTITY_PATH when OPENCLAW_WS_DEVICE_TOKEN is set"
+            )
+        path = Path(raw_path).expanduser()
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity file does not exist: {path}") from exc
+        except json.JSONDecodeError as exc:
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity file is invalid JSON: {path}") from exc
+
+        if not isinstance(payload, dict):
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity file is invalid: {path}")
+        device_id = str(payload.get("deviceId") or "").strip()
+        public_key_pem = str(payload.get("publicKeyPem") or "").strip()
+        private_key_pem = str(payload.get("privateKeyPem") or "").strip()
+        if not device_id or not public_key_pem or not private_key_pem:
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity file is incomplete: {path}")
+
+        try:
+            private_key = serialization.load_pem_private_key(private_key_pem.encode("utf-8"), password=None)
+            public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+        except ValueError as exc:
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity file contains invalid PEM keys: {path}") from exc
+        if not isinstance(private_key, Ed25519PrivateKey):
+            raise OpenClawConfigurationError(f"OpenClaw WS device identity must use an Ed25519 private key: {path}")
+
+        public_der = public_key.public_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        public_raw = public_der[len(_ED25519_SPKI_PREFIX) :] if public_der.startswith(_ED25519_SPKI_PREFIX) else public_der
+        return {
+            "device_id": device_id,
+            "public_key_base64url": self._base64url_encode(public_raw),
+            "private_key": private_key,
+        }
+
+    def _build_device_auth_payload_v3(
+        self,
+        *,
+        device_id: str,
+        client_id: str,
+        client_mode: str,
+        scopes: list[str],
+        signed_at_ms: int,
+        signature_token: str | None,
+        nonce: str,
+        platform_name: str,
+        device_family: str,
+    ) -> str:
+        return "|".join(
+            [
+                "v3",
+                device_id,
+                client_id,
+                client_mode,
+                "operator",
+                ",".join(scopes),
+                str(signed_at_ms),
+                signature_token or "",
+                nonce,
+                self._normalize_device_metadata(platform_name),
+                self._normalize_device_metadata(device_family),
+            ]
+        )
+
+    @staticmethod
+    def _normalize_device_metadata(value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            return ""
+        return "".join(
+            ch for ch in unicodedata.normalize("NFKD", trimmed) if not unicodedata.combining(ch)
+        ).lower()
+
+    @staticmethod
+    def _resolve_platform_name() -> str:
+        system_name = platform.system().lower()
+        if system_name == "darwin":
+            return "darwin"
+        if system_name == "windows":
+            return "windows"
+        return system_name or "linux"
+
+    @staticmethod
+    def _resolve_device_family(platform_name: str) -> str:
+        if platform_name == "darwin":
+            return "Mac"
+        if platform_name == "windows":
+            return "PC"
+        return "Linux"
+
+    @staticmethod
+    def _base64url_encode(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
     async def _rpc(
         self,
@@ -438,18 +674,7 @@ class OpenClawGatewayWebSocketClient:
         params: dict[str, Any] | None = None,
         on_event: EventCallback | None = None,
     ) -> dict[str, Any]:
-        self._request_counter += 1
-        request_id = f"sparkle-{self._request_counter}"
-        await websocket.send(
-            json.dumps(
-                {
-                    "type": "req",
-                    "id": request_id,
-                    "method": method,
-                    "params": params or {},
-                }
-            )
-        )
+        request_id = await self._send_request(websocket, method=method, params=params)
 
         while True:
             frame = await self._recv_json(websocket, timeout_seconds=max(self._config.default_timeout_seconds, 30))

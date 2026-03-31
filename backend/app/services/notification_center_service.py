@@ -103,6 +103,7 @@ class NotificationCenterService:
 
         # Sort all by created_at descending
         notifications.sort(key=lambda x: x.created_at, reverse=True)
+        notifications = self._dedupe_unified_notifications(notifications)
 
         # Apply limit after merging
         if len(notifications) > limit:
@@ -568,3 +569,43 @@ class NotificationCenterService:
                 "final_level": intervention.final_level
             }
         )
+
+    def _dedupe_unified_notifications(
+        self,
+        notifications: list[UnifiedNotificationResponse],
+    ) -> list[UnifiedNotificationResponse]:
+        """
+        Collapse exact duplicate entries that can appear when the same
+        notification is materialized more than once upstream.
+        """
+        deduped: list[UnifiedNotificationResponse] = []
+        seen_ids: set[str] = set()
+        seen_fingerprints: set[str] = set()
+
+        for notification in notifications:
+            if notification.id and notification.id in seen_ids:
+                continue
+            if notification.id:
+                seen_ids.add(notification.id)
+
+            created_at_bucket = int(notification.created_at.timestamp())
+            fingerprint = "|".join(
+                [
+                    notification.source_type,
+                    notification.type or "",
+                    notification.title.strip(),
+                    notification.content.strip(),
+                    str(created_at_bucket),
+                ]
+            )
+            if fingerprint in seen_fingerprints:
+                logger.warning(
+                    "Deduplicated notification center entry for user payload: {}",
+                    fingerprint,
+                )
+                continue
+
+            seen_fingerprints.add(fingerprint)
+            deduped.append(notification)
+
+        return deduped

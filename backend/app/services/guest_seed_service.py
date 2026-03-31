@@ -78,6 +78,7 @@ from app.models.community import MessageFavorite
 from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 from app.models.user import UserStatus
+from app.services.node_sector_service import build_sector_visuals
 
 
 async def _ensure_achievements(session: AsyncSession):
@@ -892,6 +893,7 @@ async def _ensure_user_node_status(
         node_id=node_id,
         is_unlocked=True,
         mastery_score=mastery_score,
+        bkt_mastery_prob=max(0.0, min(float(mastery_score) / 100.0, 1.0)),
         total_study_minutes=total_study_minutes,
         study_count=study_count,
         first_unlock_at=first_unlock_at,
@@ -1645,14 +1647,6 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     for node_tuple in _DEMO_NODES:
         name, desc, importance, keywords, sector, unlocked, mastery, study_count = node_tuple
 
-        existing = (await session.execute(
-            select(KnowledgeNode).where(KnowledgeNode.name == name)
-        )).scalar_one_or_none()
-        if existing:
-            created_nodes[name] = existing
-            continue
-
-        # Calculate position within sector
         sector_idx = _sector_counters.get(sector, 0)
         _sector_counters[sector] = sector_idx + 1
         base_angle_deg = _SECTOR_ANGLES[sector]
@@ -1661,6 +1655,32 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         angle_rad = math.radians(angle_deg)
         # Vary radius by importance (more important = closer to center)
         radius = 150.0 + (5 - importance) * 40 + (sector_idx % 3) * 20
+        sector_weights = {sector: 100}
+        visuals = build_sector_visuals(
+            name,
+            importance_level=importance,
+            sector_weights=sector_weights,
+        )
+        existing = (await session.execute(
+            select(KnowledgeNode).where(KnowledgeNode.name == name)
+        )).scalar_one_or_none()
+        if existing:
+            created_nodes[name] = existing
+            needs_sector_heal = (
+                not existing.sector_weights
+                or existing.dominant_sector_code in {None, "", "VOID"}
+                or existing.sector_classification_status in {None, "", "pending", "failed"}
+            )
+            if needs_sector_heal:
+                existing.sector_weights = sector_weights
+                existing.dominant_sector_code = visuals.dominant_sector_code.value
+                existing.sector_classification_status = "completed"
+                existing.sector_classification_model = "guest_seed"
+                existing.sector_classified_at = now
+                existing.position_x = radius * math.cos(angle_rad)
+                existing.position_y = radius * math.sin(angle_rad)
+                session.add(existing)
+            continue
 
         node = KnowledgeNode(
             name=name,
@@ -1671,6 +1691,11 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             keywords=keywords,
             position_x=radius * math.cos(angle_rad),
             position_y=radius * math.sin(angle_rad),
+            sector_weights=sector_weights,
+            dominant_sector_code=visuals.dominant_sector_code.value,
+            sector_classification_status="completed",
+            sector_classification_model="guest_seed",
+            sector_classified_at=now,
         )
         session.add(node)
         await session.flush()
@@ -1754,6 +1779,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 node_id=node.id,
                 is_unlocked=True,
                 mastery_score=mastery,
+                bkt_mastery_prob=max(0.0, min(float(mastery) / 100.0, 1.0)),
                 total_study_minutes=study_count * 15,
                 study_count=study_count,
                 first_unlock_at=now - timedelta(days=max(1, study_count)),

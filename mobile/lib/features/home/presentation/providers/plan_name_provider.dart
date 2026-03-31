@@ -20,12 +20,19 @@ class PlanNameMapNotifier extends StateNotifier<PlanNameMap> {
   PlanNameMapNotifier(this._ref) : super(const PlanNameMap()) {
     // 同步加载初始数据
     _loadPlanNamesSync();
+    _ref.listen<PlanListState>(planListProvider, (_, next) {
+      _syncFromPlanState(next);
+    });
   }
 
   final Ref _ref;
 
   void _loadPlanNamesSync() {
     final planState = _ref.read(planListProvider);
+    _syncFromPlanState(planState);
+  }
+
+  void _syncFromPlanState(PlanListState planState) {
     final nameMap = <String, String>{};
 
     // 合并所有计划和活跃计划

@@ -8,7 +8,8 @@ from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,12 +23,14 @@ from app.models.community import (
     GroupMessage,
     GroupMessageRead,
     GroupRole,
-    GroupTask,
     GroupTaskClaim,
+    GroupTask,
     GroupType,
     MessageType,
+    SharedResource,
     UserBlock,
 )
+from app.models.group_files import GroupFile
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
@@ -70,6 +73,74 @@ def _is_visible_to(content_data: dict | None, user_id: UUID) -> bool:
     return str(visible_to) == str(user_id)
 
 
+async def _end_accountability_partnerships_between_users(
+    db: AsyncSession,
+    user1_id: UUID,
+    user2_id: UUID,
+) -> int:
+    """End all non-ended accountability partnerships between two users."""
+    from app.models.accountability import AccountabilityPartnership, AccountabilityStatus
+
+    result = await db.execute(
+        select(AccountabilityPartnership).where(
+            or_(
+                and_(
+                    AccountabilityPartnership.initiator_id == user1_id,
+                    AccountabilityPartnership.partner_id == user2_id,
+                ),
+                and_(
+                    AccountabilityPartnership.initiator_id == user2_id,
+                    AccountabilityPartnership.partner_id == user1_id,
+                ),
+            ),
+            AccountabilityPartnership.status != AccountabilityStatus.ENDED,
+            AccountabilityPartnership.not_deleted_filter(),
+        )
+    )
+    partnerships = list(result.scalars().all())
+    if not partnerships:
+        return 0
+
+    ended_at = _utcnow()
+    for partnership in partnerships:
+        partnership.status = AccountabilityStatus.ENDED
+        partnership.ended_at = ended_at
+
+    return len(partnerships)
+
+
+async def _validate_group_mentions(
+    db: AsyncSession,
+    *,
+    group_id: UUID,
+    mention_user_ids: list[UUID] | None,
+) -> list[str] | None:
+    """Ensure all mentioned users are active group members before persisting mentions."""
+    if not mention_user_ids:
+        return None
+
+    normalized_ids = []
+    seen: set[str] = set()
+    for user_id in mention_user_ids:
+        user_id_str = str(user_id)
+        if user_id_str not in seen:
+            seen.add(user_id_str)
+            normalized_ids.append(user_id_str)
+
+    result = await db.execute(
+        select(GroupMember.user_id).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id.in_(mention_user_ids),
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    member_ids = {str(user_id) for user_id in result.scalars().all()}
+    if len(member_ids) != len(normalized_ids):
+        raise ValueError("被提及用户必须是群组成员")
+
+    return normalized_ids
+
+
 class FriendshipService:
     """好友系统服务"""
 
@@ -90,6 +161,14 @@ class FriendshipService:
         """
         if user_id == target_id:
             raise ValueError("不能添加自己为好友")
+
+        canonical_user_ids = sorted([user_id, target_id], key=lambda value: str(value))
+        await db.execute(
+            select(User.id)
+            .where(User.id.in_(canonical_user_ids))
+            .order_by(User.id.asc())
+            .with_for_update()
+        )
 
         # 检查是否存在反向的待处理请求 (target -> user)
         reverse_pending = await db.execute(
@@ -137,8 +216,30 @@ class FriendshipService:
             status=FriendshipStatus.PENDING,
             match_reason=match_reason
         )
-        db.add(friendship)
-        await db.flush()
+        try:
+            async with db.begin_nested():
+                db.add(friendship)
+                await db.flush()
+        except IntegrityError:
+            existing = await db.execute(
+                select(Friendship).where(
+                    Friendship.user_id == small_id,
+                    Friendship.friend_id == large_id,
+                    Friendship.not_deleted_filter(),
+                )
+            )
+            existing_rel = existing.scalar_one_or_none()
+            if existing_rel:
+                if existing_rel.status == FriendshipStatus.PENDING and existing_rel.initiated_by == target_id:
+                    existing_rel.status = FriendshipStatus.ACCEPTED
+                    await db.flush()
+                    await db.refresh(existing_rel)
+                    return existing_rel
+                if existing_rel.status == FriendshipStatus.BLOCKED:
+                    raise ValueError("由于对方的隐私设置，无法发送请求")
+                raise ValueError("已存在好友关系或待处理请求")
+            raise
+
         await db.refresh(friendship)
         return friendship
 
@@ -238,6 +339,9 @@ class FriendshipService:
 
         # 软删除好友关系
         await friendship.delete(db, soft=True)
+        other_user_id = friendship.friend_id if friendship.user_id == user_id else friendship.user_id
+        await _end_accountability_partnerships_between_users(db, user_id, other_user_id)
+        await db.flush()
         return True
 
 
@@ -618,7 +722,15 @@ class GroupService:
     ) -> GroupMember:
         """加入群组"""
         # 检查群组是否存在
-        group = await Group.get_by_id(db, group_id)
+        group_result = await db.execute(
+            select(Group)
+            .where(
+                Group.id == group_id,
+                Group.not_deleted_filter(),
+            )
+            .with_for_update()
+        )
+        group = group_result.scalar_one_or_none()
         if not group:
             raise ValueError("群组不存在")
 
@@ -651,8 +763,12 @@ class GroupService:
             joined_at=_utcnow(),
             last_active_at=_utcnow()
         )
-        db.add(member)
-        await db.flush()
+        try:
+            async with db.begin_nested():
+                db.add(member)
+                await db.flush()
+        except IntegrityError:
+            raise ValueError("已是群组成员")
         await db.refresh(member)
         _record_community_signal(
             user_id=user_id,
@@ -758,15 +874,60 @@ class GroupService:
         if not group:
             raise ValueError("群组不存在")
 
+        deleted_at = _utcnow()
+
         # 2. 软删除群组
         await group.delete(db, soft=True)
 
-        # 3. 软删除所有成员关系
-        from sqlalchemy import update
+        # 3. 软删除所有直接关联资源，避免产生僵尸数据
         await db.execute(
             update(GroupMember)
-            .where(GroupMember.group_id == group_id)
-            .values(is_deleted=True, deleted_at=_utcnow())
+            .where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupMessage)
+            .where(
+                GroupMessage.group_id == group_id,
+                GroupMessage.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        task_ids = select(GroupTask.id).where(GroupTask.group_id == group_id)
+        await db.execute(
+            update(GroupTaskClaim)
+            .where(
+                GroupTaskClaim.group_task_id.in_(task_ids),
+                GroupTaskClaim.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupTask)
+            .where(
+                GroupTask.group_id == group_id,
+                GroupTask.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(GroupFile)
+            .where(
+                GroupFile.group_id == group_id,
+                GroupFile.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await db.execute(
+            update(SharedResource)
+            .where(
+                SharedResource.group_id == group_id,
+                SharedResource.not_deleted_filter(),
+            )
+            .values(deleted_at=deleted_at)
         )
 
         return True
@@ -935,17 +1096,23 @@ class GroupMessageService:
 
         if data.reply_to_id:
             reply_msg = await db.get(GroupMessage, data.reply_to_id)
-            if not reply_msg or reply_msg.group_id != group_id:
+            if not reply_msg or reply_msg.group_id != group_id or reply_msg.is_deleted:
                 raise ValueError("回复消息不存在")
+            if reply_msg.is_revoked:
+                raise ValueError("不能回复已撤回的消息")
 
         if data.thread_root_id:
             root_msg = await db.get(GroupMessage, data.thread_root_id)
-            if not root_msg or root_msg.group_id != group_id:
+            if not root_msg or root_msg.group_id != group_id or root_msg.is_deleted:
                 raise ValueError("线程根消息不存在")
+            if root_msg.is_revoked:
+                raise ValueError("不能在线程中回复已撤回的消息")
 
-        mention_user_ids = None
-        if data.mention_user_ids:
-            mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+        mention_user_ids = await _validate_group_mentions(
+            db,
+            group_id=group_id,
+            mention_user_ids=data.mention_user_ids,
+        )
 
         message = GroupMessage(
             group_id=group_id,
@@ -1005,7 +1172,11 @@ class GroupMessageService:
         if data.content_data is not None:
             msg.content_data = data.content_data
         if data.mention_user_ids is not None:
-            msg.mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+            msg.mention_user_ids = await _validate_group_mentions(
+                db,
+                group_id=group_id,
+                mention_user_ids=data.mention_user_ids,
+            )
 
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
@@ -1521,8 +1692,7 @@ class GroupTaskService:
             raise ValueError("已认领此任务")
 
         # 创建个人任务副本
-        from app.models.task import TaskType as PersonalTaskType
-        from app.schemas.task import TaskCreate
+        from app.models.task import Task, TaskStatus, TaskType as PersonalTaskType
         from app.services.task_service import TaskService
 
         # 转换日期 (DateTime -> Date)
@@ -1541,36 +1711,38 @@ class GroupTaskService:
             )
             linked_plan_id = linked_plan_result.scalar_one_or_none()
 
-        personal_task_in = TaskCreate(
-            title=f"[{group_task.group.name}] {group_task.title}" if group_task.group else f"[群任务] {group_task.title}",
-            type=PersonalTaskType.LEARNING, # 默认设为学习类
-            plan_id=linked_plan_id,
-            tags=group_task.tags or [],
-            estimated_minutes=group_task.estimated_minutes,
-            difficulty=group_task.difficulty,
-            due_date=personal_due_date,
-            priority=2 # 中高优先级
-        )
+        try:
+            async with db.begin_nested():
+                personal_task = Task(
+                    user_id=user_id,
+                    plan_id=linked_plan_id,
+                    title=f"[{group_task.group.name}] {group_task.title}" if group_task.group else f"[群任务] {group_task.title}",
+                    type=PersonalTaskType.LEARNING,
+                    tags=group_task.tags or [],
+                    estimated_minutes=group_task.estimated_minutes,
+                    difficulty=group_task.difficulty,
+                    priority=2,
+                    due_date=personal_due_date,
+                    order_index=await TaskService._next_top_order_index(db, user_id),
+                    status=TaskStatus.PENDING,
+                )
+                db.add(personal_task)
+                await db.flush()
 
-        # 注意：这里调用 TaskService.create，它内部会执行 commit
-        # 但我们在事务中，最好让外部统一 commit。
-        # 修改：TaskService.create 目前内部有 commit，这在复合操作中不太理想。
-        # 暂时保持，但理想状态下 Service 层应该分 open/save 逻辑。
-        personal_task = await TaskService.create(db, personal_task_in, user_id)
+                claim = GroupTaskClaim(
+                    group_task_id=task_id,
+                    user_id=user_id,
+                    personal_task_id=personal_task.id,
+                    claimed_at=_utcnow()
+                )
+                db.add(claim)
 
-        # 记录认领
-        claim = GroupTaskClaim(
-            group_task_id=task_id,
-            user_id=user_id,
-            personal_task_id=personal_task.id,
-            claimed_at=_utcnow()
-        )
-        db.add(claim)
+                # 更新认领计数
+                group_task.total_claims += 1
+                await db.flush()
+        except IntegrityError:
+            raise ValueError("已认领此任务")
 
-        # 更新认领计数
-        group_task.total_claims += 1
-
-        await db.flush()
         await db.refresh(claim)
         return claim
 
@@ -1749,6 +1921,8 @@ class PrivateMessageService:
             reply_msg = await db.get(PrivateMessage, data.reply_to_id)
             if not reply_msg or reply_msg.is_deleted:
                 raise ValueError("回复消息不存在")
+            if reply_msg.is_revoked:
+                raise ValueError("不能回复已撤回的消息")
             if sender_id not in [reply_msg.sender_id, reply_msg.receiver_id]:
                 raise ValueError("不能回复非会话内消息")
 
@@ -1756,6 +1930,8 @@ class PrivateMessageService:
             root_msg = await db.get(PrivateMessage, data.thread_root_id)
             if not root_msg or root_msg.is_deleted:
                 raise ValueError("线程根消息不存在")
+            if root_msg.is_revoked:
+                raise ValueError("不能在线程中回复已撤回的消息")
             if sender_id not in [root_msg.sender_id, root_msg.receiver_id]:
                 raise ValueError("不能回复非会话内消息")
 
@@ -2088,6 +2264,7 @@ class UserBlockService:
         if existing_friendship:
             existing_friendship.soft_delete()
 
+        await _end_accountability_partnerships_between_users(db, blocker_id, blocked_id)
         await db.flush()
         return existing_block
 

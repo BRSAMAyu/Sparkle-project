@@ -132,6 +132,7 @@ class TestStreamChatBasic:
     """Test basic StreamChat RPC functionality"""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_stream_chat_simple_message(
         self,
         grpc_stub: agent_service_pb2_grpc.AgentServiceStub,
@@ -169,6 +170,7 @@ class TestStreamChatBasic:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_stream_chat_with_tool_call(
         self,
         grpc_stub: agent_service_pb2_grpc.AgentServiceStub,
@@ -203,6 +205,7 @@ class TestStreamChatBasic:
             assert hasattr(tool_calls[0], "parameters")
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_stream_chat_with_history(
         self,
         grpc_stub: agent_service_pb2_grpc.AgentServiceStub,

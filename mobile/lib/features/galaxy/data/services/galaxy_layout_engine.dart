@@ -95,11 +95,12 @@ class GalaxyLayoutEngine {
           (value) => value + 1,
           ifAbsent: () => 0,
         );
+        final nodeAnchor = _anchorForNode(node, sectorAnchors);
         positions[node.id] = _seedPhyllotaxisPosition(
           node: node,
           index: index,
           degree: adjacency[node.id]?.length ?? 0,
-          sectorAnchor: sectorAnchors[sector] ?? Offset.zero,
+          sectorAnchor: nodeAnchor,
         );
       }
     }
@@ -170,6 +171,28 @@ class GalaxyLayoutEngine {
         tangent * sin(orbitAngle) * orbitRadius * 0.34 +
         Offset(cos(orbitAngle), sin(orbitAngle)) * orbitRadius;
     return sectorAnchor + orbitOffset;
+  }
+
+  static Offset _anchorForNode(
+    GalaxyNodeModel node,
+    Map<SectorEnum, Offset> sectorAnchors,
+  ) {
+    final weights = node.normalizedSectorWeights;
+    var dx = 0.0;
+    var dy = 0.0;
+    var total = 0.0;
+
+    for (final entry in weights.entries) {
+      final anchor = sectorAnchors[entry.key] ?? Offset.zero;
+      dx += anchor.dx * entry.value;
+      dy += anchor.dy * entry.value;
+      total += entry.value;
+    }
+
+    if (total <= 0) {
+      return sectorAnchors[node.sector] ?? Offset.zero;
+    }
+    return Offset(dx / total, dy / total);
   }
 
   static void _solveHybridLayout({
@@ -244,13 +267,14 @@ class GalaxyLayoutEngine {
           force += direction * (distance - targetDistance) * 0.045 * strength;
         }
 
-        final sectorAnchor = sectorAnchors[node.sector] ?? Offset.zero;
+        final sectorAnchor = _anchorForNode(node, sectorAnchors);
         force += (sectorAnchor - position) * (0.012 + sectorAffinity * 0.016);
         force += Offset(-position.dx, -position.dy) * 0.0012;
 
         final sectorCorrection = _softSectorCorrection(
           node: node,
           position: position,
+          sectorAnchors: sectorAnchors,
         );
         force += sectorCorrection * (0.10 + sectorAffinity * 0.22);
 
@@ -276,13 +300,16 @@ class GalaxyLayoutEngine {
   static Offset _softSectorCorrection({
     required GalaxyNodeModel node,
     required Offset position,
+    required Map<SectorEnum, Offset> sectorAnchors,
   }) {
     if (position.distance <= 1) {
       return Offset.zero;
     }
-    final style = SectorConfig.getStyle(node.sector);
-    final centerAngle =
-        (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
+    final anchor = _anchorForNode(node, sectorAnchors);
+    if (anchor.distance <= 1) {
+      return Offset.zero;
+    }
+    final centerAngle = atan2(anchor.dy, anchor.dx);
     final currentAngle = atan2(position.dy, position.dx);
     final delta = _wrapAngle(centerAngle - currentAngle);
     final tangent = Offset(-sin(currentAngle), cos(currentAngle));

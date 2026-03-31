@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_banner.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
@@ -171,6 +172,9 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     unawaited(ref.read(achievementProvider.notifier).refreshAchievements());
     unawaited(ref.read(achievementProvider.notifier).refreshStats());
     unawaited(ref.read(achievementProvider.notifier).refreshStreakStats());
+    unawaited(
+      ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
+    );
     unawaited(ref.read(streakHistoryProvider.notifier).loadHistory());
   }
 

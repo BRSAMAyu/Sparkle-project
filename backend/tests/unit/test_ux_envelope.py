@@ -141,6 +141,24 @@ def test_ux_envelope_builder_marks_tool_failure_and_recovery_copy() -> None:
     assert envelope["ux_followthrough"]["retry_options"][0] == "换一种执行方式"
 
 
+def test_ux_envelope_prefers_explicit_zero_failed_steps() -> None:
+    builder = UXEnvelopeBuilder()
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "继续推进"}],
+        context_data={"chat_mode": "standard"},
+    )
+    executable_plan = SimpleNamespace(confidence=0.72, tool_calls=[{"name": "create_task"}])
+    execution_validation = {
+        "failed_steps": 0,
+        "failed_tool_calls": 2,
+        "total_steps": 2,
+        "total_tool_calls": 2,
+    }
+
+    assert builder._completion_state(final_state, executable_plan, execution_validation) == "done"
+    assert builder._confidence_band(executable_plan, RouteDecision(execution_mode="direct", reason="chat", risk_level="low"), execution_validation) == "medium"
+
+
 def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
     builder = UXEnvelopeBuilder()
     final_state = WorkflowState(

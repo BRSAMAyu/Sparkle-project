@@ -45,6 +45,17 @@ def _reset_report_cache():
     cache_service.redis = previous_redis
 
 
+def test_context_builder_preserves_seed_library_toggle_flag():
+    builder = _DummyContextBuilder()
+
+    merged = builder._merge_user_contexts(
+        {"preferences": {}},
+        {"seed_library_enabled": False},
+    )
+
+    assert merged["seed_library_enabled"] is False
+
+
 @pytest.mark.asyncio
 async def test_launch_prediction_tool_returns_preview_payload(monkeypatch):
     prediction_id = str(uuid4())
@@ -979,6 +990,18 @@ def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():
     assert "run_quick_simulation" in natural_simulation_tools
     assert "generate_learning_report" in report_tools
     assert plain_tools == []
+
+
+def test_infer_bridge_tool_names_respects_negation():
+    orchestrator = object.__new__(ChatOrchestrator)
+
+    no_prediction_tools = orchestrator._infer_bridge_tool_names("我不需要推演这条学习路径")
+    no_simulation_tools = orchestrator._infer_bridge_tool_names("先别模拟学习小组讨论")
+    no_report_tools = orchestrator._infer_bridge_tool_names("这次不用生成学习报告")
+
+    assert "launch_prediction" not in no_prediction_tools
+    assert "run_quick_simulation" not in no_simulation_tools
+    assert "generate_learning_report" not in no_report_tools
 
 
 @pytest.mark.asyncio

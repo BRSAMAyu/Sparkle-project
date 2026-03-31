@@ -4,7 +4,9 @@ from uuid import uuid4
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
+from app.models.user import User
 from app.schemas.user import UserRegister
+from app.services.personalization.preference_service import PreferenceService
 from app.services.user_service import UserService
 
 
@@ -73,14 +75,16 @@ async def test_get_context_uses_cache():
         "active_slots": {"slots": []},
         "daily_cap": 5,
         "persona_type": "coach",
+        "preference_version": 0,
     }
     redis.get.return_value = json.dumps(cached_payload)
 
     service = UserService(db, redis)
-    context = await service.get_context(user_id)
-    assert context is not None
-    assert context.nickname == "cached_user"
-    db.execute.assert_not_called()
+    with patch.object(PreferenceService, "get_preference_version", new=AsyncMock(return_value=0)):
+        context = await service.get_context(user_id)
+        assert context is not None
+        assert context.nickname == "cached_user"
+        db.execute.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -93,3 +97,42 @@ async def test_get_context_returns_none_for_missing_user():
 
     context = await service.get_context(uuid4())
     assert context is None
+
+
+class _RedisCache:
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str):
+        return self._store.get(key)
+
+    async def setex(self, key: str, ttl: int, value: str):
+        self._store[key] = value
+
+    async def delete(self, *keys: str):
+        for key in keys:
+            self._store.pop(key, None)
+
+
+@pytest.mark.asyncio
+async def test_get_context_refreshes_stale_cache_when_preference_version_changes(db_session):
+    redis = _RedisCache()
+    user = User(username="ctxversion", email="ctxversion@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = UserService(db_session, redis)
+    first_context = await service.get_context(user.id)
+    assert first_context is not None
+    assert first_context.preference_version == 1
+    stale_cache = dict(redis._store)
+
+    await PreferenceService(db_session, redis).update_explicit(user.id, {"timezone": "America/New_York"})
+    redis._store.update(stale_cache)
+
+    refreshed = await service.get_context(user.id)
+
+    assert refreshed is not None
+    assert refreshed.timezone == "America/New_York"
+    assert refreshed.preference_version == 2

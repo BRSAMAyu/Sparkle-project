@@ -101,12 +101,13 @@ extension ChatNotifierActions on ChatNotifier {
               .read(taskListProvider.notifier)
               .selectExecutionTemplate(taskId, templateId);
         }
-        final intent = await _ref.read(taskListProvider.notifier).handoffTaskToAi(
-              taskId,
-              goal: _actionString(payload, 'goal').isNotEmpty
-                  ? _actionString(payload, 'goal')
-                  : null,
-            );
+        final intent =
+            await _ref.read(taskListProvider.notifier).handoffTaskToAi(
+                  taskId,
+                  goal: _actionString(payload, 'goal').isNotEmpty
+                      ? _actionString(payload, 'goal')
+                      : null,
+                );
         if (intent == null) {
           final message = _ref.read(taskListProvider).error ?? 'AI 执行发起失败';
           if (message.contains('等待队列')) {
@@ -196,8 +197,10 @@ extension ChatNotifierActions on ChatNotifier {
     }
   }
 
-  Future<void> switchPlanSession(String? planId,
-      {BuildContext? context,}) async {
+  Future<void> switchPlanSession(
+    String? planId, {
+    BuildContext? context,
+  }) async {
     cancelActiveRun(reason: 'switch_plan');
     if (planId == null) {
       // 🔧 修复：即使没有活跃计划，也尝试加载当前会话历史
@@ -275,7 +278,9 @@ extension ChatNotifierActions on ChatNotifier {
     // Show feedback after successful switch
     if (context != null && context.mounted) {
       AppFeedback.success(
-          context, I18nService.instance.l10n.chatPlanContextSwitched,);
+        context,
+        I18nService.instance.l10n.chatPlanContextSwitched,
+      );
     }
   }
 
@@ -430,9 +435,8 @@ extension ChatNotifierActions on ChatNotifier {
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
     state = state.copyWith(
       lastActionStatus: 'response_feedback_sent',
-      lastActionMessage: feedbackType == 'up'
-          ? '已收到你的反馈，这条回复已标记为有帮助'
-          : '已收到你的反馈，我们会继续改进这类回复',
+      lastActionMessage:
+          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
     );
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -512,6 +516,9 @@ extension ChatNotifierActions on ChatNotifier {
 
     // Phase 1B: Trigger close-to-unlock check
     _ref.read(closeToUnlockProvider.notifier).triggerCheck();
+    unawaited(
+      _ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
+    );
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {
@@ -544,7 +551,8 @@ extension ChatNotifierActions on ChatNotifier {
         notificationType: event.notificationType,
       );
       debugPrint(
-          '✅ Notification added to notification center: ${event.notificationId}',);
+        '✅ Notification added to notification center: ${event.notificationId}',
+      );
     } catch (e) {
       debugPrint('⚠️ Failed to add notification to center: $e');
     }
@@ -648,20 +656,45 @@ extension ChatNotifierActions on ChatNotifier {
       '📢 State change notification added: ${event.changeType} (${event.interventionLevel})',
     );
 
+    if (event.changeType.startsWith('plan_')) {
+      _refreshPlanRelatedState(reason: event.changeType);
+    }
+
     // Refresh notification center when receiving state change events
     _refreshNotificationCenter();
   }
 
+  void _refreshPlanRelatedState({required String reason}) {
+    unawaited(
+      _ref.read(planListProvider.notifier).refresh().catchError((Object error) {
+        debugPrint('⚠️ Failed to refresh plan list after $reason: $error');
+      }),
+    );
+    unawaited(
+      _ref.read(taskListProvider.notifier).refreshTasks().catchError((
+        Object error,
+      ) {
+        debugPrint('⚠️ Failed to refresh task list after $reason: $error');
+      }),
+    );
+    unawaited(
+      _ref.read(dashboardProvider.notifier).refresh().catchError((
+        Object error,
+      ) {
+        debugPrint('⚠️ Failed to refresh dashboard after $reason: $error');
+      }),
+    );
+  }
+
   /// 刷新通知中心
   void _refreshNotificationCenter() {
-    try {
-      // Import and refresh notification center
-      final notificationCenter = _ref.read(notificationCenterProvider.notifier);
-      notificationCenter.refresh();
-      debugPrint('🔔 Notification center refreshed due to state change');
-    } catch (e) {
-      debugPrint('⚠️ Failed to refresh notification center: $e');
-    }
+    final notificationCenter = _ref.read(notificationCenterProvider.notifier);
+    unawaited(
+      notificationCenter.refresh().catchError((Object error) {
+        debugPrint('⚠️ Failed to refresh notification center: $error');
+      }),
+    );
+    debugPrint('🔔 Notification center refreshed due to state change');
   }
 
   /// 处理 Plan Review Status Event
@@ -682,6 +715,7 @@ extension ChatNotifierActions on ChatNotifier {
     // Clear pending review if status indicates completion
     if (event.status == 'approved' || event.status == 'rejected') {
       state = state.copyWith(clearPendingReview: true);
+      _refreshPlanRelatedState(reason: 'plan_review_${event.status}');
     }
 
     // Delay clearing feedback state

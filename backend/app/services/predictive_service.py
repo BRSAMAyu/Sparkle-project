@@ -365,65 +365,87 @@ class PredictiveService:
 
             if not records:
                 return {
-                    "best_hours": [9, 14, 19],  # 默认：早中晚
-                    "best_weekdays": [1, 2, 3, 4],  # 周二到周五
+                    "best_hours": [],
+                    "best_weekdays": [],
                     "performance_by_hour": {str(hour): 0.0 for hour in range(24)},
                     "performance_by_weekday": {str(day): 0.0 for day in range(7)},
-                    "reason": "默认推荐（数据不足）"
+                    "reason": "暂无足够学习记录，先完成几次学习会话后再回来查看。",
+                    "data_status": "insufficient_data",
+                    "sample_size": 0,
+                    "confidence": 0.0,
                 }
 
-            # 分析各时间段的学习效果
-            hour_performance = {i: [] for i in range(24)}
-            weekday_performance = {i: [] for i in range(7)}
+            hour_scores = {i: 0.0 for i in range(24)}
+            hour_weights = {i: 0.0 for i in range(24)}
+            weekday_scores = {i: 0.0 for i in range(7)}
+            weekday_weights = {i: 0.0 for i in range(7)}
 
             for record in records:
                 hour = record.created_at.hour
                 weekday = record.created_at.weekday()
+                recency_days = max(
+                    0.0,
+                    (now - record.created_at.replace(tzinfo=None)).total_seconds() / 86400,
+                )
+                recency_weight = max(0.35, 1.0 - (recency_days / 45.0))
+                mastery_score = max(float(getattr(record, 'mastery_delta', 0.0)), 0.0)
+                duration_score = min(float(getattr(record, 'study_minutes', 0.0)) / 45.0, 1.0)
+                performance_score = (mastery_score * 0.7) + (duration_score * 0.3)
 
-                # 假设 duration 和 mastery_gain 字段存在
-                performance_score = getattr(record, 'mastery_gain', 1.0)
+                hour_scores[hour] += performance_score * recency_weight
+                hour_weights[hour] += recency_weight
+                weekday_scores[weekday] += performance_score * recency_weight
+                weekday_weights[weekday] += recency_weight
 
-                hour_performance[hour].append(performance_score)
-                weekday_performance[weekday].append(performance_score)
-
-            # 找到表现最好的3个小时
             avg_hour_performance = {
-                hour: statistics.mean(scores) if scores else 0
-                for hour, scores in hour_performance.items()
+                hour: (hour_scores[hour] / hour_weights[hour]) if hour_weights[hour] > 0 else 0.0
+                for hour in range(24)
             }
+            avg_weekday_performance = {
+                day: (weekday_scores[day] / weekday_weights[day]) if weekday_weights[day] > 0 else 0.0
+                for day in range(7)
+            }
+            observed_hours = [hour for hour, weight in hour_weights.items() if weight > 0]
+            observed_weekdays = [day for day, weight in weekday_weights.items() if weight > 0]
             best_hours = sorted(
-                avg_hour_performance.keys(),
+                observed_hours,
                 key=lambda h: avg_hour_performance[h],
                 reverse=True
             )[:3]
-
-            # 找到表现最好的星期
-            avg_weekday_performance = {
-                day: statistics.mean(scores) if scores else 0
-                for day, scores in weekday_performance.items()
-            }
             best_weekdays = sorted(
-                avg_weekday_performance.keys(),
+                observed_weekdays,
                 key=lambda d: avg_weekday_performance[d],
                 reverse=True
             )[:4]
+            sample_size = len(records)
+            confidence = min(0.92, 0.2 + (sample_size / 12.0))
 
             return {
                 "best_hours": best_hours,
                 "best_weekdays": best_weekdays,
                 "performance_by_hour": avg_hour_performance,
                 "performance_by_weekday": avg_weekday_performance,
-                "reason": "基于最近30天的学习效果分析"
+                "reason": (
+                    "基于最近30天的学习效果分析"
+                    if sample_size >= 6
+                    else "基于近期少量学习记录的预热推荐，继续使用后会更稳定。"
+                ),
+                "data_status": "ok" if sample_size >= 6 else "cold_start",
+                "sample_size": sample_size,
+                "confidence": round(confidence, 4),
             }
 
         except Exception as e:
             logger.error(f"最佳时间推荐失败: {e}")
             return {
-                "best_hours": [9, 14, 19],
-                "best_weekdays": [1, 2, 3, 4],
+                "best_hours": [],
+                "best_weekdays": [],
                 "performance_by_hour": {str(hour): 0.0 for hour in range(24)},
                 "performance_by_weekday": {str(day): 0.0 for day in range(7)},
-                "reason": f"推荐失败: {str(e)}"
+                "reason": f"推荐失败: {str(e)}",
+                "data_status": "error",
+                "sample_size": 0,
+                "confidence": 0.0,
             }
 
     async def detect_dropout_risk(self, user_id: UUID) -> dict[str, Any]:

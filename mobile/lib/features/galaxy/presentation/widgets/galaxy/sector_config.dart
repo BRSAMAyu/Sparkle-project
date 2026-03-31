@@ -301,7 +301,10 @@ class SectorConfig {
     required GalaxyNodeModel node,
     required bool isDarkMode,
   }) {
-    final sectorColor = getColor(node.sector, isDarkMode: isDarkMode);
+    final sectorColor = _weightedSectorColor(
+      node.normalizedSectorWeights,
+      isDarkMode: isDarkMode,
+    );
     final explicitColor = tryParseHexColor(node.baseColor);
     final inheritedColor = explicitColor == null
         ? sectorColor
@@ -349,15 +352,35 @@ class SectorConfig {
       }
 
       final influenceWeight = isCrossSector ? 1.0 : 0.22;
-      neighborInfluences.update(
-        neighbor.sector,
-        (count) => count + influenceWeight,
-        ifAbsent: () => influenceWeight,
-      );
+      for (final entry in neighbor.normalizedSectorWeights.entries) {
+        neighborInfluences.update(
+          entry.key,
+          (count) => count + influenceWeight * entry.value,
+          ifAbsent: () => influenceWeight * entry.value,
+        );
+      }
     }
 
     final semanticWeights = _inferSecondarySectorWeights(node);
-    final weightedColors = <(Color, double)>[(baseColor, 1.8)];
+    final weightedColors = <(Color, double)>[(baseColor, 2.1)];
+
+    for (final entry in node.normalizedSectorWeights.entries) {
+      if (entry.key == node.sector && entry.value >= 0.999) {
+        continue;
+      }
+      weightedColors.add(
+        (
+          _applyNodeVariance(
+            getColor(entry.key, isDarkMode: isDarkMode),
+            node: node,
+            isDarkMode: isDarkMode,
+            salt: 'weight:${entry.key.name}',
+            allowWideHue: entry.key == SectorEnum.voidSector,
+          ),
+          0.9 * entry.value,
+        ),
+      );
+    }
 
     for (final entry in semanticWeights.entries) {
       if (entry.key == node.sector) {
@@ -410,7 +433,7 @@ class SectorConfig {
     return lerpInHsl(
       baseColor,
       blendedInfluenceColor,
-      (0.12 + 0.26 * crossRatio.clamp(0.0, 1.0) + semanticLift)
+      (0.10 + 0.24 * crossRatio.clamp(0.0, 1.0) + semanticLift)
           .clamp(0.0, 0.48),
       clampSaturationMin: isDarkMode ? 0.24 : 0.18,
     );
@@ -507,6 +530,23 @@ class SectorConfig {
       (sumSaturation / totalWeight).clamp(0.24, 0.86),
       (sumLightness / totalWeight).clamp(0.18, 0.82),
     ).toColor();
+  }
+
+  static Color _weightedSectorColor(
+    Map<SectorEnum, double> weights, {
+    required bool isDarkMode,
+  }) {
+    final normalized = weights.isEmpty ? {SectorEnum.voidSector: 1.0} : weights;
+    return _averageColors(
+      normalized.entries
+          .map(
+            (entry) => (
+              getColor(entry.key, isDarkMode: isDarkMode),
+              entry.value <= 0 ? 0.0 : entry.value,
+            ),
+          )
+          .toList(),
+    );
   }
 
   static double _lerpHue(double a, double b, double t) {

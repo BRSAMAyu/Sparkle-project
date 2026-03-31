@@ -85,6 +85,33 @@ class TestCalculateNextReview:
         expected = _utcnow() + timedelta(days=180)
         assert abs((result - expected).total_seconds()) < 1
 
+    @pytest.mark.parametrize(
+        ("importance", "consecutive_correct", "remembered", "expected_days"),
+        [
+            (5, 0, True, 1),
+            (4, 2, True, 4),
+            (3, 3, True, 12),
+            (1, 10, True, 180),
+            (3, 6, False, 1),
+        ],
+    )
+    def test_backend_schedule_matches_mobile_formula(
+        self,
+        importance: int,
+        consecutive_correct: int,
+        remembered: bool,
+        expected_days: int,
+    ):
+        """后端调度应与 Flutter 离线公式保持一致。"""
+        result = VocabularyService._calculate_next_review(
+            importance=importance,
+            consecutive_correct=consecutive_correct,
+            remembered=remembered,
+        )
+
+        expected = _utcnow() + timedelta(days=expected_days)
+        assert abs((result - expected).total_seconds()) < 1
+
 
 @pytest.mark.asyncio
 class TestRecordReview:
@@ -215,3 +242,16 @@ class TestGetStatistics:
         assert 'due_for_review' in stats
         assert 'accuracy_rate' in stats
         assert 'by_importance' in stats
+
+
+@pytest.mark.asyncio
+async def test_get_review_list_applies_default_batch_limit():
+    db = AsyncMock()
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = []
+    db.execute = AsyncMock(return_value=result)
+
+    await VocabularyService.get_review_list(db, MagicMock(id=123))
+
+    stmt = db.execute.await_args.args[0]
+    assert stmt._limit_clause.value == VocabularyService.DEFAULT_REVIEW_BATCH_SIZE

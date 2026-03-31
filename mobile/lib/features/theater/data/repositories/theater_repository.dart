@@ -67,6 +67,7 @@ class TheaterRepository {
     required String topic,
     String? targetNodeId,
     int horizonDays = 14,
+    String? simulationSessionId,
   }) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -76,6 +77,8 @@ class TheaterRepository {
           if (targetNodeId != null && targetNodeId.isNotEmpty)
             'target_node_id': targetNodeId,
           'horizon_days': horizonDays,
+          if (simulationSessionId != null && simulationSessionId.isNotEmpty)
+            'simulation_session_id': simulationSessionId,
         },
       );
       return TheaterPrediction.fromJson(response.data ?? const {});
@@ -110,11 +113,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '这次 What-If 没有成功生成，你可以稍后再试。',
+        fallbackMessage: '这次假设推演没有成功生成，你可以稍后再试。',
       );
     } catch (_) {
       throw const TheaterRepositoryException(
-        message: '这次 What-If 没有成功生成，你可以稍后再试。',
+        message: '这次假设推演没有成功生成，你可以稍后再试。',
       );
     }
   }
@@ -174,6 +177,24 @@ class TheaterRepository {
     }
   }
 
+  Future<TheaterPrediction> getPredictionById(String predictionId) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.theaterPrediction(predictionId),
+      );
+      return TheaterPrediction.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '读取这次推演失败了，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '读取这次推演失败了，你可以稍后再试。',
+      );
+    }
+  }
+
   Future<TheaterAccuracySummary> recordActuals({
     required String predictionId,
     double? actualCompletionRate,
@@ -219,6 +240,48 @@ class TheaterRepository {
     } catch (_) {
       throw const TheaterRepositoryException(
         message: '读取推演准确度失败，你可以稍后再试。',
+      );
+    }
+  }
+
+  Future<TheaterAccuracyOverview> getAccuracyOverview() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.theaterAccuracyOverview,
+      );
+      return TheaterAccuracyOverview.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '读取推演校准概览失败，你可以稍后再试。',
+      );
+    }
+  }
+
+  Future<TheaterNodePromotionResult> promoteNodeToGalaxy({
+    required String predictionId,
+    required String theaterNodeId,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.theaterPromoteNode(predictionId),
+        data: {
+          'theater_node_id': theaterNodeId,
+        },
+      );
+      return TheaterNodePromotionResult.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw TheaterRepositoryException.fromDio(
+        e,
+        fallbackMessage: '将节点同步到知识星图失败，你可以稍后再试。',
+      );
+    } catch (_) {
+      throw const TheaterRepositoryException(
+        message: '将节点同步到知识星图失败，你可以稍后再试。',
       );
     }
   }

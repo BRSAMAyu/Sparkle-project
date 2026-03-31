@@ -1,5 +1,68 @@
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
+Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    try {
+      return Map<String, dynamic>.from(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+List<dynamic> _asDynamicList(dynamic value) {
+  if (value is List<dynamic>) {
+    return value;
+  }
+  if (value is List) {
+    return List<dynamic>.from(value);
+  }
+  return const <dynamic>[];
+}
+
+double _asDouble(dynamic value, {double fallback = 0}) {
+  if (value is double) {
+    return value;
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value) ?? fallback;
+  }
+  return fallback;
+}
+
+bool _asBool(dynamic value, {bool fallback = false}) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  if (value is String) {
+    switch (value.trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'y':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'n':
+        return false;
+      default:
+        return fallback;
+    }
+  }
+  return fallback;
+}
+
 class PredictionActionData {
   PredictionActionData({
     required this.id,
@@ -12,15 +75,6 @@ class PredictionActionData {
     this.surface,
   });
 
-  final String id;
-  final String label;
-  final String actionType;
-  final String targetRoute;
-  final String suggestedPrompt;
-  final String? resourceType;
-  final String? resourceId;
-  final String? surface;
-
   factory PredictionActionData.fromJson(Map<String, dynamic> json) =>
       PredictionActionData(
         id: json['id']?.toString() ?? '',
@@ -32,6 +86,15 @@ class PredictionActionData {
         resourceId: json['resource_id']?.toString(),
         surface: json['surface']?.toString(),
       );
+
+  final String id;
+  final String label;
+  final String actionType;
+  final String targetRoute;
+  final String suggestedPrompt;
+  final String? resourceType;
+  final String? resourceId;
+  final String? surface;
 }
 
 class PredictionInsightData {
@@ -56,6 +119,55 @@ class PredictionInsightData {
     this.generatedAt,
     this.entityCard,
   });
+
+  factory PredictionInsightData.fromJson(Map<String, dynamic> json) {
+    final tracking =
+        _asStringKeyedMap(json['tracking']) ?? const <String, dynamic>{};
+    final explanationsMap =
+        _asStringKeyedMap(json['explanations']) ?? const <String, dynamic>{};
+    final entityCardMap = _asStringKeyedMap(json['entity_card']);
+    return PredictionInsightData(
+      predictionId: json['prediction_id']?.toString() ?? '',
+      horizon: json['horizon']?.toString() ?? 'realtime',
+      title: json['title']?.toString() ?? '',
+      summary: json['summary']?.toString() ?? '',
+      confidence: _asDouble(json['confidence']),
+      predictedActionType: json['predicted_action_type']?.toString() ?? '',
+      predictedWindow: json['predicted_window']?.toString() ?? '',
+      reasons: _asDynamicList(json['reasons'])
+          .map((item) => item.toString())
+          .toList(),
+      suggestedPrompt: json['suggested_prompt']?.toString() ?? '',
+      predictionSource: json['prediction_source']?.toString() ?? 'rules',
+      predictionTier: json['prediction_tier']?.toString() ?? 'rules',
+      fallbackUsed: _asBool(json['fallback_used']),
+      explanations: {
+        for (final entry in explanationsMap.entries)
+          entry.key: _asDynamicList(entry.value)
+              .map((item) => item.toString())
+              .toList(),
+      },
+      recommendedActions: _asDynamicList(json['recommended_actions'])
+          .map(_asStringKeyedMap)
+          .whereType<Map<String, dynamic>>()
+          .map(PredictionActionData.fromJson)
+          .toList(),
+      trackingCandidateId: tracking['candidate_id']?.toString() ??
+          json['prediction_id']?.toString() ??
+          '',
+      trackingActionType: tracking['action_type']?.toString() ??
+          json['predicted_action_type']?.toString() ??
+          'continue_chat',
+      surface: json['surface']?.toString(),
+      generatedAt: DateTime.tryParse(json['generated_at']?.toString() ?? ''),
+      entityCard: entityCardMap != null
+          ? EntityCardPayload.fromRaw(
+              {'entity_card': entityCardMap},
+              fallbackType: 'prediction',
+            )
+          : null,
+    );
+  }
 
   final String predictionId;
   final String horizon;
@@ -84,54 +196,4 @@ class PredictionInsightData {
         ...?explanations['plan'],
         ...?explanations['focus'],
       ];
-
-  factory PredictionInsightData.fromJson(Map<String, dynamic> json) {
-    final tracking = (json['tracking'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    final explanationsMap = (json['explanations'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    return PredictionInsightData(
-      predictionId: json['prediction_id']?.toString() ?? '',
-      horizon: json['horizon']?.toString() ?? 'realtime',
-      title: json['title']?.toString() ?? '',
-      summary: json['summary']?.toString() ?? '',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
-      predictedActionType: json['predicted_action_type']?.toString() ?? '',
-      predictedWindow: json['predicted_window']?.toString() ?? '',
-      reasons: ((json['reasons'] as List<dynamic>?) ?? const [])
-          .map((item) => item.toString())
-          .toList(),
-      suggestedPrompt: json['suggested_prompt']?.toString() ?? '',
-      predictionSource: json['prediction_source']?.toString() ?? 'rules',
-      predictionTier: json['prediction_tier']?.toString() ?? 'rules',
-      fallbackUsed: json['fallback_used'] as bool? ?? false,
-      explanations: {
-        for (final entry in explanationsMap.entries)
-          entry.key: ((entry.value as List<dynamic>?) ?? const [])
-              .map((item) => item.toString())
-              .toList(),
-      },
-      recommendedActions:
-          ((json['recommended_actions'] as List<dynamic>?) ?? const [])
-              .map(
-                (item) =>
-                    PredictionActionData.fromJson(item as Map<String, dynamic>),
-              )
-              .toList(),
-      trackingCandidateId: tracking['candidate_id']?.toString() ??
-          json['prediction_id']?.toString() ??
-          '',
-      trackingActionType: tracking['action_type']?.toString() ??
-          json['predicted_action_type']?.toString() ??
-          'continue_chat',
-      surface: json['surface']?.toString(),
-      generatedAt: DateTime.tryParse(json['generated_at']?.toString() ?? ''),
-      entityCard: json['entity_card'] is Map<String, dynamic>
-          ? EntityCardPayload.fromRaw(
-              {'entity_card': json['entity_card'] as Map<String, dynamic>},
-              fallbackType: 'prediction',
-            )
-          : null,
-    );
-  }
 }

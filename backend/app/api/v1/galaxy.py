@@ -20,6 +20,7 @@ from app.models.task import Task
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
+    CreateGalaxyNodeRequest,
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
     GalaxyGraphResponse,
@@ -41,6 +42,7 @@ from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy_service import GalaxyService
 from app.services.knowledge_integration_service import KnowledgeIntegrationService
+from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
 
@@ -164,6 +166,31 @@ async def get_galaxy_graph(
     )
 
 
+@router.post("/nodes", response_model=NodeBase)
+async def create_galaxy_node(
+    request: CreateGalaxyNodeRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    try:
+        node = await galaxy_service.create_node(
+            user_id=UUID(user_id),
+            title=request.name,
+            summary=request.description,
+            subject_id=request.subject_id,
+            tags=request.keywords,
+            parent_node_id=request.parent_node_id,
+            name_en=request.name_en,
+            importance_level=request.importance_level,
+            relation_type=request.relation_to_parent,
+            relation_strength=request.relation_strength,
+            sector_weights=request.sector_weights or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return NodeBase.from_model(node)
+
+
 @router.post("/node/{node_id}/spark", response_model=SparkResult)
 async def spark_node(
     node_id: UUID,
@@ -226,10 +253,8 @@ async def get_node_detail(
     relations_result = await db.execute(relations_query)
     relations = relations_result.unique().scalars().all()
 
-    # 构建 sector_code
-    sector_code = "VOID"
-    if node.subject:
-        sector_code = node.subject.sector_code or "VOID"
+    sector_weights = resolve_sector_weights(node)
+    sector_code = dominant_sector_from_weights(sector_weights).value
 
     # 构建 user_stats (top-level, matching Flutter KnowledgeUserStats)
     if user_status:
@@ -266,6 +291,7 @@ async def get_node_detail(
         "keywords": node.keywords or [],
         "importance_level": node.importance_level,
         "sector_code": sector_code,
+        "sector_weights": sector_weights,
         "is_seed": bool(node.is_seed),
         "source_type": node.source_type or "seed",
         "parent_id": str(node.parent_id) if node.parent_id else None,
@@ -405,21 +431,8 @@ async def apply_node_expansion_candidates(
         UUID(user_id),
         candidates=[candidate.model_dump() for candidate in request.candidates],
     )
-    sector_code = SectorCode.VOID
     created = [
-        NodeBase(
-            id=created_node.id,
-            name=created_node.name,
-            name_en=created_node.name_en,
-            description=created_node.description,
-            importance_level=created_node.importance_level,
-            sector_code=sector_code,
-            is_seed=bool(created_node.is_seed),
-            parent_id=created_node.parent_id,
-            parent_name=node.name,
-            tags=list(created_node.keywords or []),
-            global_spark_count=int(getattr(created_node, "global_spark_count", 0) or 0),
-        )
+        NodeBase.from_model(created_node)
         for created_node in created_nodes
     ]
     return ApplyNodeExpansionResponse(
@@ -852,7 +865,3 @@ async def get_heatmap(
     Phase 4.2 Insight.
     """
     return await galaxy_service.get_heatmap_data(UUID(user_id))
-
-
-# 导入必要的 or_ 函数
-from sqlalchemy import or_

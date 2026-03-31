@@ -10,6 +10,10 @@ const _cjkFontFallback = <String>[
   'Source Han Sans SC',
   'Microsoft YaHei',
   'Arial Unicode MS',
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Noto Color Emoji',
+  'Noto Emoji',
 ];
 
 /// 主题管理器 - 支持动态切换和持久化

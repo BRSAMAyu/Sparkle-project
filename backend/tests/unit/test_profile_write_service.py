@@ -11,6 +11,7 @@ from app.services.profile_write_service import ProfileWriteService
 class _FakeRedis:
     def __init__(self) -> None:
         self._kv: dict[str, dict[str, str]] = {}
+        self._ttl: dict[str, int] = {}
 
     async def hset(self, key: str, field: str, value: str) -> None:
         self._kv.setdefault(key, {})[field] = value
@@ -28,6 +29,9 @@ class _FakeRedis:
     async def delete(self, *keys: str) -> None:
         for key in keys:
             self._kv.pop(key, None)
+
+    async def expire(self, key: str, ttl: int) -> None:
+        self._ttl[key] = ttl
 
 
 @pytest.mark.asyncio
@@ -69,3 +73,36 @@ async def test_override_inferred_preference_moves_value_to_explicit_and_preserve
     assert "community_engagement_level" not in (restored.explicit or {})
     assert restored.inferred["community_engagement_level"] == "moderate"
     assert "community_engagement_level" not in restored_backups
+    assert redis._ttl[service._override_backup_key(user_id)] == 30 * 24 * 3600
+
+
+@pytest.mark.asyncio
+async def test_update_inferred_preference_respects_non_default_explicit_override(db_session):
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    pref_service = PreferenceService(db_session)
+    await pref_service.update_explicit(user_id, {"depth_preference": 0.3})
+
+    service = ProfileWriteService(db_session)
+    await service.update_inferred_preference(
+        user_id=user_id,
+        updates={
+            "depth_preference": 0.9,
+            "ai_delegate_preference": 0.65,
+        },
+        source="unit_test",
+    )
+
+    prefs = await pref_service.get_preferences(user_id)
+
+    assert prefs.explicit["depth_preference"] == 0.3
+    assert "depth_preference" not in (prefs.inferred or {})
+    assert prefs.inferred["ai_delegate_preference"] == 0.65

@@ -4,7 +4,7 @@ from datetime import timezone, datetime
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -468,6 +468,8 @@ async def revoke_other_sessions(
 
 @router.get("/me/security-log", response_model=list[AuthAuditLogInfo])
 async def get_security_log(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -475,7 +477,8 @@ async def get_security_log(
         select(AuthAuditLog)
         .where(AuthAuditLog.user_id == current_user.id)
         .order_by(AuthAuditLog.occurred_at.desc())
-        .limit(100),
+        .offset(offset)
+        .limit(limit),
     )
     items = result.scalars().all()
     return [

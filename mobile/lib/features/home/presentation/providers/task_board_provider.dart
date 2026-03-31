@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -98,9 +99,30 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
         ) {
     // Initialize default view based on sprint status
     _initializeDefaultView();
+    _ref.listen<PlanListState>(planListProvider, (_, next) {
+      _reconcileSelectedPlan(next);
+    });
   }
 
   final Ref _ref;
+
+  void _reconcileSelectedPlan(PlanListState planState) {
+    final selectedPlanId = state.selectedPlanId;
+    if (selectedPlanId == null) {
+      return;
+    }
+
+    if (planState.isLoading &&
+        planState.plans.isEmpty &&
+        planState.activePlans.isEmpty) {
+      return;
+    }
+
+    final activePlanIds = planState.activePlans.map((plan) => plan.id).toSet();
+    if (!activePlanIds.contains(selectedPlanId)) {
+      clearPlanSelection();
+    }
+  }
 
   void _initializeDefaultView() {
     final dashboardState = _ref.read(dashboardProvider);

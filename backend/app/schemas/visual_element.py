@@ -26,6 +26,10 @@ class VisualElementBase(BaseModel):
     icon_url: str | None = Field(None, description="图标URL")
     category: str | None = Field(None, description="分类")
     config: dict[str, Any] = Field(default_factory=dict, description="元素配置")
+    unlock_requirement: dict[str, Any] | None = Field(
+        None,
+        description="解锁条件",
+    )
 
 
 class VisualElementResponse(VisualElementBase):

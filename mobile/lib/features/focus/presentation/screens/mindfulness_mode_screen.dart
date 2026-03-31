@@ -37,6 +37,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   late Animation<Offset> _bottomSlideAnimation;
 
   bool _isExiting = false;
+  bool _isExitDialogOpen = false;
   bool _isInitialized = false;
 
   @override
@@ -108,6 +109,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
   void _initializeWithTask(TaskModel task) {
     if (_isInitialized) return;
+    final mindfulness = ref.read(mindfulnessProvider);
+    if (mindfulness.isActive && mindfulness.currentTask?.id == task.id) {
+      _isInitialized = true;
+      return;
+    }
     _isInitialized = true;
 
     // 启动正念模式
@@ -166,20 +172,26 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   }
 
   Future<void> _handleExit() async {
-    if (_isExiting) return;
+    if (_isExiting || _isExitDialogOpen) return;
 
+    _isExitDialogOpen = true;
     final confirmed = await showExitConfirmation(
       context,
       elapsedMinutes: ref.read(mindfulnessProvider.notifier).elapsedMinutes,
     );
+    _isExitDialogOpen = false;
 
     if (confirmed && mounted) {
       _isExiting = true;
-      await ref.read(mindfulnessProvider.notifier).stop();
+      final result = await ref.read(mindfulnessProvider.notifier).stop();
 
       if (mounted) {
+        if (result.message != null) {
+          AppFeedback.info(context, result.message!);
+        }
         context.pop();
       }
+      _isExiting = false;
     }
   }
 
@@ -196,11 +208,10 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       data: (task) {
         _initializeWithTask(task);
         final mindfulness = ref.watch(mindfulnessProvider);
-        final ambienceIntensity =
-            (0.52 +
-                    (mindfulness.elapsedSeconds / 900).clamp(0, 1) * 0.4 -
-                    (mindfulness.interruptionCount * 0.04))
-                .clamp(0.35, 1.0);
+        final ambienceIntensity = (0.52 +
+                (mindfulness.elapsedSeconds / 900).clamp(0, 1) * 0.4 -
+                (mindfulness.interruptionCount * 0.04))
+            .clamp(0.35, 1.0);
 
         return PopScope(
           canPop: false,
@@ -428,7 +439,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                   task.title,
                   style: TextStyle(
                     color: DS.textPrimary,
-                  fontSize: 20,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -514,10 +525,14 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
         child: SparkleButton(
           expand: true,
-          label: context.l10n.focusExitMindfulness,
+          label: ref.watch(mindfulnessProvider).isLoggingSession
+              ? context.l10n.commonSaving
+              : context.l10n.focusExitMindfulness,
           variant: ButtonVariant.secondary,
           icon: const Icon(Icons.exit_to_app_rounded, size: 18),
-          onPressed: _handleExit,
+          onPressed: ref.watch(mindfulnessProvider).isLoggingSession
+              ? null
+              : _handleExit,
         ),
       );
 }

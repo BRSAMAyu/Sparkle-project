@@ -312,7 +312,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                     _buildTag(context, '#$weeklyPattern'),
                   _buildTag(context, '#认知核心'),
                   InkWell(
-                    onTap: () => context.push('/review?mode=today'),
+                    onTap: () => context.push('/review-plan'),
                     borderRadius: BorderRadius.circular(999),
                     child: Container(
                       padding: const EdgeInsets.symmetric(

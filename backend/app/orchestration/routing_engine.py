@@ -87,6 +87,41 @@ class RoutingEngineMixin:
                 return float(raw)
         return None
 
+    @staticmethod
+    def _extract_behavior_pattern_names(
+        plan_context: dict[str, Any] | None,
+    ) -> list[str]:
+        user_profile = (plan_context or {}).get("user_profile") if isinstance(plan_context, dict) else None
+        patterns = user_profile.get("behavior_patterns") if isinstance(user_profile, dict) else None
+        if not isinstance(patterns, list):
+            return []
+        names: list[str] = []
+        for item in patterns:
+            if not isinstance(item, dict):
+                continue
+            raw = item.get("pattern_name")
+            if raw:
+                names.append(str(raw).strip())
+        return names
+
+    @staticmethod
+    def _extract_behavior_pattern_types(
+        plan_context: dict[str, Any] | None,
+    ) -> dict[str, int]:
+        user_profile = (plan_context or {}).get("user_profile") if isinstance(plan_context, dict) else None
+        patterns = user_profile.get("behavior_patterns") if isinstance(user_profile, dict) else None
+        if not isinstance(patterns, list):
+            return {}
+        counts: dict[str, int] = {}
+        for item in patterns:
+            if not isinstance(item, dict):
+                continue
+            raw = str(item.get("pattern_type") or "").strip().lower()
+            if not raw:
+                continue
+            counts[raw] = counts.get(raw, 0) + 1
+        return counts
+
     # ------------------------------------------------------------------
     # Dual-core routing
     # ------------------------------------------------------------------
@@ -134,6 +169,8 @@ class RoutingEngineMixin:
             has_active_plan=bool(active_plan_id),
             plan_health_status=plan_health_status,
             recent_task_feedback_distribution=await self._get_recent_task_feedback_distribution(user_id, active_db),
+            behavior_pattern_names=self._extract_behavior_pattern_names(plan_context),
+            behavior_pattern_types=self._extract_behavior_pattern_types(plan_context),
             session_length_preference=self._extract_session_length_preference(user_context_payload, plan_context),
             difficulty_preference=self._extract_difficulty_preference(user_context_payload, plan_context),
         )
@@ -211,6 +248,8 @@ class RoutingEngineMixin:
             "primary_challenge_area": routing_input.primary_challenge_area,
             "recent_sentiment_distribution": routing_input.recent_sentiment_distribution,
             "recent_task_feedback_distribution": routing_input.recent_task_feedback_distribution,
+            "behavior_pattern_names": routing_input.behavior_pattern_names[:5],
+            "behavior_pattern_types": routing_input.behavior_pattern_types,
             "plan_health_status": routing_input.plan_health_status,
         }
 

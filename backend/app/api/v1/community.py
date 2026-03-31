@@ -5,6 +5,7 @@ Community API - 好友、群组、消息、打卡、任务相关接口
 from __future__ import annotations
 import asyncio
 import contextlib
+from copy import deepcopy
 import json
 from datetime import timezone, datetime
 from uuid import UUID
@@ -39,7 +40,7 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.galaxy import KnowledgeNode
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
@@ -176,6 +177,9 @@ from app.services.friend_match_service import FriendMatchService
 from app.services.recommendation_feedback_service import RecommendationFeedbackService
 from app.models.community import Post, PostLike
 from app.tools.entity_cards import (
+    build_entity_action,
+    build_entity_card,
+    build_knowledge_entity_card,
     build_plan_entity_card,
     build_shared_resource_entity_card,
     build_task_entity_card,
@@ -778,6 +782,30 @@ async def send_friend_request(
             db, current_user.id, data.target_user_id
         )
         await db.commit()
+
+        if friendship.status == FriendshipStatus.PENDING and str(friendship.initiated_by) == str(current_user.id):
+            from app.schemas.notification import NotificationCreate
+            from app.services.notification_service import NotificationService
+
+            sender_name = current_user.nickname or current_user.full_name or current_user.username or "新朋友"
+            try:
+                await NotificationService.create(
+                    db,
+                    data.target_user_id,
+                    NotificationCreate(
+                        title="新的好友请求",
+                        content=f"{sender_name} 向你发来了好友请求",
+                        type="friend_request",
+                        data={
+                            "friendship_id": str(friendship.id),
+                            "from_user_id": str(current_user.id),
+                            "message": data.message,
+                        },
+                    ),
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to send friend request notification for friendship {friendship.id}: {exc}")
+
         return {"success": True, "friendship_id": str(friendship.id)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1717,7 +1745,9 @@ async def get_my_groups(
 # ============ 群消息 ============
 
 @router.post("/groups/{group_id}/messages", response_model=MessageInfo, summary="发送群消息")
+@limiter.limit("30/minute")
 async def send_message(
+    request: Request,
     group_id: UUID,
     data: MessageSend,
     current_user: User = Depends(get_current_user),
@@ -1908,6 +1938,14 @@ async def update_group_file_permissions(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        member = await GroupFileService._require_member(db, group_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if member.role not in (GroupRole.ADMIN, GroupRole.OWNER):
+        raise HTTPException(status_code=403, detail="无权限修改群文件权限")
+
+    try:
         permissions = data.permissions
         group_file = await GroupFileService.update_permissions(
             db,
@@ -1919,7 +1957,6 @@ async def update_group_file_permissions(
             manage_role=GroupRole(permissions.manage_role.value),
         )
         await db.commit()
-        member = await GroupFileService._require_member(db, group_id, current_user.id)
         return _build_group_file_info(group_file, member.role)
     except ValueError as e:
         await db.rollback()
@@ -2052,7 +2089,9 @@ async def search_group_messages(
 # ============ 私聊消息 ============
 
 @router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
+@limiter.limit("30/minute")
 async def send_private_message(
+    request: Request,
     data: PrivateMessageSend,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -2774,6 +2813,104 @@ async def get_group_resources(
     return result
 
 
+def _build_adopted_entity_card(
+    *,
+    resource_type: str,
+    resource_id: UUID,
+    title: str,
+    summary: str | None = None,
+) -> dict:
+    resource_id_str = str(resource_id)
+    if resource_type == "knowledge_node":
+        return build_knowledge_entity_card(
+            {
+                "id": resource_id_str,
+                "name": title,
+                "description": summary,
+            },
+            tool_name="adopt_shared_resource",
+            source_channel="community_share",
+        )
+
+    return build_entity_card(
+        entity_type=resource_type,
+        entity_id=resource_id_str,
+        title=title,
+        summary=summary,
+        status="saved",
+        execution_state="active",
+        source={"channel": "community_share", "tool_name": "adopt_shared_resource"},
+        primary_action=build_entity_action(
+            action_id=f"open_{resource_type}",
+            action_type="open_detail",
+            label="查看详情",
+        ),
+        secondary_actions=[
+            build_entity_action(
+                action_id=f"share_{resource_type}",
+                action_type="share_resource",
+                label="再次分享",
+                payload={"resource_type": resource_type, "resource_id": resource_id_str},
+            )
+        ],
+    )
+
+
+async def _clone_seed_library_with_items(
+    db: AsyncSession,
+    *,
+    original: SeedLibrary,
+    current_user: User,
+) -> SeedLibrary:
+    cloned_library = SeedLibrary(
+        name=original.name,
+        description=original.description,
+        category=original.category,
+        visibility="private",
+        owner_id=current_user.id,
+        language=original.language,
+        tags=deepcopy(original.tags) if original.tags else [],
+        extra_metadata=_compact_dict(
+            {
+                **(deepcopy(original.extra_metadata) if isinstance(original.extra_metadata, dict) else {}),
+                "adopted_from_library_id": str(original.id),
+                "adopted_from_user_id": str(original.owner_id) if original.owner_id else None,
+            }
+        ),
+        is_official=False,
+        is_featured=False,
+        usage_count=0,
+        quality_score=original.quality_score,
+    )
+    db.add(cloned_library)
+    await db.flush()
+
+    items_result = await db.execute(
+        select(SeedItem).where(
+            SeedItem.library_id == original.id,
+            SeedItem.not_deleted_filter(),
+        ).order_by(SeedItem.order_index.asc(), SeedItem.created_at.asc())
+    )
+    for item in items_result.scalars().all():
+        db.add(
+            SeedItem(
+                library_id=cloned_library.id,
+                item_type=item.item_type,
+                title=item.title,
+                content=item.content,
+                content_data=deepcopy(item.content_data) if item.content_data else None,
+                subject=item.subject,
+                difficulty_level=item.difficulty_level,
+                tags=deepcopy(item.tags) if item.tags else [],
+                order_index=item.order_index,
+                is_active=item.is_active,
+            )
+        )
+
+    await db.flush()
+    return cloned_library
+
+
 @router.post(
     "/shared-resources/{shared_resource_id}/adopt",
     summary="采纳共享资源为个人任务/计划",
@@ -2783,12 +2920,43 @@ async def adopt_shared_resource(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    shared = await db.get(SharedResource, shared_resource_id)
+    shared_result = await db.execute(
+        select(SharedResource)
+        .where(
+            SharedResource.id == shared_resource_id,
+            SharedResource.not_deleted_filter(),
+        )
+        .with_for_update()
+    )
+    shared = shared_result.scalar_one_or_none()
     if not shared:
         raise HTTPException(status_code=404, detail="共享资源不存在")
 
+    if shared.target_user_id is not None and str(shared.target_user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="无权采纳该共享资源")
+
+    if shared.group_id is not None:
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == shared.group_id,
+                GroupMember.user_id == current_user.id,
+                GroupMember.not_deleted_filter(),
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="无权采纳该共享资源")
+
+    if shared.target_user_id is None and shared.group_id is None and str(shared.shared_by) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="无权采纳该共享资源")
+
+    if str(shared.shared_by) != str(current_user.id):
+        if await UserBlockService.has_block_relationship(db, current_user.id, shared.shared_by):
+            raise HTTPException(status_code=403, detail="无权采纳该共享资源")
+
     new_id: UUID | None = None
     resource_type = ""
+    resource_title = ""
+    resource_summary = None
 
     if shared.task_id:
         original = await db.get(Task, shared.task_id)
@@ -2807,6 +2975,8 @@ async def adopt_shared_resource(
         new_task = await TaskService.create(db, task_in, current_user.id)
         new_id = new_task.id
         resource_type = "task"
+        resource_title = new_task.title
+        resource_summary = new_task.guide_content
     elif shared.plan_id:
         original = await db.get(Plan, shared.plan_id)
         if not original:
@@ -2831,6 +3001,177 @@ async def adopt_shared_resource(
         db.add(new_plan)
         new_id = new_plan.id
         resource_type = "plan"
+        resource_title = new_plan.name
+        resource_summary = new_plan.description
+    elif shared.knowledge_node_id:
+        original = await db.get(KnowledgeNode, shared.knowledge_node_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始知识节点不存在")
+        new_node = KnowledgeNode(
+            subject_id=original.subject_id,
+            parent_id=None,
+            name=original.name,
+            name_en=original.name_en,
+            description=original.description,
+            keywords=deepcopy(original.keywords) if original.keywords else [],
+            importance_level=original.importance_level,
+            is_seed=False,
+            source_type="user_created",
+            source_task_id=None,
+            source_file_id=None,
+            chunk_refs=None,
+            status=original.status or "published",
+            sector_weights=deepcopy(original.sector_weights) if original.sector_weights else {},
+            dominant_sector_code=original.dominant_sector_code or "VOID",
+            sector_classification_status=original.sector_classification_status or "pending",
+            sector_classification_model="community_adopt",
+            sector_classified_at=_utcnow(),
+            global_spark_count=0,
+        )
+        db.add(new_node)
+        await db.flush()
+        db.add(
+            UserNodeStatus(
+                user_id=current_user.id,
+                node_id=new_node.id,
+                mastery_score=0,
+                bkt_mastery_prob=0.0,
+                total_minutes=0,
+                total_study_minutes=0,
+                study_count=0,
+                is_unlocked=True,
+                is_collapsed=False,
+                is_favorite=False,
+            )
+        )
+        new_id = new_node.id
+        resource_type = "knowledge_node"
+        resource_title = new_node.name
+        resource_summary = new_node.description
+    elif shared.cognitive_fragment_id:
+        original = await db.get(CognitiveFragment, shared.cognitive_fragment_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始认知碎片不存在")
+        new_fragment = CognitiveFragment(
+            user_id=current_user.id,
+            task_id=None,
+            analysis_status=original.analysis_status,
+            error_message=None,
+            source_type=original.source_type,
+            resource_type=original.resource_type,
+            resource_url=original.resource_url,
+            content=original.content,
+            sentiment=original.sentiment,
+            persona_version=original.persona_version,
+            source_event_id=None,
+            sensitive_tags_encrypted=original.sensitive_tags_encrypted,
+            sensitive_tags_version=original.sensitive_tags_version,
+            sensitive_tags_key_id=original.sensitive_tags_key_id,
+            tags=deepcopy(original.tags) if original.tags else [],
+            error_tags=deepcopy(original.error_tags) if original.error_tags else [],
+            context_tags=deepcopy(original.context_tags) if original.context_tags else {},
+            severity=original.severity,
+        )
+        db.add(new_fragment)
+        await db.flush()
+        new_id = new_fragment.id
+        resource_type = "cognitive_fragment"
+        resource_title = new_fragment.content[:40] or "认知碎片"
+        resource_summary = new_fragment.content
+    elif shared.curiosity_capsule_id:
+        original = await db.get(CuriosityCapsule, shared.curiosity_capsule_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始好奇心胶囊不存在")
+        new_capsule = CuriosityCapsule(
+            user_id=current_user.id,
+            title=original.title,
+            content=original.content,
+            related_subject=original.related_subject,
+            related_task_id=None,
+            is_read=False,
+            depth_level=original.depth_level,
+            generation_method=original.generation_method,
+            source_context=deepcopy(original.source_context) if original.source_context else None,
+            personalization_context=deepcopy(original.personalization_context) if original.personalization_context else None,
+            quality_score=original.quality_score,
+            feedback_count=0,
+            share_count=0,
+        )
+        db.add(new_capsule)
+        await db.flush()
+        new_id = new_capsule.id
+        resource_type = "curiosity_capsule"
+        resource_title = new_capsule.title
+        resource_summary = new_capsule.content
+    elif shared.seed_library_id:
+        original = await db.get(SeedLibrary, shared.seed_library_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始种子库不存在")
+        new_library = await _clone_seed_library_with_items(db, original=original, current_user=current_user)
+        new_id = new_library.id
+        resource_type = "seed_library"
+        resource_title = new_library.name
+        resource_summary = new_library.description
+    elif shared.seed_item_id:
+        original = await db.get(SeedItem, shared.seed_item_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始种子内容不存在")
+        library = SeedLibrary(
+            name=original.title or "采纳内容",
+            description="从社群共享中采纳的单条种子内容",
+            category="custom",
+            visibility="private",
+            owner_id=current_user.id,
+            language="zh",
+            tags=deepcopy(original.tags) if original.tags else [],
+            extra_metadata={"adopted_from_item_id": str(original.id)},
+            is_official=False,
+            is_featured=False,
+            usage_count=0,
+        )
+        db.add(library)
+        await db.flush()
+        new_item = SeedItem(
+            library_id=library.id,
+            item_type=original.item_type,
+            title=original.title,
+            content=original.content,
+            content_data=deepcopy(original.content_data) if original.content_data else None,
+            subject=original.subject,
+            difficulty_level=original.difficulty_level,
+            tags=deepcopy(original.tags) if original.tags else [],
+            order_index=0,
+            is_active=original.is_active,
+        )
+        db.add(new_item)
+        await db.flush()
+        new_id = new_item.id
+        resource_type = "seed_item"
+        resource_title = new_item.title or "种子内容"
+        resource_summary = new_item.content
+    elif shared.behavior_pattern_id:
+        original = await db.get(BehaviorPattern, shared.behavior_pattern_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="原始认知棱镜不存在")
+        new_pattern = BehaviorPattern(
+            user_id=current_user.id,
+            pattern_name=original.pattern_name,
+            pattern_type=original.pattern_type,
+            description=original.description,
+            solution_text=original.solution_text,
+            evidence_ids=[],
+            confidence_score=original.confidence_score,
+            frequency=original.frequency,
+            is_archived=False,
+            last_observed_at=None,
+            last_decay_at=None,
+        )
+        db.add(new_pattern)
+        await db.flush()
+        new_id = new_pattern.id
+        resource_type = "cognitive_prism_pattern"
+        resource_title = new_pattern.pattern_name
+        resource_summary = new_pattern.description
     else:
         raise HTTPException(status_code=400, detail="不支持采纳此类型资源")
 
@@ -2838,8 +3179,8 @@ async def adopt_shared_resource(
     db.add(shared)
     await db.commit()
 
-    entity_card = (
-        build_task_entity_card(
+    if resource_type == "task":
+        entity_card = build_task_entity_card(
             {
                 "id": str(new_id),
                 "title": new_task.title,
@@ -2850,8 +3191,8 @@ async def adopt_shared_resource(
             tool_name="adopt_shared_resource",
             source_channel="community_share",
         )
-        if resource_type == "task"
-        else build_plan_entity_card(
+    elif resource_type == "plan":
+        entity_card = build_plan_entity_card(
             {
                 "id": str(new_id),
                 "name": new_plan.name,
@@ -2864,7 +3205,13 @@ async def adopt_shared_resource(
             tool_name="adopt_shared_resource",
             source_channel="community_share",
         )
-    )
+    else:
+        entity_card = _build_adopted_entity_card(
+            resource_type=resource_type,
+            resource_id=new_id,
+            title=resource_title or "已采纳资源",
+            summary=resource_summary,
+        )
 
     return {
         "success": True,

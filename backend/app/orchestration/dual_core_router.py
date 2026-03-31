@@ -43,6 +43,8 @@ class DualCoreRoutingInput:
     has_active_plan: bool
     plan_health_status: str | None
     recent_task_feedback_distribution: dict[str, int]
+    behavior_pattern_names: list[str] = field(default_factory=list)
+    behavior_pattern_types: dict[str, int] = field(default_factory=dict)
     session_length_preference: int | None = None
     difficulty_preference: float | None = None
 
@@ -105,11 +107,32 @@ class DualCoreRouter:
         "translation",
         "knowledge",
     }
+    PROCRASTINATION_KEYWORDS = {
+        "procrast",
+        "avoid",
+        "拖延",
+        "回避",
+        "启动困难",
+        "执行阻力",
+    }
+    PERFECTIONISM_KEYWORDS = {
+        "perfection",
+        "完美主义",
+        "过度打磨",
+        "高标准卡住",
+    }
+    PLANNING_FALLACY_KEYWORDS = {
+        "planning fallacy",
+        "计划谬误",
+        "时间估计偏差",
+        "低估耗时",
+    }
 
     def route(self, routing_input: DualCoreRoutingInput) -> DualCoreDecision:
         goal_clear = self._goal_is_clear(routing_input)
         emotional_block = self._has_emotional_block(routing_input)
         procrastination_pattern = self._has_procrastination_pattern(routing_input)
+        pattern_guidance = self._pattern_guidance(routing_input)
         cognitive_load_present = routing_input.primary_challenge_area in {"cognitive", "execution"}
 
         cognitive_adjustments: list[str] = []
@@ -121,6 +144,7 @@ class DualCoreRouter:
             cognitive_adjustments.append("先帮助用户澄清目标、约束和成功标准，再进入具体方案。")
         if procrastination_pattern:
             cognitive_adjustments.append("先识别最近的执行阻力，并把建议收敛为更容易启动的动作。")
+        cognitive_adjustments.extend(pattern_guidance["cognitive"])
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
@@ -135,6 +159,7 @@ class DualCoreRouter:
             execution_constraints.append("近期连续反馈“太难”，当前回复避免再加码任务强度。")
         if routing_input.recent_task_feedback_distribution.get("too_long", 0) >= 2:
             execution_constraints.append("近期连续反馈“太长”，优先拆成更短、更容易启动的步骤。")
+        execution_constraints.extend(pattern_guidance["execution"])
 
         if (
             goal_clear
@@ -204,10 +229,53 @@ class DualCoreRouter:
             + feedback.get("unclear", 0)
             + feedback.get("irrelevant", 0)
         )
+        pattern_names = self._normalized_pattern_names(routing_input)
         return (
             friction_signals >= 3
             or feedback.get("too_difficult", 0) >= 3
             or routing_input.plan_health_status == "critical"
+            or self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS)
+        )
+
+    def _pattern_guidance(self, routing_input: DualCoreRoutingInput) -> dict[str, list[str]]:
+        pattern_names = self._normalized_pattern_names(routing_input)
+        pattern_types = routing_input.behavior_pattern_types or {}
+        cognitive: list[str] = []
+        execution: list[str] = []
+
+        if self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS):
+            cognitive.append("结合你最近的执行型模式信号，先把第一步降到几分钟内可启动。")
+        if self._contains_any(pattern_names, self.PERFECTIONISM_KEYWORDS):
+            cognitive.append("先缓解“必须一次做到最好”的压力，再讨论下一步。")
+            execution.append("给出最小可交付版本，明确“先完成再优化”的边界。")
+        if self._contains_any(pattern_names, self.PLANNING_FALLACY_KEYWORDS):
+            execution.append("对时间预估加入缓冲，避免按理想速度承诺。")
+        if pattern_types.get("emotional", 0) >= 2:
+            cognitive.append("近期情绪型模式较集中，先用更稳的节奏降低心理摩擦。")
+        if pattern_types.get("execution", 0) >= 2:
+            execution.append("把建议压缩成更具体的动作和检查点，减少执行摩擦。")
+        if pattern_types.get("cognitive", 0) >= 2:
+            cognitive.append("先澄清理解偏差和决策依据，再推进复杂方案。")
+
+        return {
+            "cognitive": cognitive,
+            "execution": execution,
+        }
+
+    def _normalized_pattern_names(self, routing_input: DualCoreRoutingInput) -> list[str]:
+        return [
+            str(name).strip().lower()
+            for name in (routing_input.behavior_pattern_names or [])
+            if str(name).strip()
+        ]
+
+    def _contains_any(self, pattern_names: list[str], keywords: set[str]) -> bool:
+        if not pattern_names:
+            return False
+        return any(
+            keyword in name
+            for name in pattern_names
+            for keyword in keywords
         )
 
     def _cognitive_reason(

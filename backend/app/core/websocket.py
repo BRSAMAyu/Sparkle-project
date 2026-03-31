@@ -216,7 +216,36 @@ class ConnectionManager:
                 self.friend_map[fid].add(user_id)
 
         await self.set_online_status(user_id, True)
+        await self._deliver_offline_queue(websocket, user_id)
         logger.info(f"User {user_id} connected to personal channel. Registered {len(friend_ids or [])} friends.")
+
+    async def _deliver_offline_queue(self, websocket: WebSocket, user_id: str):
+        """Replay queued websocket messages after the user reconnects."""
+        if not self.redis:
+            return
+
+        queue_key = f"ws:offline_queue:{user_id}"
+        delivered = 0
+
+        while True:
+            raw_item = await self.redis.lpop(queue_key)
+            if raw_item is None:
+                break
+
+            try:
+                queue_item = json.loads(raw_item)
+                message = queue_item.get("message")
+                if not isinstance(message, dict):
+                    continue
+                await websocket.send_text(json.dumps(message, default=str))
+                delivered += 1
+            except Exception as exc:
+                await self.redis.lpush(queue_key, raw_item)
+                logger.warning(f"Failed to deliver queued websocket message to user {user_id}: {exc}")
+                break
+
+        if delivered:
+            logger.info(f"Delivered {delivered} queued websocket messages to user {user_id}")
 
     def disconnect(self, websocket: WebSocket, group_id: str, user_id: str):
         """Disconnect from group"""

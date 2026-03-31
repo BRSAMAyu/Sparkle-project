@@ -270,67 +270,67 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               padding:
                   const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
               child: Row(
-              mainAxisAlignment:
-                  isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (!isMe) ...[
-                  _buildAvatar(widget.message.sender),
-                  const SizedBox(width: DS.sm),
-                ],
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: isMe
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      if (!isMe &&
-                          (widget.message.sender != null ||
-                              isCommunityAgentMessage(widget.message)))
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 4),
-                          child: Text(
-                            widget.message.sender?.displayName ??
-                                (isCommunityAgentMessage(widget.message)
-                                    ? kCommunityAgentDisplayName
-                                    : ''),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: DS.neutral500,
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (!isMe) ...[
+                    _buildAvatar(widget.message.sender),
+                    const SizedBox(width: DS.sm),
+                  ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: isMe
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        if (!isMe &&
+                            (widget.message.sender != null ||
+                                isCommunityAgentMessage(widget.message)))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 4),
+                            child: Text(
+                              widget.message.sender?.displayName ??
+                                  (isCommunityAgentMessage(widget.message)
+                                      ? kCommunityAgentDisplayName
+                                      : ''),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: DS.neutral500,
+                              ),
                             ),
                           ),
-                        ),
-                      _buildContent(context, isMe),
-                      _buildReactions(context),
-                      const SizedBox(height: DS.xs),
-                      // Timestamp and read status
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              timeStr,
-                              style:
-                                  TextStyle(fontSize: 10, color: DS.neutral500),
-                            ),
-                            if (isMe && widget.message.readCount > 0) ...[
-                              const SizedBox(width: DS.sm),
-                              _buildReadByIndicator(),
+                        _buildContent(context, isMe),
+                        _buildReactions(context),
+                        const SizedBox(height: DS.xs),
+                        // Timestamp and read status
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                timeStr,
+                                style: TextStyle(
+                                    fontSize: 10, color: DS.neutral500),
+                              ),
+                              if (isMe && widget.message.readCount > 0) ...[
+                                const SizedBox(width: DS.sm),
+                                _buildReadByIndicator(),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                if (isMe) ...[
-                  const SizedBox(width: DS.sm),
-                  _buildAvatar(widget.message.sender),
+                  if (isMe) ...[
+                    const SizedBox(width: DS.sm),
+                    _buildAvatar(widget.message.sender),
+                  ],
                 ],
-              ],
               ),
             ),
           ),
@@ -698,7 +698,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     if (streak > 0)
                       _buildCheckinStat(
                         context.l10n.communityStreakLabel,
-                        '$streak 🔥',
+                        '$streak 天',
                         isMe,
                       ),
                   ],
@@ -1040,24 +1040,23 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             : DS.shadowSm);
 
     return SparkleTappable(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 280),
-          decoration: BoxDecoration(
-            color: wrapperColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: wrapperShadow,
-            border: isLightMode || isMe
-                ? null
-                : Border.all(color: DS.borderSubtle),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: child,
-          ),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 280),
+        decoration: BoxDecoration(
+          color: wrapperColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: wrapperShadow,
+          border:
+              isLightMode || isMe ? null : Border.all(color: DS.borderSubtle),
         ),
-      );
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: child,
+        ),
+      ),
+    );
   }
 
   Widget _buildPrismPreviewCard(
@@ -1117,25 +1116,27 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 spacing: DS.xs,
                 children: (data['patterns'] as List)
                     .take(3)
-                    .map<Widget>((p) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DS.sm,
-                            vertical: 2,
+                    .map<Widget>(
+                      (p) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : DS.prismPurple.withValues(alpha: 0.1),
+                          borderRadius: DS.borderRadius4,
+                        ),
+                        child: Text(
+                          p.toString(),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            color: isMe ? Colors.white : DS.prismPurple,
                           ),
-                          decoration: BoxDecoration(
-                            color: isMe
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : DS.prismPurple.withValues(alpha: 0.1),
-                            borderRadius: DS.borderRadius4,
-                          ),
-                          child: Text(
-                            p.toString(),
-                            style: TextStyle(
-                              fontSize: DS.fontSizeXs,
-                              color: isMe ? Colors.white : DS.prismPurple,
-                            ),
-                          ),
-                        ),)
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
             ],

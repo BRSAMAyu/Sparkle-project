@@ -530,9 +530,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           nodeId: nodeId,
           nodeName: detail.node.name,
           onApplied: () {
-            ref.invalidate(knowledgeDetailProvider(nodeId));
-            ref.invalidate(enhancedGalaxyRepositoryProvider);
-            ref.invalidate(galaxyProvider);
+            ref
+              ..invalidate(knowledgeDetailProvider(nodeId))
+              ..invalidate(galaxyRepositoryProvider)
+              ..invalidate(enhancedGalaxyRepositoryProvider)
+              ..invalidate(galaxyProvider);
           },
         ),
       ),

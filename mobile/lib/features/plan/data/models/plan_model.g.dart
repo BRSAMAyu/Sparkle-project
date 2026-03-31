@@ -86,8 +86,10 @@ PlanCreate _$PlanCreateFromJson(Map<String, dynamic> json) => PlanCreate(
           ? null
           : DateTime.parse(json['target_date'] as String),
       subject: json['subject'] as String?,
+      totalEstimatedHours: (json['total_estimated_hours'] as num?)?.toDouble(),
       priority: $enumDecodeNullable(_$PlanPriorityEnumMap, json['priority']) ??
           PlanPriority.normal,
+      planStage: $enumDecodeNullable(_$PlanStageEnumMap, json['plan_stage']),
     );
 
 Map<String, dynamic> _$PlanCreateToJson(PlanCreate instance) =>
@@ -98,7 +100,9 @@ Map<String, dynamic> _$PlanCreateToJson(PlanCreate instance) =>
       'target_date': instance.targetDate?.toIso8601String(),
       'subject': instance.subject,
       'daily_available_minutes': instance.dailyAvailableMinutes,
+      'total_estimated_hours': instance.totalEstimatedHours,
       'priority': _$PlanPriorityEnumMap[instance.priority]!,
+      'plan_stage': _$PlanStageEnumMap[instance.planStage],
     };
 
 PlanUpdate _$PlanUpdateFromJson(Map<String, dynamic> json) => PlanUpdate(
@@ -108,6 +112,7 @@ PlanUpdate _$PlanUpdateFromJson(Map<String, dynamic> json) => PlanUpdate(
           ? null
           : DateTime.parse(json['target_date'] as String),
       dailyAvailableMinutes: (json['daily_available_minutes'] as num?)?.toInt(),
+      totalEstimatedHours: (json['total_estimated_hours'] as num?)?.toDouble(),
       isActive: json['is_active'] as bool?,
       priority: $enumDecodeNullable(_$PlanPriorityEnumMap, json['priority']),
       planStage: $enumDecodeNullable(_$PlanStageEnumMap, json['plan_stage']),
@@ -119,6 +124,7 @@ Map<String, dynamic> _$PlanUpdateToJson(PlanUpdate instance) =>
       'description': instance.description,
       'target_date': instance.targetDate?.toIso8601String(),
       'daily_available_minutes': instance.dailyAvailableMinutes,
+      'total_estimated_hours': instance.totalEstimatedHours,
       'is_active': instance.isActive,
       'priority': _$PlanPriorityEnumMap[instance.priority],
       'plan_stage': _$PlanStageEnumMap[instance.planStage],

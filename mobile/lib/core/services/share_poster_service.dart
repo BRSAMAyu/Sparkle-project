@@ -21,7 +21,7 @@ class SharePosterService {
     BuildContext context,
     UniversalSharePayload payload,
   ) async {
-    return runWithoutDebugTextGuides(() async {
+    return runWithoutDebugPaintGuides(() async {
       final overlay = Overlay.maybeOf(context, rootOverlay: true);
       if (overlay == null) {
         return null;
@@ -106,16 +106,28 @@ class SharePosterService {
   }
 
   @visibleForTesting
-  static Future<T> runWithoutDebugTextGuides<T>(
+  static Future<T> runWithoutDebugPaintGuides<T>(
     Future<T> Function() action,
   ) async {
     final previousBaselines = debugPaintBaselinesEnabled;
+    final previousSize = debugPaintSizeEnabled;
+    final previousPointers = debugPaintPointersEnabled;
+    final previousLayerBorders = debugPaintLayerBordersEnabled;
+    final previousRainbow = debugRepaintRainbowEnabled;
     debugPaintBaselinesEnabled = false;
+    debugPaintSizeEnabled = false;
+    debugPaintPointersEnabled = false;
+    debugPaintLayerBordersEnabled = false;
+    debugRepaintRainbowEnabled = false;
 
     try {
       return await action();
     } finally {
       debugPaintBaselinesEnabled = previousBaselines;
+      debugPaintSizeEnabled = previousSize;
+      debugPaintPointersEnabled = previousPointers;
+      debugPaintLayerBordersEnabled = previousLayerBorders;
+      debugRepaintRainbowEnabled = previousRainbow;
     }
   }
 

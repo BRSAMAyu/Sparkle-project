@@ -17,6 +17,12 @@ class AnalysisStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
+class PatternType(str, enum.Enum):
+    COGNITIVE = "cognitive"
+    EMOTIONAL = "emotional"
+    EXECUTION = "execution"
+
 class CognitiveFragment(BaseModel):
     """
     行为/闪念碎片表 (Cognitive Fragments)

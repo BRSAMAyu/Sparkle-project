@@ -28,7 +28,11 @@ class SprintView extends ConsumerWidget {
     // 冲刺有任务
     if (sprintTasks.isNotEmpty) {
       return _buildSprintTasks(
-          context, ref, sprintTasks, dashboardState.sprint!,);
+        context,
+        ref,
+        sprintTasks,
+        dashboardState.sprint!,
+      );
     }
 
     // 冲刺无任务
@@ -50,6 +54,23 @@ class SprintView extends ConsumerWidget {
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: [
+                SparkleButton(
+                  onPressed: () => context.push('/plans/new?type=sprint'),
+                  icon: const Icon(Icons.flash_on_rounded),
+                  label: '直接创建冲刺',
+                ),
+                SparkleButton.ghost(
+                  onPressed: () => context.push('/plans/new?type=growth'),
+                  icon: const Icon(Icons.trending_up_rounded),
+                  label: '新建成长计划',
+                ),
+              ],
             ),
           ],
         ),
@@ -189,14 +210,21 @@ class _SprintHeader extends ConsumerWidget {
                 foregroundColor: DS.brandPrimary,
               ),
               onSelected: (value) => _handleMenuSelection(
-                  context, ref, value, sprint.id, sprint.name,),
+                context,
+                ref,
+                value,
+                sprint.id,
+                sprint.name,
+              ),
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'complete',
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_rounded,
-                          color: DS.semanticSuccess,),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: DS.semanticSuccess,
+                      ),
                       const SizedBox(width: DS.spacing12),
                       const Text('完成冲刺'),
                     ],

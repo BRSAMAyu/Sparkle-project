@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
@@ -12,10 +13,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // ErrCircuitOpen is returned when the circuit breaker is open
@@ -28,6 +32,10 @@ type Client struct {
 	conn   *grpc.ClientConn
 	api    agentv1.AgentServiceClient
 	config *config.Config
+	connMu sync.RWMutex
+
+	reconnectMu sync.Mutex
+	dialOptions []grpc.DialOption
 
 	// Health checker (optional)
 	healthChecker *AgentHealthChecker
@@ -52,7 +60,6 @@ func traceIDFromContext(ctx context.Context) string {
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
-	// Simple retry logic or keepalive can be added here
 	timeoutSeconds := cfg.GRPCTimeoutSeconds
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 5
@@ -60,6 +67,27 @@ func NewClient(cfg *config.Config) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
+	dialOptions, err := buildDialOptions(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := grpc.DialContext(ctx, cfg.AgentAddress, dialOptions...)
+	if err != nil {
+		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
+		return nil, err
+	}
+
+	client := agentv1.NewAgentServiceClient(conn)
+	return &Client{
+		conn:        conn,
+		api:         client,
+		config:      cfg,
+		dialOptions: dialOptions,
+	}, nil
+}
+
+func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
 		if cfg.AgentTLSCACertPath != "" {
@@ -92,9 +120,8 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		}]
 	}`
 
-	conn, err := grpc.DialContext(ctx, cfg.AgentAddress,
+	return []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
-		grpc.WithBlock(),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithDefaultServiceConfig(retryPolicy),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -102,14 +129,81 @@ func NewClient(cfg *config.Config) (*Client, error) {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
-	)
-	if err != nil {
-		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
-		return nil, err
+		grpc.WithBlock(),
+	}, nil
+}
+
+func (c *Client) currentConn() *grpc.ClientConn {
+	c.connMu.RLock()
+	defer c.connMu.RUnlock()
+	return c.conn
+}
+
+func (c *Client) currentAPI() agentv1.AgentServiceClient {
+	c.connMu.RLock()
+	defer c.connMu.RUnlock()
+	return c.api
+}
+
+func (c *Client) reconnect(ctx context.Context) error {
+	if c == nil || c.config == nil {
+		return ErrServiceUnavailable
 	}
 
-	client := agentv1.NewAgentServiceClient(conn)
-	return &Client{conn: conn, api: client, config: cfg}, nil
+	c.reconnectMu.Lock()
+	defer c.reconnectMu.Unlock()
+
+	if conn := c.currentConn(); conn != nil {
+		state := conn.GetState()
+		if state == connectivity.Ready || state == connectivity.Idle {
+			return nil
+		}
+	}
+
+	timeoutSeconds := c.config.GRPCTimeoutSeconds
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 5
+	}
+
+	reconnectCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	newConn, err := grpc.DialContext(reconnectCtx, c.config.AgentAddress, c.dialOptions...)
+	if err != nil {
+		log.Printf("[AgentClient] Reconnect to %s failed: %v", c.config.AgentAddress, err)
+		return err
+	}
+
+	c.connMu.Lock()
+	oldConn := c.conn
+	c.conn = newConn
+	c.api = agentv1.NewAgentServiceClient(newConn)
+	c.connMu.Unlock()
+
+	if oldConn != nil {
+		_ = oldConn.Close()
+	}
+
+	log.Printf("[AgentClient] Reconnected to agent service at %s", c.config.AgentAddress)
+	return nil
+}
+
+func shouldReconnect(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+
+	switch st.Code() {
+	case codes.Unavailable, codes.DeadlineExceeded:
+		return true
+	default:
+		return false
+	}
 }
 
 // NewClientWithHealthCheck creates a client with health checking enabled
@@ -137,8 +231,8 @@ func (c *Client) Close() {
 	if c.healthChecker != nil {
 		c.healthChecker.Stop()
 	}
-	if c.conn != nil {
-		c.conn.Close()
+	if conn := c.currentConn(); conn != nil {
+		conn.Close()
 	}
 }
 
@@ -198,7 +292,14 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 
 	// StreamChat is server-side streaming: single request, stream of responses
 	// otelgrpc interceptor will handle the TraceContext propagation automatically
-	return c.api.StreamChat(outCtx, req)
+	stream, err := c.currentAPI().StreamChat(outCtx, req)
+	if !shouldReconnect(err) {
+		return stream, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().StreamChat(outCtx, req)
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {
@@ -212,7 +313,14 @@ func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.Respon
 		md.Set("x-trace-id", span.SpanContext().TraceID().String())
 	}
 	outCtx := metadata.NewOutgoingContext(ctx, md)
-	return c.api.SubmitResponseFeedback(outCtx, req)
+	resp, err := c.currentAPI().SubmitResponseFeedback(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitResponseFeedback(outCtx, req)
 }
 
 func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRequest) (*agentv1.PlanReviewResponse, error) {
@@ -226,5 +334,12 @@ func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRe
 		md.Set("x-trace-id", span.SpanContext().TraceID().String())
 	}
 	outCtx := metadata.NewOutgoingContext(ctx, md)
-	return c.api.SubmitPlanReview(outCtx, req)
+	resp, err := c.currentAPI().SubmitPlanReview(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitPlanReview(outCtx, req)
 }

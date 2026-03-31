@@ -74,6 +74,10 @@ class PreferenceService:
 
         return prefs
 
+    async def get_preference_version(self, user_id: UUID) -> int:
+        """获取当前偏好版本号。"""
+        return await self._get_db_version(user_id)
+
     async def update_explicit(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
         """更新显式偏好并递增版本"""
         if not updates:

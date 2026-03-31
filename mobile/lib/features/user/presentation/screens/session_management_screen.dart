@@ -65,6 +65,28 @@ class _SessionManagementScreenState
   }
 
   Future<void> _revokeOthers() async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('确认注销其他设备'),
+            content: const Text('这会让你在所有其他设备上退出登录，是否继续？'),
+            actions: [
+              SparkleButton.ghost(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                label: context.l10n.cancel,
+              ),
+              SparkleButton.destructive(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                label: context.l10n.sessionManagementRevokeOthers,
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) {
+      return;
+    }
+
     setState(() => _isRevokingOthers = true);
     try {
       final message =

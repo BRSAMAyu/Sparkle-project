@@ -20,6 +20,7 @@ from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.cognitive_service import CognitiveService
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import recency_weight
 
 
 def _utcnow() -> datetime:
@@ -77,18 +78,14 @@ class ExecutionLearningService:
                 evidence_id=str(record.id),
                 confidence=confidence,
             )
-            await self.profile_write_service.update_inferred_preference(
-                user_id=intent.user_id,
-                updates={
-                    "ai_delegate_preference": round(min(0.9, 0.55 + streak * 0.05), 2),
-                },
-                source="execution_learning",
-            )
             await self._trigger_replanner(
                 user_id=intent_user_id,
                 plan_id=intent_plan_id,
                 pattern_name=trust_pattern_name,
             )
+
+        await self._refresh_delegate_preference(intent.user_id)
+        await self._adjust_safety_concern_count(intent.user_id, delta=-1)
 
         duration_multiplier = await self._duration_multiplier(intent_user_id)
         if duration_multiplier is not None:
@@ -158,10 +155,10 @@ class ExecutionLearningService:
             evidence_id=str(record.id if record else intent.id),
             confidence=confidence,
         )
+        await self._refresh_delegate_preference(intent.user_id)
         await self.profile_write_service.update_inferred_preference(
             user_id=intent.user_id,
             updates={
-                "ai_delegate_preference": round(max(0.1, 1.0 - takeback_rate), 2),
                 "ai_approval_preference": round(min(0.95, 0.5 + takeback_rate * 0.4), 2),
             },
             source="execution_learning",
@@ -294,11 +291,7 @@ class ExecutionLearningService:
         severity = 1
         if any(token in text for token in ["安全", "risk", "unsafe", "危险"]):
             severity = 3
-            await self.profile_write_service.update_inferred_preference(
-                user_id=intent.user_id,
-                updates={"execution.safety_concern_count": 1},
-                source="execution_rejection_sentiment",
-            )
+            await self._adjust_safety_concern_count(intent.user_id, delta=1)
         elif any(token in text for token in ["不准确", "不对", "错误", "失望"]):
             severity = 2
         await self._create_execution_fragment(
@@ -356,14 +349,85 @@ class ExecutionLearningService:
         return streak
 
     async def _delegation_aversion_summary(self, user_id: UUID) -> tuple[float, int] | None:
+        terminal = await self._recent_terminal_intents(user_id, limit=self.AVERSION_WINDOW)
+        total = len(terminal)
+        if total < 5:
+            return None
+        weighted_total = 0.0
+        weighted_takebacks = 0.0
+        now = _utcnow()
+        for intent in terminal:
+            observed_at = intent.completed_at or intent.created_at
+            weight = recency_weight(observed_at, now=now, half_life_days=7.0, min_weight=0.25)
+            weighted_total += weight
+            if intent.status == ExecutionIntentStatus.HANDED_BACK or str(intent.error_category or "") == "user_rejected":
+                weighted_takebacks += weight
+        if weighted_total <= 0:
+            return None
+        rate = weighted_takebacks / weighted_total
+        if rate < self.AVERSION_THRESHOLD:
+            return None
+        return rate, total
+
+    async def _refresh_delegate_preference(self, user_id: UUID) -> None:
+        terminal = await self._recent_terminal_intents(user_id, limit=self.AVERSION_WINDOW)
+        if not terminal:
+            return
+
+        delegated_successes = 0.0
+        weighted_total = 0.0
+        now = _utcnow()
+        for intent in terminal:
+            observed_at = intent.completed_at or intent.created_at
+            weight = recency_weight(observed_at, now=now, half_life_days=7.0, min_weight=0.25)
+            weighted_total += weight
+            if intent.status == ExecutionIntentStatus.SUCCEEDED and intent.trust_level == TrustLevel.TRUSTED:
+                delegated_successes += weight
+        if weighted_total <= 0:
+            return
+        preference = round(
+            min(0.9, max(0.1, delegated_successes / weighted_total)),
+            2,
+        )
+        await self.profile_write_service.update_inferred_preference(
+            user_id=user_id,
+            updates={"ai_delegate_preference": preference},
+            source="execution_learning",
+        )
+
+    async def _adjust_safety_concern_count(self, user_id: UUID, *, delta: int) -> None:
+        prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
+        current = prefs.inferred.get("execution.safety_concern_count", 0) if prefs.inferred else 0
+        try:
+            current_count = int(current)
+        except (TypeError, ValueError):
+            current_count = 0
+
+        next_count = max(0, current_count + delta)
+        if next_count == current_count:
+            return
+        if next_count == 0:
+            await self.profile_write_service.remove_inferred_preference(
+                user_id=user_id,
+                pref_key="execution.safety_concern_count",
+            )
+            return
+
+        await self.profile_write_service.update_inferred_preference(
+            user_id=user_id,
+            updates={"execution.safety_concern_count": next_count},
+            source="execution_rejection_sentiment",
+        )
+
+    async def _recent_terminal_intents(self, user_id: UUID, *, limit: int) -> list[ExecutionIntent]:
         result = await self.db.execute(
             select(ExecutionIntent)
             .where(ExecutionIntent.user_id == user_id, ExecutionIntent.deleted_at.is_(None))
             .order_by(desc(ExecutionIntent.completed_at), desc(ExecutionIntent.created_at))
-            .limit(self.AVERSION_WINDOW)
+            .limit(limit)
         )
         intents = list(result.scalars().all())
-        terminal = [
+        return [
             intent for intent in intents
             if intent.status in {
                 ExecutionIntentStatus.SUCCEEDED,
@@ -374,18 +438,6 @@ class ExecutionLearningService:
                 ExecutionIntentStatus.PARTIAL,
             }
         ]
-        total = len(terminal)
-        if total < 5:
-            return None
-        takebacks = sum(
-            1
-            for intent in terminal
-            if intent.status == ExecutionIntentStatus.HANDED_BACK or str(intent.error_category or "") == "user_rejected"
-        )
-        rate = takebacks / max(total, 1)
-        if rate < self.AVERSION_THRESHOLD:
-            return None
-        return rate, total
 
     async def _duration_multiplier(self, user_id: UUID) -> float | None:
         result = await self.db.execute(

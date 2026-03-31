@@ -9,6 +9,8 @@ from sqlalchemy.orm import selectinload
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.galaxy import GalaxyGraphResponse
+from app.services.node_sector_service import build_sector_visuals, node_belongs_to_sector, parse_sector_code
+from app.models.sector import SectorCode
 
 
 def _utcnow() -> datetime:
@@ -31,6 +33,18 @@ class GraphStructureService:
         """Create a new knowledge node (Structure)"""
         if tags is None:
             tags = []
+        subject = await self.db.get(Subject, subject_id) if subject_id is not None else None
+        parent = await self.db.get(KnowledgeNode, parent_node_id) if parent_node_id is not None else None
+        fallback_sector = (
+            parse_sector_code(getattr(subject, "sector_code", None))
+            or parse_sector_code(getattr(parent, "dominant_sector_code", None))
+            or SectorCode.VOID
+        )
+        visuals = build_sector_visuals(
+            title,
+            importance_level=1,
+            sector_weights={fallback_sector.value: 100},
+        )
         node = KnowledgeNode(
             name=title,
             description=summary,
@@ -40,13 +54,25 @@ class GraphStructureService:
             is_seed=False,
             source_type="user_created",
             importance_level=1,
+            sector_weights={fallback_sector.value: 100},
+            dominant_sector_code=visuals.dominant_sector_code.value,
+            sector_classification_status="completed",
+            sector_classification_model="structure_service",
+            sector_classified_at=_utcnow(),
+            position_x=visuals.position_x,
+            position_y=visuals.position_y,
         )
         self.db.add(node)
         await self.db.flush()  # Get ID
 
         # Initialize status
         status = UserNodeStatus(
-            user_id=user_id, node_id=node.id, is_unlocked=True, mastery_score=0, first_unlock_at=_utcnow()
+            user_id=user_id,
+            node_id=node.id,
+            is_unlocked=True,
+            mastery_score=0,
+            bkt_mastery_prob=0.0,
+            first_unlock_at=_utcnow(),
         )
         self.db.add(status)
 
@@ -211,9 +237,6 @@ class GraphStructureService:
             .outerjoin(Subject, KnowledgeNode.subject_id == Subject.id)
         )
 
-        if sector_code:
-            query = query.where(Subject.sector_code == sector_code)
-
         # LOD Filtering
         if zoom_level < 0.5:
             query = query.where(
@@ -222,6 +245,13 @@ class GraphStructureService:
 
         result = await self.db.execute(query)
         nodes_with_status = result.all()
+
+        if sector_code:
+            nodes_with_status = [
+                (node, status)
+                for node, status in nodes_with_status
+                if node_belongs_to_sector(node, sector_code)
+            ]
 
         if not include_locked:
             nodes_with_status = [(node, status) for node, status in nodes_with_status if status and status.is_unlocked]

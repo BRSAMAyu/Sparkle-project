@@ -13,6 +13,7 @@ from loguru import logger
 from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
 from app.services.profile_write_service import ProfileWriteService
+from app.services.signal_adaptation import classify_band_with_hysteresis, recency_weight
 
 
 def _utcnow() -> datetime:
@@ -57,7 +58,7 @@ class CommunitySignalCollector:
         if not entries:
             return
 
-        updates = self._build_updates(entries)
+        updates = await self._build_updates(user_id, entries)
         if not updates:
             return
 
@@ -108,21 +109,39 @@ class CommunitySignalCollector:
                 entries.append(parsed)
         return list(reversed(entries))
 
-    def _build_updates(self, entries: list[dict[str, Any]]) -> dict[str, Any]:
+    async def _build_updates(self, user_id: UUID, entries: list[dict[str, Any]]) -> dict[str, Any]:
         total = len(entries)
         if total < self.MIN_SAMPLE:
             return {}
 
-        group_count = sum(1 for entry in entries if entry.get("context") == "group")
-        contribution_count = sum(
-            1
-            for entry in entries
-            if entry.get("action") in {"post", "comment"}
-        )
+        weighted_total = 0.0
+        weighted_group = 0.0
+        weighted_contribution = 0.0
+        for entry in entries:
+            weight = self._entry_weight(entry)
+            weighted_total += weight
+            if entry.get("context") == "group":
+                weighted_group += weight
+            if entry.get("action") in {"post", "comment"}:
+                weighted_contribution += weight
 
-        engagement_level = self._engagement_level(total)
-        social_preference = group_count / total if total else 0.0
-        contribution_rate = contribution_count / total if total else 0.0
+        if weighted_total < self.MIN_SAMPLE * 0.6:
+            return {}
+
+        previous_engagement = await self._current_inferred_value(user_id, "community_engagement_level")
+        engagement_level = classify_band_with_hysteresis(
+            weighted_total,
+            previous_engagement if isinstance(previous_engagement, str) else None,
+            low_enter=6.0,
+            high_enter=18.0,
+            low_exit=8.0,
+            high_exit=16.0,
+            low_label="passive",
+            mid_label="moderate",
+            high_label="active",
+        )
+        social_preference = weighted_group / weighted_total if weighted_total else 0.0
+        contribution_rate = weighted_contribution / weighted_total if weighted_total else 0.0
 
         return {
             "community_engagement_level": engagement_level,
@@ -131,9 +150,22 @@ class CommunitySignalCollector:
         }
 
     @staticmethod
-    def _engagement_level(total: int) -> str:
-        if total >= 20:
-            return "active"
-        if total >= 5:
-            return "moderate"
-        return "passive"
+    def _entry_weight(entry: dict[str, Any]) -> float:
+        raw_ts = entry.get("ts")
+        if not raw_ts:
+            return 0.25
+        try:
+            parsed = datetime.fromisoformat(str(raw_ts))
+        except Exception:
+            return 0.25
+        return recency_weight(parsed, now=_utcnow(), half_life_days=5.0, min_weight=0.25)
+
+    async def _current_inferred_value(self, user_id: UUID, key: str) -> object | None:
+        try:
+            async with AsyncSessionLocal() as db:
+                service = ProfileWriteService(db, self.redis)
+                prefs = await service.pref_service.get_preferences(user_id)
+        except Exception:
+            return None
+        inferred = prefs.inferred or {}
+        return inferred.get(key)

@@ -169,6 +169,8 @@ class GalaxyNodeModel {
     this.firstUnlockAt,
     this.parentId,
     this.baseColor,
+    this.glowColor,
+    this.sectorWeights = const {},
     this.tags,
     this.description,
     this.positionHint,
@@ -195,6 +197,15 @@ class GalaxyNodeModel {
                   ? (json['subject'] as Map)['hex_color']
                   : null))
           ?.toString(),
+      glowColor: (json['glow_color'] ??
+              (json['subject'] is Map
+                  ? (json['subject'] as Map)['glow_color']
+                  : null))
+          ?.toString(),
+      sectorWeights: _parseSectorWeights(
+        json['sector_weights'],
+        fallbackSector: _parseSector(json['sector_code']),
+      ),
       isUnlocked: (json['is_unlocked'] as bool?) ??
           (userStatus?['is_unlocked'] as bool?) ??
           false,
@@ -243,6 +254,12 @@ class GalaxyNodeModel {
 
   @JsonKey(name: 'base_color')
   final String? baseColor;
+
+  @JsonKey(name: 'glow_color')
+  final String? glowColor;
+
+  @JsonKey(name: 'sector_weights')
+  final Map<SectorEnum, double> sectorWeights;
 
   @JsonKey(name: 'is_unlocked')
   final bool isUnlocked;
@@ -307,6 +324,19 @@ class GalaxyNodeModel {
 
   List<String> get autoTags => tags ?? const [];
 
+  Map<SectorEnum, double> get normalizedSectorWeights {
+    if (sectorWeights.isNotEmpty) {
+      final total = sectorWeights.values.fold<double>(0, (sum, value) => sum + value);
+      if (total > 0) {
+        return {
+          for (final entry in sectorWeights.entries)
+            entry.key: entry.value / total,
+        };
+      }
+    }
+    return {sector: 1.0};
+  }
+
   /// Convert to CompactKnowledgeNode for rendering
   CompactKnowledgeNode toCompact(double x, double y) =>
       CompactKnowledgeNode.create(
@@ -332,6 +362,8 @@ class GalaxyNodeModel {
     int? importance,
     SectorEnum? sector,
     String? baseColor,
+    String? glowColor,
+    Map<SectorEnum, double>? sectorWeights,
     bool? isUnlocked,
     int? masteryScore,
     int? studyCount,
@@ -351,6 +383,8 @@ class GalaxyNodeModel {
         importance: importance ?? this.importance,
         sector: sector ?? this.sector,
         baseColor: baseColor ?? this.baseColor,
+        glowColor: glowColor ?? this.glowColor,
+        sectorWeights: sectorWeights ?? this.sectorWeights,
         isUnlocked: isUnlocked ?? this.isUnlocked,
         masteryScore: masteryScore ?? this.masteryScore,
         studyCount: studyCount ?? this.studyCount,
@@ -379,6 +413,28 @@ class GalaxyNodeModel {
       default:
         return sector.name.toUpperCase();
     }
+  }
+
+  static Map<SectorEnum, double> _parseSectorWeights(
+    Object? raw, {
+    required SectorEnum fallbackSector,
+  }) {
+    if (raw is Map) {
+      final parsed = <SectorEnum, double>{};
+      for (final entry in raw.entries) {
+        final sector = _parseSector(entry.key);
+        final weight = (entry.value as num?)?.toDouble() ??
+            double.tryParse(entry.value.toString()) ??
+            0;
+        if (weight > 0) {
+          parsed[sector] = weight;
+        }
+      }
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+    return {fallbackSector: 100.0};
   }
 }
 

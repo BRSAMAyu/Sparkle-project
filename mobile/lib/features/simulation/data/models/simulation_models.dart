@@ -149,6 +149,7 @@ class SimulationSessionModel {
     this.interactionOptions = const [],
     this.plannedRoundCount = 0,
     this.pendingInteraction,
+    this.facilitationStyle = 'balanced',
   });
 
   factory SimulationSessionModel.fromJson(Map<String, dynamic> json) =>
@@ -177,6 +178,7 @@ class SimulationSessionModel {
                 .map((item) => item.toString())
                 .toList(),
         plannedRoundCount: (json['planned_round_count'] as num?)?.toInt() ?? 0,
+        facilitationStyle: json['facilitation_style']?.toString() ?? 'balanced',
         pendingInteraction: json['pending_interaction'] is Map<String, dynamic>
             ? SimulationInteractionModel.fromJson(
                 json['pending_interaction'] as Map<String, dynamic>,
@@ -197,6 +199,7 @@ class SimulationSessionModel {
   final List<String> interactionOptions;
   final int plannedRoundCount;
   final SimulationInteractionModel? pendingInteraction;
+  final String facilitationStyle;
 
   SimulationSessionModel copyWith({
     String? id,
@@ -212,6 +215,7 @@ class SimulationSessionModel {
     List<String>? interactionOptions,
     int? plannedRoundCount,
     SimulationInteractionModel? pendingInteraction,
+    String? facilitationStyle,
   }) =>
       SimulationSessionModel(
         id: id ?? this.id,
@@ -227,6 +231,7 @@ class SimulationSessionModel {
         interactionOptions: interactionOptions ?? this.interactionOptions,
         plannedRoundCount: plannedRoundCount ?? this.plannedRoundCount,
         pendingInteraction: pendingInteraction ?? this.pendingInteraction,
+        facilitationStyle: facilitationStyle ?? this.facilitationStyle,
       );
 }
 
@@ -236,6 +241,8 @@ class SimulationStreamEventModel {
     this.sessionId,
     this.state,
     this.progress,
+    this.plannedRoundCount,
+    this.facilitationStyle,
     this.participants = const [],
     this.round,
     this.rounds = const [],
@@ -255,6 +262,8 @@ class SimulationStreamEventModel {
         sessionId: json['session_id']?.toString(),
         state: json['state']?.toString(),
         progress: (json['progress'] as num?)?.toDouble(),
+        plannedRoundCount: (json['planned_round_count'] as num?)?.toInt(),
+        facilitationStyle: json['facilitation_style']?.toString(),
         participants: (json['participants'] as List<dynamic>? ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(SimulationParticipantModel.fromJson)
@@ -290,6 +299,8 @@ class SimulationStreamEventModel {
   final String? sessionId;
   final String? state;
   final double? progress;
+  final int? plannedRoundCount;
+  final String? facilitationStyle;
   final List<SimulationParticipantModel> participants;
   final SimulationRoundModel? round;
   final List<SimulationRoundModel> rounds;

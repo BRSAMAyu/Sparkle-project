@@ -36,6 +36,13 @@ class VisualElementService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _normalize_user_id(user_id: uuid.UUID | str) -> uuid.UUID:
+        return user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
+
+    def _is_transaction_managed_externally(self) -> bool:
+        return bool(self.db.sync_session.info.get("external_transaction_managed"))
+
     async def get_all_elements(
         self,
         element_type: VisualElementType | None = None,
@@ -279,18 +286,20 @@ class VisualElementService:
 
     async def unlock_element(
         self,
-        user_id: uuid.UUID,
+        user_id: uuid.UUID | str,
         request: UnlockElementRequest,
         locale: str | None = None,
     ) -> UnlockElementResponse:
         """解锁视觉元素（内部使用，供成就系统等调用）"""
+        normalized_user_id = self._normalize_user_id(user_id)
+
         # 获取元素
         element = await self._get_element_by_id(request.element_id)
         if not element:
             raise ValueError(f"Element not found: {request.element_id}")
 
         # 检查是否已解锁
-        is_already_unlocked = await self._is_element_unlocked(user_id, request.element_id)
+        is_already_unlocked = await self._is_element_unlocked(normalized_user_id, request.element_id)
         if is_already_unlocked:
             # 返回已解锁的元素
             return UnlockElementResponse(
@@ -302,7 +311,7 @@ class VisualElementService:
         # 创建解锁记录
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         user_element = UserVisualElement(
-            user_id=user_id,
+            user_id=normalized_user_id,
             element_id=request.element_id,
             unlocked_at=now,
             unlock_source=request.source,
@@ -310,12 +319,33 @@ class VisualElementService:
         )
 
         self.db.add(user_element)
-        await self.db.commit()
+        await self.db.flush()
+        if not self._is_transaction_managed_externally():
+            await self.db.commit()
 
         return UnlockElementResponse(
             success=True,
             element=self._build_element_response(element, locale, is_unlocked=True),
             message=f"Successfully unlocked {element.name}",
+        )
+
+    async def unlock_element_for_user(
+        self,
+        user_id: uuid.UUID | str,
+        element_id: str,
+        unlock_source: str,
+        source_id: str | None = None,
+        locale: str | None = None,
+    ) -> UnlockElementResponse:
+        """Compatibility wrapper for internal callers."""
+        return await self.unlock_element(
+            user_id=user_id,
+            request=UnlockElementRequest(
+                element_id=element_id,
+                source=unlock_source,
+                source_id=source_id,
+            ),
+            locale=locale,
         )
 
     async def unlock_element_by_achievement(
@@ -478,6 +508,7 @@ class VisualElementService:
             category=element.category,
             sort_order=element.sort_order,
             config=element.config or {},
+            unlock_requirement=element.unlock_requirement,
             is_unlocked=is_unlocked,
             is_equipped=is_equipped,
         )
