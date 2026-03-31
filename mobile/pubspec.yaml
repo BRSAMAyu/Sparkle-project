@@ -137,6 +137,8 @@ dependency_overrides:
     path: third_party_plugins/flutter_local_notifications
   flutter_secure_storage:
     path: third_party_plugins/flutter_secure_storage
+  isar_flutter_libs:
+    path: third_party_plugins/isar_flutter_libs
   jpush_flutter:
     path: third_party_plugins/jpush_flutter
   sentry_flutter:
