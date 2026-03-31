@@ -57,6 +57,7 @@ services:
     image: minio/minio:latest
     container_name: sparkle_minio
     hostname: minio
+    entrypoint: ["minio"]
     command: server /data --console-address ":9001"
     ports:
       - "${SPARKLE_MINIO_API_PORT:-9000}:9000"

@@ -44,3 +44,4 @@ scripts/setup_celery.py
 tests/
 *.md
 README*
+!README.md
