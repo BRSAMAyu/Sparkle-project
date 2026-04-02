@@ -116,7 +116,8 @@ class NotificationAnalyticsService:
         system_sent_stmt = select(func.count(Notification.id)).where(
             and_(
                 Notification.user_id == user_id,
-                Notification.created_at >= start_date
+                Notification.created_at >= start_date,
+                ~self._is_intervention_notification(),
             )
         )
         result = await self.db.execute(system_sent_stmt)
@@ -127,11 +128,33 @@ class NotificationAnalyticsService:
             and_(
                 Notification.user_id == user_id,
                 Notification.created_at >= start_date,
-                Notification.is_read
+                Notification.is_read,
+                ~self._is_intervention_notification(),
             )
         )
         result = await self.db.execute(system_viewed_stmt)
         system_viewed = result.scalar() or 0
+
+        intervention_notification_sent_stmt = select(func.count(Notification.id)).where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.created_at >= start_date,
+                self._is_intervention_notification(),
+            )
+        )
+        result = await self.db.execute(intervention_notification_sent_stmt)
+        intervention_notification_sent = result.scalar() or 0
+
+        intervention_notification_viewed_stmt = select(func.count(Notification.id)).where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.created_at >= start_date,
+                Notification.is_read,
+                self._is_intervention_notification(),
+            )
+        )
+        result = await self.db.execute(intervention_notification_viewed_stmt)
+        intervention_notification_viewed = result.scalar() or 0
 
         # Count interventions sent
         intervention_sent_stmt = select(func.count(InterventionRequest.id)).where(
@@ -166,8 +189,8 @@ class NotificationAnalyticsService:
         total_clicked = result.scalar() or 0
 
         # Calculate totals
-        total_sent = system_sent + intervention_sent
-        total_viewed = system_viewed + intervention_viewed
+        total_sent = system_sent + intervention_notification_sent + intervention_sent
+        total_viewed = system_viewed + intervention_notification_viewed + intervention_viewed
 
         # Calculate rates
         view_rate = (total_viewed / total_sent * 100) if total_sent > 0 else 0.0
@@ -205,7 +228,8 @@ class NotificationAnalyticsService:
         system_sent_stmt = select(func.count(Notification.id)).where(
             and_(
                 Notification.user_id == user_id,
-                Notification.created_at >= start_date
+                Notification.created_at >= start_date,
+                ~self._is_intervention_notification(),
             )
         )
         result = await self.db.execute(system_sent_stmt)
@@ -215,7 +239,8 @@ class NotificationAnalyticsService:
             and_(
                 Notification.user_id == user_id,
                 Notification.created_at >= start_date,
-                Notification.is_read
+                Notification.is_read,
+                ~self._is_intervention_notification(),
             )
         )
         result = await self.db.execute(system_viewed_stmt)
@@ -244,6 +269,27 @@ class NotificationAnalyticsService:
             view_rate=round(system_view_rate, 2),
             click_rate=round(system_click_rate, 2)
         )
+
+        intervention_notification_sent_stmt = select(func.count(Notification.id)).where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.created_at >= start_date,
+                self._is_intervention_notification(),
+            )
+        )
+        result = await self.db.execute(intervention_notification_sent_stmt)
+        intervention_notification_sent = result.scalar() or 0
+
+        intervention_notification_viewed_stmt = select(func.count(Notification.id)).where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.created_at >= start_date,
+                Notification.is_read,
+                self._is_intervention_notification(),
+            )
+        )
+        result = await self.db.execute(intervention_notification_viewed_stmt)
+        intervention_notification_viewed = result.scalar() or 0
 
         # Interventions
         intervention_sent_stmt = select(func.count(InterventionRequest.id)).where(
@@ -277,13 +323,15 @@ class NotificationAnalyticsService:
         result = await self.db.execute(intervention_clicks_stmt)
         intervention_clicked = result.scalar() or 0
 
-        intervention_view_rate = (intervention_viewed / intervention_sent * 100) if intervention_sent > 0 else 0.0
-        intervention_click_rate = (intervention_clicked / intervention_viewed * 100) if intervention_viewed > 0 else 0.0
+        intervention_sent_total = intervention_notification_sent + intervention_sent
+        intervention_viewed_total = intervention_notification_viewed + intervention_viewed
+        intervention_view_rate = (intervention_viewed_total / intervention_sent_total * 100) if intervention_sent_total > 0 else 0.0
+        intervention_click_rate = (intervention_clicked / intervention_viewed_total * 100) if intervention_viewed_total > 0 else 0.0
 
         stats['intervention'] = NotificationTypeStats(
             type='intervention',
-            sent=intervention_sent,
-            viewed=intervention_viewed,
+            sent=intervention_sent_total,
+            viewed=intervention_viewed_total,
             clicked=intervention_clicked,
             view_rate=round(intervention_view_rate, 2),
             click_rate=round(intervention_click_rate, 2)
@@ -312,7 +360,8 @@ class NotificationAnalyticsService:
                 and_(
                     Notification.user_id == user_id,
                     Notification.created_at >= day_start,
-                    Notification.created_at <= day_end
+                    Notification.created_at <= day_end,
+                    ~self._is_intervention_notification(),
                 )
             )
             result = await self.db.execute(system_sent_stmt)
@@ -324,11 +373,35 @@ class NotificationAnalyticsService:
                     Notification.user_id == user_id,
                     Notification.created_at >= day_start,
                     Notification.created_at <= day_end,
-                    Notification.is_read
+                    Notification.is_read,
+                    ~self._is_intervention_notification(),
                 )
             )
             result = await self.db.execute(system_viewed_stmt)
             system_viewed = result.scalar() or 0
+
+            intervention_notification_sent_stmt = select(func.count(Notification.id)).where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.created_at >= day_start,
+                    Notification.created_at <= day_end,
+                    self._is_intervention_notification(),
+                )
+            )
+            result = await self.db.execute(intervention_notification_sent_stmt)
+            intervention_notification_sent = result.scalar() or 0
+
+            intervention_notification_viewed_stmt = select(func.count(Notification.id)).where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.created_at >= day_start,
+                    Notification.created_at <= day_end,
+                    Notification.is_read,
+                    self._is_intervention_notification(),
+                )
+            )
+            result = await self.db.execute(intervention_notification_viewed_stmt)
+            intervention_notification_viewed = result.scalar() or 0
 
             # Count interventions sent this day
             intervention_sent_stmt = select(func.count(InterventionRequest.id)).where(
@@ -367,8 +440,8 @@ class NotificationAnalyticsService:
 
             trends.append(NotificationTrendData(
                 date=current_date.isoformat(),
-                sent=system_sent + intervention_sent,
-                viewed=system_viewed + intervention_viewed,
+                sent=system_sent + intervention_notification_sent + intervention_sent,
+                viewed=system_viewed + intervention_notification_viewed + intervention_viewed,
                 clicked=clicked
             ))
 
@@ -424,3 +497,7 @@ class NotificationAnalyticsService:
                 await self.redis.close()
             except Exception as e:
                 logger.warning(f"Error closing Redis connection: {e}")
+
+    @staticmethod
+    def _is_intervention_notification():
+        return Notification.type.in_(("intervention", "intervention_push"))

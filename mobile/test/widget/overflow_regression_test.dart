@@ -208,16 +208,25 @@ void main() {
             priority: 'high',
             isRead: false,
             createdAt: DateTime(2026, 3, 26, 12),
-            type: 'settings_updated',
+            type: 'intervention_push',
+            metadata: const {
+              'intent_type': 'micro_restart',
+              'suggested_step': '先把计时器开到 5 分钟',
+            },
           ),
           onRead: _noop,
           onDelete: _noop,
+          onAccept: _noop,
+          onAct: _noop,
+          onSnooze: _noop,
         ),
       );
 
       await tester.pumpAndSettle();
 
       expect(find.textContaining('通知标题'), findsOneWidget);
+      expect(find.text('试试看'), findsOneWidget);
+      expect(find.text('开始'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

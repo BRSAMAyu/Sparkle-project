@@ -15,6 +15,7 @@ from sqlalchemy import desc, select
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.core.event_bus import event_bus
+from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback
@@ -593,6 +594,26 @@ class AdaptiveReplanner:
                 logger.debug("Card protocol bridge not available (pre-migration)")
         return self._card_bridge
 
+    async def _find_plan_card_id(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+    ) -> UUID | None:
+        """Resolve the canonical PLAN card id for a legacy plan.
+
+        Phase 3 compilation must target the canonical plan card, but the
+        replanner still operates on legacy plan ids. Keep the lookup local and
+        deterministic instead of reaching through bridge internals.
+        """
+        stmt = select(Card.id).where(
+            Card.card_type == CardType.PLAN,
+            Card.owner_id == user_id,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def _apply_incremental_adjustment(
         self,
         report: PlanHealthReport,
@@ -606,7 +627,34 @@ class AdaptiveReplanner:
         if not state:
             return []
 
-        adjustments = self._calculate_adjustments(state.facts or {}, report, difficulty_delta)
+        # Phase 3: Try ParameterCompiler first (requires GLOBAL_COMPASS + STRATEGY_MAP artifacts)
+        compiled_result = None
+        try:
+            from app.services.card_protocol.parameter_compiler import ParameterCompiler
+
+            compiler = ParameterCompiler(self.db, event_bus)
+            # Find plan card for this legacy plan
+            plan_card_id = await self._find_plan_card_id(report.user_id, report.plan_id)
+            if plan_card_id and await compiler.can_compile(plan_card_id):
+                compiled_result = await compiler.compile(
+                    user_id=report.user_id,
+                    plan_card_id=plan_card_id,
+                    plan_id=report.plan_id,
+                    trigger=trigger,
+                    context={
+                        "health_reasons": report.reasons,
+                        "difficulty_delta": difficulty_delta,
+                        "completion_rate": completion_rate,
+                    },
+                )
+        except Exception as exc:
+            logger.debug("ParameterCompiler skipped (non-fatal): {}", exc)
+
+        if compiled_result and compiled_result.success:
+            adjustments = {"adaptive_adjustments": compiled_result.adaptive_adjustments}
+        else:
+            # Fallback to legacy calculation when no artifacts available
+            adjustments = self._calculate_adjustments(state.facts or {}, report, difficulty_delta)
         if not adjustments:
             return []
 

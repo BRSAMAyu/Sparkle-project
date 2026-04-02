@@ -12,9 +12,11 @@ from loguru import logger
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
 from app.models.intervention import InterventionRequest
 from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
+from app.services.intervention_record_service import InterventionRecordService
 from app.schemas.unified_notification import (
     NotificationHistoryFilters,
     NotificationPreferencesUpdate,
@@ -59,7 +61,10 @@ class NotificationCenterService:
 
         # Fetch system notifications
         if not source_type or source_type == 'system':
-            system_stmt = select(Notification).where(Notification.user_id == user_id)
+            system_stmt = select(Notification).where(
+                Notification.user_id == user_id,
+                ~self._is_intervention_notification(),
+            )
 
             if unread_only:
                 system_stmt = system_stmt.where(Notification.is_read.is_(False))
@@ -73,6 +78,21 @@ class NotificationCenterService:
 
         # Fetch intervention requests
         if not source_type or source_type == 'intervention':
+            intervention_notif_stmt = select(Notification).where(
+                Notification.user_id == user_id,
+                self._is_intervention_notification(),
+            )
+
+            if unread_only:
+                intervention_notif_stmt = intervention_notif_stmt.where(Notification.is_read.is_(False))
+
+            intervention_notif_stmt = intervention_notif_stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
+            intervention_notif_result = await self.db.execute(intervention_notif_stmt)
+            intervention_notifications = intervention_notif_result.scalars().all()
+
+            for notif in intervention_notifications:
+                notifications.append(self._system_to_unified(notif))
+
             # Determine status filter for "unread"
             # Intervention status: pending, approved, rejected, acknowledged, superseded
             intervention_statuses = ['pending', 'approved']
@@ -157,7 +177,25 @@ class NotificationCenterService:
                     return True
 
             elif notification_type == 'intervention':
-                # Mark InterventionRequest as acknowledged
+                notification_stmt = select(Notification).where(
+                    and_(
+                        Notification.id == notification_id,
+                        Notification.user_id == user_id,
+                        self._is_intervention_notification(),
+                    )
+                )
+                result = await self.db.execute(notification_stmt)
+                notification = result.scalar_one_or_none()
+
+                if notification:
+                    return await self.transition_intervention_notification(
+                        user_id=user_id,
+                        notification_id=notification_id,
+                        action='seen',
+                        action_payload={"source": "notification_center.mark_read"},
+                    )
+
+                # Mark InterventionRequest as acknowledged (legacy flow fallback)
                 stmt = select(InterventionRequest).where(
                     and_(
                         InterventionRequest.id == notification_id,
@@ -207,6 +245,7 @@ class NotificationCenterService:
                 and_(
                     Notification.user_id == user_id,
                     Notification.is_read.is_(False),
+                    ~self._is_intervention_notification(),
                 )
             )
             result = await self.db.execute(system_stmt)
@@ -221,6 +260,39 @@ class NotificationCenterService:
                 await self._record_interaction(
                     user_id=user_id,
                     notification_type='system',
+                    notification_id=notif.id,
+                    action_type='viewed',
+                    created_at=notif.created_at
+                )
+
+            # Mark new intervention notifications as read
+            intervention_notification_stmt = select(Notification).where(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.is_read.is_(False),
+                    self._is_intervention_notification(),
+                )
+            )
+            result = await self.db.execute(intervention_notification_stmt)
+            unread_intervention_notifications = result.scalars().all()
+
+            for notif in unread_intervention_notifications:
+                notif.is_read = True
+                notif.read_at = _utcnow()
+                count += 1
+
+                record_id = self._extract_notification_record_id(notif)
+                if record_id:
+                    await self._apply_intervention_record_action(
+                        user_id=user_id,
+                        record_id=record_id,
+                        action="seen",
+                        action_payload={"source": "notification_center.mark_all_read"},
+                    )
+
+                await self._record_interaction(
+                    user_id=user_id,
+                    notification_type='intervention',
                     notification_id=notif.id,
                     action_type='viewed',
                     created_at=notif.created_at
@@ -282,7 +354,8 @@ class NotificationCenterService:
                 stmt = select(Notification).where(
                     and_(
                         Notification.id == notification_id,
-                        Notification.user_id == user_id
+                        Notification.user_id == user_id,
+                        ~self._is_intervention_notification(),
                     )
                 )
                 result = await self.db.execute(stmt)
@@ -303,13 +376,96 @@ class NotificationCenterService:
                     return True
 
             elif notification_type == 'intervention':
-                # Interventions can't be deleted, only acknowledged
+                notification_stmt = select(Notification).where(
+                    and_(
+                        Notification.id == notification_id,
+                        Notification.user_id == user_id,
+                        self._is_intervention_notification(),
+                    )
+                )
+                result = await self.db.execute(notification_stmt)
+                notification = result.scalar_one_or_none()
+
+                if notification:
+                    record_id = self._extract_notification_record_id(notification)
+                    if record_id:
+                        await self._apply_intervention_record_action(
+                            user_id=user_id,
+                            record_id=record_id,
+                            action="dismissed",
+                            action_payload={"source": "notification_center.delete"},
+                        )
+                    await self._record_interaction(
+                        user_id=user_id,
+                        notification_type='intervention',
+                        notification_id=notification_id,
+                        action_type='dismissed',
+                        created_at=notification.created_at
+                    )
+                    await self.db.delete(notification)
+                    await self.db.commit()
+                    return True
+
+                # Legacy interventions can't be deleted, only acknowledged
                 return await self.mark_notification_read(user_id, notification_id, 'intervention')
 
             return False
 
         except Exception as e:
             logger.error(f"Error deleting notification: {e}")
+            await self.db.rollback()
+            return False
+
+    async def transition_intervention_notification(
+        self,
+        user_id: UUID,
+        notification_id: UUID,
+        action: str,
+        action_payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Apply a mobile/user interaction to a notification-backed intervention."""
+        action_payload = dict(action_payload or {})
+        try:
+            stmt = select(Notification).where(
+                and_(
+                    Notification.id == notification_id,
+                    Notification.user_id == user_id,
+                    self._is_intervention_notification(),
+                )
+            )
+            result = await self.db.execute(stmt)
+            notification = result.scalar_one_or_none()
+            if not notification:
+                return False
+
+            if action in {"seen", "accepted", "acted", "dismissed"} and not notification.is_read:
+                notification.is_read = True
+                notification.read_at = _utcnow()
+
+            record_id = self._extract_notification_record_id(notification)
+            if record_id:
+                await self._apply_intervention_record_action(
+                    user_id=user_id,
+                    record_id=record_id,
+                    action=action,
+                    action_payload={
+                        **action_payload,
+                        "notification_id": str(notification.id),
+                        "notification_type": notification.type,
+                    },
+                )
+
+            await self._record_interaction(
+                user_id=user_id,
+                notification_type='intervention',
+                notification_id=notification_id,
+                action_type=self._interaction_action_for_intervention_action(action),
+                created_at=notification.created_at
+            )
+            await self.db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error applying intervention action: {e}")
             await self.db.rollback()
             return False
 
@@ -330,7 +486,8 @@ class NotificationCenterService:
             stmt = select(Notification).where(
                 and_(
                     Notification.user_id == user_id,
-                    Notification.is_read
+                    Notification.is_read,
+                    ~self._is_intervention_notification(),
                 )
             )
             result = await self.db.execute(stmt)
@@ -375,7 +532,10 @@ class NotificationCenterService:
 
         # Fetch system notifications
         if not filters.type or filters.type == 'system' or filters.type == 'all':
-            system_stmt = select(Notification).where(Notification.user_id == user_id)
+            system_stmt = select(Notification).where(
+                Notification.user_id == user_id,
+                ~self._is_intervention_notification(),
+            )
 
             if filters.start_date:
                 system_stmt = system_stmt.where(Notification.created_at >= filters.start_date)
@@ -405,6 +565,35 @@ class NotificationCenterService:
 
         # Fetch interventions
         if not filters.type or filters.type == 'intervention' or filters.type == 'all':
+            intervention_notification_stmt = select(Notification).where(
+                Notification.user_id == user_id,
+                self._is_intervention_notification(),
+            )
+
+            if filters.start_date:
+                intervention_notification_stmt = intervention_notification_stmt.where(Notification.created_at >= filters.start_date)
+            if filters.end_date:
+                intervention_notification_stmt = intervention_notification_stmt.where(Notification.created_at <= filters.end_date)
+            if filters.search:
+                intervention_notification_stmt = intervention_notification_stmt.where(
+                    or_(
+                        Notification.title.ilike(f"%{filters.search}%"),
+                        Notification.content.ilike(f"%{filters.search}%")
+                    )
+                )
+
+            count_stmt = select(func.count()).select_from(intervention_notification_stmt.subquery())
+            count_result = await self.db.execute(count_stmt)
+            intervention_notification_total = count_result.scalar() or 0
+            total += intervention_notification_total
+
+            intervention_notification_stmt = intervention_notification_stmt.order_by(desc(Notification.created_at)).offset(offset).limit(page_size)
+            intervention_notification_result = await self.db.execute(intervention_notification_stmt)
+            intervention_notifications = intervention_notification_result.scalars().all()
+
+            for notif in intervention_notifications:
+                notifications.append(self._system_to_unified(notif))
+
             intervention_stmt = select(InterventionRequest).where(InterventionRequest.user_id == user_id)
 
             if filters.start_date:
@@ -523,15 +712,93 @@ class NotificationCenterService:
         except Exception as e:
             logger.error(f"Error recording interaction: {e}")
 
+    async def _apply_intervention_record_action(
+        self,
+        user_id: UUID,
+        record_id: UUID,
+        action: str,
+        action_payload: dict[str, Any] | None = None,
+    ) -> None:
+        record = await self.db.get(InterventionRecord, record_id)
+        if not record or record.user_id != user_id:
+            return
+
+        service = InterventionRecordService(self.db)
+        payload = dict(action_payload or {})
+
+        if action == "seen":
+            if record.acceptance_status == InterventionAcceptanceStatus.DELIVERED:
+                await service.mark_seen(record.id)
+            return
+
+        if action == "accepted":
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.DELIVERED,
+                InterventionAcceptanceStatus.SEEN,
+                InterventionAcceptanceStatus.SNOOZED,
+            }:
+                await service.mark_accepted(record.id)
+            return
+
+        if action == "acted":
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.DELIVERED,
+                InterventionAcceptanceStatus.SEEN,
+                InterventionAcceptanceStatus.SNOOZED,
+            }:
+                await service.mark_accepted(record.id)
+            if record.acceptance_status == InterventionAcceptanceStatus.ACCEPTED:
+                await service.mark_acted(record.id, action_payload=payload)
+            return
+
+        if action == "dismissed":
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.DELIVERED,
+                InterventionAcceptanceStatus.SEEN,
+                InterventionAcceptanceStatus.SNOOZED,
+            }:
+                await service.mark_dismissed(record.id)
+            return
+
+        if action == "snoozed":
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.DELIVERED,
+                InterventionAcceptanceStatus.SEEN,
+            }:
+                snooze_hours = int(payload.get("snooze_hours", 24))
+                await service.mark_snoozed(record.id, snooze_hours=snooze_hours)
+
+    @staticmethod
+    def _extract_notification_record_id(notification: Notification) -> UUID | None:
+        raw = (notification.data or {}).get("record_id")
+        if not raw:
+            return None
+        try:
+            return UUID(str(raw))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _interaction_action_for_intervention_action(action: str) -> str:
+        return {
+            "seen": "viewed",
+            "accepted": "accepted",
+            "acted": "acted",
+            "dismissed": "dismissed",
+            "snoozed": "snoozed",
+        }.get(action, action)
+
     def _system_to_unified(self, notification: Notification) -> UnifiedNotificationResponse:
         """Convert Notification model to UnifiedNotificationResponse"""
+        source_type = "intervention" if self._notification_is_intervention(notification) else "system"
+        priority = "high" if source_type == "intervention" and notification.type == "intervention_push" else "medium"
         return UnifiedNotificationResponse(
             id=str(notification.id),
-            source_type="system",
+            source_type=source_type,
             title=notification.title,
             content=notification.content,
             type=notification.type,
-            priority="medium",
+            priority=priority,
             is_read=notification.is_read,
             created_at=notification.created_at,
             read_at=notification.read_at,
@@ -609,3 +876,11 @@ class NotificationCenterService:
             deduped.append(notification)
 
         return deduped
+
+    @staticmethod
+    def _notification_is_intervention(notification: Notification) -> bool:
+        return str(notification.type or "").strip().lower() in {"intervention", "intervention_push"}
+
+    @staticmethod
+    def _is_intervention_notification():
+        return Notification.type.in_(("intervention", "intervention_push"))

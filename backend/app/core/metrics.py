@@ -133,6 +133,27 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     Gauge, "sparkle_outbox_pending_events", "Number of pending events in the outbox table"
 )
 
+INTERVENTION_DELIVERY_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_intervention_delivery_total",
+    "Intervention delivery attempts by channel and result",
+    ["channel", "result"],
+)
+
+INTERVENTION_PUSH_HISTORY_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_intervention_push_history_total",
+    "Intervention push history writes",
+    ["status"],
+)
+
+INTERVENTION_PARAMETER_COMPILATION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_intervention_parameter_compilation_total",
+    "Breakpoint 5 parameter compilation results for intervention delivery",
+    ["result"],
+)
+
 # 5b. Proto v2 Migration Metrics
 PROTO_FIELD_READ_TOTAL = get_or_create_metric(
     Counter,

@@ -120,6 +120,42 @@ class NotificationCenterRepository {
     }
   }
 
+  /// Send a real interaction state update for a notification-backed intervention.
+  Future<void> sendInterventionAction(
+    String notificationId,
+    String action, {
+    Map<String, dynamic>? actionPayload,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final items = DemoDataService().demoNotifications;
+      final index = items.indexWhere((item) => item['id'] == notificationId);
+      if (index != -1) {
+        items[index] = {
+          ...items[index],
+          'is_read': true,
+          'read_at': DateTime.now().toIso8601String(),
+          'metadata': {
+            ...(items[index]['metadata'] as Map<String, dynamic>? ?? {}),
+            'client_intervention_state': action,
+          },
+        };
+      }
+      return;
+    }
+
+    try {
+      await _client.post<Map<String, dynamic>>(
+        '/notification-center/notifications/$notificationId/intervention-action',
+        data: {
+          'action': action,
+          'action_payload': actionPayload ?? <String, dynamic>{},
+        },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Delete a notification
   Future<void> deleteNotification(String notificationId, String type) async {
     if (DemoDataService.isDemoMode) {

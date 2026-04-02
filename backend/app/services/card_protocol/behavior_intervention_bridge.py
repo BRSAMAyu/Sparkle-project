@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.card_protocol import (
     Card,
     CardType,
+    InterventionRecord,
     InterventionTriggerType,
     DeliveryStrategy,
     DeliveryChannel,
@@ -162,22 +163,27 @@ class BehaviorInterventionBridge:
             user_id=user_id,
             trigger_type=trigger_type,
             delivery_strategy=delivery_strategy,
-            delivery_channel=DeliveryChannel.CHAT,
+            delivery_channel=self._select_channel(
+                pattern_name=pattern_name,
+                pattern_type=pattern_type,
+                confidence=confidence,
+                frequency=frequency,
+            ),
             plan_card_id=plan_card_id,
             trigger_source_ref=f"behavior_pattern:{pattern_name}:{confidence:.2f}",
             diagnosis_payload=diagnosis,
             outcome_window_days=7 if frequency >= 3 else 14,
         )
-        record = await self.record_service.mark_delivered(record.id) or record
 
         logger.info(
             "BehaviorInterventionBridge: created intervention record {} for pattern {} "
-            "(type={}, confidence={:.2f}, strategy={})",
+            "(type={}, confidence={:.2f}, strategy={}, channel={})",
             record.id,
             pattern_name,
             trigger_type.value,
             confidence,
             delivery_strategy.value,
+            record.delivery_channel.value,
         )
         return record
 
@@ -204,6 +210,27 @@ class BehaviorInterventionBridge:
 
         # Default: curious (low-pressure)
         return DeliveryStrategy.CURIOUS
+
+    def _select_channel(
+        self,
+        *,
+        pattern_name: str,
+        pattern_type: str,
+        confidence: float,
+        frequency: int,
+    ) -> DeliveryChannel:
+        lowered_pattern_name = pattern_name.lower()
+        lowered_pattern_type = pattern_type.lower()
+        if (
+            confidence >= 0.8
+            and frequency >= 3
+            and (
+                lowered_pattern_name in _MICRO_RESTART_PATTERNS
+                or lowered_pattern_type in _MICRO_RESTART_PATTERNS
+            )
+        ):
+            return DeliveryChannel.PUSH
+        return DeliveryChannel.CHAT
 
     async def _find_plan_card(self, legacy_plan_id: uuid.UUID) -> Card | None:
         stmt = (

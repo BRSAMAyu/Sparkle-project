@@ -140,15 +140,15 @@ class PlanHealthInterventionBridge:
             diagnosis_payload=diagnosis,
             outcome_window_days=7,
         )
-        record = await self.record_service.mark_delivered(record.id) or record
 
         logger.info(
             "PlanHealthInterventionBridge: created intervention record {} for plan {} "
-            "severity={}, trigger={}",
+            "severity={}, trigger={}, channel={}",
             record.id,
             plan_id,
             severity,
             trigger_type.value,
+            delivery_channel.value,
         )
         return record
 

@@ -1037,6 +1037,7 @@ class NotificationEvent extends ChatStreamEvent {
         'created_at': createdAt,
         'priority': priority,
         'data': data,
+        'metadata': data,
         ...notificationData,
       };
 }

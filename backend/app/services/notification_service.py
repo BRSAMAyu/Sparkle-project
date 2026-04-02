@@ -19,6 +19,13 @@ def _utcnow() -> datetime:
 
 class NotificationService:
     @staticmethod
+    def source_type_for_notification(notification_type: str | None) -> str:
+        normalized = str(notification_type or "").strip().lower()
+        if normalized in {"intervention", "intervention_push"}:
+            return "intervention"
+        return "system"
+
+    @staticmethod
     def _normalize_timezone(timezone_name: str | None) -> str:
         timezone_name = timezone_name or "Asia/Shanghai"
         try:
@@ -163,7 +170,7 @@ class NotificationService:
 
         message = {
             "type": "notification",
-            "notification_type": "system",
+            "notification_type": NotificationService.source_type_for_notification(notification.type),
             "notification": {
                 "id": str(notification.id),
                 "title": notification.title,

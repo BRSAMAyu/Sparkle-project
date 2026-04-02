@@ -51,6 +51,20 @@ class NotificationInteractionResponse(BaseModel):
         from_attributes = True
 
 
+class InterventionNotificationActionRequest(BaseModel):
+    """Transition a notification-backed intervention record from mobile."""
+
+    action: str = Field(
+        ...,
+        pattern="^(seen|accepted|acted|dismissed|snoozed)$",
+        description="Desired intervention action",
+    )
+    action_payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional client-side evidence such as source, route, CTA label, or acted context",
+    )
+
+
 class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
     enable_system: bool | None = None

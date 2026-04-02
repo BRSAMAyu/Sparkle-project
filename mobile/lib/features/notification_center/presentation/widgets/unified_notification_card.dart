@@ -11,161 +11,199 @@ class UnifiedNotificationCard extends StatelessWidget {
     required this.notification,
     required this.onRead,
     required this.onDelete,
+    this.onAccept,
+    this.onAct,
+    this.onSnooze,
     super.key,
   });
 
   final UnifiedNotification notification;
   final VoidCallback onRead;
   final VoidCallback onDelete;
+  final VoidCallback? onAccept;
+  final VoidCallback? onAct;
+  final VoidCallback? onSnooze;
 
   @override
-  Widget build(BuildContext context) => Dismissible(
-        key: Key(notification.id),
-        direction: DismissDirection.endToStart,
-        onDismissed: (_) => onDelete(),
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: DS.spacing20),
-          decoration: BoxDecoration(
-            color: DS.error,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(Icons.delete, color: DS.onBrandPrimary),
+  Widget build(BuildContext context) {
+    final acceptAction = onAccept;
+    final actAction = onAct;
+    final snoozeAction = onSnooze;
+
+    return Dismissible(
+      key: Key(notification.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => onDelete(),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: DS.spacing20),
+        decoration: BoxDecoration(
+          color: DS.error,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: GestureDetector(
-          onTap: () {
-            if (!notification.isRead) {
-              onRead();
-            }
-            _handleNavigation(context);
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: DS.spacing12),
-            padding: const EdgeInsets.all(DS.md),
-            decoration: BoxDecoration(
+        child: Icon(Icons.delete, color: DS.onBrandPrimary),
+      ),
+      child: GestureDetector(
+        onTap: () {
+          if (!notification.isRead) {
+            onRead();
+          }
+          _handleNavigation(context);
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: DS.spacing12),
+          padding: const EdgeInsets.all(DS.md),
+          decoration: BoxDecoration(
+            color: notification.isRead
+                ? DS.surfaceTertiary
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: notification.isRead
-                  ? DS.surfaceTertiary
-                  : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: notification.isRead
-                    ? DS.border
-                    : Theme.of(context).colorScheme.primary,
-                width: notification.isRead ? 1 : 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: DS.textPrimary.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+                  ? DS.border
+                  : Theme.of(context).colorScheme.primary,
+              width: notification.isRead ? 1 : 2,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Icon
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: notification.isRead
-                        ? DS.neutral200
-                        : Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      notification.icon,
-                      style: const TextStyle(fontSize: 20),
-                    ),
+            boxShadow: [
+              BoxShadow(
+                color: DS.textPrimary.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: notification.isRead
+                      ? DS.neutral200
+                      : Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    notification.icon,
+                    style: const TextStyle(fontSize: 20),
                   ),
                 ),
+              ),
 
-                const SizedBox(width: DS.spacing12),
+              const SizedBox(width: DS.spacing12),
 
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title
-                      Text(
-                        notification.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: notification.isRead
-                                      ? FontWeight.normal
-                                      : FontWeight.bold,
-                                ),
-                      ),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      notification.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: notification.isRead
+                                ? FontWeight.normal
+                                : FontWeight.bold,
+                          ),
+                    ),
 
-                      const SizedBox(height: DS.xs),
+                    const SizedBox(height: DS.xs),
 
-                      // Content preview
-                      Text(
-                        notification.content,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: DS.textSecondary,
+                    // Content preview
+                    Text(
+                      notification.previewText,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                      maxLines: notification.isIntervention ? 3 : 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    const SizedBox(height: DS.sm),
+
+                    // Timestamp
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 12,
+                              color: DS.textTertiary,
                             ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
+                            const SizedBox(width: DS.xs),
+                            Text(
+                              Formatters.formatRelativeTime(
+                                notification.createdAt,
+                              ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: DS.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildSourceBadge(context),
+                      ],
+                    ),
+                    if (notification.isIntervention) ...[
                       const SizedBox(height: DS.sm),
-
-                      // Timestamp
                       Wrap(
                         spacing: DS.spacing8,
-                        runSpacing: DS.spacing4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                        runSpacing: DS.spacing8,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 12,
-                                color: DS.textTertiary,
-                              ),
-                              const SizedBox(width: DS.xs),
-                              Text(
-                                Formatters.formatRelativeTime(
-                                  notification.createdAt,
-                                ),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: DS.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _buildSourceBadge(context),
+                          if (notification.canAcceptIntervention &&
+                              acceptAction != null)
+                            SparkleButton.outline(
+                              onPressed: acceptAction,
+                              label: context.l10n.focusCandidateAccept,
+                            ),
+                          if (notification.canActOnIntervention &&
+                              actAction != null)
+                            SparkleButton(
+                              onPressed: actAction,
+                              label: context.l10n.taskActionStart,
+                            ),
+                          if (notification.canAcceptIntervention &&
+                              snoozeAction != null)
+                            SparkleButton.ghost(
+                              onPressed: snoozeAction,
+                              label: context.l10n.chatActionLater,
+                            ),
                         ],
                       ),
                     ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: DS.sm),
+
+              // Unread indicator
+              if (!notification.isRead)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
                   ),
                 ),
-
-                const SizedBox(width: DS.sm),
-
-                // Unread indicator
-                if (!notification.isRead)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildSourceBadge(BuildContext context) {
     var badgeColor = DS.neutral500;
@@ -201,6 +239,16 @@ class UnifiedNotificationCard extends StatelessWidget {
 
   void _handleNavigation(BuildContext context) {
     switch (notification.type) {
+      case 'intervention':
+      case 'intervention_push':
+        final planId = notification.planId;
+        if (planId != null && planId.isNotEmpty) {
+          context.push('/plans/$planId');
+        } else {
+          _showDetailDialog(context);
+        }
+        return;
+
       case 'plan_archived':
       case 'plan_restored':
       case 'plan_deleted':
@@ -210,17 +258,21 @@ class UnifiedNotificationCard extends StatelessWidget {
         } else {
           _showDetailDialog(context);
         }
+        return;
 
       case 'settings_updated':
         context.push('/profile/settings');
+        return;
 
       case 'achievement':
-        final achievementId = notification.metadata['achievement_id'] as String?;
+        final achievementId =
+            notification.metadata['achievement_id'] as String?;
         if (achievementId != null) {
           context.push('/achievements/$achievementId');
         } else {
           context.push('/achievements');
         }
+        return;
 
       case 'task_due':
       case 'task_overdue':
@@ -230,9 +282,11 @@ class UnifiedNotificationCard extends StatelessWidget {
         } else {
           _showDetailDialog(context);
         }
+        return;
 
       default:
         _showDetailDialog(context);
+        return;
     }
   }
 
@@ -247,6 +301,17 @@ class UnifiedNotificationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(notification.content),
+              if (notification.isIntervention &&
+                  notification.suggestedStep != null &&
+                  notification.suggestedStep!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '建议动作：${notification.suggestedStep!}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
               const SizedBox(height: 16),
               Text(
                 Formatters.formatRelativeTime(notification.createdAt),

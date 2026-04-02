@@ -70,6 +70,7 @@ class PlanAdapter:
 
     def __init__(self, db: AsyncSession, event_bus: EventBus | None = None):
         self.db = db
+        self.event_bus = event_bus
         self.card_service = CardService(db, event_bus)
         self.edge_service = CardEdgeService(db, event_bus)
 
@@ -132,6 +133,9 @@ class PlanAdapter:
             card.version += 1
             card.updated_by = CardCreatedBy.SYSTEM
             await self.db.flush()
+
+        # Phase 3: Auto-initialize GLOBAL_COMPASS + STRATEGY_MAP artifacts
+        await self._ensure_phase3_artifacts(plan, card)
 
         return card
 
@@ -210,6 +214,50 @@ class PlanAdapter:
             if (card.metadata_ or {}).get("synthetic_phase") is True:
                 return card
         return None
+
+    async def _ensure_phase3_artifacts(
+        self, plan: Plan, plan_card: Card
+    ) -> None:
+        """Auto-initialize GLOBAL_COMPASS and STRATEGY_MAP for a plan card.
+
+        This is the Phase 3 onboarding: when a legacy plan gets projected
+        into the card protocol, we ensure the governance artifacts exist
+        so the ParameterCompiler can work.
+        """
+        try:
+            from app.services.card_protocol.global_compass_manager import GlobalCompassManager
+            from app.services.card_protocol.strategy_map_manager import StrategyMapManager
+
+            compass_mgr = GlobalCompassManager(self.db, self.event_bus)
+            strategy_mgr = StrategyMapManager(self.db, self.event_bus)
+
+            compass = await compass_mgr.get_or_initialize(
+                plan_card_id=plan_card.id,
+                user_id=plan.user_id,
+                plan_context={"goal": plan.name},
+            )
+            strategy = await strategy_mgr.get_or_initialize(
+                plan_card_id=plan_card.id,
+                user_id=plan.user_id,
+                plan_structure={"phase_count": 1, "task_density": 0},
+            )
+
+            plan_meta = dict(plan_card.metadata_ or {})
+            metadata_patch = {
+                "global_compass_artifact_id": str(compass.id),
+                "global_compass_version": compass.version,
+                "strategy_map_artifact_id": str(strategy.id),
+                "strategy_map_version": strategy.version,
+            }
+            if any(plan_meta.get(key) != value for key, value in metadata_patch.items()):
+                plan_meta.update(metadata_patch)
+                plan_card.metadata_ = plan_meta
+                plan_card.version += 1
+                plan_card.updated_by = CardCreatedBy.SYSTEM
+                await self.db.flush()
+        except Exception as exc:
+            from loguru import logger
+            logger.warning("Phase3 artifact auto-init failed (non-fatal): {}", exc)
 
 
 # ---------------------------------------------------------------------------
