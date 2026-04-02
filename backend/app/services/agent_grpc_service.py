@@ -668,6 +668,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         plan_id=plan_id,
                         user_id=user_id,
                         db_session=db,
+                        modifications=dict(request.meta) if request.meta else None,
                     )
                 logger.info(
                     f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}"
@@ -688,6 +689,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     plan_id=plan_id,
                     user_id=user_id,
                     feedback=request.user_comment or "User requested modifications",
+                    modifications=dict(request.meta) if request.meta else None,
                 )
                 updated_plan_id = replan_result.get("new_plan_id", "")
                 logger.info(f"Plan {plan_id} marked for replanning by {user_id}")

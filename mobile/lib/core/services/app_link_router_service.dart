@@ -23,14 +23,20 @@ class AppLinkRouterService {
 
     final initialUri = await _appLinks.getInitialLink();
     if (initialUri != null) {
+      debugPrint('AppLinkRouterService initial link: $initialUri');
       _scheduleHandle(
         initialUri,
         delay: const Duration(milliseconds: 1400),
       );
+    } else {
+      debugPrint('AppLinkRouterService initial link: <none>');
     }
 
     _subscription = _appLinks.uriLinkStream.listen(
-      _scheduleHandle,
+      (uri) {
+        debugPrint('AppLinkRouterService stream link: $uri');
+        _scheduleHandle(uri);
+      },
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('AppLinkRouterService error: $error');
       },
@@ -62,8 +68,10 @@ class AppLinkRouterService {
     }
     final route = DeepLinkService.resolveRoute(uri.toString());
     if (route == null) {
+      debugPrint('AppLinkRouterService ignored uri: $uri');
       return;
     }
+    debugPrint('AppLinkRouterService navigating to: $route');
     GoRouter.of(context).go(route);
   }
 }

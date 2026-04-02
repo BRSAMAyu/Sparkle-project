@@ -185,6 +185,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   // Submission state
   bool _isSubmitting = false;
   bool _isSubmitted = false;
+  late bool _delegateApprovedTasks;
 
   @override
   void initState() {
@@ -207,13 +208,17 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       vsync: this,
       duration: SparkleMotion.normal,
     );
-    _slideInController.forward();
+    unawaited(_slideInController.forward());
+    _delegateApprovedTasks = _resolveInitialDelegateToggle(widget.review);
     _syncHighlightAnimation();
   }
 
   @override
   void didUpdateWidget(covariant PlanReviewCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.review.reviewId != widget.review.reviewId) {
+      _delegateApprovedTasks = _resolveInitialDelegateToggle(widget.review);
+    }
     if (oldWidget.review != widget.review || _isSubmitting || _isSubmitted) {
       _syncHighlightAnimation();
     }
@@ -236,14 +241,47 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           widget.onReject != null ||
           widget.onModify != null);
 
+  bool get _showDelegateToggle =>
+      _showActions && widget.review.decision != ReviewDecision.rejected;
+
+  bool _resolveInitialDelegateToggle(PlanReviewResult review) {
+    final suggested =
+        review.suggestedModifications ?? const <String, dynamic>{};
+    final raw = suggested['delegate_approved_tasks'] ??
+        suggested['auto_delegate_approved_tasks'] ??
+        suggested['delegate_to_agent'] ??
+        suggested['execution_mode'];
+    if (raw is bool) return raw;
+    final normalized = raw?.toString().trim().toLowerCase() ?? '';
+    return normalized == 'true' ||
+        normalized == '1' ||
+        normalized == 'yes' ||
+        normalized == 'agent' ||
+        normalized == 'auto';
+  }
+
+  Map<String, String>? _buildDecisionMeta(Map<String, String>? extra) {
+    final meta = <String, String>{
+      if (_showDelegateToggle)
+        'delegate_approved_tasks': _delegateApprovedTasks ? 'true' : 'false',
+      if (_showDelegateToggle)
+        'execution_mode': _delegateApprovedTasks ? 'agent' : 'manual',
+    };
+    if (extra != null) {
+      meta.addAll(extra);
+    }
+    return meta.isEmpty ? null : meta;
+  }
+
   void _syncHighlightAnimation() {
     if (_showActions && !_isSubmitting) {
       if (!_highlightController.isAnimating) {
-        _highlightController.repeat(reverse: true);
+        unawaited(_highlightController.repeat(reverse: true));
       }
     } else {
-      _highlightController.stop();
-      _highlightController.value = 0;
+      _highlightController
+        ..stop()
+        ..value = 0;
     }
   }
 
@@ -304,7 +342,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     await _handleDecision(
       ReviewDecision.rejected,
       userComment: trimmedNote,
-      meta: meta,
+      meta: _buildDecisionMeta(meta),
     );
   }
 
@@ -514,6 +552,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                           ],
                           if (showActions) ...[
                             const SizedBox(height: DS.spacing16),
+                            if (_showDelegateToggle) ...[
+                              _buildDelegateToggleCard(),
+                              const SizedBox(height: DS.spacing12),
+                            ],
                             _buildActionButtons(decision, gradient),
                           ],
                         ],
@@ -887,7 +929,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
               text: context.l10n.cancel,
               onPressed: _isSubmitting
                   ? null
-                  : () => _handleDecision(ReviewDecision.rejected),
+                  : () => _handleDecision(
+                        ReviewDecision.rejected,
+                        meta: _buildDecisionMeta(null),
+                      ),
               size: CustomButtonSize.small,
             ),
           const SizedBox(width: DS.spacing8),
@@ -897,7 +942,12 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                   ? context.l10n.commonSubmitting
                   : context.l10n.planReviewModifyPlan,
               icon: Icons.edit_rounded,
-              onPressed: _isSubmitting ? null : () => _handleDecision(decision),
+              onPressed: _isSubmitting
+                  ? null
+                  : () => _handleDecision(
+                        decision,
+                        meta: _buildDecisionMeta(null),
+                      ),
               size: CustomButtonSize.small,
               customGradient: gradient,
             ),
@@ -914,7 +964,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
             text: context.l10n.cancel,
             onPressed: _isSubmitting
                 ? null
-                : () => _handleDecision(ReviewDecision.rejected),
+                : () => _handleDecision(
+                      ReviewDecision.rejected,
+                      meta: _buildDecisionMeta(null),
+                    ),
             size: CustomButtonSize.small,
           ),
         const SizedBox(width: DS.spacing8),
@@ -930,7 +983,12 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                     unawaited(
                       SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
                     );
-                    _handleDecision(ReviewDecision.approved);
+                    unawaited(
+                      _handleDecision(
+                        ReviewDecision.approved,
+                        meta: _buildDecisionMeta(null),
+                      ),
+                    );
                   },
             size: CustomButtonSize.small,
             customGradient: gradient,
@@ -938,6 +996,57 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       ],
     );
   }
+
+  Widget _buildDelegateToggleCard() => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.info.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.info.withValues(alpha: 0.16)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.smart_toy_rounded,
+              size: DS.iconSizeSm,
+              color: DS.info,
+            ),
+            const SizedBox(width: DS.spacing10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '批准后自动交给 Agent 执行',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: DS.fontWeightSemibold,
+                          color: DS.neutral900,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    'Sparkle 会只挑适合委派给 OpenClaw 的任务自动下发，其余任务仍保留为手动执行。',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.neutral700,
+                          height: 1.4,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            Switch.adaptive(
+              value: _delegateApprovedTasks,
+              onChanged: _isSubmitting
+                  ? null
+                  : (value) {
+                      setState(() => _delegateApprovedTasks = value);
+                    },
+            ),
+          ],
+        ),
+      );
 
   LinearGradient _getDecisionGradient(ReviewDecision decision) {
     switch (decision) {

@@ -207,6 +207,7 @@ void main() {
       expect(find.textContaining('已选中“访客模式默认引擎”'), findsOneWidget);
       expect(find.text('网关地址'), findsNothing);
       expect(find.text('认证方式'), findsNothing);
+      expect(find.text('扫码配对'), findsOneWidget);
     },
   );
 

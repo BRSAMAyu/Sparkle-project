@@ -1477,7 +1477,11 @@ Please review this plan and provide your assessment."""
         return None
 
     async def resume_plan_after_approval(
-        self, plan_id: str, user_id: str, db_session: Any | None = None
+        self,
+        plan_id: str,
+        user_id: str,
+        db_session: Any | None = None,
+        modifications: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Resume plan execution after user approval.
@@ -1490,11 +1494,13 @@ Please review this plan and provide your assessment."""
             plan_id: Plan ID to resume
             user_id: User who approved
             db_session: Optional database session for task generation
+            modifications: Optional UI metadata submitted with the approval
 
         Returns:
             Status dictionary
         """
         logger.info(f"Resuming plan {plan_id} after approval by user {user_id}")
+        auto_delegate_tasks = self._should_auto_delegate_tasks(modifications)
 
         # Store the approval in pending_actions for the orchestrator to pick up
         action_id = await pending_actions_store.save(
@@ -1502,6 +1508,8 @@ Please review this plan and provide your assessment."""
             arguments={
                 "plan_id": plan_id,
                 "user_id": user_id,
+                "auto_delegate_tasks": auto_delegate_tasks,
+                "review_modifications": modifications or {},
             },
             user_id=user_id,
             description=f"Plan {plan_id} approved by user",
@@ -1509,6 +1517,7 @@ Please review this plan and provide your assessment."""
                 "plan_id": plan_id,
                 "user_id": user_id,
                 "action": "resume",
+                "auto_delegate_tasks": auto_delegate_tasks,
                 "timestamp": _utcnow().isoformat(),
             },
         )
@@ -1518,19 +1527,29 @@ Please review this plan and provide your assessment."""
             self._generate_tasks_after_approval(
                 plan_id=plan_id,
                 user_id=user_id,
-                action_id=action_id
+                action_id=action_id,
+                auto_delegate_tasks=auto_delegate_tasks,
             )
         )
 
         return {
             "status": "success",
             "action_id": action_id,
-            "message": "Plan approved and task generation initiated",
+            "message": (
+                "Plan approved and task generation initiated"
+                if not auto_delegate_tasks
+                else "Plan approved, task generation initiated, and eligible tasks will be auto-delegated"
+            ),
             "task_generation_initiated": True,
+            "auto_delegate_tasks": auto_delegate_tasks,
         }
 
     async def _generate_tasks_after_approval(
-        self, plan_id: str, user_id: str, action_id: str
+        self,
+        plan_id: str,
+        user_id: str,
+        action_id: str,
+        auto_delegate_tasks: bool = False,
     ) -> None:
         """
         Background task: Generate tasks automatically after plan approval.
@@ -1542,6 +1561,7 @@ Please review this plan and provide your assessment."""
             plan_id: The approved plan ID
             user_id: User who owns the plan
             action_id: The approval action ID for tracking
+            auto_delegate_tasks: Whether eligible tasks should be handed off automatically
         """
         from uuid import UUID
 
@@ -1614,6 +1634,13 @@ Please review this plan and provide your assessment."""
                         f"Successfully generated {task_count_created} tasks "
                         f"for plan {plan_id} (action_id={action_id})"
                     )
+                    if auto_delegate_tasks:
+                        await self._auto_delegate_generated_tasks(
+                            db_session=db,
+                            user_id=user_id,
+                            plan_id=plan_id,
+                            tasks=result.data.get("tasks") or [],
+                        )
                 else:
                     logger.error(
                         f"Task generation failed for plan {plan_id}: "
@@ -1670,7 +1697,11 @@ Please review this plan and provide your assessment."""
         }
 
     async def trigger_replanning(
-        self, plan_id: str, user_id: str, feedback: str
+        self,
+        plan_id: str,
+        user_id: str,
+        feedback: str,
+        modifications: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Trigger replanning based on user feedback.
@@ -1682,6 +1713,7 @@ Please review this plan and provide your assessment."""
             plan_id: Original plan ID
             user_id: User requesting modifications
             feedback: User's modification request
+            modifications: Optional UI metadata submitted with the request
 
         Returns:
             Status dictionary with new plan ID if created
@@ -1701,6 +1733,7 @@ Please review this plan and provide your assessment."""
                 "new_plan_id": new_plan_id,
                 "user_id": user_id,
                 "feedback": feedback,
+                "review_modifications": modifications or {},
             },
             user_id=user_id,
             description=f"Plan modification requested: {feedback[:100]}",
@@ -1974,6 +2007,85 @@ Please review this plan and provide your assessment."""
                 logger.info(f"Published information collection trigger for user {user_id}")
             except Exception as e:
                 logger.warning(f"Failed to publish information collection trigger: {e}")
+
+    @staticmethod
+    def _should_auto_delegate_tasks(modifications: dict[str, Any] | None) -> bool:
+        if not isinstance(modifications, dict):
+            return False
+        raw = (
+            modifications.get("delegate_approved_tasks")
+            or modifications.get("auto_delegate_approved_tasks")
+            or modifications.get("delegate_to_agent")
+            or modifications.get("execution_mode")
+        )
+        if isinstance(raw, bool):
+            return raw
+        normalized = str(raw or "").strip().lower()
+        return normalized in {"true", "1", "yes", "agent", "auto"}
+
+    async def _auto_delegate_generated_tasks(
+        self,
+        *,
+        db_session: Any,
+        user_id: str,
+        plan_id: str,
+        tasks: list[dict[str, Any]],
+    ) -> None:
+        from app.models.execution_intent import ExecutionMode
+        from app.services.execution_service import ExecutionService
+
+        execution_service = ExecutionService(db=db_session)
+        user_uuid = UUID(user_id)
+        eligible_task_ids: list[UUID] = []
+
+        for task_payload in tasks:
+            raw_task_id = str(task_payload.get("id") or "").strip()
+            if not raw_task_id:
+                continue
+            try:
+                task_uuid = UUID(raw_task_id)
+            except Exception:
+                logger.debug("Skipping auto-delegation for invalid task id payload: {}", raw_task_id)
+                continue
+            try:
+                decision = await execution_service.classify_task(
+                    task_id=task_uuid,
+                    user_id=user_uuid,
+                )
+            except Exception as exc:
+                logger.info(
+                    "Skipping auto-delegation for task {} in plan {} because classification failed: {}",
+                    task_uuid,
+                    plan_id,
+                    exc,
+                )
+                continue
+            if decision.execution_mode == ExecutionMode.HUMAN:
+                continue
+            eligible_task_ids.append(task_uuid)
+
+        if not eligible_task_ids:
+            logger.info("Plan {} has no generated tasks eligible for auto-delegation", plan_id)
+            return
+
+        try:
+            payload = await execution_service.handoff_tasks_batch(
+                task_ids=eligible_task_ids,
+                user_id=user_uuid,
+                execution_strategy="auto",
+            )
+            logger.info(
+                "Auto-delegated {} generated tasks for plan {} after approval (requested={})",
+                len(payload.get("items") or []),
+                plan_id,
+                len(eligible_task_ids),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to auto-delegate generated tasks for plan {}: {}",
+                plan_id,
+                exc,
+            )
 
 
 # Global singleton

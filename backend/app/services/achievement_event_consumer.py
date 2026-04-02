@@ -9,7 +9,11 @@ from datetime import timezone, datetime
 from loguru import logger
 
 from app.core.event_bus import EventBus
+from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
+from app.models.execution_intent import ExecutionIntent
+from app.models.execution_record import ExecutionRecord
+from app.models.task import Task
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
 
@@ -51,6 +55,8 @@ class AchievementEventConsumer:
             await self._handle_node_updated(event)
         elif event_type == "focus.session.completed":
             await self._handle_focus_session_completed(event)
+        elif event_type == EXECUTION_RESULT_INGESTED:
+            await self._handle_execution_result(event)
         elif event_type == "achievement.unlocked":
             await self._handle_achievement_unlocked(event)
 
@@ -93,6 +99,43 @@ class AchievementEventConsumer:
                 source="group",
                 group_task_id=str(event.get("group_task_id") or ""),
             )
+
+    async def _handle_execution_result(self, event: dict):
+        if not bool(event.get("success")):
+            return
+
+        intent_id = event.get("execution_intent_id")
+        record_id = event.get("execution_record_id")
+        user_id = event.get("user_id")
+        if not intent_id or not record_id or not user_id:
+            return
+
+        try:
+            async with AsyncSessionLocal() as db:
+                intent = await db.get(ExecutionIntent, intent_id)
+                record = await db.get(ExecutionRecord, record_id)
+                if intent is None or record is None:
+                    return
+                if not bool((intent.policy or {}).get("chat_control")):
+                    return
+
+                task = await db.get(Task, intent.task_id) if intent.task_id else None
+                actual_minutes = max(1, int((record.duration_ms or 0) / 60000))
+                estimated_minutes = int(getattr(task, "estimated_minutes", 0) or actual_minutes)
+                difficulty = int(getattr(task, "difficulty", 1) or 1)
+
+                engine = AchievementEngine(db)
+                await engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.TASK_COMPLETED,
+                    task_id=str(intent.task_id or ""),
+                    actual_minutes=actual_minutes,
+                    estimated_minutes=estimated_minutes,
+                    difficulty=difficulty,
+                    source="execution_chat_control",
+                )
+        except Exception as exc:
+            logger.warning(f"Failed to process execution achievement event: {exc}")
 
     async def _handle_node_updated(self, event: dict):
         old_mastery = float(event.get("old_mastery") or 0.0)

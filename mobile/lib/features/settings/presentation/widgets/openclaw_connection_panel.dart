@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
+import 'package:sparkle/features/settings/presentation/widgets/openclaw_pairing_scanner_sheet.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
@@ -265,6 +267,44 @@ class _OpenClawConnectionPanelState
       successLabel: payload.deviceName == null
           ? '已导入 OpenClaw 配对配置'
           : '已导入 ${payload.deviceName} 的配对配置',
+    );
+  }
+
+  Future<void> _scanPairingPayload(
+    OpenClawConnectionService service,
+  ) async {
+    final status = await Permission.camera.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      _showSnackBar(
+        '需要相机权限才能扫码配对。你也可以改用“从剪贴板导入”或“粘贴配对串”。',
+        isError: true,
+      );
+      return;
+    }
+
+    final raw = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) => const OpenClawPairingScannerSheet(),
+    );
+    if (!mounted || raw == null || raw.trim().isEmpty) return;
+
+    final payload = OpenClawConnectionService.parsePairingPayload(raw);
+    if (payload == null) {
+      _showSnackBar('扫到的二维码不是可识别的 OpenClaw 配对内容', isError: true);
+      return;
+    }
+
+    final config = payload.toConfig();
+    _applyConfigDraft(config);
+    await _saveImportedConfig(
+      service,
+      config,
+      successLabel: payload.deviceName == null
+          ? '已扫码导入 OpenClaw 配对配置'
+          : '已扫码连接到 ${payload.deviceName}',
     );
   }
 
@@ -751,6 +791,11 @@ class _OpenClawConnectionPanelState
                 onPressed: () => unawaited(_showPairingImportDialog(service)),
                 icon: const Icon(Icons.qr_code_2_rounded),
                 label: const Text('粘贴配对串'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_scanPairingPayload(service)),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('扫码配对'),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(
